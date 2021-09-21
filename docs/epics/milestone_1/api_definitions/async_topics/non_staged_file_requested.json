@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/ghga-de/milestones-docs/main/milestone_1/api_definitions/async_topics/non_staged_file_requested.json",
   "title": "non_staged_file_requested",
-  "description": "This event type is triggered when a new file was uploaded to the Upload Controller service.",
+  "description": "This event type is triggered when a user requested to download a file from the DRS3 service that is not yet staged in the Outbox storage.",
   "type": "object",
   "properties": {
     "request_id": {
@@ -18,7 +18,7 @@
       "type": "string"
     },
     "timestamp": {
-      "description": "The time when the request was received by the user.",
+      "description": "The time when the user request was received.",
       "type": "string",
       "format": "date-time"
     }
