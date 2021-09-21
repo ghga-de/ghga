@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/ghga-de/milestones-docs/main/milestone_1/api_definitions/async_topics/non_staged_file_requested.json",
-  "title": "non_staged_file_requested",
-  "description": "This event type is triggered when a user requested to download a file from the DRS3 service that is not yet staged in the Outbox storage.",
+  "$id": "https://raw.githubusercontent.com/ghga-de/milestones-docs/main/milestone_1/api_definitions/async_topics/drs_object_registered.json",
+  "title": "drs_object_registered",
+  "description": "This event type is triggered when a new DRS object is registered to the DRS3 service.",
   "type": "object",
   "properties": {
     "request_id": {
@@ -18,7 +18,7 @@
       "type": "string"
     },
     "timestamp": {
-      "description": "The time when the user request was received.",
+      "description": "The time when the DRS object was registered.",
       "type": "string",
       "format": "date-time"
     }
