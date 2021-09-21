@@ -1,0 +1,589 @@
+components:
+  schemas:
+    Dataset:
+      properties:
+        description:
+          title: Description
+          type: string
+        files:
+          items:
+            type: string
+          title: Files
+          type: array
+        has_study:
+          title: Has Study
+          type: string
+        id:
+          title: Id
+          type: string
+        title:
+          title: Title
+          type: string
+        type:
+          title: Type
+          type: string
+      required:
+      - id
+      title: Dataset
+      type: object
+    Experiment:
+      properties:
+        has_study:
+          title: Has Study
+          type: string
+        id:
+          title: Id
+          type: string
+        instrument_model:
+          title: Instrument Model
+          type: string
+        name:
+          title: Name
+          type: string
+      required:
+      - id
+      title: Experiment
+      type: object
+    File:
+      properties:
+        category:
+          title: Category
+          type: string
+        checksum:
+          title: Checksum
+          type: string
+        format:
+          title: Format
+          type: string
+        id:
+          title: Id
+          type: string
+        name:
+          title: Name
+          type: string
+        size:
+          title: Size
+          type: string
+        type:
+          title: Type
+          type: string
+      required:
+      - id
+      title: File
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    Publication:
+      properties:
+        id:
+          title: Id
+          type: string
+        title:
+          title: Title
+          type: string
+      required:
+      - id
+      title: Publication
+      type: object
+    Study:
+      properties:
+        abstract:
+          title: Abstract
+          type: string
+        id:
+          title: Id
+          type: string
+        publications:
+          items:
+            type: string
+          title: Publications
+          type: array
+        title:
+          title: Title
+          type: string
+        type:
+          title: Type
+          type: string
+      required:
+      - id
+      title: Study
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            type: string
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  title: Metadata Service API
+  version: 0.1.0
+openapi: 3.0.2
+paths:
+  /datasets:
+    get:
+      operationId: get_all_datasets_datasets_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: string
+                title: Response Get All Datasets Datasets Get
+                type: array
+          description: Successful Response
+      summary: Get All Datasets
+    post:
+      operationId: add_datasets_datasets_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Datasets
+  /datasets/{dataset_id}:
+    get:
+      operationId: get_datasets_datasets__dataset_id__get
+      parameters:
+      - in: path
+        name: dataset_id
+        required: true
+        schema:
+          title: Dataset Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Datasets
+    put:
+      operationId: update_datasets_datasets__dataset_id__put
+      parameters:
+      - in: path
+        name: dataset_id
+        required: true
+        schema:
+          title: Dataset Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Update Datasets
+  /experiments:
+    get:
+      operationId: get_all_experiments_experiments_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: string
+                title: Response Get All Experiments Experiments Get
+                type: array
+          description: Successful Response
+      summary: Get All Experiments
+    post:
+      operationId: add_experiments_experiments_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Experiment'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Experiments
+  /experiments/{experiment_id}:
+    get:
+      operationId: get_experiments_experiments__experiment_id__get
+      parameters:
+      - in: path
+        name: experiment_id
+        required: true
+        schema:
+          title: Experiment Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Experiment'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Experiments
+    put:
+      operationId: update_experiments_experiments__experiment_id__put
+      parameters:
+      - in: path
+        name: experiment_id
+        required: true
+        schema:
+          title: Experiment Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Experiment'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Update Experiments
+  /files:
+    get:
+      operationId: get_all_files_files_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: string
+                title: Response Get All Files Files Get
+                type: array
+          description: Successful Response
+      summary: Get All Files
+    post:
+      operationId: add_files_files_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Files
+  /files/{file_id}:
+    get:
+      operationId: get_files_files__file_id__get
+      parameters:
+      - in: path
+        name: file_id
+        required: true
+        schema:
+          title: File Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Files
+    put:
+      operationId: update_files_files__file_id__put
+      parameters:
+      - in: path
+        name: file_id
+        required: true
+        schema:
+          title: File Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Update Files
+  /publications:
+    get:
+      operationId: get_all_publications_publications_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: string
+                title: Response Get All Publications Publications Get
+                type: array
+          description: Successful Response
+      summary: Get All Publications
+    post:
+      operationId: add_publications_publications_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publication'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Publications
+  /publications/{publication_id}:
+    get:
+      operationId: get_publications_publications__publication_id__get
+      parameters:
+      - in: path
+        name: publication_id
+        required: true
+        schema:
+          title: Publication Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publication'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Publications
+    put:
+      operationId: update_publications_publications__publication_id__put
+      parameters:
+      - in: path
+        name: publication_id
+        required: true
+        schema:
+          title: Publication Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publication'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Update Publications
+  /studies:
+    get:
+      operationId: get_all_studies_studies_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: string
+                title: Response Get All Studies Studies Get
+                type: array
+          description: Successful Response
+      summary: Get All Studies
+    post:
+      operationId: add_studies_studies_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Study'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Studies
+  /studies/{study_id}:
+    get:
+      operationId: get_studies_studies__study_id__get
+      parameters:
+      - in: path
+        name: study_id
+        required: true
+        schema:
+          title: Study Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Study'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Studies
+    put:
+      operationId: update_studies_studies__study_id__put
+      parameters:
+      - in: path
+        name: study_id
+        required: true
+        schema:
+          title: Study Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Study'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Update Studies
+
