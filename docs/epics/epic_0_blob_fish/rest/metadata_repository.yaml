@@ -26,6 +26,7 @@ components:
         - id
       title: Dataset
       type: object
+
     Experiment:
       properties:
         has_study:
@@ -44,6 +45,7 @@ components:
         - id
       title: Experiment
       type: object
+
     File:
       properties:
         category:
@@ -71,6 +73,7 @@ components:
         - id
       title: File
       type: object
+
     HTTPValidationError:
       properties:
         detail:
@@ -80,6 +83,7 @@ components:
           type: array
       title: HTTPValidationError
       type: object
+
     Publication:
       properties:
         id:
@@ -92,6 +96,7 @@ components:
         - id
       title: Publication
       type: object
+
     Study:
       properties:
         abstract:
@@ -115,6 +120,7 @@ components:
         - id
       title: Study
       type: object
+
     ValidationError:
       properties:
         loc:
@@ -134,10 +140,12 @@ components:
         - type
       title: ValidationError
       type: object
+
 info:
   title: Metadata Service API
   version: 0.1.0
 openapi: 3.0.2
+
 paths:
   /datasets:
     get:
@@ -153,6 +161,7 @@ paths:
                 type: array
           description: Successful Response
       summary: List all Dataset IDs
+
   /datasets/{dataset_id}:
     get:
       operationId: get_datasets_datasets_dataset_id
@@ -176,6 +185,7 @@ paths:
                 $ref: "#/components/schemas/HTTPValidationError"
           description: Validation Error
       summary: Get a specific Dataset
+
   /experiments:
     get:
       operationId: list_all_experiments_experiments_get
@@ -190,6 +200,7 @@ paths:
                 type: array
           description: Successful Response
       summary: List all Experiment IDs
+
   /experiments/{experiment_id}:
     get:
       operationId: get_experiments_experiments_experiment_id
@@ -213,6 +224,7 @@ paths:
                 $ref: "#/components/schemas/HTTPValidationError"
           description: Validation Error
       summary: Get a specific Experiment
+
   /files:
     get:
       operationId: list_all_files_files_get
@@ -227,6 +239,7 @@ paths:
                 type: array
           description: Successful Response
       summary: List all File IDs
+
   /files/{file_id}:
     get:
       operationId: get_files_files_file_id
@@ -251,6 +264,7 @@ paths:
                 $ref: "#/components/schemas/HTTPValidationError"
           description: Validation Error
       summary: Get a specific File
+
   /publications:
     get:
       operationId: list_all_publications_publications_get
@@ -265,6 +279,7 @@ paths:
                 type: array
           description: Successful Response
       summary: List all Publication IDs
+
   /publications/{publication_id}:
     get:
       operationId: get_publications_publications_publication_id
@@ -288,6 +303,7 @@ paths:
                 $ref: "#/components/schemas/HTTPValidationError"
           description: Validation Error
       summary: Get a specific Publication
+
   /studies:
     get:
       operationId: list_all_studies_studies_get
@@ -302,6 +318,7 @@ paths:
                 type: array
           description: Successful Response
       summary: List all Studie IDs
+
   /studies/{study_id}:
     get:
       operationId: get_studies_studies_study_id

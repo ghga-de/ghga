@@ -1,0 +1,99 @@
+components:
+  schemas:
+    ItemType:
+      type: string
+      enum:
+        - File
+        - Publication
+        - Experiment
+        - Study
+        - Dataset
+
+    ExperimentType:
+      type: string
+      enum:
+        - WGS
+        - WES
+        - RNA-seq
+        - WGBS
+
+    DiseaseType:
+      type: string
+      enum:
+        - cancer
+        - RD
+
+    Filters:
+      type: object
+      properties:
+        item_types:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemType"
+        experiment_types:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExperimentType"
+        disease_types:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiseaseType"
+      additionalProperties: false
+
+    SearchQuery:
+      type: object
+      properties:
+        # please provide at least one of the following properties:
+        keywords:
+          type: array
+          items:
+            type: string
+        filters:
+          $ref: "#/components/schemas/Filters"
+      additionalProperties: false
+
+    SearchHit:
+      type: object
+      properties:
+        item_type:
+          $ref: "#/components/schemas/ItemType"
+        id:
+          type: string
+          description: ID of metadata item
+        context:
+          type: string
+          description: |
+            Optionally, give the context (metadata field or sentence)
+            where the hit was found.
+      required:
+        - item_type
+        - id
+      additionalProperties: false
+
+info:
+  title: Metadata Service API
+  version: 0.1.0
+
+openapi: 3.0.2
+
+paths:
+  /rpc/search:
+    post:
+      operationId: search
+      summary: Search metadata catalog by keywords and filters
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchQuery"
+        description: >-
+          Search keywords and filters.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchHit"
+          description: Successful Response
