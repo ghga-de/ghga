@@ -1,77 +1,91 @@
 components:
   schemas:
-    ItemType:
+    DocumentType:
       type: string
       enum:
+        # to be adjusted
         - File
         - Publication
         - Experiment
         - Study
         - Dataset
 
-    ExperimentType:
-      type: string
-      enum:
-        - WGS
-        - WES
-        - RNA-seq
-        - WGBS
-
-    DiseaseType:
-      type: string
-      enum:
-        - cancer
-        - RD
-
-    Filters:
+    FacetOption:
       type: object
       properties:
-        item_types:
+        option:
+          type: string
+        count:
+          type: integer
+      required:
+        - option
+      additionalProperties: false
+
+    Facet:
+      type: object
+      properties:
+        key:
+          type: string
+        options:
           type: array
           items:
-            $ref: "#/components/schemas/ItemType"
-        experiment_types:
-          type: array
-          items:
-            $ref: "#/components/schemas/ExperimentType"
-        disease_types:
-          type: array
-          items:
-            $ref: "#/components/schemas/DiseaseType"
+            $ref: "#/components/schemas/FacetOption"
+      required:
+        - key
+        - options
       additionalProperties: false
 
     SearchQuery:
       type: object
       properties:
         # please provide at least one of the following properties:
-        keywords:
-          type: array
-          items:
-            type: string
-        filters:
-          $ref: "#/components/schemas/Filters"
+        q:
+          type: string
+          description: query string
+        facets:
+          type: object
+      required:
+        - q
       additionalProperties: false
 
     SearchHit:
       type: object
       properties:
-        item_type:
-          $ref: "#/components/schemas/ItemType"
+        document_type:
+          $ref: "#/components/schemas/DocumentType"
         id:
           type: string
-          description: ID of metadata item
+          description: ID of metadata document
         context:
           type: string
           description: |
             Optionally, give the context (metadata field or sentence)
             where the hit was found.
+        content:
+          type: object
       required:
-        - item_type
+        - document_type
         - id
       additionalProperties: false
 
+    SearchResult:
+      type: object
+      properties:
+        hits:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHit"
+        facets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Facet"
+      required:
+        - hits
+        - facets
+      additionalProperties: false
+
 info:
-  title: Metadata Service API
+  title: Metadata Search API
   version: 0.1.0
 
 openapi: 3.0.2
@@ -80,20 +94,18 @@ paths:
   /rpc/search:
     post:
       operationId: search
-      summary: Search metadata catalog by keywords and filters
+      summary: Search metadata catalog by keywords and facets
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/SearchQuery"
         description: >-
-          Search keywords and filters.
+          Search keywords and facets.
       responses:
         "200":
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/SearchHit"
+                $ref: "#/components/schemas/SearchResult"
           description: Successful Response
