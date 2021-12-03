@@ -147,20 +147,6 @@ info:
 openapi: 3.0.2
 
 paths:
-  /datasets:
-    get:
-      operationId: list_all_datasets_datasets_get
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  type: string
-                title: Response Get All Datasets Datasets Get
-                type: array
-          description: Successful Response
-      summary: List all Dataset IDs
 
   /datasets/{dataset_id}:
     get:
@@ -186,21 +172,6 @@ paths:
           description: Validation Error
       summary: Get a specific Dataset
 
-  /experiments:
-    get:
-      operationId: list_all_experiments_experiments_get
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  type: string
-                title: Response Get All Experiments Experiments Get
-                type: array
-          description: Successful Response
-      summary: List all Experiment IDs
-
   /experiments/{experiment_id}:
     get:
       operationId: get_experiments_experiments_experiment_id
@@ -224,22 +195,7 @@ paths:
                 $ref: "#/components/schemas/HTTPValidationError"
           description: Validation Error
       summary: Get a specific Experiment
-
-  /files:
-    get:
-      operationId: list_all_files_files_get
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  type: string
-                title: Response Get All Files Files Get
-                type: array
-          description: Successful Response
-      summary: List all File IDs
-
+      
   /files/{file_id}:
     get:
       operationId: get_files_files_file_id
@@ -265,21 +221,6 @@ paths:
           description: Validation Error
       summary: Get a specific File
 
-  /publications:
-    get:
-      operationId: list_all_publications_publications_get
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  type: string
-                title: Response Get All Publications Publications Get
-                type: array
-          description: Successful Response
-      summary: List all Publication IDs
-
   /publications/{publication_id}:
     get:
       operationId: get_publications_publications_publication_id
@@ -303,21 +244,6 @@ paths:
                 $ref: "#/components/schemas/HTTPValidationError"
           description: Validation Error
       summary: Get a specific Publication
-
-  /studies:
-    get:
-      operationId: list_all_studies_studies_get
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  type: string
-                title: Response Get All Studies Studies Get
-                type: array
-          description: Successful Response
-      summary: List all Studie IDs
 
   /studies/{study_id}:
     get:
