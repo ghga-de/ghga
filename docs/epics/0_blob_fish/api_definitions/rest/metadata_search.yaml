@@ -3,12 +3,13 @@ components:
     DocumentType:
       type: string
       enum:
-        # to be adjusted
-        - File
-        - Publication
-        - Experiment
-        - Study
         - Dataset
+        - Project
+        - Study
+        - Experiment
+        - Sample
+        - Publication
+        - File
 
     FacetOption:
       type: object
@@ -20,6 +21,20 @@ components:
       required:
         - option
       additionalProperties: false
+
+    FilterOption:
+      properties:
+        key:
+          title: Key
+          type: string
+        value:
+          title: Value
+          type: string
+      required:
+        - key
+        - value
+      title: FilterOption
+      type: object
 
     Facet:
       type: object
@@ -36,17 +51,19 @@ components:
       additionalProperties: false
 
     SearchQuery:
-      type: object
+      description: Represents the Search Query.
       properties:
-        # please provide at least one of the following properties:
-        q:
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterOption'
+        query:
+          title: Query
           type: string
-          description: query string
-        facets:
-          type: object
       required:
-        - q
-      additionalProperties: false
+        - query
+      title: SearchQuery
+      type: object
 
     SearchHit:
       type: object
@@ -94,14 +111,41 @@ paths:
   /rpc/search:
     post:
       operationId: search
-      summary: Search metadata catalog by keywords and facets
+      summary: Search metadata catalog by keywords and filters
+      parameters:
+      - in: query
+        name: document_type
+        required: true
+        schema:
+          $ref: '#/components/schemas/DocumentType'
+      - in: query
+        name: return_facets
+        required: false
+        schema:
+          default: false
+          title: Facet
+          type: boolean
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          title: Limit
+          type: integer
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/SearchQuery"
         description: >-
-          Search keywords and facets.
+          Search keywords and filters.
       responses:
         "200":
           content:
