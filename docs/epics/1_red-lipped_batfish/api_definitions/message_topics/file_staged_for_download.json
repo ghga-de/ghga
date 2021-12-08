@@ -12,6 +12,10 @@
       "description": "This is a label that might be use to group multiple files together. E.g. the study id.",
       "type": "string"
     },
+    "md5_checksum": {
+      "description": "The md5-checksum of the file content.",
+      "type": "string"
+    },
     "request_id": {
       "description": "A unique identified for the original user request that let to this event.",
       "type": "string"

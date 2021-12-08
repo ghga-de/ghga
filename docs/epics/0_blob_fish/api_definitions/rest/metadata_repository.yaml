@@ -195,7 +195,7 @@ paths:
                 $ref: "#/components/schemas/HTTPValidationError"
           description: Validation Error
       summary: Get a specific Experiment
-      
+
   /files/{file_id}:
     get:
       operationId: get_files_files_file_id
