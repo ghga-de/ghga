@@ -4,8 +4,8 @@
   "additionalProperties": false,
   "description": "This event type is triggered when a new DRS object is registered to the DRS3 service.",
   "properties": {
-    "drs_id": {
-      "description": "The DRS ID which can be used to access the file for download.",
+    "drs_uri": {
+      "description": "The DRS URI of pattern `drs://<drs_service_hostname>/<drs_id>`.",
       "type": "string"
     },
     "file_id": {
@@ -29,7 +29,7 @@
   "required": [
     "request_id",
     "file_id",
-    "drs_id",
+    "drs_uri",
     "timestamp"
   ],
   "title": "drs_object_registered",
