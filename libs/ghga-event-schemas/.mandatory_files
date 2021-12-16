@@ -1,0 +1,34 @@
+# List of all mandatory files and directories that
+# have to exist in this repo.
+# This list is similar to the `./static_files`,
+# however, the entries here are just checked for
+# existence, their content is not evaluated and
+# may differ from that of the template repository.
+
+.devcontainer/dev_install
+.devcontainer/dev_launcher
+.devcontainer/devcontainer.json
+.devcontainer/docker-compose.yml
+.devcontainer/Dockerfile
+
+.github/workflows/dev_cd.yaml
+.github/workflows/unit_and_int_tests.yaml
+
+db_migration
+
+docs/README.md
+
+example_data
+
+scripts
+
+tests/fixtures/__init__.py
+tests/integration/fixtures/__init__.py
+tests/unit/fixtures/__init__.py
+tests/integration/__init__.py
+tests/unit/__init__.py
+
+Dockerfile
+example-config.yaml
+README.md
+setup.py
