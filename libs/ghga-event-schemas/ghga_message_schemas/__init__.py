@@ -13,20 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Connects to database."""
+"""A package that collects schemas used for messaging between GHGA service."""
 
-import os
-
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-
-# adapted once config parsing is implemented
-SQLALCHEMY_DATABASE_URL = os.getenv("DB_URL")
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
+__version__ = "0.1.0"
