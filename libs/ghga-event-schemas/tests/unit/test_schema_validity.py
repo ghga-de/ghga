@@ -13,4 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This sub-package contains the core functionality"""
+"""Check if all JSON schemas are valid"""
+
+import pytest
+from jsonschema.validators import validator_for
+
+from ghga_message_schemas import schemas
+
+from . import fixtures
+
+
+@pytest.mark.parametrize("schema_name", fixtures.SCHEMA_NAMES)
+def test_json_schemas_valid(schema_name: str):
+    """Validate if the schema dicts are valid JSON schemas."""
+    schema_dict = getattr(schemas, schema_name.upper())
+
+    validator = validator_for(schema_dict)
+    validator.check_schema(schema_dict)
