@@ -49,7 +49,17 @@
       "type": "array"
     },
     "study": {
-      "$ref": "https://raw.githubusercontent.com/ghga-de/ghga-metadata-schema/main/artifacts/jsonschema/ghga.schema.json#/definitions/Study"
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "description": "The internal unique identifier for an entity.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
     },
     "timestamp": {
       "description": "The time when the message was published.",
