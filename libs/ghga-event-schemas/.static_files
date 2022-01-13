@@ -9,6 +9,7 @@
 # ./scripts/update_static_files.py
 
 .devcontainer/library-scripts/docker-in-docker-debian.sh
+.devcontainer/license_header.txt
 
 scripts/update_static_files.py
 scripts/license_checker.py
@@ -19,6 +20,7 @@ scripts/README.md
 .github/workflows/check_pr_target.yaml
 .github/workflows/static_code_analysis.yaml
 .github/workflows/check_mandatory_and_static_files.yaml
+.github/workflows/unit_and_int_tests.yaml
 
 example_data/README.md
 
