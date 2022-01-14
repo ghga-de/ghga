@@ -1,4 +1,4 @@
-# Copyright 2021 - 2022 Universität Tübingen, DKFZ and EMBL
+# Copyright 2022 Universität Tübingen, DKFZ and EMBL
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A package that collects schemas used for messaging between GHGA service."""
-
-__version__ = "0.2.2"
+"""Package containing JSON schemas."""
