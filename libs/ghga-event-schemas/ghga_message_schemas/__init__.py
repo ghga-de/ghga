@@ -15,4 +15,4 @@
 
 """A package that collects schemas used for messaging between GHGA service."""
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"

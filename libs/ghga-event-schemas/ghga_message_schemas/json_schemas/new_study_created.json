@@ -28,7 +28,7 @@
           },
           "size": {
             "description": "The size of a file in bytes.",
-            "type": "string"
+            "type": "integer"
           },
           "update_date": {
             "description": "Timestamp (in ISO 8601 format) when the entity was updated.",
