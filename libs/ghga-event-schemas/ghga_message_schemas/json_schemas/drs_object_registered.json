@@ -27,7 +27,7 @@
     },
     "size": {
       "description": "The size of a file in bytes.",
-      "type": "string"
+      "type": "integer"
     },
     "timestamp": {
       "description": "The time when the message was published.",

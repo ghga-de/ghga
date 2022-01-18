@@ -13,15 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utils around schemas"""
-
-import os
-from typing import List
-
-from ghga_message_schemas.schemas import _JSON_SCHEMA_DIR
-
-SCHEMA_NAMES: List[str] = [
-    os.path.splitext(file_name)[0]
-    for file_name in os.listdir(_JSON_SCHEMA_DIR)
-    if file_name.endswith(".json")
-]
+"""Package containing JSON schemas."""

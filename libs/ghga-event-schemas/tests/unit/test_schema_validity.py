@@ -18,15 +18,15 @@
 import pytest
 from jsonschema.validators import validator_for
 
-from ghga_message_schemas import schemas
+from ghga_message_schemas import SCHEMAS
+from ghga_message_schemas.schemas import get_topic_names
 
-from . import fixtures
 
-
-@pytest.mark.parametrize("schema_name", fixtures.SCHEMA_NAMES)
-def test_json_schemas_valid(schema_name: str):
+@pytest.mark.parametrize("topic_name", get_topic_names())
+def test_json_schemas_valid(topic_name: str):
     """Validate if the schema dicts are valid JSON schemas."""
-    schema_dict = getattr(schemas, schema_name.upper())
+
+    schema_dict = SCHEMAS[topic_name]
 
     validator = validator_for(schema_dict)
     validator.check_schema(schema_dict)

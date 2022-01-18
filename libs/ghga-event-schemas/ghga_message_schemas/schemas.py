@@ -16,8 +16,9 @@
 """Read in schemas from json files"""
 
 import json
+import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 _JSON_SCHEMA_DIR = Path(__file__).parent.resolve() / "json_schemas"
 
@@ -30,9 +31,13 @@ def _read_schema(topic_name: str) -> Dict[str, object]:
         return json.load(schema_file)
 
 
-DRS_OBJECT_REGISTERED = _read_schema("drs_object_registered")
-FILE_INTERNALLY_REGISTERED = _read_schema("file_internally_registered")
-FILE_STAGED_FOR_DOWNLOAD = _read_schema("file_staged_for_download")
-FILE_UPLOAD_RECEIVED = _read_schema("file_upload_received")
-NEW_STUDY_CREATED = _read_schema("new_study_created")
-NON_STAGED_FILE_REQUESTED = _read_schema("non_staged_file_requested")
+def get_topic_names() -> List[str]:
+    """Get a list of all topic names."""
+    return [
+        os.path.splitext(os.path.basename(filename))[0]
+        for filename in os.listdir(_JSON_SCHEMA_DIR)
+        if filename.endswith(".json")
+    ]
+
+
+SCHEMAS = {topic_name: _read_schema(topic_name) for topic_name in get_topic_names()}

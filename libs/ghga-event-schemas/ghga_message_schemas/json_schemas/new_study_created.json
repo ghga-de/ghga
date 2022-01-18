@@ -28,7 +28,7 @@
           },
           "size": {
             "description": "The size of a file in bytes.",
-            "type": "string"
+            "type": "integer"
           },
           "update_date": {
             "description": "Timestamp (in ISO 8601 format) when the entity was updated.",
@@ -49,7 +49,17 @@
       "type": "array"
     },
     "study": {
-      "$ref": "https://raw.githubusercontent.com/ghga-de/ghga-metadata-schema/main/artifacts/jsonschema/ghga.schema.json#/definitions/Study"
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "description": "The internal unique identifier for an entity.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
     },
     "timestamp": {
       "description": "The time when the message was published.",
