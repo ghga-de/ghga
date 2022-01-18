@@ -14,5 +14,3 @@
 # limitations under the License.
 
 """Fixtures that exclusively used in unit tests"""
-
-from .schemas import SCHEMA_NAMES  # noqa: F401
