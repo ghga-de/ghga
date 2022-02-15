@@ -1,4 +1,5 @@
 # \<Epic Title\> (\<Epic Code Name\>)
+**Epic Type:** Implementation Epic
 
 \<Please replace all appearances of `<...>`.\>
 
