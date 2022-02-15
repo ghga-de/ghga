@@ -45,7 +45,14 @@ The payloads for asynchronous topics are described using JSON schemas:
 
 (The JSON schemas should be defined in the following repository: https://github.com/ghga-de/ghga-message-schemas. Please insert only links from the main branch.)
 
-## Technical planning:
+
+## Additional Implementation Details:
+
+- \<List further implemenation details here. (Anything that might be relevant for defining and executing tasks.)>
+
+
+## Human Resource/Time Estimation:
+
 
 Number of sprints required: \<Insert a number.\>
 

@@ -34,7 +34,13 @@ This epic covers the following user journeys:
 #
 - \<Provide a list here.\>
 
-## Technical planning:
+
+## Additional Implementation Details:
+
+- \<List further implemenation details here. (Anything that might be relevant for defining and executing tasks.)>
+
+
+## Human Resource/Time Estimation:
 
 Number of sprints required: \<Insert a number.\>
 
