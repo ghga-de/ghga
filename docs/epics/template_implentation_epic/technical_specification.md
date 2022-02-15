@@ -1,5 +1,7 @@
 # \<Epic Title\> (\<Epic Code Name\>)
 **Epic Type:** Implementation Epic
+  
+**Attention: Please do not put any confidential content here.**
 
 \<Please replace all appearances of `<...>`.\>
 

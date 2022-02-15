@@ -1,6 +1,8 @@
 # \<Epic Title\> (\<Epic Code Name\>)
 **Epic Type:** Exploratory Epic
 
+**Attention: Please do not put any confidential content here.**
+
 \<Please replace all appearances of `<...>`.\>
 
 ## Principle Components of Exploration:
