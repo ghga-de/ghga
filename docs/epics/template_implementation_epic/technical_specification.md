@@ -5,6 +5,8 @@
 
 \<Please replace all appearances of `<...>`.\>
 
+## Scope:
+A scope definition can be found here: \<Insert Link to epic documentation on confluence.\>
 ## User Journeys
 
 This epic covers the following user journeys:
@@ -52,7 +54,6 @@ The payloads for asynchronous topics are described using JSON schemas:
 
 
 ## Human Resource/Time Estimation:
-
 
 Number of sprints required: \<Insert a number.\>
 
