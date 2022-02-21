@@ -1,0 +1,212 @@
+{
+  "title": "ModSettings",
+  "description": "Modifies the orginal Settings class provided by the user",
+  "type": "object",
+  "properties": {
+    "s3_endpoint_url": {
+      "title": "S3 Endpoint Url",
+      "env_names": [
+        "my_microservice_s3_endpoint_url"
+      ],
+      "type": "string"
+    },
+    "s3_access_key_id": {
+      "title": "S3 Access Key Id",
+      "env_names": [
+        "my_microservice_s3_access_key_id"
+      ],
+      "type": "string"
+    },
+    "s3_secret_access_key": {
+      "title": "S3 Secret Access Key",
+      "env_names": [
+        "my_microservice_s3_secret_access_key"
+      ],
+      "type": "string"
+    },
+    "s3_session_token": {
+      "title": "S3 Session Token",
+      "env_names": [
+        "my_microservice_s3_session_token"
+      ],
+      "type": "string"
+    },
+    "aws_config_ini": {
+      "title": "Aws Config Ini",
+      "env_names": [
+        "my_microservice_aws_config_ini"
+      ],
+      "type": "string",
+      "format": "path"
+    },
+    "db_url": {
+      "title": "Db Url",
+      "env_names": [
+        "my_microservice_db_url"
+      ],
+      "type": "string"
+    },
+    "db_print_logs": {
+      "title": "Db Print Logs",
+      "default": false,
+      "env_names": [
+        "my_microservice_db_print_logs"
+      ],
+      "type": "boolean"
+    },
+    "service_name": {
+      "title": "Service Name",
+      "default": "my_microservice",
+      "env_names": [
+        "my_microservice_service_name"
+      ],
+      "type": "string"
+    },
+    "rabbitmq_host": {
+      "title": "Rabbitmq Host",
+      "default": "rabbitmq",
+      "env_names": [
+        "my_microservice_rabbitmq_host"
+      ],
+      "type": "string"
+    },
+    "rabbitmq_port": {
+      "title": "Rabbitmq Port",
+      "default": 5672,
+      "env_names": [
+        "my_microservice_rabbitmq_port"
+      ],
+      "type": "integer"
+    },
+    "host": {
+      "title": "Host",
+      "default": "127.0.0.1",
+      "env_names": [
+        "my_microservice_host"
+      ],
+      "type": "string"
+    },
+    "port": {
+      "title": "Port",
+      "default": 8080,
+      "env_names": [
+        "my_microservice_port"
+      ],
+      "type": "integer"
+    },
+    "log_level": {
+      "title": "Log Level",
+      "default": "info",
+      "env_names": [
+        "my_microservice_log_level"
+      ],
+      "enum": [
+        "critical",
+        "error",
+        "warning",
+        "info",
+        "debug",
+        "trace"
+      ],
+      "type": "string"
+    },
+    "auto_reload": {
+      "title": "Auto Reload",
+      "default": false,
+      "env_names": [
+        "my_microservice_auto_reload"
+      ],
+      "type": "boolean"
+    },
+    "workers": {
+      "title": "Workers",
+      "default": 1,
+      "env_names": [
+        "my_microservice_workers"
+      ],
+      "type": "integer"
+    },
+    "api_root_path": {
+      "title": "Api Root Path",
+      "default": "/",
+      "env_names": [
+        "my_microservice_api_root_path"
+      ],
+      "type": "string"
+    },
+    "openapi_url": {
+      "title": "Openapi Url",
+      "default": "/openapi.json",
+      "env_names": [
+        "my_microservice_openapi_url"
+      ],
+      "type": "string"
+    },
+    "docs_url": {
+      "title": "Docs Url",
+      "default": "/docs",
+      "env_names": [
+        "my_microservice_docs_url"
+      ],
+      "type": "string"
+    },
+    "cors_allowed_origins": {
+      "title": "Cors Allowed Origins",
+      "env_names": [
+        "my_microservice_cors_allowed_origins"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cors_allow_credentials": {
+      "title": "Cors Allow Credentials",
+      "env_names": [
+        "my_microservice_cors_allow_credentials"
+      ],
+      "type": "boolean"
+    },
+    "cors_allowed_methods": {
+      "title": "Cors Allowed Methods",
+      "env_names": [
+        "my_microservice_cors_allowed_methods"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cors_allowed_headers": {
+      "title": "Cors Allowed Headers",
+      "env_names": [
+        "my_microservice_cors_allowed_headers"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "language": {
+      "title": "Language",
+      "default": "Croatian",
+      "env_names": [
+        "my_microservice_language"
+      ],
+      "enum": [
+        "Greek",
+        "Croatian",
+        "French",
+        "German"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "s3_endpoint_url",
+    "s3_access_key_id",
+    "s3_secret_access_key",
+    "db_url"
+  ],
+  "additionalProperties": false
+}
