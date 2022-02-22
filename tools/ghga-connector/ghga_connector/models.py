@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""DAO interface implementation to connect to the database."""
+"""Defines dataclasses for holding business-logic data"""

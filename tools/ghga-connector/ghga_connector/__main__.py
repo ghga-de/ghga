@@ -13,7 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Subpackage defineing functions for publishing to or subscribing from
-asynchronous messaging topics.
-"""
+"""Entrypoint of the package"""

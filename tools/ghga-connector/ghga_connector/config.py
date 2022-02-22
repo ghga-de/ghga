@@ -13,4 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Consuming or Subscribing to Async Messaging Topics"""
+"""Config Parameter Modeling and Parsing"""
+
+from ghga_service_chassis_lib.config import config_from_yaml
+from pydantic import BaseSettings
+
+
+@config_from_yaml(prefix="ghga_connector")
+class Config(BaseSettings):
+    """Config parameters and their defaults."""
+
+    dummy_param: str
+
+
+CONFIG = Config()

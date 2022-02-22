@@ -15,7 +15,10 @@
 
 """Test dummy."""
 
+from ghga_connector import __version__
+
 
 def test_dummy():
     """Just makes the CI pass."""
+    print(__version__)
     assert True
