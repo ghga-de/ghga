@@ -1,6 +1,6 @@
 # Pilot Study for 3-Hex Chassis Lib (Domestic Quail)
 **Epic Type:** Half Exploration / Half Implementation
-  
+
 **Attention: Please do not put any confidential content here.**
 
 ## Scope:
@@ -48,6 +48,8 @@ One question that remains to be evaluated is how to best represent protocols in 
 Moreover, options for a test framework that is standardized around the provided protocols shall be explored. Ideally, tests shall be written in a way that it can be decided at runtime whether fast in-memory/mock providers or realistic production providers are used. I.e. the in-memory/mock provicers could be used for fast testing that integrates nicely into the development workflow on developer end devices, while the production providers can be run by CI tools to provide additional diagnostic power.
 
 With reference to that, it might be also useful to explore whether application states associated with specific protocols could be defined in a standardized specification (YAML or JSON-based) that is applicaple to all providers implementing the protocol. Specialized tooling might interprete this specification and setup and teardown the application state when running tests but also when deploying a service to a staging environment (that uses the same infrastructre than the production environment).
+
+Another area research is how dependency injection can help to glue all of the triple hexagonal architecture components together (providers to protocols to translators to ports). Thereby, a specific focus should be set on the question of how to inject config parameters that are needed throughout all of these components and are typically defined via YAML files or environment variables.
 
 ## Human Resource/Time Estimation:
 
