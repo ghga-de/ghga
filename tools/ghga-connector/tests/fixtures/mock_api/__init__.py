@@ -12,16 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
-
-from ghga_connector.cli import cli
-
-
-def run():
-    """Run the application (used in setup.cfg)."""
-    cli()
-
-
-if __name__ == "__main__":
-    run()
+"""Code to start a mock API server in the background of a test."""

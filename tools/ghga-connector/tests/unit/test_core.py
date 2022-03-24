@@ -12,16 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
+"""Tests for the core functions of the cli"""
 
-from ghga_connector.cli import cli
+import pytest
 
-
-def run():
-    """Run the application (used in setup.cfg)."""
-    cli()
+from ghga_connector.core import check_url
 
 
-if __name__ == "__main__":
-    run()
+@pytest.mark.parametrize(
+    "api_url,wait_time,expected_response",
+    [("https://www.ghga.de/", 1000, True), ("https://bad_url", 1000, False)],
+)
+def test_check_url(api_url, wait_time, expected_response):
+    """
+    Test the check_url function
+    """
+    response = check_url(api_url, wait_time)
+    assert response == expected_response

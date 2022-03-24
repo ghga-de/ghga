@@ -17,3 +17,15 @@
 This sub-package contains the main business functionality of this service.
 It should not contain any service API-related code.
 """
+
+from .api_calls import (  # noqa: F401
+    confirm_api_call,
+    download_api_call,
+    upload_api_call,
+)
+from .main import (  # noqa: F401
+    BadResponseCodeError,
+    NoS3AccessMethod,
+    RequestFailedError,
+    check_url,
+)
