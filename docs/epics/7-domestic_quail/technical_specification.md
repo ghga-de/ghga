@@ -18,14 +18,14 @@ This epic specifically tries to deliver a draft for the library proposed in docu
 
 ## Implementation Details:
 
-This epic aims at prototyping the triple hexagonal architecture by exemplarily implementing protocols and providers for event handling as summarizes in following figure and further discussed below.
+This epic aims at prototyping the triple hexagonal architecture by exemplarily implementing protocols and providers for event handling as summarized in following figure and further discussed below.
 ![](./images/protocol_and_providers_overview.jpg)
 
 ### Protocols:
 
 The even subscription protocol defines an interface that uses the following vocabulary:
 - **topic**: string identifying the topic from which to consume events. A topic serves as the highest organization unit for events.
-- **event_payload**: the actual data that is shipped with the event. It is has to be JSON-serilizable.
+- **event_payload**: the actual data that is shipped with the event. It has to be JSON-serilizable.
 - **event_type**: string identifying the type of event, e.g. "user_account_created" or "user_account_deleted". One topic can deliver multiple event types.
 - **event_schema**: JSON schema describing the shape of the event payload. Typically, each event type is associated with a specific event schema. The schema shall be used by the provider to validate the event payload.
 
@@ -45,11 +45,11 @@ The newly created chassis library shall be tested on the code base of the Upload
 
 One question that remains to be evaluated is how to best represent protocols in code. A simple option is to subclass from python's typing.Protocol or abc.ABC (abstract base class) to simulate interfaces as they exist in Java or C#. However, other more options that provide more structure might be explored, too. Thereby, it might be useful to choose different strategies for inbound and outbound protocols because of their fundamental difference in the way they are called: inbound protocols are called by the provider, while outbound protocols are called by the abstract translator.
 
-Moreover, options for a test framework that is standardized around the provided protocols shall be explored. Ideally, tests shall be written in a way that it can be decided at runtime whether fast in-memory/mock providers or realistic production providers are used. I.e. the in-memory/mock provicers could be used for fast testing that integrates nicely into the development workflow on developer end devices, while the production providers can be run by CI tools to provide additional diagnostic power.
+Moreover, options for a test framework that is standardized around the provided protocols shall be explored. Ideally, tests shall be written in a way that it can be decided at runtime whether fast in-memory/mock providers or realistic production providers are used. I.e. the in-memory/mock providers could be used for fast testing that integrates nicely into the development workflow on developer end devices, while the production providers can be run by CI tools to provide additional diagnostic power.
 
-With reference to that, it might be also useful to explore whether application states associated with specific protocols could be defined in a standardized specification (YAML or JSON-based) that is applicaple to all providers implementing the protocol. Specialized tooling might interprete this specification and setup and teardown the application state when running tests but also when deploying a service to a staging environment (that uses the same infrastructre than the production environment).
+With reference to that, it might be also useful to explore whether application states associated with specific protocols could be defined in a standardized specification (YAML or JSON-based) that is applicable to all providers implementing the protocol. Specialized tooling might interpret this specification and setup and teardown the application state when running tests but also when deploying a service to a staging environment (that uses the same infrastructure than the production environment).
 
-Another area research is how dependency injection can help to glue all of the triple hexagonal architecture components together (providers to protocols to translators to ports). Thereby, a specific focus should be set on the question of how to inject config parameters that are needed throughout all of these components and are typically defined via YAML files or environment variables.
+Another area of research is how dependency injection can help to glue all of the triple hexagonal architecture components together (providers to protocols to translators to ports). Thereby, a specific focus should be set on the question of how to inject config parameters that are needed throughout all of these components and are typically defined via YAML files or environment variables.
 
 ## Human Resource/Time Estimation:
 
