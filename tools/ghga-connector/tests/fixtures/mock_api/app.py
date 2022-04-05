@@ -27,7 +27,7 @@ from enum import Enum
 from typing import List, Literal
 
 from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 
@@ -113,9 +113,9 @@ async def drs3_objects(file_id: str):
     Mock for the drs3 /objects/{file_id} call
     """
 
-    if file_id == "1m":
-        return JSONResponse(
-            status_code=status.HTTP_202_ACCEPTED, content={"retry_after": 60}
+    if file_id == "10s":
+        return Response(
+            status_code=status.HTTP_202_ACCEPTED, headers={"Retry-After": "10"}
         )
 
     if file_id == "1":

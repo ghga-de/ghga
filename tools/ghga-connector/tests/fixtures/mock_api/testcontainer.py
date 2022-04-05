@@ -66,8 +66,8 @@ class MockAPIContainer(DockerContainer):
     def readiness_probe(self):
         """Test if the RabbitMQ broker is ready."""
         connection_url = self.get_connection_url()
-
         request = requests.get(f"{connection_url}/ready", timeout=0.5)
+
         if request.status_code != 204:
             raise RuntimeError("Mock API server not ready.")
 

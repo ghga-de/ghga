@@ -23,7 +23,8 @@ from ghga_connector.core import check_url
 
 @pytest.mark.parametrize(
     "api_url,wait_time,expected_response",
-    [("https://www.ghga.de/", 1000, True), ("https://bad_url", 1000, False)],
+    # Google has a higher availability than ghga.de
+    [("https://www.google.de/", 1000, True), ("https://bad_url", 1000, False)],
 )
 def test_check_url(api_url, wait_time, expected_response):
     """

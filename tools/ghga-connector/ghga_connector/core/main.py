@@ -19,30 +19,6 @@
 import pycurl
 
 
-class RequestFailedError(RuntimeError):
-    """Thrown, when a request fails without returning a response code"""
-
-    def __init__(self, url: str):
-        message = f"The request to {url} failed."
-        super().__init__(message)
-
-
-class NoS3AccessMethod(RuntimeError):
-    """Thrown, when a request returns the desired response code, but no S3 Access Method"""
-
-    def __init__(self, url: str):
-        message = f"The request to {url} did not return an S3 Access Method."
-        super().__init__(message)
-
-
-class BadResponseCodeError(RuntimeError):
-    """Thrown, when a request returns a non-desired response code (e.g. 400)"""
-
-    def __init__(self, url: str, response_code: int):
-        message = f"The request to {url} failed with response code {response_code}"
-        super().__init__(message)
-
-
 def check_url(api_url, wait_time=1000) -> bool:
     """
     Checks, if an url is reachable within a certain time

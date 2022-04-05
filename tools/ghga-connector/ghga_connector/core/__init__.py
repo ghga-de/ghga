@@ -23,9 +23,9 @@ from .api_calls import (  # noqa: F401
     download_api_call,
     upload_api_call,
 )
-from .main import (  # noqa: F401
+from .exceptions import (  # noqa: F401
     BadResponseCodeError,
     NoS3AccessMethod,
     RequestFailedError,
-    check_url,
 )
+from .main import check_url  # noqa: F401

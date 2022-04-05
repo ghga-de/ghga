@@ -17,6 +17,7 @@
 """ CLI-specific wrappers around core functions."""
 
 from os import path
+from time import sleep
 
 import typer
 
@@ -27,6 +28,31 @@ from ghga_connector.core import (
     download_api_call,
     upload_api_call,
 )
+
+
+class DirectoryNotExist(RuntimeError):
+    """Thrown, when the specified directory does not exist."""
+
+    def __init__(self, output_dir: str):
+        message = f"The directory {output_dir} does not exist."
+        super().__init__(message)
+
+
+class ApiNotReachable(RuntimeError):
+    """Thrown, when the api is not reachable."""
+
+    def __init__(self, api_url: str):
+        message = f"The url {api_url} is currently not reachable."
+        super().__init__(message)
+
+
+class MaxWaitTimeExceeded(RuntimeError):
+    """Thrown, when the specified wait time has been exceeded."""
+
+    def __init__(self, max_wait_time: int):
+        message = f"Exceeded maximum wait time of {max_wait_time} seconds."
+        super().__init__(message)
+
 
 cli = typer.Typer()
 
@@ -67,28 +93,41 @@ def download(
     output_dir: str = typer.Option(
         ..., help="The directory to put the downloaded file"
     ),
+    max_wait_time: int = typer.Argument(
+        3600, help="Maximal time in seconds to wait before quitting without a download."
+    ),
 ):
     """
     Command to download a file
     """
     if not path.isdir(output_dir):
-        typer.echo(f"The directory {output_dir} does not exist.")
-        raise typer.Abort()
+        raise DirectoryNotExist(output_dir)
 
     if not check_url(api_url):
-        typer.echo(f"The url {api_url} is currently not reachable.")
-        raise typer.Abort()
+        raise ApiNotReachable(api_url)
 
-    try:
-        response_url = download_api_call(api_url, file_id)
-    except BadResponseCodeError as error:
-        typer.echo("The request was invalid and returnd a wrong HTTP status code.")
-        raise typer.Abort() from error
-    except RequestFailedError as error:
-        typer.echo("The request has failed.")
-        raise typer.Abort() from error
+    # get the download_url, wait if needed
+    wait_time = 0
+    while True:
 
-    if response_url is not None:
-        typer.echo(f"File with id '{file_id}' can be downloaded via {response_url}.")
+        try:
+            download_url, retry_time = download_api_call(api_url, file_id)
+        except BadResponseCodeError as error:
+            typer.echo("The request was invalid and returnd a wrong HTTP status code.")
+            raise error
+        except RequestFailedError as error:
+            typer.echo("The request has failed.")
+            raise error
 
-    # otherwise do nothing, waiting on a 202 will be implemented later
+        if download_url is not None:
+            break
+
+        wait_time += retry_time
+        if wait_time > max_wait_time:
+            raise MaxWaitTimeExceeded(max_wait_time)
+
+        typer.echo(f"File staging, will try to download again in {retry_time} seconds")
+        sleep(retry_time)
+
+    # perform the download:
+    typer.echo(f"File with id '{file_id}' can be download via {download_url}.")
