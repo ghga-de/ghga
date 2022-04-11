@@ -33,9 +33,10 @@ class MockAPIContainer(DockerContainer):
 
     def __init__(
         self,
+        s3_download_url: str = "test://download.url",
+        s3_upload_url: str = "test://upload.url",
         image: str = "ghga/fastapi_essentials:0.73.0",
         port: int = 8000,
-        download_url: str = "http://test.test/test.fastq",
     ) -> None:
         """Initialize the Fastapi test container.
 
@@ -50,7 +51,8 @@ class MockAPIContainer(DockerContainer):
         self._port = port
 
         self.with_exposed_ports(self._port)
-        self.with_env("MOCK_DOWNLOAD_URL", download_url)
+        self.with_env("S3_DOWNLOAD_URL", s3_download_url)
+        self.with_env("S3_UPLOAD_URL", s3_upload_url)
         self.with_volume_mapping(host=str(APP_MODULE_PATH), container="/app.py")
         self.with_command(
             f"python3 -m uvicorn --host 0.0.0.0 --port {self._port} --app-dir / app:app"

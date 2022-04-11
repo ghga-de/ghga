@@ -113,14 +113,12 @@ async def drs3_objects(file_id: str):
     Mock for the drs3 /objects/{file_id} call
     """
 
-    if file_id == "10s":
+    if file_id == "retry":
         return Response(
             status_code=status.HTTP_202_ACCEPTED, headers={"Retry-After": "10"}
         )
 
-    if file_id == "1":
-
-        download_url = os.environ["MOCK_DOWNLOAD_URL"]
+    if file_id == "downloadable":
 
         return DrsObjectServe(
             file_id=file_id,
@@ -130,7 +128,9 @@ async def drs3_objects(file_id: str):
             updated_time=datetime.now(timezone.utc).isoformat(),
             checksums=[Checksum(checksum="1", type="md5")],
             access_methods=[
-                AccessMethod(access_url=AccessURL(url=download_url), type="s3")
+                AccessMethod(
+                    access_url=AccessURL(url=os.environ["S3_DOWNLOAD_URL"]), type="s3"
+                )
             ],
         )
 
@@ -149,10 +149,8 @@ async def ulc_presigned_post(file_id: str):
     Mock for the ulc /presigned_post/{file_id} call.
     """
 
-    upload_url = "test"
-
-    if file_id == "1":
-        return {"presigned_post": upload_url}
+    if file_id == "uploadable":
+        return {"presigned_post": os.environ["S3_UPLOAD_URL"]}
 
     raise HTTPException(
         status_code=404,
@@ -169,7 +167,7 @@ async def ulc_confirm_upload(file_id: str, state: State):
     Mock for the drs3 /confirm_upload/{file_id} call
     """
 
-    if file_id == "1":
+    if file_id == "uploaded":
         if state.state == UploadState.REGISTERED:
             return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
