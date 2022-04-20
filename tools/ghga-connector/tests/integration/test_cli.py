@@ -16,11 +16,11 @@
 
 """Tests for the up- and download functions of the cli"""
 
-from os import path
+from filecmp import cmp
+from pathlib import Path
 
 import pytest
 import typer
-from ghga_service_chassis_lib.s3 import ObjectStorageS3 as ObjectStorage
 
 from ghga_connector.cli import (
     ApiNotReachable,
@@ -38,34 +38,44 @@ from ghga_connector.core import (
 from ..fixtures import s3_fixture  # noqa: F401
 from ..fixtures import state
 from ..fixtures.mock_api.testcontainer import MockAPIContainer
-from ..fixtures.utils import BASE_DIR
-
-EXAMPLE_FOLDER = path.join(BASE_DIR.parent.parent.resolve(), "example_data")
 
 
 @pytest.mark.parametrize(
-    "bad_url,file_id,output_dir,max_wait_time,expected_exception",
+    "bad_url,bad_outdir,file_id,max_wait_time,expected_exception",
     [
-        (True, "downloadable", EXAMPLE_FOLDER, "60", ApiNotReachable),
-        (False, "downloadable", EXAMPLE_FOLDER, "60", None),
-        (False, "not_downloadable", EXAMPLE_FOLDER, "60", BadResponseCodeError),
-        (False, "retry", EXAMPLE_FOLDER, "60", MaxWaitTimeExceeded),
-        (False, "downloadable", "/this_path/", "60", DirectoryNotExist),
+        (True, False, "downloadable", "60", ApiNotReachable),
+        (False, False, "downloadable", "60", None),
+        (
+            False,
+            False,
+            "not_downloadable",
+            "60",
+            BadResponseCodeError,
+        ),
+        (False, False, "retry", "60", MaxWaitTimeExceeded),
+        (False, True, "downloadable", "60", DirectoryNotExist),
     ],
 )
 def test_download(
     bad_url,
+    bad_outdir,
     file_id,
-    output_dir,
     max_wait_time,
     expected_exception,
     s3_fixture,  # noqa F811
+    tmp_path,
 ):
     """Test the download of a file, expects Abort, if the file was not found"""
 
-    with MockAPIContainer(
-        s3_download_url=get_presigned_download_url(s3_config=s3_fixture.config)
-    ) as api:
+    output_dir = Path("/non/existing/path") if bad_outdir else tmp_path
+    downloadable_file = state.FILES["file_downloadable"]
+    download_url = s3_fixture.storage.get_object_download_url(
+        bucket_id=downloadable_file.grouping_label,
+        object_id=downloadable_file.file_id,
+        expires_after=60,
+    )
+
+    with MockAPIContainer(s3_download_url=download_url) as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
         try:
@@ -76,46 +86,51 @@ def test_download(
                 max_wait_time=int(max_wait_time),
             )
             assert expected_exception is None
+            assert cmp(output_dir / file_id, downloadable_file.file_path)
         except Exception as exception:
             assert isinstance(exception, expected_exception)
 
 
 @pytest.mark.parametrize(
-    "bad_url,file_id,file_path,expected_exception",
+    "bad_url,file_name,expected_exception",
     [
-        (
-            True,
-            "uploadable",
-            EXAMPLE_FOLDER,
-            typer.Abort,
-        ),
-        (False, "uploadable", path.join(EXAMPLE_FOLDER, "file1.test"), None),
-        (False, "not_uploadable", path.join(EXAMPLE_FOLDER, "file2.test"), typer.Abort),
-        (
-            False,
-            "1",
-            "/this_path/does_not_exist.test",
-            typer.Abort,
-        ),
+        (True, "file_uploadable", typer.Abort),
+        (False, "file_uploadable", None),
+        (False, "file_not_uploadable", typer.Abort),
+        (False, "file_with_bad_path", typer.Abort),
     ],
 )
 def test_upload(
     bad_url,
-    file_id,
-    file_path,
+    file_name,
     expected_exception,
     s3_fixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
 
+    uploadable_file = state.FILES[file_name]
+    upload_url = s3_fixture.storage.get_object_upload_url(
+        bucket_id=uploadable_file.grouping_label,
+        object_id=uploadable_file.file_id,
+        expires_after=60,
+    )
+
     with MockAPIContainer(
-        s3_upload_url=get_presigned_upload_url(s3_config=s3_fixture.config)
+        s3_upload_url=upload_url.url, s3_upload_fields=upload_url.fields
     ) as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
         try:
-            upload(api_url, file_id, file_path)
+            upload(
+                api_url,
+                uploadable_file.file_id,
+                str(uploadable_file.file_path.resolve()),
+            )
             assert expected_exception is None
+            assert s3_fixture.storage.does_object_exist(
+                bucket_id=uploadable_file.grouping_label,
+                object_id=uploadable_file.file_id,
+            )
         except Exception as exception:
             assert isinstance(exception, expected_exception)
 
@@ -144,39 +159,3 @@ def test_confirm_api_call(
             assert expected_exception is None
         except Exception as exception:
             assert isinstance(exception, expected_exception)
-
-
-def get_presigned_download_url(s3_config) -> str:
-
-    """
-    Returns the presigned url for download
-    """
-
-    download_file = state.FILES["file_in_outbox"]
-
-    with ObjectStorage(config=s3_config) as storage:
-        download_url = storage.get_object_download_url(
-            bucket_id=download_file.grouping_label,
-            object_id=download_file.file_id,
-            expires_after=60,
-        )
-
-    return download_url
-
-
-def get_presigned_upload_url(s3_config) -> str:  # noqa F811
-
-    """
-    Returns the presigned url for upload
-    """
-
-    upload_file = state.FILES["file_can_be_uploaded"]
-
-    with ObjectStorage(config=s3_config) as storage:
-        upload_url = storage.get_object_upload_url(
-            bucket_id=upload_file.grouping_label,
-            object_id=upload_file.file_id,
-            expires_after=60,
-        )
-
-    return upload_url

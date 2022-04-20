@@ -55,22 +55,34 @@ class FileState:
 
 
 FILES: Dict[str, FileState] = {
-    "file_can_be_uploaded": FileState(
+    "file_uploadable": FileState(
         file_id="uploadable",
         grouping_label="inbox",
         file_path=TEST_FILE_PATHS[0],
         populate_storage=False,
     ),
-    "file_in_inbox": FileState(
-        file_id="uploaded",
+    "file_not_uploadable": FileState(
+        file_id="not-uploadable",
         grouping_label="inbox",
         file_path=TEST_FILE_PATHS[1],
+        populate_storage=False,
+    ),
+    "file_with_bad_path": FileState(
+        file_id="bad-path",
+        grouping_label="inbox",
+        file_path=Path("/bad/path.xyz"),
+        populate_storage=False,
+    ),
+    "file_uploaded": FileState(
+        file_id="uploaded",
+        grouping_label="inbox",
+        file_path=TEST_FILE_PATHS[2],
         populate_storage=True,
     ),
-    "file_in_outbox": FileState(
+    "file_downloadable": FileState(
         file_id="downloadable",
         grouping_label="outbox",
-        file_path=TEST_FILE_PATHS[2],
+        file_path=TEST_FILE_PATHS[3],
         populate_storage=True,
     ),
 }

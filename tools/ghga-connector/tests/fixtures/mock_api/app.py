@@ -21,6 +21,7 @@ The drs3 mock sends back a "wait 1 minute" for file_id == "1m"
 All other file_ids will fail
 """
 
+import json
 import os
 from datetime import datetime, timezone
 from enum import Enum
@@ -54,6 +55,15 @@ class State(BaseModel):
     """
 
     state: UploadState
+
+
+class PresignedPostURL(BaseModel):
+    """
+    Model containing an url and header fields
+    """
+
+    url: str
+    fields: dict
 
 
 class Checksum(BaseModel):
@@ -150,7 +160,11 @@ async def ulc_presigned_post(file_id: str):
     """
 
     if file_id == "uploadable":
-        return {"presigned_post": os.environ["S3_UPLOAD_URL"]}
+        url = PresignedPostURL(
+            url=os.environ["S3_UPLOAD_URL"],
+            fields=json.loads(os.environ["S3_UPLOAD_FIELDS"]),
+        )
+        return {"presigned_post": url}
 
     raise HTTPException(
         status_code=404,

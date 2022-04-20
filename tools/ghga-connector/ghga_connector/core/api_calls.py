@@ -23,6 +23,7 @@ from io import BytesIO
 from typing import Optional, Tuple
 
 import pycurl
+from ghga_service_chassis_lib.s3 import PresignedPostURL
 
 from .exceptions import (
     BadResponseCodeError,
@@ -69,7 +70,7 @@ def header_function_factory(headers: dict):
     return header_function
 
 
-def upload_api_call(api_url: str, file_id: str) -> str:
+def upload_api_call(api_url: str, file_id: str) -> PresignedPostURL:
     """
     Perform a RESTful API call to retrieve a presigned upload URL
     """
@@ -102,9 +103,9 @@ def upload_api_call(api_url: str, file_id: str) -> str:
         raise BadResponseCodeError(url, status_code)
 
     dictionary = json.loads(data.getvalue())
-    response_url = dictionary["presigned_post"]
+    presigned_post = dictionary["presigned_post"]
 
-    return response_url
+    return PresignedPostURL(url=presigned_post["url"], fields=presigned_post["fields"])
 
 
 def download_api_call(api_url: str, file_id: str) -> Tuple[Optional[str], int]:

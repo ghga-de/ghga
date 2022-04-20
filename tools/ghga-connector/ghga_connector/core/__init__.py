@@ -28,4 +28,5 @@ from .exceptions import (  # noqa: F401
     NoS3AccessMethod,
     RequestFailedError,
 )
+from .file_operations import download_file, upload_file  # noqa: F401
 from .main import check_url  # noqa: F401
