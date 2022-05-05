@@ -57,7 +57,7 @@ upload_status is an Enum and can have the following values:
 
 ```
 - pending
-- canceled
+- cancelled
 - failed
 - uploaded
 - accepted
@@ -68,67 +68,9 @@ The column "upload_status" from then table "files" is removed.
 
 Please note, not more that one upload per file_id may have a state that is set to `pending` , `uploaded`, or `accepted`. Moreover, within the list of states from uploads corresponding to one file, these `pending` , `uploaded`, and `accepted` are mutually exclusive.
 This also means that once an upload attempt corresponding to a file is set to `accepted`, no new uploads can be created for that file. In a future epic, we will implement a mechanism that allows controlled re-upload of a file by explicitly requesting to depreciate an old upload. We might also consider an `is_open` flag that is specified per file to control whether new upload attempts are currently allowed for that file.
+### API Definition:
 
-### Endpoints:
-
-
-Replace:
-```
-GET: /presigned_post/{file_id}
-    gets presigned_post from S3
-    sets UploadState to Pending
-returns presigned_post
-```
-
-with:
-```
-POST /files/{file_id}/multipart_uploads
-    if there is already a multipart_upload with file_id and upload_status == pending, updated or accepted
-        returns error
-    else:
-        gets s3_upload_id from S3
-        creates new row in multipart_uploads with file_id, s3_upload_id and upload_status=pending
-        put s3_upload_id into database
-returns s3_upload_id and the part size in bytes for this download (default: 16 MiB)
-```
-
-Add:
-```
-GET /files/{file_id}/multipart_uploads?status=pending
-returns the s3_upload_id in the table multipart_uploads where file_id=file_id and upload_status=pending (There should never be more than one.) or None
-```
-
-Add:
-```
-POST /multipart_uploads/{upload_id}/part/{part_no}/presigned_posts
-    creates part-specific presigned post
-returns presigned post
-```
-
-Replace:
-```
-patch: /confirm_upload/{file_id}
-    body: state: UploadState (Uploaded)
-    sets upload_status to uploaded
-returns: 204
-```
-
-with:
-```
-PATCH /multipart_uploads/{upload_id}/
-    body:       status==uploaded/cancelled
-    if status=uploaded && upload_status of upload_id is pending:
-        finish multipart upload via s3 api
-        sets upload_status of upload_id to uploaded
-    if status=cancelled && upload_status of upload_id is pending:
-        sets upload_status of upload_id to canceled
-returns 204
-```
-
-### Async communications:
-
-Adapt async communications where needed.
-
+[OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/api_definitions/rest/ucs.yaml)
 
 ## Additional Implementation Details:
 
