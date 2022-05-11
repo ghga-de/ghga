@@ -70,7 +70,7 @@ Please note, not more that one upload per file_id may have a state that is set t
 This also means that once an upload attempt corresponding to a file is set to `accepted`, no new uploads can be created for that file. In a future epic, we will implement a mechanism that allows controlled re-upload of a file by explicitly requesting to depreciate an old upload. We might also consider an `is_open` flag that is specified per file to control whether new upload attempts are currently allowed for that file.
 ### API Definition:
 
-[OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/api_definitions/rest/ucs.yaml)
+[OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/4-star-nosed_mole/api_definitions/rest/ucs.yaml)
 
 ## Additional Implementation Details:
 
