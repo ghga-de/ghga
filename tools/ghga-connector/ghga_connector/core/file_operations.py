@@ -24,11 +24,16 @@ from ghga_service_chassis_lib.s3 import PresignedPostURL
 from .exceptions import BadResponseCodeError, RequestFailedError
 
 
-def download_file(download_url, output_file_path):
+def download_file_part(
+    download_url: str, output_file_path: str, part_offset: int, part_end: int
+) -> None:  # pylint: disable=unused-argument
     """Download File"""
 
-    with open(output_file_path, "wb") as file:
+    with open(output_file_path, "ab") as file:
+
         curl = pycurl.Curl()
+
+        curl.setopt(curl.RANGE, f"{part_offset}-{part_end}")
         curl.setopt(curl.URL, download_url)
         curl.setopt(curl.WRITEDATA, file)
         try:
@@ -39,7 +44,8 @@ def download_file(download_url, output_file_path):
         status_code = curl.getinfo(pycurl.RESPONSE_CODE)
         curl.close()
 
-    if status_code == 200:
+    # 200, if the full file was returned (files smaller than the part size), 206 else
+    if status_code in (200, 206):
         return
 
     raise BadResponseCodeError(url=download_url, response_code=status_code)

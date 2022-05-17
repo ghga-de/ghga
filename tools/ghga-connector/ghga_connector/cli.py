@@ -17,19 +17,20 @@
 """ CLI-specific wrappers around core functions."""
 
 from os import path
-from time import sleep
 
 import typer
 
 from ghga_connector.core import (
     BadResponseCodeError,
     RequestFailedError,
+    await_download_url,
     check_url,
-    download_api_call,
-    download_file,
+    download_file_part,
     upload_api_call,
     upload_file,
 )
+
+DEFAULT_PART_SIZE = 16 * 1024 * 1024
 
 
 class DirectoryNotExist(RuntimeError):
@@ -45,14 +46,6 @@ class ApiNotReachable(RuntimeError):
 
     def __init__(self, api_url: str):
         message = f"The url {api_url} is currently not reachable."
-        super().__init__(message)
-
-
-class MaxWaitTimeExceeded(RuntimeError):
-    """Thrown, when the specified wait time has been exceeded."""
-
-    def __init__(self, max_wait_time: int):
-        message = f"Exceeded maximum wait time of {max_wait_time} seconds."
         super().__init__(message)
 
 
@@ -100,14 +93,21 @@ def upload(
 
 
 @cli.command()
-def download(  # noqa C901
+def download(  # noqa C901, pylint: disable=too-many-arguments, too-many-branches
     api_url: str = typer.Option(..., help="Url to the DRS3"),
     file_id: str = typer.Option(..., help="The id if the file to upload"),
     output_dir: str = typer.Option(
         ..., help="The directory to put the downloaded file"
     ),
     max_wait_time: int = typer.Argument(
-        3600, help="Maximal time in seconds to wait before quitting without a download."
+        "60",
+        help="Maximal time in seconds to wait before quitting without a download. ",
+    ),
+    part_size: int = typer.Argument(
+        DEFAULT_PART_SIZE, help="Part size of the downloaded chunks."
+    ),
+    max_retries: int = typer.Argument(
+        "3", help="Maximum number of tries to download a single file part."
     ),
 ):
     """
@@ -119,42 +119,44 @@ def download(  # noqa C901
     if not check_url(api_url):
         raise ApiNotReachable(api_url)
 
-    # get the download_url, wait if needed
-    wait_time = 0
-    download_url = None
-    while download_url is None:
-
-        try:
-            download_url, retry_time = download_api_call(api_url, file_id)
-        except BadResponseCodeError as error:
-            typer.echo("The request was invalid and returnd a wrong HTTP status code.")
-            raise error
-        except RequestFailedError as error:
-            typer.echo("The request has failed.")
-            raise error
-
-        if download_url is not None:
-            break
-
-        wait_time += retry_time
-        if wait_time > max_wait_time:
-            raise MaxWaitTimeExceeded(max_wait_time)
-
-        typer.echo(f"File staging, will try to download again in {retry_time} seconds")
-        sleep(retry_time)
+    download_url, file_size = await_download_url(
+        api_url=api_url, file_id=file_id, max_wait_time=max_wait_time, logger=typer.echo
+    )
 
     # perform the download:
     output_file = path.join(output_dir, file_id)
 
-    try:
-        download_file(download_url=download_url, output_file_path=output_file)
-    except BadResponseCodeError as error:
-        typer.echo(
-            "The download request was invalid and returnd a wrong HTTP status code."
-        )
-        raise error
-    except RequestFailedError as error:
-        typer.echo("The download request has failed.")
-        raise error
+    part_offset = 0
+
+    while part_offset < file_size:
+
+        # Calculetes end of byte range of the file
+        part_end = part_offset + part_size - 1
+        if part_end > file_size:
+            part_end = file_size - 1
+
+        # For 0 retries, we still try the first time
+        for retries in range(0, max_retries + 1):
+            try:
+                download_file_part(
+                    download_url=download_url,
+                    output_file_path=output_file,
+                    part_offset=part_offset,
+                    part_end=part_end,
+                )
+
+            except BadResponseCodeError as error:
+                typer.echo(
+                    "The download request was invalid and returnd a wrong HTTP status code."
+                )
+                if retries > max_retries - 1:
+                    raise error
+            except RequestFailedError as error:
+                typer.echo("The download request has failed.")
+                if retries > max_retries - 1:
+                    raise error
+
+        # If part download was successfull, go to the next part
+        part_offset += part_size
 
     typer.echo(f"File with id '{file_id}' has been successfully downloaded.")

@@ -49,3 +49,11 @@ class BadResponseCodeError(RuntimeError):
     def __init__(self, url: str, response_code: int):
         message = f"The request to {url} failed with response code {response_code}"
         super().__init__(message)
+
+
+class MaxWaitTimeExceeded(RuntimeError):
+    """Thrown, when the specified wait time has been exceeded."""
+
+    def __init__(self, max_wait_time: int):
+        message = f"Exceeded maximum wait time of {max_wait_time} seconds."
+        super().__init__(message)

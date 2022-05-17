@@ -113,7 +113,7 @@ async def ready():
     """
     Readyness probe.
     """
-    return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+    return JSONResponse(None, status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/objects/{file_id}", summary="drs3_mock")
@@ -128,12 +128,12 @@ async def drs3_objects(file_id: str):
             status_code=status.HTTP_202_ACCEPTED, headers={"Retry-After": "10"}
         )
 
-    if file_id == "downloadable":
+    if file_id == "downloadable" or file_id == "big-downloadable":
 
         return DrsObjectServe(
             file_id=file_id,
             self_uri=f"drs://localhost:8080//{file_id}",
-            size=1000,
+            size=int(os.environ["S3_DOWNLOAD_FIELD_SIZE"]),
             created_time=datetime.now(timezone.utc).isoformat(),
             updated_time=datetime.now(timezone.utc).isoformat(),
             checksums=[Checksum(checksum="1", type="md5")],
@@ -183,7 +183,7 @@ async def ulc_confirm_upload(file_id: str, state: State):
 
     if file_id == "uploaded":
         if state.state == UploadState.REGISTERED:
-            return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+            return JSONResponse(None, status_code=status.HTTP_204_NO_CONTENT)
 
         raise HTTPException(
             status_code=400,

@@ -21,7 +21,7 @@ from os import path, remove
 
 import pytest
 
-from ghga_connector.core import check_url, download_file, upload_file
+from ghga_connector.core import check_url, download_file_part, upload_file
 
 from ..fixtures import s3_fixture  # noqa: F401
 from ..fixtures import state
@@ -84,9 +84,15 @@ def test_download_file(
     download_url = s3_fixture.storage.get_object_download_url(
         bucket_id=downloadable_file.grouping_label,
         object_id=downloadable_file.file_id,
-        expires_after=60,
+        expires_after=3600,
     )
 
-    download_file(download_url, EXAMPLE_File)
+    # Try to download the whole test file in one part. Should be fairly small.
+    download_file_part(
+        download_url,
+        EXAMPLE_File,
+        part_offset=0,
+        part_end=path.getsize(downloadable_file.file_path) - 1,
+    )
 
     assert cmp(EXAMPLE_File, downloadable_file.file_path)
