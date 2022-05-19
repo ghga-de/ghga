@@ -16,25 +16,15 @@
 
 """Tests for the core functions of the cli"""
 
+import os
 from filecmp import cmp
-from os import path, remove
 
 import pytest
 
-from ghga_connector.core import check_url, download_file_part, upload_file
+from ghga_connector.core import check_url, download_file_part
 
 from ..fixtures import s3_fixture  # noqa: F401
 from ..fixtures import state
-from ..fixtures.utils import BASE_DIR
-
-EXAMPLE_File = path.join(BASE_DIR.parent.parent.resolve(), "example_data/downloadable")
-
-
-def teardown_module():
-    """
-    Delete the downloaded file
-    """
-    remove(EXAMPLE_File)
 
 
 @pytest.mark.parametrize(
@@ -50,35 +40,15 @@ def test_check_url(api_url, wait_time, expected_response):
     assert response == expected_response
 
 
-def test_upload_file(
-    s3_fixture,  # noqa F811
-):
-    """
-    Test the upload_url function
-    """
-
-    uploadable_file = state.FILES["file_uploadable"]
-    presigned_post = s3_fixture.storage.get_object_upload_url(
-        bucket_id=uploadable_file.grouping_label,
-        object_id=uploadable_file.file_id,
-        expires_after=60,
-    )
-    upload_file(
-        presigned_post=presigned_post,
-        upload_file_path=str(uploadable_file.file_path.resolve()),
-    )
-    assert s3_fixture.storage.does_object_exist(
-        bucket_id=uploadable_file.grouping_label,
-        object_id=uploadable_file.file_id,
-    )
-
-
 def test_download_file(
     s3_fixture,  # noqa F811
+    tmp_path,
 ):
     """
     Test the download_file function
     """
+
+    file_path = tmp_path / "file.test"
 
     downloadable_file = state.FILES["file_downloadable"]
     download_url = s3_fixture.storage.get_object_download_url(
@@ -89,10 +59,11 @@ def test_download_file(
 
     # Try to download the whole test file in one part. Should be fairly small.
     download_file_part(
-        download_url,
-        EXAMPLE_File,
+        download_url=download_url,
+        output_file_path=file_path,
         part_offset=0,
-        part_end=path.getsize(downloadable_file.file_path) - 1,
+        part_size=os.path.getsize(downloadable_file.file_path),
+        file_size=os.path.getsize(downloadable_file.file_path),
     )
 
-    assert cmp(EXAMPLE_File, downloadable_file.file_path)
+    assert cmp(file_path, downloadable_file.file_path)

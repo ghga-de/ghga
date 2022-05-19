@@ -18,18 +18,28 @@
 Contains Calls of the Presigned URLs in order to Up- and Download Files
 """
 
+from io import BytesIO
+
 import pycurl
-from ghga_service_chassis_lib.s3 import PresignedPostURL
 
 from .exceptions import BadResponseCodeError, RequestFailedError
 
 
 def download_file_part(
-    download_url: str, output_file_path: str, part_offset: int, part_end: int
-) -> None:  # pylint: disable=unused-argument
+    download_url: str,
+    output_file_path: str,
+    part_offset: int,
+    part_size: int,
+    file_size: int,
+) -> None:
     """Download File"""
 
-    with open(output_file_path, "ab") as file:
+    # Calculetes end of byte range of the file
+    part_end = part_offset + part_size - 1
+    if part_end > file_size:
+        part_end = file_size - 1
+
+    with open(file=output_file_path, mode="ab", buffering=part_size) as file:
 
         curl = pycurl.Curl()
 
@@ -38,11 +48,11 @@ def download_file_part(
         curl.setopt(curl.WRITEDATA, file)
         try:
             curl.perform()
+            status_code = curl.getinfo(pycurl.RESPONSE_CODE)
         except pycurl.error as pycurl_error:
             raise RequestFailedError(download_url) from pycurl_error
-
-        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-        curl.close()
+        finally:
+            curl.close()
 
     # 200, if the full file was returned (files smaller than the part size), 206 else
     if status_code in (200, 206):
@@ -51,26 +61,35 @@ def download_file_part(
     raise BadResponseCodeError(url=download_url, response_code=status_code)
 
 
-def upload_file(presigned_post: PresignedPostURL, upload_file_path):
+def upload_file_part(
+    presigned_post_url: str,
+    upload_file_path: str,
+    part_offset: int,
+    part_size: int,
+) -> None:
     """Upload File"""
 
-    url = presigned_post.url
-    curl = pycurl.Curl()
-    curl.setopt(curl.URL, url)
-    curl.setopt(curl.POST, 1)
-    fields = presigned_post.fields
-    fields.update({"file": (curl.FORM_FILE, upload_file_path)})
-    curl.setopt(curl.HTTPPOST, list(fields.items()))
+    with open(file=upload_file_path, mode="rb") as file:
 
-    try:
-        curl.perform()
-    except pycurl.error as pycurl_error:
-        raise RequestFailedError(url) from pycurl_error
+        file.seek(part_offset)
+        content = file.read(part_size)
+        body = BytesIO(content)
 
-    status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    curl.close()
+        curl = pycurl.Curl()
+        curl.setopt(curl.URL, presigned_post_url)
 
-    if status_code == 204:
-        return
+        curl.setopt(curl.UPLOAD, 1)
+        curl.setopt(curl.READDATA, body)
 
-    raise BadResponseCodeError(url=url, response_code=status_code)
+        try:
+            curl.perform()
+            status_code = curl.getinfo(pycurl.RESPONSE_CODE)
+        except pycurl.error as pycurl_error:
+            raise RequestFailedError(presigned_post_url) from pycurl_error
+        finally:
+            curl.close()
+
+        if status_code == 200:
+            return
+
+    raise BadResponseCodeError(url=presigned_post_url, response_code=status_code)

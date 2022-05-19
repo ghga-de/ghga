@@ -15,3 +15,5 @@
 #
 
 """Code to start a mock API server in the background of a test."""
+
+from .app import UploadStatus  # noqa: F401

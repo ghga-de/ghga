@@ -15,5 +15,6 @@
 
 """Fixtures that are used in both integration and unit tests"""
 
+from .mock_api import UploadStatus  # noqa: F401
 from .s3 import s3_fixture  # noqa: F401
 from .state import FILES  # noqa: F401

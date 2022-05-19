@@ -35,12 +35,7 @@ from ghga_connector.cli import (
     download,
     upload,
 )
-from ghga_connector.core import (
-    BadResponseCodeError,
-    MaxWaitTimeExceeded,
-    RequestFailedError,
-    confirm_api_call,
-)
+from ghga_connector.core import BadResponseCodeError, MaxWaitTimeExceeded
 
 from ..fixtures import s3_fixture  # noqa: F401
 from ..fixtures import state
@@ -77,7 +72,8 @@ def test_multipart_download(
             bucket_id=object_fixture.bucket_id, object_id=object_fixture.object_id
         )
         presigned_post = s3_fixture.storage.get_object_upload_url(
-            bucket_id=object_fixture.bucket_id, object_id=object_fixture.object_id
+            bucket_id=object_fixture.bucket_id,
+            object_id=object_fixture.object_id,
         )
         upload_file(
             presigned_url=presigned_post,
@@ -194,23 +190,37 @@ def test_upload(
     """Test the upload of a file, expects Abort, if the file was not found"""
 
     uploadable_file = state.FILES[file_name]
-    upload_url = s3_fixture.storage.get_object_upload_url(
+
+    # initiate upload
+    upload_id = s3_fixture.storage.init_multipart_upload(
         bucket_id=uploadable_file.grouping_label,
         object_id=uploadable_file.file_id,
-        expires_after=60,
     )
 
-    with MockAPIContainer(
-        s3_upload_url=upload_url.url, s3_upload_fields=upload_url.fields
-    ) as api:
+    upload_url = s3_fixture.storage.get_part_upload_url(
+        bucket_id=uploadable_file.grouping_label,
+        object_id=uploadable_file.file_id,
+        upload_id=upload_id,
+        part_number=1,
+    )
+
+    with MockAPIContainer(s3_upload_url_1=upload_url) as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
         try:
             upload(
-                api_url,
-                uploadable_file.file_id,
-                str(uploadable_file.file_path.resolve()),
+                api_url=api_url,
+                file_id=uploadable_file.file_id,
+                file_path=str(uploadable_file.file_path.resolve()),
+                max_retries=0,
             )
+
+            s3_fixture.storage.complete_multipart_upload(
+                upload_id=upload_id,
+                bucket_id=uploadable_file.grouping_label,
+                object_id=uploadable_file.file_id,
+            )
+
             assert expected_exception is None
             assert s3_fixture.storage.does_object_exist(
                 bucket_id=uploadable_file.grouping_label,
@@ -221,26 +231,78 @@ def test_upload(
 
 
 @pytest.mark.parametrize(
-    "bad_url,file_id,expected_exception",
+    "file_size,anticipated_part_size",
     [
-        (False, "uploaded", None),
-        (False, "uploadable", BadResponseCodeError),
-        (True, "uploaded", RequestFailedError),
+        (6 * 1024 * 1024, 5),
+        (20 * 1024 * 1024, 16),
     ],
 )
-def test_confirm_api_call(
-    bad_url,
-    file_id,
-    expected_exception,
+def test_multipart_upload(
+    file_size: int,
+    anticipated_part_size: int,
+    s3_fixture,  # noqa F811
 ):
-    """
-    Test the confirm_api_call function
-    """
-    with MockAPIContainer() as api:
-        api_url = "http://bad_url" if bad_url else api.get_connection_url()
+    """Test the upload of a file, expects Abort, if the file was not found"""
+
+    bucket_id = s3_fixture.existing_buckets[0]
+    file_id = "uploadable-" + str(anticipated_part_size)
+
+    anticipated_part_size = anticipated_part_size * 1024 * 1024
+
+    anticipated_part_quantity = file_size // anticipated_part_size
+
+    if anticipated_part_quantity * anticipated_part_size < file_size:
+        anticipated_part_quantity += 1
+
+    # initiate upload
+    upload_id = s3_fixture.storage.init_multipart_upload(
+        bucket_id=bucket_id,
+        object_id=file_id,
+    )
+
+    # create presigned url for upload part 1
+    upload_url_1 = s3_fixture.storage.get_part_upload_url(
+        upload_id=upload_id,
+        bucket_id=bucket_id,
+        object_id=file_id,
+        part_number=1,
+    )
+
+    # create presigned url for upload part 2
+    upload_url_2 = s3_fixture.storage.get_part_upload_url(
+        upload_id=upload_id,
+        bucket_id=bucket_id,
+        object_id=file_id,
+        part_number=2,
+    )
+
+    with MockAPIContainer(
+        s3_upload_url_1=upload_url_1,
+        s3_upload_url_2=upload_url_2,
+    ) as api:
+        api_url = api.get_connection_url()
 
         try:
-            confirm_api_call(api_url=api_url, file_id=file_id)
-            assert expected_exception is None
+            # create big temp file
+            with big_temp_file(file_size) as file:
+                upload(
+                    api_url=api_url,
+                    file_id=file_id,
+                    file_path=file.name,
+                    max_retries=3,
+                )
+
+            # confirm upload
+            s3_fixture.storage.complete_multipart_upload(
+                upload_id=upload_id,
+                bucket_id=bucket_id,
+                object_id=file_id,
+                anticipated_part_quantity=anticipated_part_quantity,
+                anticipated_part_size=anticipated_part_size,
+            )
+            assert s3_fixture.storage.does_object_exist(
+                bucket_id=bucket_id,
+                object_id=file_id,
+            )
         except Exception as exception:
-            assert isinstance(exception, expected_exception)
+            raise exception
