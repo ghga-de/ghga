@@ -5,67 +5,23 @@ info:
   version: 0.2.0
 
 paths:
-  /files/{file_id}/uploads:
-    post:
-      operationId: createUpload
-      description: Initiate a new mutli-part upload.
-      parameters:
-        - name: file_id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Details on the newly created upload.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UploadDetails"
-        "403":
-          description: |
-            Either the user is not registered as a Data Submitter for the
-            corresponding file.
-            Or it is currently not possible to create a new upload for
-            the file with the specified ID because:
-              - a previous upload for that file was already accepted
-              - another upload for that file is currently in progress Or
-                is waiting for acceptance
-        "404":
-          description: The file with the given ID has not (yet) been registered for upload.
-
+  /files/{file_id}:
     get:
-      operationId: getPendingUploads
-      description: |
-        Get all multi-part uploads (can only be 1 or none) which are currently pending.
-        E.g. this endpoint is useful if the client has lost the ID of the currently ongoing
-        upload.
+      operationId: getFileMetadata
+      description: Get file metadata including the current upload attempt.
       parameters:
         - name: file_id
           in: path
           required: true
           schema:
             type: string
-        - name: status
-          in: query
-          description: |
-            The status of the multi-part upload, only "pending" is allowed as
-            the single option.
-          required: true
-          schema:
-            type: string
-            enum: ["pending"]
       responses:
         "200":
-          description: |
-            List of pending multi-part uploads and their details.
-            Please note, the list may either contain 1 or 0 elements.
+          description: File metadata including the current upload attempt
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/UploadDetails"
+                $ref: "#/components/schemas/FileMetadata"
         "403":
           description: |
             The user is not registered as a Data Submitter for the
@@ -73,7 +29,57 @@ paths:
         "404":
           description: The file with the given ID has not (yet) been registered for upload.
 
+  /uploads:
+    post:
+      operationId: createUpload
+      description: Initiate a new mutli-part upload.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadCreation"
+      responses:
+        "200":
+          description: Details on the newly created upload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadDetails"
+        "400":
+          description: |
+            It is currently not possible to create a new upload for
+            the file with the specified ID because another upload for that
+            file is already active or has been accepted
+            (its status is not "failed", "cancelled", or "rejected").
+        "403":
+          description: |
+            The user is not registered as a Data Submitter for the
+            corresponding file.
+
   /uploads/{upload_id}:
+    get:
+      operationId: getUploadDetails
+      description: Get details on a specific upload.
+      parameters:
+        - name: upload_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Details on a specific upload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadDetails"
+        "403":
+          description: |
+            The user is not registered as a Data Submitter for the
+            file corresponding to this upload.
+        "404":
+          description: The upload with the given ID does not exist (anymore).
+
     patch:
       operationId: updateUploadStatus
       description: |
@@ -137,18 +143,33 @@ paths:
 
 components:
   schemas:
+    UploadCreation:
+      title: Properties required to create a new upload
+      type: object
+      properties:
+        file_id:
+          type: string
+          description: The ID of the file corresponding to this upload.
+      required:
+        - upload_id
+
     UploadDetails:
       title: Multi-Part Upload Details
       type: object
       properties:
         upload_id:
           type: string
+        file_id:
+          type: string
+          description: The ID of the file corresponding to this upload.
         part_size:
           type: integer
           description: Part size in bytes.
       required:
         - upload_id
+        - file_id
         - part_size
+
     UploadUpdate:
       title: Multi-Part Upload Update
       type: object
@@ -158,3 +179,42 @@ components:
           enum:
             - uploaded
             - cancelled
+
+    FileMetadata:
+      title: Multi-Part Upload Details
+      type: object
+      properties:
+        file_id:
+          type: string
+        file_name:
+          type: string
+        md5_checksum:
+          type: string
+        size:
+          type: integer
+          minimum: 0
+        grouping_label:
+          type: string
+        creation_date:
+          type: string
+          format: date-time
+        update_date:
+          type: string
+          format: date-time
+        format:
+          type: string
+        current_upload_id:
+          description: |
+            ID of the current upload. `Null` if no update has been
+            initiated, yet.
+          type: string
+          nullable: true
+      required:
+        - file_id
+        - file_name
+        - md5_checksum
+        - grouping_label
+        - creation_date
+        - update_date
+        - format
+        - current_upload_id
