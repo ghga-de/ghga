@@ -12,7 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Short description of package"""  # Please adapt to package
+"""Main domain logic."""
 
-__version__ = "0.1.0"
+import pycurl
+
+
+def check_url(api_url, wait_time=1000) -> bool:
+    """
+    Checks, if an url is reachable within a certain time
+    """
+    curl = pycurl.Curl()
+    curl.setopt(curl.URL, api_url)
+    curl.setopt(curl.CONNECTTIMEOUT_MS, wait_time)
+    try:
+        curl.perform_rb()
+    except pycurl.error:
+        return False
+    return True

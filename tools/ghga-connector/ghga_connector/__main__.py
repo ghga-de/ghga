@@ -13,4 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Consuming or Subscribing to Async Messaging Topics"""
+"""Entrypoint of the package"""
+
+from ghga_connector.cli import cli
+
+
+def run():
+    """Run the application (used in setup.cfg)."""
+    cli()
+
+
+if __name__ == "__main__":
+    run()
