@@ -22,10 +22,6 @@ from pathlib import Path
 
 import pytest
 import typer
-from ghga_service_chassis_lib.object_storage_dao_testing import (
-    ObjectFixture,
-    upload_file,
-)
 from ghga_service_chassis_lib.utils import big_temp_file
 
 from ghga_connector.cli import (
@@ -37,9 +33,9 @@ from ghga_connector.cli import (
 )
 from ghga_connector.core import BadResponseCodeError, MaxWaitTimeExceeded
 
-from ..fixtures import s3_fixture  # noqa: F401
 from ..fixtures import state
 from ..fixtures.mock_api.testcontainer import MockAPIContainer
+from ..fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
 
 
 @pytest.mark.parametrize(
@@ -47,66 +43,50 @@ from ..fixtures.mock_api.testcontainer import MockAPIContainer
     [
         (6 * 1024 * 1024, 5 * 1024 * 1024),
         (12 * 1024 * 1024, 5 * 1024 * 1024),
-        (6 * 1024 * 1024, DEFAULT_PART_SIZE),
+        (1 * 1024 * 1024, DEFAULT_PART_SIZE),
         (20 * 1024 * 1024, DEFAULT_PART_SIZE),
     ],
 )
 def test_multipart_download(
     file_size,
     part_size,
-    s3_fixture,  # noqa F811
+    s3_fixture: S3Fixture,  # noqa F811
     tmp_path,
 ):
     """Test the multipart download of a file"""
+    big_object = get_big_s3_object(s3_fixture, object_size=file_size)
 
-    with big_temp_file(file_size) as big_file:
+    # right now the desired file size is only
+    # approximately met by the provided big file:
+    file_size_ = len(big_object.content)
 
-        object_fixture = ObjectFixture(
-            file_path=big_file.name,
-            bucket_id=s3_fixture.existing_buckets[0],
-            object_id="big-downloadable",
-        )
+    # get s3 download url
+    download_url = s3_fixture.storage.get_object_download_url(
+        bucket_id=big_object.bucket_id,
+        object_id=big_object.object_id,
+        expires_after=180,
+    )
+    with MockAPIContainer(
+        s3_download_url=download_url,
+        s3_download_file_size=file_size_,
+    ) as api:
+        api_url = api.get_connection_url()
 
-        # upload file to s3
-        assert not s3_fixture.storage.does_object_exist(
-            bucket_id=object_fixture.bucket_id, object_id=object_fixture.object_id
-        )
-        presigned_post = s3_fixture.storage.get_object_upload_url(
-            bucket_id=object_fixture.bucket_id,
-            object_id=object_fixture.object_id,
-        )
-        upload_file(
-            presigned_url=presigned_post,
-            file_path=big_file.name,
-            file_md5=object_fixture.md5,
-        )
+        try:
+            download(
+                api_url=api_url,
+                file_id=big_object.object_id,
+                output_dir=tmp_path,
+                max_wait_time=int(60),
+                part_size=part_size,
+            )
+        except Exception as exception:
+            raise exception
 
-        # get s3 download url
-        download_url = s3_fixture.storage.get_object_download_url(
-            bucket_id=object_fixture.bucket_id,
-            object_id=object_fixture.object_id,
-            expires_after=180,
-        )
-        with MockAPIContainer(
-            s3_download_url=download_url,
-            s3_download_file_size=os.path.getsize(object_fixture.file_path),
-        ) as api:
-            api_url = api.get_connection_url()
+        with open(tmp_path / big_object.object_id, "rb") as file:
+            observed_content = file.read()
 
-            try:
-                download(
-                    api_url=api_url,
-                    file_id=object_fixture.object_id,
-                    output_dir=tmp_path,
-                    max_wait_time=int(60),
-                    part_size=part_size,
-                    max_retries=0,
-                )
-                assert cmp(
-                    tmp_path / object_fixture.object_id, object_fixture.file_path
-                )
-            except Exception as exception:
-                raise exception
+        assert observed_content == big_object.content
 
 
 @pytest.mark.parametrize(
@@ -131,7 +111,7 @@ def test_download(
     file_name,
     max_wait_time,
     expected_exception,
-    s3_fixture,  # noqa F811
+    s3_fixture: S3Fixture,  # noqa F811
     tmp_path,
 ):
     """Test the download of a file"""
@@ -164,7 +144,6 @@ def test_download(
                 output_dir=output_dir,
                 max_wait_time=int(max_wait_time),
                 part_size=DEFAULT_PART_SIZE,
-                max_retries=0,
             )
             assert expected_exception is None
             assert cmp(output_dir / file.file_id, file.file_path)
@@ -185,7 +164,7 @@ def test_upload(
     bad_url,
     file_name,
     expected_exception,
-    s3_fixture,  # noqa F811
+    s3_fixture: S3Fixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
 
@@ -212,7 +191,6 @@ def test_upload(
                 api_url=api_url,
                 file_id=uploadable_file.file_id,
                 file_path=str(uploadable_file.file_path.resolve()),
-                max_retries=0,
             )
 
             s3_fixture.storage.complete_multipart_upload(
@@ -240,7 +218,7 @@ def test_upload(
 def test_multipart_upload(
     file_size: int,
     anticipated_part_size: int,
-    s3_fixture,  # noqa F811
+    s3_fixture: S3Fixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
 
@@ -289,7 +267,6 @@ def test_multipart_upload(
                     api_url=api_url,
                     file_id=file_id,
                     file_path=file.name,
-                    max_retries=3,
                 )
 
             # confirm upload

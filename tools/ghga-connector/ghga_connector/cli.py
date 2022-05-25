@@ -29,11 +29,12 @@ from ghga_connector.core import (
     UploadStatus,
     await_download_url,
     check_url,
-    download_file_part,
+    download_file_parts,
+    get_part_upload_urls,
     patch_multipart_upload,
+    read_file_parts,
     start_multipart_upload,
     upload_file_part,
-    upload_part,
 )
 
 DEFAULT_PART_SIZE = 16 * 1024 * 1024
@@ -71,9 +72,6 @@ def upload(  # noqa C901
     api_url: str = typer.Option(..., help="Url to the upload contoller"),
     file_id: str = typer.Option(..., help="The id if the file to upload"),
     file_path: str = typer.Option(..., help="The path to the file to upload"),
-    max_retries: int = typer.Argument(
-        "3", help="Maximum number of tries to upload a single file part."
-    ),
 ):
     """
     Command to upload a file
@@ -106,11 +104,10 @@ def upload(  # noqa C901
         raise typer.Abort() from error
 
     try:
-        upload_parts(
+        upload_file_parts(
             api_url=api_url,
             upload_id=upload_id,
             part_size=part_size,
-            max_retries=max_retries,
             file_path=file_path,
         )
     except MaxRetriesReached as error:
@@ -148,9 +145,6 @@ def download(  # pylint: disable=too-many-arguments
     part_size: int = typer.Argument(
         DEFAULT_PART_SIZE, help="Part size of the downloaded chunks."
     ),
-    max_retries: int = typer.Argument(
-        "3", help="Maximum number of tries to download a single file part."
-    ),
 ):
     """
     Command to download a file
@@ -174,7 +168,6 @@ def download(  # pylint: disable=too-many-arguments
     try:
         download_parts(
             file_size=file_size,
-            max_retries=max_retries,
             download_url=download_url,
             output_file=output_file,
             part_size=part_size,
@@ -187,90 +180,39 @@ def download(  # pylint: disable=too-many-arguments
     typer.echo(f"File with id '{file_id}' has been successfully downloaded.")
 
 
-def upload_parts(
+def upload_file_parts(
     api_url: str,
     upload_id: str,
     part_size: int,
-    max_retries: int,
     file_path: str,
-):
+) -> None:
     """
     Uploads a file using a specific upload id via uploading all its parts.
     """
 
-    file_size = os.path.getsize(file_path)
+    with open(file_path, "rb") as file:
+        file_parts = read_file_parts(file, part_size=part_size)
+        upload_urls = get_part_upload_urls(api_url=api_url, upload_id=upload_id)
 
-    part_no = 1
-    part_offset = 0
-
-    while part_offset < file_size:
-
-        # For 0 retries, we still try the first time
-        for retries in range(0, max_retries + 1):
-            presigned_post_url = upload_part(
-                api_url=api_url, upload_id=upload_id, part_no=part_no
-            )
-
-            # Upload File
-            try:
-                upload_file_part(
-                    presigned_post_url=presigned_post_url,
-                    upload_file_path=file_path,
-                    part_offset=part_offset,
-                    part_size=part_size,
-                )
-                break
-            except BadResponseCodeError as error:
-                typer.echo(
-                    "The part upload request was invalid and returnd a wrong HTTP status code."
-                )
-                if retries >= max_retries:
-                    raise MaxRetriesReached(part_no=part_no) from error
-            except RequestFailedError as error:
-                typer.echo("The part upload request has failed.")
-                if retries > max_retries - 1:
-                    raise MaxRetriesReached(part_no=part_no) from error
-
-        part_offset += part_size
-        part_no += 1
+        for part, upload_url in zip(file_parts, upload_urls):
+            upload_file_part(presigned_url=upload_url, part=part)
 
 
 def download_parts(
     file_size: int,
-    max_retries: int,
     download_url: str,
     output_file: str,
     part_size: int,
-):
+) -> None:
     """
     Downloads a file using a specific download_url via uploading all its parts.
     """
 
-    part_offset = 0
-
-    while part_offset < file_size:
-
-        # For 0 retries, we still try the first time
-        for retries in range(0, max_retries + 1):
-            try:
-                download_file_part(
-                    download_url=download_url,
-                    output_file_path=output_file,
-                    part_offset=part_offset,
-                    part_size=part_size,
-                    file_size=file_size,
-                )
-
-            except BadResponseCodeError as error:
-                typer.echo(
-                    "The download request was invalid and returnd a wrong HTTP status code."
-                )
-                if retries > max_retries - 1:
-                    raise MaxRetriesReached(part_no=part_offset // part_size) from error
-            except RequestFailedError as error:
-                typer.echo("The download request has failed.")
-                if retries > max_retries - 1:
-                    raise MaxRetriesReached(part_no=part_offset // part_size) from error
-
-        # If part download was successfull, go to the next part
-        part_offset += part_size
+    file_parts = download_file_parts(
+        download_url=download_url,
+        part_size=part_size,
+        total_file_size=file_size,
+    )
+    with open(output_file, "wb") as file:
+        for part in file_parts:
+            file.write(part)

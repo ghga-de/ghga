@@ -16,6 +16,8 @@
 
 """Custom Exceptions."""
 
+from ghga_connector.core.constants import MAX_PART_NUMBER
+
 
 class RetryTimeExpectedError(RuntimeError):
     """Thrown, when a request didn't contain a retry time even though it was expected."""
@@ -84,4 +86,18 @@ class MaxRetriesReached(RuntimeError):
 
     def __init__(self, part_no: int):
         message = f"Exceeded maximum retries for part number '{part_no}'."
+        super().__init__(message)
+
+
+class MaxPartNoExceededError(RuntimeError):
+    """
+    Thrown requesting a part number larger than the maximally possible number of parts.
+
+    This exception is a bug.
+    """
+
+    def __init__(
+        self,
+    ):
+        message = f"No more than ({MAX_PART_NUMBER}) file parts can be up-/downloaded."
         super().__init__(message)

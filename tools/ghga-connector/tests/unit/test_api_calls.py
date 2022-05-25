@@ -16,6 +16,9 @@
 
 """Tests for API Calls"""
 
+from contextlib import nullcontext
+from typing import Optional
+from unittest.mock import Mock
 
 import pytest
 
@@ -26,6 +29,8 @@ from ghga_connector.core import (
     get_pending_uploads,
     patch_multipart_upload,
 )
+from ghga_connector.core.api_calls import get_part_upload_urls
+from ghga_connector.core.exceptions import MaxPartNoExceededError
 
 from ..fixtures.mock_api.testcontainer import MockAPIContainer
 
@@ -96,3 +101,50 @@ def test_patch_multipart_upload(
             assert expected_exception is None
         except Exception as exception:
             assert isinstance(exception, expected_exception)
+
+
+@pytest.mark.parametrize(
+    "from_part, end_part, exception",
+    [
+        (None, 10, None),
+        (2, 10, None),
+        (9999, 10001, MaxPartNoExceededError),
+    ],
+)
+def test_get_part_upload_ulrs(
+    from_part: Optional[int],
+    end_part: int,
+    exception: Optional[Exception],
+):
+    """
+    Test the `get_part_upload_urls` generator for iterating through signed part urls
+    """
+    upload_id = "example-upload"
+    api_url = "http://my-api.example"
+    from_part_ = 1 if from_part is None else from_part
+
+    # mock the function to get a specific part upload url:
+    static_signed_url = "http://my-signed-url.example/97982jsdf7823j"
+    get_url_func = Mock(return_value=static_signed_url)
+
+    # create the iterator:
+    kwargs = {
+        "api_url": api_url,
+        "upload_id": upload_id,
+        "get_url_func": get_url_func,
+    }
+    if from_part is not None:
+        kwargs["from_part"] = from_part
+    part_upload_urls = get_part_upload_urls(**kwargs)  # type: ignore
+
+    with (pytest.raises(exception) if exception else nullcontext()):
+        for idx, signed_url in enumerate(part_upload_urls):
+            assert static_signed_url == signed_url
+
+            part_no = idx + from_part_
+            get_url_func.assert_called_with(
+                api_url=api_url, upload_id=upload_id, part_no=part_no
+            )
+
+            if part_no >= end_part:
+                break

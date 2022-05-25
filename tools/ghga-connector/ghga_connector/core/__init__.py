@@ -22,11 +22,11 @@ from .api_calls import (  # noqa: F401
     UploadStatus,
     await_download_url,
     download_api_call,
+    get_part_upload_urls,
     get_pending_uploads,
     initiate_multipart_upload,
     patch_multipart_upload,
     start_multipart_upload,
-    upload_part,
 )
 from .exceptions import (  # noqa: F401
     BadResponseCodeError,
@@ -37,5 +37,9 @@ from .exceptions import (  # noqa: F401
     NoUploadPossibleError,
     RequestFailedError,
 )
-from .file_operations import download_file_part, upload_file_part  # noqa: F401
+from .file_operations import (  # noqa: F401
+    download_file_parts,
+    read_file_parts,
+    upload_file_part,
+)
 from .main import check_url  # noqa: F401

@@ -22,13 +22,16 @@ import json
 from enum import Enum
 from io import BytesIO
 from time import sleep
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
 
 import pycurl
+
+from ghga_connector.core.constants import MAX_PART_NUMBER
 
 from .exceptions import (
     BadResponseCodeError,
     CantCancelUploadError,
+    MaxPartNoExceededError,
     MaxWaitTimeExceeded,
     NoS3AccessMethod,
     NoUploadPossibleError,
@@ -131,9 +134,9 @@ def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
     return response_body["upload_id"], int(response_body["part_size"])
 
 
-def upload_part(api_url: str, upload_id: str, part_no: int) -> str:
+def get_part_upload_url(*, api_url: str, upload_id: str, part_no: int):
     """
-    Get a presigned url to upload a specific part to S3
+    Get a presigned url to upload a specific part
     """
 
     # build url
@@ -166,6 +169,33 @@ def upload_part(api_url: str, upload_id: str, part_no: int) -> str:
     presigned_post = response_body["presigned_post"]
 
     return presigned_post
+
+
+def get_part_upload_urls(
+    *,
+    api_url: str,
+    upload_id: str,
+    from_part: int = 1,
+    get_url_func=get_part_upload_url,
+) -> Iterator[str]:
+    """
+    For a specific mutli-part upload identified by the `upload_id`, it returns an
+    iterator to iterate through file parts and obtain the corresponding upload urls.
+
+    By default it start with the first part but you may also start from a specific part
+    in the middle of the file using the `from_part` argument. This might be useful to
+    resume an interrupted upload process.
+
+    Please note: the upload corresponding to the `upload_id` must have already been
+    initiated.
+
+    `get_url_func` only for testing purposes.
+    """
+
+    for part_no in range(from_part, MAX_PART_NUMBER + 1):
+        yield get_url_func(api_url=api_url, upload_id=upload_id, part_no=part_no)
+
+    raise MaxPartNoExceededError()
 
 
 def patch_multipart_upload(

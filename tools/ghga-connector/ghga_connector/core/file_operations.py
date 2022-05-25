@@ -18,78 +18,140 @@
 Contains Calls of the Presigned URLs in order to Up- and Download Files
 """
 
-from io import BytesIO
+import math
+from io import BufferedReader, BytesIO
+from typing import Iterator, Sequence
 
 import pycurl
 
 from .exceptions import BadResponseCodeError, RequestFailedError
 
 
-def download_file_part(
+def download_content_range(
+    *,
     download_url: str,
-    output_file_path: str,
-    part_offset: int,
-    part_size: int,
-    file_size: int,
-) -> None:
-    """Download File"""
+    start: int,
+    end: int,
+) -> bytes:
+    """Download a specific range of a file's content using a presigned download url."""
 
-    # Calculetes end of byte range of the file
-    part_end = part_offset + part_size - 1
-    if part_end > file_size:
-        part_end = file_size - 1
+    bytes_stream = BytesIO()
+    curl = pycurl.Curl()
 
-    with open(file=output_file_path, mode="ab", buffering=part_size) as file:
+    curl.setopt(curl.RANGE, f"{start}-{end}")
+    curl.setopt(curl.URL, download_url)
+    curl.setopt(curl.WRITEDATA, bytes_stream)
+    try:
+        curl.perform()
+        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
+    except pycurl.error as pycurl_error:
+        raise RequestFailedError(download_url) from pycurl_error
+    finally:
+        curl.close()
 
-        curl = pycurl.Curl()
-
-        curl.setopt(curl.RANGE, f"{part_offset}-{part_end}")
-        curl.setopt(curl.URL, download_url)
-        curl.setopt(curl.WRITEDATA, file)
-        try:
-            curl.perform()
-            status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-        except pycurl.error as pycurl_error:
-            raise RequestFailedError(download_url) from pycurl_error
-        finally:
-            curl.close()
-
-    # 200, if the full file was returned (files smaller than the part size), 206 else
+    # 200, if the full file was returned, 206 else
     if status_code in (200, 206):
-        return
+        return bytes_stream.getvalue()
 
     raise BadResponseCodeError(url=download_url, response_code=status_code)
 
 
-def upload_file_part(
-    presigned_post_url: str,
-    upload_file_path: str,
-    part_offset: int,
+def calc_part_ranges(
+    *, part_size: int, total_file_size: int, from_part: int = 1
+) -> Sequence[tuple[int, int]]:
+    """
+    Calculate and return the ranges (start, end) of file parts as a list of tuples.
+
+    By default it starts with the first part but you may also start from a specific part
+    in the middle of the file using the `from_part` argument. This might be useful to
+    resume an interrupted reading process.
+    """
+    # calc the ranges for the parts that have the full part_size:
+    full_part_number = math.floor(total_file_size / part_size)
+    part_ranges = [
+        (part_size * (part_no - 1), part_size * part_no - 1)
+        for part_no in range(from_part, full_part_number + 1)
+    ]
+
+    if (total_file_size % part_size) > 0:
+        # if the last part is smaller than the part_size, calculate it range separately:
+        part_ranges.append((part_size * full_part_number, total_file_size - 1))
+
+    return part_ranges
+
+
+def download_file_parts(
+    *,
+    download_url: str,
     part_size: int,
-) -> None:
-    """Upload File"""
+    total_file_size: int,
+    from_part: int = 1,
+    download_range_func=download_content_range,
+    calc_ranges_func=calc_part_ranges,
+) -> Iterator[bytes]:
+    """
+    Returns an iterator to obtain the bytes content of a file in a part by part fashion.
 
-    with open(file=upload_file_path, mode="rb") as file:
+    By default it start with the first part but you may also start from a specific part
+    in the middle of the file using the `from_part` argument. This might be useful to
+    resume an interrupted reading process.
+    """
 
-        file.seek(part_offset)
-        content = file.read(part_size)
-        body = BytesIO(content)
+    part_ranges = calc_ranges_func(
+        part_size=part_size, total_file_size=total_file_size, from_part=from_part
+    )
 
-        curl = pycurl.Curl()
-        curl.setopt(curl.URL, presigned_post_url)
+    for part_start, part_end in part_ranges:
+        yield download_range_func(
+            download_url=download_url, start=part_start, end=part_end
+        )
 
-        curl.setopt(curl.UPLOAD, 1)
-        curl.setopt(curl.READDATA, body)
 
-        try:
-            curl.perform()
-            status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-        except pycurl.error as pycurl_error:
-            raise RequestFailedError(presigned_post_url) from pycurl_error
-        finally:
-            curl.close()
+def read_file_parts(
+    file: BufferedReader, *, part_size: int, from_part: int = 1
+) -> Iterator[bytes]:
+    """
+    Returns an iterator to iterate through file parts of the given size (in bytes).
 
-        if status_code == 200:
+    By default it start with the first part but you may also start from a specific part
+    in the middle of the file using the `from_part` argument. This might be useful to
+    resume an interrupted reading process.
+
+    Please note: opening and closing of the file MUST happen outside of this function.
+    """
+
+    initial_offset = part_size * (from_part - 1)
+    file.seek(initial_offset)
+
+    while True:
+        file_part = file.read(part_size)
+
+        if len(file_part) == 0:
             return
 
-    raise BadResponseCodeError(url=presigned_post_url, response_code=status_code)
+        yield file_part
+
+
+def upload_file_part(*, presigned_url: str, part: bytes) -> None:
+    """Upload File"""
+
+    body = BytesIO(part)
+
+    curl = pycurl.Curl()
+    curl.setopt(curl.URL, presigned_url)
+
+    curl.setopt(curl.UPLOAD, 1)
+    curl.setopt(curl.READDATA, body)
+
+    try:
+        curl.perform()
+        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
+    except pycurl.error as pycurl_error:
+        raise RequestFailedError(presigned_url) from pycurl_error
+    finally:
+        curl.close()
+
+    if status_code == 200:
+        return
+
+    raise BadResponseCodeError(url=presigned_url, response_code=status_code)
