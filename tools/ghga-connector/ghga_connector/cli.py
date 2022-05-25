@@ -21,9 +21,11 @@ import os
 import typer
 
 from ghga_connector.core import (
+    AbstractMessageDisplay,
     BadResponseCodeError,
     GHGAConnectorException,
     MaxRetriesReached,
+    MessageColors,
     NoUploadPossibleError,
     RequestFailedError,
     UploadNotRegisteredError,
@@ -65,7 +67,33 @@ class ApiNotReachable(RuntimeError, GHGAConnectorException):
         super().__init__(message)
 
 
+class CLIMessageDisplay(AbstractMessageDisplay):
+    """
+    Command line writer message display implementation,
+    using different color based on information type
+    """
+
+    def display(self, message: str):
+        """
+        Write message with default color to stdout
+        """
+        typer.secho(message, fg=MessageColors.DEFAULT)
+
+    def success(self, message: str):
+        """
+        Write message to stdout representing information about a successful operation
+        """
+        typer.secho(message, fg=MessageColors.SUCCESS)
+
+    def failure(self, message: str):
+        """
+        Write message to stderr representing information about a failed operation
+        """
+        typer.secho(message, fg=MessageColors.FAILURE, err=True)
+
+
 cli = typer.Typer()
+message_display: AbstractMessageDisplay = CLIMessageDisplay()
 
 
 @cli.command()
@@ -78,30 +106,32 @@ def upload(  # noqa C901
     Command to upload a file
     """
     if not os.path.isfile(file_path):
-        typer.echo(f"The file {file_path} does not exist.")
+        message_display.failure(f"The file {file_path} does not exist.")
         raise typer.Abort()
 
     if not check_url(api_url):
-        typer.echo(f"The url {api_url} is currently not reachable.")
+        message_display.failure(f"The url {api_url} is currently not reachable.")
         raise typer.Abort()
 
     try:
         upload_id, part_size = start_multipart_upload(api_url=api_url, file_id=file_id)
     except NoUploadPossibleError as error:
-        typer.echo(
+        message_display.failure(
             f"This user can't start a multipart upload for the file_id '{file_id}'"
         )
         raise typer.Abort() from error
     except UploadNotRegisteredError as error:
-        typer.echo(
+        message_display.failure(
             f"There is already an upload pending for file '{file_id}', which can't be cancelled."
         )
         raise typer.Abort() from error
     except BadResponseCodeError as error:
-        typer.echo("The request was invalid and returnd a wrong HTTP status code.")
+        message_display.failure(
+            "The request was invalid and returnd a wrong HTTP status code."
+        )
         raise typer.Abort() from error
     except RequestFailedError as error:
-        typer.echo("The request has failed.")
+        message_display.failure("The request has failed.")
         raise typer.Abort() from error
 
     try:
@@ -112,7 +142,9 @@ def upload(  # noqa C901
             file_path=file_path,
         )
     except MaxRetriesReached as error:
-        typer.echo("The upload has failed too many times. The upload was aborted.")
+        message_display.failure(
+            "The upload has failed too many times. The upload was aborted."
+        )
         raise typer.Abort() from error
 
     try:
@@ -122,14 +154,14 @@ def upload(  # noqa C901
             upload_status=UploadStatus.UPLOADED,
         )
     except BadResponseCodeError as error:
-        typer.echo(
+        message_display.failure(
             f"The request to confirm the upload with id {upload_id} was invalid."
         )
         raise typer.Abort() from error
     except RequestFailedError as error:
-        typer.echo(f"Confirming the upload with id {upload_id} failed.")
+        message_display.failure(f"Confirming the upload with id {upload_id} failed.")
         raise typer.Abort() from error
-    typer.echo(f"File with id '{file_id}' has been successfully uploaded.")
+    message_display.success(f"File with id '{file_id}' has been successfully uploaded.")
 
 
 @cli.command()
@@ -157,7 +189,10 @@ def download(  # pylint: disable=too-many-arguments
         raise ApiNotReachable(api_url)
 
     download_url, file_size = await_download_url(
-        api_url=api_url, file_id=file_id, max_wait_time=max_wait_time, logger=typer.echo
+        api_url=api_url,
+        file_id=file_id,
+        max_wait_time=max_wait_time,
+        message_display=message_display,
     )
 
     # perform the download:
@@ -178,7 +213,9 @@ def download(  # pylint: disable=too-many-arguments
         os.remove(output_file)
         raise error
 
-    typer.echo(f"File with id '{file_id}' has been successfully downloaded.")
+    message_display.success(
+        f"File with id '{file_id}' has been successfully downloaded."
+    )
 
 
 def upload_file_parts(

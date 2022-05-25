@@ -22,11 +22,12 @@ import json
 from enum import Enum
 from io import BytesIO
 from time import sleep
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 import pycurl
 
 from ghga_connector.core.constants import MAX_PART_NUMBER
+from ghga_connector.core.message_display import AbstractMessageDisplay
 
 from .exceptions import (
     BadResponseCodeError,
@@ -379,7 +380,7 @@ def await_download_url(
     api_url: str,
     file_id: str,
     max_wait_time: int,
-    logger: Callable[[str], Any] = lambda x: ...,
+    message_display: AbstractMessageDisplay,
 ) -> Tuple[str, int]:
     """Wait until download URL can be generated.
     Returns a tuple with two elements:
@@ -393,10 +394,12 @@ def await_download_url(
         try:
             response_body = download_api_call(api_url, file_id)
         except BadResponseCodeError as error:
-            logger("The request was invalid and returnd a wrong HTTP status code.")
+            message_display.failure(
+                "The request was invalid and returnd a wrong HTTP status code."
+            )
             raise error
         except RequestFailedError as error:
-            logger("The request has failed.")
+            message_display.failure("The request has failed.")
             raise error
 
         if response_body[0] is not None:
@@ -407,7 +410,9 @@ def await_download_url(
         retry_time: int = response_body[2]
 
         wait_time += retry_time
-        logger(f"File staging, will try to download again in {retry_time} seconds")
+        message_display.display(
+            f"File staging, will try to download again in {retry_time} seconds"
+        )
         sleep(retry_time)
 
     raise MaxWaitTimeExceeded(max_wait_time)
