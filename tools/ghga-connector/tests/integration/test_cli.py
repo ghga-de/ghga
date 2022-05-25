@@ -27,7 +27,7 @@ from ghga_service_chassis_lib.utils import big_temp_file
 from ghga_connector.cli import (
     DEFAULT_PART_SIZE,
     ApiNotReachable,
-    DirectoryNotExist,
+    DirectoryDoesNotExist,
     download,
     upload,
 )
@@ -102,7 +102,7 @@ def test_multipart_download(
             BadResponseCodeError,
         ),
         (False, False, "file_retry", "60", MaxWaitTimeExceeded),
-        (False, True, "file_downloadable", "60", DirectoryNotExist),
+        (False, True, "file_downloadable", "60", DirectoryDoesNotExist),
     ],
 )
 def test_download(

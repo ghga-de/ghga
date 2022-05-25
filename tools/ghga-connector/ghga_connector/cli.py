@@ -22,10 +22,11 @@ import typer
 
 from ghga_connector.core import (
     BadResponseCodeError,
-    CantCancelUploadError,
+    GHGAConnectorException,
     MaxRetriesReached,
     NoUploadPossibleError,
     RequestFailedError,
+    UploadNotRegisteredError,
     UploadStatus,
     await_download_url,
     check_url,
@@ -40,7 +41,7 @@ from ghga_connector.core import (
 DEFAULT_PART_SIZE = 16 * 1024 * 1024
 
 
-class DirectoryNotExist(RuntimeError):
+class DirectoryDoesNotExist(RuntimeError, GHGAConnectorException):
     """Thrown, when the specified directory does not exist."""
 
     def __init__(self, output_dir: str):
@@ -48,7 +49,7 @@ class DirectoryNotExist(RuntimeError):
         super().__init__(message)
 
 
-class FileAlreadyExistsError(RuntimeError):
+class FileAlreadyExistsError(RuntimeError, GHGAConnectorException):
     """Thrown, when the specified file already exists."""
 
     def __init__(self, output_file: str):
@@ -56,7 +57,7 @@ class FileAlreadyExistsError(RuntimeError):
         super().__init__(message)
 
 
-class ApiNotReachable(RuntimeError):
+class ApiNotReachable(RuntimeError, GHGAConnectorException):
     """Thrown, when the api is not reachable."""
 
     def __init__(self, api_url: str):
@@ -91,7 +92,7 @@ def upload(  # noqa C901
             f"This user can't start a multipart upload for the file_id '{file_id}'"
         )
         raise typer.Abort() from error
-    except CantCancelUploadError as error:
+    except UploadNotRegisteredError as error:
         typer.echo(
             f"There is already an upload pending for file '{file_id}', which can't be cancelled."
         )
@@ -150,7 +151,7 @@ def download(  # pylint: disable=too-many-arguments
     Command to download a file
     """
     if not os.path.isdir(output_dir):
-        raise DirectoryNotExist(output_dir)
+        raise DirectoryDoesNotExist(output_dir)
 
     if not check_url(api_url):
         raise ApiNotReachable(api_url)

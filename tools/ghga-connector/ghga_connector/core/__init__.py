@@ -30,12 +30,13 @@ from .api_calls import (  # noqa: F401
 )
 from .exceptions import (  # noqa: F401
     BadResponseCodeError,
-    CantCancelUploadError,
+    GHGAConnectorException,
     MaxRetriesReached,
     MaxWaitTimeExceeded,
     NoS3AccessMethod,
     NoUploadPossibleError,
     RequestFailedError,
+    UploadNotRegisteredError,
 )
 from .file_operations import (  # noqa: F401
     download_file_parts,

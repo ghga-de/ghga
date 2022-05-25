@@ -30,13 +30,13 @@ from ghga_connector.core.constants import MAX_PART_NUMBER
 
 from .exceptions import (
     BadResponseCodeError,
-    CantCancelUploadError,
     MaxPartNoExceededError,
     MaxWaitTimeExceeded,
     NoS3AccessMethod,
     NoUploadPossibleError,
     RequestFailedError,
     RetryTimeExpectedError,
+    UploadNotRegisteredError,
 )
 
 # Constants for clarity of return values
@@ -126,7 +126,7 @@ def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
 
     if status_code != 200:
         if status_code == 403:
-            raise NoUploadPossibleError()
+            raise NoUploadPossibleError(file_id=file_id)
         raise BadResponseCodeError(url, status_code)
 
     response_body = json.loads(data.getvalue())
@@ -365,7 +365,7 @@ def start_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
             )
 
         except Exception as error:
-            raise CantCancelUploadError(upload_id=upload_id) from error
+            raise UploadNotRegisteredError(upload_id=upload_id) from error
 
     try:
         multipart_upload = initiate_multipart_upload(api_url=api_url, file_id=file_id)
