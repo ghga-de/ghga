@@ -20,11 +20,10 @@ Contains API calls to the API of the GHGA Storage implementation
 
 import json
 from enum import Enum
-from io import BytesIO
 from time import sleep
 from typing import Dict, Iterator, List, Optional, Tuple, Union
 
-import pycurl
+import requests
 
 from ghga_connector.core.constants import MAX_PART_NUMBER
 from ghga_connector.core.message_display import AbstractMessageDisplay
@@ -59,78 +58,29 @@ class UploadStatus(str, Enum):
     UPLOADED = "uploaded"
 
 
-def header_function_factory(headers: dict):
-    """Creates a header function that updates the specified headers dict."""
-
-    def header_function(header_line):
-        """
-        Function used to decode headers from HTTP Responses
-        """
-
-        # HTTP standard specifies that headers are encoded in iso-8859-1.
-        header_line = header_line.decode("iso-8859-1")
-
-        # Header lines include the first status line (HTTP/1.x ...).
-        # We are going to ignore all lines that don't have a colon in them.
-        # This will botch headers that are split on multiple lines...
-        if ":" not in header_line:
-            return
-
-        # Break the header line into header name and value.
-        name, value = header_line.split(":", 1)
-
-        # Remove whitespace that may be present.
-        # Header lines include the trailing newline, and there may be whitespace
-        # around the colon.
-        name = name.strip()
-        value = value.strip()
-
-        # Header names are case insensitive.
-        # Lowercase name here.
-        name = name.lower()
-
-        # Now we can actually record the header name and value.
-        # Note: this only works when headers are not duplicated, see below.
-        headers[name] = value
-
-    return header_function
-
-
 def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
     """
     Perform a RESTful API call to initiate a multipart upload
     Returns an upload id and a part size
     """
 
-    # build url
+    # build url and headers
     url = f"{api_url}/files/{file_id}/uploads"
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
     # Make function call to get upload url
-    curl = pycurl.Curl()
-    data = BytesIO()
-    curl.setopt(curl.URL, url)
-    curl.setopt(curl.WRITEFUNCTION, data.write)
-
-    curl.setopt(
-        curl.HTTPHEADER,
-        ["Accept: application/json", "Content-Type: application/json"],
-    )
-
-    curl.setopt(curl.POST, 1)
     try:
-        curl.perform()
-        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    except pycurl.error as pycurl_error:
-        raise RequestFailedError(url) from pycurl_error
-    finally:
-        curl.close()
+        response = requests.post(url=url, headers=headers)
+    except requests.exceptions.RequestException as request_error:
+        raise RequestFailedError(url) from request_error
 
+    status_code = response.status_code
     if status_code != 200:
         if status_code == 403:
             raise NoUploadPossibleError(file_id=file_id)
         raise BadResponseCodeError(url, status_code)
 
-    response_body = json.loads(data.getvalue())
+    response_body = response.json()
 
     return response_body["upload_id"], int(response_body["part_size"])
 
@@ -140,33 +90,21 @@ def get_part_upload_url(*, api_url: str, upload_id: str, part_no: int):
     Get a presigned url to upload a specific part
     """
 
-    # build url
+    # build url and headers
     url = f"{api_url}/uploads/{upload_id}/parts/{part_no}/signed_posts"
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
     # Make function call to get upload url
-    curl = pycurl.Curl()
-    data = BytesIO()
-    curl.setopt(curl.URL, url)
-    curl.setopt(curl.WRITEFUNCTION, data.write)
-
-    curl.setopt(
-        curl.HTTPHEADER,
-        ["Accept: application/json", "Content-Type: application/json"],
-    )
-
-    curl.setopt(curl.POST, 1)
     try:
-        curl.perform()
-        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    except pycurl.error as pycurl_error:
-        raise RequestFailedError(url) from pycurl_error
-    finally:
-        curl.close()
+        response = requests.post(url=url, headers=headers)
+    except requests.exceptions.RequestException as request_error:
+        raise RequestFailedError(url) from request_error
 
+    status_code = response.status_code
     if status_code != 200:
         raise BadResponseCodeError(url, status_code)
 
-    response_body = json.loads(data.getvalue())
+    response_body = response.json()
     presigned_post = response_body["presigned_post"]
 
     return presigned_post
@@ -207,31 +145,19 @@ def patch_multipart_upload(
     The API accepts "uploaded" or "accepted",
     if the upload_id is currently set to "pending"
     """
-    # build url
+
+    # build url and headers
     url = f"{api_url}/uploads/{upload_id}"
-
+    headers = {"Accept": "*/*", "Content-Type": "application/json"}
     post_data = {"upload_status": upload_status}
-    postfields = json.dumps(post_data)
-
-    curl = pycurl.Curl()
-    curl.setopt(curl.URL, url)
-    curl.setopt(
-        curl.HTTPHEADER,
-        ["Accept: */*", "Content-Type: application/json"],
-    )
-    curl.setopt(curl.POSTFIELDS, postfields)
-
-    # Set to patch, since postfields sets to POST automatically
-    curl.setopt(curl.CUSTOMREQUEST, "PATCH")
+    serialized_data = json.dumps(post_data)
 
     try:
-        curl.perform()
-        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    except pycurl.error as pycurl_error:
-        raise RequestFailedError(url) from pycurl_error
-    finally:
-        curl.close()
+        response = requests.patch(url=url, headers=headers, data=serialized_data)
+    except requests.exceptions.RequestException as request_error:
+        raise RequestFailedError(url) from request_error
 
+    status_code = response.status_code
     if status_code != 204:
         raise BadResponseCodeError(url, status_code)
 
@@ -243,39 +169,25 @@ def get_pending_uploads(api_url: str, file_id: str) -> Optional[List[Dict]]:
     Returns either the upload_id and part_size of the pending upload, or None
     """
 
-    # build url
-    url = f"{api_url}/files/{file_id}/uploads?upload_status=pending"
+    # build url and headers
+    url = f"{api_url}/files/{file_id}/uploads"
+    params = {"upload_status": "pending"}
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
-    # Make function call to get upload url
-    curl = pycurl.Curl()
-    data = BytesIO()
-    curl.setopt(curl.URL, url)
-    curl.setopt(curl.WRITEFUNCTION, data.write)
-
-    curl.setopt(
-        curl.HTTPHEADER,
-        ["Accept: application/json", "Content-Type: application/json"],
-    )
-
-    # GET is the standard, but setting it here explicitely nonetheless
-    curl.setopt(curl.HTTPGET, 1)
     try:
-        curl.perform()
-        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    except pycurl.error as pycurl_error:
-        raise RequestFailedError(url) from pycurl_error
-    finally:
-        curl.close()
+        response = requests.get(url=url, headers=headers, params=params)
+    except requests.exceptions.RequestException as request_error:
+        raise RequestFailedError(url) from request_error
 
+    status_code = response.status_code
     if status_code != 200:
         raise BadResponseCodeError(url, status_code)
 
-    list_of_uploads: list = json.loads(data.getvalue())
-
-    if len(list_of_uploads) == 0:
+    pending_uploads: list = response.json()
+    if len(pending_uploads) == 0:
         return None
 
-    return list_of_uploads
+    return pending_uploads
 
 
 def download_api_call(
@@ -293,41 +205,29 @@ def download_api_call(
         Otherwise, only the last element is None while the others are set.
     """
 
-    # build url
+    # build url and headers
     url = f"{api_url}/objects/{file_id}"
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
     # Make function call to get upload url
-    curl = pycurl.Curl()
-    data = BytesIO()
-    headers: dict[str, str] = {}
-    curl.setopt(curl.URL, url)
-    curl.setopt(curl.WRITEFUNCTION, data.write)
-    curl.setopt(
-        curl.HTTPHEADER,
-        ["Accept: application/json", "Content-Type: application/json"],
-    )
-    curl.setopt(curl.HEADERFUNCTION, header_function_factory(headers))
-    # GET is the standard, but setting it here explicitely nonetheless
-    curl.setopt(curl.HTTPGET, 1)
     try:
-        curl.perform()
-        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    except pycurl.error as pycurl_error:
-        raise RequestFailedError(url) from pycurl_error
-    finally:
-        curl.close()
+        response = requests.get(url=url, headers=headers)
+    except requests.exceptions.RequestException as request_error:
+        raise RequestFailedError(url) from request_error
 
+    status_code = response.status_code
     if status_code != 200:
         if status_code != 202:
             raise BadResponseCodeError(url, status_code)
 
+        headers = response.headers
         if "retry-after" not in headers:
             raise RetryTimeExpectedError(url)
 
         return (NO_DOWNLOAD_URL, NO_FILE_SIZE, int(headers["retry-after"]))
 
     # look for an access method of type s3 in the response:
-    response_body = json.loads(data.getvalue())
+    response_body = response.json()
     download_url = None
     access_methods = response_body["access_methods"]
     for access_method in access_methods:
