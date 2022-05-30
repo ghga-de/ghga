@@ -99,6 +99,10 @@ paths:
       responses:
         "204":
           description: Multi-part upload successfully updated.
+        "400":
+          description: |
+            Cannot set invalid status for multi-part upload
+            with the given ID.
         "403":
           description: |
             The user is not registered as a Data Submitter for the
@@ -174,7 +178,7 @@ components:
       title: Multi-Part Upload Update
       type: object
       properties:
-        status:
+        upload_status:
           type: string
           enum:
             - uploaded
