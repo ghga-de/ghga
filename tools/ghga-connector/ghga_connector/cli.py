@@ -23,6 +23,7 @@ import typer
 from ghga_connector.core import (
     AbstractMessageDisplay,
     BadResponseCodeError,
+    CantChangeUploadStatus,
     GHGAConnectorException,
     MaxRetriesReached,
     MessageColors,
@@ -30,6 +31,7 @@ from ghga_connector.core import (
     RequestFailedError,
     UploadNotRegisteredError,
     UploadStatus,
+    UserHasNoUploadAccess,
     await_download_url,
     check_url,
     download_file_parts,
@@ -122,13 +124,21 @@ def upload(  # noqa C901
         raise typer.Abort() from error
     except UploadNotRegisteredError as error:
         message_display.failure(
-            f"There is already an upload pending for file '{file_id}', which can't be cancelled."
+            f"The pending upload for file '{file_id}' does not exist."
+        )
+        raise typer.Abort() from error
+    except UserHasNoUploadAccess as error:
+        message_display.failure(
+            f"The user is not registered as a Data Submitter for the file with id '{file_id}'."
         )
         raise typer.Abort() from error
     except BadResponseCodeError as error:
         message_display.failure(
             "The request was invalid and returnd a wrong HTTP status code."
         )
+        raise typer.Abort() from error
+    except CantChangeUploadStatus as error:
+        message_display.failure(f"The file with id '{file_id}' was already uploaded.")
         raise typer.Abort() from error
     except RequestFailedError as error:
         message_display.failure("The request has failed.")

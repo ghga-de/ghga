@@ -82,14 +82,6 @@ class BadResponseCodeError(RuntimeError):
         super().__init__(message)
 
 
-class UploadDoesNotExistError(RuntimeError, GHGAConnectorException):
-    """Thrown, when a request to patch an upload fails with response code 404"""
-
-    def __init__(self, upload_id: str):
-        message = f"The upload with the id '{upload_id}' does not exists."
-        super().__init__(message)
-
-
 class NoUploadPossibleError(RuntimeError, GHGAConnectorException):
     """Thrown, when a multipart upload currently can't be started (response code 400)"""
 
@@ -101,14 +93,43 @@ class NoUploadPossibleError(RuntimeError, GHGAConnectorException):
         super().__init__(message)
 
 
-class UserHasNoAccess(RuntimeError, GHGAConnectorException):
+class UserHasNoUploadAccess(RuntimeError, GHGAConnectorException):
     """
-    Thrown, when a User does not have the credentials for a
-    specific file id (response code 403)
+    Thrown when a user does not have the credentials to get or change
+    details of an ongoing upload with a specific upload id
+    (response code 403)
+    """
+
+    def __init__(self, upload_id: str):
+        message = (
+            "This user is not registered as data submitter "
+            f"for the file corresponding to the upload_id '{upload_id}'."
+        )
+        super().__init__(message)
+
+
+class UserHasNoFileAccess(RuntimeError, GHGAConnectorException):
+    """
+    Thrown when a user does not have the credentials for
+    a specific file id (response code 403)
     """
 
     def __init__(self, file_id: str):
-        message = f"This user is not registered as data submitter for the file with id '{file_id}'."
+        message = (
+            "This user is not registered as data submitter "
+            f"for the file with the id '{file_id}'."
+        )
+        super().__init__(message)
+
+
+class CantChangeUploadStatus(RuntimeError, GHGAConnectorException):
+    """
+    Thrown when the upload status of a file can't be set to the requested status
+    (response code 400)
+    """
+
+    def __init__(self, upload_id: str, upload_status: str):
+        message = f"The upload with id '{upload_id}' can't be set to '{upload_status}'."
         super().__init__(message)
 
 

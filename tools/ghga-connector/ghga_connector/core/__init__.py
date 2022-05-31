@@ -22,14 +22,15 @@ from .api_calls import (  # noqa: F401
     UploadStatus,
     await_download_url,
     download_api_call,
+    get_file_metadata,
     get_part_upload_urls,
-    get_pending_uploads,
     initiate_multipart_upload,
     patch_multipart_upload,
     start_multipart_upload,
 )
 from .exceptions import (  # noqa: F401
     BadResponseCodeError,
+    CantChangeUploadStatus,
     GHGAConnectorException,
     MaxRetriesReached,
     MaxWaitTimeExceeded,
@@ -37,6 +38,7 @@ from .exceptions import (  # noqa: F401
     NoUploadPossibleError,
     RequestFailedError,
     UploadNotRegisteredError,
+    UserHasNoUploadAccess,
 )
 from .file_operations import (  # noqa: F401
     download_file_parts,

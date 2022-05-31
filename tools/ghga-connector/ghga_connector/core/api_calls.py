@@ -21,7 +21,7 @@ Contains API calls to the API of the GHGA Storage implementation
 import json
 from enum import Enum
 from time import sleep
-from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import Dict, Iterator, Tuple, Union
 
 import requests
 
@@ -30,6 +30,8 @@ from ghga_connector.core.message_display import AbstractMessageDisplay
 
 from .exceptions import (
     BadResponseCodeError,
+    CantChangeUploadStatus,
+    FileNotRegisteredError,
     MaxPartNoExceededError,
     MaxWaitTimeExceeded,
     NoS3AccessMethod,
@@ -37,6 +39,8 @@ from .exceptions import (
     RequestFailedError,
     RetryTimeExpectedError,
     UploadNotRegisteredError,
+    UserHasNoFileAccess,
+    UserHasNoUploadAccess,
 )
 
 # Constants for clarity of return values
@@ -65,19 +69,23 @@ def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
     """
 
     # build url and headers
-    url = f"{api_url}/files/{file_id}/uploads"
+    url = f"{api_url}/uploads"
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    post_data = {"file_id": file_id}
+    serialized_data = json.dumps(post_data)
 
     # Make function call to get upload url
     try:
-        response = requests.post(url=url, headers=headers)
+        response = requests.post(url=url, headers=headers, data=serialized_data)
     except requests.exceptions.RequestException as request_error:
         raise RequestFailedError(url) from request_error
 
     status_code = response.status_code
     if status_code != 200:
-        if status_code == 403:
+        if status_code == 400:
             raise NoUploadPossibleError(file_id=file_id)
+        if status_code == 403:
+            raise UserHasNoFileAccess(file_id=file_id)
         raise BadResponseCodeError(url, status_code)
 
     response_body = response.json()
@@ -102,6 +110,10 @@ def get_part_upload_url(*, api_url: str, upload_id: str, part_no: int):
 
     status_code = response.status_code
     if status_code != 200:
+        if status_code == 403:
+            raise UserHasNoUploadAccess(upload_id=upload_id)
+        if status_code == 404:
+            raise UploadNotRegisteredError(upload_id=upload_id)
         raise BadResponseCodeError(url, status_code)
 
     response_body = response.json()
@@ -159,35 +171,70 @@ def patch_multipart_upload(
 
     status_code = response.status_code
     if status_code != 204:
+        if status_code == 400:
+            raise CantChangeUploadStatus(
+                upload_id=upload_id, upload_status=upload_status
+            )
+        if status_code == 403:
+            raise UserHasNoUploadAccess(upload_id=upload_id)
+        if status_code == 404:
+            raise UploadNotRegisteredError(upload_id=upload_id)
         raise BadResponseCodeError(url, status_code)
 
 
-def get_pending_uploads(api_url: str, file_id: str) -> Optional[List[Dict]]:
+def get_upload_info(
+    api_url: str,
+    upload_id: str,
+) -> Dict:
     """
-    Get all multipart-uploads of a specific file which are currently pending.
-    The number of multipart uploads can either be 0 or 1
-    Returns either the upload_id and part_size of the pending upload, or None
+    Get details on a specific upload
     """
 
     # build url and headers
-    url = f"{api_url}/files/{file_id}/uploads"
-    params = {"upload_status": "pending"}
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    url = f"{api_url}/uploads/{upload_id}"
+    headers = {"Accept": "*/*", "Content-Type": "application/json"}
 
     try:
-        response = requests.get(url=url, headers=headers, params=params)
+        response = requests.get(url=url, headers=headers)
     except requests.exceptions.RequestException as request_error:
         raise RequestFailedError(url) from request_error
 
     status_code = response.status_code
     if status_code != 200:
+        if status_code == 403:
+            raise UserHasNoUploadAccess(upload_id=upload_id)
+        if status_code == 404:
+            raise UploadNotRegisteredError(upload_id=upload_id)
         raise BadResponseCodeError(url, status_code)
 
-    pending_uploads: list = response.json()
-    if len(pending_uploads) == 0:
-        return None
+    return response.json()
 
-    return pending_uploads
+
+def get_file_metadata(api_url: str, file_id: str) -> Dict:
+    """
+    Get all file metadata
+    """
+
+    # build url and headers
+    url = f"{api_url}/files/{file_id}"
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+
+    try:
+        response = requests.get(url=url, headers=headers)
+    except requests.exceptions.RequestException as request_error:
+        raise RequestFailedError(url) from request_error
+
+    status_code = response.status_code
+    if status_code != 200:
+        if status_code == 403:
+            raise UserHasNoFileAccess(file_id=file_id)
+        if status_code == 404:
+            raise FileNotRegisteredError(file_id=file_id)
+        raise BadResponseCodeError(url, status_code)
+
+    file_metadata = response.json()
+
+    return file_metadata
 
 
 def download_api_call(
@@ -250,26 +297,19 @@ def start_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
         multipart_upload = initiate_multipart_upload(api_url=api_url, file_id=file_id)
         return multipart_upload
     except NoUploadPossibleError as error:
-        pending_uploads = get_pending_uploads(api_url=api_url, file_id=file_id)
-        if pending_uploads is None:
+        file_metadata = get_file_metadata(api_url=api_url, file_id=file_id)
+        upload_id = file_metadata["current_upload_id"]
+        if upload_id is None:
             raise error
-    except Exception as error:
-        raise error
 
-    for upload in pending_uploads:
-        upload_id = upload[0]
-        try:
-            patch_multipart_upload(
-                api_url=api_url,
-                upload_id=upload_id,
-                upload_status=UploadStatus.CANCELLED,
-            )
+        patch_multipart_upload(
+            api_url=api_url,
+            upload_id=upload_id,
+            upload_status=UploadStatus.CANCELLED,
+        )
 
-        except Exception as error:
-            raise UploadNotRegisteredError(upload_id=upload_id) from error
-
-    try:
         multipart_upload = initiate_multipart_upload(api_url=api_url, file_id=file_id)
+
     except Exception as error:
         raise error
 

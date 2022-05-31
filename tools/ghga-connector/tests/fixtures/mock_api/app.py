@@ -48,10 +48,18 @@ class UploadStatus(str, Enum):
 
 class StatePatch(BaseModel):
     """
-    Model containing a state parameter. Needed for the ULC get api call
+    Model containing a state parameter. Needed for the UCS patch: /uploads/... api call
     """
 
     upload_status: UploadStatus
+
+
+class StatePost(BaseModel):
+    """
+    Model containing a state parameter. Needed for the UCS post: /uploads api call
+    """
+
+    file_id: str
 
 
 class PresignedPostURL(BaseModel):
@@ -86,10 +94,25 @@ class AccessMethod(BaseModel):
 
 
 class UploadProperties(BaseModel):
-    """A AccessMethod as per the DRS OpenApi spec."""
+    """The Upload Properties returned by the UCS post /uploads endpoint"""
 
     upload_id: str
+    file_id: str
     part_size: int
+
+
+class FileProperties(BaseModel):
+    """The File Properties returned by the UCS get /files/{file_id} endpoint"""
+
+    file_id: str
+    file_name: str
+    md5_checksum: str
+    size: int
+    grouping_label: str
+    creation_date: datetime
+    update_date: datetime
+    format: str
+    current_upload_id: str
 
 
 class DrsObjectServe(BaseModel):
@@ -153,26 +176,24 @@ async def drs3_objects(file_id: str):
     )
 
 
-@app.get(
-    "/files/{file_id}/uploads", summary="ulc_get_files_uploads_mock", status_code=200
-)
-async def ulc_get_files_uploads(file_id: str, upload_status: str):
-
+@app.get("/files/{file_id}", summary="ulc_get_files_mock", status_code=200)
+async def ulc_get_files(file_id: str):
     """
-    Mock for the ulc GET /files/{file_id}/uploads call.
+    Mock for the ulc GET /files/{file_id} call.
     """
-    if upload_status == UploadStatus.PENDING:
 
-        if file_id == "pending":
-            return [
-                UploadProperties(
-                    upload_id="pending",
-                    part_size=DEFAULT_PART_SIZE,
-                )
-            ]
-
-        if file_id == "uploaded":
-            return []
+    if file_id == "pending":
+        return FileProperties(
+            file_id=file_id,
+            file_name=file_id,
+            md5_checksum="",
+            size=0,
+            grouping_label="inbox",
+            creation_date=datetime.utcnow(),
+            update_date=datetime.utcnow(),
+            format="",
+            current_upload_id="pending",
+        )
 
     raise HTTPException(
         status_code=404,
@@ -180,28 +201,49 @@ async def ulc_get_files_uploads(file_id: str, upload_status: str):
     )
 
 
-@app.post(
-    "/files/{file_id}/uploads", summary="ulc_post_files_uploads_mock", status_code=200
-)
-async def ulc_post_files_uploads(file_id: str):
+@app.get("/uploads/{upload_id}", summary="ulc_get_uploads_mock", status_code=200)
+async def ulc_get_uploads(upload_id: str):
     """
-    Mock for the ulc POST /files/{file_id}/uploads call.
+    Mock for the ulc GET /uploads/{upload_id} call.
     """
+    if upload_id == "pending":
+        return UploadProperties(
+            upload_id="pending",
+            file_id="pending",
+            part_size=DEFAULT_PART_SIZE,
+        )
+
+    raise HTTPException(
+        status_code=404,
+        detail=(f'The upload with the id "{upload_id}" does not exist.'),
+    )
+
+
+@app.post("/uploads", summary="ulc_post_uploads_mock", status_code=200)
+async def ulc_post_files_uploads(state: StatePost):
+    """
+    Mock for the ulc POST /uploads call.
+    """
+
+    file_id = state.file_id
 
     if file_id == "uploadable":
         return UploadProperties(
             upload_id="pending",
+            file_id=file_id,
             part_size=DEFAULT_PART_SIZE,
         )
     if file_id == "uploadable-16":
         return UploadProperties(
             upload_id="pending",
+            file_id=file_id,
             part_size=16 * 1024 * 1024,
         )
 
     if file_id == "uploadable-5":
         return UploadProperties(
             upload_id="pending",
+            file_id=file_id,
             part_size=5 * 1024 * 1024,
         )
     if file_id == "pending":
@@ -253,7 +295,7 @@ async def ulc_patch_uploads(upload_id: str, state: StatePatch):
             return JSONResponse(None, status_code=status.HTTP_204_NO_CONTENT)
 
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=(
                 f'The upload with id "{upload_id}" can`t be set to "{upload_status}"'
             ),
@@ -264,7 +306,15 @@ async def ulc_patch_uploads(upload_id: str, state: StatePatch):
             return JSONResponse(None, status_code=status.HTTP_204_NO_CONTENT)
 
         raise HTTPException(
-            status_code=403,
+            status_code=400,
+            detail=(
+                f'The upload with id "{upload_id}" can`t be set to "{upload_status}"'
+            ),
+        )
+
+    if upload_id == "uploadable":
+        raise HTTPException(
+            status_code=400,
             detail=(
                 f'The upload with id "{upload_id}" can`t be set to "{upload_status}"'
             ),
