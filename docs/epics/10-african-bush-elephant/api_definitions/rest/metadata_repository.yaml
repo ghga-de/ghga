@@ -1627,86 +1627,80 @@ components:
           type: array
       title: Dataset
       type: object
-    DatasetSummary:
-      description: Dataset Summary
-      title: Dataset Summary
-      type: object
+
+    Summary:
       properties:
-        creation_date:
-          description: Timestamp (in ISO 8601 format) when the entity was created.
-          title: Creation Date
+        count:
+          title: Count
+          type: integer
+        stats:
+          title: Stats
+          type: object
+      required:
+        - count
+        - stats
+      title: Summary
+      type: object
+
+    MetadataSummary:
+      properties:
+        sample_summary:
+          $ref: "#/components/schemas/Summary"
+        file_summary:
+          $ref: "#/components/schemas/Summary"
+        experiment_summary:
+          $ref: "#/components/schemas/Summary"
+        analysis_summary:
+          $ref: "#/components/schemas/Summary"
+        individual_summary:
+          $ref: "#/components/schemas/Summary"
+        project_summary:
+          $ref: "#/components/schemas/Summary"
+        protocol_summary:
+          $ref: "#/components/schemas/Summary"
+        study_summary:
+          $ref: "#/components/schemas/Summary"
+        biospecimen_summary:
+          $ref: "#/components/schemas/Summary"
+        dataset_summary:
+          $ref: "#/components/schemas/Summary"
+      title: Summary
+      type: object
+
+    DatasetSummary:
+      properties:
+        accession:
+          description:
+            A unique GHGA identifier assigned to an entity for the sole
+            purpose of referring to that entity in a global scope.
+          title: Accession
           type: string
         description:
-          description: Description of an entity.
+          description: Description of the Dataset.
           title: Description
           type: string
-        id:
-          description: An identifier that uniquely represents an entity.
-          title: Id
+        ega_accession:
+          description:
+            A unique European Genome-Phenome Archive (EGA) identifier assigned
+            to an entity for the sole purpose of referring to that entity within the
+            EGA federated network.
+          title: Ega Accession
           type: string
         title:
-          description: The name for an entity.
-          title: Name
+          description: A title for a Dataset.
+          title: Title
           type: string
-        update_date:
-          description: Timestamp (in ISO 8601 format) when the entity was updated.
-          title: Update Date
-          type: string
-        samples:
-          description: Sample description
-          type: object
-          properties:
-            sex:
-              type: object
-              properties:
-                count:
-                  type: integer
-                male:
-                  type: integer
-                female:
-                  type: integer
-                unknown:
-                  type: integer
-            tissue:
-              type: object
-            phenotype:
-              type: object
-        files:
-          description: Files description
-          type: object
-          properties:
-            count:
-              type: integer
-            format:
-              type: object
-            size:
-              type: string
-        studies:
-          description: Studies description
-          type: object
-          properties:
-            part_of_studies:
-              type: array
-              items:
-                type: string
-            publications:
-              type: array
-              items:
-                type: string
-        experiments:
-          description: Experiments description
-          type: object
-          properties:
-            count:
-              type: integer
-            experiment_type:
-              type: array
-              items:
-                type: string
-            instrument:
-              type: array
-              items:
-                type: string
+        sample_summary:
+          $ref: "#/components/schemas/Summary"
+        study_summary:
+          $ref: "#/components/schemas/Summary"
+        experiment_summary:
+          $ref: "#/components/schemas/Summary"
+        file_summary:
+          $ref: "#/components/schemas/Summary"
+      title: DatasetSummary
+      type: object
+
     DatasetStatusPatch:
       properties:
         status:
