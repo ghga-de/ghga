@@ -27,6 +27,7 @@ import requests
 
 from ghga_connector.core.constants import MAX_PART_NUMBER
 from ghga_connector.core.message_display import AbstractMessageDisplay
+from ghga_connector.core.retry import WithRetry
 
 from .exceptions import (
     BadResponseCodeError,
@@ -62,6 +63,7 @@ class UploadStatus(str, Enum):
     UPLOADED = "uploaded"
 
 
+@WithRetry
 def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
     """
     Perform a RESTful API call to initiate a multipart upload
@@ -93,6 +95,7 @@ def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
     return response_body["upload_id"], int(response_body["part_size"])
 
 
+@WithRetry
 def get_part_upload_url(*, api_url: str, upload_id: str, part_no: int):
     """
     Get a presigned url to upload a specific part
@@ -149,6 +152,7 @@ def get_part_upload_urls(
     raise MaxPartNoExceededError()
 
 
+@WithRetry
 def patch_multipart_upload(
     api_url: str, upload_id: str, upload_status: UploadStatus
 ) -> None:
@@ -210,6 +214,7 @@ def get_upload_info(
     return response.json()
 
 
+@WithRetry
 def get_file_metadata(api_url: str, file_id: str) -> Dict:
     """
     Get all file metadata

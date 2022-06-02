@@ -17,8 +17,10 @@
 """Tests for the up- and download functions of the cli"""
 
 import os
+import pathlib
 from filecmp import cmp
 from pathlib import Path
+from typing import Optional
 
 import pytest
 import typer
@@ -35,6 +37,7 @@ from ghga_connector.core import BadResponseCodeError, MaxWaitTimeExceeded
 
 from ..fixtures import state
 from ..fixtures.mock_api.testcontainer import MockAPIContainer
+from ..fixtures.retry import RetryFixture, retry_fixture  # noqa: F401
 from ..fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
 
 
@@ -48,10 +51,11 @@ from ..fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
     ],
 )
 def test_multipart_download(
-    file_size,
-    part_size,
+    file_size: int,
+    part_size: int,
     s3_fixture: S3Fixture,  # noqa F811
-    tmp_path,
+    tmp_path: pathlib.Path,
+    retry_fixture: RetryFixture,  # noqa F811
 ):
     """Test the multipart download of a file"""
     big_object = get_big_s3_object(s3_fixture, object_size=file_size)
@@ -71,14 +75,14 @@ def test_multipart_download(
         s3_download_file_size=file_size_,
     ) as api:
         api_url = api.get_connection_url()
-
         try:
             download(
                 api_url=api_url,
                 file_id=big_object.object_id,
                 output_dir=tmp_path,
-                max_wait_time=int(60),
+                max_wait_time=60,
                 part_size=part_size,
+                max_retries=0,
             )
         except Exception as exception:
             raise exception
@@ -92,27 +96,28 @@ def test_multipart_download(
 @pytest.mark.parametrize(
     "bad_url,bad_outdir,file_name,max_wait_time,expected_exception",
     [
-        (True, False, "file_downloadable", "60", ApiNotReachable),
-        (False, False, "file_downloadable", "60", None),
+        (True, False, "file_downloadable", 60, ApiNotReachable),
+        (False, False, "file_downloadable", 60, None),
         (
             False,
             False,
             "file_not_downloadable",
-            "60",
+            60,
             BadResponseCodeError,
         ),
-        (False, False, "file_retry", "60", MaxWaitTimeExceeded),
-        (False, True, "file_downloadable", "60", DirectoryDoesNotExist),
+        (False, False, "file_retry", 60, MaxWaitTimeExceeded),
+        (False, True, "file_downloadable", 60, DirectoryDoesNotExist),
     ],
 )
 def test_download(
-    bad_url,
-    bad_outdir,
-    file_name,
-    max_wait_time,
-    expected_exception,
-    s3_fixture: S3Fixture,  # noqa F811
-    tmp_path,
+    bad_url: bool,
+    bad_outdir: bool,
+    file_name: str,
+    max_wait_time: int,
+    expected_exception: type[Optional[Exception]],
+    s3_fixture: S3Fixture,  # noqa: F811
+    tmp_path: pathlib.Path,
+    retry_fixture: RetryFixture,  # noqa: F811
 ):
     """Test the download of a file"""
 
@@ -142,8 +147,9 @@ def test_download(
                 api_url=api_url,
                 file_id=file.file_id,
                 output_dir=output_dir,
-                max_wait_time=int(max_wait_time),
+                max_wait_time=max_wait_time,
                 part_size=DEFAULT_PART_SIZE,
+                max_retries=0,
             )
             assert expected_exception is None
             assert cmp(output_dir / file.file_id, file.file_path)
@@ -161,10 +167,11 @@ def test_download(
     ],
 )
 def test_upload(
-    bad_url,
-    file_name,
-    expected_exception,
+    bad_url: bool,
+    file_name: str,
+    expected_exception: type[Optional[Exception]],
     s3_fixture: S3Fixture,  # noqa F811
+    retry_fixture: RetryFixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
 
@@ -191,6 +198,7 @@ def test_upload(
                 api_url=api_url,
                 file_id=uploadable_file.file_id,
                 file_path=str(uploadable_file.file_path.resolve()),
+                max_retries=0,
             )
 
             s3_fixture.storage.complete_multipart_upload(
@@ -219,6 +227,7 @@ def test_multipart_upload(
     file_size: int,
     anticipated_part_size: int,
     s3_fixture: S3Fixture,  # noqa F811
+    retry_fixture: RetryFixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
 
@@ -267,6 +276,7 @@ def test_multipart_upload(
                     api_url=api_url,
                     file_id=file_id,
                     file_path=file.name,
+                    max_retries=0,
                 )
 
             # confirm upload

@@ -24,7 +24,7 @@ from ghga_connector.core import (
     AbstractMessageDisplay,
     BadResponseCodeError,
     CantChangeUploadStatus,
-    GHGAConnectorException,
+    KnownError,
     MaxRetriesReached,
     MessageColors,
     NoUploadPossibleError,
@@ -41,11 +41,13 @@ from ghga_connector.core import (
     start_multipart_upload,
     upload_file_part,
 )
+from ghga_connector.core.retry import WithRetry
 
 DEFAULT_PART_SIZE = 16 * 1024 * 1024
+MAX_RETRIES = 3
 
 
-class DirectoryDoesNotExist(RuntimeError, GHGAConnectorException):
+class DirectoryDoesNotExist(RuntimeError, KnownError):
     """Thrown, when the specified directory does not exist."""
 
     def __init__(self, output_dir: str):
@@ -53,7 +55,7 @@ class DirectoryDoesNotExist(RuntimeError, GHGAConnectorException):
         super().__init__(message)
 
 
-class FileAlreadyExistsError(RuntimeError, GHGAConnectorException):
+class FileAlreadyExistsError(RuntimeError, KnownError):
     """Thrown, when the specified file already exists."""
 
     def __init__(self, output_file: str):
@@ -61,7 +63,7 @@ class FileAlreadyExistsError(RuntimeError, GHGAConnectorException):
         super().__init__(message)
 
 
-class ApiNotReachable(RuntimeError, GHGAConnectorException):
+class ApiNotReachable(RuntimeError, KnownError):
     """Thrown, when the api is not reachable."""
 
     def __init__(self, api_url: str):
@@ -103,10 +105,16 @@ def upload(  # noqa C901
     api_url: str = typer.Option(..., help="Url to the upload contoller"),
     file_id: str = typer.Option(..., help="The id if the file to upload"),
     file_path: str = typer.Option(..., help="The path to the file to upload"),
+    max_retries: int = typer.Argument(
+        default=MAX_RETRIES,
+        help="Number of times to retry failed part uploads",
+    ),
 ):
     """
     Command to upload a file
     """
+    WithRetry.set_retries(max_retries)
+
     if not os.path.isfile(file_path):
         message_display.failure(f"The file {file_path} does not exist.")
         raise typer.Abort()
@@ -182,16 +190,22 @@ def download(  # pylint: disable=too-many-arguments
         ..., help="The directory to put the downloaded file"
     ),
     max_wait_time: int = typer.Argument(
-        "60",
+        60,
         help="Maximal time in seconds to wait before quitting without a download. ",
     ),
     part_size: int = typer.Argument(
         DEFAULT_PART_SIZE, help="Part size of the downloaded chunks."
     ),
+    max_retries: int = typer.Argument(
+        default=MAX_RETRIES,
+        help="Number of times to retry failed part downloads",
+    ),
 ):
     """
     Command to download a file
     """
+    WithRetry.set_retries(max_retries)
+
     if not os.path.isdir(output_dir):
         raise DirectoryDoesNotExist(output_dir)
 
