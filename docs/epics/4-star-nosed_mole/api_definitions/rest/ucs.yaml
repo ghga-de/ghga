@@ -147,6 +147,24 @@ paths:
 
 components:
   schemas:
+    KnownException:
+      type: object
+      properties:
+        description:
+          type: string
+          description: A message to the client describing what went wrong.
+        exceptionId:
+          type: string
+          description: A string toidentify the domain logic problem.
+        data:
+          type: object
+          description: Additional machine-readable information on the exception.
+        required:
+          - description
+          - exceptionId
+          - data
+
+
     UploadCreation:
       title: Properties required to create a new upload
       type: object
