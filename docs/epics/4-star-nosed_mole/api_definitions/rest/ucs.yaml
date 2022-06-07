@@ -32,7 +32,7 @@ paths:
   /uploads:
     post:
       operationId: createUpload
-      description: Initiate a new mutli-part upload.
+      description: Initiate a new multi-part upload.
       requestBody:
         content:
           application/json:
@@ -78,7 +78,7 @@ paths:
             The user is not registered as a Data Submitter for the
             file corresponding to this upload.
         "404":
-          description: The upload with the given ID does not exist (anymore).
+          description: The multi-part upload with the given ID does not exist.
 
     patch:
       operationId: updateUploadStatus
@@ -101,8 +101,7 @@ paths:
           description: Multi-part upload successfully updated.
         "400":
           description: |
-            Cannot set invalid status for multi-part upload
-            with the given ID.
+            The provided status value was invalid or the status of this multi-part upload currently or permanently can't be changed.
         "403":
           description: |
             The user is not registered as a Data Submitter for the
@@ -110,11 +109,11 @@ paths:
         "404":
           description: The multi-part upload with the given ID does not exist.
 
-  /uploads/{upload_id}/parts/{part_no}/signed_posts:
+  /uploads/{upload_id}/parts/{part_no}/signed_urls:
     post:
-      operationId: createPreSignedPost
+      operationId: createPreSignedURL
       description: |
-        Create a pre-signed post for the specified part number of the specified multi-part
+        Create a pre-signed URL for the specified part number of the specified multi-part
         upload.
       parameters:
         - name: upload_id
@@ -159,11 +158,10 @@ components:
         data:
           type: object
           description: Additional machine-readable information on the exception.
-        required:
-          - description
-          - exceptionId
-          - data
-
+      required:
+        - description
+        - exceptionId
+        - data
 
     UploadCreation:
       title: Properties required to create a new upload
@@ -173,7 +171,7 @@ components:
           type: string
           description: The ID of the file corresponding to this upload.
       required:
-        - upload_id
+        - file_id
 
     UploadDetails:
       title: Multi-Part Upload Details
@@ -234,6 +232,7 @@ components:
       required:
         - file_id
         - file_name
+        - size
         - md5_checksum
         - grouping_label
         - creation_date
