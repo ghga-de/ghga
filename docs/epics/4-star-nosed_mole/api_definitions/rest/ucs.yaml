@@ -131,12 +131,11 @@ paths:
       responses:
         "200":
           description: |
-            The newly create pre-signed POST.
+            The newly created pre-signed url.
           content:
             application/json:
               schema:
-                description: To be defined in further detail.
-                type: object
+                $ref: "#/components/schemas/AccessURL"
         "403":
           description: |
             The user is not registered as a Data Submitter for the
@@ -162,6 +161,17 @@ components:
         - description
         - exceptionId
         - data
+
+    AccessURL:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: >-
+            A fully resolvable URL that can be used to upload the actual object
+            bytes for one upload part.
 
     UploadCreation:
       title: Properties required to create a new upload
