@@ -68,6 +68,43 @@ The column "upload_status" from then table "files" is removed.
 
 Please note, not more that one upload per file_id may have a state that is set to `pending` , `uploaded`, or `accepted`. Moreover, within the list of states from uploads corresponding to one file, these `pending` , `uploaded`, and `accepted` are mutually exclusive.
 This also means that once an upload attempt corresponding to a file is set to `accepted`, no new uploads can be created for that file. In a future epic, we will implement a mechanism that allows controlled re-upload of a file by explicitly requesting to depreciate an old upload. We might also consider an `is_open` flag that is specified per file to control whether new upload attempts are currently allowed for that file.
+#### Valid State Changes For One Upload Attempt
+
+```mermaid
+stateDiagram-v2
+    state initiate <<choice>>
+    state "no upload attempt created" as uninitiated
+    state "Upload Attempt" as upload_attempt
+
+    [*] --> initiate: intiate upload attempt
+    initiate --> uninitiated: 
+    note right of uninitiated
+    upload attempt for file
+    already present
+    in pending, uploaded 
+    or accepted state 
+    end note
+    initiate --> pending
+    state upload_attempt {
+    state part_upload_choice <<choice>>
+    
+    pending --> part_upload_choice: create part upload url
+    part_upload_choice --> pending
+    part_upload_choice --> failed
+    
+    pending --> cancelled: user cancels
+    state confirm_choice <<choice>>
+    pending --> confirm_choice: user confirms upload completion
+    confirm_choice --> failed
+    confirm_choice --> uploaded
+    
+    state check_choice <<choice>>
+    uploaded --> check_choice: check and persist uploaded file\n(done by dedicated services)
+    check_choice --> accepted
+    check_choice --> rejected
+    }
+```
+
 ### API Definition:
 
 [OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/4-star-nosed_mole/api_definitions/rest/ucs.yaml)

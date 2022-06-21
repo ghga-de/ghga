@@ -24,10 +24,14 @@ paths:
                 $ref: "#/components/schemas/FileMetadata"
         "403":
           description: |
-            The user is not registered as a Data Submitter for the
-            corresponding file.
+            Exceptions by ID:
+              - noFileAccess: The user is not registered as a Data Submitter
+                for the corresponding file.
         "404":
-          description: The file with the given ID has not (yet) been registered for upload.
+          description: |
+            Exceptions by ID:
+              - fileNotRegistered: The file with the given ID has not (yet)
+                been registered for upload.
 
   /uploads:
     post:
@@ -47,14 +51,21 @@ paths:
                 $ref: "#/components/schemas/UploadDetails"
         "400":
           description: |
-            It is currently not possible to create a new upload for
-            the file with the specified ID because another upload for that
-            file is already active or has been accepted
-            (its status is not "failed", "cancelled", or "rejected").
+            Exceptions by ID:
+              - uploadAttemptPresentPending: Imposible to create a new upload for
+                the file with the specific ID. Another upload in pending status
+                already exists for this file.
+              - uploadAttemptPresentUploaded: Imposible to create a new upload for
+                the file with the specific ID. Another upload in uploaded status
+                already exists for this file.
+              - uploadAttemptPresentAccepted: Imposible to create a new upload for
+                the file with the specific ID. Another upload in accepted status
+                already exists for this file.
         "403":
           description: |
-            The user is not registered as a Data Submitter for the
-            corresponding file.
+            Exceptions by ID:
+              - noFileAccess: The user is not registered as a Data Submitter
+                for the corresponding file.
 
   /uploads/{upload_id}:
     get:
@@ -75,10 +86,14 @@ paths:
                 $ref: "#/components/schemas/UploadDetails"
         "403":
           description: |
-            The user is not registered as a Data Submitter for the
-            file corresponding to this upload.
+            Exceptions by ID:
+              - noFileAccess: The user is not registered as a Data Submitter
+                for the file corresponding to this upload.
         "404":
-          description: The multi-part upload with the given ID does not exist.
+          description: |
+            Exceptions by ID:
+              - NoSuchUpload: The multi-part upload with the given ID
+                does not exist.
 
     patch:
       operationId: updateUploadStatus
@@ -101,13 +116,27 @@ paths:
           description: Multi-part upload successfully updated.
         "400":
           description: |
-            The provided status value was invalid or the status of this multi-part upload currently or permanently can't be changed.
+            Exceptions by ID:
+              - pendingInvalidChange: Cannot change status from pending to accepted or rejected
+              - uploadedInvalidChange: Cannot change status from uploaded to cancelled or pending
+              - invalidChangeFromCancelled: Cannot change status from cancelled for this upload attempt.
+                If you want to restart, initiate a new multi-part upload instead.
+              - invalidChangeFromFailed: Cannot change status from failed for this upload attempt.
+                If you want to restart, initiate a new multi-part upload instead.
+              - invalidChangeFromAccepted: Upload has already been accepted, a status change or
+                new upload attempt is no longer possible.
+              - invalidChangeFromRejected: Cannot change status from rejected for this upload attempt.
+                If you want to restart, initiate a new multi-part upload instead.
         "403":
           description: |
-            The user is not registered as a Data Submitter for the
-            file corresponding to this multi-part upload.
+            Exceptions by ID:
+              - noFileAccess: The user is not registered as a Data Submitter
+                for the file corresponding to this multi-part upload.
         "404":
-          description: The multi-part upload with the given ID does not exist.
+          description: |
+            Exceptions by ID:
+              - noSuchUpload: The multi-part upload with the given ID
+                does not exist.
 
   /uploads/{upload_id}/parts/{part_no}/signed_urls:
     post:
@@ -138,10 +167,14 @@ paths:
                 $ref: "#/components/schemas/AccessURL"
         "403":
           description: |
-            The user is not registered as a Data Submitter for the
-            file corresponding to this multi-part upload.
+            Exceptions by ID:
+              - noFileAccess: The user is not registered as a Data Submitter
+                for the file corresponding to this multi-part upload.
         "404":
-          description: The multi-part upload with the given ID does not exist.
+          description: |
+            Exceptions by ID:
+              - noSuchUpload: The multi-part upload with the given ID
+                does not exist.
 
 components:
   schemas:
@@ -169,7 +202,7 @@ components:
       properties:
         url:
           type: string
-          description: >-
+          description: |
             A fully resolvable URL that can be used to upload the actual object
             bytes for one upload part.
 
