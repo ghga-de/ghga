@@ -38,7 +38,9 @@ For the above protocols, providers specific for event handling using Apache Kafk
 Moreover, a provider that uses a lightweight local (single machine only) in-memory queue shall be implemented for testing purposes.
 
 ### Application
-The newly created chassis library shall be tested on the code base of the Upload Controller Service. There the above mentioned protocols and providers shall be used to replace the message handling functionality currently based on RabbitMQ.
+~~The newly created chassis library shall be tested on the code base of the Upload Controller Service. There the above mentioned protocols and providers shall be used to replace the message handling functionality currently based on RabbitMQ.~~
+*This is currently not possible, as the UCS code base is entirely synchronous, while the Kafka providers are async. Before applying the hexkit building blocks to a microservice, protocol/provider pairs for other infrastructure need to be implemented.
+Most importantly, this includes interactions with an S3-base object storage and with a MongoDB-based database.*
 
 
 ## Exploratory Part / Open Questions:
@@ -60,7 +62,8 @@ differently for local service-specific and deployment-based multi-service testin
 still be interesting, however, that investigation shall be part of another epic.
 
 
-Another area of research is how dependency injection can help to glue all of the triple hexagonal architecture components together (providers to protocols to translators to ports). Thereby, a specific focus should be set on the question of how to inject config parameters that are needed throughout all of these components and are typically defined via YAML files or environment variables.
+~~Another area of research is how dependency injection can help to glue all of the triple hexagonal architecture components together (providers to protocols to translators to ports). Thereby, a specific focus should be set on the question of how to inject config parameters that are needed throughout all of these components and are typically defined via YAML files or environment variables.~~
+*This is still interesting but will be postponed.*
 
 ## Human Resource/Time Estimation:
 
