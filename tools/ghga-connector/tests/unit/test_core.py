@@ -19,13 +19,13 @@ from typing import Optional
 
 import pytest
 
-from ghga_connector.core import check_url
 from ghga_connector.core.exceptions import (
     CollectiveError,
     FatalError,
     MaxRetriesReached,
     RetryAbortException,
 )
+from ghga_connector.core.main import check_url
 from ghga_connector.core.retry import WithRetry
 
 

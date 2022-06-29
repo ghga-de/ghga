@@ -88,6 +88,8 @@ def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
             raise NoUploadPossibleError(file_id=file_id)
         if status_code == 403:
             raise UserHasNoFileAccess(file_id=file_id)
+        if status_code == 404:
+            raise FileNotRegisteredError(file_id=file_id)
         raise BadResponseCodeError(url, status_code)
 
     response_body = response.json()

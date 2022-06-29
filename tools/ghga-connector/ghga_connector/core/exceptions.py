@@ -71,6 +71,38 @@ class CollectiveError(RuntimeError, KnownError):
         super().__init__(message)
 
 
+class DirectoryDoesNotExist(RuntimeError, KnownError):
+    """Thrown, when the specified directory does not exist."""
+
+    def __init__(self, output_dir: str):
+        message = f"The directory {output_dir} does not exist."
+        super().__init__(message)
+
+
+class FileAlreadyExistsError(RuntimeError, KnownError):
+    """Thrown, when the specified file already exists."""
+
+    def __init__(self, output_file: str):
+        message = f"The file {output_file} does already exist."
+        super().__init__(message)
+
+
+class FileDoesNotExistError(RuntimeError, KnownError):
+    """Thrown, when the specified file already exists."""
+
+    def __init__(self, file_path: str):
+        message = f"The file {file_path} does not exist."
+        super().__init__(message)
+
+
+class ApiNotReachable(RuntimeError, KnownError):
+    """Thrown, when the api is not reachable."""
+
+    def __init__(self, api_url: str):
+        message = f"The url {api_url} is currently not reachable."
+        super().__init__(message)
+
+
 class RetryAbortException(CollectiveError, FatalError):
     """
     Raised on encountering a FatalError in the WithRetry decorator.

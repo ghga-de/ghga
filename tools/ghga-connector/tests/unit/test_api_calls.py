@@ -22,17 +22,19 @@ from unittest.mock import Mock
 
 import pytest
 
-from ghga_connector.core import (
-    CantChangeUploadStatus,
-    UploadNotRegisteredError,
+from ghga_connector.core.api_calls import (
     UploadStatus,
+    get_part_upload_urls,
     patch_multipart_upload,
 )
-from ghga_connector.core.api_calls import get_part_upload_urls
-from ghga_connector.core.exceptions import MaxPartNoExceededError, MaxRetriesReached
-
-from ..fixtures.mock_api.testcontainer import MockAPIContainer
-from ..fixtures.retry import RetryFixture, zero_retry_fixture  # noqa: F401
+from ghga_connector.core.exceptions import (
+    CantChangeUploadStatus,
+    MaxPartNoExceededError,
+    MaxRetriesReached,
+    UploadNotRegisteredError,
+)
+from tests.fixtures.mock_api.testcontainer import MockAPIContainer
+from tests.fixtures.retry import RetryFixture, zero_retry_fixture  # noqa: F401
 
 
 @pytest.mark.parametrize(
