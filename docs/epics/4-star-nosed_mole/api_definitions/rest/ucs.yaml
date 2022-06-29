@@ -119,15 +119,13 @@ paths:
         "400":
           description: |
             Exceptions by ID:
-              - pendingInvalidChange: Cannot change status from pending to accepted or rejected
-              - uploadedInvalidChange: Cannot change status from uploaded to cancelled or pending
-              - invalidChangeFromCancelled: Cannot change status from cancelled for this upload attempt.
+              - invalidChangeFromCancelled: Cannot update an upload with status cancelled.
                 If you want to restart, initiate a new multi-part upload instead.
               - invalidChangeFromFailed: Cannot change status from failed for this upload attempt.
                 If you want to restart, initiate a new multi-part upload instead.
-              - invalidChangeFromAccepted: Upload has already been accepted, a status change or
-                new upload attempt is no longer possible.
-              - invalidChangeFromRejected: Cannot change status from rejected for this upload attempt.
+              - invalidChangeFromUploaded: Cannot update an upload with status uploaded.
+              - invalidChangeFromAccepted: Cannot update an upload with status accepted.
+              - invalidChangeFromRejected: Cannot update an upload with status cancelled.
                 If you want to restart, initiate a new multi-part upload instead.
         "403":
           description: |
