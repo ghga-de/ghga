@@ -27,11 +27,19 @@ paths:
             Exceptions by ID:
               - noFileAccess: The user is not registered as a Data Submitter
                 for the corresponding file.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
         "404":
           description: |
             Exceptions by ID:
               - fileNotRegistered: The file with the given ID has not (yet)
                 been registered for upload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
 
   /uploads:
     post:
@@ -52,22 +60,23 @@ paths:
         "400":
           description: |
             Exceptions by ID:
-              - uploadAttemptPresentPending: Imposible to create a new upload for
-                the file with the specific ID. Another upload in pending status
-                already exists for this file.
-              - uploadAttemptPresentUploaded: Imposible to create a new upload for
-                the file with the specific ID. Another upload in uploaded status
-                already exists for this file.
-              - uploadAttemptPresentAccepted: Imposible to create a new upload for
-                the file with the specific ID. Another upload in accepted status
-                already exists for this file.
-              - fileNotRegistered: The file with the given ID has not (yet)
-                been registered for upload.
+              - existingActiveUpload: Imposible to create a new upload for
+                the file with the specific ID. There is already another
+                active or accepted upload for that file. Details on the
+                existing upload are provided as part of the exception data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExistingActiveUploadError"
         "403":
           description: |
             Exceptions by ID:
               - noFileAccess: The user is not registered as a Data Submitter
                 for the corresponding file.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
 
   /uploads/{upload_id}:
     get:
@@ -91,11 +100,19 @@ paths:
             Exceptions by ID:
               - noFileAccess: The user is not registered as a Data Submitter
                 for the file corresponding to this upload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
         "404":
           description: |
             Exceptions by ID:
               - NoSuchUpload: The multi-part upload with the given ID
                 does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
 
     patch:
       operationId: updateUploadStatus
@@ -119,24 +136,33 @@ paths:
         "400":
           description: |
             Exceptions by ID:
-              - invalidChangeFromCancelled: Cannot update an upload with status cancelled.
-                If you want to restart, initiate a new multi-part upload instead.
-              - invalidChangeFromFailed: Cannot change status from failed for this upload attempt.
-                If you want to restart, initiate a new multi-part upload instead.
-              - invalidChangeFromUploaded: Cannot update an upload with status uploaded.
-              - invalidChangeFromAccepted: Cannot update an upload with status accepted.
-              - invalidChangeFromRejected: Cannot update an upload with status cancelled.
-                If you want to restart, initiate a new multi-part upload instead.
+              - uploadNotPending:
+                  The corresponding upload is not in "pending" state.
+                  Thus no updates can be performed.
+                  Details on the current upload status can be found in
+                  the exception data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadNotPendingError"
         "403":
           description: |
             Exceptions by ID:
               - noFileAccess: The user is not registered as a Data Submitter
                 for the file corresponding to this multi-part upload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
         "404":
           description: |
             Exceptions by ID:
               - noSuchUpload: The multi-part upload with the given ID
                 does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
 
   /uploads/{upload_id}/parts/{part_no}/signed_urls:
     post:
@@ -170,11 +196,19 @@ paths:
             Exceptions by ID:
               - noFileAccess: The user is not registered as a Data Submitter
                 for the file corresponding to this multi-part upload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
         "404":
           description: |
             Exceptions by ID:
               - noSuchUpload: The multi-part upload with the given ID
                 does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownException"
 
 components:
   schemas:
@@ -186,10 +220,58 @@ components:
           description: A message to the client describing what went wrong.
         exceptionId:
           type: string
-          description: A string toidentify the domain logic problem.
+          description: A string to identify the domain logic problem.
         data:
           type: object
           description: Additional machine-readable information on the exception.
+      required:
+        - description
+        - exceptionId
+        - data
+
+    ExistingActiveUploadError:
+      type: object
+      properties:
+        description:
+          type: string
+          description: A message to the client describing what went wrong.
+        exceptionId:
+          type: string
+          enum:
+            - existingActiveUpload
+          description: A string to identify the domain logic problem.
+        data:
+          type: object
+          description: Additional machine-readable information on the exception.
+          properties:
+            active_upload:
+              $ref: "#/components/schemas/UploadDetails"
+
+      required:
+        - description
+        - exceptionId
+        - data
+
+
+    UploadNotPendingError:
+      type: object
+      properties:
+        description:
+          type: string
+          description: A message to the client describing what went wrong.
+        exceptionId:
+          type: string
+          enum:
+            - existingActiveUpload
+          description: A string to identify the domain logic problem.
+        data:
+          type: object
+          description: Additional machine-readable information on the exception.
+          properties:
+            current_status:
+              type: string
+              description: The current status of the upload attempt.
+
       required:
         - description
         - exceptionId
@@ -228,10 +310,14 @@ components:
         part_size:
           type: integer
           description: Part size in bytes.
+        upload_status:
+          type: str
+          description: The upload status.
       required:
         - upload_id
         - file_id
         - part_size
+        - upload_status
 
     UploadUpdate:
       title: Multi-Part Upload Update
