@@ -77,27 +77,27 @@ stateDiagram-v2
     state "Upload Attempt" as upload_attempt
 
     [*] --> initiate: intiate upload attempt
-    initiate --> uninitiated: 
+    initiate --> uninitiated:
     note right of uninitiated
     upload attempt for file
     already present
-    in pending, uploaded 
-    or accepted state 
+    in pending, uploaded
+    or accepted state
     end note
     initiate --> pending
     state upload_attempt {
     state part_upload_choice <<choice>>
-    
+
     pending --> part_upload_choice: create part upload url
     part_upload_choice --> pending
     part_upload_choice --> failed
-    
+
     pending --> cancelled: user cancels
     state confirm_choice <<choice>>
     pending --> confirm_choice: user confirms upload completion
     confirm_choice --> failed
     confirm_choice --> uploaded
-    
+
     state check_choice <<choice>>
     uploaded --> check_choice: check and persist uploaded file\n(done by dedicated services)
     check_choice --> accepted
@@ -121,18 +121,7 @@ stateDiagram-v2
 - Name of the package is up for debate.
 
 ## Benchmarking
-This epic not only contains implementation work but the produced solution is also benchmarked against a production s3 system.
-
-### Benchmarking Senario:
-- upload and download large file > 200 GB
-- backend: Ceph S3 in Tübingen and(/or) IMB COS at DKFZ, GHGA file services may be deployed to an arbritrary de.NBI Cloud location
-- client: outside of backend network (e.g. private computer, or VM in different location), should have reasonably fast internet connection
-
-### Benchmarking Criteria:
-- throughput/speed: duration of the up- and download process, average transfer rate
-- reliability: occurrence of sporadic errors/unavailabilities when repeated multiple times
-- (optional) scalability: is the experience deteriorating when uploading multiple large files (from multiple clients) in parallel?
-
+Benchmarking has been cut and will be moved to a later epic.
 
 ## Human Resource/Time Estimation:
 

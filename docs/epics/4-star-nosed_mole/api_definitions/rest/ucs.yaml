@@ -252,7 +252,6 @@ components:
         - exceptionId
         - data
 
-
     UploadNotPendingError:
       type: object
       properties:
@@ -311,7 +310,7 @@ components:
           type: integer
           description: Part size in bytes.
         upload_status:
-          type: str
+          type: string
           description: The upload status.
       required:
         - upload_id
