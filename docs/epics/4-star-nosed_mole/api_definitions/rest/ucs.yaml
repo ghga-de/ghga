@@ -30,7 +30,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpNoFileAccessError"
         "404":
           description: |
             Exceptions by ID:
@@ -39,7 +39,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpFileNotFoundError"
 
   /uploads:
     post:
@@ -58,16 +58,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/UploadDetails"
         "400":
-          description: |
-            Exceptions by ID:
-              - existingActiveUpload: Imposible to create a new upload for
-                the file with the specific ID. There is already another
-                active or accepted upload for that file. Details on the
-                existing upload are provided as part of the exception data.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ExistingActiveUploadError"
+                anyOf:
+                  - $ref: "#/components/schemas/HttpExistingActiveUploadError"
+                  - $ref: "#/components/schemas/HttpFileNotFoundError"
+          description: |
+            Exceptions by ID:
+              - existingActiveUpload: Imposible to create a new upload for the file
+                with the specific ID. There is already another active or accepted upload
+                for that file. Details on the existing upload are provided as part of
+                the exception data.
+              - fileNotRegistered: The file with the given ID has not (yet) been registered
+                for upload.'
         "403":
           description: |
             Exceptions by ID:
@@ -76,7 +80,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpNoFileAccessError"
 
   /uploads/{upload_id}:
     get:
@@ -103,7 +107,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpNoFileAccessError"
         "404":
           description: |
             Exceptions by ID:
@@ -112,7 +116,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpUploadNotFoundError"
 
     patch:
       operationId: updateUploadStatus
@@ -141,10 +145,14 @@ paths:
                   Thus no updates can be performed.
                   Details on the current upload status can be found in
                   the exception data.
+              - uploadStatusChange: Failed to change the status of upload. A reason
+                is provided in the description.'
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UploadNotPendingError"
+                anyOf:
+                  - $ref: "#/components/schemas/HttpUploadNotPendingError"
+                  - $ref: "#/components/schemas/HttpUploadStatusChangeError"
         "403":
           description: |
             Exceptions by ID:
@@ -153,7 +161,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpNoFileAccessError"
         "404":
           description: |
             Exceptions by ID:
@@ -162,7 +170,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpUploadNotFoundError"
 
   /uploads/{upload_id}/parts/{part_no}/signed_urls:
     post:
@@ -199,7 +207,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpNoFileAccessError"
         "404":
           description: |
             Exceptions by ID:
@@ -208,74 +216,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/KnownException"
+                $ref: "#/components/schemas/HttpUploadNotFoundError"
 
 components:
   schemas:
-    KnownException:
-      type: object
-      properties:
-        description:
-          type: string
-          description: A message to the client describing what went wrong.
-        exceptionId:
-          type: string
-          description: A string to identify the domain logic problem.
-        data:
-          type: object
-          description: Additional machine-readable information on the exception.
-      required:
-        - description
-        - exceptionId
-        - data
-
-    ExistingActiveUploadError:
-      type: object
-      properties:
-        description:
-          type: string
-          description: A message to the client describing what went wrong.
-        exceptionId:
-          type: string
-          enum:
-            - existingActiveUpload
-          description: A string to identify the domain logic problem.
-        data:
-          type: object
-          description: Additional machine-readable information on the exception.
-          properties:
-            active_upload:
-              $ref: "#/components/schemas/UploadDetails"
-
-      required:
-        - description
-        - exceptionId
-        - data
-
-    UploadNotPendingError:
-      type: object
-      properties:
-        description:
-          type: string
-          description: A message to the client describing what went wrong.
-        exceptionId:
-          type: string
-          enum:
-            - existingActiveUpload
-          description: A string to identify the domain logic problem.
-        data:
-          type: object
-          description: Additional machine-readable information on the exception.
-          properties:
-            current_status:
-              type: string
-              description: The current status of the upload attempt.
-
-      required:
-        - description
-        - exceptionId
-        - data
-
     AccessURL:
       type: object
       required:
@@ -286,6 +230,23 @@ components:
           description: |
             A fully resolvable URL that can be used to upload the actual object
             bytes for one upload part.
+
+    UploadStatus:
+      description:
+        "The current upload state. Can be one of:\n    - PENDING (the user\
+        \ has requested an upload url)\n    - CANCELLED (the user has canceled the\
+        \ upload)\n    - UPLOADED (the user has confirmed the upload)\n    - FAILED\
+        \ (the upload has failed for a technical reason)\n    - ACCEPTED (the upload\
+        \ was accepted by a downstream service)\n    - REJECTED (the upload was rejected\
+        \ by a downstream service)"
+      enum:
+        - pending
+        - cancelled
+        - uploaded
+        - failed
+        - accepted
+        - rejected
+      title: UploadStatus
 
     UploadCreation:
       title: Properties required to create a new upload
@@ -367,3 +328,222 @@ components:
         - update_date
         - format
         - current_upload_id
+
+    HttpExistingActiveUploadError:
+      additionalProperties: false
+      description: A custom exception body model.
+      properties:
+        data:
+          $ref: "#/components/schemas/HttpExistingActiveUploadErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exceptionId:
+          enum:
+            - existingActiveUpload
+          title: Exceptionid
+          type: string
+      required:
+        - data
+        - description
+        - exceptionId
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpExistingActiveUploadErrorData:
+      description: Model for exception data
+      properties:
+        active_upload:
+          $ref: "#/components/schemas/UploadDetails"
+        file_id:
+          title: File Id
+          type: string
+      required:
+        - file_id
+        - active_upload
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpFileNotFoundError:
+      additionalProperties: false
+      description: A custom exception body model.
+      properties:
+        data:
+          $ref: "#/components/schemas/HttpFileNotFoundErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exceptionId:
+          enum:
+            - fileNotRegistered
+          title: Exceptionid
+          type: string
+      required:
+        - data
+        - description
+        - exceptionId
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpFileNotFoundErrorData:
+      description: Model for exception data
+      properties:
+        file_id:
+          title: File Id
+          type: string
+      required:
+        - file_id
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpNoFileAccessError:
+      additionalProperties: false
+      description: A custom exception body model.
+      properties:
+        data:
+          $ref: "#/components/schemas/HttpNoFileAccessErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exceptionId:
+          enum:
+            - noFileAccess
+          title: Exceptionid
+          type: string
+      required:
+        - data
+        - description
+        - exceptionId
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpNoFileAccessErrorData:
+      description: Model for exception data
+      properties:
+        file_id:
+          title: File Id
+          type: string
+      required:
+        - file_id
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpUploadNotFoundError:
+      additionalProperties: false
+      description: A custom exception body model.
+      properties:
+        data:
+          $ref: "#/components/schemas/HttpUploadNotFoundErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exceptionId:
+          enum:
+            - noSuchUpload
+          title: Exceptionid
+          type: string
+      required:
+        - data
+        - description
+        - exceptionId
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpUploadNotFoundErrorData:
+      description: Model for exception data
+      properties:
+        upload_id:
+          title: Upload Id
+          type: string
+      required:
+        - upload_id
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpUploadNotPendingError:
+      additionalProperties: false
+      description: A custom exception body model.
+      properties:
+        data:
+          $ref: "#/components/schemas/HttpUploadNotPendingErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exceptionId:
+          enum:
+            - uploadNotPending
+          title: Exceptionid
+          type: string
+      required:
+        - data
+        - description
+        - exceptionId
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpUploadNotPendingErrorData:
+      description: Model for exception data
+      properties:
+        current_upload_status:
+          $ref: "#/components/schemas/UploadStatus"
+        upload_id:
+          title: Upload Id
+          type: string
+      required:
+        - upload_id
+        - current_upload_status
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpUploadStatusChangeError:
+      additionalProperties: false
+      description: A custom exception body model.
+      properties:
+        data:
+          $ref: "#/components/schemas/HttpUploadStatusChangeErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exceptionId:
+          enum:
+            - uploadStatusChange
+          title: Exceptionid
+          type: string
+      required:
+        - data
+        - description
+        - exceptionId
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpUploadStatusChangeErrorData:
+      description: Model for exception data
+      properties:
+        target_status:
+          $ref: "#/components/schemas/UploadStatus"
+        upload_id:
+          title: Upload Id
+          type: string
+      required:
+        - upload_id
+        - target_status
+      title: HttpUploadStatusChangeErrorData
+      type: object
