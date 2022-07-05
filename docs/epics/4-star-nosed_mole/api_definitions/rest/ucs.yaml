@@ -341,7 +341,7 @@ components:
             of the exception.
           title: Description
           type: string
-        exceptionId:
+        exception_id:
           enum:
             - existingActiveUpload
           title: Exceptionid
@@ -349,7 +349,7 @@ components:
       required:
         - data
         - description
-        - exceptionId
+        - exception_id
       title: HttpUploadStatusChangeErrorData
       type: object
 
@@ -379,7 +379,7 @@ components:
             of the exception.
           title: Description
           type: string
-        exceptionId:
+        exception_id:
           enum:
             - fileNotRegistered
           title: Exceptionid
@@ -387,7 +387,7 @@ components:
       required:
         - data
         - description
-        - exceptionId
+        - exception_id
       title: HttpUploadStatusChangeErrorData
       type: object
 
@@ -414,7 +414,7 @@ components:
             of the exception.
           title: Description
           type: string
-        exceptionId:
+        exception_id:
           enum:
             - noFileAccess
           title: Exceptionid
@@ -422,7 +422,7 @@ components:
       required:
         - data
         - description
-        - exceptionId
+        - exception_id
       title: HttpUploadStatusChangeErrorData
       type: object
 
@@ -449,7 +449,7 @@ components:
             of the exception.
           title: Description
           type: string
-        exceptionId:
+        exception_id:
           enum:
             - noSuchUpload
           title: Exceptionid
@@ -457,7 +457,7 @@ components:
       required:
         - data
         - description
-        - exceptionId
+        - exception_id
       title: HttpUploadStatusChangeErrorData
       type: object
 
@@ -484,7 +484,7 @@ components:
             of the exception.
           title: Description
           type: string
-        exceptionId:
+        exception_id:
           enum:
             - uploadNotPending
           title: Exceptionid
@@ -492,7 +492,7 @@ components:
       required:
         - data
         - description
-        - exceptionId
+        - exception_id
       title: HttpUploadStatusChangeErrorData
       type: object
 
@@ -522,7 +522,7 @@ components:
             of the exception.
           title: Description
           type: string
-        exceptionId:
+        exception_id:
           enum:
             - uploadStatusChange
           title: Exceptionid
@@ -530,7 +530,7 @@ components:
       required:
         - data
         - description
-        - exceptionId
+        - exception_id
       title: HttpUploadStatusChangeErrorData
       type: object
 
