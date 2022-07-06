@@ -17,6 +17,7 @@
 """Main domain logic."""
 
 import os
+from pathlib import Path
 
 import requests
 
@@ -47,6 +48,7 @@ from .retry import WithRetry
 
 # define core-wide constants
 MAX_RETRIES = 3
+MAX_WAIT_TIME = 60 * 60
 DEFAULT_PART_SIZE = 16 * 1024 * 1024
 
 
@@ -65,7 +67,7 @@ def check_url(api_url, wait_time=1000) -> bool:
 def upload(  # noqa C901, pylint: disable=too-many-statements
     api_url: str,
     file_id: str,
-    file_path: str,
+    file_path: Path,
     message_display: AbstractMessageDisplay,
     max_retries: int = MAX_RETRIES,
 ) -> None:
@@ -148,7 +150,7 @@ def upload_file_parts(
     api_url: str,
     upload_id: str,
     part_size: int,
-    file_path: str,
+    file_path: Path,
 ) -> None:
     """
     Uploads a file using a specific upload id via uploading all its parts.
@@ -165,10 +167,10 @@ def upload_file_parts(
 def download(  # pylint: disable=too-many-arguments
     api_url: str,
     file_id: str,
-    output_dir: str,
+    output_dir: Path,
     part_size: int,
     message_display: AbstractMessageDisplay,
-    max_wait_time: int = 60,
+    max_wait_time: int = MAX_WAIT_TIME,
     max_retries: int = MAX_RETRIES,
 ) -> None:
     """

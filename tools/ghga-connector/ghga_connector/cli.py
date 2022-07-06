@@ -16,10 +16,14 @@
 
 """ CLI-specific wrappers around core functions."""
 
+from pathlib import Path
 
 import typer
 
 from ghga_connector import core
+from ghga_connector.config import Config
+
+config = Config()  # will be patched for testing
 
 
 class CLIMessageDisplay(core.AbstractMessageDisplay):
@@ -48,49 +52,31 @@ class CLIMessageDisplay(core.AbstractMessageDisplay):
 
 
 cli = typer.Typer()
-message_display: core.AbstractMessageDisplay = CLIMessageDisplay()
 
 
 @cli.command()
 def upload(  # noqa C901
-    api_url: str = typer.Option(..., help="Url to the upload contoller"),
     file_id: str = typer.Option(..., help="The id if the file to upload"),
-    file_path: str = typer.Option(..., help="The path to the file to upload"),
-    max_retries: int = typer.Argument(
-        default=core.MAX_RETRIES,
-        help="Number of times to retry failed part uploads",
-    ),
+    file_path: Path = typer.Option(..., help="The path to the file to upload"),
 ):
     """
     Command to upload a file
     """
 
     core.upload(
-        api_url=api_url,
+        api_url=config.upload_api,
         file_id=file_id,
         file_path=file_path,
-        max_retries=max_retries,
-        message_display=message_display,
+        max_retries=config.max_retries,
+        message_display=CLIMessageDisplay(),
     )
 
 
 @cli.command()
 def download(  # pylint: disable=too-many-arguments
-    api_url: str = typer.Option(..., help="Url to the DRS3"),
     file_id: str = typer.Option(..., help="The id if the file to upload"),
-    output_dir: str = typer.Option(
+    output_dir: Path = typer.Option(
         ..., help="The directory to put the downloaded file"
-    ),
-    max_wait_time: int = typer.Argument(
-        60,
-        help="Maximal time in seconds to wait before quitting without a download.",
-    ),
-    part_size: int = typer.Argument(
-        core.DEFAULT_PART_SIZE, help="Part size of the downloaded chunks."
-    ),
-    max_retries: int = typer.Argument(
-        default=core.MAX_RETRIES,
-        help="Number of times to retry failed part downloads",
     ),
 ):
     """
@@ -98,11 +84,11 @@ def download(  # pylint: disable=too-many-arguments
     """
 
     core.download(
-        api_url=api_url,
+        api_url=config.download_api,
         file_id=file_id,
         output_dir=output_dir,
-        max_wait_time=max_wait_time,
-        part_size=part_size,
-        max_retries=max_retries,
-        message_display=message_display,
+        max_wait_time=config.max_wait_time,
+        part_size=config.part_size,
+        max_retries=config.max_retries,
+        message_display=CLIMessageDisplay(),
     )

@@ -12,18 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""
-This sub-package contains the main business functionality of this service.
-It should not contain any service API-related code.
-"""
+"""Config utilies."""
 
-from . import exceptions  # noqa: F401
-from .main import (  # noqa: F401
-    DEFAULT_PART_SIZE,
-    MAX_RETRIES,
-    MAX_WAIT_TIME,
-    download,
-    upload,
+from ghga_connector import core
+from ghga_connector.config import Config
+
+DEFAULT_TEST_CONFIG = Config(
+    upload_api="http:/example.org/upload",
+    download_api="http:/example.org/download",
+    max_retries=0,
+    max_wait_time=2,
+    part_size=core.DEFAULT_PART_SIZE,
 )
-from .message_display import AbstractMessageDisplay, MessageColors  # noqa: F401
+
+
+def get_test_config(**kwargs):
+    """Get test config params with the defaults being overwritting by the parameter
+    passed as kwargs.
+    """
+
+    return DEFAULT_TEST_CONFIG.copy(update=kwargs)

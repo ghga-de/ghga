@@ -21,6 +21,7 @@ import pathlib
 from filecmp import cmp
 from pathlib import Path
 from typing import Optional
+from unittest.mock import patch
 
 import pytest
 from ghga_service_chassis_lib.utils import big_temp_file
@@ -36,6 +37,7 @@ from ghga_connector.core.exceptions import (
     MaxWaitTimeExceeded,
 )
 from tests.fixtures import state
+from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
 from tests.fixtures.retry import RetryFixture, retry_fixture  # noqa: F401
 from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
@@ -75,18 +77,14 @@ def test_multipart_download(
         s3_download_file_size=file_size_,
     ) as api:
         api_url = api.get_connection_url()
-        try:
+        with patch(
+            "ghga_connector.cli.config",
+            get_test_config(download_api=api_url, part_size=part_size),
+        ):
             download(
-                api_url=api_url,
                 file_id=big_object.object_id,
                 output_dir=tmp_path,
-                max_wait_time=60,
-                part_size=part_size,
-                max_retries=0,
             )
-        except Exception as exception:
-            raise exception
-
         with open(tmp_path / big_object.object_id, "rb") as file:
             observed_content = file.read()
 
@@ -94,26 +92,24 @@ def test_multipart_download(
 
 
 @pytest.mark.parametrize(
-    "bad_url,bad_outdir,file_name,max_wait_time,expected_exception",
+    "bad_url,bad_outdir,file_name,expected_exception",
     [
-        (True, False, "file_downloadable", 60, ApiNotReachable),
-        (False, False, "file_downloadable", 60, None),
+        (True, False, "file_downloadable", ApiNotReachable),
+        (False, False, "file_downloadable", None),
         (
             False,
             False,
             "file_not_downloadable",
-            60,
             BadResponseCodeError,
         ),
-        (False, False, "file_retry", 60, MaxWaitTimeExceeded),
-        (False, True, "file_downloadable", 60, DirectoryDoesNotExist),
+        (False, False, "file_retry", MaxWaitTimeExceeded),
+        (False, True, "file_downloadable", DirectoryDoesNotExist),
     ],
 )
 def test_download(
     bad_url: bool,
     bad_outdir: bool,
     file_name: str,
-    max_wait_time: int,
     expected_exception: type[Optional[Exception]],
     s3_fixture: S3Fixture,  # noqa: F811
     tmp_path: pathlib.Path,
@@ -142,19 +138,17 @@ def test_download(
     ) as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
-        try:
-            download(
-                api_url=api_url,
-                file_id=file.file_id,
-                output_dir=output_dir,
-                max_wait_time=max_wait_time,
-                part_size=DEFAULT_PART_SIZE,
-                max_retries=0,
-            )
-            assert expected_exception is None
-            assert cmp(output_dir / file.file_id, file.file_path)
-        except Exception as exception:
-            assert isinstance(exception, expected_exception)
+        with patch(
+            "ghga_connector.cli.config",
+            get_test_config(download_api=api_url),
+        ):
+            try:
+                download(file_id=file.file_id, output_dir=output_dir)
+
+                assert expected_exception is None
+                assert cmp(output_dir / file.file_id, file.file_path)
+            except Exception as exception:
+                assert isinstance(exception, expected_exception)
 
 
 @pytest.mark.parametrize(
@@ -193,27 +187,26 @@ def test_upload(
     with MockAPIContainer(s3_upload_url_1=upload_url) as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
-        try:
-            upload(
-                api_url=api_url,
-                file_id=uploadable_file.file_id,
-                file_path=str(uploadable_file.file_path.resolve()),
-                max_retries=0,
-            )
+        with patch("ghga_connector.cli.config", get_test_config(upload_api=api_url)):
+            try:
+                upload(
+                    file_id=uploadable_file.file_id,
+                    file_path=str(uploadable_file.file_path.resolve()),
+                )
 
-            s3_fixture.storage.complete_multipart_upload(
-                upload_id=upload_id,
-                bucket_id=uploadable_file.grouping_label,
-                object_id=uploadable_file.file_id,
-            )
+                s3_fixture.storage.complete_multipart_upload(
+                    upload_id=upload_id,
+                    bucket_id=uploadable_file.grouping_label,
+                    object_id=uploadable_file.file_id,
+                )
 
-            assert expected_exception is None
-            assert s3_fixture.storage.does_object_exist(
-                bucket_id=uploadable_file.grouping_label,
-                object_id=uploadable_file.file_id,
-            )
-        except Exception as exception:
-            assert isinstance(exception, expected_exception)
+                assert expected_exception is None
+                assert s3_fixture.storage.does_object_exist(
+                    bucket_id=uploadable_file.grouping_label,
+                    object_id=uploadable_file.file_id,
+                )
+            except Exception as exception:
+                assert isinstance(exception, expected_exception)
 
 
 @pytest.mark.parametrize(
@@ -269,27 +262,26 @@ def test_multipart_upload(
     ) as api:
         api_url = api.get_connection_url()
 
-        try:
-            # create big temp file
-            with big_temp_file(file_size) as file:
+        # create big temp file
+        with big_temp_file(file_size) as file:
+            with patch(
+                "ghga_connector.cli.config",
+                get_test_config(upload_api=api_url),
+            ):
                 upload(
-                    api_url=api_url,
                     file_id=file_id,
                     file_path=file.name,
-                    max_retries=0,
                 )
 
-            # confirm upload
-            s3_fixture.storage.complete_multipart_upload(
-                upload_id=upload_id,
-                bucket_id=bucket_id,
-                object_id=file_id,
-                anticipated_part_quantity=anticipated_part_quantity,
-                anticipated_part_size=anticipated_part_size,
-            )
-            assert s3_fixture.storage.does_object_exist(
-                bucket_id=bucket_id,
-                object_id=file_id,
-            )
-        except Exception as exception:
-            raise exception
+        # confirm upload
+        s3_fixture.storage.complete_multipart_upload(
+            upload_id=upload_id,
+            bucket_id=bucket_id,
+            object_id=file_id,
+            anticipated_part_quantity=anticipated_part_quantity,
+            anticipated_part_size=anticipated_part_size,
+        )
+        assert s3_fixture.storage.does_object_exist(
+            bucket_id=bucket_id,
+            object_id=file_id,
+        )

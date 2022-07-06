@@ -16,6 +16,8 @@
 
 """Custom Exceptions."""
 
+from pathlib import Path
+
 from ghga_connector.core.constants import MAX_PART_NUMBER
 
 
@@ -74,7 +76,7 @@ class CollectiveError(RuntimeError, KnownError):
 class DirectoryDoesNotExist(RuntimeError, KnownError):
     """Thrown, when the specified directory does not exist."""
 
-    def __init__(self, output_dir: str):
+    def __init__(self, output_dir: Path):
         message = f"The directory {output_dir} does not exist."
         super().__init__(message)
 
@@ -90,7 +92,7 @@ class FileAlreadyExistsError(RuntimeError, KnownError):
 class FileDoesNotExistError(RuntimeError, KnownError):
     """Thrown, when the specified file already exists."""
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: Path):
         message = f"The file {file_path} does not exist."
         super().__init__(message)
 
