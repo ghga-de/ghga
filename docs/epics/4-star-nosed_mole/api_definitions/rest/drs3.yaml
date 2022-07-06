@@ -1,0 +1,225 @@
+openapi: 3.0.1
+info:
+  title: Data Repository Service on S3 (DRS3)
+  description: |
+    A service managing access to file objects stored on an S3-compatible Object Storage.
+
+    This is an implementation of the DRS standard from the Global Alliance for Genomics
+    and Health, please find more information at:
+    [https://github.com/ga4gh/data-repository-service-schemas](https://github.com/ga4gh/data-repository-service-schemas)
+  termsOfService: https://www.ga4gh.org/terms-and-conditions/
+  license:
+    name: Apache 2.0
+    url: https://raw.githubusercontent.com/ga4gh/data-repository-service-schemas/master/LICENSE
+  version: 1.1.0
+servers:
+  - url: /ga4gh/drs/v1
+security:
+  - {}
+  - authToken: []
+tags:
+  - name: DataRepositoryService
+paths:
+  /objects/{object_id}:
+    get:
+      tags:
+        - DataRepositoryService
+      summary: Get info about a `DrsObject`.
+      description:
+        Returns object metadata, and a list of access methods that can
+        be used to fetch object bytes.
+      operationId: GetObject
+      parameters:
+        - name: object_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: The `DrsObject` was found successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrsObject"
+        202:
+          description: |
+            The operation is delayed and will continue asynchronously. The client should retry this same request after the delay specified by Retry-After header.
+          headers:
+            Retry-After:
+              description: |
+                Delay in seconds. The client should retry this same request after waiting for this duration. To simplify client response processing, this must be an integral relative time in seconds. This value SHOULD represent the minimum duration the client should wait before attempting the operation again with a reasonable expectation of success. When it is not feasible for the server to determine the actual expected delay, the server may return a brief, fixed value instead.
+              schema:
+                type: integer
+                format: int64
+          content: {}
+        400:
+          description: The request is malformed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: The request is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        403:
+          description: The requester is not authorized to perform this action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: The requested `DrsObject` wasn't found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500:
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-swagger-router-controller: ga4gh.drs.server
+components:
+  schemas:
+    Checksum:
+      required:
+        - checksum
+        - type
+      type: object
+      properties:
+        checksum:
+          type: string
+          description: The hex-string encoded checksum for the data
+        type:
+          type: string
+          description:
+            The digest method used to create the checksum. The value (e.g.
+            `sha-256`) SHOULD be listed as `Hash Name String` in the https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg[IANA
+            Named Information Hash Algorithm Registry]. Other values MAY be used,
+            as long as implementors are aware of the issues discussed in https://tools.ietf.org/html/rfc6920#section-9.4[RFC6920].
+            GA4GH may provide more explicit guidance for use of non-IANA-registered
+            algorithms in the future. Until then, if implementors do choose such an
+            algorithm (e.g. because it's implemented by their storage provider), they
+            SHOULD use an existing standard `type` value such as `md5`, `etag`, `crc32c`,
+            `trunc512`, or `sha1`.
+          example: sha-256
+    DrsObject:
+      required:
+        - checksums
+        - created_time
+        - id
+        - self_uri
+        - size
+        - access_methods
+        - name
+      type: object
+      properties:
+        id:
+          type: string
+          description: An identifier unique to this `DrsObject`.
+        name:
+          type: string
+          description: |-
+            A string that can be used to name a `DrsObject`.
+            This string is made up of uppercase and lowercase letters, decimal digits, hypen, period, and underscore [A-Za-z0-9.-_]. See http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_282[portable filenames].
+        self_uri:
+          type: string
+          description: |-
+            A drs:// hostname-based URI, as defined in the DRS documentation, that tells clients how to access this object.
+            The intent of this field is to make DRS objects self-contained, and therefore easier for clients to store and pass around.  For example, if you arrive at this DRS JSON by resolving a compact identifier-based DRS URI, the `self_uri` presents you with a hostname and properly encoded DRS ID for use in subsequent `access` endpoint calls.
+          example: drs://drs.example.org/314159
+        size:
+          type: integer
+          description: |-
+            For blobs, the blob size in bytes.
+            For bundles, the cumulative size, in bytes, of items in the `contents` field.
+          format: int64
+        created_time:
+          type: string
+          description: |-
+            Timestamp of content creation in RFC3339.
+            (This is the creation time of the underlying content, not of the JSON object.)
+          format: date-time
+        checksums:
+          minItems: 1
+          type: array
+          description:
+            "The checksum of the `DrsObject`. At least one checksum must
+            be provided. For blobs, the checksum is computed over the bytes in the
+            blob. For bundles, the checksum is computed over a sorted concatenation
+            of the checksums of its top-level contained objects (not recursive, names
+            not included). The list of checksums is sorted alphabetically (hex-code)
+            before concatenation and a further checksum is performed on the concatenated
+            checksum value. For example, if a bundle contains blobs with the following
+            checksums: md5(blob1) = 72794b6d md5(blob2) = 5e089d29 Then the checksum
+            of the bundle is: md5( concat( sort( md5(blob1), md5(blob2) ) ) ) = md5(
+            concat( sort( 72794b6d, 5e089d29 ) ) ) = md5( concat( 5e089d29, 72794b6d
+            ) ) = md5( 5e089d2972794b6d ) = f7a29a04"
+          items:
+            $ref: "#/components/schemas/Checksum"
+        access_methods:
+          minItems: 1
+          type: array
+          description: |-
+            The list of access methods that can be used to fetch the `DrsObject`.
+            Required for single blobs; optional for bundles.
+          items:
+            $ref: "#/components/schemas/AccessMethod"
+    AccessURL:
+      required:
+        - url
+        - headers
+      type: object
+      properties:
+        url:
+          type: string
+          description:
+            A fully resolvable URL that can be used to fetch the actual
+            object bytes.
+        headers:
+          type: array
+          description:
+            A list of headers to include in the HTTP request
+            to `url`. These headers can be used to provide auth tokens required to
+            fetch the object bytes.
+          example:
+            Authorization: Basic Z2E0Z2g6ZHJz
+          items:
+            type: string
+    AccessMethod:
+      required:
+        - type
+        - access_url
+      type: object
+      properties:
+        type:
+          type: string
+          description: Type of the access method.
+          enum:
+            - s3
+        access_url:
+          $ref: "#/components/schemas/AccessURL"
+    Error:
+      type: object
+      properties:
+        msg:
+          type: string
+          description: A detailed error message.
+        status_code:
+          type: integer
+          description: The integer representing the HTTP status code (e.g. 200, 404).
+      description: An object that can optionally include information about the error.
+  securitySchemes:
+    authToken:
+      type: apiKey
+      description: |
+        A valid authorization token must be passed in the 'Authorization' header.
+        Example syntax for using 'Authorization' header :
+          Bearer: token_string
+      name: Authorization
+      in: header
