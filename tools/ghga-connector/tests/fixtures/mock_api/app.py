@@ -305,10 +305,10 @@ async def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int
     if upload_id == "pending":
         if part_no == 1:
             url = os.environ["S3_UPLOAD_URL_1"]
-            return {"presigned_post": url}
+            return {"presigned_url": url}
         if part_no == 2:
             url = os.environ["S3_UPLOAD_URL_2"]
-            return {"presigned_post": url}
+            return {"presigned_url": url}
 
     raise HttpException(
         status_code=404,

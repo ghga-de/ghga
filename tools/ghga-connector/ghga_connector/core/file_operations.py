@@ -24,9 +24,8 @@ from typing import Iterator, Sequence
 
 import pycurl
 
+from ghga_connector.core import exceptions
 from ghga_connector.core.retry import WithRetry
-
-from .exceptions import BadResponseCodeError, RequestFailedError
 
 
 @WithRetry
@@ -48,7 +47,7 @@ def download_content_range(
         curl.perform()
         status_code = curl.getinfo(pycurl.RESPONSE_CODE)
     except pycurl.error as pycurl_error:
-        raise RequestFailedError(download_url) from pycurl_error
+        raise exceptions.RequestFailedError(url=download_url) from pycurl_error
     finally:
         curl.close()
 
@@ -56,7 +55,7 @@ def download_content_range(
     if status_code in (200, 206):
         return bytes_stream.getvalue()
 
-    raise BadResponseCodeError(url=download_url, response_code=status_code)
+    raise exceptions.BadResponseCodeError(url=download_url, response_code=status_code)
 
 
 def calc_part_ranges(
@@ -151,11 +150,11 @@ def upload_file_part(*, presigned_url: str, part: bytes) -> None:
         curl.perform()
         status_code = curl.getinfo(pycurl.RESPONSE_CODE)
     except pycurl.error as pycurl_error:
-        raise RequestFailedError(presigned_url) from pycurl_error
+        raise exceptions.RequestFailedError(url=presigned_url) from pycurl_error
     finally:
         curl.close()
 
     if status_code == 200:
         return
 
-    raise BadResponseCodeError(url=presigned_url, response_code=status_code)
+    raise exceptions.BadResponseCodeError(url=presigned_url, response_code=status_code)

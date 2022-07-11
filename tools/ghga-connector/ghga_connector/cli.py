@@ -56,6 +56,7 @@ cli = typer.Typer()
 
 @cli.command()
 def upload(  # noqa C901
+    *,
     file_id: str = typer.Option(..., help="The id if the file to upload"),
     file_path: Path = typer.Option(..., help="The path to the file to upload"),
 ):
@@ -74,6 +75,7 @@ def upload(  # noqa C901
 
 @cli.command()
 def download(  # pylint: disable=too-many-arguments
+    *,
     file_id: str = typer.Option(..., help="The id if the file to upload"),
     output_dir: Path = typer.Option(
         ..., help="The directory to put the downloaded file"

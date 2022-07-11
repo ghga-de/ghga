@@ -17,3 +17,6 @@
 """Constants used throught the core."""
 
 MAX_PART_NUMBER = 10000
+MAX_RETRIES = 3
+MAX_WAIT_TIME = 60 * 60
+DEFAULT_PART_SIZE = 16 * 1024 * 1024

@@ -18,6 +18,7 @@
 
 import os
 import pathlib
+from contextlib import nullcontext
 from filecmp import cmp
 from pathlib import Path
 from typing import Optional
@@ -27,15 +28,8 @@ import pytest
 from ghga_service_chassis_lib.utils import big_temp_file
 
 from ghga_connector.cli import download, upload
-from ghga_connector.core import DEFAULT_PART_SIZE
-from ghga_connector.core.exceptions import (
-    ApiNotReachable,
-    BadResponseCodeError,
-    DirectoryDoesNotExist,
-    FileDoesNotExistError,
-    FileNotRegisteredError,
-    MaxWaitTimeExceeded,
-)
+from ghga_connector.core import exceptions
+from ghga_connector.core.constants import DEFAULT_PART_SIZE
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
@@ -94,16 +88,16 @@ def test_multipart_download(
 @pytest.mark.parametrize(
     "bad_url,bad_outdir,file_name,expected_exception",
     [
-        (True, False, "file_downloadable", ApiNotReachable),
+        (True, False, "file_downloadable", exceptions.ApiNotReachableError),
         (False, False, "file_downloadable", None),
         (
             False,
             False,
             "file_not_downloadable",
-            BadResponseCodeError,
+            exceptions.BadResponseCodeError,
         ),
-        (False, False, "file_retry", MaxWaitTimeExceeded),
-        (False, True, "file_downloadable", DirectoryDoesNotExist),
+        (False, False, "file_retry", exceptions.MaxWaitTimeExceededError),
+        (False, True, "file_downloadable", exceptions.DirectoryDoesNotExistError),
     ],
 )
 def test_download(
@@ -142,22 +136,22 @@ def test_download(
             "ghga_connector.cli.config",
             get_test_config(download_api=api_url),
         ):
-            try:
+            with pytest.raises(
+                expected_exception
+            ) if expected_exception else nullcontext():
                 download(file_id=file.file_id, output_dir=output_dir)
 
-                assert expected_exception is None
-                assert cmp(output_dir / file.file_id, file.file_path)
-            except Exception as exception:
-                assert isinstance(exception, expected_exception)
+        if not expected_exception:
+            assert cmp(output_dir / file.file_id, file.file_path)
 
 
 @pytest.mark.parametrize(
     "bad_url,file_name,expected_exception",
     [
-        (True, "file_uploadable", ApiNotReachable),
+        (True, "file_uploadable", exceptions.ApiNotReachableError),
         (False, "file_uploadable", None),
-        (False, "file_not_uploadable", FileNotRegisteredError),
-        (False, "file_with_bad_path", FileDoesNotExistError),
+        (False, "file_not_uploadable", exceptions.FileNotRegisteredError),
+        (False, "file_with_bad_path", exceptions.FileDoesNotExistError),
     ],
 )
 def test_upload(
@@ -188,7 +182,9 @@ def test_upload(
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
         with patch("ghga_connector.cli.config", get_test_config(upload_api=api_url)):
-            try:
+            with pytest.raises(
+                expected_exception
+            ) if expected_exception else nullcontext():
                 upload(
                     file_id=uploadable_file.file_id,
                     file_path=str(uploadable_file.file_path.resolve()),
@@ -200,13 +196,10 @@ def test_upload(
                     object_id=uploadable_file.file_id,
                 )
 
-                assert expected_exception is None
                 assert s3_fixture.storage.does_object_exist(
                     bucket_id=uploadable_file.grouping_label,
                     object_id=uploadable_file.file_id,
                 )
-            except Exception as exception:
-                assert isinstance(exception, expected_exception)
 
 
 @pytest.mark.parametrize(

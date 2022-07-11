@@ -29,6 +29,7 @@ class FileState:
 
     def __init__(
         self,
+        *,
         file_id: str,
         grouping_label: str,
         file_path: Path,

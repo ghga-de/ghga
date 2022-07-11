@@ -28,7 +28,7 @@ from httpyexpect.client import ExceptionMapping, ResponseTranslator
 class ResponseExceptionTranslator:
     """Base class providing behaviour and injection point for spec"""
 
-    def __init__(self, spec: Dict[int, object]) -> None:
+    def __init__(self, *, spec: Dict[int, object]) -> None:
         self._exception_map = ExceptionMapping(spec)
 
     def handle(self, response: requests.Response):

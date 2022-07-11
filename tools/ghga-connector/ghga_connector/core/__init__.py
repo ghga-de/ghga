@@ -19,11 +19,11 @@ It should not contain any service API-related code.
 """
 
 from . import exceptions  # noqa: F401
-from .main import (  # noqa: F401
+from .constants import (  # noqa: F401
     DEFAULT_PART_SIZE,
+    MAX_PART_NUMBER,
     MAX_RETRIES,
     MAX_WAIT_TIME,
-    download,
-    upload,
 )
+from .main import download, upload  # noqa: F401
 from .message_display import AbstractMessageDisplay, MessageColors  # noqa: F401

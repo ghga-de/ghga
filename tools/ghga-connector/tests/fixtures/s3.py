@@ -71,12 +71,12 @@ def get_big_s3_object(
         assert not s3_fixture.storage.does_object_exist(
             bucket_id=object_fixture.bucket_id, object_id=object_fixture.object_id
         )
-        presigned_post = s3_fixture.storage.get_object_upload_url(
+        presigned_url = s3_fixture.storage.get_object_upload_url(
             bucket_id=object_fixture.bucket_id,
             object_id=object_fixture.object_id,
         )
         upload_file(
-            presigned_url=presigned_post,
+            presigned_url=presigned_url,
             file_path=big_file.name,
             file_md5=object_fixture.md5,
         )

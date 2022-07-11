@@ -25,25 +25,11 @@ from typing import Dict, Iterator, Tuple, Union
 
 import requests
 
+from ghga_connector.core import exceptions
 from ghga_connector.core.constants import MAX_PART_NUMBER
 from ghga_connector.core.http_translation import ResponseExceptionTranslator
 from ghga_connector.core.message_display import AbstractMessageDisplay
 from ghga_connector.core.retry import WithRetry
-
-from .exceptions import (
-    BadResponseCodeError,
-    CantChangeUploadStatus,
-    FileNotRegisteredError,
-    MaxPartNoExceededError,
-    MaxWaitTimeExceeded,
-    NoS3AccessMethod,
-    NoUploadPossibleError,
-    RequestFailedError,
-    RetryTimeExpectedError,
-    UploadNotRegisteredError,
-    UserHasNoFileAccess,
-    UserHasNoUploadAccess,
-)
 
 # Constants for clarity of return values
 NO_DOWNLOAD_URL = None
@@ -65,7 +51,7 @@ class UploadStatus(str, Enum):
 
 
 @WithRetry
-def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
+def initiate_multipart_upload(*, api_url: str, file_id: str) -> Tuple[str, int]:
     """
     Perform a RESTful API call to initiate a multipart upload
     Returns an upload id and a part size
@@ -81,19 +67,27 @@ def initiate_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
     try:
         response = requests.post(url=url, headers=headers, data=serialized_data)
     except requests.exceptions.RequestException as request_error:
-        raise RequestFailedError(url) from request_error
+        raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
     if status_code != 200:
         spec = {
             400: {
-                "existingActiveUpload": lambda: NoUploadPossibleError(file_id=file_id),
-                "fileNotRegistered": lambda: FileNotRegisteredError(file_id=file_id),
+                "existingActiveUpload": lambda: exceptions.NoUploadPossibleError(
+                    file_id=file_id
+                ),
+                "fileNotRegistered": lambda: exceptions.FileNotRegisteredError(
+                    file_id=file_id
+                ),
             },
-            403: {"noFileAccess": lambda: UserHasNoFileAccess(file_id=file_id)},
+            403: {
+                "noFileAccess": lambda: exceptions.UserHasNoFileAccessError(
+                    file_id=file_id
+                )
+            },
         }
         ResponseExceptionTranslator(spec=spec).handle(response=response)
-        raise BadResponseCodeError(url, status_code)
+        raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
     response_body = response.json()
 
@@ -114,23 +108,29 @@ def get_part_upload_url(*, api_url: str, upload_id: str, part_no: int):
     try:
         response = requests.post(url=url, headers=headers)
     except requests.exceptions.RequestException as request_error:
-        raise RequestFailedError(url) from request_error
+        raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
     if status_code != 200:
         spec = {
-            403: {"noFileAccess": lambda: UserHasNoUploadAccess(upload_id=upload_id)},
+            403: {
+                "noFileAccess": lambda: exceptions.UserHasNoUploadAccessError(
+                    upload_id=upload_id
+                )
+            },
             404: {
-                "noSuchUpload": lambda: UploadNotRegisteredError(upload_id=upload_id)
+                "noSuchUpload": lambda: exceptions.UploadNotRegisteredError(
+                    upload_id=upload_id
+                )
             },
         }
         ResponseExceptionTranslator(spec=spec).handle(response=response)
-        raise BadResponseCodeError(url, status_code)
+        raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
     response_body = response.json()
-    presigned_post = response_body["presigned_post"]
+    presigned_url = response_body["presigned_url"]
 
-    return presigned_post
+    return presigned_url
 
 
 def get_part_upload_urls(
@@ -157,12 +157,12 @@ def get_part_upload_urls(
     for part_no in range(from_part, MAX_PART_NUMBER + 1):
         yield get_url_func(api_url=api_url, upload_id=upload_id, part_no=part_no)
 
-    raise MaxPartNoExceededError()
+    raise exceptions.MaxPartNoExceededError()
 
 
 @WithRetry
 def patch_multipart_upload(
-    api_url: str, upload_id: str, upload_status: UploadStatus
+    *, api_url: str, upload_id: str, upload_status: UploadStatus
 ) -> None:
     """
     Set the status of a specific upload attempt.
@@ -179,29 +179,36 @@ def patch_multipart_upload(
     try:
         response = requests.patch(url=url, headers=headers, data=serialized_data)
     except requests.exceptions.RequestException as request_error:
-        raise RequestFailedError(url) from request_error
+        raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
     if status_code != 204:
         spec = {
             400: {
-                "uploadNotPending": lambda: CantChangeUploadStatus(
+                "uploadNotPending": lambda: exceptions.CantChangeUploadStatusError(
                     upload_id=upload_id, upload_status=upload_status
                 ),
-                "uploadStatusChange": lambda: CantChangeUploadStatus(
+                "uploadStatusChange": lambda: exceptions.CantChangeUploadStatusError(
                     upload_id=upload_id, upload_status=upload_status
                 ),
             },
-            403: {"noFileAccess": lambda: UserHasNoUploadAccess(upload_id=upload_id)},
+            403: {
+                "noFileAccess": lambda: exceptions.UserHasNoUploadAccessError(
+                    upload_id=upload_id
+                )
+            },
             404: {
-                "noSuchUpload": lambda: UploadNotRegisteredError(upload_id=upload_id)
+                "noSuchUpload": lambda: exceptions.UploadNotRegisteredError(
+                    upload_id=upload_id
+                )
             },
         }
         ResponseExceptionTranslator(spec=spec).handle(response=response)
-        raise BadResponseCodeError(url, status_code)
+        raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
 
 def get_upload_info(
+    *,
     api_url: str,
     upload_id: str,
 ) -> Dict:
@@ -216,24 +223,30 @@ def get_upload_info(
     try:
         response = requests.get(url=url, headers=headers)
     except requests.exceptions.RequestException as request_error:
-        raise RequestFailedError(url) from request_error
+        raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
     if status_code != 200:
         spec = {
-            403: {"noFileAccess": lambda: UserHasNoUploadAccess(upload_id=upload_id)},
+            403: {
+                "noFileAccess": lambda: exceptions.UserHasNoUploadAccessError(
+                    upload_id=upload_id
+                )
+            },
             404: {
-                "noSuchUpload": lambda: UploadNotRegisteredError(upload_id=upload_id)
+                "noSuchUpload": lambda: exceptions.UploadNotRegisteredError(
+                    upload_id=upload_id
+                )
             },
         }
         ResponseExceptionTranslator(spec=spec).handle(response=response)
-        raise BadResponseCodeError(url, status_code)
+        raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
     return response.json()
 
 
 @WithRetry
-def get_file_metadata(api_url: str, file_id: str) -> Dict:
+def get_file_metadata(*, api_url: str, file_id: str) -> Dict:
     """
     Get all file metadata
     """
@@ -245,16 +258,24 @@ def get_file_metadata(api_url: str, file_id: str) -> Dict:
     try:
         response = requests.get(url=url, headers=headers)
     except requests.exceptions.RequestException as request_error:
-        raise RequestFailedError(url) from request_error
+        raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
     if status_code != 200:
         spec = {
-            403: {"noFileAccess": lambda: UserHasNoFileAccess(file_id=file_id)},
-            404: {"fileNotRegistered": lambda: FileNotRegisteredError(file_id=file_id)},
+            403: {
+                "noFileAccess": lambda: exceptions.UserHasNoFileAccessError(
+                    file_id=file_id
+                )
+            },
+            404: {
+                "fileNotRegistered": lambda: exceptions.FileNotRegisteredError(
+                    file_id=file_id
+                )
+            },
         }
         ResponseExceptionTranslator(spec=spec).handle(response=response)
-        raise BadResponseCodeError(url, status_code)
+        raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
     file_metadata = response.json()
 
@@ -262,7 +283,7 @@ def get_file_metadata(api_url: str, file_id: str) -> Dict:
 
 
 def download_api_call(
-    api_url: str, file_id: str
+    *, api_url: str, file_id: str
 ) -> Union[Tuple[None, None, int], Tuple[str, int, None]]:
     """
     Perform a RESTful API call to retrieve a presigned download URL.
@@ -284,16 +305,16 @@ def download_api_call(
     try:
         response = requests.get(url=url, headers=headers)
     except requests.exceptions.RequestException as request_error:
-        raise RequestFailedError(url) from request_error
+        raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
     if status_code != 200:
         if status_code != 202:
-            raise BadResponseCodeError(url, status_code)
+            raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
         headers = response.headers
         if "retry-after" not in headers:
-            raise RetryTimeExpectedError(url)
+            raise exceptions.RetryTimeExpectedError(url=url)
 
         return (NO_DOWNLOAD_URL, NO_FILE_SIZE, int(headers["retry-after"]))
 
@@ -308,19 +329,19 @@ def download_api_call(
             break
 
     if download_url is None:
-        raise NoS3AccessMethod(url)
+        raise exceptions.NoS3AccessMethodError(url=url)
 
     return download_url, file_size, NO_RETRY_TIME
 
 
-def start_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
+def start_multipart_upload(*, api_url: str, file_id: str) -> Tuple[str, int]:
     """Try to initiate a multipart upload. If it fails, try to cancel the current upload
     can and then try to initiate a multipart upload again."""
 
     try:
         multipart_upload = initiate_multipart_upload(api_url=api_url, file_id=file_id)
         return multipart_upload
-    except NoUploadPossibleError as error:
+    except exceptions.NoUploadPossibleError as error:
         file_metadata = get_file_metadata(api_url=api_url, file_id=file_id)
         upload_id = file_metadata["current_upload_id"]
         if upload_id is None:
@@ -341,6 +362,7 @@ def start_multipart_upload(api_url: str, file_id: str) -> Tuple[str, int]:
 
 
 def await_download_url(
+    *,
     api_url: str,
     file_id: str,
     max_wait_time: int,
@@ -356,13 +378,13 @@ def await_download_url(
     wait_time = 0
     while wait_time < max_wait_time:
         try:
-            response_body = download_api_call(api_url, file_id)
-        except BadResponseCodeError as error:
+            response_body = download_api_call(api_url=api_url, file_id=file_id)
+        except exceptions.BadResponseCodeError as error:
             message_display.failure(
                 "The request was invalid and returnd a wrong HTTP status code."
             )
             raise error
-        except RequestFailedError as error:
+        except exceptions.RequestFailedError as error:
             message_display.failure("The request has failed.")
             raise error
 
@@ -379,4 +401,4 @@ def await_download_url(
         )
         sleep(retry_time)
 
-    raise MaxWaitTimeExceeded(max_wait_time)
+    raise exceptions.MaxWaitTimeExceededError(max_wait_time=max_wait_time)

@@ -28,9 +28,9 @@ from ghga_connector.core.api_calls import (
     patch_multipart_upload,
 )
 from ghga_connector.core.exceptions import (
-    CantChangeUploadStatus,
+    CantChangeUploadStatusError,
     MaxPartNoExceededError,
-    MaxRetriesReached,
+    MaxRetriesReachedError,
     UploadNotRegisteredError,
 )
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
@@ -42,10 +42,10 @@ from tests.fixtures.retry import RetryFixture, zero_retry_fixture  # noqa: F401
     [
         (False, "pending", UploadStatus.UPLOADED, None),
         (False, "uploaded", UploadStatus.CANCELLED, None),
-        (False, "pending", UploadStatus.CANCELLED, CantChangeUploadStatus),
-        (False, "uploadable", UploadStatus.UPLOADED, CantChangeUploadStatus),
+        (False, "pending", UploadStatus.CANCELLED, CantChangeUploadStatusError),
+        (False, "uploadable", UploadStatus.UPLOADED, CantChangeUploadStatusError),
         (False, "not_uploadable", UploadStatus.UPLOADED, UploadNotRegisteredError),
-        (True, "uploaded", UploadStatus.UPLOADED, MaxRetriesReached),
+        (True, "uploaded", UploadStatus.UPLOADED, MaxRetriesReachedError),
     ],
 )
 def test_patch_multipart_upload(
@@ -61,15 +61,12 @@ def test_patch_multipart_upload(
     with MockAPIContainer() as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
-        try:
+        with pytest.raises(expected_exception) if expected_exception else nullcontext():
             patch_multipart_upload(
                 api_url=api_url,
                 upload_id=upload_id,
                 upload_status=upload_status,
             )
-            assert expected_exception is None
-        except Exception as exception:
-            assert isinstance(exception, expected_exception)
 
 
 @pytest.mark.parametrize(
