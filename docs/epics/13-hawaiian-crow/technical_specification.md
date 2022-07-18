@@ -14,9 +14,9 @@ This epic covers benchmarking performance and reliability of S3 upload/download 
 Test files consist of four categories:
 
 - Sub multipart: < 5 MiB
-- Small file: ~ 10GiB
-- Medium file: ~ 50GiB
-- Big file: ~ 200 GiB
+- Small file: ~ 10 GiB
+- Medium file: ~ 50 GiB
+- Big file: ~ 150 GiB (not bigger than 160 GiB)
 
 Content in the test files consists of sequence data in FASTA format.
 
