@@ -57,8 +57,7 @@ class WithRetry:
                         raise error
                     error_causes.append(error)
                     # Use exponential backoff for retries
-                    backoff_factor = 0.5
-                    exponential_backoff = backoff_factor * (2 ** (i))
+                    exponential_backoff = 5**i
                     time.sleep(exponential_backoff)
             raise exceptions.MaxRetriesReachedError(
                 func_name=self._func.__name__, causes=error_causes
