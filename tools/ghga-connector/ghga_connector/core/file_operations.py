@@ -23,6 +23,7 @@ from io import BufferedReader, BytesIO
 from typing import Iterator, Sequence
 
 import pycurl
+import pycurl_requests as requests
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.retry import WithRetry
@@ -138,21 +139,8 @@ def read_file_parts(
 def upload_file_part(*, presigned_url: str, part: bytes) -> None:
     """Upload File"""
 
-    body = BytesIO(part)
-
-    curl = pycurl.Curl()
-    curl.setopt(curl.URL, presigned_url)
-
-    curl.setopt(curl.UPLOAD, 1)
-    curl.setopt(curl.READDATA, body)
-
-    try:
-        curl.perform()
-        status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    except pycurl.error as pycurl_error:
-        raise exceptions.RequestFailedError(url=presigned_url) from pycurl_error
-    finally:
-        curl.close()
+    response = requests.put(presigned_url, data=part)
+    status_code = response.status_code
 
     if status_code == 200:
         return
