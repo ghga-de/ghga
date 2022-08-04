@@ -50,36 +50,11 @@ Find out, which of these checksum algorithms are also supported by the Ceph and 
 
 ### FastQC
 
-Answer the following questions:
-
-- How can FastQC be used? Is it only available through a CLI tool, or does it provide an API?
-- Can content be streamed into the tool, or does it only take whole files?
-- Does the tool require a file system?
-- Does it natively support crapt4GH
-- What are the outputs/output formats?
-- Which of those are relevant for GHGA?
-- What are the dependencies of the tool?
-
-Benchmark all four test files in the de.NBI cloud and capture the memory and CPU footprint.
+FastQC has been omitted from this epic and moved to a future epic (no specifics yet).
 
 ### Volume/ Hardware Level encryption
 
-(Specificly refer the Ceph Storage in Tübingen and the IBM COS Storage in Heidelberg.)
-
-Answer the following questions:
-- What is the overhead of this encryption (CPU, slower File-IO, etc.)?
-- From a users perspective: When does encryption happen?
-- Who, in reality, might have (backdoor-) access to the files (Sys-Admins, Developers, Support personnel)?
-- What measures could be taken to restrict this (backdoor-) access?
-
-
-Construct possible attacking scenarios and find out:
-- What is the advantage over not encrypting?
-- Against what attacks does it protect?
-- What additional measures could be taken to also protect against such attacks?
-- Against what attacks does it not protect?
-- What additional measures can be taken to protact against such attacks?
-
+Volume/ Hardware Level encryption has been omitted from this epic and moved to a future epic (no specifics yet).
 
 ## Material and Resources:
 
@@ -91,17 +66,6 @@ Another source for publicly available genome files would be the 1000 Genomes pro
 - crypt4GH Documentation: http://samtools.github.io/hts-specs/crypt4gh.pdf
 - crypt4GH python utility: https://crypt4gh.readthedocs.io/en/latest/
 - crypt4GH rust utility: https://docs.rs/crypt4gh/latest/crypt4gh/
-
-###
-
-- FastQC Documentation: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
-
-### Volume/Hardware Level Encryption
-- IBM COS Documentation: https://cloud.ibm.com/docs/cloud-object-storage
-- IBM COS expert in Heidelberg: Koray
-- Ceph Documentation: https://docs.ceph.com/en/quincy/
-- Ceph Storage in Tübingen deployed by Sardina Systems (info@sardinasystems.com)
-- Ceph Storage & de.NBI expert in Tübingen: Moritz
 
 
 ## Human Resource/Time Estimation:
