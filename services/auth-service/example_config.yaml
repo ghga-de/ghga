@@ -1,0 +1,24 @@
+api_root_path: /
+auto_reload: false
+aws_config_ini: null
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+db_print_logs: false
+db_url: postgresql://postgres:postgres@postgres/postgres
+docs_url: /docs
+host: 127.0.0.1
+language: Greek
+log_level: info
+openapi_url: /openapi.json
+port: 8080
+rabbitmq_host: rabbitmq
+rabbitmq_port: 5672
+s3_access_key_id: test
+s3_endpoint_url: http://localstack:4566
+s3_secret_access_key: test
+s3_session_token: null
+service_name: my_microservice
+workers: 1
+
