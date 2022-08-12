@@ -18,11 +18,11 @@
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from my_microservice.api.main import app
+from auth_adapter.api.main import app
 
 
-def test_index():
-    """Test the index endpoint"""
+def test_get_from_root():
+    """Test that a simple GET request passes."""
 
     client = TestClient(app)
     response = client.get("/")
@@ -31,13 +31,11 @@ def test_index():
     assert response.text == '"Hello World."'
 
 
-def test_greet():
-    """Test the greet endpoint"""
-
-    name = "Friendly Tester"
+def test_post_to_some_path():
+    """Test that a POST request to a random path passes."""
 
     client = TestClient(app)
-    response = client.get(f"/greet/{name}")
+    response = client.post("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
-    assert name in response.json()["message"]
+    assert response.text == '"Hello World."'

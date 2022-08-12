@@ -13,6 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Short description of package"""  # Please adapt to package
+"""Entrypoint of the package"""
 
-__version__ = "0.1.0"
+from ghga_service_chassis_lib.api import run_server
+
+from .api.main import app  # noqa: F401 pylint: disable=unused-import
+from .config import CONFIG, Config
+
+
+def run(config: Config = CONFIG):
+    """Run the service"""
+    run_server(app="auth_adapter.__main__:app", config=config)
+
+
+if __name__ == "__main__":
+    run()

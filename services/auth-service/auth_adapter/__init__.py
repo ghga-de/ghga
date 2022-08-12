@@ -13,19 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Auth Adapter
 
-from ghga_service_chassis_lib.api import run_server
+The GHGA auth adapter is used by the API gateway via the ExtAuth protocol
+to authenticate users on the edge and to convert the external access tokens
+from the federated authentication service to internally access tokens.
+"""
 
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
-
-
-def run(config: Config = CONFIG):
-    """Run the service"""
-    # Please adapt to package name
-    run_server(app="my_microservice.__main__:app", config=config)
-
-
-if __name__ == "__main__":
-    run()
+__version__ = "0.1.0"

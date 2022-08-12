@@ -3,102 +3,12 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
-    "s3_endpoint_url": {
-      "title": "S3 Endpoint Url",
-      "description": "URL to the S3 API.",
-      "example": "http://localhost:4566",
-      "env_names": [
-        "my_microservice_s3_endpoint_url"
-      ],
-      "type": "string"
-    },
-    "s3_access_key_id": {
-      "title": "S3 Access Key Id",
-      "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
-      "example": "my-access-key-id",
-      "env_names": [
-        "my_microservice_s3_access_key_id"
-      ],
-      "type": "string"
-    },
-    "s3_secret_access_key": {
-      "title": "S3 Secret Access Key",
-      "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
-      "example": "my-secret-access-key",
-      "env_names": [
-        "my_microservice_s3_secret_access_key"
-      ],
-      "type": "string"
-    },
-    "s3_session_token": {
-      "title": "S3 Session Token",
-      "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
-      "example": "my-session-token",
-      "env_names": [
-        "my_microservice_s3_session_token"
-      ],
-      "type": "string"
-    },
-    "aws_config_ini": {
-      "title": "Aws Config Ini",
-      "description": "Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file",
-      "example": "~/.aws/config",
-      "env_names": [
-        "my_microservice_aws_config_ini"
-      ],
-      "type": "string",
-      "format": "path"
-    },
-    "db_url": {
-      "title": "Db Url",
-      "description": "A URL to a PostgreSQL database.",
-      "example": "postgresql://user:password@mydbserver/dbname",
-      "env_names": [
-        "my_microservice_db_url"
-      ],
-      "type": "string"
-    },
-    "db_print_logs": {
-      "title": "Db Print Logs",
-      "description": "Print DB/ORM logs.",
-      "default": false,
-      "env_names": [
-        "my_microservice_db_print_logs"
-      ],
-      "type": "boolean"
-    },
-    "service_name": {
-      "title": "Service Name",
-      "default": "my_microservice",
-      "env_names": [
-        "my_microservice_service_name"
-      ],
-      "type": "string"
-    },
-    "rabbitmq_host": {
-      "title": "Rabbitmq Host",
-      "description": "Name or IP address of the host running the RabbitMQ broker.",
-      "example": "rabbitmq",
-      "env_names": [
-        "my_microservice_rabbitmq_host"
-      ],
-      "type": "string"
-    },
-    "rabbitmq_port": {
-      "title": "Rabbitmq Port",
-      "description": "Port of the RabbitMQ broker running on the specified host.",
-      "default": 5672,
-      "env_names": [
-        "my_microservice_rabbitmq_port"
-      ],
-      "type": "integer"
-    },
     "host": {
       "title": "Host",
       "description": "IP of the host.",
       "default": "127.0.0.1",
       "env_names": [
-        "my_microservice_host"
+        "auth_adapter_host"
       ],
       "type": "string"
     },
@@ -107,7 +17,7 @@
       "description": "Port to expose the server on the specified host",
       "default": 8080,
       "env_names": [
-        "my_microservice_port"
+        "auth_adapter_port"
       ],
       "type": "integer"
     },
@@ -116,7 +26,7 @@
       "description": "Controls the verbosity of the log.",
       "default": "info",
       "env_names": [
-        "my_microservice_log_level"
+        "auth_adapter_log_level"
       ],
       "enum": [
         "critical",
@@ -133,7 +43,7 @@
       "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
       "default": false,
       "env_names": [
-        "my_microservice_auto_reload"
+        "auth_adapter_auto_reload"
       ],
       "type": "boolean"
     },
@@ -142,7 +52,7 @@
       "description": "Number of workers processes to run.",
       "default": 1,
       "env_names": [
-        "my_microservice_workers"
+        "auth_adapter_workers"
       ],
       "type": "integer"
     },
@@ -151,7 +61,7 @@
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "default": "/",
       "env_names": [
-        "my_microservice_api_root_path"
+        "auth_adapter_api_root_path"
       ],
       "type": "string"
     },
@@ -160,7 +70,7 @@
       "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
       "default": "/openapi.json",
       "env_names": [
-        "my_microservice_openapi_url"
+        "auth_adapter_openapi_url"
       ],
       "type": "string"
     },
@@ -169,7 +79,7 @@
       "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
       "default": "/docs",
       "env_names": [
-        "my_microservice_docs_url"
+        "auth_adapter_docs_url"
       ],
       "type": "string"
     },
@@ -181,7 +91,7 @@
         "https://www.example.org"
       ],
       "env_names": [
-        "my_microservice_cors_allowed_origins"
+        "auth_adapter_cors_allowed_origins"
       ],
       "type": "array",
       "items": {
@@ -196,7 +106,7 @@
         "https://www.example.org"
       ],
       "env_names": [
-        "my_microservice_cors_allow_credentials"
+        "auth_adapter_cors_allow_credentials"
       ],
       "type": "boolean"
     },
@@ -207,7 +117,7 @@
         "*"
       ],
       "env_names": [
-        "my_microservice_cors_allowed_methods"
+        "auth_adapter_cors_allowed_methods"
       ],
       "type": "array",
       "items": {
@@ -219,34 +129,29 @@
       "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
       "example": [],
       "env_names": [
-        "my_microservice_cors_allowed_headers"
+        "auth_adapter_cors_allowed_headers"
       ],
       "type": "array",
       "items": {
         "type": "string"
       }
     },
-    "language": {
-      "title": "Language",
-      "default": "Croatian",
+    "service_name": {
+      "title": "Service Name",
+      "default": "auth_adapter",
       "env_names": [
-        "my_microservice_language"
+        "auth_adapter_service_name"
       ],
-      "enum": [
-        "Greek",
-        "Croatian",
-        "French",
-        "German"
+      "type": "string"
+    },
+    "path_prefix": {
+      "title": "Path Prefix",
+      "default": "/",
+      "env_names": [
+        "auth_adapter_path_prefix"
       ],
       "type": "string"
     }
   },
-  "required": [
-    "s3_endpoint_url",
-    "s3_access_key_id",
-    "s3_secret_access_key",
-    "db_url",
-    "rabbitmq_host"
-  ],
   "additionalProperties": false
 }

@@ -17,20 +17,14 @@
 
 from ghga_service_chassis_lib.api import ApiConfigBase
 from ghga_service_chassis_lib.config import config_from_yaml
-from ghga_service_chassis_lib.postgresql import PostgresqlConfigBase
-from ghga_service_chassis_lib.pubsub import PubSubConfigBase
-from ghga_service_chassis_lib.s3 import S3ConfigBase
-
-from .models import SupportedLanguages
 
 
-# Please adapt config prefix and remove unnecessary config bases:
-@config_from_yaml(prefix="my_microservice")
-class Config(ApiConfigBase, PubSubConfigBase, PostgresqlConfigBase, S3ConfigBase):
+@config_from_yaml(prefix="auth_adapter")
+class Config(ApiConfigBase):
     """Config parameters and their defaults."""
 
-    service_name: str = "my_microservice"  # Please adapt
-    language: SupportedLanguages = "Croatian"
+    service_name: str = "auth_adapter"
+    path_prefix: str = "/"
 
 
 CONFIG = Config()
