@@ -13,29 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test the api module"""
-
-from fastapi import status
-from fastapi.testclient import TestClient
-
-from auth_adapter.api.main import app
-
-
-def test_get_from_root():
-    """Test that a simple GET request passes."""
-
-    client = TestClient(app)
-    response = client.get("/")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.text == '"Hello World."'
-
-
-def test_post_to_some_path():
-    """Test that a POST request to a random path passes."""
-
-    client = TestClient(app)
-    response = client.post("/some/path")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.text == '"Hello World."'
+"""Integration tests for the auth adapter"""

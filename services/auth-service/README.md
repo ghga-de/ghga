@@ -2,9 +2,18 @@
 ![tests](https://github.com/ghga-de/auth-adapter/actions/workflows/unit_and_int_tests.yaml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/auth-adapter/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/auth-adapter?branch=main)
 
-# GHGA Auth Adapter
+# GHGA Auth Service
 
-This repository contains the authentication service for the GHGA data portal used by the API gateway via the ExtAuth protocol.
+This repository contains two services for the management, authentication and authorization of users of the GHGA data portal.
+
+These two services are described in the following sections. The setting `run_auth_adapter` can be used to determine which of the two services will be started.
+## Auth Adapter
+
+The `auth_adapter` subpackage contains the authentication service used by the API gateway via the ExtAuth protocol.
+
+## User Management
+
+The `user_management` subpackage contains the user data management service.
 
 ## Documentation
 
@@ -49,10 +58,10 @@ auth-adapter
 
 The [`./example-config.yaml`](./example-config.yaml) gives an overview of the available configuration options.
 Please adapt it and choose one of the following options for injecting it into the service:
-- specify the path to via the `AUTH_ADAPTER_CONFIG_YAML` env variable
-- rename it to `.auth_adapter.yaml` and place it into one of the following locations:
-  - the current working directory were you are execute the service (on unix: `./.auth_adapter.yaml`)
-  - your home directory (on unix: `~/.auth_adapter.yaml`)
+- specify the path to via the `AUTH_SERVICE_CONFIG_YAML` env variable
+- rename it to `.auth_service.yaml` and place it into one of the following locations:
+  - the current working directory were you are execute the service (on unix: `./.auth_service.yaml`)
+  - your home directory (on unix: `~/.auth_service.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -60,7 +69,7 @@ The config yaml will be automatically parsed by the service.
 
 All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml) could also be set using environment variables or file secrets.
 
-For naming the environment variables, just prefix the parameter name with `AUTH_ADAPTER_`, e.g. for the `host` set an environment variable named `AUTH_ADAPTER_HOST` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
+For naming the environment variables, just prefix the parameter name with `AUTH_SERVICe_`, e.g. for the `host` set an environment variable named `AUTH_SERVICE_HOST` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
 
 To using file secrets please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
 

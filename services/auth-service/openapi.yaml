@@ -4,81 +4,14 @@ info:
   version: 0.1.0
 openapi: 3.0.2
 paths:
-  '{path}':
-    delete:
-      description: Implements the ExtAuth protocol to authenticate users in the API
-        gateway.
-      operationId: ext_auth_path__delete
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: Ext Auth
+  /:
     get:
-      description: Implements the ExtAuth protocol to authenticate users in the API
-        gateway.
-      operationId: ext_auth_path__get
+      description: Greet the World
+      operationId: index__get
       responses:
         '200':
           content:
             application/json:
               schema: {}
           description: Successful Response
-      summary: Ext Auth
-    head:
-      description: Implements the ExtAuth protocol to authenticate users in the API
-        gateway.
-      operationId: ext_auth_path__head
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: Ext Auth
-    options:
-      description: Implements the ExtAuth protocol to authenticate users in the API
-        gateway.
-      operationId: ext_auth_path__options
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: Ext Auth
-    patch:
-      description: Implements the ExtAuth protocol to authenticate users in the API
-        gateway.
-      operationId: ext_auth_path__patch
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: Ext Auth
-    post:
-      description: Implements the ExtAuth protocol to authenticate users in the API
-        gateway.
-      operationId: ext_auth_path__post
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: Ext Auth
-    put:
-      description: Implements the ExtAuth protocol to authenticate users in the API
-        gateway.
-      operationId: ext_auth_path__put
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: Ext Auth
+      summary: Greet the world

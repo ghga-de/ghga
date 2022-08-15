@@ -13,11 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""FastAPI dependencies (used with the `Depends` feature)"""
-
-from ..config import CONFIG
-
-
-def get_config():
-    """Get runtime configuration."""
-    return CONFIG
+"""Consuming or Subscribing to Async Messaging Topics"""

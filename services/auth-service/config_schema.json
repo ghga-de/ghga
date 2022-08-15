@@ -8,7 +8,7 @@
       "description": "IP of the host.",
       "default": "127.0.0.1",
       "env_names": [
-        "auth_adapter_host"
+        "auth_service_host"
       ],
       "type": "string"
     },
@@ -17,16 +17,15 @@
       "description": "Port to expose the server on the specified host",
       "default": 8080,
       "env_names": [
-        "auth_adapter_port"
+        "auth_service_port"
       ],
       "type": "integer"
     },
     "log_level": {
       "title": "Log Level",
-      "description": "Controls the verbosity of the log.",
       "default": "info",
       "env_names": [
-        "auth_adapter_log_level"
+        "auth_service_log_level"
       ],
       "enum": [
         "critical",
@@ -43,7 +42,7 @@
       "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
       "default": false,
       "env_names": [
-        "auth_adapter_auto_reload"
+        "auth_service_auto_reload"
       ],
       "type": "boolean"
     },
@@ -52,7 +51,7 @@
       "description": "Number of workers processes to run.",
       "default": 1,
       "env_names": [
-        "auth_adapter_workers"
+        "auth_service_workers"
       ],
       "type": "integer"
     },
@@ -61,7 +60,7 @@
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "default": "/",
       "env_names": [
-        "auth_adapter_api_root_path"
+        "auth_service_api_root_path"
       ],
       "type": "string"
     },
@@ -70,7 +69,7 @@
       "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
       "default": "/openapi.json",
       "env_names": [
-        "auth_adapter_openapi_url"
+        "auth_service_openapi_url"
       ],
       "type": "string"
     },
@@ -79,7 +78,7 @@
       "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
       "default": "/docs",
       "env_names": [
-        "auth_adapter_docs_url"
+        "auth_service_docs_url"
       ],
       "type": "string"
     },
@@ -91,7 +90,7 @@
         "https://www.example.org"
       ],
       "env_names": [
-        "auth_adapter_cors_allowed_origins"
+        "auth_service_cors_allowed_origins"
       ],
       "type": "array",
       "items": {
@@ -106,7 +105,7 @@
         "https://www.example.org"
       ],
       "env_names": [
-        "auth_adapter_cors_allow_credentials"
+        "auth_service_cors_allow_credentials"
       ],
       "type": "boolean"
     },
@@ -117,7 +116,7 @@
         "*"
       ],
       "env_names": [
-        "auth_adapter_cors_allowed_methods"
+        "auth_service_cors_allowed_methods"
       ],
       "type": "array",
       "items": {
@@ -129,7 +128,7 @@
       "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
       "example": [],
       "env_names": [
-        "auth_adapter_cors_allowed_headers"
+        "auth_service_cors_allowed_headers"
       ],
       "type": "array",
       "items": {
@@ -138,17 +137,39 @@
     },
     "service_name": {
       "title": "Service Name",
-      "default": "auth_adapter",
+      "default": "auth_service",
       "env_names": [
-        "auth_adapter_service_name"
+        "auth_service_service_name"
       ],
       "type": "string"
     },
-    "path_prefix": {
-      "title": "Path Prefix",
-      "default": "/",
+    "run_auth_adapter": {
+      "title": "Run Auth Adapter",
+      "default": false,
       "env_names": [
-        "auth_adapter_path_prefix"
+        "auth_service_run_auth_adapter"
+      ],
+      "type": "boolean"
+    },
+    "auth_path_prefix": {
+      "title": "Auth Path Prefix",
+      "default": "/auth",
+      "env_names": [
+        "auth_service_auth_path_prefix"
+      ],
+      "type": "string"
+    },
+    "basic_auth_user": {
+      "title": "Basic Auth User",
+      "env_names": [
+        "auth_service_basic_auth_user"
+      ],
+      "type": "string"
+    },
+    "basic_auth_pwd": {
+      "title": "Basic Auth Pwd",
+      "env_names": [
+        "auth_service_basic_auth_pwd"
       ],
       "type": "string"
     }

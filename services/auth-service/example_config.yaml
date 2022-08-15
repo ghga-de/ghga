@@ -1,5 +1,8 @@
 api_root_path: /
+auth_path_prefix: /auth
 auto_reload: false
+basic_auth_pwd: null
+basic_auth_user: null
 cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
@@ -8,8 +11,7 @@ docs_url: /docs
 host: 127.0.0.1
 log_level: info
 openapi_url: /openapi.json
-path_prefix: /
 port: 8080
-service_name: auth_adapter
+run_auth_adapter: false
+service_name: auth_service
 workers: 1
-

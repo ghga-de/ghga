@@ -13,18 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Config Parameter Modeling and Parsing"""
-
-from ghga_service_chassis_lib.api import ApiConfigBase
-from ghga_service_chassis_lib.config import config_from_yaml
-
-
-@config_from_yaml(prefix="auth_adapter")
-class Config(ApiConfigBase):
-    """Config parameters and their defaults."""
-
-    service_name: str = "auth_adapter"
-    path_prefix: str = "/"
-
-
-CONFIG = Config()
+"""DAO interface implementation to connect to the database."""

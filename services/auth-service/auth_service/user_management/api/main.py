@@ -22,16 +22,13 @@ Additional endpoints might be structured in dedicated modules
 from fastapi import FastAPI
 from ghga_service_chassis_lib.api import configure_app
 
-from ..config import CONFIG
+from ...config import CONFIG
 
 app = FastAPI()
 configure_app(app, config=CONFIG)
 
-handle_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
 
-
-@app.api_route("{path:path}", methods=handle_methods)
-async def ext_auth():
-    """Implements the ExtAuth protocol to authenticate users in the API gateway."""
-    # this is only dummy code, needs to be implemented properly
-    return "Hello World."
+@app.get("/", summary="Greet the world")
+async def index():
+    """Greet the World"""
+    return "Hello World from the User Management."
