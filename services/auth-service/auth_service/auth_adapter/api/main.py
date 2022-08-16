@@ -19,19 +19,48 @@ Additional endpoints might be structured in dedicated modules
 (each of them having a sub-router).
 """
 
-from fastapi import FastAPI
+import secrets
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from ghga_service_chassis_lib.api import configure_app
 
 from ...config import CONFIG
+from .deps import get_config
 
 app = FastAPI()
 configure_app(app, config=CONFIG)
 
-handle_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
+HANDLE_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
 
 
-@app.api_route("{path:path}", methods=handle_methods)
-async def ext_auth():
+def basic_auth_injector():
+    """Inject Basic authentication if user and passwort are set."""
+    config = get_config()
+    user, pwd = config.basic_auth_user, config.basic_auth_pwd
+    if not (user and pwd):
+        return None
+
+    security = HTTPBasic(realm="GHGA Data Portal")
+
+    async def check_basic_auth(credentials: HTTPBasicCredentials = Depends(security)):
+        """Check basic access authentication if username and passwort are set."""
+        # checking user and password while avoiding timing attacks
+        user_ok = secrets.compare_digest(credentials.username, user)
+        pwd_ok = secrets.compare_digest(credentials.password, pwd)
+        if not (user_ok and pwd_ok):
+            www_auth = f'Basic realm="{security.realm}"'
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": www_auth},
+            )
+
+    return Depends(check_basic_auth)
+
+
+@app.api_route("{path:path}", methods=HANDLE_METHODS)
+async def ext_auth(_basic_auth: None = basic_auth_injector()):
     """Implements the ExtAuth protocol to authenticate users in the API gateway."""
     # this is only dummy code, needs to be implemented properly
     return "Hello World from the Auth Adapter."

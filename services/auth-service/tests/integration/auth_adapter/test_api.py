@@ -15,27 +15,52 @@
 
 """Test the api module"""
 
+from base64 import b64encode
+
 from fastapi import status
-from fastapi.testclient import TestClient
 
-from auth_service.auth_adapter.api.main import app
+from .fixtures import (  # noqa: F401; pylint: disable=unused-import
+    fixture_client,
+    fixture_with_basic_auth,
+)
 
 
-def test_get_from_root():
+def test_get_from_root(client):
     """Test that a simple GET request passes."""
 
-    client = TestClient(app)
     response = client.get("/")
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_200_OK, response.text
     assert response.text == '"Hello World from the Auth Adapter."'
 
 
-def test_post_to_some_path():
+def test_post_to_some_path(client):
     """Test that a POST request to a random path passes."""
 
-    client = TestClient(app)
     response = client.post("/some/path")
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.text == '"Hello World from the Auth Adapter."'
+
+
+def test_basic_auth(with_basic_auth, client):
+    """Test that the root path can be protected with basic authentication."""
+
+    response = client.get("/")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED, response.text
+    assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
+
+    auth = b64encode(b"bad:credentials").decode("ASCII")
+    auth = f"Basic {auth}"
+    response = client.get("/", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED, response.text
+    assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
+
+    auth = b64encode(with_basic_auth.encode("UTF-8")).decode("ASCII")
+    auth = f"Basic {auth}"
+    response = client.get("/", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_200_OK, response.text
     assert response.text == '"Hello World from the Auth Adapter."'

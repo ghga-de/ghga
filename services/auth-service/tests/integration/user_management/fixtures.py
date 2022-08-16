@@ -13,25 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test the api module"""
-
-from fastapi import status
-
-from .fixtures import fixture_client  # noqa: F401; pylint: disable=unused-import
+"""Fixtures for the auth adapter integration tests"""
 
 
-def test_get_from_root(client):
-    """Test that a simple GET request passes."""
+from fastapi.testclient import TestClient
+from pytest import fixture
 
-    response = client.get("/")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.text == '"Hello World from the User Management."'
+from auth_service.user_management.api import main
 
 
-def test_get_from_some_other_path(client):
-    """Test that a GET request to a random path raises a not found error."""
-
-    response = client.post("/some/path")
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+@fixture(name="client")
+def fixture_client():
+    """Get test client for the auth adapter"""
+    return TestClient(main.app)
