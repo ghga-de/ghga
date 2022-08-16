@@ -30,8 +30,35 @@ def test_get_from_root(client):
 
     response = client.get("/")
 
-    assert response.status_code == status.HTTP_200_OK, response.text
-    assert response.text == '"Hello World from the Auth Adapter."'
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+
+def test_get_from_some_path(client):
+    """Test that a simple GET request passes."""
+
+    response = client.get("/some/path")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+
+def test_get_from_some_path_with_query_parameters(client):
+    """Test that a simple GET request passes."""
+
+    response = client.get("/some/path?foo=1&bar=2")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+
+def test_patch_to_some_path(client):
+    """Test that a PATCH request to a random path passes."""
+
+    response = client.patch("/some/path")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
 
 
 def test_post_to_some_path(client):
@@ -39,8 +66,17 @@ def test_post_to_some_path(client):
 
     response = client.post("/some/path")
 
-    assert response.status_code == status.HTTP_200_OK, response.text
-    assert response.text == '"Hello World from the Auth Adapter."'
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+
+def test_delete_to_some_path(client):
+    """Test that a DELETE request to a random path passes."""
+
+    response = client.delete("/some/path")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
 
 
 def test_basic_auth(with_basic_auth, client):
@@ -48,19 +84,42 @@ def test_basic_auth(with_basic_auth, client):
 
     response = client.get("/")
 
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED, response.text
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
+    assert response.text == "GHGA Data Portal: Not authenticated"
 
     auth = b64encode(b"bad:credentials").decode("ASCII")
     auth = f"Basic {auth}"
     response = client.get("/", headers={"Authorization": auth})
 
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED, response.text
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
+    assert response.text == "GHGA Data Portal: Incorrect username or password"
 
     auth = b64encode(with_basic_auth.encode("UTF-8")).decode("ASCII")
     auth = f"Basic {auth}"
     response = client.get("/", headers={"Authorization": auth})
 
-    assert response.status_code == status.HTTP_200_OK, response.text
-    assert response.text == '"Hello World from the Auth Adapter."'
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+
+def test_basic_auth_well_known(with_basic_auth, client):
+    """Test that GET From well-known path is excluded from basic authentication."""
+
+    assert with_basic_auth
+
+    response = client.get("/.well-known/some/thing")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    response = client.post("/.well-known/some/thing")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.text == "GHGA Data Portal: Not authenticated"
+
+    response = client.get("/.not-well-known/some/thing")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.text == "GHGA Data Portal: Not authenticated"

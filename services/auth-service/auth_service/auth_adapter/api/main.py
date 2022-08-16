@@ -22,6 +22,7 @@ Additional endpoints might be structured in dedicated modules
 import secrets
 
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from ghga_service_chassis_lib.api import configure_app
 
@@ -43,6 +44,18 @@ def basic_auth_injector():
 
     security = HTTPBasic(realm="GHGA Data Portal")
 
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(_request, exc):
+        if "WWW-Authenticate" in exc.headers:
+            return PlainTextResponse(
+                f"{security.realm}: {exc.detail}",
+                status_code=exc.status_code,
+                headers=exc.headers,
+            )
+        return JSONResponse(
+            {"detail": exc.detail}, status_code=exc.status_code, headers=exc.headers
+        )
+
     async def check_basic_auth(credentials: HTTPBasicCredentials = Depends(security)):
         """Check basic access authentication if username and passwort are set."""
         # checking user and password while avoiding timing attacks
@@ -59,8 +72,14 @@ def basic_auth_injector():
     return Depends(check_basic_auth)
 
 
-@app.api_route("{path:path}", methods=HANDLE_METHODS)
+@app.api_route("/.well-known/{path:path}", methods=["GET"])
+async def ext_auth_well_known():
+    """Unprotected route for the .well-known URLs."""
+    return {}
+
+
+@app.api_route("/{path:path}", methods=HANDLE_METHODS)
 async def ext_auth(_basic_auth: None = basic_auth_injector()):
     """Implements the ExtAuth protocol to authenticate users in the API gateway."""
     # this is only dummy code, needs to be implemented properly
-    return "Hello World from the Auth Adapter."
+    return {}
