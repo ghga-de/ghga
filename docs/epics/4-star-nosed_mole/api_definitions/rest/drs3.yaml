@@ -53,37 +53,14 @@ paths:
                 type: integer
                 format: int64
           content: {}
-        400:
-          description: The request is malformed.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        401:
-          description: The request is unauthorized.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
         403:
           description: The requester is not authorized to perform this action.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
         404:
           description: The requested `DrsObject` wasn't found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        500:
-          description: An unexpected error occurred.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      x-swagger-router-controller: ga4gh.drs.server
+                $ref: "#/components/schemas/HttpObjectNotFoundError"
 components:
   schemas:
     Checksum:
@@ -183,8 +160,7 @@ components:
             object bytes.
         headers:
           type: array
-          description:
-            A list of headers to include in the HTTP request
+          description: A list of headers to include in the HTTP request
             to `url`. These headers can be used to provide auth tokens required to
             fetch the object bytes.
           example:
@@ -204,16 +180,42 @@ components:
             - s3
         access_url:
           $ref: "#/components/schemas/AccessURL"
-    Error:
-      type: object
+
+    HttpObjectNotFoundError:
+      additionalProperties: false
+      description: A custom exception body model.
       properties:
-        msg:
+        data:
+          $ref: "#/components/schemas/HttpObjectNotFoundErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
           type: string
-          description: A detailed error message.
-        status_code:
-          type: integer
-          description: The integer representing the HTTP status code (e.g. 200, 404).
-      description: An object that can optionally include information about the error.
+        exception_id:
+          enum:
+            - noSuchObject
+          title: Exception ID
+          type: string
+      required:
+        - data
+        - description
+        - exception_id
+      title: HttpUploadStatusChangeErrorData
+      type: object
+
+    HttpObjectNotFoundErrorData:
+      description: Model for exception data
+      properties:
+        object_id:
+          title: The DRS object ID.
+          type: string
+      required:
+        - object_id
+      title: HttpObjectNotFoundErrorData
+      type: object
+
   securitySchemes:
     authToken:
       type: apiKey
