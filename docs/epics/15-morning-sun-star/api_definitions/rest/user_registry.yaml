@@ -1,0 +1,306 @@
+openapi: 3.1.0
+
+info:
+  title: User Registry API
+  version: 0.1.0
+  description: REST API for managing the GHGA user registry
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/
+  contact: 
+    url: https://www.ghga.de/about-us/contact
+
+servers:
+  - url: https://api.server.test/v1
+
+tags: 
+  - name: users 
+    description: User Data
+
+paths:
+
+  /users:
+    post:
+      operationId: post_user
+      summary: Register a user
+      description: |
+        Endpoint used to register a new user.
+        May only be performed by the users themselves.
+        Data delivered by the OIDC provider may not be altered.
+      tags:
+        - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject:
+                  title: OpenID Subject
+                  type: string
+                issuer:
+                  title: OpenID Issuer
+                  type: string
+                name:
+                  $ref: "#/components/schemas/FullName"
+                title: 
+                  $ref: "#/components/schemas/AcademicTitle"
+                email:
+                  $ref: "#/components/schemas/EMail"
+                affiliation:
+                  $ref: "#/components/schemas/Affiliation"
+                orcid:
+                  title: ORCID identifier
+                  type: string
+                registration_reason:
+                  title: Reason for registration
+                  type: string
+                research_topics:
+                  title: Research topic(s)
+                  type: string
+              required:
+                - subject
+                - issuer
+                - name
+                - email
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+          description: User was successfully registered.
+        "400":
+          description: User cannot be registered.
+        "409":
+          description: User was already registered.
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation error in submitted user data.
+
+  /users/{id}:
+    get:
+      operationId: get_user
+      summary: Get user data
+      description: |
+        Endpoint used to get the user data for a specified user.
+        Can only be performed by a data steward or the same user.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: id
+          description: Internal ID or external ID (subject) if issuer is given
+          schema:
+            title: Internal ID
+            type: string
+          required: true
+        - in: query
+          name: issuer
+          description: Issuer if an external ID (subject) is specified
+          schema:
+            title: Issuer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+          description: Successful Response
+        "401":
+          description: Not authorized to get user data.
+        "404":
+          description: The user was not found.
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation error in submitted user identification.
+
+    patch:
+      operationId: patch_user
+      summary: Modify user data
+      description: |
+        Endpoint used to modify the user data for a specified user.
+        Can only be performed by a data steward or the same user.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: id
+          description: Internal ID
+          schema:
+            title: Internal ID
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: "#/components/schemas/UserStatus"
+                title: 
+                  $ref: "#/components/schemas/AcademicTitle"
+        required: true
+      responses:
+        "204":
+          description: User data was successfully saved.
+        "404":
+          description: The user was not found.
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation error in submitted user data.
+
+    delete:
+      operationId: delete_user
+      summary: Delete user
+      description: |
+        Endpoint used to delete a user.
+        Can only be performed by a data steward.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: id
+          description: Internal ID
+          schema:
+            title: Internal ID
+            type: string
+          required: true
+      responses:
+        "204":
+          description: User was successfully deleted.
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+          description: Validation error in submitted user identification.
+
+components:
+
+  schemas:
+  
+    User:
+      type: object
+      title: User
+      properties:
+        id:
+          title: Internal ID
+          type: string
+        subject:
+          title: External ID (OpenID Subject)
+          type: string
+        issuer:
+          title: External AAI (OpenID Issuer)
+          type: string
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        name:
+          $ref: "#/components/schemas/FullName"
+        title: 
+          $ref: "#/components/schemas/AcademicTitle"
+        email:
+          $ref: "#/components/schemas/EMail"
+        affiliation:
+          $ref: "#/components/schemas/Affiliation"
+        orcid:
+          title: ORCID identifier
+          type: string
+        registration_reason:
+          title: Reason for registration
+          type: string
+        research_topics:
+          title: Research topic(s)
+          type: string
+      required:
+        - id
+        - status
+        - name
+
+    Affiliation:
+      type: array
+      title: Affiliation
+      items:
+        type: string
+
+    UserStatus:
+      type: string
+      enum:
+        - registered
+        - activated
+        - inactivated
+        - deleted
+      title: Status
+      description: Registration status of the user.
+
+    FullName:
+      type: string
+      title: Name
+      description: Full name of the user.
+
+    AcademicTitle:
+      type: string
+      title: Academic title
+      enum:
+        - Dr.
+        - Prof.
+
+    EMail:
+      type: string
+      minLength: 8
+      maxLength: 254
+      format: email
+      title: E-Mail
+      description: E-Mail address of the user.
+
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: "#/components/schemas/ValidationError"
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+
+    ValidationError:
+      properties:
+        loc:
+          items:
+            type: string
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+
+  securitySchemes:
+    
+    AuthToken:
+      type: apiKey
+      in: header
+      name: X-GHGA-Token
+      description: Internal authentication token for GHGA.
+
+security:
+- AuthToken: []
