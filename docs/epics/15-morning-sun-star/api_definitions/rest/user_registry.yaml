@@ -35,23 +35,14 @@ paths:
             schema:
               type: object
               properties:
-                subject:
-                  title: OpenID Subject
-                  type: string
-                issuer:
-                  title: OpenID Issuer
-                  type: string
+                ls_id:
+                  $ref: "#/components/schemas/LSID"
                 name:
                   $ref: "#/components/schemas/FullName"
                 title: 
                   $ref: "#/components/schemas/AcademicTitle"
                 email:
                   $ref: "#/components/schemas/EMail"
-                affiliation:
-                  $ref: "#/components/schemas/Affiliation"
-                orcid:
-                  title: ORCID identifier
-                  type: string
                 registration_reason:
                   title: Reason for registration
                   type: string
@@ -59,8 +50,7 @@ paths:
                   title: Research topic(s)
                   type: string
               required:
-                - subject
-                - issuer
+                - ls_id
                 - name
                 - email
         required: true
@@ -94,16 +84,12 @@ paths:
       parameters:
         - in: path
           name: id
-          description: Internal ID or external ID (subject) if issuer is given
+          description: Internal ID or LS ID
           schema:
-            title: Internal ID
-            type: string
+            oneOf:
+             - $ref: "#/components/schemas/ID"
+             - $ref: "#/components/schemas/LSID"
           required: true
-        - in: query
-          name: issuer
-          description: Issuer if an external ID (subject) is specified
-          schema:
-            title: Issuer
       responses:
         "200":
           content:
@@ -135,8 +121,7 @@ paths:
           name: id
           description: Internal ID
           schema:
-            title: Internal ID
-            type: string
+            $ref: "#/components/schemas/ID"
           required: true
       requestBody:
         content:
@@ -174,8 +159,7 @@ paths:
           name: id
           description: Internal ID
           schema:
-            title: Internal ID
-            type: string
+            $ref: "#/components/schemas/ID"
           required: true
       responses:
         "204":
@@ -196,14 +180,9 @@ components:
       title: User
       properties:
         id:
-          title: Internal ID
-          type: string
-        subject:
-          title: External ID (OpenID Subject)
-          type: string
-        issuer:
-          title: External AAI (OpenID Issuer)
-          type: string
+          $ref: "#/components/schemas/ID"
+        ls_id:
+          $ref: "#/components/schemas/LSID"
         status:
           $ref: "#/components/schemas/UserStatus"
         name:
@@ -212,11 +191,6 @@ components:
           $ref: "#/components/schemas/AcademicTitle"
         email:
           $ref: "#/components/schemas/EMail"
-        affiliation:
-          $ref: "#/components/schemas/Affiliation"
-        orcid:
-          title: ORCID identifier
-          type: string
         registration_reason:
           title: Reason for registration
           type: string
@@ -228,11 +202,17 @@ components:
         - status
         - name
 
-    Affiliation:
-      type: array
-      title: Affiliation
-      items:
-        type: string
+    ID:
+      title: ID
+      description: Internally used ID
+      type: string
+      format: uuid
+
+    LSID:
+      title: LS ID
+      description: Life Science ID
+      type: string
+      format: email
 
     UserStatus:
       type: string

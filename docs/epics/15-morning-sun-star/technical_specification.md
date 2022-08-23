@@ -64,14 +64,17 @@ Note that a part of the use data originates at the external identity providers (
 
 This part of the user data that is kept in sync with the external identity provider consists of the following fields:
 
-- subject (LS Login ID)
-- issuer (currently only LS AAI)
+- ls_id (LS Login ID)
 - name (full name, see below)
 - email
+
+The name can also be stored in two separate components (first name and last name or given name and family name) if these can be reliably retrieved via OIDC - currently only the full name (display name) is documented for LS Login. Also note that the semantics of these name parts can be different for international users coming from different cultures.
+
+The following fields that are provided by the external identity provider are currently *not* requested and synchronized:
 - affiliation
 - orcid
 
-The name can also be stored in two separate components (first name and last name or given name and family name) if these can be reliably retrieved via OIDC - currently only the full name (display name) is documented for LS Login. Also note that the semantics of these name parts can be different for international users coming from different cultures.
+Therefore, it may be possible to extract all the necessary information from the access token or ID token alone, and the requests to the UserInfo endpoint of LS Login can be omitted.
 
 The part of the user data that is not provided externally must be provided in the registration process and consists of the following fields:
 
