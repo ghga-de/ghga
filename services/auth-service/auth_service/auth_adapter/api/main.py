@@ -14,72 +14,51 @@
 # limitations under the License.
 
 """
-Module containing the main FastAPI router and (optionally) top-level API enpoints.
+Module containing the main FastAPI router and (optionally) top-level API endpoints.
 Additional endpoints might be structured in dedicated modules
 (each of them having a sub-router).
 """
 
-import secrets
+from typing import Optional
 
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse, PlainTextResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import FastAPI, Header, Response
 from ghga_service_chassis_lib.api import configure_app
 
-from ...config import CONFIG
-from .deps import get_config
+from ...config import CONFIG, configure_logging
+from ..core.auth import exchange_token
+from .basic import basic_auth
+from .headers import get_access_token
+
+configure_logging()
 
 app = FastAPI()
 configure_app(app, config=CONFIG)
 
+# the auth adapter needs to handle all HTTP methods
 HANDLE_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
 
 
-def basic_auth_injector():
-    """Inject Basic authentication if user and passwort are set."""
-    config = get_config()
-    user, pwd = config.basic_auth_user, config.basic_auth_pwd
-    if not (user and pwd):
-        return None
-
-    security = HTTPBasic(realm="GHGA Data Portal")
-
-    @app.exception_handler(HTTPException)
-    async def http_exception_handler(_request, exc):
-        if "WWW-Authenticate" in exc.headers:
-            return PlainTextResponse(
-                f"{security.realm}: {exc.detail}",
-                status_code=exc.status_code,
-                headers=exc.headers,
-            )
-        return JSONResponse(
-            {"detail": exc.detail}, status_code=exc.status_code, headers=exc.headers
-        )
-
-    async def check_basic_auth(credentials: HTTPBasicCredentials = Depends(security)):
-        """Check basic access authentication if username and passwort are set."""
-        # checking user and password while avoiding timing attacks
-        user_ok = secrets.compare_digest(credentials.username, user)
-        pwd_ok = secrets.compare_digest(credentials.password, pwd)
-        if not (user_ok and pwd_ok):
-            www_auth = f'Basic realm="{security.realm}"'
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": www_auth},
-            )
-
-    return Depends(check_basic_auth)
-
-
 @app.api_route("/.well-known/{path:path}", methods=["GET"])
-async def ext_auth_well_known():
+async def ext_auth_well_known() -> dict:
     """Unprotected route for the .well-known URLs."""
     return {}
 
 
 @app.api_route("/{path:path}", methods=HANDLE_METHODS)
-async def ext_auth(_basic_auth: None = basic_auth_injector()):
-    """Implements the ExtAuth protocol to authenticate users in the API gateway."""
-    # this is only dummy code, needs to be implemented properly
+async def ext_auth(
+    response: Response,
+    authorization: Optional[str] = Header(default=None),
+    _basic_auth: None = basic_auth(app, config=CONFIG),
+) -> dict:
+    """Implements the ExtAuth protocol to authenticate users in the API gateway.
+
+    A valid external access token will be replaced with a corresponding internal token.
+    If the access token does not exist or is invalid, no internal token will be placed,
+    but the status will still be returned as OK so that all requests can pass.
+    """
+    access_token = get_access_token(authorization)
+    internal_token = exchange_token(access_token)
+    if internal_token:
+        response.headers[CONFIG.token_name] = internal_token
+    del response.headers["authorization"]
     return {}

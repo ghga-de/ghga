@@ -15,10 +15,44 @@
 
 """Config Parameter Modeling and Parsing"""
 
+import logging.config
 from typing import Optional
 
 from ghga_service_chassis_lib.api import ApiConfigBase, LogLevel
 from ghga_service_chassis_lib.config import config_from_yaml
+
+
+def configure_logging():
+    """Configure the application logging.
+
+    This must happen before the application is configured.
+    """
+    logging.config.dictConfig(
+        {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "default": {
+                    "()": "uvicorn.logging.DefaultFormatter",
+                    "fmt": "%(levelprefix)s %(asctime)s %(name)s: %(message)s",
+                    "datefmt": "%Y-%m-%d %H:%M:%S",
+                },
+            },
+            "handlers": {
+                "default": {
+                    "formatter": "default",
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stderr",
+                },
+            },
+            "loggers": {
+                "metadata_repository_service": {
+                    "handlers": ["default"],
+                    "level": CONFIG.log_level.upper(),
+                },
+            },
+        }
+    )
 
 
 @config_from_yaml(prefix="auth_service")
@@ -29,8 +63,10 @@ class Config(ApiConfigBase):
     log_level: LogLevel = "info"
     run_auth_adapter: bool = False
     auth_path_prefix: str = "/auth"
+    token_name: str = "x-ghga-token"
     basic_auth_user: Optional[str] = None
     basic_auth_pwd: Optional[str] = None
+    basic_auth_realm: Optional[str] = "GHGA Data Portal"
 
 
 CONFIG = Config()

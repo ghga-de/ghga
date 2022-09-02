@@ -12,19 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Fixtures that are used in both integration and unit tests"""
-
-from jwcrypto import jwk
-from pytest import fixture
-
-from auth_service.auth_adapter.core.jwks import external_jwks
+from auth_service.auth_adapter.api.headers import get_access_token
 
 
-@fixture(name="external_key")
-def fixture_external_key():
-    """Generate a key pair and add it to the external key set."""
-    key = jwk.JWK.generate(kty="RSA", size=2048)
-    external_jwks.add(key)
-    yield key
-    external_jwks["keys"].remove(key)
+def test_get_access_token():
+    """Test that the access token can be extracted from the header."""
+    assert get_access_token(None) is None
+    assert get_access_token("No Bearer token") is None
+    assert get_access_token("Bearer foo-bar") == "foo-bar"

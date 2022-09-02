@@ -159,6 +159,14 @@
       ],
       "type": "string"
     },
+    "token_name": {
+      "title": "Token Name",
+      "default": "x-ghga-token",
+      "env_names": [
+        "auth_service_token_name"
+      ],
+      "type": "string"
+    },
     "basic_auth_user": {
       "title": "Basic Auth User",
       "env_names": [
@@ -170,6 +178,14 @@
       "title": "Basic Auth Pwd",
       "env_names": [
         "auth_service_basic_auth_pwd"
+      ],
+      "type": "string"
+    },
+    "basic_auth_realm": {
+      "title": "Basic Auth Realm",
+      "default": "GHGA Data Portal",
+      "env_names": [
+        "auth_service_basic_auth_realm"
       ],
       "type": "string"
     }

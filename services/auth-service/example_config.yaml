@@ -2,6 +2,7 @@ api_root_path: /
 auth_path_prefix: /auth
 auto_reload: false
 basic_auth_pwd: null
+basic_auth_realm: GHGA Data Portal
 basic_auth_user: null
 cors_allow_credentials: null
 cors_allowed_headers: null
@@ -14,4 +15,5 @@ openapi_url: /openapi.json
 port: 8080
 run_auth_adapter: false
 service_name: auth_service
+token_name: x-ghga-token
 workers: 1

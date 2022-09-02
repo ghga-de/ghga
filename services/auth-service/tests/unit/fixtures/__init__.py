@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that exclusively used in unit tests"""
+"""Fixtures that are exclusively used in unit tests"""
 
 from pathlib import Path
 

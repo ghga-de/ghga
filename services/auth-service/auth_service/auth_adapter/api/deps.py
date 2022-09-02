@@ -17,6 +17,8 @@
 
 from ...config import CONFIG
 
+__all__ = ["get_config"]
+
 
 def get_config():
     """Get runtime configuration."""
