@@ -19,14 +19,18 @@ Manage request and response headers
 
 from typing import Optional
 
+__all__ = ["get_bearer_token"]
 
-def get_access_token(authorization: Optional[str]) -> Optional[str]:
-    """Extract the access token from the authorization header.
 
-    Return None if no bearer token was passed as authorization header.
+def get_bearer_token(*header_values: Optional[str]) -> Optional[str]:
+    """Extract the bearer token from the authorization header.
+
+    Multiple possible authorization header values can be passed,
+    in case one of them is used for Basic authentication.
+
+    Return None if no bearer token was found in one of the header values.
     """
-    if authorization:
-        authorization_parts = authorization.split(" ", 1)
-        if len(authorization_parts) == 2 and authorization_parts[0] == "Bearer":
-            return authorization_parts[1]
+    for header_value in header_values:
+        if header_value and header_value.startswith("Bearer "):
+            return header_value.removeprefix("Bearer ")
     return None

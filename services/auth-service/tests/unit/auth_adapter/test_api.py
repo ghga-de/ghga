@@ -14,11 +14,35 @@
 # limitations under the License.
 #
 
-from auth_service.auth_adapter.api.headers import get_access_token
+"""Unit tests for the auth adapter API"""
+
+from auth_service.auth_adapter.api.headers import get_bearer_token
 
 
-def test_get_access_token():
-    """Test that the access token can be extracted from the header."""
-    assert get_access_token(None) is None
-    assert get_access_token("No Bearer token") is None
-    assert get_access_token("Bearer foo-bar") == "foo-bar"
+def test_get_bearer_token_no_headers():
+    """Test that None is returned when there are no headers."""
+    assert get_bearer_token() is None
+    assert get_bearer_token(None) is None
+    assert get_bearer_token(None, None) is None
+
+
+def test_get_bearer_token_invalid_headers():
+    """Test that None is returned when there are no bearer tokens."""
+    assert get_bearer_token("Basic token") is None
+    assert get_bearer_token("Still not a Bearer token") is None
+    assert get_bearer_token("foo", "bar") is None
+    assert get_bearer_token("Basic token", "Invalid token", "Basic token") is None
+
+
+def test_get_bearer_token_one_header():
+    """Test that bearer token is returned when there is one header."""
+    assert get_bearer_token("Bearer foo-bar") == "foo-bar"
+
+
+def test_get_bearer_token_multiple_header():
+    """Test that first bearer token is returned when there are multiple headers."""
+    assert get_bearer_token("Bearer foo-bar", "Bearer bar-foo") == "foo-bar"
+    assert get_bearer_token(None, "Bearer foo-bar") == "foo-bar"
+    assert get_bearer_token("Bearer foo-bar", None) == "foo-bar"
+    assert get_bearer_token("Bearer foo-bar", "Basic foo:bar") == "foo-bar"
+    assert get_bearer_token("Basic foo:bar", "Bearer foo-bar") == "foo-bar"

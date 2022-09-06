@@ -23,7 +23,7 @@
     },
     "log_level": {
       "title": "Log Level",
-      "default": "info",
+      "default": "debug",
       "env_names": [
         "auth_service_log_level"
       ],
@@ -156,14 +156,6 @@
       "default": "/auth",
       "env_names": [
         "auth_service_auth_path_prefix"
-      ],
-      "type": "string"
-    },
-    "token_name": {
-      "title": "Token Name",
-      "default": "x-ghga-token",
-      "env_names": [
-        "auth_service_token_name"
       ],
       "type": "string"
     },

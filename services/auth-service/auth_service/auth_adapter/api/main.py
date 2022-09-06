@@ -27,7 +27,7 @@ from ghga_service_chassis_lib.api import configure_app
 from ...config import CONFIG, configure_logging
 from ..core.auth import exchange_token
 from .basic import basic_auth
-from .headers import get_access_token
+from .headers import get_bearer_token
 
 configure_logging()
 
@@ -48,6 +48,7 @@ async def ext_auth_well_known() -> dict:
 async def ext_auth(
     response: Response,
     authorization: Optional[str] = Header(default=None),
+    x_authorization: Optional[str] = Header(default=None),
     _basic_auth: None = basic_auth(app, config=CONFIG),
 ) -> dict:
     """Implements the ExtAuth protocol to authenticate users in the API gateway.
@@ -56,9 +57,8 @@ async def ext_auth(
     If the access token does not exist or is invalid, no internal token will be placed,
     but the status will still be returned as OK so that all requests can pass.
     """
-    access_token = get_access_token(authorization)
+    access_token = get_bearer_token(authorization, x_authorization)
     internal_token = exchange_token(access_token)
     if internal_token:
-        response.headers[CONFIG.token_name] = internal_token
-    del response.headers["authorization"]
+        response.headers["Authorization"] = internal_token
     return {}
