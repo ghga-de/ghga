@@ -1,6 +1,6 @@
 
-![tests](https://github.com/ghga-de/auth-adapter/actions/workflows/unit_and_int_tests.yaml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/auth-adapter/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/auth-adapter?branch=main)
+![tests](https://github.com/ghga-de/auth-service/actions/workflows/unit_and_int_tests.yaml/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/ghga-de/auth-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/auth-service?branch=main)
 
 # GHGA Auth Service
 
@@ -29,20 +29,20 @@ A pre-built version is available at [docker hub](https://hub.docker.com/reposito
 
 ```bash
 # Please feel free to choose the version as needed:
-docker pull ghga/auth-adapter:<version>
+docker pull ghga/auth-service:<version>
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
 # (Please feel free to adapt the name/tag.)
-docker build -t ghga/auth-adapter:<version> .
+docker build -t ghga/auth-service:<version> .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however, for simple use cases, you could execute th service using docker on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-adapter:<version>
+docker run -p 8080:8080 ghga/auth-service:<version>
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -51,7 +51,7 @@ If you prefer not to use containers, you may install the service from source:
 pip install .
 
 # to run the service:
-auth-adapter
+auth-service
 ```
 
 ### Configuration
