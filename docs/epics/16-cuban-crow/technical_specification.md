@@ -19,7 +19,7 @@ The prototyping script will consist of two parts, upload and download. They shou
     - decrypt file part
     - feed file part into checksum algorithm
 - compare checksum of decrypted object with provided checksum
-- save decrypted file without envelope
+- save encrypted file without envelope
 - publish (write to stdout) outcome of validation, list of checksums
 
 #### Encrypted key store functionality
