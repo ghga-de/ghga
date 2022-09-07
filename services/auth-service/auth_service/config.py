@@ -66,6 +66,9 @@ class Config(ApiConfigBase):
     basic_auth_user: Optional[str] = None
     basic_auth_pwd: Optional[str] = None
     basic_auth_realm: Optional[str] = "GHGA Data Portal"
+    db_url: str = "mongodb://localhost:27017"
+    db_name: str = "user-registry"
+    user_collection: str = "users"
 
 
 CONFIG = Config()

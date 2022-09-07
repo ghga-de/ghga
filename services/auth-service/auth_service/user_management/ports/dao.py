@@ -12,5 +12,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Consuming or Subscribing to Async Messaging Topics"""
+"""Outbound port for the user registry."""
+
+from abc import ABC, abstractmethod
+
+from hexkit.protocols.dao import DaoSurrogateId
+from typing_extensions import TypeAlias  # in typing only since Python 3.10
+
+from .dto import UserCreationDto, UserDto
+
+__all__ = ["UserDao", "UserDaoFactoryPort"]
+
+
+UserDao: TypeAlias = DaoSurrogateId[UserDto, UserCreationDto]
+
+
+class UserDaoFactoryPort(ABC):
+    """Port that provides a factory for user data access objects."""
+
+    @abstractmethod
+    async def get_user_dao(self) -> UserDao:
+        """Construct a DAO for interacting with user data in a database."""
+        ...

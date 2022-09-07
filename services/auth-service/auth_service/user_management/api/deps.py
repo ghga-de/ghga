@@ -15,9 +15,47 @@
 
 """FastAPI dependencies (used with the `Depends` feature)"""
 
-from ...config import CONFIG
+from fastapi import Depends
+from hexkit.providers.mongodb import MongoDbConfig, MongoDbDaoFactory
+
+from ...config import CONFIG, Config
+from ..translators.dao import UserDaoFactory, UserDaoFactoryConfig
+
+__all__ = ["Depends", "get_config", "get_user_dao"]
 
 
 def get_config():
     """Get runtime configuration."""
     return CONFIG
+
+
+def get_mongodb_config(config: Config = Depends(get_config)) -> MongoDbConfig:
+    """Get MongoDB configuration."""
+    return MongoDbConfig(db_connection_str=config.db_url, db_name=config.db_name)
+
+
+def get_mongodb_dao_factory(
+    config: MongoDbConfig = Depends(get_mongodb_config),
+) -> MongoDbDaoFactory:
+    """Get MongoDB DAO factory."""
+    return MongoDbDaoFactory(config=config)
+
+
+def get_user_dao_factory_config(
+    config: Config = Depends(get_config),
+) -> UserDaoFactoryConfig:
+    """Get user DAO factory config."""
+    return UserDaoFactoryConfig(collection_name=config.user_collection)
+
+
+def get_user_dao_factory(
+    config: UserDaoFactoryConfig = Depends(get_user_dao_factory_config),
+    dao_factory: MongoDbDaoFactory = Depends(get_mongodb_dao_factory),
+) -> UserDaoFactory:
+    """Get user DAO factory."""
+    return UserDaoFactory(config=config, dao_factory=dao_factory)
+
+
+async def get_user_dao(dao_factory: UserDaoFactory = Depends(get_user_dao_factory)):
+    """Get user data access object."""
+    return await dao_factory.get_user_dao()

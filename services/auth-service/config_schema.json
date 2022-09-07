@@ -180,6 +180,30 @@
         "auth_service_basic_auth_realm"
       ],
       "type": "string"
+    },
+    "db_url": {
+      "title": "Db Url",
+      "default": "mongodb://localhost:27017",
+      "env_names": [
+        "auth_service_db_url"
+      ],
+      "type": "string"
+    },
+    "db_name": {
+      "title": "Db Name",
+      "default": "user-registry",
+      "env_names": [
+        "auth_service_db_name"
+      ],
+      "type": "string"
+    },
+    "user_collection": {
+      "title": "User Collection",
+      "default": "users",
+      "env_names": [
+        "auth_service_user_collection"
+      ],
+      "type": "string"
     }
   },
   "additionalProperties": false

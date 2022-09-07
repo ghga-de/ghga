@@ -17,7 +17,10 @@
 
 from fastapi import status
 
-from .fixtures import fixture_client  # noqa: F401; pylint: disable=unused-import
+from .fixtures import (  # noqa: F401; pylint: disable=unused-import
+    fixture_client,
+    fixture_client_with_db,
+)
 
 
 def test_get_from_root(client):
@@ -35,3 +38,28 @@ def test_get_from_some_other_path(client):
     response = client.post("/some/path")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_demo_create_user(client_with_db):
+    """Test that the demo endpoint for creating a user works."""
+
+    response = client_with_db.post("/create_demo_user")
+
+    assert response.status_code == status.HTTP_200_OK
+    dto = response.json()
+
+    assert set(dto) == {
+        "academic_title",
+        "email",
+        "id",
+        "ls_id",
+        "name",
+        "registration_date",
+        "registration_reason",
+        "research_topics",
+    }
+    assert dto["name"] == "Demo User"
+    id_ = dto["id"]
+    assert isinstance(id_, str)
+    assert len(id_) == 36
+    assert id_.count("-") == 4

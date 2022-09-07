@@ -19,16 +19,35 @@ Additional endpoints might be structured in dedicated modules
 (each of them having a sub-router).
 """
 
+from datetime import datetime
+
 from fastapi import FastAPI
 from ghga_service_chassis_lib.api import configure_app
 
-from ...config import CONFIG
+from ...config import CONFIG, configure_logging
+from ..ports.dao import UserDao
+from ..ports.dto import UserCreationDto
+from .deps import Depends, get_user_dao
+
+configure_logging()
 
 app = FastAPI()
 configure_app(app, config=CONFIG)
 
 
-@app.get("/", summary="Greet the world")
+@app.get("/", operation_id="greet", summary="Greet the world")
 async def index():
     """Greet the World"""
     return "Hello World from the User Management."
+
+
+@app.post("/create_demo_user", operation_id="demo", summary="Create demo user")
+async def demo_create_user(user_dao: UserDao = Depends(get_user_dao)):
+    """Create a new user (for demonstration only)"""
+    demo_user = UserCreationDto(
+        ls_id="demo@ls.org",
+        name="Demo User",
+        email="demo@example.org",
+        registration_date=datetime.now(),
+    )
+    return await user_dao.insert(demo_user)

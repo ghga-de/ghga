@@ -13,16 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures for the auth adapter integration tests"""
+"""Fixtures for the user management integration tests"""
 
+from typing import Generator
 
 from fastapi.testclient import TestClient
 from pytest import fixture
+from testcontainers.mongodb import MongoDbContainer
 
-from auth_service.user_management.api import main
+from auth_service.config import Config
+from auth_service.user_management.api.deps import get_config
+from auth_service.user_management.api.main import app
 
 
 @fixture(name="client")
-def fixture_client():
-    """Get test client for the auth adapter"""
-    return TestClient(main.app)
+def fixture_client() -> TestClient:
+    """Get test client for the user manager"""
+    return TestClient(app)
+
+
+@fixture(name="client_with_db")
+def fixture_client_with_db() -> Generator[TestClient, None, None]:
+    """Get test client for the user manager with a test database."""
+
+    with MongoDbContainer() as mongodb:
+        connection_url = mongodb.get_connection_url()
+        config = Config(db_url=connection_url, db_name="test-user-management")
+
+        app.dependency_overrides[get_config] = lambda: config
+        yield TestClient(app)

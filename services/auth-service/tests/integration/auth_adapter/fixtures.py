@@ -16,6 +16,7 @@
 """Fixtures for the auth adapter integration tests"""
 
 import importlib
+from typing import Generator
 
 from fastapi.testclient import TestClient
 from pytest import fixture
@@ -25,13 +26,13 @@ from auth_service.config import CONFIG
 
 
 @fixture(name="client")
-def fixture_client():
+def fixture_client() -> TestClient:
     """Get test client for the auth adapter"""
     return TestClient(main.app)
 
 
 @fixture(name="with_basic_auth")
-def fixture_with_basic_auth():
+def fixture_with_basic_auth() -> Generator[str, None, None]:
     """Run test with Basic authentication"""
     user, pwd = "testuser", "testpwd"
     CONFIG.basic_auth_user = user

@@ -7,7 +7,7 @@ paths:
   /:
     get:
       description: Greet the World
-      operationId: index__get
+      operationId: greet
       responses:
         '200':
           content:
@@ -15,3 +15,14 @@ paths:
               schema: {}
           description: Successful Response
       summary: Greet the world
+  /create_demo_user:
+    post:
+      description: Create a new user (for demonstration only)
+      operationId: demo
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Create demo user
