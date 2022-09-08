@@ -12,16 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Auth Adapter
-
-The GHGA auth adapter is used by the API gateway via the ExtAuth protocol
-to authenticate users on the edge and to convert the external access tokens
-from the federated authentication service to internally access tokens.
+"""
+Core utilities for the functionality of the User Management Service.
 """
 
-__version__ = "0.1.0"
+__all__ = ["is_internal_id", "is_external_id"]
 
-VERSION = __version__
-TITLE = "Ext Auth Protocol"
-DESCRIPTION = "Implementation of the Ext Auth protocol for the API gateway"
+
+def is_internal_id(id_: str) -> bool:
+    """Check if the passed ID is an internal user id."""
+    if not id_ or not isinstance(id_, str):
+        return False
+    return len(id_) == 36 and id_.count("-") == 4 and "@" not in id_
+
+
+def is_external_id(id_: str) -> bool:
+    """Check if the passed ID is an external user id."""
+    if not id_ or not isinstance(id_, str):
+        return False
+    return len(id_) > 8 and id_.count("@") == 1

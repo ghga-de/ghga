@@ -26,10 +26,12 @@ from auth_service.user_management.api.deps import (
     get_user_dao_factory,
     get_user_dao_factory_config,
 )
-from auth_service.user_management.ports.dto import (
+from auth_service.user_management.core.utils import is_internal_id
+from auth_service.user_management.models.dto import (
     AcademicTitle,
-    UserCreationDto,
-    UserDto,
+    User,
+    UserData,
+    UserStatus,
 )
 
 
@@ -44,23 +46,24 @@ async def test_user_creation(mongodb_fixture):  # noqa: F811
     )
     user_dao = await user_dao_factory.get_user_dao()
 
-    user_creation_dto = UserCreationDto(
+    user_data = UserData(
         ls_id="max@ls.org",
+        status=UserStatus.ACTIVATED,
         name="Max Headroom",
+        title=AcademicTitle.DR,
         email="max@example.org",
-        academic_title=AcademicTitle.DR,
         research_topics="genes",
         registration_reasons="for testing",
         registration_date=datetime(2022, 9, 1, 12, 0),
     )
-    user_dto = await user_dao.insert(user_creation_dto)
-    assert user_dto and isinstance(user_dto, UserDto)
-    assert user_dto.ls_id == user_creation_dto.ls_id
-    assert user_dto.name == user_creation_dto.name
-    assert user_dto.email == user_creation_dto.email
-    assert user_dto.academic_title == user_creation_dto.academic_title
-    assert user_dto.research_topics == user_creation_dto.research_topics
-    assert user_dto.registration_reason == user_creation_dto.registration_reason
-    assert user_dto.registration_date == user_creation_dto.registration_date
-    id_ = user_dto.id
-    assert id_ and isinstance(id_, str)
+    user = await user_dao.insert(user_data)
+    assert user and isinstance(user, User)
+    assert user.ls_id == user_data.ls_id
+    assert user.status == user_data.status
+    assert user.name == user_data.name
+    assert user.title == user_data.title
+    assert user.email == user_data.email
+    assert user.research_topics == user_data.research_topics
+    assert user.registration_reason == user_data.registration_reason
+    assert user.registration_date == user_data.registration_date
+    assert is_internal_id(user.id)

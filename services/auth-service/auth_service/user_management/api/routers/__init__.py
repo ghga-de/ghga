@@ -12,16 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Auth Adapter
-
-The GHGA auth adapter is used by the API gateway via the ExtAuth protocol
-to authenticate users on the edge and to convert the external access tokens
-from the federated authentication service to internally access tokens.
-"""
-
-__version__ = "0.1.0"
-
-VERSION = __version__
-TITLE = "Ext Auth Protocol"
-DESCRIPTION = "Implementation of the Ext Auth protocol for the API gateway"
+"Routers for different entity specific routes"

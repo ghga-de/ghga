@@ -25,13 +25,14 @@ from fastapi import FastAPI, Header, Response
 from ghga_service_chassis_lib.api import configure_app
 
 from ...config import CONFIG, configure_logging
+from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import exchange_token
 from .basic import basic_auth
 from .headers import get_bearer_token
 
 configure_logging()
 
-app = FastAPI()
+app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
 configure_app(app, config=CONFIG)
 
 # the auth adapter needs to handle all HTTP methods

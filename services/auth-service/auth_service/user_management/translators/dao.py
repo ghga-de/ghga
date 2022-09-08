@@ -14,13 +14,14 @@
 # limitations under the License.
 #
 
-"""Translator definitions."""
+"""Translation between general and user specific DAOs."""
 
 from hexkit.protocols.dao import DaoFactoryProtcol, uuid4_id_generator
 from pydantic import BaseSettings
 
+from ..models.dto import User as UserDto
+from ..models.dto import UserData as UserCreationDto
 from ..ports.dao import UserDao, UserDaoFactoryPort
-from ..ports.dto import UserCreationDto, UserDto
 
 __all__ = ["UserDaoFactory", "UserDaoFactoryConfig"]
 

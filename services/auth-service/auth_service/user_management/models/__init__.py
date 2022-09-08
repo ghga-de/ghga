@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test dummy."""
-
-
-def test_dummy():
-    """Just makes the CI pass."""
-    assert True
+"""
+This sub-package contains the models used in the user management service.
+"""

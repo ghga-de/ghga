@@ -19,35 +19,29 @@ Additional endpoints might be structured in dedicated modules
 (each of them having a sub-router).
 """
 
-from datetime import datetime
-
 from fastapi import FastAPI
 from ghga_service_chassis_lib.api import configure_app
 
 from ...config import CONFIG, configure_logging
-from ..ports.dao import UserDao
-from ..ports.dto import UserCreationDto
-from .deps import Depends, get_user_dao
+from .. import CONTACT, DESCRIPTION, LICENSE_INFO, TAGS_METADATA, TITLE, VERSION
+from .routers.users import router as users_router
 
 configure_logging()
 
-app = FastAPI()
+app = FastAPI(
+    title=TITLE,
+    description=DESCRIPTION,
+    version=VERSION,
+    contact=CONTACT,
+    license_info=LICENSE_INFO,
+    openapi_tags=TAGS_METADATA,
+)
 configure_app(app, config=CONFIG)
 
+app.include_router(users_router)
 
-@app.get("/", operation_id="greet", summary="Greet the world")
+
+@app.get("/", operation_id="index", tags=[], summary="Index")
 async def index():
-    """Greet the World"""
-    return "Hello World from the User Management."
-
-
-@app.post("/create_demo_user", operation_id="demo", summary="Create demo user")
-async def demo_create_user(user_dao: UserDao = Depends(get_user_dao)):
-    """Create a new user (for demonstration only)"""
-    demo_user = UserCreationDto(
-        ls_id="demo@ls.org",
-        name="Demo User",
-        email="demo@example.org",
-        registration_date=datetime.now(),
-    )
-    return await user_dao.insert(demo_user)
+    """Index of the User Management Service."""
+    return "Index of the User Management Service"

@@ -14,14 +14,15 @@
 # limitations under the License.
 #
 
-"""Outbound port for the user registry."""
+"""DAOs that are used as part of the uutbound port for the user management."""
 
 from abc import ABC, abstractmethod
 
 from hexkit.protocols.dao import DaoSurrogateId
 from typing_extensions import TypeAlias  # in typing only since Python 3.10
 
-from .dto import UserCreationDto, UserDto
+from ..models.dto import User as UserDto
+from ..models.dto import UserData as UserCreationDto
 
 __all__ = ["UserDao", "UserDaoFactoryPort"]
 
