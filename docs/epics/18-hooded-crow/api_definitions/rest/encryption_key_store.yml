@@ -1,0 +1,248 @@
+openapi: 3.0.3
+
+info:
+  title: Encryption Key Store
+  version: 0.1.0
+
+paths:
+  /envelopes:
+    get:
+      operationId: getPersonalizedEnvelope
+      summary: Get personalized envelope containing Crypt4GH file encryption/decryption key
+      description: |
+        A Crypt4GH file envelope is created on demand using the corresponding file encryption/decryption secret,
+        the current GHGA secret key and the download user's private key.
+      parameters:
+        - name: file_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Envelope was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "404":
+          description: |
+            Returned when either the file ID or public key is not known to the service.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/FileNotFoundError"
+                  - $ref: "#/components/schemas/PublicKeyNotFoundError"
+
+    put:
+      operationId: extractEnvelopeSecrets
+      summary: Extract file encryption/decryption secret and file content offset from enevelope
+      description: |
+        Extract file encryption/decryption secret, create secret ID and extract file content offset.
+        Saves first two in a secure store, returns all three to caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnvelopeQuery"
+
+      responses:
+        "200":
+          description: |
+            Information extracted from envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeContent"
+        "400":
+          description: Envelope malformed or missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MalformedOrMissingEnvelopeError"
+        "403":
+          description: Could not decrypt envelope content with given keys
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDecryptionError"
+
+components:
+  schemas:
+    Envelope:
+      title: Personalized Envelope
+      description: |
+        Crypt4GH Envelope generated with GHGA secret key and download user public key.
+        Contains file encryption/decryption secret.
+      type: object
+      properties:
+        content:
+          type: string
+          format: bytes
+      required:
+        - content
+
+    EnvelopeContent:
+      title: Envelope Content
+      description: |
+        Contains file encryption/decryption secret extracted from file envelope, the ID generated for this secret
+        and the file content offset, i.e. the location of the encrypted file content within the file.
+      type: object
+      properties:
+        secret:
+          type: string
+          format: bytes
+        secret_id:
+          type: string
+        offset:
+          type: integer
+          minimum: 0
+      required:
+        - secret
+        - secret_id
+        - offset
+
+    EnvelopeDecryptionError:
+      title: EnvelopeDecryptionError
+      description: Error thrown when no provided key can successfully decrypt the file envelope.
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/EnvelopeDecryptionErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          enum:
+            - EnvelopeDecryptionError
+          title: Exceptionid
+          type: string
+
+    EnvelopeDecryptionErrorData:
+      title: EnvelopeDecryptionErrorData
+      description: Model for exception data
+      type: object
+      properties:
+        user_id:
+          title: User Id
+          type: string
+      required:
+        - user_id
+
+    EnvelopeQuery:
+      title: Envelope Query
+      description: Request object containing first file part and user ID.
+      type: object
+      properties:
+        user_id:
+          type: string
+        file_part:
+          $ref: "#/components/schemas/FilePart"
+      required:
+        - user_id
+        - file_part
+
+    FileNotFoundError:
+      title: FileNotFoundError
+      description: File for the given ID is not known to the service.
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/FileNotFoundErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          enum:
+            - FileNotFoundError
+          title: Exceptionid
+          type: string
+
+    FileNotFoundErrorData:
+      title: FileNotFoundErrorData
+      description: Model for exception data
+      type: object
+      properties:
+        file_id:
+          title: File Id
+          type: string
+      required:
+        - file_id
+
+    FilePart:
+      title: File Part
+      description: First file part from inbox, containing the envelope.
+      type: object
+      properties:
+        content:
+          type: string
+          format: bytes
+      required:
+        - content
+
+    MalformedOrMissingEnvelopeError:
+      title: MalformedOrMissingEnvelopeError
+      description: Envelope decryption fails due to missing or malformed envelope.
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/MalformedOrMissingEnvelopeErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          enum:
+            - MalformedOrMissingEnvelopeError
+          title: Exceptionid
+          type: string
+
+    MalformedOrMissingEnvelopeErrorData:
+      title: MalformedOrMissingEnvelopeErrorData
+      description: Model for exception data
+      type: object
+
+    PublicKeyNotFoundError:
+      title: PublicKeyNotFoundError
+      description: Public key for the requesting user is not registered with the service database.
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/PublicKeyNotFoundErrorData"
+        description:
+          description:
+            A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          enum:
+            - PublicKeyNotFoundError
+          title: Exceptionid
+          type: string
+
+    PublicKeyNotFoundErrorData:
+      title: PublicKeyNotFoundErrorData
+      description: Model for exception data
+      type: object
+      properties:
+        user_id:
+          title: User Id
+          type: string
+      required:
+        - user_id
