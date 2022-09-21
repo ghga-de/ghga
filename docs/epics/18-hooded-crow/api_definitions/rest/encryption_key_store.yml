@@ -5,43 +5,9 @@ info:
   version: 0.1.0
 
 paths:
-  /envelopes:
-    get:
-      operationId: getPersonalizedEnvelope
-      summary: Get personalized envelope containing Crypt4GH file encryption/decryption key
-      description: |
-        A Crypt4GH file envelope is created on demand using the corresponding file encryption/decryption secret,
-        the current GHGA secret key and the download user's private key.
-      parameters:
-        - name: file_id
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: user_id
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Envelope was successfully created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Envelope"
-        "404":
-          description: |
-            Returned when either the file ID or public key is not known to the service.
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/FileNotFoundError"
-                  - $ref: "#/components/schemas/PublicKeyNotFoundError"
-
-    put:
-      operationId: extractEnvelopeSecrets
+  /secrets:
+    post:
+      operationId: postEncryptionSecrets
       summary: Extract file encryption/decryption secret and file content offset from enevelope
       description: |
         Extract file encryption/decryption secret, create secret ID and extract file content offset.
@@ -51,7 +17,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/EnvelopeQuery"
+              $ref: "#/components/schemas/InboundEnvelopeQuery"
 
       responses:
         "200":
@@ -60,7 +26,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EnvelopeContent"
+                $ref: "#/components/schemas/InboundEnvelopeContent"
         "400":
           description: Envelope malformed or missing
           content:
@@ -74,9 +40,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/EnvelopeDecryptionError"
 
+  /secrets/{secret_id}/envelopes/{receiver_pk}:
+    get:
+      operationId: getPersonalizedEnvelope
+      summary: Get personalized envelope containing Crypt4GH file encryption/decryption key
+      description: |
+        A Crypt4GH file envelope is created on demand using the corresponding file encryption/decryption secret,
+        the current GHGA secret key and the download user's private key.
+      parameters:
+        - name: secret_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: receiver_pk
+          in: path
+          description: The public key of the receiver.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Envelope was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutboundEnvelope"
+        "404":
+          description: |
+            Returned when either the file ID or public key is not known to the service.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/SecretNotFoundError"
+
 components:
   schemas:
-    Envelope:
+    OutboundEnvelope:
       title: Personalized Envelope
       description: |
         Crypt4GH Envelope generated with GHGA secret key and download user public key.
@@ -89,7 +90,7 @@ components:
       required:
         - content
 
-    EnvelopeContent:
+    InboundEnvelopeContent:
       title: Envelope Content
       description: |
         Contains file encryption/decryption secret extracted from file envelope, the ID generated for this secret
@@ -111,11 +112,11 @@ components:
 
     EnvelopeDecryptionError:
       title: EnvelopeDecryptionError
-      description: Error thrown when no provided key can successfully decrypt the file envelope.
+      description:
+        Error thrown when no available secret crypt4GH key can successfully decrypt the
+        file envelope.
       type: object
       properties:
-        data:
-          $ref: "#/components/schemas/EnvelopeDecryptionErrorData"
         description:
           description:
             A human readable message to the client explaining the cause
@@ -128,18 +129,7 @@ components:
           title: Exceptionid
           type: string
 
-    EnvelopeDecryptionErrorData:
-      title: EnvelopeDecryptionErrorData
-      description: Model for exception data
-      type: object
-      properties:
-        user_id:
-          title: User Id
-          type: string
-      required:
-        - user_id
-
-    EnvelopeQuery:
+    InboundEnvelopeQuery:
       title: Envelope Query
       description: Request object containing first file part and user ID.
       type: object
@@ -147,18 +137,20 @@ components:
         user_id:
           type: string
         file_part:
-          $ref: "#/components/schemas/FilePart"
+          type: string
+          format: bytes
+          description: First file part from inbox, containing the envelope.
       required:
         - user_id
         - file_part
 
-    FileNotFoundError:
-      title: FileNotFoundError
-      description: File for the given ID is not known to the service.
+    SecretNotFoundError:
+      title: SecretNotFoundError
+      description: No secret with the given ID is known.
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/FileNotFoundErrorData"
+          $ref: "#/components/schemas/SecretNotFoundErrorData"
         description:
           description:
             A human readable message to the client explaining the cause
@@ -167,31 +159,20 @@ components:
           type: string
         exception_id:
           enum:
-            - FileNotFoundError
+            - SecretNotFoundError
           title: Exceptionid
           type: string
 
-    FileNotFoundErrorData:
-      title: FileNotFoundErrorData
+    SecretNotFoundErrorData:
+      title: SecretNotFoundErrorData
       description: Model for exception data
       type: object
       properties:
-        file_id:
-          title: File Id
+        secret_id:
+          title: Secret Id
           type: string
       required:
-        - file_id
-
-    FilePart:
-      title: File Part
-      description: First file part from inbox, containing the envelope.
-      type: object
-      properties:
-        content:
-          type: string
-          format: bytes
-      required:
-        - content
+        - secret_id
 
     MalformedOrMissingEnvelopeError:
       title: MalformedOrMissingEnvelopeError
@@ -216,33 +197,3 @@ components:
       title: MalformedOrMissingEnvelopeErrorData
       description: Model for exception data
       type: object
-
-    PublicKeyNotFoundError:
-      title: PublicKeyNotFoundError
-      description: Public key for the requesting user is not registered with the service database.
-      type: object
-      properties:
-        data:
-          $ref: "#/components/schemas/PublicKeyNotFoundErrorData"
-        description:
-          description:
-            A human readable message to the client explaining the cause
-            of the exception.
-          title: Description
-          type: string
-        exception_id:
-          enum:
-            - PublicKeyNotFoundError
-          title: Exceptionid
-          type: string
-
-    PublicKeyNotFoundErrorData:
-      title: PublicKeyNotFoundErrorData
-      description: Model for exception data
-      type: object
-      properties:
-        user_id:
-          title: User Id
-          type: string
-      required:
-        - user_id
