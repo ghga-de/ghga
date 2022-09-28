@@ -18,6 +18,7 @@ Basic HTTP authentication
 """
 
 import secrets
+from typing import cast
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -28,16 +29,52 @@ from ...config import Config
 __all__ = ["basic_auth"]
 
 
+def get_allowed_credentials(config: Config) -> list[HTTPBasicCredentials]:
+    """Get list of allowed credentials from the config.
+
+    Multiple users and passwords can be specified separated with commas.
+    Passwords can be specified in the user setting separated with colons.
+    """
+    user, password = config.basic_auth_user, config.basic_auth_pwd
+    try:
+        if user:
+            users = user.split(",")
+            if password:
+                passwords = password.split(",")
+                if len(passwords) != len(users):
+                    raise ValueError(
+                        "Different numbers of Basic Auth users and passwords."
+                    )
+                user_passwords = cast(list[list[str]], zip(users, passwords))
+            else:
+                user_passwords = [user.split(":", 1) for user in users]
+            allowed_credentials = [
+                HTTPBasicCredentials(username=user.strip(), password=password.strip())
+                for (user, password) in user_passwords
+            ]
+            if not all(
+                credentials.username and credentials.password
+                for credentials in allowed_credentials
+            ):
+                raise ValueError("Empty Basic Auth user or password.")
+        elif password:
+            raise ValueError("Basic Auth password with no user.")
+        else:
+            allowed_credentials = []
+    except ValueError as error:
+        raise ValueError("Invalid Basic Auth credentials configuration.") from error
+    return allowed_credentials
+
+
 def basic_auth(app: FastAPI, config: Config):
     """Inject Basic authentication if this is configured."""
-    user, pwd = config.basic_auth_user, config.basic_auth_pwd
-    if not (user and pwd):
+    allowed_credentials = get_allowed_credentials(config)
+    if not allowed_credentials:
         return None
     realm = config.basic_auth_realm
     if not realm:
         return None
 
-    required_credentials = HTTPBasicCredentials(username=user, password=pwd)
     http_basic = HTTPBasic(realm=realm)
 
     @app.exception_handler(HTTPException)
@@ -55,15 +92,18 @@ def basic_auth(app: FastAPI, config: Config):
     async def check_basic_auth(
         passed_credentials: HTTPBasicCredentials = Depends(http_basic),
     ):
-        """Check basic access authentication if username and passwort are set."""
+        """Check basic access authentication if username and password are set."""
         # checking user and password while avoiding timing attacks
-        user_ok = secrets.compare_digest(
-            passed_credentials.username, required_credentials.username
-        )
-        pwd_ok = secrets.compare_digest(
-            passed_credentials.password, required_credentials.password
-        )
-        if not (user_ok and pwd_ok):
+        for credentials in allowed_credentials:
+            user_ok = secrets.compare_digest(
+                passed_credentials.username, credentials.username
+            )
+            pwd_ok = secrets.compare_digest(
+                passed_credentials.password, credentials.password
+            )
+            if user_ok and pwd_ok:
+                break
+        else:
             www_auth = f'Basic realm="{realm}"'
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
