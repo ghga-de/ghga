@@ -40,7 +40,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/EnvelopeDecryptionError"
 
-  /secrets/{secret_id}/envelopes/{receiver_pk}:
+  /secrets/{secret_id}/envelopes/{client_pk}:
     get:
       operationId: getPersonalizedEnvelope
       summary: Get personalized envelope containing Crypt4GH file encryption/decryption key
@@ -53,9 +53,9 @@ paths:
           required: true
           schema:
             type: string
-        - name: receiver_pk
+        - name: client_pk
           in: path
-          description: The public key of the receiver.
+          description: The public key of the client.
           required: true
           schema:
             type: string
@@ -134,7 +134,7 @@ components:
       description: Request object containing first file part and user ID.
       type: object
       properties:
-        user_id:
+        client_pk:
           type: string
         file_part:
           type: string
