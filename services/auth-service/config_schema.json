@@ -151,14 +151,6 @@
       ],
       "type": "boolean"
     },
-    "auth_path_prefix": {
-      "title": "Auth Path Prefix",
-      "default": "/auth",
-      "env_names": [
-        "auth_service_auth_path_prefix"
-      ],
-      "type": "string"
-    },
     "basic_auth_user": {
       "title": "Basic Auth User",
       "env_names": [

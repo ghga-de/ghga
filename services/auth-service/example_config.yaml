@@ -1,5 +1,4 @@
 api_root_path: /
-auth_path_prefix: /auth
 auto_reload: true
 basic_auth_pwd: null
 basic_auth_realm: GHGA Data Portal

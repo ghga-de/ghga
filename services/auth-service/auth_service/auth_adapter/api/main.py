@@ -17,6 +17,9 @@
 Module containing the main FastAPI router and (optionally) top-level API endpoints.
 Additional endpoints might be structured in dedicated modules
 (each of them having a sub-router).
+
+Note: If a path_prefix is used for the Emissary AuthService,
+then this must be also specified in the config setting api_root_path.
 """
 
 from typing import Optional

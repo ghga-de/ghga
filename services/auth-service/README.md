@@ -11,6 +11,7 @@ These two services are described in the following sections. The setting `run_aut
 
 The `auth_adapter` subpackage contains the authentication service used by the API gateway via the ExtAuth protocol.
 
+If a `path_prefix` has been configured for the AuthService in the API gateway, then the `api_root_path` must be set accordingly.
 ## User Management
 
 The `user_management` subpackage contains the user data management service.
