@@ -137,7 +137,7 @@ def test_basic_auth_well_known(with_basic_auth, client):
 def test_token_exchange(external_key, client):
     """Test that the external access token is exchanged against an internal token."""
 
-    ext_payload = {"name": "Foo Bar", "mail": "foo@bar", "sub": "foo", "iss": "bar"}
+    ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
     auth = sign_and_encode_token(ext_payload, key=external_key)
     auth = f"Bearer {auth}"
     response = client.get("/some/path", headers={"Authorization": auth})
@@ -153,7 +153,7 @@ def test_token_exchange(external_key, client):
     assert internal_token.count(".", 2)
 
     int_payload = decode_and_verify_token(internal_token, key=internal_jwk)
-    assert int_payload == {"name": "Foo Bar", "mail": "foo@bar"}
+    assert int_payload == {"name": "Foo Bar", "email": "foo@bar"}
 
     assert "X-Authorization" not in headers
 
@@ -161,7 +161,7 @@ def test_token_exchange(external_key, client):
 def test_token_exchange_with_x_token(external_key, client):
     """Test that the external access token can be passed in separate header."""
 
-    ext_payload = {"name": "Foo Bar", "mail": "foo@bar", "sub": "foo", "iss": "bar"}
+    ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
     auth = sign_and_encode_token(ext_payload, key=external_key)
     auth = f"Bearer {auth}"
     response = client.get("/some/path", headers={"X-Authorization": auth})
@@ -177,7 +177,7 @@ def test_token_exchange_with_x_token(external_key, client):
     assert internal_token.count(".", 2)
 
     int_payload = decode_and_verify_token(internal_token, key=internal_jwk)
-    assert int_payload == {"name": "Foo Bar", "mail": "foo@bar"}
+    assert int_payload == {"name": "Foo Bar", "email": "foo@bar"}
 
     assert "X-Authorization" not in headers
 

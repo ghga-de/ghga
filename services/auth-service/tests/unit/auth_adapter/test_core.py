@@ -190,10 +190,10 @@ def test_signs_internal_token():
 
 def test_token_exchange(external_key):
     """Test that a valid external token is exchanged against an internal token."""
-    ext_payload = {"name": "Foo Bar", "mail": "foo@bar", "sub": "foo", "iss": "bar"}
+    ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
     access_token = sign_and_encode_token(ext_payload, key=external_key)
     internal_token = exchange_token(access_token)
     assert isinstance(internal_token, str)
     assert internal_token.count(".") == 2
     int_payload = decode_and_verify_token(internal_token, key=internal_jwk)
-    assert int_payload == {"name": "Foo Bar", "mail": "foo@bar"}
+    assert int_payload == {"name": "Foo Bar", "email": "foo@bar"}

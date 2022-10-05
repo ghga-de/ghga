@@ -33,7 +33,7 @@ class InternalToken(TypedDict):
     """Payload of an internal token."""
 
     name: str
-    mail: str
+    email: str
 
 
 def exchange_token(external_token: Optional[str]) -> Optional[str]:
@@ -46,12 +46,11 @@ def exchange_token(external_token: Optional[str]) -> Optional[str]:
     if not payload or not isinstance(payload, dict):
         return None
     name = payload.get("name")
-    mail = payload.get("mail")
-    if not (name and mail):
+    email = payload.get("email")
+    if not (name and email):
         log.debug("Access token does not contain required user info")
-        log.debug("Access token playload = %r", payload)
         return None
-    payload = dict(name=name, mail=mail)
+    payload = dict(name=name, email=email)
     internal_token = sign_and_encode_token(payload)
     return internal_token
 
