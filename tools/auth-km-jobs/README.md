@@ -19,7 +19,7 @@ The following environment variables are evaluated:
 
 - `VAULT_ADDR`: the address of the vault server
 - `VAULT_TOKEN`: token for allowing write access to the vault server
-- `VAULT_NAMESPACE`: vault namespace (None by default)
+- `VAULT_NAMESPACE`: vault namespace ("vault" by default)
 
 ## Vault paths
 

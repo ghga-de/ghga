@@ -5,13 +5,15 @@ import os
 import hvac
 
 DEFAULT_ADDR = "http://localhost:8200"
-DEFAULT_NAMESPACE = None
+DEFAULT_NAMESPACE = "vault"
 DEFAULT_TOKEN = "dev-token"
 DEFAULT_KEY = "data"
 
 PATH_PRIVATE = "auth/priv"
 PATH_PUBLIC_INTERNAL = "auth/pub/int"
 PATH_PUBLIC_EXTERNAL = "auth/pub/ext"
+
+SSL_VERIFY = False  # could also be path to the certificate
 
 
 def env(name: str, default=None) -> str:
@@ -33,8 +35,7 @@ def get_vault() -> hvac.Client:
         url=url,
         namespace=namespace,
         token=token,
-        # cert=(client_cert_path, client_key_path),
-        # verify=server_cert_path,
+        verify=SSL_VERIFY,
     )
 
 
