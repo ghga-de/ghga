@@ -191,7 +191,8 @@ def test_external_tokens_are_removed(client):
     assert response.json() == {}
 
     headers = response.headers
-    assert "Authorization" not in headers
+    assert "Authorization" in headers
+    assert headers["Authorization"] == ""
     assert "X-Authorization" not in headers
 
     response = client.get(
@@ -203,5 +204,7 @@ def test_external_tokens_are_removed(client):
     assert response.json() == {}
 
     headers = response.headers
-    assert "Authorization" not in headers
+    assert "Authorization" in headers
+    assert headers["Authorization"] == ""
     assert "X-Authorization" not in headers
+
