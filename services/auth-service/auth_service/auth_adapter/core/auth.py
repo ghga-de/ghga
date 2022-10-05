@@ -49,6 +49,7 @@ def exchange_token(external_token: Optional[str]) -> Optional[str]:
     mail = payload.get("mail")
     if not (name and mail):
         log.debug("Access token does not contain required user info")
+        log.debug("Access token playload = %r", payload)
         return None
     payload = dict(name=name, mail=mail)
     internal_token = sign_and_encode_token(payload)
