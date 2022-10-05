@@ -7,7 +7,7 @@ OIDC_AUTHORITY_URL = "https://proxy.aai.lifescience-ri.eu/"
 
 DISCOVERY_URL = f"{OIDC_AUTHORITY_URL}.well-known/openid-configuration"
 
-TIMEOUT = 20  # timeout in seconds
+TIMEOUT = 30  # timeout in seconds
 
 
 def fetch_external_jwks() -> str:

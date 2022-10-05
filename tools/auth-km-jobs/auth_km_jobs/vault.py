@@ -17,7 +17,7 @@ VERIFY_WRITE = True  # read back from vault and compare
 SHOW_PUBLIC_KEY = True  # print public key
 
 SSL_VERIFY = False  # could also be path to the certificate
-TIMEOUT = 10  # timeout in seconds
+TIMEOUT = 15  # timeout in seconds
 
 def env(name: str, default=None) -> str:
     """Get an environment variable"""
