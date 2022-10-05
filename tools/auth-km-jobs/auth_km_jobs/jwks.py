@@ -12,7 +12,7 @@ TIMEOUT = 20  # timeout in seconds
 
 def fetch_external_jwks() -> str:
     """Fetch the JSON string with the external JWKS."""
-    config_respsonse = requests.get(DISCOVERY_URL, timeout=10)
+    config_respsonse = requests.get(DISCOVERY_URL, timeout=TIMEOUT)
     config_dict = config_respsonse.json()
     if not isinstance(config_dict, dict) or "version" not in config_dict:
         raise ValueError("Unexpected discovery object")
