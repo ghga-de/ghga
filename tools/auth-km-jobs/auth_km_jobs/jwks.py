@@ -7,6 +7,8 @@ OIDC_AUTHORITY_URL = "https://proxy.aai.lifescience-ri.eu/"
 
 DISCOVERY_URL = f"{OIDC_AUTHORITY_URL}.well-known/openid-configuration"
 
+TIMEOUT = 20  # timeout in seconds
+
 
 def fetch_external_jwks() -> str:
     """Fetch the JSON string with the external JWKS."""
@@ -19,7 +21,7 @@ def fetch_external_jwks() -> str:
         raise ValueError("Cannot discover JWKS URI")
     if not jwks_uri.startswith(OIDC_AUTHORITY_URL):
         raise ValueError("Unexpected JWKS URI")
-    jwks_response = requests.get(jwks_uri, timeout=10)
+    jwks_response = requests.get(jwks_uri, timeout=TIMEOUT)
     jwks_dict = jwks_response.json()
     if not isinstance(jwks_dict, dict) or "keys" not in jwks_dict:
         raise ValueError("Unexpected JWKS object")
