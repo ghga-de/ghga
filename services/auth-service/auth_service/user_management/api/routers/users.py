@@ -96,7 +96,7 @@ async def get_user(
         if is_external_id(id_):
             user = await user_dao.find_one(mapping={"ls_id": id_})
         elif is_internal_id(id_):
-            user = await user_dao.get(id_=id_)
+            user = await user_dao.get_by_id(id_)
         else:
             user = None
         if not user:
@@ -140,7 +140,7 @@ async def patch_user(
     try:
         if not is_internal_id(id_):
             raise ResourceNotFoundError(id_=id_)
-        user = await user_dao.get(id_=id_)
+        user = await user_dao.get_by_id(id_)
         update_data = user_data.dict(exclude_unset=True)
         user = user.copy(update=update_data)
         await user_dao.update(user)

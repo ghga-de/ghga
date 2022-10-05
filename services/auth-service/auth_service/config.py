@@ -46,7 +46,7 @@ def configure_logging():
                 },
             },
             "loggers": {
-                "metadata_repository_service": {
+                "auth_service": {
                     "handlers": ["default"],
                     "level": CONFIG.log_level.upper(),
                 },

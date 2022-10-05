@@ -16,7 +16,7 @@
 
 """Translation between general and user specific DAOs."""
 
-from hexkit.protocols.dao import DaoFactoryProtcol, uuid4_id_generator
+from hexkit.protocols.dao import DaoFactoryProtocol
 from pydantic import BaseSettings
 
 from ..models.dto import User as UserDto
@@ -36,12 +36,11 @@ class UserDaoFactory(UserDaoFactoryPort):
     """Translation between UserDaoFactoryPort and DaoFactoryProtocol."""
 
     def __init__(
-        self, *, config: UserDaoFactoryConfig, dao_factory: DaoFactoryProtcol
+        self, *, config: UserDaoFactoryConfig, dao_factory: DaoFactoryProtocol
     ) -> None:
         """Configure with provider for the the DaoFactoryProtocol"""
         self._collection_name = config.collection_name
         self._dao_factory = dao_factory
-        self._id_generator = uuid4_id_generator()
 
     async def get_user_dao(self) -> UserDao:
         """Construct a DAO for interacting with user data in a database."""
@@ -50,5 +49,4 @@ class UserDaoFactory(UserDaoFactoryPort):
             dto_model=UserDto,
             id_field="id",
             dto_creation_model=UserCreationDto,
-            id_generator=self._id_generator,
         )
