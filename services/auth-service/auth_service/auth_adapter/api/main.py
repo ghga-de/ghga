@@ -65,4 +65,6 @@ async def ext_auth(
     internal_token = exchange_token(access_token)
     if internal_token:
         response.headers["Authorization"] = internal_token
+    else:
+        del response.headers["Authorization"]
     return {}
