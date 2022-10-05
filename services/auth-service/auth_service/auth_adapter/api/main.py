@@ -63,8 +63,6 @@ async def ext_auth(
     """
     access_token = get_bearer_token(authorization, x_authorization)
     internal_token = exchange_token(access_token)
-    if internal_token:
-        response.headers["Authorization"] = internal_token
-    elif "Authorization" in response.headers:
-        del response.headers["Authorization"]
+    # since we cannot delete a header, we set it to an empty string if invalid
+    response.headers["Authorization"] = internal_token or ""
     return {}
