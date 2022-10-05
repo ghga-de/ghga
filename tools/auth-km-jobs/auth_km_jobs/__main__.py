@@ -32,9 +32,17 @@ def refresh_int_keys():
 @app.command()
 def refresh_all_keys():
     """Refresh all auth signing keys."""
-    refresh_int_keys()
-    refresh_ext_keys()
-
+    first_error = None
+    for cmd in refresh_int_keys, refresh_ext_keys:
+        try:
+            cmd()
+        except Exception as error:  # pylint: disable=broad-except
+            print("ERROR:", error)
+            if not first_error:
+                first_error = error
+    if first_error:
+        print("Could not run all commands, raising the first error:")
+        raise first_error
 
 if __name__ == "__main__":
     app()
