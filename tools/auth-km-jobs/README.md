@@ -1,12 +1,13 @@
 
 # GHGA Auth Key Management Jobs
 
-This repo contains the script that manages internal and external auth keys
-and are executed as Kubernetes Jobs.
+This repo contains the script that manages internal and external auth keys.
+
+This script can be executed as a Kubernetes Job, either regularly or on demand.
 
 ## Subcommands
 
-You can run the following subcommands using `run <command name>`:
+The following subcommands can be executed using `run <command name>`:
 
 - `refresh-int-keys`: Recreate internal signing keys and store them in the vault
 - `refresh-ext-keys`: Refetch external public key set and store it in the vault
