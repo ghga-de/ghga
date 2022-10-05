@@ -19,6 +19,7 @@ SHOW_PUBLIC_KEY = True  # print public key
 SSL_VERIFY = False  # could also be path to the certificate
 TIMEOUT = 15  # timeout in seconds
 
+
 def env(name: str, default=None) -> str:
     """Get an environment variable"""
     return os.environ.get(name, default)
