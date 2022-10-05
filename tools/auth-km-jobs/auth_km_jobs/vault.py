@@ -13,6 +13,9 @@ PATH_PRIVATE = "auth/priv"
 PATH_PUBLIC_INTERNAL = "auth/pub/int"
 PATH_PUBLIC_EXTERNAL = "auth/pub/ext"
 
+VERIFY_WRITE = True  # read back from vault and compare
+SHOW_PUBLIC_KEY = True  # print public key
+
 SSL_VERIFY = False  # could also be path to the certificate
 
 
@@ -46,10 +49,13 @@ def store_in_vault(path: str, value: str):
     create_response = vault.secrets.kv.create_or_update_secret(
         path=path, secret={DEFAULT_KEY: value}
     )
-    if is_dev():
+    if VERIFY_WRITE:
         read_response = vault.secrets.kv.read_secret_version(path=path)
         read_value = read_response["data"]["data"][DEFAULT_KEY]
-        assert read_value == value
+        if read_value != value:
+            print("ERROR: Could not read back the stored value.")
+            print("Create response:", create_response)
+            print("Read response:", read_response)
     return create_response
 
 
@@ -65,6 +71,6 @@ def store_internal_public_key(key: str):
 
 def store_external_public_key(key: str):
     """Store the external public key as JSON value."""
-    if is_dev():
+    if SHOW_PUBLIC_KEY:
         print(key)
     return store_in_vault(PATH_PUBLIC_INTERNAL, key)
