@@ -15,6 +15,6 @@
 
 """A package that collects schemas used for messaging between GHGA service."""
 
-from ghga_message_schemas.schemas import SCHEMAS  # noqa: F401
+from ghga_event_schemas.schemas import SCHEMAS  # noqa: F401
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"

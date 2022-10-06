@@ -62,7 +62,7 @@
       "type": "object"
     },
     "timestamp": {
-      "description": "The time when the message was published.",
+      "description": "The time when the event was published.",
       "format": "date-time",
       "type": "string"
     }

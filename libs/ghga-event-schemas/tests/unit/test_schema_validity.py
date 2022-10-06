@@ -18,8 +18,8 @@
 import pytest
 from jsonschema.validators import validator_for
 
-from ghga_message_schemas import SCHEMAS
-from ghga_message_schemas.schemas import get_topic_names
+from ghga_event_schemas import SCHEMAS
+from ghga_event_schemas.schemas import get_topic_names
 
 
 @pytest.mark.parametrize("topic_name", get_topic_names())

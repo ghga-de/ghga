@@ -1,16 +1,12 @@
 {
-  "$id": "https://raw.githubusercontent.com/ghga-de/milestones-docs/main/milestone_1/api_definitions/async_topics/drs_object_registered.json",
+  "$id": "https://raw.githubusercontent.com/ghga-de/milestones-docs/main/milestone_1/api_definitions/async_topics/file_upload_received.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "This event type is triggered when a new DRS object is registered to the DRS3 service.",
+  "description": "This event type is triggered when a new file was uploaded to the Upload Controller service.",
   "properties": {
     "creation_date": {
       "description": "Timestamp (in ISO 8601 format) when the entity was created.",
       "format": "date-time",
-      "type": "string"
-    },
-    "drs_uri": {
-      "description": "The DRS URI of pattern `drs://<drs_service_hostname>/<drs_id>`.",
       "type": "string"
     },
     "file_id": {
@@ -19,6 +15,10 @@
     },
     "format": {
       "description": "The format of the file: BAM, SAM, CRAM, BAI, etc.",
+      "type": "string"
+    },
+    "grouping_label": {
+      "description": "This is a label that might be use to group multiple files together. E.g. the study id.",
       "type": "string"
     },
     "md5_checksum": {
@@ -30,7 +30,7 @@
       "type": "integer"
     },
     "timestamp": {
-      "description": "The time when the message was published.",
+      "description": "The time when the event was published.",
       "format": "date-time",
       "type": "string"
     },
@@ -42,14 +42,14 @@
   },
   "required": [
     "creation_date",
-    "drs_uri",
     "file_id",
     "format",
+    "grouping_label",
     "md5_checksum",
     "size",
     "timestamp",
     "update_date"
   ],
-  "title": "drs_object_registered",
+  "title": "file_upload_received",
   "type": "object"
 }

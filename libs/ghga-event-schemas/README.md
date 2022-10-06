@@ -1,5 +1,5 @@
-![tests](https://github.com/ghga-de/ghga-message-schemas/actions/workflows/unit_and_int_tests.yaml/badge.svg)
-[![codecov](https://codecov.io/gh/ghga-de/ghga-message-schemas/branch/main/graph/badge.svg?token=GYH99Y71CK)](https://codecov.io/gh/ghga-de/ghga-message-schemas)
+![tests](https://github.com/ghga-de/ghga-event-schemas/actions/workflows/unit_and_int_tests.yaml/badge.svg)
+[![codecov](https://codecov.io/gh/ghga-de/ghga-event-schemas/branch/main/graph/badge.svg?token=GYH99Y71CK)](https://codecov.io/gh/ghga-de/ghga-event-schemas)
 # GHGA Message Schemas
 A package that collects schemas used for messaging between GHGA service.
 
@@ -7,11 +7,11 @@ A package that collects schemas used for messaging between GHGA service.
 ## Quick Start
 ### Installation
 This package is available at PyPI:
-https://pypi.org/project/ghga-message-schemas
+https://pypi.org/project/ghga-event-schemas
 
 You can install it from there using:
 ```
-pip install ghga-message-schemas
+pip install ghga-event-schemas
 ```
 
 Thereby, you may specify following extra(s):
