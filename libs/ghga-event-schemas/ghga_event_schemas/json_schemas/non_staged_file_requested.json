@@ -1,8 +1,8 @@
 {
-  "$id": "https://raw.githubusercontent.com/ghga-de/milestones-docs/main/milestone_1/api_definitions/async_topics/file_upload_received.json",
+  "$id": "https://raw.githubusercontent.com/ghga-de/milestones-docs/main/milestone_1/api_definitions/async_topics/non_staged_file_requested.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "This event type is triggered when a new file was uploaded to the Upload Controller service.",
+  "description": "This event type is triggered when a user requested to download a file from the DRS3 service that is not yet staged in the Outbox storage.",
   "properties": {
     "creation_date": {
       "description": "Timestamp (in ISO 8601 format) when the entity was created.",
@@ -17,10 +17,6 @@
       "description": "The format of the file: BAM, SAM, CRAM, BAI, etc.",
       "type": "string"
     },
-    "grouping_label": {
-      "description": "This is a label that might be use to group multiple files together. E.g. the study id.",
-      "type": "string"
-    },
     "md5_checksum": {
       "description": "The md5-checksum of the file content.",
       "type": "string"
@@ -30,7 +26,7 @@
       "type": "integer"
     },
     "timestamp": {
-      "description": "The time when the message was published.",
+      "description": "The time when the event was published.",
       "format": "date-time",
       "type": "string"
     },
@@ -44,12 +40,11 @@
     "creation_date",
     "file_id",
     "format",
-    "grouping_label",
     "md5_checksum",
     "size",
     "timestamp",
     "update_date"
   ],
-  "title": "file_upload_received",
+  "title": "non_staged_file_requested",
   "type": "object"
 }
