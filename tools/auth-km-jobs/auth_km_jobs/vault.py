@@ -14,7 +14,7 @@ PATH_PUBLIC_INTERNAL = "auth/pub/int"
 PATH_PUBLIC_EXTERNAL = "auth/pub/ext"
 
 VERIFY_WRITE = True  # read back from vault and compare
-SHOW_PUBLIC_KEY = True  # print public key
+SHOW_EXTERNAL_KEYS = False  # print public key set
 
 SSL_VERIFY = False  # could also be path to the certificate
 TIMEOUT = 15  # timeout in seconds
@@ -73,6 +73,6 @@ def store_internal_public_key(key: str):
 
 def store_external_public_key(key: str):
     """Store the external public key as JSON value."""
-    if SHOW_PUBLIC_KEY:
-        print(key)
-    return store_in_vault(PATH_PUBLIC_INTERNAL, key)
+    if SHOW_EXTERNAL_KEYS:
+        print("EXternal key set:", key)
+    return store_in_vault(PATH_PUBLIC_EXTERNAL, key)
