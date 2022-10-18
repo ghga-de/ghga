@@ -151,6 +151,20 @@
       ],
       "type": "boolean"
     },
+    "auth_int_keys": {
+      "title": "Auth Int Keys",
+      "env_names": [
+        "auth_service_auth_int_keys"
+      ],
+      "type": "string"
+    },
+    "auth_ext_keys": {
+      "title": "Auth Ext Keys",
+      "env_names": [
+        "auth_service_auth_ext_keys"
+      ],
+      "type": "string"
+    },
     "basic_auth_user": {
       "title": "Basic Auth User",
       "env_names": [

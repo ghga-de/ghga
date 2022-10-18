@@ -33,7 +33,7 @@ components:
           type: string
         registration_date:
           format: date-time
-          title: Resitration date
+          title: Registration date
           type: string
         registration_reason:
           title: Reason for registration
@@ -82,7 +82,7 @@ components:
           type: string
         registration_date:
           format: date-time
-          title: Resitration date
+          title: Registration date
           type: string
         registration_reason:
           title: Reason for registration

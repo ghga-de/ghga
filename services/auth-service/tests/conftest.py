@@ -13,22 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Test configuration"""
 
-import asyncio
+from .fixtures.auth_keys import set_auth_keys_env
 
-from ghga_service_chassis_lib.api import run_server
-
-from .config import CONFIG, Config
-
-
-def run(config: Config = CONFIG):
-    """Run the service"""
-    service = "auth_adapter" if config.run_auth_adapter else "user_management"
-    print(f"Starting {service} service", service)
-    print("Configuration:", CONFIG)
-    asyncio.run(run_server(app=f"auth_service.{service}.api.main:app", config=config))
-
-
-if __name__ == "__main__":
-    run()
+set_auth_keys_env()  # set signing keys in environment for testing

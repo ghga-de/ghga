@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-
 """Unit tests for the Basic Auth feature"""
 
 from fastapi.security import HTTPBasicCredentials

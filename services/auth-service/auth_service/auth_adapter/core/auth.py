@@ -18,22 +18,43 @@
 
 import json
 import logging
-from typing import Any, Optional, TypedDict
+from typing import Any, Optional
 
-from jwcrypto import jws
+from jwcrypto import jwk, jws
 
-from .jwks import external_jwks, internal_jwk
+from ...config import CONFIG, Config
 
-__all__ = ["exchange_token"]
+__all__ = ["exchange_token", "signing_keys"]
 
 log = logging.getLogger(__name__)
 
 
-class InternalToken(TypedDict):
-    """Payload of an internal token."""
+class SigningKeys:
+    """A container for external and internal signing keys."""
 
-    name: str
-    email: str
+    external_jwks: jwk.JWKSet  # the external public key set
+    internal_jwk: jwk.JWK  # the interal key pair
+
+    def __init__(self, config: Config = CONFIG) -> None:
+        """Load all the signing keys from the configuration."""
+        external_keys = config.auth_ext_keys
+        if not external_keys:
+            raise RuntimeError("No external signing keys configured.")
+        try:
+            self.external_jwks = jwk.JWKSet.from_json(external_keys)
+        except Exception as exc:
+            raise RuntimeError("Cannot parse external signing keys.") from exc
+        internal_keys = config.auth_int_keys
+        if not internal_keys:
+            raise RuntimeError("No internal signing keys configured.")
+        try:
+            internal_keys = config.auth_int_keys
+        except Exception as exc:
+            raise RuntimeError("Cannot parse internal signing key pair.") from exc
+        self.internal_jwk = jwk.JWK.from_json(internal_keys)
+
+
+signing_keys = SigningKeys()
 
 
 def exchange_token(external_token: Optional[str]) -> Optional[str]:
@@ -62,7 +83,7 @@ def decode_and_verify_token(
     if not access_token:
         return None
     if not key:
-        key = external_jwks
+        key = signing_keys.external_jwks
     jws_token = jws.JWS()
     try:
         jws_token.deserialize(access_token, key=key)
@@ -89,7 +110,7 @@ def sign_and_encode_token(payload: dict[str, Any], key=None) -> Optional[str]:
     if not payload:
         return None
     if not key:
-        key = internal_jwk
+        key = signing_keys.internal_jwk
     try:
         jws_token = jws.JWS(json.dumps(payload).encode("utf-8"))
         header = json.dumps({"kid": key.thumbprint()})

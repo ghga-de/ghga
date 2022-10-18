@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Unit tests for the Core Auth Adapter features"""
+
 import logging
 
 from jwcrypto import jwk
@@ -22,36 +24,8 @@ from auth_service.auth_adapter.core.auth import (
     decode_and_verify_token,
     exchange_token,
     sign_and_encode_token,
+    signing_keys,
 )
-from auth_service.auth_adapter.core.jwks import external_jwks, internal_jwk
-
-from ...fixtures import (  # noqa: F401; pylint: disable=unused-import
-    fixture_external_key,
-)
-
-
-def test_external_jwks():
-    """Test that an external JWK set is provided with more than one key."""
-    assert isinstance(external_jwks, jwk.JWKSet)
-    jwks_dict = external_jwks.export(private_keys=False, as_dict=True)
-    assert "keys" in jwks_dict
-    keys = jwks_dict["keys"]
-    assert keys
-    assert isinstance(keys, list)
-    assert len(keys) > 1
-    for key in keys:
-        assert "kty" in key
-        assert key["kty"] in ("EC", "RSA")
-        assert "use" in key
-        assert key["use"] == "sig"
-
-
-def test_internal_jwk():
-    """Test that an internal JWK set is provided."""
-    assert isinstance(internal_jwk, jwk.JWK)
-    key = internal_jwk.export(as_dict=True)
-    assert "kty" in key
-    assert key["kty"] in ("EC", "RSA")
 
 
 def test_checks_signature_of_access_token(caplog):
@@ -185,15 +159,17 @@ def test_signs_internal_token():
     token = sign_and_encode_token(payload)
     assert isinstance(token, str)
     assert token.count(".") == 2
-    assert decode_and_verify_token(token, key=internal_jwk) == payload
+    assert decode_and_verify_token(token, key=signing_keys.internal_jwk) == payload
 
 
-def test_token_exchange(external_key):
+def test_token_exchange():
     """Test that a valid external token is exchanged against an internal token."""
     ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
-    access_token = sign_and_encode_token(ext_payload, key=external_key)
+    ext_sign_key = signing_keys.external_jwks.get_key("test")
+    access_token = sign_and_encode_token(ext_payload, key=ext_sign_key)
+    assert decode_and_verify_token(access_token) == ext_payload
     internal_token = exchange_token(access_token)
     assert isinstance(internal_token, str)
     assert internal_token.count(".") == 2
-    int_payload = decode_and_verify_token(internal_token, key=internal_jwk)
+    int_payload = decode_and_verify_token(internal_token, key=signing_keys.internal_jwk)
     assert int_payload == {"name": "Foo Bar", "email": "foo@bar"}

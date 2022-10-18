@@ -76,7 +76,7 @@ class UserData(BaseModel):
     registration_reason: Optional[str] = Field(
         default=None, title="Reason for registration"
     )
-    registration_date: datetime = Field(default=..., title="Resitration date")
+    registration_date: datetime = Field(default=..., title="Registration date")
 
     class Config:  # pylint: disable=missing-class-docstring
         frozen = True

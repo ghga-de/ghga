@@ -14,17 +14,3 @@
 # limitations under the License.
 
 """Fixtures that are used in both integration and unit tests"""
-
-from jwcrypto import jwk
-from pytest import fixture
-
-from auth_service.auth_adapter.core.jwks import external_jwks
-
-
-@fixture(name="external_key")
-def fixture_external_key():
-    """Generate a key pair and add it to the external key set."""
-    key = jwk.JWK.generate(kty="RSA", size=2048)
-    external_jwks.add(key)
-    yield key
-    external_jwks["keys"].remove(key)
