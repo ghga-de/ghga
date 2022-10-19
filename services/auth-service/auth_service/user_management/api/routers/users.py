@@ -17,13 +17,20 @@
 "Routes for managing users"
 
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
 from hexkit.protocols.dao import MultipleHitsFoundError, ResourceNotFoundError
 
 from ...core.utils import is_external_id, is_internal_id
-from ...models.dto import User, UserData, UserModifiableData
+from ...models.dto import (
+    StatusChange,
+    User,
+    UserCreatableData,
+    UserData,
+    UserModifiableData,
+)
 from ...ports.dao import UserDao
 from ..deps import Depends, get_user_dao
 
@@ -51,15 +58,16 @@ router = APIRouter()
     status_code=201,
 )
 async def post_user(
-    user_data: UserData, user_dao: UserDao = Depends(get_user_dao)
+    user_data: UserCreatableData, user_dao: UserDao = Depends(get_user_dao)
 ) -> User:
     """Register a user"""
     ls_id = user_data.ls_id
     user = await user_dao.find_one(mapping={"ls_id": ls_id})
     if user:
         raise HTTPException(status_code=409, detail="User was already registered.")
+    full_user_data = UserData(**user_data.dict(), registration_date=datetime.now())
     try:
-        user = await user_dao.insert(user_data)
+        user = await user_dao.insert(full_user_data)
     except Exception as error:
         log.error("Could not insert user: %s", error)
         raise HTTPException(
@@ -142,6 +150,14 @@ async def patch_user(
             raise ResourceNotFoundError(id_=id_)
         user = await user_dao.get_by_id(id_)
         update_data = user_data.dict(exclude_unset=True)
+        if "status" in update_data and update_data["status"] != user.status:
+            current_user_id = None  # fetch from auth token
+            update_data["status_change"] = StatusChange(
+                previous=user.status,
+                by=current_user_id,
+                context="manual change",
+                change_date=datetime.now(),
+            )
         user = user.copy(update=update_data)
         await user_dao.update(user)
     except ResourceNotFoundError as error:

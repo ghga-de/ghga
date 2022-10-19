@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Test user specific DAOs."""
+
 from datetime import datetime
 
 from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=unused-import
@@ -29,6 +31,7 @@ from auth_service.user_management.api.deps import (
 from auth_service.user_management.core.utils import is_internal_id
 from auth_service.user_management.models.dto import (
     AcademicTitle,
+    StatusChange,
     User,
     UserData,
     UserStatus,
@@ -36,7 +39,9 @@ from auth_service.user_management.models.dto import (
 
 
 @mark.asyncio
-async def test_user_creation(mongodb_fixture):  # noqa: F811
+async def test_user_creation(
+    mongodb_fixture,  # noqa: F811  pylint:disable=redefined-outer-name
+):
     """Test creating a new user"""
 
     config = get_config()
@@ -55,6 +60,7 @@ async def test_user_creation(mongodb_fixture):  # noqa: F811
         research_topics="genes",
         registration_reasons="for testing",
         registration_date=datetime(2022, 9, 1, 12, 0),
+        status_change=StatusChange(previous=None, by=None, context="test"),
     )
     user = await user_dao.insert(user_data)
     assert user and isinstance(user, User)
@@ -67,3 +73,4 @@ async def test_user_creation(mongodb_fixture):  # noqa: F811
     assert user.registration_reason == user_data.registration_reason
     assert user.registration_date == user_data.registration_date
     assert is_internal_id(user.id)
+    assert user.status_change == user_data.status_change

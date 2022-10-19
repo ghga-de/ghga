@@ -15,6 +15,8 @@
 
 """Test the api module"""
 
+from datetime import datetime
+
 from fastapi import status
 
 from auth_service.user_management.core.utils import is_internal_id
@@ -29,7 +31,6 @@ MIN_USER_DATA = {
     "status": "activated",
     "name": "Max Headroom",
     "email": "max@example.org",
-    "registration_date": "2022-09-01T12:00:00",
 }
 
 OPT_USER_DATA = {
@@ -70,6 +71,10 @@ def test_post_user(client_with_db):
     id_ = user.pop("id", None)
     assert is_internal_id(id_)
 
+    assert user.pop("status_change") is None
+    date_diff = datetime.now() - datetime.fromisoformat(user.pop("registration_date"))
+    assert 0 <= date_diff.total_seconds() <= 10
+
     assert user == user_data
 
     response = client_with_db.post("/users", json=user_data)
@@ -90,6 +95,10 @@ def test_post_user_with_minimal_data(client_with_db):
 
     id_ = user.pop("id", None)
     assert is_internal_id(id_)
+
+    assert user.pop("status_change") is None
+    date_diff = datetime.now() - datetime.fromisoformat(user.pop("registration_date"))
+    assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == {**MIN_USER_DATA, **dict.fromkeys(OPT_USER_DATA)}  # type: ignore
 
@@ -174,6 +183,9 @@ def test_patch_user(client_with_db):
     assert response.status_code == status.HTTP_201_CREATED
     id_ = expected_user["id"]
 
+    assert expected_user["status"] == MAX_USER_DATA["status"]
+    assert expected_user.pop("status_change") is None
+
     update_data = {"status": "inactivated", "title": "Prof."}
     assert expected_user["status"] != update_data["status"]
     assert expected_user["title"] != update_data["title"]
@@ -189,6 +201,13 @@ def test_patch_user(client_with_db):
     user = response.json()
     assert response.status_code == status.HTTP_200_OK, user
 
+    status_change = user.pop("status_change")
+    assert status_change["previous"] == MAX_USER_DATA["status"]
+    assert status_change["by"] is None
+    assert status_change["context"] == "manual change"
+    date_diff = datetime.now() - datetime.fromisoformat(status_change["change_date"])
+    assert 0 <= date_diff.total_seconds() <= 10
+
     assert user == expected_user
 
 
@@ -200,6 +219,9 @@ def test_patch_user_partially(client_with_db):
     expected_user = response.json()
     assert response.status_code == status.HTTP_201_CREATED
     id_ = expected_user["id"]
+
+    assert expected_user["status"] == MAX_USER_DATA["status"]
+    assert expected_user.pop("status_change") is None
 
     update_data = {"status": "inactivated"}
     assert expected_user["status"] != update_data["status"]
@@ -214,6 +236,13 @@ def test_patch_user_partially(client_with_db):
 
     user = response.json()
     assert response.status_code == status.HTTP_200_OK, user
+
+    status_change = user.pop("status_change")
+    assert status_change["previous"] == MAX_USER_DATA["status"]
+    assert status_change["by"] is None
+    assert status_change["context"] == "manual change"
+    date_diff = datetime.now() - datetime.fromisoformat(status_change["change_date"])
+    assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == expected_user
 
@@ -230,6 +259,8 @@ def test_patch_user_partially(client_with_db):
 
     user = response.json()
     assert response.status_code == status.HTTP_200_OK, user
+
+    assert user.pop("status_change") == status_change
 
     assert user == expected_user
 

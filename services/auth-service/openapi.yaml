@@ -7,8 +7,28 @@ components:
       - Prof.
       title: AcademicTitle
       type: string
+    StatusChange:
+      description: Details of a status change
+      properties:
+        by:
+          description: ID of the user who changed the status
+          title: Status changed by
+          type: string
+        change_date:
+          format: date-time
+          title: Date of last change
+          type: string
+        context:
+          title: Status change context
+          type: string
+        previous:
+          allOf:
+          - $ref: '#/components/schemas/UserStatus'
+          title: Previous user status
+      title: StatusChange
+      type: object
     User:
-      description: User
+      description: Complete user model with ID
       properties:
         email:
           description: Preferred e-mail address of the user
@@ -46,21 +66,23 @@ components:
           - $ref: '#/components/schemas/UserStatus'
           description: Registration status of the user
           title: Status
+        status_change:
+          $ref: '#/components/schemas/StatusChange'
         title:
           allOf:
           - $ref: '#/components/schemas/AcademicTitle'
           description: Academic title of the user
           title: Academic title
       required:
+      - registration_date
       - ls_id
       - status
       - name
       - email
-      - registration_date
       - id
       title: User
       type: object
-    UserData:
+    UserCreatableData:
       description: User data
       properties:
         email:
@@ -79,10 +101,6 @@ components:
           description: Full name of the user
           example: Rosalind Franklin
           title: Name
-          type: string
-        registration_date:
-          format: date-time
-          title: Registration date
           type: string
         registration_reason:
           title: Reason for registration
@@ -105,11 +123,10 @@ components:
       - status
       - name
       - email
-      - registration_date
-      title: UserData
+      title: UserCreatableData
       type: object
     UserModifiableData:
-      description: User data that is modifiable
+      description: User data that can be modified
       properties:
         status:
           allOf:
@@ -163,7 +180,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserData'
+              $ref: '#/components/schemas/UserCreatableData'
         required: true
       responses:
         '201':

@@ -43,7 +43,28 @@ class AcademicTitle(str, Enum):
     PROF = "Prof."
 
 
-class UserData(BaseModel):
+class BaseDto(BaseModel):
+    """Base model preconfigured for use as Dto."""
+
+    class Config:  # pylint: disable=missing-class-docstring
+        frozen = True
+        use_enum_values = True
+
+
+class StatusChange(BaseDto):
+    """Details of a status change"""
+
+    previous: UserStatus = Field(default=None, title="Previous user status")
+    by: Optional[str] = Field(
+        default=None,
+        title="Status changed by",
+        description="ID of the user who changed the status",
+    )
+    context: str = Field(default=None, title="Status change context")
+    change_date: datetime = Field(default=None, title="Date of last change")
+
+
+class UserCreatableData(BaseDto):
     """User data"""
 
     ls_id: EmailStr = Field(
@@ -76,15 +97,10 @@ class UserData(BaseModel):
     registration_reason: Optional[str] = Field(
         default=None, title="Reason for registration"
     )
-    registration_date: datetime = Field(default=..., title="Registration date")
-
-    class Config:  # pylint: disable=missing-class-docstring
-        frozen = True
-        use_enum_values = True
 
 
-class UserModifiableData(BaseModel):
-    """User data that is modifiable"""
+class UserModifiableData(BaseDto):
+    """User data that can be modified"""
 
     status: Optional[UserStatus] = Field(
         None, title="Status", description="Registration status of the user"
@@ -98,8 +114,20 @@ class UserModifiableData(BaseModel):
         use_enum_values = True
 
 
+class UserAutomaticData(BaseModel):
+    """User data that is automatically created except the ID"""
+
+    registration_date: datetime = Field(default=..., title="Registration date")
+
+    status_change: Optional[StatusChange] = None
+
+
+class UserData(UserCreatableData, UserAutomaticData):
+    """User data model without the ID"""
+
+
 class User(UserData):
-    """User"""
+    """Complete user model with ID"""
 
     id: str = Field(  # actually UUID
         default=..., title="ID", description="Internally used ID"
