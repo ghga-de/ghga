@@ -32,26 +32,29 @@ log = logging.getLogger(__name__)
 class SigningKeys:
     """A container for external and internal signing keys."""
 
-    external_jwks: jwk.JWKSet  # the external public key set
-    internal_jwk: jwk.JWK  # the interal key pair
+    external_jwks: Optional[jwk.JWKSet] = None  # the external public key set
+    internal_jwk: Optional[jwk.JWK] = None  # the internal key pair
 
     def __init__(self, config: Config = CONFIG) -> None:
         """Load all the signing keys from the configuration."""
         external_keys = config.auth_ext_keys
-        if not external_keys:
-            raise RuntimeError("No external signing keys configured.")
         try:
+            if not external_keys:
+                raise ValueError("No external keys configured")
             self.external_jwks = jwk.JWKSet.from_json(external_keys)
-        except Exception as exc:
-            raise RuntimeError("Cannot parse external signing keys.") from exc
+        except Exception as exc:  # pylint:disable=broad-except
+            # do not throw an error so that the auth adapter can still run
+            # even though it will not be able to validate external tokens
+            log.error("Error in external signing keys: %s", exc)
         internal_keys = config.auth_int_keys
-        if not internal_keys:
-            raise RuntimeError("No internal signing keys configured.")
         try:
-            internal_keys = config.auth_int_keys
-        except Exception as exc:
-            raise RuntimeError("Cannot parse internal signing key pair.") from exc
-        self.internal_jwk = jwk.JWK.from_json(internal_keys)
+            if not internal_keys:
+                raise ValueError("No internal signing keys configured.")
+            self.internal_jwk = jwk.JWK.from_json(internal_keys)
+        except Exception as exc:  # pylint:disable=broad-except
+            # do not throw an error so that the auth adapter can still run
+            # even though it will not be able to sign internal tokens
+            log.error("Error in internal signing key pair: %s", exc)
 
 
 signing_keys = SigningKeys()
@@ -84,6 +87,9 @@ def decode_and_verify_token(
         return None
     if not key:
         key = signing_keys.external_jwks
+        if not key:
+            log.debug("No external signing key, cannot verify token")
+            return None
     jws_token = jws.JWS()
     try:
         jws_token.deserialize(access_token, key=key)
@@ -111,6 +117,9 @@ def sign_and_encode_token(payload: dict[str, Any], key=None) -> Optional[str]:
         return None
     if not key:
         key = signing_keys.internal_jwk
+        if not key:
+            log.debug("No internal signing key, cannot sign token")
+            return None
     try:
         jws_token = jws.JWS(json.dumps(payload).encode("utf-8"))
         header = json.dumps({"kid": key.thumbprint()})

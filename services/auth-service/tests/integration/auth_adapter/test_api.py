@@ -135,7 +135,10 @@ def test_token_exchange(client):
     """Test that the external access token is exchanged against an internal token."""
 
     ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
-    ext_sign_key = signing_keys.external_jwks.get_key("test")
+    ext_sign_keyset = signing_keys.external_jwks
+    assert ext_sign_keyset
+    ext_sign_key = ext_sign_keyset.get_key("test")
+    assert ext_sign_key
     auth = sign_and_encode_token(ext_payload, key=ext_sign_key)
     auth = f"Bearer {auth}"
     response = client.get("/some/path", headers={"Authorization": auth})
@@ -160,7 +163,10 @@ def test_token_exchange_with_x_token(client):
     """Test that the external access token can be passed in separate header."""
 
     ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
-    ext_sign_key = signing_keys.external_jwks.get_key("test")
+    ext_sign_keyset = signing_keys.external_jwks
+    assert ext_sign_keyset
+    ext_sign_key = ext_sign_keyset.get_key("test")
+    assert ext_sign_key
     auth = sign_and_encode_token(ext_payload, key=ext_sign_key)
     auth = f"Bearer {auth}"
     response = client.get("/some/path", headers={"X-Authorization": auth})

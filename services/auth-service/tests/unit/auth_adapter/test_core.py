@@ -165,7 +165,10 @@ def test_signs_internal_token():
 def test_token_exchange():
     """Test that a valid external token is exchanged against an internal token."""
     ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
-    ext_sign_key = signing_keys.external_jwks.get_key("test")
+    ext_sign_keyset = signing_keys.external_jwks
+    assert ext_sign_keyset
+    ext_sign_key = ext_sign_keyset.get_key("test")
+    assert ext_sign_key
     access_token = sign_and_encode_token(ext_payload, key=ext_sign_key)
     assert decode_and_verify_token(access_token) == ext_payload
     internal_token = exchange_token(access_token)
