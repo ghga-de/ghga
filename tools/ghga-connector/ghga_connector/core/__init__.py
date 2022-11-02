@@ -27,3 +27,4 @@ from .constants import (  # noqa: F401
 )
 from .main import download, upload  # noqa: F401
 from .message_display import AbstractMessageDisplay, MessageColors  # noqa: F401
+from .session import RequestsSession  # noqa: F401

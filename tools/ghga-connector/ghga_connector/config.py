@@ -22,7 +22,7 @@ from pydantic import BaseSettings, Field
 from ghga_connector import core
 
 
-@config_from_yaml(prefix="ghga-connector")
+@config_from_yaml(prefix="ghga_connector")
 class Config(BaseSettings):
     "Global Config Parameters"
 

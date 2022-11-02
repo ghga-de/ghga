@@ -1,0 +1,53 @@
+{
+  "title": "ModSettings",
+  "description": "Modifies the orginal Settings class provided by the user",
+  "type": "object",
+  "properties": {
+    "upload_api": {
+      "title": "Upload Api",
+      "description": "URL to the root of the upload controller API.",
+      "default": "https://hd-dev.ghga-dev.de/ucs",
+      "env_names": [
+        "ghga_connector_upload_api"
+      ],
+      "type": "string"
+    },
+    "download_api": {
+      "title": "Download Api",
+      "description": "URL to the root of the DRS-compatible API used for download.",
+      "default": "https://hd-dev.ghga-dev.de/drs3/ga4gh/drs/v1",
+      "env_names": [
+        "ghga_connector_download_api"
+      ],
+      "type": "string"
+    },
+    "max_retries": {
+      "title": "Max Retries",
+      "description": "Number of times to retry failed API calls.",
+      "default": 5,
+      "env_names": [
+        "ghga_connector_max_retries"
+      ],
+      "type": "integer"
+    },
+    "max_wait_time": {
+      "title": "Max Wait Time",
+      "description": "Maximal time in seconds to wait before quitting without a download.",
+      "default": 3600,
+      "env_names": [
+        "ghga_connector_max_wait_time"
+      ],
+      "type": "integer"
+    },
+    "part_size": {
+      "title": "Part Size",
+      "description": "The part size to use for download.",
+      "default": 16777216,
+      "env_names": [
+        "ghga_connector_part_size"
+      ],
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false
+}

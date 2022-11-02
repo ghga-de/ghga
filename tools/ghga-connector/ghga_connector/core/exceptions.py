@@ -18,63 +18,13 @@
 
 from pathlib import Path
 
+import requests
+import urllib3.exceptions
+
 from ghga_connector.core.constants import MAX_PART_NUMBER
 
 
-class KnownError(Exception):
-    """
-    Base Exception for all custom-thrown exceptions.
-    Indicates expected behaviour such as user error or unstable connections
-    """
-
-
-class UnkownError(Exception):
-    """
-    Indicates unexpected behaviour such as bug in this package that are not caused by
-    usage errors.
-    Please note, all exceptions that do not inherit from `KownError` MUST be considered
-    unkown. This exception is just to explicitly state the unkown character of the error
-    in the code.
-    """
-
-
-class FatalError(Exception):
-    """
-    Base Exception for all exceptions that should not trigger retry logic
-    """
-
-
-class CollectiveError(RuntimeError, KnownError):
-    """
-    An error that can have one or more direct causes.
-    Please note, this is different from using the `raise ... from ...` statement since
-    the statement only allows to capture one direct cause.
-    """
-
-    def __init__(self, *, base_message: str, causes: list[KnownError]):
-
-        if len(causes) < 1:
-            raise TypeError(
-                "Collective error must receive at least one causal error but zero were"
-                + " given"
-            )
-
-        self.causes = causes
-        message = (
-            f"{base_message}\nThis error was caused by following prior exceptions:"
-        )
-
-        for i, cause in enumerate(causes):
-            if not isinstance(cause, KnownError):
-                raise TypeError(
-                    "A causal error of an error collection was unkown."
-                ) from cause
-
-            message += f"\n  {i+1}: {cause}"
-        super().__init__(message)
-
-
-class DirectoryDoesNotExistError(RuntimeError, KnownError):
+class DirectoryDoesNotExistError(RuntimeError):
     """Thrown, when the specified directory does not exist."""
 
     def __init__(self, *, output_dir: Path):
@@ -82,7 +32,7 @@ class DirectoryDoesNotExistError(RuntimeError, KnownError):
         super().__init__(message)
 
 
-class FileAlreadyExistsError(RuntimeError, KnownError):
+class FileAlreadyExistsError(RuntimeError):
     """Thrown, when the specified file already exists."""
 
     def __init__(self, *, output_file: str):
@@ -90,7 +40,7 @@ class FileAlreadyExistsError(RuntimeError, KnownError):
         super().__init__(message)
 
 
-class FileDoesNotExistError(RuntimeError, KnownError):
+class FileDoesNotExistError(RuntimeError):
     """Thrown, when the specified file already exists."""
 
     def __init__(self, *, file_path: Path):
@@ -98,7 +48,7 @@ class FileDoesNotExistError(RuntimeError, KnownError):
         super().__init__(message)
 
 
-class ApiNotReachableError(RuntimeError, KnownError):
+class ApiNotReachableError(RuntimeError):
     """Thrown, when the api is not reachable."""
 
     def __init__(self, *, api_url: str):
@@ -106,19 +56,7 @@ class ApiNotReachableError(RuntimeError, KnownError):
         super().__init__(message)
 
 
-class RetryAbortError(CollectiveError, FatalError):
-    """
-    Raised on encountering a FatalError in the WithRetry decorator.
-    Information about all preceding exceptions encountered before the FatalError is
-    attached.
-    """
-
-    def __init__(self, *, func_name: str, causes: list[KnownError]):
-        base_message = f"'{func_name}' raised a FatalError."
-        super().__init__(base_message=base_message, causes=causes)
-
-
-class RetryTimeExpectedError(RuntimeError, KnownError, FatalError):
+class RetryTimeExpectedError(RuntimeError):
     """Thrown, when a request didn't contain a retry time even though it was expected."""
 
     def __init__(self, *, url: str):
@@ -128,7 +66,7 @@ class RetryTimeExpectedError(RuntimeError, KnownError, FatalError):
         super().__init__(message)
 
 
-class RequestFailedError(RuntimeError, KnownError):
+class RequestFailedError(RuntimeError):
     """Thrown, when a request fails without returning a response code"""
 
     def __init__(self, *, url: str):
@@ -136,7 +74,7 @@ class RequestFailedError(RuntimeError, KnownError):
         super().__init__(message)
 
 
-class NoS3AccessMethodError(RuntimeError, KnownError, FatalError):
+class NoS3AccessMethodError(RuntimeError):
     """Thrown, when a request returns the desired response code, but no S3 Access
     Method"""
 
@@ -145,7 +83,7 @@ class NoS3AccessMethodError(RuntimeError, KnownError, FatalError):
         super().__init__(message)
 
 
-class FileNotRegisteredError(RuntimeError, KnownError, FatalError):
+class FileNotRegisteredError(RuntimeError):
     """Thrown, when a request for a file returns a 404 error."""
 
     def __init__(self, *, file_id: str):
@@ -156,7 +94,7 @@ class FileNotRegisteredError(RuntimeError, KnownError, FatalError):
         super().__init__(message)
 
 
-class UploadNotRegisteredError(RuntimeError, KnownError, FatalError):
+class UploadNotRegisteredError(RuntimeError):
     """Thrown, when a request for a multipart upload returns a 404 error."""
 
     def __init__(self, *, upload_id: str):
@@ -167,7 +105,7 @@ class UploadNotRegisteredError(RuntimeError, KnownError, FatalError):
         super().__init__(message)
 
 
-class BadResponseCodeError(RuntimeError, FatalError):
+class BadResponseCodeError(RuntimeError):
     """Thrown, when a request returns an unexpected response code (e.g. 500)"""
 
     def __init__(self, *, url: str, response_code: int):
@@ -176,7 +114,7 @@ class BadResponseCodeError(RuntimeError, FatalError):
         super().__init__(message)
 
 
-class NoUploadPossibleError(RuntimeError, KnownError, FatalError):
+class NoUploadPossibleError(RuntimeError):
     """Thrown, when a multipart upload currently can't be started (response code 400)"""
 
     def __init__(self, *, file_id: str):
@@ -188,7 +126,7 @@ class NoUploadPossibleError(RuntimeError, KnownError, FatalError):
         super().__init__(message)
 
 
-class UserHasNoUploadAccessError(RuntimeError, KnownError, FatalError):
+class UserHasNoUploadAccessError(RuntimeError):
     """
     Thrown when a user does not have the credentials to get or change
     details of an ongoing upload with a specific upload id
@@ -203,7 +141,7 @@ class UserHasNoUploadAccessError(RuntimeError, KnownError, FatalError):
         super().__init__(message)
 
 
-class UserHasNoFileAccessError(RuntimeError, KnownError, FatalError):
+class UserHasNoFileAccessError(RuntimeError):
     """
     Thrown when a user does not have the credentials for
     a specific file id (response code 403)
@@ -217,7 +155,7 @@ class UserHasNoFileAccessError(RuntimeError, KnownError, FatalError):
         super().__init__(message)
 
 
-class CantChangeUploadStatusError(RuntimeError, KnownError, FatalError):
+class CantChangeUploadStatusError(RuntimeError):
     """
     Thrown when the upload status of a file can't be set to the requested status
     (response code 400)
@@ -228,7 +166,7 @@ class CantChangeUploadStatusError(RuntimeError, KnownError, FatalError):
         super().__init__(message)
 
 
-class MaxWaitTimeExceededError(RuntimeError, KnownError):
+class MaxWaitTimeExceededError(RuntimeError):
     """Thrown, when the specified wait time for getting a download url has been
     exceeded."""
 
@@ -237,12 +175,12 @@ class MaxWaitTimeExceededError(RuntimeError, KnownError):
         super().__init__(message)
 
 
-class MaxRetriesReachedError(CollectiveError, FatalError):
+class MaxRetriesReachedError(RuntimeError):
     """Thrown, when the specified number of retries has been exceeded."""
 
-    def __init__(self, *, func_name: str, causes: list[KnownError]):
-        base_message = f"Exceeded maximum retries for '{func_name}'."
-        super().__init__(base_message=base_message, causes=causes)
+    def __init__(self, *, url: str, reason: str):
+        message = f"Exceeded maximum retries for '{url}' due to: {reason}."
+        super().__init__(message)
 
 
 class MaxPartNoExceededError(RuntimeError):
@@ -255,3 +193,17 @@ class MaxPartNoExceededError(RuntimeError):
     def __init__(self):
         message = f"No more than ({MAX_PART_NUMBER}) file parts can be up-/downloaded."
         super().__init__(message)
+
+
+def raise_if_max_retries(request_error: requests.exceptions.RequestException, url: str):
+    """
+    Check if request exception is caused by hitting max retries and raise accordingly
+    """
+    if isinstance(request_error, requests.exceptions.ConnectionError):
+        if request_error.args and isinstance(
+            request_error.args[0], urllib3.exceptions.MaxRetryError
+        ):
+            max_retry_error = request_error.args[0]
+            raise MaxRetriesReachedError(
+                url=url, reason=str(max_retry_error.reason)
+            ) from max_retry_error

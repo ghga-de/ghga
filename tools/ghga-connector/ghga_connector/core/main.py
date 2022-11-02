@@ -29,14 +29,13 @@ from ghga_connector.core.api_calls import (
     patch_multipart_upload,
     start_multipart_upload,
 )
-from ghga_connector.core.constants import MAX_RETRIES, MAX_WAIT_TIME
+from ghga_connector.core.constants import MAX_WAIT_TIME
 from ghga_connector.core.file_operations import (
     download_file_parts,
     read_file_parts,
     upload_file_part,
 )
 from ghga_connector.core.message_display import AbstractMessageDisplay
-from ghga_connector.core.retry import WithRetry
 
 
 def check_url(api_url, *, wait_time=1000) -> bool:
@@ -57,12 +56,10 @@ def upload(  # noqa C901, pylint: disable=too-many-statements
     file_id: str,
     file_path: Path,
     message_display: AbstractMessageDisplay,
-    max_retries: int = MAX_RETRIES,
 ) -> None:
     """
     Core command to upload a file. Can be called by CLI, GUI, etc.
     """
-    WithRetry.set_retries(max_retries)
 
     if not os.path.isfile(file_path):
         message_display.failure(f"The file {file_path} does not exist.")
@@ -161,12 +158,10 @@ def download(  # pylint: disable=too-many-arguments
     part_size: int,
     message_display: AbstractMessageDisplay,
     max_wait_time: int = MAX_WAIT_TIME,
-    max_retries: int = MAX_RETRIES,
 ) -> None:
     """
     Core command to download a file. Can be called by CLI, GUI, etc.
     """
-    WithRetry.set_retries(max_retries)
 
     if not os.path.isdir(output_dir):
         message_display.failure(f"The directory {output_dir} does not exist.")

@@ -24,7 +24,6 @@ from ghga_connector.core.file_operations import (
     download_content_range,
     download_file_parts,
 )
-from tests.fixtures.retry import RetryFixture, zero_retry_fixture  # noqa: F401
 from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
 
 
@@ -44,7 +43,6 @@ def test_download_content_range(
     end: int,
     file_size: int,
     s3_fixture: S3Fixture,  # noqa: F811
-    zero_retry_fixture: RetryFixture,  # noqa F811
 ):
     """Test the `download_content_range` function."""
     # prepare state and the expected result:
@@ -69,7 +67,6 @@ def test_download_content_range(
 def test_download_file_parts(
     from_part: Optional[int],
     s3_fixture: S3Fixture,  # noqa: F811
-    zero_retry_fixture: RetryFixture,  # noqa: F811
 ):
     """Test the `download_file_parts` function."""
     # prepare state and the expected result:

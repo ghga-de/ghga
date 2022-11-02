@@ -12,9 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Configuration for the global RequestsSession"""
 
-"""
-CLI - Client to perform up- and download operations to and from a local ghga instance
-"""
+import pytest
 
-__version__ = "0.2.0"
+from ghga_connector.core import MAX_RETRIES, RequestsSession
+
+
+@pytest.fixture(autouse=True)
+def default_session_configuration():
+    """Configure requests session with default number of max_retries"""
+    RequestsSession.configure(max_retries=MAX_RETRIES)

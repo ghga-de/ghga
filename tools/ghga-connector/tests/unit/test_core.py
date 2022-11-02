@@ -15,18 +15,10 @@
 #
 
 """Tests for the core functions of the cli"""
-from typing import Optional
 
 import pytest
 
-from ghga_connector.core.exceptions import (
-    CollectiveError,
-    FatalError,
-    MaxRetriesReachedError,
-    RetryAbortError,
-)
 from ghga_connector.core.main import check_url
-from ghga_connector.core.retry import WithRetry
 
 
 @pytest.mark.parametrize(
@@ -40,58 +32,3 @@ def test_check_url(api_url: str, wait_time: int, expected_response: bool):
     """
     response = check_url(api_url, wait_time=wait_time)
     assert response == expected_response
-
-
-@pytest.mark.parametrize(
-    "retry_exceptions,final_exception",
-    [
-        ([None], None),
-        ([RuntimeError], RuntimeError),
-        (
-            [RuntimeError, TypeError, None],
-            None,
-        ),
-        (
-            [RuntimeError, TypeError, ValueError],
-            MaxRetriesReachedError,
-        ),
-        (
-            [RuntimeError, TypeError, FatalError],
-            RetryAbortError,
-        ),
-    ],
-)
-def test_retry(
-    retry_exceptions: list[type[Optional[Exception]]],
-    final_exception: type[Optional[Exception]],
-):
-    """
-    Test the Retry class decorator
-    """
-    # initialize state for the decorator
-    WithRetry.set_retries(len(retry_exceptions) - 1)
-
-    curr_retry = 0
-
-    @WithRetry
-    def exception_producer():
-        """
-        Generate exceptions based on expected behavior
-        Distinguish between fatal and non fatal exceptions
-        """
-        nonlocal curr_retry
-        exception = retry_exceptions[curr_retry]
-        curr_retry += 1
-
-        if isinstance(exception, Exception):
-            raise exception
-
-    try:
-        exception_producer()
-    except Exception as final_error:
-        assert isinstance(final_error, final_exception)
-        if isinstance(final_error, CollectiveError):
-            for idx, retry_error in enumerate(final_error.causes):
-                assert isinstance(retry_error, retry_exceptions[idx])
-    finally:
-        WithRetry._max_retries = None

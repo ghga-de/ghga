@@ -33,7 +33,6 @@ from ghga_connector.core.constants import DEFAULT_PART_SIZE
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
-from tests.fixtures.retry import RetryFixture, retry_fixture  # noqa: F401
 from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
 
 
@@ -51,7 +50,6 @@ def test_multipart_download(
     part_size: int,
     s3_fixture: S3Fixture,  # noqa F811
     tmp_path: pathlib.Path,
-    retry_fixture: RetryFixture,  # noqa F811
 ):
     """Test the multipart download of a file"""
     big_object = get_big_s3_object(s3_fixture, object_size=file_size)
@@ -107,7 +105,6 @@ def test_download(
     expected_exception: type[Optional[Exception]],
     s3_fixture: S3Fixture,  # noqa: F811
     tmp_path: pathlib.Path,
-    retry_fixture: RetryFixture,  # noqa: F811
 ):
     """Test the download of a file"""
 
@@ -136,7 +133,7 @@ def test_download(
             "ghga_connector.cli.config",
             get_test_config(download_api=api_url),
         ):
-            with pytest.raises(
+            with pytest.raises(  # type: ignore
                 expected_exception
             ) if expected_exception else nullcontext():
                 download(file_id=file.file_id, output_dir=output_dir)
@@ -159,7 +156,6 @@ def test_upload(
     file_name: str,
     expected_exception: type[Optional[Exception]],
     s3_fixture: S3Fixture,  # noqa F811
-    retry_fixture: RetryFixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
 
@@ -182,12 +178,12 @@ def test_upload(
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
         with patch("ghga_connector.cli.config", get_test_config(upload_api=api_url)):
-            with pytest.raises(
+            with pytest.raises(  # type: ignore
                 expected_exception
             ) if expected_exception else nullcontext():
                 upload(
                     file_id=uploadable_file.file_id,
-                    file_path=str(uploadable_file.file_path.resolve()),
+                    file_path=uploadable_file.file_path.resolve(),
                 )
 
                 s3_fixture.storage.complete_multipart_upload(
@@ -213,7 +209,6 @@ def test_multipart_upload(
     file_size: int,
     anticipated_part_size: int,
     s3_fixture: S3Fixture,  # noqa F811
-    retry_fixture: RetryFixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
 

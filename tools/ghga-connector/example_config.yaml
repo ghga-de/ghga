@@ -1,0 +1,5 @@
+download_api: https://hd-dev.ghga-dev.de/drs3/ga4gh/drs/v1
+max_retries: 2
+max_wait_time: 3600
+part_size: 16777216
+upload_api: https://hd-dev.ghga-dev.de/ucs

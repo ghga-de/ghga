@@ -34,7 +34,6 @@ from ghga_connector.core.exceptions import (
     UploadNotRegisteredError,
 )
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
-from tests.fixtures.retry import RetryFixture, zero_retry_fixture  # noqa: F401
 
 
 @pytest.mark.parametrize(
@@ -53,7 +52,6 @@ def test_patch_multipart_upload(
     upload_id: str,
     upload_status: UploadStatus,
     expected_exception: type[Optional[Exception]],
-    zero_retry_fixture: RetryFixture,  # noqa F811
 ):
     """
     Test the patch_multipart_upload function
@@ -61,7 +59,9 @@ def test_patch_multipart_upload(
     with MockAPIContainer() as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
-        with pytest.raises(expected_exception) if expected_exception else nullcontext():
+        with pytest.raises(  # type: ignore
+            expected_exception
+        ) if expected_exception else nullcontext():
             patch_multipart_upload(
                 api_url=api_url,
                 upload_id=upload_id,
@@ -70,7 +70,7 @@ def test_patch_multipart_upload(
 
 
 @pytest.mark.parametrize(
-    "from_part, end_part, exception",
+    "from_part, end_part, expected_exception",
     [
         (None, 10, None),
         (2, 10, None),
@@ -80,7 +80,7 @@ def test_patch_multipart_upload(
 def test_get_part_upload_urls(
     from_part: Optional[int],
     end_part: int,
-    exception: Optional[Exception],
+    expected_exception: type[Optional[Exception]],
 ):
     """
     Test the `get_part_upload_urls` generator for iterating through signed part urls
@@ -103,7 +103,11 @@ def test_get_part_upload_urls(
         kwargs["from_part"] = from_part
     part_upload_urls = get_part_upload_urls(**kwargs)  # type: ignore
 
-    with (pytest.raises(exception) if exception else nullcontext()):
+    with (
+        pytest.raises(expected_exception)  # type: ignore
+        if expected_exception
+        else nullcontext()
+    ):
         for idx, signed_url in enumerate(part_upload_urls):
             assert static_signed_url == signed_url
 
