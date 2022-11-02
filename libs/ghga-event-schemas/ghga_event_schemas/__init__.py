@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A package that collects schemas used for messaging between GHGA service."""
+"""A package that collects schemas used for events exchanges between GHGA service."""
 
-from ghga_event_schemas.schemas import SCHEMAS  # noqa: F401
-
-__version__ = "0.4.0"
+__version__ = "0.5.0"
