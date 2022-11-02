@@ -18,121 +18,231 @@
 
 import json
 import logging
+from datetime import datetime
 from typing import Any, Optional
 
-from jwcrypto import jwk, jws
+from hexkit.protocols.dao import NoHitsFoundError
+from jwcrypto import jwk, jwt
+from jwcrypto.common import JWException
 
 from ...config import CONFIG, Config
+from ...deps import Depends, UserDao
+from ...user_management.models.dto import StatusChange, User, UserStatus
 
-__all__ = ["exchange_token", "signing_keys"]
+__all__ = ["exchange_token", "jwt_config"]
 
 log = logging.getLogger(__name__)
 
 
-class SigningKeys:
-    """A container for external and internal signing keys."""
+class AuthAdapterError(Exception):
+    """Auth adapter related error."""
+
+
+class ConfigurationMissingKey(AuthAdapterError):
+    """Missing key in configuration"""
+
+
+class TokenSigningError(AuthAdapterError):
+    """Error when signing JWTs."""
+
+
+class TokenValidationError(AuthAdapterError):
+    """Error when validating JWTs."""
+
+
+class UserDataMismatchError(AuthAdapterError):
+    """Raised when user claims do not match the registered user data."""
+
+
+class JWTConfig:
+    """A container for the JWT related configuration."""
 
     external_jwks: Optional[jwk.JWKSet] = None  # the external public key set
     internal_jwk: Optional[jwk.JWK] = None  # the internal key pair
+    external_algs: Optional[list[str]] = None  # allowed external signing algorithms
+    check_claims: dict[str, Any] = {  # claims that shall be verified
+        "iat": None,
+        "exp": None,
+        "jti": None,
+        "sub": None,
+        "name": None,
+        "email": None,
+        "token_class": "access_token",
+    }
+    # the claims that are copied from the external to the internal token
+    copied_claims = ("name", "email", "iat", "exp")
+    # the key under which the subject is copied from the external token
+    copy_sub_as = "ls_id"
 
     def __init__(self, config: Config = CONFIG) -> None:
-        """Load all the signing keys from the configuration."""
+        """Load the JWT related configuration parameters."""
+
         external_keys = config.auth_ext_keys
-        try:
-            if not external_keys:
-                raise ValueError("No external keys configured")
-            self.external_jwks = jwk.JWKSet.from_json(external_keys)
-        except Exception as exc:  # pylint:disable=broad-except
-            # do not throw an error so that the auth adapter can still run
-            # even though it will not be able to validate external tokens
-            log.error("Error in external signing keys: %s", exc)
+        if not external_keys:
+            raise ConfigurationMissingKey("No external signing keys configured.")
+        self.external_jwks = jwk.JWKSet.from_json(external_keys)
         internal_keys = config.auth_int_keys
-        try:
-            if not internal_keys:
-                raise ValueError("No internal signing keys configured.")
-            self.internal_jwk = jwk.JWK.from_json(internal_keys)
-        except Exception as exc:  # pylint:disable=broad-except
-            # do not throw an error so that the auth adapter can still run
-            # even though it will not be able to sign internal tokens
-            log.error("Error in internal signing key pair: %s", exc)
+        if not internal_keys:
+            raise ConfigurationMissingKey("No internal signing keys configured.")
+        self.internal_jwk = jwk.JWK.from_json(internal_keys)
+        external_algs = config.auth_ext_algs
+        if external_algs:
+            self.external_algs = external_algs
+        else:
+            log.warning("Allowed external signing algorithms not configured.")
+        authority_url = config.oidc_authority_url
+        if authority_url:
+            self.check_claims["iss"] = authority_url
+        else:
+            log.warning("No OIDC authority URL configured.")
+        client_id = config.oidc_client_id
+        if client_id:
+            self.check_claims["client_id"] = client_id
+        else:
+            log.warning("No OIDC client ID configured.")
 
 
-signing_keys = SigningKeys()
+jwt_config = JWTConfig()
 
 
-def exchange_token(external_token: Optional[str]) -> Optional[str]:
+def _compare_user_data(user: User, external_claims: dict[str, Any]) -> None:
+    """Compare user data and raise an error if there is a mismatch.
+
+    The value of the raised UserDataMismatchError can be used as inactivation context.
+    """
+    if user.status == UserStatus.ACTIVATED:
+        if user.name != external_claims.get("name"):
+            raise UserDataMismatchError("name")
+        if user.email != external_claims.get("email"):
+            raise UserDataMismatchError("email")
+
+
+def _get_inactivated_user(user: User, context: str) -> User:
+    """Get an inactivated copy of the User object."""
+    return user.copy(
+        update=dict(
+            status=UserStatus.INACTIVATED.value,
+            status_change=StatusChange(
+                previous=user.status,
+                by=None,
+                context=context,
+                change_date=datetime.now(),
+            ),
+        )
+    )
+
+
+async def exchange_token(
+    external_token: str, pass_sub: bool = False, user_dao: UserDao = Depends()
+) -> str:
     """Exchange the external token against an internal token.
 
     If the provided external token is valid, a corresponding internal token
-    will be returned. Otherwise None will be returned.
+    will be returned.
+
+    The internal token will contain the name and email taken from the
+    external token, and also its issued date and expiry date.
+    If the user is already registered, the user id and status will be
+    included in the internal token as well.
+    If name or email do not match with the external token, the user
+    is automatically deactivated in the database and internal token.
+    If the user is not yet registered, and pass_sub is set, then the sub claim
+    will be included in the internal token as "ls_id", otherwise an empty string
+    will be returned instead of the internal token.
+
+    If the external token is invalid a TokenValidationError is raised.
+    If the internal token cannot be signed, a TokenSigningError is raised.
     """
-    payload = decode_and_verify_token(external_token)
-    if not payload or not isinstance(payload, dict):
-        return None
-    name = payload.get("name")
-    email = payload.get("email")
-    if not (name and email):
-        log.debug("Access token does not contain required user info")
-        return None
-    payload = dict(name=name, email=email)
-    internal_token = sign_and_encode_token(payload)
+    external_claims = decode_and_validate_token(external_token)
+    internal_claims = {
+        claim: external_claims[claim] for claim in jwt_config.copied_claims
+    }
+    sub = external_claims["sub"]
+    try:
+        user = await user_dao.find_one(mapping={"ls_id": sub})
+    except NoHitsFoundError:
+        # user is not yet registered
+        if not pass_sub:
+            return ""
+        internal_claims[jwt_config.copy_sub_as] = sub
+    else:
+        # user already exists in the registry
+        try:
+            _compare_user_data(user, external_claims)
+        except UserDataMismatchError as mismatch:
+            context = f"{mismatch} changed"
+            user = _get_inactivated_user(user, context)
+            await user_dao.update(user)
+        internal_claims.update(id=user.id, status=user.status)
+    internal_token = sign_and_encode_token(internal_claims)
     return internal_token
 
 
-def decode_and_verify_token(
-    access_token: Optional[str], key=None
-) -> Optional[dict[str, Any]]:
-    """Decode and verify the given JSON Web Token."""
+def _assert_claims_not_empty(claims: dict[str, Any]) -> None:
+    """Make sure that all important claims are not empty.
+
+    Note that JWT.validate() checks only whether claims exist, but we also
+    want to make sure that the copied claims are not null or empty strings.
+
+    Raises a TokenValidationError in case one of the claims is empty.
+    """
+    if not claims["sub"]:
+        raise TokenValidationError("The subject claim is missing.")
+    for claim in jwt_config.copied_claims:
+        if not claims[claim]:
+            raise TokenValidationError(f"Missing value for {claim} claim.")
+
+
+def decode_and_validate_token(access_token: str, key=None) -> dict[str, Any]:
+    """Decode and validate the given JSON Web Token.
+
+    Rerturns the decoded claims in the token as a dictionary if valid.
+
+    Raises a TokenValidationError in case the token could not be validated.
+    """
     if not access_token:
-        return None
+        raise TokenValidationError("Empty token")
     if not key:
-        key = signing_keys.external_jwks
+        key = jwt_config.external_jwks
         if not key:
-            log.debug("No external signing key, cannot verify token")
-            return None
-    jws_token = jws.JWS()
+            raise TokenValidationError(
+                "No external signing key(s), cannot validate token."
+            )
     try:
-        jws_token.deserialize(access_token, key=key)
-        payload = json.loads(jws_token.payload.decode("UTF-8"))
-        return payload
-    except jws.InvalidJWSObject:
-        log.debug("Invalid access token format")
-    except jws.InvalidJWSSignature:
-        log.debug("Invalid access token signature")
-    except jws.JWKeyNotFound:
-        log.debug("Signature key for access token not found")
-    except UnicodeDecodeError:
-        log.debug("Access token payload has invalid encoding")
-    except json.JSONDecodeError:
-        log.debug("Access token payload is not valid JSON")
-    return None
+        token = jwt.JWT(
+            jwt=access_token,
+            key=key,
+            algs=jwt_config.external_algs,
+            check_claims=jwt_config.check_claims,
+            expected_type="JWS",
+        )
+    except (JWException, UnicodeDecodeError, KeyError, TypeError, ValueError) as exc:
+        raise TokenValidationError(f"Not a valid token: {exc}") from exc
+    try:
+        claims = json.loads(token.claims)
+    except json.JSONDecodeError as exc:
+        raise TokenValidationError("Claims cannot be decoded") from exc
+    _assert_claims_not_empty(claims)
+    return claims
 
 
-def sign_and_encode_token(payload: dict[str, Any], key=None) -> Optional[str]:
+def sign_and_encode_token(claims: dict[str, Any], key=None) -> str:
     """Encode and sign the given payload as JSON Web Token.
 
-    Returns None in case the payload could not be properly signed.
+    Returns the signed and encoded payload.
+
+    Raises a TokenSigningError in case the payload could not be properly signed.
     """
-    if not payload:
-        return None
+    if not claims:
+        raise TokenSigningError("No payload")
     if not key:
-        key = signing_keys.internal_jwk
+        key = jwt_config.internal_jwk
         if not key:
-            log.debug("No internal signing key, cannot sign token")
-            return None
+            raise TokenSigningError("No internal signing key, cannot sign token.")
+    header = {"alg": "ES256" if key["kty"] == "EC" else "RS256", "typ": "JWT"}
     try:
-        jws_token = jws.JWS(json.dumps(payload).encode("utf-8"))
-        header = json.dumps({"kid": key.thumbprint()})
-        alg = "ES256" if key["kty"] == "EC" else "RS256"
-        protected = {"alg": alg}
-        jws_token.add_signature(key, alg=alg, protected=protected, header=header)
-        token = jws_token.serialize(compact=True)
-    except (
-        jws.InvalidJWSObject,
-        jws.InvalidJWSOperation,
-        UnicodeEncodeError,
-        ValueError,
-    ) as error:
-        log.error("Error while signing JTW: %s", error)  # pragma: no cover
-        token = None
-    return token
+        token = jwt.JWT(header=header, claims=claims)
+        token.make_signed_token(key)
+        return token.serialize(compact=True)
+    except (JWException, UnicodeEncodeError, KeyError, TypeError, ValueError) as exc:
+        raise TokenSigningError(f"Could not sign token: {exc}") from exc

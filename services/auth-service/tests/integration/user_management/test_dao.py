@@ -23,7 +23,7 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=
 )
 from pytest import mark
 
-from auth_service.user_management.api.deps import (
+from auth_service.deps import (
     get_config,
     get_user_dao_factory,
     get_user_dao_factory_config,

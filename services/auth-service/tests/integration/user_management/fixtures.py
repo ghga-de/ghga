@@ -22,7 +22,7 @@ from pytest import fixture
 from testcontainers.mongodb import MongoDbContainer
 
 from auth_service.config import Config
-from auth_service.user_management.api.deps import get_config
+from auth_service.deps import get_config
 from auth_service.user_management.api.main import app
 
 

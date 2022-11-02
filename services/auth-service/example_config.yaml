@@ -1,4 +1,7 @@
 api_root_path: /
+auth_ext_algs:
+- RS256
+- ES256
 auth_ext_keys: null
 auth_int_keys: null
 auto_reload: true
@@ -14,6 +17,8 @@ db_url: mongodb://mongodb:27017/
 docs_url: /docs
 host: 0.0.0.0
 log_level: debug
+oidc_authority_url: https://proxy.aai.lifescience-ri.eu
+oidc_client_id: ghga-data-portal
 openapi_url: /openapi.json
 port: 8080
 run_auth_adapter: false

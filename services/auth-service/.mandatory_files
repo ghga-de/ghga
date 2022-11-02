@@ -19,11 +19,8 @@ docs/README.md
 example_data
 
 
+tests/__init__.py
 tests/fixtures/__init__.py
-tests/integration/fixtures/__init__.py
-tests/unit/fixtures/__init__.py
-tests/integration/__init__.py
-tests/unit/__init__.py
 
 Dockerfile
 config_schema.json

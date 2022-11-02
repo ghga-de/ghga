@@ -18,13 +18,14 @@
 from fastapi import Depends
 from hexkit.providers.mongodb import MongoDbConfig, MongoDbDaoFactory
 
-from ...config import CONFIG, Config
-from ..translators.dao import UserDaoFactory, UserDaoFactoryConfig
+from .config import CONFIG, Config
+from .user_management.ports.dao import UserDao
+from .user_management.translators.dao import UserDaoFactory, UserDaoFactoryConfig
 
-__all__ = ["Depends", "get_config", "get_user_dao"]
+__all__ = ["Depends", "get_config", "get_user_dao", "Config", "UserDao"]
 
 
-def get_config():
+def get_config() -> Config:
     """Get runtime configuration."""
     return CONFIG
 
@@ -56,6 +57,8 @@ def get_user_dao_factory(
     return UserDaoFactory(config=config, dao_factory=dao_factory)
 
 
-async def get_user_dao(dao_factory: UserDaoFactory = Depends(get_user_dao_factory)):
+async def get_user_dao(
+    dao_factory: UserDaoFactory = Depends(get_user_dao_factory),
+) -> UserDao:
     """Get user data access object."""
     return await dao_factory.get_user_dao()

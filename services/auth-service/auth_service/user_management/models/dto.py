@@ -24,7 +24,7 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-__all__ = ["User", "UserData"]
+__all__ = ["User", "UserData", "UserStatus", "StatusChange"]
 
 
 class UserStatus(str, Enum):
@@ -48,7 +48,6 @@ class BaseDto(BaseModel):
 
     class Config:  # pylint: disable=missing-class-docstring
         frozen = True
-        use_enum_values = True
 
 
 class StatusChange(BaseDto):
@@ -108,10 +107,6 @@ class UserModifiableData(BaseDto):
     title: Optional[AcademicTitle] = Field(
         None, title="Academic title", description="Academic title of the user"
     )
-
-    class Config:  # pylint: disable=missing-class-docstring
-        frozen = True
-        use_enum_values = True
 
 
 class UserAutomaticData(BaseModel):

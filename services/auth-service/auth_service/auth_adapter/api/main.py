@@ -24,12 +24,13 @@ then this must be also specified in the config setting api_root_path.
 
 from typing import Optional
 
-from fastapi import FastAPI, Header, Response
+from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from ghga_service_chassis_lib.api import configure_app
 
 from ...config import CONFIG, configure_logging
+from ...deps import Depends, UserDao, get_user_dao
 from .. import DESCRIPTION, TITLE, VERSION
-from ..core.auth import exchange_token
+from ..core.auth import TokenValidationError, exchange_token
 from .basic import basic_auth
 from .headers import get_bearer_token
 
@@ -49,10 +50,13 @@ async def ext_auth_well_known() -> dict:
 
 
 @app.api_route("/{path:path}", methods=HANDLE_METHODS)
-async def ext_auth(
+async def ext_auth(  # pylint:disable=too-many-arguments
+    path: str,
+    request: Request,
     response: Response,
     authorization: Optional[str] = Header(default=None),
     x_authorization: Optional[str] = Header(default=None),
+    user_dao: UserDao = Depends(get_user_dao),
     _basic_auth: None = basic_auth(app, config=CONFIG),
 ) -> dict:
     """Implements the ExtAuth protocol to authenticate users in the API gateway.
@@ -62,7 +66,26 @@ async def ext_auth(
     but the status will still be returned as OK so that all requests can pass.
     """
     access_token = get_bearer_token(authorization, x_authorization)
-    internal_token = exchange_token(access_token)
+    if access_token:
+        # check whether the external id is of interest and only pass it on in that case
+        pass_sub = path_needs_ext_info(path, request.method)
+        try:
+            internal_token = await exchange_token(
+                access_token, pass_sub=pass_sub, user_dao=user_dao
+            )
+        except TokenValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token"
+            ) from exc
+    else:
+        internal_token = ""  # nosec
     # since we cannot delete a header, we set it to an empty string if invalid
-    response.headers["Authorization"] = internal_token or ""
+    response.headers["Authorization"] = internal_token
     return {}
+
+
+def path_needs_ext_info(path: str, method: str) -> bool:
+    """Check whether the given request path and method need external user info."""
+    return (method == "POST" and path == "users") or (
+        method == "GET" and path.startswith("users/") and "@" in path
+    )

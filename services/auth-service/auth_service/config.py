@@ -61,17 +61,26 @@ class Config(ApiConfigBase):
 
     service_name: str = "auth_service"
     log_level: LogLevel = "debug"
+
     run_auth_adapter: bool = False
+
     # internal key pair for auth adapter, internal public key for user management
     auth_int_keys: Optional[str] = None
     # external public key set for auth adapter
     auth_ext_keys: Optional[str] = None
+    # allowed algorithms for signing external tokens
+    auth_ext_algs: Optional[list[str]] = ["RS256", "ES256"]
     # user(s) and password(s) for basic authentication
     basic_auth_user: Optional[str] = None
     # password(s) for basic authentication if not specified above
     basic_auth_pwd: Optional[str] = None
     # realm for basic authentication
     basic_auth_realm: Optional[str] = "GHGA Data Portal"
+
+    # expected external token content for validation in auth adapter
+    oidc_authority_url: Optional[str] = "https://proxy.aai.lifescience-ri.eu"
+    oidc_client_id: Optional[str] = "ghga-data-portal"
+
     db_url: str = "mongodb://localhost:27017"
     db_name: str = "user-registry"
     user_collection: str = "users"

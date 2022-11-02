@@ -21,8 +21,13 @@ from datetime import datetime
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
-from hexkit.protocols.dao import MultipleHitsFoundError, ResourceNotFoundError
+from hexkit.protocols.dao import (
+    MultipleHitsFoundError,
+    NoHitsFoundError,
+    ResourceNotFoundError,
+)
 
+from ....deps import Depends, UserDao, get_user_dao
 from ...core.utils import is_external_id, is_internal_id
 from ...models.dto import (
     StatusChange,
@@ -31,8 +36,6 @@ from ...models.dto import (
     UserData,
     UserModifiableData,
 )
-from ...ports.dao import UserDao
-from ..deps import Depends, get_user_dao
 
 __all__ = ["router"]
 
@@ -62,8 +65,11 @@ async def post_user(
 ) -> User:
     """Register a user"""
     ls_id = user_data.ls_id
-    user = await user_dao.find_one(mapping={"ls_id": ls_id})
-    if user:
+    try:
+        user = await user_dao.find_one(mapping={"ls_id": ls_id})
+    except NoHitsFoundError:
+        pass
+    else:
         raise HTTPException(status_code=409, detail="User was already registered.")
     full_user_data = UserData(**user_data.dict(), registration_date=datetime.now())
     try:
@@ -106,10 +112,8 @@ async def get_user(
         elif is_internal_id(id_):
             user = await user_dao.get_by_id(id_)
         else:
-            user = None
-        if not user:
             raise ResourceNotFoundError(id_=id_)
-    except (MultipleHitsFoundError, ResourceNotFoundError) as error:
+    except (NoHitsFoundError, MultipleHitsFoundError, ResourceNotFoundError) as error:
         raise HTTPException(
             status_code=404, detail="The user was not found."
         ) from error

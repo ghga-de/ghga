@@ -165,6 +165,20 @@
       ],
       "type": "string"
     },
+    "auth_ext_algs": {
+      "title": "Auth Ext Algs",
+      "default": [
+        "RS256",
+        "ES256"
+      ],
+      "env_names": [
+        "auth_service_auth_ext_algs"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "basic_auth_user": {
       "title": "Basic Auth User",
       "env_names": [
@@ -184,6 +198,22 @@
       "default": "GHGA Data Portal",
       "env_names": [
         "auth_service_basic_auth_realm"
+      ],
+      "type": "string"
+    },
+    "oidc_authority_url": {
+      "title": "Oidc Authority Url",
+      "default": "https://proxy.aai.lifescience-ri.eu",
+      "env_names": [
+        "auth_service_oidc_authority_url"
+      ],
+      "type": "string"
+    },
+    "oidc_client_id": {
+      "title": "Oidc Client Id",
+      "default": "ghga-data-portal",
+      "env_names": [
+        "auth_service_oidc_client_id"
       ],
       "type": "string"
     },

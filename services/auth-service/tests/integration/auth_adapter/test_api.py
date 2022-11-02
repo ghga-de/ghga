@@ -16,15 +16,14 @@
 """Test the api module"""
 
 from base64 import b64encode
+from datetime import datetime
 
 from fastapi import status
 
-from auth_service.auth_adapter.core.auth import (
-    decode_and_verify_token,
-    sign_and_encode_token,
-    signing_keys,
-)
+from auth_service.deps import UserDao, get_user_dao
+from auth_service.user_management.models.dto import UserStatus
 
+from ...fixtures.utils import DummyUserDao, create_access_token, get_claims_from_token
 from .fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_client,
     fixture_with_basic_auth,
@@ -131,84 +130,283 @@ def test_basic_auth_well_known(with_basic_auth, client):
     assert response.text == "GHGA Data Portal: Not authenticated"
 
 
-def test_token_exchange(client):
-    """Test that the external access token is exchanged against an internal token."""
+def test_does_not_authorize_invalid_users(client):
+    """Test that unauthenticated or invalid users are not authorized."""
 
-    ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
-    ext_sign_keyset = signing_keys.external_jwks
-    assert ext_sign_keyset
-    ext_sign_key = ext_sign_keyset.get_key("test")
-    assert ext_sign_key
-    auth = sign_and_encode_token(ext_payload, key=ext_sign_key)
-    auth = f"Bearer {auth}"
+    # User without Authorization token
+    response = client.get("/some/path")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    assert "Authorization" in headers
+    assert headers["Authorization"] == ""
+    assert "X-Authorization" not in headers
+
+    # User with empty Authorization token
+    response = client.get("/some/path", headers={"Authorization": ""})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    assert "Authorization" in headers
+    assert headers["Authorization"] == ""
+    assert "X-Authorization" not in headers
+
+    # User with non-bearer Authorization token
+    response = client.get("/some/path", headers={"Authorization": "Foo bar"})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    assert "Authorization" in headers
+    assert headers["Authorization"] == ""
+    assert "X-Authorization" not in headers
+
+    # User with empty bearer Authorization token
+    response = client.get("/some/path", headers={"Authorization": "Bearer"})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    assert "Authorization" in headers
+    assert headers["Authorization"] == ""
+    assert "X-Authorization" not in headers
+
+    # User with invalid bearer Authorization token
+    response = client.get("/some/path", headers={"Authorization": "Bearer invalid"})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid access token"}
+
+    headers = response.headers
+    assert "Authorization" not in headers
+    assert "X-Authorization" not in headers
+
+    # User with invalid bearer X-Authorization token
+    response = client.get("/some/path", headers={"Authorization": "Bearer invalid"})
+    response = client.get(
+        "/some/path",
+        headers={"Authorization": "Basic invalid", "X-Authorization": "Bearer invalid"},
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid access token"}
+
+    headers = response.headers
+    assert "Authorization" not in headers
+    assert "X-Authorization" not in headers
+
+
+def test_token_exchange_for_unknown_user(
+    client,
+):  # pylint:disable=too-many-statements
+    """Test the token exchange for authenticated but unknown users."""
+
+    user_dao = DummyUserDao(ls_id="not.john@aai.org")
+    client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+
+    auth = f"Bearer {create_access_token()}"
+
+    # does not get internal token for GET request to random path
     response = client.get("/some/path", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
     headers = response.headers
-    assert "Authorization" in headers
-    internal_token = headers["Authorization"]
-    assert internal_token is not None
-    assert isinstance(internal_token, str)
-    assert internal_token.count(".", 2)
-
-    int_payload = decode_and_verify_token(internal_token, key=signing_keys.internal_jwk)
-    assert int_payload == {"name": "Foo Bar", "email": "foo@bar"}
-
+    assert headers.get("Authorization") == ""
     assert "X-Authorization" not in headers
+
+    # does not get internal token for POST request to random path
+    response = client.post("/some/path", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    assert headers.get("Authorization") == ""
+    assert "X-Authorization" not in headers
+
+    # does not get internal token for GET request to users
+    response = client.get("/users", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    assert headers.get("Authorization") == ""
+    assert "X-Authorization" not in headers
+
+    # does not get internal token for GET request to users with internal ID
+    response = client.get("/users/some-internal-id", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    assert headers.get("Authorization") == ""
+    assert "X-Authorization" not in headers
+
+    # gets internal token for GET request to users with external ID
+    response = client.get("/users/someone@aai.org", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    internal_token = headers.get("Authorization")
+    assert internal_token
+    assert "X-Authorization" not in headers
+
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"name", "email", "ls_id", "exp", "iat"}
+
+    assert set(claims) == expected_claims
+    assert claims["name"] == "John Doe"
+    assert claims["email"] == "john@home.org"
+    assert claims["ls_id"] == "john@aai.org"
+    assert isinstance(claims["iat"], int)
+    assert isinstance(claims["exp"], int)
+    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+
+    # gets internal token for POST request to users
+    response = client.post("/users", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    internal_token = headers.get("Authorization")
+    assert internal_token
+    assert "X-Authorization" not in headers
+
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"name", "email", "ls_id", "exp", "iat"}
+
+    assert set(claims) == expected_claims
+    assert claims["name"] == "John Doe"
+    assert claims["email"] == "john@home.org"
+    assert claims["ls_id"] == "john@aai.org"
+    assert isinstance(claims["iat"], int)
+    assert isinstance(claims["exp"], int)
+    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+
+
+def test_token_exchange_for_known_user(
+    client,
+):  # pylint:disable=too-many-statements
+    """Test the token exchange for authenticated and registered users."""
+
+    user_dao: UserDao = DummyUserDao()
+    client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    user = user_dao.user
+
+    # Check that we get an internal token for the user
+
+    auth = f"Bearer {create_access_token()}"
+    response = client.get("/some/path", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    internal_token = headers.get("Authorization")
+    assert internal_token
+    assert "X-Authorization" not in headers
+
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"id", "name", "email", "status", "exp", "iat"}
+
+    assert set(claims) == expected_claims
+    assert claims["id"] == user.id
+    assert claims["name"] == user.name
+    assert claims["email"] == user.email
+    assert claims["status"] == "activated"
+    assert isinstance(claims["iat"], int)
+    assert isinstance(claims["exp"], int)
+    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+
+    # Check that the user is inactivated when the name has changed
+    assert user.status is UserStatus.ACTIVATED
+    assert user.status_change is None
+
+    auth = f"Bearer {create_access_token(name='John Foo')}"
+    response = client.get("/some/path", headers={"Authorization": auth})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+
+    headers = response.headers
+    internal_token = headers.get("Authorization")
+    assert internal_token
+    assert "X-Authorization" not in headers
+
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"id", "name", "email", "status", "exp", "iat"}
+
+    assert set(claims) == expected_claims
+    assert claims["id"] == user.id
+    assert claims["name"] == "John Foo"  # changed name in internal token
+    assert claims["email"] == user.email
+    assert claims["status"] == "inactivated"
+    assert isinstance(claims["iat"], int)
+    assert isinstance(claims["exp"], int)
+    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+
+    # Check that the status was also changed in the database
+    user = user_dao.user
+    assert user.name == "John Doe"  # user name was not changed
+    assert user.status == UserStatus.INACTIVATED
+    status_change = user.status_change
+    assert status_change is not None
+    assert status_change.previous is UserStatus.ACTIVATED
+    assert status_change.by is None
+    assert status_change.context == "name changed"
+    assert 0 <= (datetime.now() - status_change.change_date).total_seconds() < 5
 
 
 def test_token_exchange_with_x_token(client):
     """Test that the external access token can be passed in separate header."""
 
-    ext_payload = {"name": "Foo Bar", "email": "foo@bar", "sub": "foo", "iss": "bar"}
-    ext_sign_keyset = signing_keys.external_jwks
-    assert ext_sign_keyset
-    ext_sign_key = ext_sign_keyset.get_key("test")
-    assert ext_sign_key
-    auth = sign_and_encode_token(ext_payload, key=ext_sign_key)
-    auth = f"Bearer {auth}"
+    user_dao = DummyUserDao(ls_id="not.john@aai.org")
+    client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+
+    auth = f"Bearer {create_access_token()}"
+
+    # send access token to some path in X-Authorization header
     response = client.get("/some/path", headers={"X-Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
     headers = response.headers
-    assert "Authorization" in headers
-    internal_token = headers["Authorization"]
-    assert internal_token is not None
-    assert isinstance(internal_token, str)
-    assert internal_token.count(".", 2)
-
-    int_payload = decode_and_verify_token(internal_token, key=signing_keys.internal_jwk)
-    assert int_payload == {"name": "Foo Bar", "email": "foo@bar"}
-
+    assert headers.get("Authorization") == ""
     assert "X-Authorization" not in headers
 
-
-def test_external_tokens_are_removed(client):
-    """Test that the external access token is exchanged against an internal token."""
-
-    response = client.get("/some/path", headers={"Authorization": "Bearer invalid"})
+    # send access token in POST request to users to get the internal token
+    response = client.post("/users", headers={"X-Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
     headers = response.headers
-    assert "Authorization" in headers
-    assert headers["Authorization"] == ""
+    internal_token = headers.get("Authorization")
+    assert internal_token
     assert "X-Authorization" not in headers
 
-    response = client.get(
-        "/some/path",
-        headers={"Authorization": "Basic invalid", "X-Authorization": "Bearer invalid"},
-    )
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"name", "email", "ls_id", "exp", "iat"}
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {}
-
-    headers = response.headers
-    assert "Authorization" in headers
-    assert headers["Authorization"] == ""
-    assert "X-Authorization" not in headers
+    assert set(claims) == expected_claims
+    assert claims["name"] == "John Doe"
+    assert claims["email"] == "john@home.org"
+    assert claims["ls_id"] == "john@aai.org"
+    assert isinstance(claims["iat"], int)
+    assert isinstance(claims["exp"], int)
+    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
