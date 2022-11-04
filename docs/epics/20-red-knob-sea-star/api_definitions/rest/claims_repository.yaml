@@ -1,0 +1,376 @@
+openapi: 3.0.3
+
+info:
+  title: Claims Repository API
+  version: 0.1.0
+  description: REST API for managing the GHGA claims repository
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/
+  contact: 
+    url: https://www.ghga.de/about-us/contact
+
+servers:
+  - url: https://api.server.test/v1
+
+tags:
+  - name: claims
+    description: User Claims
+
+paths:
+
+  /users/{user_id}/claims:
+
+    get:
+      operationId: get_claims
+      summary: Get all claims for a given user
+      description: Endpoint used to get all claims for a specified user.
+      tags:
+        - claims
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            title: Internal ID of the user
+            type: string
+      responses:
+        '200':
+          description: User claims have been retrieved.
+          content:
+            application/json:
+              schema:
+                title: Response 200 Get Claims Users  User Id  Claims Get
+                type: array
+                items:
+                  $ref: '#/components/schemas/Claim'
+        '401':
+          description: Not authorized to get user claims.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user ID.
+
+    post:
+      operationId: post_claim
+      summary: Store a user claim
+      description: Endpoint used to store a new claim about a user.
+      tags:
+        - claims
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            title: Internal ID of the user
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimCreation'
+        required: true
+      responses:
+        '201':
+          description: Claim was successfully stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '400':
+          description: Claim cannot be stored.
+        '409':
+          description: Claim was already stored.
+        '422':
+          description: Validation error in submitted ID or claims data.
+
+
+  /users/{user_id}/claims/{claim_id}:
+
+    delete:
+      operationId: delete_claim
+      summary: Delete an existing user claim
+      description: Endpoint used to delete an existing user claim.
+      tags:
+        - claims
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            title: Internal user ID
+            type: string
+        - name: claim_id
+          in: path
+          required: true
+          schema:
+            title: Internal claim ID
+            type: string
+      responses:
+        '204':
+          description: User claim was successfully deleted.
+        '404':
+          description: The user claim was not found.
+        '422':
+          description: Validation error in submitted user or claim ID.
+
+    patch:
+      operationId: patch_user
+      summary: Revoke an existing user claim
+      description: Endpoint used to revoke a claim for a specified user.
+      tags:
+        - claims
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            title: Internal user ID
+            type: string
+        - name: claim_id
+          in: path
+          required: true
+          schema:
+            title: Internal claim ID
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                revocation_date:
+                  title: Date of revocation
+                  type: string
+                  format: date-time
+        required: true
+      responses:
+        '204':
+          description: User claim was successfully saved.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user data.
+
+components:
+
+  schemas:
+
+    AuthorityLevel:
+      title: Authority Level
+      enum:
+        - SELF
+        - PEER
+        - SYSTEM
+        - SO
+        - DAC
+      type: string
+      description: Type of asserting authority
+
+    Claim:
+      title: Claim
+      required:
+        - user_id
+        - visa_type
+        - visa_value
+        - assertion_date
+        - valid_from
+        - valid_until
+        - source
+        - id
+      type: object
+      properties:
+        user_id:
+          title: ID
+          type: string
+          description: Internally used ID of the user
+        visa_type:
+          title: Visa type
+          allOf:
+            - $ref: '#/components/schemas/VisaType'
+        visa_value:
+          title: Scope of the claim depending of the visa type
+          type: string
+        assertion_date:
+          title: Assertion date
+          type: string
+          format: date-time
+        revocation_date:
+          title: If revoked, date of revocation
+          type: string
+          format: date-time
+          nullable: true
+        valid_from:
+          title: Start date of validity
+          type: string
+          format: date-time
+        valid_until:
+          title: End date of validity
+          type: string
+          format: date-time
+        source:
+          title: Asserting organization
+          maxLength: 2083
+          minLength: 1
+          type: string
+          format: uri
+        sub_source:
+          title: Asserting sub-organization
+          maxLength: 2083
+          minLength: 1
+          type: string
+          format: uri
+          nullable: true
+        asserted_by:
+          title: Authority level
+          allOf:
+            - $ref: '#/components/schemas/AuthorityLevel'
+          nullable: true
+        conditions:
+          title: Set of conditions
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Condition'
+          nullable: true
+        id:
+          title: ID
+          type: string
+          description: Internally used ID of the claim
+      description: A claim made about a user with a claim ID
+
+    ClaimCreation:
+      title: Claim Creation
+      required:
+        - user_id
+        - visa_type
+        - visa_value
+        - assertion_date
+        - valid_from
+        - valid_until
+        - source
+      type: object
+      properties:
+        user_id:
+          title: ID
+          type: string
+          description: Internally used ID of the user
+        visa_type:
+          title: Visa type
+          allOf:
+            - $ref: '#/components/schemas/VisaType'
+        visa_value:
+          title: Scope of the claim depending of the visa type
+          type: string
+        assertion_date:
+          title: Assertion date
+          type: string
+          format: date-time
+        revocation_date:
+          title: If revoked, date of revocation
+          type: string
+          format: date-time
+          nullable: true
+        valid_from:
+          title: Start date of validity
+          type: string
+          format: date-time
+        valid_until:
+          title: End date of validity
+          type: string
+          format: date-time
+        source:
+          title: Asserting organization
+          maxLength: 2083
+          minLength: 1
+          type: string
+          format: uri
+        sub_source:
+          title: Asserting sub-organization
+          maxLength: 2083
+          minLength: 1
+          type: string
+          format: uri
+          nullable: true
+        asserted_by:
+          title: Authority level
+          allOf:
+            - $ref: '#/components/schemas/AuthorityLevel'
+          nullable: true
+        conditions:
+          title: Set of conditions
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Condition'
+          nullable: true
+      description: A claim made about a user with a user ID
+
+    ClaimMatch:
+      title: Claim Match
+      required:
+        - claim
+        - match_type
+        - match_value
+      type: object
+      properties:
+        claim:
+          title: Claim
+          type: string
+        match_type:
+          $ref: '#/components/schemas/MatchType'
+        match_value:
+          title: Match Value
+          type: string
+      description: A pair of a claim name and a match value with type
+
+    Condition:
+      title: Condition
+      required:
+        - type
+        - matches
+      type: object
+      properties:
+        type:
+          title: Type
+          type: string
+        matches:
+          title: Matches
+          type: array
+          items:
+            $ref: '#/components/schemas/ClaimMatch'
+      description: A single condition to check a type and a set of claims
+
+    MatchType:
+      title: Match Type
+      enum:
+        - CONST
+        - PATTERN
+        - SPLIT_PATTERN
+      type: string
+      description: Type of matching a claim value
+
+    VisaType:
+      title: Visa Type
+      enum:
+        - AFFILIATION_AND_ROLE
+        - ACCEPTED_TERMS_AND_POLICIES
+        - RESEARCHER_STATUS
+        - CONTROLLED_ACCESS_GRANTS
+        - LINKED_IDENTITIES
+        - GHGA_ROLE
+      type: string
+      description: Visa type for the claim
+
+  securitySchemes:
+    
+    AuthToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Internal authentication token for GHGA.
+
+security:
+- AuthToken: []
