@@ -201,7 +201,7 @@ def test_upload(
 @pytest.mark.parametrize(
     "file_size,anticipated_part_size",
     [
-        (6 * 1024 * 1024, 5),
+        (6 * 1024 * 1024, 8),
         (20 * 1024 * 1024, 16),
     ],
 )
@@ -258,7 +258,7 @@ def test_multipart_upload(
             ):
                 upload(
                     file_id=file_id,
-                    file_path=file.name,
+                    file_path=Path(file.name),
                 )
 
         # confirm upload

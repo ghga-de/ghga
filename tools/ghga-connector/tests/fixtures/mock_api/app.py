@@ -270,11 +270,11 @@ async def ulc_post_files_uploads(state: StatePost):
             part_size=16 * 1024 * 1024,
         )
 
-    if file_id == "uploadable-5":
+    if file_id == "uploadable-8":
         return UploadProperties(
             upload_id="pending",
             file_id=file_id,
-            part_size=5 * 1024 * 1024,
+            part_size=8 * 1024 * 1024,
         )
     if file_id == "pending":
         raise HttpException(
