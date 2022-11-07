@@ -165,6 +165,7 @@ components:
         - SO
         - DAC
       type: string
+      nullable: true
       description: Type of asserting authority
 
     Claim:
@@ -180,17 +181,18 @@ components:
         - id
       type: object
       properties:
+        id:
+          title: ID
+          type: string
+          description: Internally used ID of the claim
         user_id:
           title: ID
           type: string
           description: Internally used ID of the user
         visa_type:
-          title: Visa type
-          allOf:
-            - $ref: '#/components/schemas/VisaType'
+          $ref: '#/components/schemas/VisaType'
         visa_value:
-          title: Scope of the claim depending of the visa type
-          type: string
+          $ref: '#/components/schemas/VisaValue'
         assertion_date:
           title: Assertion date
           type: string
@@ -222,10 +224,7 @@ components:
           format: uri
           nullable: true
         asserted_by:
-          title: Authority level
-          allOf:
-            - $ref: '#/components/schemas/AuthorityLevel'
-          nullable: true
+          $ref: '#/components/schemas/AuthorityLevel'
         conditions:
           title: Set of conditions
           type: array
@@ -234,10 +233,6 @@ components:
             items:
               $ref: '#/components/schemas/Condition'
           nullable: true
-        id:
-          title: ID
-          type: string
-          description: Internally used ID of the claim
       description: A claim made about a user with a claim ID
 
     ClaimCreation:
@@ -257,21 +252,13 @@ components:
           type: string
           description: Internally used ID of the user
         visa_type:
-          title: Visa type
-          allOf:
-            - $ref: '#/components/schemas/VisaType'
+          $ref: '#/components/schemas/VisaType'
         visa_value:
-          title: Scope of the claim depending of the visa type
-          type: string
+          $ref: '#/components/schemas/VisaValue'
         assertion_date:
           title: Assertion date
           type: string
           format: date-time
-        revocation_date:
-          title: If revoked, date of revocation
-          type: string
-          format: date-time
-          nullable: true
         valid_from:
           title: Start date of validity
           type: string
@@ -294,10 +281,7 @@ components:
           format: uri
           nullable: true
         asserted_by:
-          title: Authority level
-          allOf:
-            - $ref: '#/components/schemas/AuthorityLevel'
-          nullable: true
+          $ref: '#/components/schemas/AuthorityLevel'
         conditions:
           title: Set of conditions
           type: array
@@ -317,8 +301,7 @@ components:
       type: object
       properties:
         claim:
-          title: Claim
-          type: string
+          $ref: '#/components/schemas/MatchName'
         match_type:
           $ref: '#/components/schemas/MatchType'
         match_value:
@@ -334,14 +317,36 @@ components:
       type: object
       properties:
         type:
-          title: Type
-          type: string
+          $ref: '#/components/schemas/VisaType'
         matches:
           title: Matches
           type: array
           items:
             $ref: '#/components/schemas/ClaimMatch'
       description: A single condition to check a type and a set of claims
+
+    Identity:
+      title: Identity
+      required:
+        - iss
+        - sub
+      type: object
+      properties:
+        iss:
+          type: string
+          format: url
+        sub:
+          type: string
+      description: A user identity based on an iss/sub pair
+
+    MatchName:
+      title: Claim Name
+      enum:
+        - BY
+        - SOURCE
+        - VALUE
+      type: string
+      description: Possible visa claim names that can be used in conditions
 
     MatchType:
       title: Match Type
@@ -363,6 +368,18 @@ components:
         - GHGA_ROLE
       type: string
       description: Visa type for the claim
+
+    VisaValue:
+      title: Visa Value
+      oneOf:
+        - type: string
+          format: email
+        - type: string
+          format: uri
+        - type: array
+          items:
+            $ref: '#/components/schemas/Identity'
+      description: Scope of the claim depending of the visa type
 
   securitySchemes:
     
