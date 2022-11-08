@@ -16,9 +16,8 @@ docs/README.md
 
 example_data
 
+tests/__init__.py
 tests/fixtures/__init__.py
-tests/unit/fixtures/__init__.py
-tests/unit/__init__.py
 
 README.md
 setup.py
