@@ -16,7 +16,10 @@
 
 """Unit tests for the utils module."""
 
-from auth_service.user_management.core.utils import is_external_id, is_internal_id
+from auth_service.user_management.user_registry.utils import (
+    is_external_id,
+    is_internal_id,
+)
 
 
 def test_is_internal_id():

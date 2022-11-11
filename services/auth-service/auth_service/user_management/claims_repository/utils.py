@@ -12,9 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Utils for Fixture handling"""
+"""
+Core utilities for the Claims Repository.
+"""
 
-from pathlib import Path
+from hexkit.protocols.dao import ResourceNotFoundError
 
-BASE_DIR = Path(__file__).parent.resolve()
+from auth_service.user_management.user_registry.deps import UserDao
+
+
+async def user_exists(user_id: str, user_dao: UserDao) -> bool:
+    """Check whether the user with the given id exists."""
+    try:
+        await user_dao.get_by_id(user_id)
+    except ResourceNotFoundError:
+        return False
+    else:
+        return True

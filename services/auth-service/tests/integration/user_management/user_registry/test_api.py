@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test the api module"""
+"""Test the REST API"""
 
 from datetime import datetime
 
 from fastapi import status
 
-from auth_service.user_management.core.utils import is_internal_id
+from auth_service.user_management.user_registry.utils import is_internal_id
 
-from .fixtures import (  # noqa: F401; pylint: disable=unused-import
+from ..fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_client,
     fixture_client_with_db,
 )

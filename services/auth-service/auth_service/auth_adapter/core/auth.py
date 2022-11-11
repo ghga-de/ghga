@@ -25,9 +25,13 @@ from hexkit.protocols.dao import NoHitsFoundError
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
 
-from ...config import CONFIG, Config
-from ...deps import Depends, UserDao
-from ...user_management.models.dto import StatusChange, User, UserStatus
+from auth_service.config import CONFIG, Config
+from auth_service.user_management.user_registry.deps import Depends, UserDao
+from auth_service.user_management.user_registry.models.dto import (
+    StatusChange,
+    User,
+    UserStatus,
+)
 
 __all__ = ["exchange_token", "jwt_config"]
 

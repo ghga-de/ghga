@@ -21,7 +21,7 @@ from datetime import datetime
 from pytest import mark, raises
 
 from auth_service.auth_adapter.core.auth import TokenValidationError, exchange_token
-from auth_service.user_management.models.dto import UserStatus
+from auth_service.user_management.user_registry.models.dto import UserStatus
 
 from ...fixtures.utils import DummyUserDao, create_access_token, get_claims_from_token
 

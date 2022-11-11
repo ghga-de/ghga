@@ -7,6 +7,259 @@ components:
       - Prof.
       title: AcademicTitle
       type: string
+    AuthorityLevel:
+      description: Type of asserting authority
+      enum:
+      - self
+      - peer
+      - system
+      - so
+      - dac
+      title: AuthorityLevel
+      type: string
+    Claim:
+      description: A claim about a user with a claim ID
+      properties:
+        asserted_by:
+          allOf:
+          - $ref: '#/components/schemas/AuthorityLevel'
+          example: so
+          title: Authority level
+        assertion_date:
+          example: '2022-11-30T12:00:00Z'
+          format: date-time
+          title: Assertion date
+          type: string
+        conditions:
+          items:
+            items:
+              $ref: '#/components/schemas/Condition'
+            type: array
+          title: Set of conditions
+          type: array
+        creation_by:
+          title: Who created this claim (user ID)
+          type: string
+        creation_date:
+          format: date-time
+          title: Date of creation of this claim
+          type: string
+        id:
+          description: Internally used ID of the claim
+          title: ID
+          type: string
+        revocation_by:
+          title: Who revoked this claim (user ID)
+          type: string
+        revocation_date:
+          format: date-time
+          title: If revoked, date of revocation
+          type: string
+        source:
+          example: https://home.org
+          format: uri
+          maxLength: 2083
+          minLength: 1
+          title: Asserting organization
+          type: string
+        sub_source:
+          example: https://dac.home.org
+          format: uri
+          maxLength: 2083
+          minLength: 1
+          title: Asserting sub-organization
+          type: string
+        user_id:
+          description: Internally used ID of the user
+          title: ID
+          type: string
+        valid_from:
+          example: '2023-01-01T00:00:00Z'
+          format: date-time
+          title: Start date of validity
+          type: string
+        valid_until:
+          example: '2023-12-31T23:59:59Z'
+          format: date-time
+          title: End date of validity
+          type: string
+        visa_type:
+          example: AffiliationAndRole
+          title: Visa type
+          type: string
+        visa_value:
+          anyOf:
+          - format: email
+            type: string
+          - format: uri
+            maxLength: 2083
+            minLength: 1
+            type: string
+          - items:
+              $ref: '#/components/schemas/Identity'
+            type: array
+          example: faculty@home.org
+          title: Scope of the claim depending of the visa type
+      required:
+      - visa_type
+      - visa_value
+      - assertion_date
+      - valid_from
+      - valid_until
+      - source
+      - user_id
+      - creation_date
+      - creation_by
+      - id
+      title: Claim
+      type: object
+    ClaimCreation:
+      description: A claim made about a user with a user ID
+      properties:
+        asserted_by:
+          allOf:
+          - $ref: '#/components/schemas/AuthorityLevel'
+          example: so
+          title: Authority level
+        assertion_date:
+          example: '2022-11-30T12:00:00Z'
+          format: date-time
+          title: Assertion date
+          type: string
+        conditions:
+          items:
+            items:
+              $ref: '#/components/schemas/Condition'
+            type: array
+          title: Set of conditions
+          type: array
+        source:
+          example: https://home.org
+          format: uri
+          maxLength: 2083
+          minLength: 1
+          title: Asserting organization
+          type: string
+        sub_source:
+          example: https://dac.home.org
+          format: uri
+          maxLength: 2083
+          minLength: 1
+          title: Asserting sub-organization
+          type: string
+        valid_from:
+          example: '2023-01-01T00:00:00Z'
+          format: date-time
+          title: Start date of validity
+          type: string
+        valid_until:
+          example: '2023-12-31T23:59:59Z'
+          format: date-time
+          title: End date of validity
+          type: string
+        visa_type:
+          example: AffiliationAndRole
+          title: Visa type
+          type: string
+        visa_value:
+          anyOf:
+          - format: email
+            type: string
+          - format: uri
+            maxLength: 2083
+            minLength: 1
+            type: string
+          - items:
+              $ref: '#/components/schemas/Identity'
+            type: array
+          example: faculty@home.org
+          title: Scope of the claim depending of the visa type
+      required:
+      - visa_type
+      - visa_value
+      - assertion_date
+      - valid_from
+      - valid_until
+      - source
+      title: ClaimCreation
+      type: object
+    ClaimMatch:
+      description: A pair of a claim name and a match value with type
+      properties:
+        claim:
+          $ref: '#/components/schemas/MatchClaim'
+        match_type:
+          $ref: '#/components/schemas/MatchType'
+        match_value:
+          title: Match Value
+          type: string
+      required:
+      - claim
+      - match_type
+      - match_value
+      title: ClaimMatch
+      type: object
+    ClaimUpdate:
+      description: A set of attributes that shall be updated in a claim.
+      properties:
+        revocation_date:
+          format: date-time
+          title: Date of revocation
+          type: string
+      required:
+      - revocation_date
+      title: ClaimUpdate
+      type: object
+    Condition:
+      description: A single condition to check a type and a set of claims
+      properties:
+        matches:
+          items:
+            $ref: '#/components/schemas/ClaimMatch'
+          title: Matches
+          type: array
+        type:
+          $ref: '#/components/schemas/VisaType'
+      required:
+      - type
+      - matches
+      title: Condition
+      type: object
+    Identity:
+      description: A user identity based on an iss/sub pair
+      properties:
+        iss:
+          description: OpenID Issuer
+          format: uri
+          maxLength: 2083
+          minLength: 1
+          title: Issuer
+          type: string
+        sub:
+          description: OpenID Subject
+          title: Subject
+          type: string
+      required:
+      - iss
+      - sub
+      title: Identity
+      type: object
+    MatchClaim:
+      description: Possible visa claim names for conditions
+      enum:
+      - by
+      - source
+      - value
+      title: MatchClaim
+      type: string
+    MatchType:
+      description: Type of matching a claim value
+      enum:
+      - const
+      - pattern
+      - split_pattern
+      title: MatchType
+      type: string
     StatusChange:
       description: Details of a status change
       properties:
@@ -149,14 +402,25 @@ components:
       - deleted
       title: UserStatus
       type: string
+    VisaType:
+      description: Type of a visa
+      enum:
+      - AffiliationAndRole
+      - AcceptedTermsAndPolicies
+      - ResearcherStatus
+      - ControlledAccessGrants
+      - LinkedIdentities
+      - https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0
+      title: VisaType
+      type: string
 info:
   contact:
     email: helpdesk@ghga.de
     name: GHGA
-  description: REST API for managing the GHGA user registry
+  description: REST API for managing the GHGA users and user claims
   license:
     name: Apache 2.0
-  title: User Registry API
+  title: User Management API
   version: 0.1.0
 openapi: 3.0.2
 paths:
@@ -284,6 +548,141 @@ paths:
       summary: Modify user data
       tags:
       - users
+  /users/{user_id}/claims:
+    get:
+      description: Endpoint used to get all claims for a specified user.
+      operationId: get_claims
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: Internal ID of the user
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Claim'
+                title: Response 200 Get Claims Users  User Id  Claims Get
+                type: array
+          description: User claims have been retrieved.
+        '401':
+          description: Not authorized to get user claims.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user ID.
+      summary: Get all claims for a given user
+      tags:
+      - claims
+    post:
+      description: Endpoint used to store a new claim about a user.
+      operationId: post_claim
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: Internal ID of the user
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimCreation'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: Claim was successfully stored.
+        '400':
+          description: Claim cannot be stored.
+        '404':
+          description: The user was not found.
+        '409':
+          description: Claim was already stored.
+        '422':
+          description: Validation error in submitted ID or claims data.
+      summary: Store a user claim
+      tags:
+      - claims
+  /users/{user_id}/claims/{claim_id}:
+    delete:
+      description: Endpoint used to delete an existing user claim.
+      operationId: delete_claim
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: Internal user ID
+          type: string
+      - in: path
+        name: claim_id
+        required: true
+        schema:
+          title: Internal claim ID
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '204':
+          description: User claim was successfully deleted.
+        '404':
+          description: The user claim was not found.
+        '422':
+          description: Validation error in submitted user or claim ID.
+      summary: Delete an existing user claim
+      tags:
+      - claims
+    patch:
+      description: Endpoint used to revoke a claim for a specified user.
+      operationId: patch_claim
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: Internal user ID
+          type: string
+      - in: path
+        name: claim_id
+        required: true
+        schema:
+          title: Internal claim ID
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimUpdate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '204':
+          description: User claim was successfully saved.
+        '404':
+          description: The user claim was not found.
+        '422':
+          description: Validation error in submitted user data.
+      summary: Revoke an existing user claim
+      tags:
+      - claims
 tags:
 - description: User data
   name: users
+- description: User claims
+  name: claims

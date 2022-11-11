@@ -227,17 +227,25 @@
     },
     "db_name": {
       "title": "Db Name",
-      "default": "user-registry",
+      "default": "user-management",
       "env_names": [
         "auth_service_db_name"
       ],
       "type": "string"
     },
-    "user_collection": {
-      "title": "User Collection",
+    "users_collection": {
+      "title": "Users Collection",
       "default": "users",
       "env_names": [
-        "auth_service_user_collection"
+        "auth_service_users_collection"
+      ],
+      "type": "string"
+    },
+    "claims_collection": {
+      "title": "Claims Collection",
+      "default": "claims",
+      "env_names": [
+        "auth_service_claims_collection"
       ],
       "type": "string"
     }

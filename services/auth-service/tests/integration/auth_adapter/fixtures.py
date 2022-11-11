@@ -26,9 +26,10 @@ from auth_service.config import CONFIG
 
 
 @fixture(name="client")
-def fixture_client() -> TestClient:
+def fixture_client() -> Generator[TestClient, None, None]:
     """Get test client for the auth adapter"""
-    return TestClient(main.app)
+    yield TestClient(main.app)
+    main.app.dependency_overrides.clear()
 
 
 @fixture(name="with_basic_auth")

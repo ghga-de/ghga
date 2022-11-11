@@ -8,11 +8,12 @@ auto_reload: true
 basic_auth_pwd: null
 basic_auth_realm: GHGA Data Portal
 basic_auth_user: null
+claims_collection: claims
 cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
-db_name: user-registry
+db_name: user-management
 db_url: mongodb://mongodb:27017/
 docs_url: /docs
 host: 0.0.0.0
@@ -23,5 +24,5 @@ openapi_url: /openapi.json
 port: 8080
 run_auth_adapter: false
 service_name: auth_service
-user_collection: users
+users_collection: users
 workers: 1

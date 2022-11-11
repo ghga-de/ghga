@@ -23,19 +23,19 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=
 )
 from pytest import mark
 
-from auth_service.deps import (
+from auth_service.user_management.user_registry.deps import (
     get_config,
     get_user_dao_factory,
     get_user_dao_factory_config,
 )
-from auth_service.user_management.core.utils import is_internal_id
-from auth_service.user_management.models.dto import (
+from auth_service.user_management.user_registry.models.dto import (
     AcademicTitle,
     StatusChange,
     User,
     UserData,
     UserStatus,
 )
+from auth_service.user_management.user_registry.utils import is_internal_id
 
 
 @mark.asyncio

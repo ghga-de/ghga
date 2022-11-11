@@ -42,3 +42,4 @@ def fixture_client_with_db() -> Generator[TestClient, None, None]:
 
         app.dependency_overrides[get_config] = lambda: config
         yield TestClient(app)
+        app.dependency_overrides.clear()

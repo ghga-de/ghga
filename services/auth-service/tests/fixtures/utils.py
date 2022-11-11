@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utils for fixture handling"""
+"""Utils for testing"""
 
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
-from hexkit.protocols.dao import NoHitsFoundError
+from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
 
 from auth_service.auth_adapter.core.auth import jwt_config
-from auth_service.user_management.models.dto import User, UserStatus
+from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -105,8 +105,14 @@ class DummyUserDao:
             registration_date=datetime(2020, 1, 1),
         )
 
+    async def get_by_id(self, id_: str) -> User:
+        """Get the dummy user via internal ID."""
+        if id_ == self.user.id:
+            return self.user
+        raise ResourceNotFoundError(id_=id_)
+
     async def find_one(self, *, mapping: Mapping[str, Any]) -> Optional[User]:
-        """Find the dummy user via ls_id."""
+        """Find the dummy user via LS-ID."""
         user, ls_id = self.user, mapping.get("ls_id")
         if user and ls_id and ls_id == user.ls_id:
             return user

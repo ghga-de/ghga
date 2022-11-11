@@ -13,4 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for the user management service"""
+"""Claims Repository
+
+The GHGA claims repository holds all of the user claim related data.
+"""

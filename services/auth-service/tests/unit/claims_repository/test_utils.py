@@ -12,8 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""
-This sub-package contains the main business functionality of this service.
-It should not contain any service API-related code.
-"""
+"""Unit tests for the utils module."""
+
+from pytest import mark
+
+from auth_service.user_management.claims_repository.utils import user_exists
+
+from ...fixtures.utils import DummyUserDao
+
+
+@mark.asyncio
+async def test_user_exists():
+    """Test that existence of users can be checked."""
+    user_dao = DummyUserDao(id_="some-internal-id")
+    assert await user_exists(None, user_dao) is False  # type: ignore
+    assert await user_exists("some-internal-id", user_dao) is True
+    assert await user_exists("other-internal-id", user_dao) is False

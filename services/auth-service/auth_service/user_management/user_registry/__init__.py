@@ -13,31 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""User Management
+"""User Registry
 
-This service contains all the functionality for the user data management.
+The GHGA users registry holds all of the user related data.
 """
-
-__version__ = "0.1.0"
-
-VERSION = __version__
-TITLE = "User Management API"
-DESCRIPTION = "REST API for managing the GHGA users and user claims"
-
-# TO DO: the URLs cannot be converted to YAML (openapi_from_app)
-
-CONTACT = {
-    "name": "GHGA",
-    # "url": "https://www.ghga.de/about-us/contact",
-    "email": "helpdesk@ghga.de",
-}
-
-LICENSE_INFO = {
-    "name": "Apache 2.0",
-    # "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
-}
-
-TAGS_METADATA = [
-    {"name": "users", "description": "User data"},
-    {"name": "claims", "description": "User claims"},
-]

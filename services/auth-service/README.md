@@ -92,7 +92,7 @@ Moreover, inside the devcontainer, there are two convenience commands available 
 - `dev_install` - install the service with all development dependencies, installs pre-commit, and applies any migration scripts to the test database (please run that if you are starting the devcontainer for the first time or if you added any python dependencies to the [`./setup.cfg`](./setup.cfg))
 - `dev_launcher` - starts the service with the development config yaml (located in the `./.devcontainer/` dir)
 
-After starting the application with `dev_launcher`, you can access it at the URL http://localhost:8080. You can manage the database using Mongo Express at http://localhost:8081.
+After starting the application with `dev_launcher`, you can access it at the URL http://localhost:8080. You can manage the database using Mongo Express at http://localhost:8088.
 
 If you prefer not to use vscode, you could get a similar setup (without the editor specific features) by running the following commands:
 ``` bash

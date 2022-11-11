@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"Routers for different entity specific routes"
+"""
+This sub-package contains the models used in the claims repository service.
+"""

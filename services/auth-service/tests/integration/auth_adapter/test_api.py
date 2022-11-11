@@ -20,8 +20,8 @@ from datetime import datetime
 
 from fastapi import status
 
-from auth_service.deps import UserDao, get_user_dao
-from auth_service.user_management.models.dto import UserStatus
+from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
+from auth_service.user_management.user_registry.models.dto import UserStatus
 
 from ...fixtures.utils import DummyUserDao, create_access_token, get_claims_from_token
 from .fixtures import (  # noqa: F401; pylint: disable=unused-import

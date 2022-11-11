@@ -12,32 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""User Management
-
-This service contains all the functionality for the user data management.
+"""
+Core utilities for the User Registry.
 """
 
-__version__ = "0.1.0"
+__all__ = ["is_internal_id", "is_external_id"]
 
-VERSION = __version__
-TITLE = "User Management API"
-DESCRIPTION = "REST API for managing the GHGA users and user claims"
 
-# TO DO: the URLs cannot be converted to YAML (openapi_from_app)
+def is_internal_id(id_: str) -> bool:
+    """Check if the passed ID is an internal user id."""
+    if not id_ or not isinstance(id_, str):
+        return False
+    return len(id_) == 36 and id_.count("-") == 4 and "@" not in id_
 
-CONTACT = {
-    "name": "GHGA",
-    # "url": "https://www.ghga.de/about-us/contact",
-    "email": "helpdesk@ghga.de",
-}
 
-LICENSE_INFO = {
-    "name": "Apache 2.0",
-    # "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
-}
-
-TAGS_METADATA = [
-    {"name": "users", "description": "User data"},
-    {"name": "claims", "description": "User claims"},
-]
+def is_external_id(id_: str) -> bool:
+    """Check if the passed ID is an external user id."""
+    if not id_ or not isinstance(id_, str):
+        return False
+    return len(id_) > 8 and id_.count("@") == 1

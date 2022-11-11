@@ -14,22 +14,4 @@
 # limitations under the License.
 #
 
-"""
-Core utilities for the functionality of the User Management Service.
-"""
-
-__all__ = ["is_internal_id", "is_external_id"]
-
-
-def is_internal_id(id_: str) -> bool:
-    """Check if the passed ID is an internal user id."""
-    if not id_ or not isinstance(id_, str):
-        return False
-    return len(id_) == 36 and id_.count("-") == 4 and "@" not in id_
-
-
-def is_external_id(id_: str) -> bool:
-    """Check if the passed ID is an external user id."""
-    if not id_ or not isinstance(id_, str):
-        return False
-    return len(id_) > 8 and id_.count("@") == 1
+"""All inbound and outbound ports of the application."""

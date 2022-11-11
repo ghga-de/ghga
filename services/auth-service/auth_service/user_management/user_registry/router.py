@@ -27,15 +27,15 @@ from hexkit.protocols.dao import (
     ResourceNotFoundError,
 )
 
-from ....deps import Depends, UserDao, get_user_dao
-from ...core.utils import is_external_id, is_internal_id
-from ...models.dto import (
+from .deps import Depends, UserDao, get_user_dao
+from .models.dto import (
     StatusChange,
     User,
     UserCreatableData,
     UserData,
     UserModifiableData,
 )
+from .utils import is_external_id, is_internal_id
 
 __all__ = ["router"]
 

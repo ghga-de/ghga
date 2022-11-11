@@ -27,8 +27,13 @@ from typing import Optional
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from ghga_service_chassis_lib.api import configure_app
 
-from ...config import CONFIG, configure_logging
-from ...deps import Depends, UserDao, get_user_dao
+from auth_service.config import CONFIG, configure_logging
+from auth_service.user_management.user_registry.deps import (
+    Depends,
+    UserDao,
+    get_user_dao,
+)
+
 from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import TokenValidationError, exchange_token
 from .basic import basic_auth
