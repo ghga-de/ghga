@@ -16,15 +16,22 @@
 """Utils for testing"""
 
 import json
-from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any, AsyncIterator, Mapping, Optional
 
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
 
 from auth_service.auth_adapter.core.auth import jwt_config
+from auth_service.config import CONFIG
+from auth_service.user_management.claims_repository.models.dto import (
+    AuthorityLevel,
+    Claim,
+    VisaType,
+)
 from auth_service.user_management.user_registry.models.dto import User, UserStatus
+from auth_service.user_management.utils import DateTimeUTC, now_as_utc
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -52,7 +59,7 @@ def create_access_token(
         sub="john@aai.org",
         foo="bar",
     )
-    iat = int(datetime.now().timestamp())
+    iat = int(now_as_utc().timestamp())
     exp = iat + 60
     if expired:
         iat -= 120
@@ -62,7 +69,7 @@ def create_access_token(
     token = jwt.JWT(header=header, claims=claims)
     token.make_signed_token(key)
     access_token = token.serialize()
-    assert isinstance(access_token, str)
+    assert token and isinstance(access_token, str)
     assert len(access_token) > 50
     assert access_token.count(".") == 2
     return access_token
@@ -76,7 +83,7 @@ def get_claims_from_token(token: str, key: Optional[jwk.JWK] = None) -> dict[str
     if not key:
         key = jwt_config.internal_jwk
     assert isinstance(key, jwk.JWK)
-    assert isinstance(token, str)
+    assert token and isinstance(token, str)
     assert len(token) > 50
     assert token.count(".") == 2
     claims = json.loads(jwt.JWT(jwt=token, key=key).claims)
@@ -89,7 +96,7 @@ class DummyUserDao:
 
     def __init__(
         self,
-        id_="john@ghga.org",
+        id_="john@ghga.de",
         name="John Doe",
         email="john@home.org",
         ls_id="john@aai.org",
@@ -102,7 +109,7 @@ class DummyUserDao:
             ls_id=ls_id,
             status=UserStatus.ACTIVATED,
             status_change=None,
-            registration_date=datetime(2020, 1, 1),
+            registration_date=DateTimeUTC.create(2020, 1, 1),
         )
 
     async def get_by_id(self, id_: str) -> User:
@@ -122,3 +129,42 @@ class DummyUserDao:
         """Update the dummy user."""
         if user.id == self.user.id:
             self.user = user
+
+
+class DummyClaimDao:
+    """ClaimDao that can retrieve a dummy data steward claim."""
+
+    def __init__(self, valid_date=now_as_utc()):
+        """Initialize the dummy ClaimDao"""
+        self.valid_date = valid_date
+        self.invalid_date = valid_date + timedelta(14)
+        self.claim = Claim(
+            id="dummy-claim-id",
+            user_id="james@ghga.de",
+            visa_type=VisaType.GHGA_ROLE,
+            visa_value="data_steward@some.org",
+            source=CONFIG.organization_url,
+            assertion_date=valid_date - timedelta(14),
+            asserted_by=AuthorityLevel.SYSTEM,
+            valid_from=valid_date - timedelta(7),
+            valid_until=valid_date + timedelta(7),
+            creation_date=valid_date - timedelta(10),
+            creation_by="maria@ghga.de",
+        )
+
+    async def get_by_id(self, id_: str) -> Claim:
+        """Get the dummy user claim via its ID."""
+        if id_ == self.claim.id:
+            return self.claim
+        raise ResourceNotFoundError(id_=id_)
+
+    async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[Claim]:
+        """Find all dummy user claims."""
+        claim = self.claim
+        claim_id, user_id, visa_type = claim.id, claim.user_id, claim.visa_type
+        if (
+            mapping.get("id", claim_id) == claim_id
+            and mapping.get("user_id", user_id) == user_id
+            and mapping.get("visa_type", visa_type) == visa_type
+        ):
+            yield claim

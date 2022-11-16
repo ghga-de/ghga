@@ -18,7 +18,7 @@
 This service contains all the functionality for the user data management.
 """
 
-__version__ = "0.1.0"
+from auth_service import __version__
 
 VERSION = __version__
 TITLE = "User Management API"

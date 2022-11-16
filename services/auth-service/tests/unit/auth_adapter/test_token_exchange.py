@@ -16,14 +16,18 @@
 
 """Unit tests for the core token exchange feature"""
 
-from datetime import datetime
-
 from pytest import mark, raises
 
 from auth_service.auth_adapter.core.auth import TokenValidationError, exchange_token
 from auth_service.user_management.user_registry.models.dto import UserStatus
+from auth_service.user_management.utils import now_as_utc
 
-from ...fixtures.utils import DummyUserDao, create_access_token, get_claims_from_token
+from ...fixtures.utils import (
+    DummyClaimDao,
+    DummyUserDao,
+    create_access_token,
+    get_claims_from_token,
+)
 
 
 @mark.asyncio
@@ -52,7 +56,7 @@ async def test_exchanges_token_for_unknown_user_if_requested():
     assert claims["ls_id"] == "john@aai.org"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
 
 @mark.asyncio
@@ -68,8 +72,10 @@ async def test_does_not_exchange_for_unknown_user_if_not_requested():
 async def test_exchanges_access_token_for_a_known_user():
     """Test the token exchange for a valid and already known user."""
     access_token = create_access_token()
-    user_dao = DummyUserDao()
-    internal_token = await exchange_token(access_token, user_dao=user_dao)
+    user_dao, claim_dao = DummyUserDao(), DummyClaimDao()
+    internal_token = await exchange_token(
+        access_token, user_dao=user_dao, claim_dao=claim_dao
+    )
     assert internal_token is not None
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
@@ -77,11 +83,11 @@ async def test_exchanges_access_token_for_a_known_user():
     assert set(claims) == expected_claims
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["id"] == "john@ghga.org"
+    assert claims["id"] == "john@ghga.de"
     assert claims["status"] == "activated"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
     assert user_dao.user.status is UserStatus.ACTIVATED
     assert user_dao.user.status_change is None
 
@@ -90,9 +96,9 @@ async def test_exchanges_access_token_for_a_known_user():
 async def test_does_not_pass_sub_for_a_known_user():
     """Test that the sub claim is never passed for an already known user."""
     access_token = create_access_token()
-    user_dao = DummyUserDao()
+    user_dao, claim_dao = DummyUserDao(), DummyClaimDao()
     internal_token = await exchange_token(
-        access_token, pass_sub=True, user_dao=user_dao
+        access_token, pass_sub=True, user_dao=user_dao, claim_dao=claim_dao
     )
     assert internal_token is not None
     claims = get_claims_from_token(internal_token)
@@ -113,17 +119,17 @@ async def test_exchanges_access_token_when_name_was_changed():
     assert set(claims) == expected_claims
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["id"] == "john@ghga.org"
+    assert claims["id"] == "john@ghga.de"
     assert claims["status"] == "inactivated"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
     status_change = user_dao.user.status_change
     assert status_change is not None
     assert status_change.previous is UserStatus.ACTIVATED
     assert status_change.by is None
     assert status_change.context == "name changed"
-    assert 0 <= (datetime.now() - status_change.change_date).total_seconds() < 5
+    assert 0 <= (now_as_utc() - status_change.change_date).total_seconds() < 5
 
 
 @mark.asyncio
@@ -139,14 +145,33 @@ async def test_exchanges_access_token_when_email_was_changed():
     assert set(claims) == expected_claims
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["id"] == "john@ghga.org"
+    assert claims["id"] == "john@ghga.de"
     assert claims["status"] == "inactivated"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
     status_change = user_dao.user.status_change
     assert status_change is not None
     assert status_change.previous is UserStatus.ACTIVATED
     assert status_change.by is None
     assert status_change.context == "email changed"
-    assert 0 <= (datetime.now() - status_change.change_date).total_seconds() < 5
+    assert 0 <= (now_as_utc() - status_change.change_date).total_seconds() < 5
+
+
+@mark.asyncio
+async def test_adds_role_for_a_known_data_steward():
+    """Test that the internal token contains the role for a data steward."""
+    access_token = create_access_token()
+    user_dao, claim_dao = (DummyUserDao(id_="james@ghga.de"), DummyClaimDao())
+    internal_token = await exchange_token(
+        access_token, user_dao=user_dao, claim_dao=claim_dao
+    )
+    assert internal_token is not None
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"email", "name", "id", "status", "exp", "iat", "role"}
+    assert set(claims) == expected_claims
+    assert claims["id"] == "james@ghga.de"
+    assert claims["status"] == "activated"
+
+    assert claims["role"] == "data_steward"

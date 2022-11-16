@@ -16,8 +16,6 @@
 
 """Unit tests for the core token validation feature"""
 
-from datetime import datetime
-
 from jwcrypto import jwk
 from pytest import raises
 
@@ -27,6 +25,7 @@ from auth_service.auth_adapter.core.auth import (
     jwt_config,
 )
 from auth_service.config import CONFIG
+from auth_service.user_management.utils import now_as_utc
 
 from ...fixtures.utils import create_access_token
 
@@ -58,7 +57,7 @@ def test_decodes_and_validates_a_valid_access_token():
     assert claims["token_class"] == "access_token"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
 
 def test_validates_access_token_with_rsa_signature():

@@ -20,7 +20,7 @@ to authenticate users on the edge and to convert the external access tokens
 from the federated authentication service to internally access tokens.
 """
 
-__version__ = "0.1.0"
+from auth_service import __version__
 
 VERSION = __version__
 TITLE = "Ext Auth Protocol"

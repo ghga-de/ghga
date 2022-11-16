@@ -16,14 +16,20 @@
 """Test the api module"""
 
 from base64 import b64encode
-from datetime import datetime
 
 from fastapi import status
 
+from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 from auth_service.user_management.user_registry.models.dto import UserStatus
+from auth_service.user_management.utils import now_as_utc
 
-from ...fixtures.utils import DummyUserDao, create_access_token, get_claims_from_token
+from ...fixtures.utils import (
+    DummyClaimDao,
+    DummyUserDao,
+    create_access_token,
+    get_claims_from_token,
+)
 from .fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_client,
     fixture_with_basic_auth,
@@ -269,7 +275,7 @@ def test_token_exchange_for_unknown_user(
     assert claims["ls_id"] == "john@aai.org"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
     # gets internal token for POST request to users
     response = client.post("/users", headers={"Authorization": auth})
@@ -292,7 +298,7 @@ def test_token_exchange_for_unknown_user(
     assert claims["ls_id"] == "john@aai.org"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
 
 def test_token_exchange_for_known_user(
@@ -302,6 +308,8 @@ def test_token_exchange_for_known_user(
 
     user_dao: UserDao = DummyUserDao()
     client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    claim_dao: ClaimDao = DummyClaimDao()
+    client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
     user = user_dao.user
 
     # Check that we get an internal token for the user
@@ -328,7 +336,7 @@ def test_token_exchange_for_known_user(
     assert claims["status"] == "activated"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
     # Check that the user is inactivated when the name has changed
     assert user.status is UserStatus.ACTIVATED
@@ -356,7 +364,7 @@ def test_token_exchange_for_known_user(
     assert claims["status"] == "inactivated"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
     # Check that the status was also changed in the database
     user = user_dao.user
@@ -367,7 +375,7 @@ def test_token_exchange_for_known_user(
     assert status_change.previous is UserStatus.ACTIVATED
     assert status_change.by is None
     assert status_change.context == "name changed"
-    assert 0 <= (datetime.now() - status_change.change_date).total_seconds() < 5
+    assert 0 <= (now_as_utc() - status_change.change_date).total_seconds() < 5
 
 
 def test_token_exchange_with_x_token(client):
@@ -409,4 +417,38 @@ def test_token_exchange_with_x_token(client):
     assert claims["ls_id"] == "john@aai.org"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
-    assert claims["iat"] <= int(datetime.now().timestamp()) < claims["exp"]
+    assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
+
+
+def test_token_exchange_for_known_data_steward(
+    client,
+):  # pylint:disable=too-many-statements
+    """Test the token exchange for an authenticated data steward."""
+
+    # add a dummy user who is a data steward
+    user_dao: UserDao = DummyUserDao(id_="james@ghga.de")
+    client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    claim_dao: ClaimDao = DummyClaimDao()
+    client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
+    user = user_dao.user
+
+    auth = f"Bearer {create_access_token()}"
+    response = client.get("/some/path", headers={"Authorization": auth})
+    assert response.status_code == status.HTTP_200_OK
+
+    headers = response.headers
+    internal_token = headers.get("Authorization")
+    assert internal_token
+
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"id", "name", "email", "status", "exp", "iat", "role"}
+
+    assert set(claims) == expected_claims
+    assert claims["id"] == user.id
+    assert claims["name"] == user.name
+    assert claims["email"] == user.email
+    assert claims["status"] == "activated"
+
+    # check that the data steward role appears in the token
+    assert claims["role"] == "data_steward"

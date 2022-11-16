@@ -81,6 +81,9 @@ class Config(ApiConfigBase):
     oidc_authority_url: Optional[str] = "https://proxy.aai.lifescience-ri.eu"
     oidc_client_id: Optional[str] = "ghga-data-portal"
 
+    # the URL used as source for internal claims
+    organization_url: str = "https://ghga.de"
+
     db_url: str = "mongodb://localhost:27017"
     db_name: str = "user-management"
     users_collection: str = "users"

@@ -20,6 +20,7 @@ from datetime import datetime
 from fastapi import status
 
 from auth_service.user_management.user_registry.utils import is_internal_id
+from auth_service.user_management.utils import now_as_utc
 
 from ..fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_client,
@@ -72,7 +73,7 @@ def test_post_user(client_with_db):
     assert is_internal_id(id_)
 
     assert user.pop("status_change") is None
-    date_diff = datetime.now() - datetime.fromisoformat(user.pop("registration_date"))
+    date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == user_data
@@ -97,7 +98,7 @@ def test_post_user_with_minimal_data(client_with_db):
     assert is_internal_id(id_)
 
     assert user.pop("status_change") is None
-    date_diff = datetime.now() - datetime.fromisoformat(user.pop("registration_date"))
+    date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == {**MIN_USER_DATA, **dict.fromkeys(OPT_USER_DATA)}  # type: ignore
@@ -205,7 +206,7 @@ def test_patch_user(client_with_db):
     assert status_change["previous"] == MAX_USER_DATA["status"]
     assert status_change["by"] is None
     assert status_change["context"] == "manual change"
-    date_diff = datetime.now() - datetime.fromisoformat(status_change["change_date"])
+    date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == expected_user
@@ -241,7 +242,7 @@ def test_patch_user_partially(client_with_db):
     assert status_change["previous"] == MAX_USER_DATA["status"]
     assert status_change["by"] is None
     assert status_change["context"] == "manual change"
-    date_diff = datetime.now() - datetime.fromisoformat(status_change["change_date"])
+    date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == expected_user

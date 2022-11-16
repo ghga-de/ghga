@@ -16,14 +16,22 @@
 """Entrypoint of the package"""
 
 import asyncio
+import datetime
 
 from ghga_service_chassis_lib.api import run_server
 
 from .config import CONFIG, Config
 
 
+def assert_tz_is_utc():
+    """Check that the default timezone is set to UTC."""
+    if datetime.datetime.now().astimezone().tzinfo != datetime.timezone.utc:
+        raise RuntimeError("System must be configured to use UTC.")
+
+
 def run(config: Config = CONFIG):
     """Run the service"""
+    assert_tz_is_utc()
     service = "auth_adapter" if config.run_auth_adapter else "user_management"
     print(f"Starting {service} service", service)
     print("Configuration:", CONFIG)

@@ -13,10 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Auth Service
-
-The GHGA auth service contains all services needed for the management,
-authentication and authorization of users.
 """
-
-__version__ = "0.2.0"
+This sub-package contains the main business functionality of this package.
+It should not contain any service API-related code.
+"""

@@ -18,9 +18,12 @@
 
 from pytest import mark
 
-from auth_service.user_management.claims_repository.utils import user_exists
+from auth_service.user_management.claims_repository.core.utils import (
+    is_data_steward,
+    user_exists,
+)
 
-from ...fixtures.utils import DummyUserDao
+from ...fixtures.utils import DummyClaimDao, DummyUserDao
 
 
 @mark.asyncio
@@ -30,3 +33,18 @@ async def test_user_exists():
     assert await user_exists(None, user_dao) is False  # type: ignore
     assert await user_exists("some-internal-id", user_dao) is True
     assert await user_exists("other-internal-id", user_dao) is False
+
+
+@mark.asyncio
+async def test_is_data_steward():
+    """Test check that a user is a data steward."""
+    claim_dao = DummyClaimDao()
+    user_dao = DummyUserDao(id_="james@ghga.de")
+    assert await is_data_steward("james@ghga.de", user_dao, claim_dao)
+    assert not await is_data_steward("john@ghga.de", user_dao, claim_dao)
+    assert not await is_data_steward(
+        "james@ghga.de", user_dao, claim_dao, now=lambda: claim_dao.invalid_date
+    )
+    user_dao = DummyUserDao("jane@ghga.de")
+    assert not await is_data_steward("james@ghga.de", user_dao, claim_dao)
+    assert not await is_data_steward("john@ghga.de", user_dao, claim_dao)

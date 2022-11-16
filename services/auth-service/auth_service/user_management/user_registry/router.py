@@ -17,7 +17,6 @@
 "Routes for managing users"
 
 import logging
-from datetime import datetime
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
@@ -27,6 +26,7 @@ from hexkit.protocols.dao import (
     ResourceNotFoundError,
 )
 
+from ..utils import now_as_utc
 from .deps import Depends, UserDao, get_user_dao
 from .models.dto import (
     StatusChange,
@@ -71,7 +71,7 @@ async def post_user(
         pass
     else:
         raise HTTPException(status_code=409, detail="User was already registered.")
-    full_user_data = UserData(**user_data.dict(), registration_date=datetime.now())
+    full_user_data = UserData(**user_data.dict(), registration_date=now_as_utc())
     try:
         user = await user_dao.insert(full_user_data)
     except Exception as error:
@@ -160,7 +160,7 @@ async def patch_user(
                 previous=user.status,
                 by=current_user_id,
                 context="manual change",
-                change_date=datetime.now(),
+                change_date=now_as_utc(),
             )
         user = user.copy(update=update_data)
         await user_dao.update(user)

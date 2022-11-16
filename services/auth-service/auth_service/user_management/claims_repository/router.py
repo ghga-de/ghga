@@ -17,7 +17,6 @@
 "Routes for managing user claims"
 
 import logging
-from datetime import datetime
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
@@ -25,6 +24,7 @@ from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 
+from ..utils import now_as_utc
 from .deps import ClaimDao, Depends, get_claim_dao
 from .models.dto import Claim, ClaimCreation, ClaimFullCreation, ClaimUpdate
 from .utils import user_exists
@@ -70,7 +70,7 @@ async def post_claim(
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
-    current_date = datetime.now()
+    current_date = now_as_utc()
     current_user_id = "someone"  # needs to be changed
     full_claim = ClaimFullCreation(
         **claim_creation.dict(),

@@ -18,11 +18,12 @@
 Note: we currently use the DTOs also as the core entities.
 """
 
-from datetime import datetime
 from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
+
+from ...utils import DateTimeUTC
 
 __all__ = ["User", "UserData", "UserStatus", "StatusChange"]
 
@@ -60,7 +61,7 @@ class StatusChange(BaseDto):
         description="ID of the user who changed the status",
     )
     context: str = Field(default=None, title="Status change context")
-    change_date: datetime = Field(default=None, title="Date of last change")
+    change_date: DateTimeUTC = Field(default=None, title="Date of last change")
 
 
 class UserCreatableData(BaseDto):
@@ -112,7 +113,7 @@ class UserModifiableData(BaseDto):
 class UserAutomaticData(BaseModel):
     """User data that is automatically created except the ID"""
 
-    registration_date: datetime = Field(default=..., title="Registration date")
+    registration_date: DateTimeUTC = Field(default=..., title="Registration date")
 
     status_change: Optional[StatusChange] = None
 

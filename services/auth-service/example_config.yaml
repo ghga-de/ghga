@@ -21,6 +21,7 @@ log_level: debug
 oidc_authority_url: https://proxy.aai.lifescience-ri.eu
 oidc_client_id: ghga-data-portal
 openapi_url: /openapi.json
+organization_url: https://ghga.de
 port: 8080
 run_auth_adapter: false
 service_name: auth_service

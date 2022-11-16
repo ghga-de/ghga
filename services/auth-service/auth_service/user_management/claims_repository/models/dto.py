@@ -18,11 +18,12 @@
 Note: we currently use the DTOs also as the core entities.
 """
 
-from datetime import datetime
 from enum import Enum
 from typing import Optional, Union
 
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, validator
+
+from ...utils import DateTimeUTC
 
 __all__ = [
     "AuthorityLevel",
@@ -118,13 +119,13 @@ class ClaimCreation(BaseDto):
         example="faculty@home.org",
     )
 
-    assertion_date: datetime = Field(
+    assertion_date: DateTimeUTC = Field(
         ..., title="Assertion date", example="2022-11-30T12:00:00Z"
     )
-    valid_from: datetime = Field(
+    valid_from: DateTimeUTC = Field(
         ..., title="Start date of validity", example="2023-01-01T00:00:00Z"
     )
-    valid_until: datetime = Field(
+    valid_until: DateTimeUTC = Field(
         ..., title="End date of validity", example="2023-12-31T23:59:59Z"
     )
 
@@ -153,7 +154,7 @@ class ClaimCreation(BaseDto):
 class ClaimUpdate(BaseDto):
     """A set of attributes that shall be updated in a claim."""
 
-    revocation_date: datetime = Field(..., title="Date of revocation")
+    revocation_date: DateTimeUTC = Field(..., title="Date of revocation")
 
 
 class ClaimFullCreation(ClaimCreation):
@@ -163,9 +164,9 @@ class ClaimFullCreation(ClaimCreation):
         default=..., title="ID", description="Internally used ID of the user"
     )
 
-    creation_date: datetime = Field(..., title="Date of creation of this claim")
+    creation_date: DateTimeUTC = Field(..., title="Date of creation of this claim")
     creation_by: str = Field(..., title="Who created this claim (user ID)")
-    revocation_date: Optional[datetime] = Field(
+    revocation_date: Optional[DateTimeUTC] = Field(
         None, title="If revoked, date of revocation"
     )
     revocation_by: Optional[str] = Field(None, title="Who revoked this claim (user ID)")

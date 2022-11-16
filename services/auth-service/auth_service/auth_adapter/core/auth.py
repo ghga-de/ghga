@@ -18,7 +18,7 @@
 
 import json
 import logging
-from datetime import datetime
+from datetime import timezone
 from typing import Any, Optional
 
 from hexkit.protocols.dao import NoHitsFoundError
@@ -26,16 +26,21 @@ from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
 
 from auth_service.config import CONFIG, Config
+from auth_service.user_management.claims_repository.core.utils import is_data_steward
+from auth_service.user_management.claims_repository.deps import ClaimDao
 from auth_service.user_management.user_registry.deps import Depends, UserDao
 from auth_service.user_management.user_registry.models.dto import (
     StatusChange,
     User,
     UserStatus,
 )
+from auth_service.user_management.utils import now_as_utc
 
 __all__ = ["exchange_token", "jwt_config"]
 
 log = logging.getLogger(__name__)
+
+UTC = timezone.utc
 
 
 class AuthAdapterError(Exception):
@@ -130,14 +135,17 @@ def _get_inactivated_user(user: User, context: str) -> User:
                 previous=user.status,
                 by=None,
                 context=context,
-                change_date=datetime.now(),
+                change_date=now_as_utc(),
             ),
         )
     )
 
 
 async def exchange_token(
-    external_token: str, pass_sub: bool = False, user_dao: UserDao = Depends()
+    external_token: str,
+    pass_sub: bool = False,
+    user_dao: UserDao = Depends(),
+    claim_dao: ClaimDao = Depends(),
 ) -> str:
     """Exchange the external token against an internal token.
 
@@ -153,6 +161,8 @@ async def exchange_token(
     If the user is not yet registered, and pass_sub is set, then the sub claim
     will be included in the internal token as "ls_id", otherwise an empty string
     will be returned instead of the internal token.
+    If the user has a special internal role, this is passed as the "role"
+    claim of the internal token.
 
     If the external token is invalid a TokenValidationError is raised.
     If the internal token cannot be signed, a TokenSigningError is raised.
@@ -178,6 +188,10 @@ async def exchange_token(
             user = _get_inactivated_user(user, context)
             await user_dao.update(user)
         internal_claims.update(id=user.id, status=user.status)
+        if user.status is UserStatus.ACTIVATED and await is_data_steward(
+            user.id, user_dao=user_dao, claim_dao=claim_dao
+        ):
+            internal_claims.update(role="data_steward")
     internal_token = sign_and_encode_token(internal_claims)
     return internal_token
 

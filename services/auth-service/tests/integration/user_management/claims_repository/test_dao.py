@@ -16,8 +16,6 @@
 
 """Test user specific DAOs."""
 
-from datetime import datetime
-
 from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=unused-import
     mongodb_fixture,
 )
@@ -33,6 +31,7 @@ from auth_service.user_management.claims_repository.models.dto import (
     ClaimFullCreation,
     VisaType,
 )
+from auth_service.user_management.utils import DateTimeUTC
 
 
 @mark.asyncio
@@ -52,11 +51,11 @@ async def test_claim_creation(
         user_id="som-internal-user-id",
         visa_type=VisaType.GHGA_ROLE,
         visa_value="data-steward@ghga.de",
-        assertion_date=datetime(2022, 9, 1),
-        valid_from=datetime(2022, 10, 1),
-        valid_until=datetime(2022, 10, 31),
+        assertion_date=DateTimeUTC.create(2022, 9, 1),
+        valid_from=DateTimeUTC.create(2022, 10, 1),
+        valid_until=DateTimeUTC.create(2022, 10, 31),
         source="https://ghga.de",
-        creation_date=datetime(2022, 9, 15),
+        creation_date=DateTimeUTC.create(2022, 9, 15),
         creation_by="another-internal-user-id",
     )
     claim = await claim_dao.insert(claim_data)
@@ -75,6 +74,3 @@ async def test_claim_creation(
     assert claim.creation_by == claim_data.creation_by
     assert claim.revocation_date is None
     assert claim.revocation_by is None
-
-
-## TEST WITH valid_from > valid_until
