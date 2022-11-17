@@ -61,7 +61,12 @@ class FileUploadReceived(BaseModel):
     """This event is triggered when an new file upload was received."""
 
     file_id: str = Field(
-        ..., description="The public ID of the file as present in the metadata catalog."
+        ...,
+        description="The public ID of the file as present in the metadata catalog.",
+    )
+    submitter_public_key: str = Field(
+        ...,
+        description="The public key of the submitter.",
     )
     upload_date: datetime = Field(
         ...,
