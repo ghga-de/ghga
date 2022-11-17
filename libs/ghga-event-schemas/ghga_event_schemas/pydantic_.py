@@ -234,6 +234,24 @@ class FileStagedForDownload(NonStagedFileRequested):
         title = "file_staged_for_download"
 
 
+class FileDownloadServed(NonStagedFileRequested):
+    """This event type is triggered when a the content of a file was served
+    for download. This event might be useful for auditing."""
+
+    context: str = Field(
+        ...,
+        description=(
+            "The context in which the download was served (e.g. the ID of the data"
+            + " access request)."
+        ),
+    )
+
+    class Config:
+        """Additional Model Config."""
+
+        title = "file_download_served"
+
+
 # Lists event schemas (values) by event types (key):
 schema_registry: dict[str, type[BaseModel]] = {
     "metadata_submission_upserted": MetadataSubmissionUpserted,
@@ -244,4 +262,5 @@ schema_registry: dict[str, type[BaseModel]] = {
     "file_registered_for_download": FileRegisteredForDownload,
     "non_staged_file_requested": NonStagedFileRequested,
     "file_staged_for_download": FileStagedForDownload,
+    "file_download_served": FileDownloadServed,
 }
