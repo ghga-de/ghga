@@ -16,6 +16,7 @@
 
 """Unit tests for the core token validation feature"""
 
+from ghga_service_chassis_lib.utils import now_as_utc
 from jwcrypto import jwk
 from pytest import raises
 
@@ -25,7 +26,6 @@ from auth_service.auth_adapter.core.auth import (
     jwt_config,
 )
 from auth_service.config import CONFIG
-from auth_service.user_management.utils import now_as_utc
 
 from ...fixtures.utils import create_access_token
 

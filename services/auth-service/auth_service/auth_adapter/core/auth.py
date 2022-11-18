@@ -18,9 +18,9 @@
 
 import json
 import logging
-from datetime import timezone
 from typing import Any, Optional
 
+from ghga_service_chassis_lib.utils import now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
@@ -34,13 +34,10 @@ from auth_service.user_management.user_registry.models.dto import (
     User,
     UserStatus,
 )
-from auth_service.user_management.utils import now_as_utc
 
 __all__ = ["exchange_token", "jwt_config"]
 
 log = logging.getLogger(__name__)
-
-UTC = timezone.utc
 
 
 class AuthAdapterError(Exception):

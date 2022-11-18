@@ -20,11 +20,11 @@ Core utilities for the Claims Repository.
 
 from typing import Callable
 
+from ghga_service_chassis_lib.utils import DateTimeUTC, now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import UserDao
 
-from ...utils import DateTimeUTC, now_as_utc
 from ..deps import ClaimDao
 from ..models.dto import VisaType
 from .claims import is_data_steward_claim, is_valid_claim

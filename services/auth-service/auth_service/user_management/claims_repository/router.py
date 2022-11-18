@@ -20,11 +20,11 @@ import logging
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
+from ghga_service_chassis_lib.utils import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 
-from ..utils import now_as_utc
 from .deps import ClaimDao, Depends, get_claim_dao
 from .models.dto import Claim, ClaimCreation, ClaimFullCreation, ClaimUpdate
 from .utils import user_exists

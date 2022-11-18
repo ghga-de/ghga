@@ -18,11 +18,11 @@
 from base64 import b64encode
 
 from fastapi import status
+from ghga_service_chassis_lib.utils import now_as_utc
 
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 from auth_service.user_management.user_registry.models.dto import UserStatus
-from auth_service.user_management.utils import now_as_utc
 
 from ...fixtures.utils import (
     DummyClaimDao,

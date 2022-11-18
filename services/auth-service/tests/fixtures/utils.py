@@ -20,6 +20,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, AsyncIterator, Mapping, Optional
 
+from ghga_service_chassis_lib.utils import DateTimeUTC, now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
 
@@ -31,9 +32,10 @@ from auth_service.user_management.claims_repository.models.dto import (
     VisaType,
 )
 from auth_service.user_management.user_registry.models.dto import User, UserStatus
-from auth_service.user_management.utils import DateTimeUTC, now_as_utc
 
 BASE_DIR = Path(__file__).parent.resolve()
+
+datetime_utc = DateTimeUTC.construct
 
 
 def create_access_token(
@@ -109,7 +111,7 @@ class DummyUserDao:
             ls_id=ls_id,
             status=UserStatus.ACTIVATED,
             status_change=None,
-            registration_date=DateTimeUTC.create(2020, 1, 1),
+            registration_date=datetime_utc(2020, 1, 1),
         )
 
     async def get_by_id(self, id_: str) -> User:

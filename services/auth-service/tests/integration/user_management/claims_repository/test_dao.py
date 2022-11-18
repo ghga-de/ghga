@@ -16,6 +16,7 @@
 
 """Test user specific DAOs."""
 
+from ghga_service_chassis_lib.utils import DateTimeUTC
 from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=unused-import
     mongodb_fixture,
 )
@@ -31,7 +32,8 @@ from auth_service.user_management.claims_repository.models.dto import (
     ClaimFullCreation,
     VisaType,
 )
-from auth_service.user_management.utils import DateTimeUTC
+
+datetime_utc = DateTimeUTC.construct
 
 
 @mark.asyncio
@@ -51,11 +53,11 @@ async def test_claim_creation(
         user_id="som-internal-user-id",
         visa_type=VisaType.GHGA_ROLE,
         visa_value="data-steward@ghga.de",
-        assertion_date=DateTimeUTC.create(2022, 9, 1),
-        valid_from=DateTimeUTC.create(2022, 10, 1),
-        valid_until=DateTimeUTC.create(2022, 10, 31),
+        assertion_date=datetime_utc(2022, 9, 1),
+        valid_from=datetime_utc(2022, 10, 1),
+        valid_until=datetime_utc(2022, 10, 31),
         source="https://ghga.de",
-        creation_date=DateTimeUTC.create(2022, 9, 15),
+        creation_date=datetime_utc(2022, 9, 15),
         creation_by="another-internal-user-id",
     )
     claim = await claim_dao.insert(claim_data)

@@ -20,8 +20,9 @@ Definitions and helper functions for validating user claims.
 
 from typing import Callable
 
+from ghga_service_chassis_lib.utils import DateTimeUTC, now_as_utc
+
 from ....config import CONFIG
-from ...utils import DateTimeUTC, now_as_utc
 from ..models.dto import AuthorityLevel, Claim, VisaType
 
 __all__ = ["is_valid_claim", "is_data_steward_claim"]
