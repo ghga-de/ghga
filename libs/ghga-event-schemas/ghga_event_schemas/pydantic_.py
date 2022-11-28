@@ -19,9 +19,28 @@ Please note, these pydantic-based schemas are the source of thruth for all other
 schema representations such as json-schema.
 """
 
-from datetime import datetime
+from pydantic import BaseModel, Field, validator
 
-from pydantic import BaseModel, Field
+from ghga_event_schemas.validation import validated_upload_date
+
+
+class UploadDateModel(BaseModel):
+    """
+    Custom base model for common datetime validation.
+    Models containing stringified upload_date datetimes should be dervied from this.
+    """
+
+    upload_date: str = Field(
+        ...,
+        description="The date and time when this file was uploaded."
+        + "String format should follow ISO 8601 as produced by datetime.utcnow().isoformat()",
+    )
+
+    @validator("upload_date")
+    @classmethod
+    def check_datetime_format(cls, upload_date):
+        """Validate provided upload date string can be interpreted as datetime"""
+        return validated_upload_date(upload_date)
 
 
 class MetadataSubmissionFiles(BaseModel):
@@ -57,7 +76,7 @@ class MetadataSubmissionUpserted(BaseModel):
         title = "metadata_submission_upserted"
 
 
-class FileUploadReceived(BaseModel):
+class FileUploadReceived(UploadDateModel):
     """This event is triggered when an new file upload was received."""
 
     file_id: str = Field(
@@ -67,10 +86,6 @@ class FileUploadReceived(BaseModel):
     submitter_public_key: str = Field(
         ...,
         description="The public key of the submitter.",
-    )
-    upload_date: datetime = Field(
-        ...,
-        description="The date and time when this file was uploaded.",
     )
     decrypted_size: int = Field(
         ...,
@@ -90,15 +105,11 @@ class FileUploadReceived(BaseModel):
         title = "file_upload_received"
 
 
-class FileUploadValidationSuccess(BaseModel):
+class FileUploadValidationSuccess(UploadDateModel):
     """This event is triggered when an uploaded file was successfully validated."""
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
-    )
-    upload_date: datetime = Field(
-        ...,
-        description="The date and time when this file was uploaded.",
     )
     decrypted_size: int = Field(
         ...,
@@ -152,15 +163,11 @@ class FileUploadValidationSuccess(BaseModel):
         title = "file_upload_validation_success"
 
 
-class FileUploadValidationFailure(BaseModel):
+class FileUploadValidationFailure(UploadDateModel):
     """This event is triggered when an uploaded file failed to validate."""
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
-    )
-    upload_date: datetime = Field(
-        ...,
-        description="The date and time when this file was uploaded.",
     )
     reason: str = Field(
         ...,
@@ -184,16 +191,12 @@ class FileInternallyRegistered(FileUploadValidationSuccess):
         title = "file_internally_registered"
 
 
-class FileRegisteredForDownload(BaseModel):
+class FileRegisteredForDownload(UploadDateModel):
     """This event is triggered when a newly uploaded file becomes available for
     download via a GA4GH DRS-compatible API."""
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
-    )
-    upload_date: datetime = Field(
-        ...,
-        description="The date and time when this file was uploaded.",
     )
     decrypted_sha256: str = Field(
         ...,

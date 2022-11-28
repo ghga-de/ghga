@@ -16,6 +16,7 @@
 """Utils for validating event payloads against event schemas."""
 
 import json
+from datetime import datetime
 from typing import Any, Mapping, TypeVar
 
 import pydantic
@@ -46,3 +47,14 @@ def get_validated_payload(payload: JsonObject, schema: type[Schema]) -> Schema:
         return schema(**payload)
     except pydantic.ValidationError as error:
         raise EventSchemaValidationError(payload=payload, schema=schema) from error
+
+
+def validated_upload_date(upload_date: str):
+    """Ensure that the provided upload date string can be interpreted as a datetime"""
+    try:
+        datetime.fromisoformat(upload_date)
+    except ValueError as exc:
+        raise ValueError(
+            f"Could not convert upload date to datetime: {upload_date}"
+        ) from exc
+    return upload_date

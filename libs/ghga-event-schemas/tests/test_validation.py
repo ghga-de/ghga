@@ -15,9 +15,12 @@
 
 """Test schema validation utils."""
 
+from datetime import datetime
+
 import pytest
 from pydantic import BaseModel
 
+from ghga_event_schemas.pydantic_ import UploadDateModel
 from ghga_event_schemas.validation import (
     EventSchemaValidationError,
     get_validated_payload,
@@ -47,3 +50,17 @@ def test_failure():
 
     with pytest.raises(EventSchemaValidationError):
         _ = get_validated_payload(payload=payload, schema=ExampleSchema)
+
+
+def test_datetime_validation_happy():
+    """Check validation hook for upload date - happy path"""
+    payload = {"upload_date": datetime.utcnow().isoformat()}
+    validated_payload = get_validated_payload(payload=payload, schema=UploadDateModel)
+    assert isinstance(validated_payload, UploadDateModel)
+
+
+def test_datetime_validation_failure():
+    """Check validation hook for upload date with invalid string"""
+    payload = {"upload_date": "test o'clock"}
+    with pytest.raises(EventSchemaValidationError):
+        _ = get_validated_payload(payload=payload, schema=UploadDateModel)
