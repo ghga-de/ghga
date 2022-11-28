@@ -19,7 +19,7 @@ Additional endpoints might be structured in dedicated modules
 (each of them having a sub-router).
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from ghga_service_chassis_lib.api import configure_app
 
 from auth_service.config import CONFIG, configure_logging
@@ -52,7 +52,8 @@ app.include_router(users_router)
 app.include_router(claims_router)
 
 
-@app.get("/", operation_id="index", tags=[], summary="Index")
-async def index():
-    """Index of the User Management Service."""
-    return "Index of the User Management Service"
+@app.get("/health", summary="health", tags=["health"], status_code=status.HTTP_200_OK)
+async def health():
+    """Used to check that this service is alive"""
+
+    return {"status": "OK"}

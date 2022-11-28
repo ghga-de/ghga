@@ -23,7 +23,7 @@ from auth_service.user_management.claims_repository.core.utils import (
     user_exists,
 )
 
-from ...fixtures.utils import DummyClaimDao, DummyUserDao
+from ....fixtures.utils import DummyClaimDao, DummyUserDao
 
 
 @mark.asyncio

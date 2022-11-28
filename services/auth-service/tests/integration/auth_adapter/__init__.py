@@ -14,3 +14,7 @@
 # limitations under the License.
 
 """Integration tests for the auth adapter"""
+
+from ...fixtures import auth_keys
+
+auth_keys.reload_auth_key_config(auth_adapter=True)  # needed for collecting tests

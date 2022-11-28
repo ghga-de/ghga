@@ -13,8 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are exclusively used in unit tests"""
+"""Test configuration for the auth adapter"""
 
-from pathlib import Path
+from pytest import fixture
 
-BASE_DIR = Path(__file__).parent.resolve()
+from ...fixtures import auth_keys
+
+
+@fixture(autouse=True, scope="package")
+def config_for_auth_adapter() -> None:
+    """Set the environment for the auth adapter"""
+    auth_keys.reload_auth_key_config(auth_adapter=True)

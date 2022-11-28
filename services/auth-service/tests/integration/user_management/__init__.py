@@ -14,3 +14,7 @@
 # limitations under the License.
 
 """Integration tests for the user management service"""
+
+from ...fixtures import auth_keys
+
+auth_keys.reload_auth_key_config(auth_adapter=False)  # needed for collecting tests

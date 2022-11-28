@@ -20,6 +20,7 @@ from base64 import b64encode
 from fastapi import status
 from ghga_service_chassis_lib.utils import now_as_utc
 
+from auth_service.auth_adapter.api.headers import get_bearer_token
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 from auth_service.user_management.user_registry.models.dto import UserStatus
@@ -261,10 +262,12 @@ def test_token_exchange_for_unknown_user(
     assert response.json() == {}
 
     headers = response.headers
-    internal_token = headers.get("Authorization")
-    assert internal_token
+    authorization = headers.get("Authorization")
+    assert authorization
     assert "X-Authorization" not in headers
 
+    internal_token = get_bearer_token(authorization)
+    assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
     expected_claims = {"name", "email", "ls_id", "exp", "iat"}
@@ -284,10 +287,12 @@ def test_token_exchange_for_unknown_user(
     assert response.json() == {}
 
     headers = response.headers
-    internal_token = headers.get("Authorization")
-    assert internal_token
+    authorization = headers.get("Authorization")
+    assert authorization
     assert "X-Authorization" not in headers
 
+    internal_token = get_bearer_token(authorization)
+    assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
     expected_claims = {"name", "email", "ls_id", "exp", "iat"}
@@ -321,10 +326,12 @@ def test_token_exchange_for_known_user(
     assert response.json() == {}
 
     headers = response.headers
-    internal_token = headers.get("Authorization")
-    assert internal_token
+    authorization = headers.get("Authorization")
+    assert authorization
     assert "X-Authorization" not in headers
 
+    internal_token = get_bearer_token(authorization)
+    assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
     expected_claims = {"id", "name", "email", "status", "exp", "iat"}
@@ -349,10 +356,12 @@ def test_token_exchange_for_known_user(
     assert response.json() == {}
 
     headers = response.headers
-    internal_token = headers.get("Authorization")
-    assert internal_token
+    authorization = headers.get("Authorization")
+    assert authorization
     assert "X-Authorization" not in headers
 
+    internal_token = get_bearer_token(authorization)
+    assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
     expected_claims = {"id", "name", "email", "status", "exp", "iat"}
@@ -403,10 +412,12 @@ def test_token_exchange_with_x_token(client):
     assert response.json() == {}
 
     headers = response.headers
-    internal_token = headers.get("Authorization")
-    assert internal_token
+    authorization = headers.get("Authorization")
+    assert authorization
     assert "X-Authorization" not in headers
 
+    internal_token = get_bearer_token(authorization)
+    assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
     expected_claims = {"name", "email", "ls_id", "exp", "iat"}
@@ -437,9 +448,11 @@ def test_token_exchange_for_known_data_steward(
     assert response.status_code == status.HTTP_200_OK
 
     headers = response.headers
-    internal_token = headers.get("Authorization")
-    assert internal_token
+    authorization = headers.get("Authorization")
+    assert authorization
 
+    internal_token = get_bearer_token(authorization)
+    assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
     expected_claims = {"id", "name", "email", "status", "exp", "iat", "role"}

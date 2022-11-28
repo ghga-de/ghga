@@ -18,13 +18,15 @@
 import json
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, AsyncIterator, Mapping, Optional
+from typing import Any, AsyncIterator, Mapping, Optional, Union
 
+from fastapi import Request
+from ghga_service_chassis_lib.api import ApiConfigBase
+from ghga_service_chassis_lib.config import config_from_yaml
 from ghga_service_chassis_lib.utils import DateTimeUTC, now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
 
-from auth_service.auth_adapter.core.auth import jwt_config
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.models.dto import (
     AuthorityLevel,
@@ -38,34 +40,69 @@ BASE_DIR = Path(__file__).parent.resolve()
 datetime_utc = DateTimeUTC.construct
 
 
+@config_from_yaml(prefix="test_auth_service")
+class AdditionalConfig(ApiConfigBase):
+    """Config that holds private keys for testing.
+
+    Should be set as additional environment variables when running the test.
+    """
+
+    # full internal key for user management and auth adatper
+    auth_int_keys: str
+    # full external key set for auth adapter
+    auth_ext_keys: Optional[str] = None
+
+
+class SigningKeys:
+    """Signign keys that can be used for testing."""
+
+    internal_jwk: jwk.JWK
+    external_jwk: Optional[jwk.JWKSet]
+
+    def __init__(self):
+        config = AdditionalConfig()
+        self.internal_jwk = jwk.JWK.from_json(config.auth_int_keys)
+        self.external_jwk = (
+            jwk.JWKSet.from_json(config.auth_ext_keys).get_key("test")
+            if config.auth_ext_keys
+            else None
+        )
+
+
+signing_keys = SigningKeys()
+
+
 def create_access_token(
-    key: Optional[jwk.JWK] = None, expired: bool = False, **kwargs
+    key: Optional[jwk.JWK] = None,
+    expired: bool = False,
+    **kwargs: Union[None, int, str],
 ) -> str:
     """Create an external access token that can be used for testing.
 
-    If no signing key is provided, the external_jwks from the global jwt_config is used.
+    If no signing key is provided, the additional test configuration is used.
     """
     if not key:
-        keyset = jwt_config.external_jwks
-        assert isinstance(keyset, jwk.JWKSet)
-        key = keyset.get_key("test")
+        key = signing_keys.external_jwk
     assert isinstance(key, jwk.JWK)
     kty = key["kty"]
     assert kty in ("EC", "RSA")
     header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
-    claims = jwt_config.check_claims.copy()
-    claims.update(
+    claims: dict[str, Union[None, str, int]] = dict(
         name="John Doe",
         email="john@home.org",
-        jti="1234567890",
+        jti="123-456-789-0",
         sub="john@aai.org",
+        iss=CONFIG.oidc_authority_url,
+        client_id=CONFIG.oidc_client_id,
         foo="bar",
+        token_class="access_token",
     )
     iat = int(now_as_utc().timestamp())
-    exp = iat + 60
     if expired:
-        iat -= 120
-        exp -= 120
+        exp = iat - 60 * 10  # expired 10 minutes ago
+        iat = exp - 60 * 10  # created 20 minutes ago
+    else:
+        exp = iat + 60 * 10  # valid for 10 minutes
     claims.update(iat=iat, exp=exp)
     claims.update(kwargs)
     token = jwt.JWT(header=header, claims=claims)
@@ -77,13 +114,61 @@ def create_access_token(
     return access_token
 
 
-def get_claims_from_token(token: str, key: Optional[jwk.JWK] = None) -> dict[str, Any]:
-    """Decode the given JWT token and get its claims.
+def create_internal_token(
+    key: Optional[jwk.JWK] = None,
+    expired: bool = False,
+    **kwargs: Union[None, int, str],
+) -> str:
+    """Create an internal token that can be used for testing.
 
-    If no signing key is provided, the internal_jwk from the global jwt_config is used.
+    If no signing key is provided, the additional test configuration is used.
     """
-    if not key:
-        key = jwt_config.internal_jwk
+    if key is None:
+        key = signing_keys.internal_jwk
+    assert isinstance(key, jwk.JWK)
+    kty = key["kty"]
+    assert kty in ("EC", "RSA")
+    header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
+    claims: dict[str, Union[None, int, str]] = dict(
+        name="John Doe", email="john@home.org", status="activated"
+    )
+    iat = int(now_as_utc().timestamp())
+    if expired:
+        exp = iat - 60 * 10  # expired 10 minutes ago
+        iat = exp - 60 * 10  # created 20 minutes ago
+    else:
+        exp = iat + 60 * 30  # valid for 30 minutes
+    claims.update(iat=iat, exp=exp)
+    claims.update(kwargs)
+    token = jwt.JWT(header=header, claims=claims)
+    token.make_signed_token(key)
+    internal_token = token.serialize()
+    assert token and isinstance(internal_token, str)
+    assert len(internal_token) > 50
+    assert internal_token.count(".") == 2
+    return internal_token
+
+
+def get_headers_for(
+    key: Optional[jwk.JWK] = None,
+    expired: bool = False,
+    **kwargs: Union[None, int, str],
+) -> dict[str, str]:
+    """Create the headers for an internal token with the given arguments.
+
+    If no signing key is provided, the additional test configuration is used.
+    """
+    token = create_internal_token(key=key, expired=expired, **kwargs)
+    return {"Authorization": f"Bearer {token}"}
+
+
+def get_claims_from_token(token: str, key: Optional[jwk.JWK] = None) -> dict[str, Any]:
+    """Decode the given JWT access token and get its claims.
+
+    If no signing key is provided, the additional test configuration is used.
+    """
+    if key is None:
+        key = signing_keys.internal_jwk
     assert isinstance(key, jwk.JWK)
     assert token and isinstance(token, str)
     assert len(token) > 50
@@ -91,6 +176,12 @@ def get_claims_from_token(token: str, key: Optional[jwk.JWK] = None) -> dict[str
     claims = json.loads(jwt.JWT(jwt=token, key=key).claims)
     assert isinstance(claims, dict)
     return claims
+
+
+def request_with_authorization(token: str = "") -> Request:
+    """Get a dummy request with the given bearer token in the authorization header."""
+    authorization = f"Bearer {token}".encode("ascii")
+    return Request(dict(type="http", headers=[(b"authorization", authorization)]))
 
 
 class DummyUserDao:

@@ -16,7 +16,9 @@
 
 """Generate signing keys for testing"""
 
+from importlib import reload
 from os import environ
+from typing import Optional
 
 from jwcrypto import jwk
 
@@ -26,39 +28,76 @@ def generate_jwk() -> jwk.JWK:
     return jwk.JWK.generate(kty="EC", crv="P-256")
 
 
-def generate_auth_ext_keys():
-    """Create external key set (with private keys)."""
-    external_jwks = jwk.JWKSet()
-    external_jwk = generate_jwk()
-    external_jwk["kid"] = "test"
-    external_jwks.add(external_jwk)
-    return external_jwks.export(private_keys=True)
+def generate_jwk_set() -> jwk.JWKSet:
+    """Generate a key set with one test key."""
+    jwk_set = jwk.JWKSet()
+    test_jwk = generate_jwk()
+    test_jwk["kid"] = "test"
+    jwk_set.add(test_jwk)
+    return jwk_set
 
 
-def generate_auth_int_keys():
-    """Create internal key pair."""
-    internal_jwk = generate_jwk()
-    return internal_jwk.export(private_key=True)
-
-
-def generate_keys():
+def generate_keys() -> dict[str, Optional[str]]:
     """Generate dictionary with signing keys."""
-    return dict(
-        AUTH_SERVICE_AUTH_EXT_KEYS=generate_auth_ext_keys(),
-        AUTH_SERVICE_AUTH_INT_KEYS=generate_auth_int_keys(),
+    auth_adapter = environ.get("AUTH_SERVICE_RUN_AUTH_ADAPTER") == "true"
+    int_keys = generate_jwk().export
+    env = dict(
+        AUTH_SERVICE_AUTH_INT_KEYS=int_keys(private_key=auth_adapter),
+        TEST_AUTH_SERVICE_AUTH_INT_KEYS=int_keys(private_key=True),
     )
+    if auth_adapter:
+        ext_keys = generate_jwk_set().export
+        env.update(
+            AUTH_SERVICE_AUTH_EXT_KEYS=ext_keys(private_keys=False),
+            TEST_AUTH_SERVICE_AUTH_EXT_KEYS=ext_keys(private_keys=True),
+        )
+    else:
+        env.update(
+            AUTH_SERVICE_AUTH_EXT_KEYS=None, TEST_AUTH_SERVICE_AUTH_EXT_KEYS=None
+        )
+    return env
 
 
-def set_auth_keys_env():
+def set_auth_keys_env() -> None:
     """Set signing keys as environment variables."""
     for key, value in generate_keys().items():
-        environ[key] = value
+        if value is None:
+            if key in environ:
+                del environ[key]
+        else:
+            environ[key] = value
 
 
-def print_auth_keys_env():
+def print_auth_keys_env() -> None:
     """Print environment for signing keys."""
     for key, value in generate_keys().items():
-        print(f"{key}={value!r}")
+        if value is None:
+            print(f"unset {key}")
+        else:
+            print(f"{key}={value!r}")
+
+
+# pylint: disable=import-outside-toplevel
+def reload_auth_key_config(auth_adapter: bool) -> None:
+    """Reload the configuration for the signing keys."""
+    environ["AUTH_SERVICE_RUN_AUTH_ADAPTER"] = "true" if auth_adapter else "false"
+    set_auth_keys_env()
+    from auth_service.config import CONFIG
+
+    config = CONFIG.__class__()
+    CONFIG.auth_ext_keys = config.auth_ext_keys
+    CONFIG.auth_int_keys = config.auth_int_keys
+
+    if auth_adapter:
+        from auth_service.auth_adapter.core import auth
+    else:
+        from auth_service.user_management import auth  # type: ignore[no-redef]
+
+    reload(auth)
+
+    from . import utils
+
+    reload(utils)
 
 
 if __name__ == "__main__":

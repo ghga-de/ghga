@@ -86,8 +86,9 @@ async def ext_auth(  # pylint:disable=too-many-arguments
             ) from exc
     else:
         internal_token = ""  # nosec
-    # since we cannot delete a header, we set it to an empty string if invalid
-    response.headers["Authorization"] = internal_token
+    # since ExtAuth cannot delete a header, we set it to an empty string if invalid
+    authorization = f"Bearer {internal_token}" if internal_token else ""
+    response.headers["Authorization"] = authorization
     return {}
 
 

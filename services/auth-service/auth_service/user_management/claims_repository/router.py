@@ -25,6 +25,7 @@ from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 
+from ..auth import AuthToken, RequireAuthToken
 from .deps import ClaimDao, Depends, get_claim_dao
 from .models.dto import Claim, ClaimCreation, ClaimFullCreation, ClaimUpdate
 from .utils import user_exists
@@ -35,10 +36,14 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+require_data_steward = Depends(RequireAuthToken(role="data_steward"))
+
 user_not_found_error = HTTPException(status_code=404, detail="The user was not found.")
 claim_not_found_error = HTTPException(
     status_code=404, detail="The user claim was not found."
 )
+own_claim_error = HTTPException(status_code=403, detail="Cannot modify own claims.")
 
 
 @router.post(
@@ -50,6 +55,7 @@ claim_not_found_error = HTTPException(
     responses={
         201: {"model": Claim, "description": "Claim was successfully stored."},
         400: {"description": "Claim cannot be stored."},
+        403: {"description": "Not authorized to create claims."},
         404: {"description": "The user was not found."},
         409: {"description": "Claim was already stored."},
         422: {"description": "Validation error in submitted ID or claims data."},
@@ -65,8 +71,12 @@ async def post_claim(
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
+    auth_token: AuthToken = require_data_steward,
 ) -> Claim:
     """Store a user claim"""
+    if user_id == auth_token.id:
+        raise own_claim_error
+
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
@@ -100,6 +110,7 @@ async def post_claim(
     responses={
         200: {"model": list[Claim], "description": "User claims have been retrieved."},
         401: {"description": "Not authorized to get user claims."},
+        403: {"description": "Not authorized to request claims."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user ID."},
     },
@@ -113,6 +124,7 @@ async def get_claims(
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
+    _auth_token: AuthToken = require_data_steward,
 ) -> list[Claim]:
     """Get all claims for a given user"""
     if not await user_exists(user_id, user_dao):
@@ -121,6 +133,7 @@ async def get_claims(
     return [claim async for claim in claim_dao.find_all(mapping={"user_id": user_id})]
 
 
+# pylint: disable=too-many-arguments
 @router.patch(
     "/users/{user_id}/claims/{claim_id}",
     operation_id="patch_claim",
@@ -129,6 +142,7 @@ async def get_claims(
     description="Endpoint used to revoke a claim for a specified user.",
     responses={
         204: {"description": "User claim was successfully saved."},
+        403: {"description": "Not authorized to modify claims."},
         404: {"description": "The user claim was not found."},
         422: {"description": "Validation error in submitted user data."},
     },
@@ -148,8 +162,12 @@ async def patch_user(
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
+    auth_token: AuthToken = require_data_steward,
 ) -> Response:
     """Revoke an existing user claim"""
+    if user_id == auth_token.id:
+        raise own_claim_error
+
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
@@ -186,6 +204,7 @@ async def patch_user(
     description="Endpoint used to delete an existing user claim.",
     responses={
         204: {"description": "User claim was successfully deleted."},
+        403: {"description": "Not authorized to delete claims."},
         404: {"description": "The user claim was not found."},
         422: {"description": "Validation error in submitted user or claim ID."},
     },
@@ -204,16 +223,23 @@ async def delete_claim(
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
+    auth_token: AuthToken = require_data_steward,
 ) -> Response:
     """Delete an existing user claim"""
+    if user_id == auth_token.id:
+        raise own_claim_error
+
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
+
     try:
         claim = await claim_dao.get_by_id(claim_id)
     except ResourceNotFoundError as error:
         raise claim_not_found_error from error
+
     if claim.user_id != user_id:
         raise claim_not_found_error
+
     try:
         await claim_dao.delete(id_=claim_id)
     except ResourceNotFoundError as error:

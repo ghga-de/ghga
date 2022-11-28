@@ -13,23 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Unit tests for the user management service"""
 
-import asyncio
+from ...fixtures import auth_keys
 
-from ghga_service_chassis_lib.api import run_server
-from ghga_service_chassis_lib.utils import assert_tz_is_utc
-
-from .config import CONFIG, Config
-
-
-def run(config: Config = CONFIG):
-    """Run the service"""
-    assert_tz_is_utc()
-    service = "auth_adapter" if config.run_auth_adapter else "user_management"
-    print(f"Starting {service} service", service)
-    asyncio.run(run_server(app=f"auth_service.{service}.api.main:app", config=config))
-
-
-if __name__ == "__main__":
-    run()
+auth_keys.reload_auth_key_config(auth_adapter=False)  # needed for collecting tests

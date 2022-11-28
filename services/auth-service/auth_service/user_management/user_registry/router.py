@@ -27,6 +27,7 @@ from hexkit.protocols.dao import (
     ResourceNotFoundError,
 )
 
+from ..auth import AuthToken, RequireAuthToken
 from .deps import Depends, UserDao, get_user_dao
 from .models.dto import (
     StatusChange,
@@ -55,16 +56,28 @@ router = APIRouter()
     responses={
         201: {"model": User, "description": "User was successfully registered."},
         400: {"description": "User cannot be registered."},
+        403: {"description": "Not authorized to register user."},
         409: {"description": "User was already registered."},
         422: {"description": "Validation error in submitted user data."},
     },
     status_code=201,
 )
 async def post_user(
-    user_data: UserCreatableData, user_dao: UserDao = Depends(get_user_dao)
+    user_data: UserCreatableData,
+    user_dao: UserDao = Depends(get_user_dao),
+    auth_token: AuthToken = Depends(RequireAuthToken(activated=False)),
 ) -> User:
     """Register a user"""
     ls_id = user_data.ls_id
+    # users can only register themselves
+    if ls_id != auth_token.ls_id:
+        raise HTTPException(status_code=403, detail="Not authorized to register user.")
+    if (
+        auth_token.id  # must not have been already registered
+        or user_data.name != auth_token.name  # specified name must match token
+        or user_data.email != auth_token.email  # specified email must match token
+    ):
+        raise HTTPException(status_code=400, detail="User cannot be registered.")
     try:
         user = await user_dao.find_one(mapping={"ls_id": ls_id})
     except NoHitsFoundError:
@@ -92,6 +105,7 @@ async def post_user(
     responses={
         200: {"model": User, "description": "Requested user has been found."},
         401: {"description": "Not authorized to get user data."},
+        403: {"description": "Not authorized to request user."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user identification."},
     },
@@ -104,8 +118,16 @@ async def get_user(
         title="Internal ID or LS ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
+    auth_token: AuthToken = Depends(RequireAuthToken(activated=False)),
 ) -> User:
     """Get user data"""
+    # Only data steward can request other user accounts
+    if not (
+        auth_token.has_role("data_steward")
+        or (is_external_id(id_) and id_ == auth_token.ls_id)
+        or (is_internal_id(id_) and id_ == auth_token.id)
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized to request user.")
     try:
         if is_external_id(id_):
             user = await user_dao.find_one(mapping={"ls_id": id_})
@@ -122,6 +144,10 @@ async def get_user(
         raise HTTPException(
             status_code=500, detail="The user cannot be requested."
         ) from error
+    if not auth_token.has_role("data_steward"):
+        # only data stewards should be able to see the status change information
+        if user.status_change is not None:
+            user = user.copy(update=dict(status_change=None))
     return user
 
 
@@ -134,6 +160,7 @@ async def get_user(
     " Can only be performed by a data steward or the same user.",
     responses={
         204: {"description": "User data was successfully saved."},
+        403: {"description": "Not authorized to make this modification."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user data."},
     },
@@ -147,18 +174,29 @@ async def patch_user(
         title="Internal ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
+    auth_token: AuthToken = Depends(RequireAuthToken()),
 ) -> Response:
     """Modify user data"""
+    update_data = user_data.dict(exclude_unset=True)
+    # Everybody is allowed to modify their own data except the status,
+    # but only data stewards are allowed to modify other accounts
+    allowed = (
+        "status" not in update_data
+        if id_ == auth_token.id
+        else auth_token.has_role("data_steward")
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to make this modification."
+        )
     try:
         if not is_internal_id(id_):
             raise ResourceNotFoundError(id_=id_)
         user = await user_dao.get_by_id(id_)
-        update_data = user_data.dict(exclude_unset=True)
         if "status" in update_data and update_data["status"] != user.status:
-            current_user_id = None  # fetch from auth token
             update_data["status_change"] = StatusChange(
                 previous=user.status,
-                by=current_user_id,
+                by=auth_token.id,
                 context="manual change",
                 change_date=now_as_utc(),
             )
@@ -186,6 +224,7 @@ async def patch_user(
     " Can only be performed by a data steward.",
     responses={
         204: {"description": "User data was successfully deleted."},
+        403: {"description": "Not authorized to delete this user."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user identification."},
     },
@@ -198,8 +237,13 @@ async def delete_user(
         title="Internal ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
+    auth_token: AuthToken = Depends(RequireAuthToken(role="data_steward")),
 ) -> Response:
     """Delete user"""
+    if id_ == auth_token.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete this user."
+        )
     try:
         if not is_internal_id(id_):
             raise ResourceNotFoundError(id_=id_)

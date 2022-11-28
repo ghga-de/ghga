@@ -413,6 +413,10 @@ components:
       - https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0
       title: VisaType
       type: string
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
 info:
   contact:
     email: helpdesk@ghga.de
@@ -424,17 +428,19 @@ info:
   version: 0.2.1
 openapi: 3.0.2
 paths:
-  /:
+  /health:
     get:
-      description: Index of the User Management Service.
-      operationId: index
+      description: Used to check that this service is alive
+      operationId: health_health_get
       responses:
         '200':
           content:
             application/json:
               schema: {}
           description: Successful Response
-      summary: Index
+      summary: health
+      tags:
+      - health
   /users:
     post:
       description: Endpoint used to register a new user. May only be performed by
@@ -455,10 +461,14 @@ paths:
           description: User was successfully registered.
         '400':
           description: User cannot be registered.
+        '403':
+          description: Not authorized to register user.
         '409':
           description: User was already registered.
         '422':
           description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
       summary: Register a user
       tags:
       - users
@@ -482,10 +492,14 @@ paths:
           description: Successful Response
         '204':
           description: User data was successfully deleted.
+        '403':
+          description: Not authorized to delete this user.
         '404':
           description: The user was not found.
         '422':
           description: Validation error in submitted user identification.
+      security:
+      - HTTPBearer: []
       summary: Delete user
       tags:
       - users
@@ -509,10 +523,14 @@ paths:
           description: Requested user has been found.
         '401':
           description: Not authorized to get user data.
+        '403':
+          description: Not authorized to request user.
         '404':
           description: The user was not found.
         '422':
           description: Validation error in submitted user identification.
+      security:
+      - HTTPBearer: []
       summary: Get user data
       tags:
       - users
@@ -541,10 +559,14 @@ paths:
           description: Successful Response
         '204':
           description: User data was successfully saved.
+        '403':
+          description: Not authorized to make this modification.
         '404':
           description: The user was not found.
         '422':
           description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
       summary: Modify user data
       tags:
       - users
@@ -571,10 +593,14 @@ paths:
           description: User claims have been retrieved.
         '401':
           description: Not authorized to get user claims.
+        '403':
+          description: Not authorized to request claims.
         '404':
           description: The user was not found.
         '422':
           description: Validation error in submitted user ID.
+      security:
+      - HTTPBearer: []
       summary: Get all claims for a given user
       tags:
       - claims
@@ -603,12 +629,16 @@ paths:
           description: Claim was successfully stored.
         '400':
           description: Claim cannot be stored.
+        '403':
+          description: Not authorized to create claims.
         '404':
           description: The user was not found.
         '409':
           description: Claim was already stored.
         '422':
           description: Validation error in submitted ID or claims data.
+      security:
+      - HTTPBearer: []
       summary: Store a user claim
       tags:
       - claims
@@ -637,10 +667,14 @@ paths:
           description: Successful Response
         '204':
           description: User claim was successfully deleted.
+        '403':
+          description: Not authorized to delete claims.
         '404':
           description: The user claim was not found.
         '422':
           description: Validation error in submitted user or claim ID.
+      security:
+      - HTTPBearer: []
       summary: Delete an existing user claim
       tags:
       - claims
@@ -674,10 +708,14 @@ paths:
           description: Successful Response
         '204':
           description: User claim was successfully saved.
+        '403':
+          description: Not authorized to modify claims.
         '404':
           description: The user claim was not found.
         '422':
           description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
       summary: Revoke an existing user claim
       tags:
       - claims

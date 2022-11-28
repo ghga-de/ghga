@@ -14,15 +14,11 @@
 # limitations under the License.
 #
 
-"""Unit tests for the core token signing feature"""
+"""Unit tests for the auth adapter core token signing feature"""
 
 from pytest import raises
 
-from auth_service.auth_adapter.core.auth import (
-    TokenSigningError,
-    jwt_config,
-    sign_and_encode_token,
-)
+from auth_service.auth_adapter.core import auth
 
 from ...fixtures.utils import get_claims_from_token
 
@@ -30,26 +26,14 @@ from ...fixtures.utils import get_claims_from_token
 def test_signs_and_encodes_an_internal_token():
     """Test that internal tokens can be signed and encoded."""
     claims = {"foo": "bar"}
-    internal_token = sign_and_encode_token(claims)
+    internal_token = auth.sign_and_encode_token(claims)
     assert internal_token is not None
     assert get_claims_from_token(internal_token) == claims
 
 
 def test_does_not_sign_an_empty_payload():
     """Test that an empty payload is rejected."""
-    with raises(TokenSigningError, match="No payload"):
-        sign_and_encode_token(None)  # type: ignore
-    with raises(TokenSigningError, match="No payload"):
-        sign_and_encode_token({})
-
-
-def test_does_not_sign_internal_token_when_internal_key_is_missing():
-    """Test that internal tokens cannot be signed without an internal key."""
-    claims = {"foo": "bar"}
-    internal_jwk, jwt_config.internal_jwk = jwt_config.internal_jwk, None
-    try:
-        with raises(TokenSigningError) as exc_info:
-            sign_and_encode_token(claims)
-    finally:
-        jwt_config.internal_jwk = internal_jwk
-    assert str(exc_info.value) == "No internal signing key, cannot sign token."
+    with raises(auth.TokenSigningError, match="No payload"):
+        auth.sign_and_encode_token(None)  # type: ignore
+    with raises(auth.TokenSigningError, match="No payload"):
+        auth.sign_and_encode_token({})

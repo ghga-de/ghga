@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Unit tests for the HTTP Basic authentication feature"""
+"""Unit tests for the auth adapter HTTP Basic authentication feature"""
 
 from fastapi.security import HTTPBasicCredentials
 from pytest import raises

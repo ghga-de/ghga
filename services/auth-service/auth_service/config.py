@@ -64,22 +64,22 @@ class Config(ApiConfigBase):
 
     run_auth_adapter: bool = False
 
-    # internal key pair for auth adapter, internal public key for user management
+    # internal public key for user management (key pair for auth adapter)
     auth_int_keys: Optional[str] = None
-    # external public key set for auth adapter
+    # external public key set for auth adapter (not used for user management)
     auth_ext_keys: Optional[str] = None
     # allowed algorithms for signing external tokens
-    auth_ext_algs: Optional[list[str]] = ["RS256", "ES256"]
+    auth_ext_algs: list[str] = ["RS256", "ES256"]
     # user(s) and password(s) for basic authentication
     basic_auth_user: Optional[str] = None
     # password(s) for basic authentication if not specified above
     basic_auth_pwd: Optional[str] = None
     # realm for basic authentication
-    basic_auth_realm: Optional[str] = "GHGA Data Portal"
+    basic_auth_realm: str = "GHGA Data Portal"
 
     # expected external token content for validation in auth adapter
-    oidc_authority_url: Optional[str] = "https://proxy.aai.lifescience-ri.eu"
-    oidc_client_id: Optional[str] = "ghga-data-portal"
+    oidc_authority_url: str = "https://proxy.aai.lifescience-ri.eu"
+    oidc_client_id: str = "ghga-data-portal"
 
     # the URL used as source for internal claims
     organization_url: str = "https://ghga.de"
