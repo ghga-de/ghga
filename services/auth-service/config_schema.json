@@ -151,6 +151,14 @@
       ],
       "type": "boolean"
     },
+    "api_ext_path": {
+      "title": "Api Ext Path",
+      "default": "/api/auth",
+      "env_names": [
+        "auth_service_api_ext_path"
+      ],
+      "type": "string"
+    },
     "auth_int_keys": {
       "title": "Auth Int Keys",
       "env_names": [

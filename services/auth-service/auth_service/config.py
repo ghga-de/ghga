@@ -64,6 +64,9 @@ class Config(ApiConfigBase):
 
     run_auth_adapter: bool = False
 
+    # extermal API path for the user management as seen by the auth adapter
+    api_ext_path: str = "/api/auth"
+
     # internal public key for user management (key pair for auth adapter)
     auth_int_keys: Optional[str] = None
     # external public key set for auth adapter (not used for user management)

@@ -21,6 +21,7 @@ from fastapi import status
 from ghga_service_chassis_lib.utils import now_as_utc
 
 from auth_service.auth_adapter.api.headers import get_bearer_token
+from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 from auth_service.user_management.user_registry.models.dto import UserStatus
@@ -35,6 +36,11 @@ from .fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_client,
     fixture_with_basic_auth,
 )
+
+API_EXT_PATH = CONFIG.api_ext_path.strip("/")
+if API_EXT_PATH:
+    API_EXT_PATH += "/"
+USERS_PATH = f"/{API_EXT_PATH}users"
 
 
 def test_get_from_root(client):
@@ -236,7 +242,7 @@ def test_token_exchange_for_unknown_user(
     assert "X-Authorization" not in headers
 
     # does not get internal token for GET request to users
-    response = client.get("/users", headers={"Authorization": auth})
+    response = client.get(USERS_PATH, headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -246,7 +252,9 @@ def test_token_exchange_for_unknown_user(
     assert "X-Authorization" not in headers
 
     # does not get internal token for GET request to users with internal ID
-    response = client.get("/users/some-internal-id", headers={"Authorization": auth})
+    response = client.get(
+        f"{USERS_PATH}/some-internal-id", headers={"Authorization": auth}
+    )
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -256,7 +264,9 @@ def test_token_exchange_for_unknown_user(
     assert "X-Authorization" not in headers
 
     # gets internal token for GET request to users with external ID
-    response = client.get("/users/someone@aai.org", headers={"Authorization": auth})
+    response = client.get(
+        f"{USERS_PATH}/someone@aai.org", headers={"Authorization": auth}
+    )
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -281,7 +291,7 @@ def test_token_exchange_for_unknown_user(
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
     # gets internal token for POST request to users
-    response = client.post("/users", headers={"Authorization": auth})
+    response = client.post(USERS_PATH, headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -406,7 +416,7 @@ def test_token_exchange_with_x_token(client):
     assert "X-Authorization" not in headers
 
     # send access token in POST request to users to get the internal token
-    response = client.post("/users", headers={"X-Authorization": auth})
+    response = client.post(USERS_PATH, headers={"X-Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}

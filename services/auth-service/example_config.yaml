@@ -1,3 +1,4 @@
+api_ext_path: /api/auth
 api_root_path: /
 auth_ext_algs:
 - RS256
