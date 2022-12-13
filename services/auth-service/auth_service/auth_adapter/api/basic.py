@@ -79,7 +79,7 @@ def basic_auth(app: FastAPI, config: Config):
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(_request, exc):
-        if "WWW-Authenticate" in exc.headers:
+        if exc.headers and "WWW-Authenticate" in exc.headers:
             return PlainTextResponse(
                 f"{realm}: {exc.detail}",
                 status_code=exc.status_code,
