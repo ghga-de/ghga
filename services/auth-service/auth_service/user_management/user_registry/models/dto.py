@@ -47,6 +47,7 @@ class BaseDto(BaseModel):
     """Base model preconfigured for use as Dto."""
 
     class Config:  # pylint: disable=missing-class-docstring
+        extra = "forbid"
         frozen = True
 
 
@@ -71,9 +72,6 @@ class UserCreatableData(BaseDto):
         title="LS ID",
         description="Life Science ID",
         example="user@lifescience-ri.eu",
-    )
-    status: UserStatus = Field(
-        default=..., title="Status", description="Registration status of the user"
     )
     name: str = Field(
         default=...,
@@ -119,6 +117,10 @@ class UserAutomaticData(BaseModel):
 
 class UserData(UserCreatableData, UserAutomaticData):
     """User data model without the ID"""
+
+    status: UserStatus = Field(
+        default=..., title="Status", description="Registration status of the user"
+    )
 
 
 class User(UserData):

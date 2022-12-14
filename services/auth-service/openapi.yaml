@@ -18,6 +18,7 @@ components:
       title: AuthorityLevel
       type: string
     Claim:
+      additionalProperties: false
       description: A claim about a user with a claim ID
       properties:
         asserted_by:
@@ -114,6 +115,7 @@ components:
       title: Claim
       type: object
     ClaimCreation:
+      additionalProperties: false
       description: A claim made about a user with a user ID
       properties:
         asserted_by:
@@ -184,6 +186,7 @@ components:
       title: ClaimCreation
       type: object
     ClaimMatch:
+      additionalProperties: false
       description: A pair of a claim name and a match value with type
       properties:
         claim:
@@ -200,6 +203,7 @@ components:
       title: ClaimMatch
       type: object
     ClaimUpdate:
+      additionalProperties: false
       description: A set of attributes that shall be updated in a claim.
       properties:
         revocation_date:
@@ -211,6 +215,7 @@ components:
       title: ClaimUpdate
       type: object
     Condition:
+      additionalProperties: false
       description: A single condition to check a type and a set of claims
       properties:
         matches:
@@ -226,6 +231,7 @@ components:
       title: Condition
       type: object
     Identity:
+      additionalProperties: false
       description: A user identity based on an iss/sub pair
       properties:
         iss:
@@ -261,6 +267,7 @@ components:
       title: MatchType
       type: string
     StatusChange:
+      additionalProperties: false
       description: Details of a status change
       properties:
         by:
@@ -281,6 +288,7 @@ components:
       title: StatusChange
       type: object
     User:
+      additionalProperties: false
       description: Complete user model with ID
       properties:
         email:
@@ -329,13 +337,14 @@ components:
       required:
       - registration_date
       - ls_id
-      - status
       - name
       - email
+      - status
       - id
       title: User
       type: object
     UserCreatableData:
+      additionalProperties: false
       description: User data
       properties:
         email:
@@ -361,11 +370,6 @@ components:
         research_topics:
           title: Research topic(s)
           type: string
-        status:
-          allOf:
-          - $ref: '#/components/schemas/UserStatus'
-          description: Registration status of the user
-          title: Status
         title:
           allOf:
           - $ref: '#/components/schemas/AcademicTitle'
@@ -373,12 +377,12 @@ components:
           title: Academic title
       required:
       - ls_id
-      - status
       - name
       - email
       title: UserCreatableData
       type: object
     UserModifiableData:
+      additionalProperties: false
       description: User data that can be modified
       properties:
         status:

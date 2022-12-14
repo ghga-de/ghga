@@ -30,7 +30,6 @@ from ..fixtures import (  # noqa: F401; pylint: disable=unused-import
 
 MIN_USER_DATA = {
     "ls_id": "max@ls.org",
-    "status": "activated",
     "name": "Max Headroom",
     "email": "max@example.org",
 }
@@ -73,6 +72,7 @@ def test_post_user(client_with_db, user_headers):
     id_ = user.pop("id", None)
     assert is_internal_id(id_)
 
+    assert user.pop("status") == "registered"
     assert user.pop("status_change") is None
     date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
     assert 0 <= date_diff.total_seconds() <= 10
@@ -98,6 +98,7 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
     id_ = user.pop("id", None)
     assert is_internal_id(id_)
 
+    assert user.pop("status") == "registered"
     assert user.pop("status_change") is None
     date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
     assert 0 <= date_diff.total_seconds() <= 10
@@ -109,6 +110,15 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
     assert response.status_code == status.HTTP_409_CONFLICT
     error = response.json()
     assert error == {"detail": "User was already registered."}
+
+
+def test_post_user_with_status(client_with_db, user_headers):
+    """Test that status field is rejected when registering a user."""
+
+    user_data = {**MIN_USER_DATA, "status": "activated"}
+    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 def test_post_user_with_different_name(client, user_headers):
@@ -291,10 +301,10 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
     assert response.status_code == status.HTTP_201_CREATED
     id_ = expected_user["id"]
 
-    assert expected_user["status"] == MAX_USER_DATA["status"]
+    assert expected_user["status"] == "registered"
     assert expected_user.pop("status_change") is None
 
-    update_data = {"status": "inactivated", "title": "Prof."}
+    update_data = {"status": "activated", "title": "Prof."}
     assert expected_user["status"] != update_data["status"]
     assert expected_user["title"] != update_data["title"]
     expected_user.update(update_data)
@@ -313,7 +323,7 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
 
     # can get status change as data steward
     status_change = user.pop("status_change")
-    assert status_change["previous"] == MAX_USER_DATA["status"]
+    assert status_change["previous"] == "registered"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
     date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
@@ -344,7 +354,7 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     expected_user = response.json()
     id_ = expected_user["id"]
 
-    assert expected_user["status"] == MAX_USER_DATA["status"]
+    assert expected_user["status"] == "registered"
     assert expected_user.pop("status_change") is None
 
     update_data = {"status": "inactivated"}
@@ -363,7 +373,7 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     user = response.json()
 
     status_change = user.pop("status_change")
-    assert status_change["previous"] == MAX_USER_DATA["status"]
+    assert status_change["previous"] == "registered"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
     date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])

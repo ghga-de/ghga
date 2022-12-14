@@ -35,6 +35,7 @@ from .models.dto import (
     UserCreatableData,
     UserData,
     UserModifiableData,
+    UserStatus,
 )
 from .utils import is_external_id, is_internal_id
 
@@ -84,7 +85,9 @@ async def post_user(
         pass
     else:
         raise HTTPException(status_code=409, detail="User was already registered.")
-    full_user_data = UserData(**user_data.dict(), registration_date=now_as_utc())
+    full_user_data = UserData(
+        **user_data.dict(), status=UserStatus.REGISTERED, registration_date=now_as_utc()
+    )
     try:
         user = await user_dao.insert(full_user_data)
     except Exception as error:
@@ -122,6 +125,13 @@ async def get_user(
 ) -> User:
     """Get user data"""
     # Only data steward can request other user accounts
+    log.info(
+        "Getting user %s with token %s - external %s internal %s",
+        id_,
+        auth_token,
+        is_external_id(id_),
+        is_internal_id(id_),
+    )  # Remove after testing
     if not (
         auth_token.has_role("data_steward")
         or (is_external_id(id_) and id_ == auth_token.ls_id)

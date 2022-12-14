@@ -38,9 +38,8 @@ datetime_utc = DateTimeUTC.construct
     ["foo@bar.org", "https://foo.org", [Identity(iss="https://bar.org", sub="baz")]],
 )
 def test_good_visa_values(value):
-    """Test creating an invalid visa value"""
+    """Test creating a valid visa value"""
     ClaimCreation(
-        user_id="foo-bar",
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value=value,
         assertion_date=datetime_utc(2022, 9, 1, 12, 0),
@@ -66,7 +65,6 @@ def test_bad_visa_values(value):
     """Test creating an invalid visa value"""
     with raises(ValueError):
         ClaimCreation(
-            user_id="foo-bar",
             visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
             visa_value=value,
             assertion_date=datetime_utc(2022, 9, 1, 12, 0),
@@ -79,7 +77,6 @@ def test_bad_visa_values(value):
 def test_conditions():
     """Test creating a complex condition"""
     ClaimCreation(
-        user_id="foo-bar",
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value="baz@foo-bar.org",
         assertion_date=datetime_utc(2022, 9, 1, 12, 0),
@@ -88,7 +85,7 @@ def test_conditions():
         source="https://foo-bar.org",
         sub_source="https://baz.foo-bar.org",
         asserted_by=AuthorityLevel.DAC,
-        condition=[
+        conditions=[
             [
                 Condition(
                     type=VisaType.AFFILIATION_AND_ROLE,
@@ -165,7 +162,6 @@ def test_conditions():
 def test_validator_period(valid_from, valid_until):
     """Test the validator for valid_from and valid_until"""
     ClaimCreation(
-        user_id="foo",
         visa_type=VisaType.RESEARCHER_STATUS,
         visa_value="foo@bar.org",
         assertion_date=datetime_utc(2022, 9, 1, 12, 0),

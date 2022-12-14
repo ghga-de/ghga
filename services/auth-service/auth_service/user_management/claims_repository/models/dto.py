@@ -43,6 +43,7 @@ class BaseDto(BaseModel):
     """Base model preconfigured for use as Dto."""
 
     class Config:  # pylint: disable=missing-class-docstring
+        extra = "forbid"
         frozen = True
 
 

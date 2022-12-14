@@ -59,7 +59,7 @@ async def test_user_creation(
         title=AcademicTitle.DR,
         email="max@example.org",
         research_topics="genes",
-        registration_reasons="for testing",
+        registration_reason="for testing",
         registration_date=datetime_utc(2022, 9, 1, 12, 0),
         status_change=StatusChange(previous=None, by=None, context="test"),
     )
