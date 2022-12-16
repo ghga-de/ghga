@@ -189,7 +189,6 @@ async def exchange_token(
         # user is not yet registered
         if not pass_sub:
             return None
-        internal_claims[jwt_config.copy_sub_as] = sub
     else:
         # user already exists in the registry
         try:
@@ -203,6 +202,8 @@ async def exchange_token(
             user.id, user_dao=user_dao, claim_dao=claim_dao
         ):
             internal_claims.update(role="data_steward")
+    if pass_sub:
+        internal_claims[jwt_config.copy_sub_as] = sub
     return sign_and_encode_token(internal_claims)
 
 

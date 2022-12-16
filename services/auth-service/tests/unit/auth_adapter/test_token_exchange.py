@@ -92,8 +92,8 @@ async def test_exchanges_access_token_for_a_known_user():
 
 
 @mark.asyncio
-async def test_does_not_pass_sub_for_a_known_user():
-    """Test that the sub claim is never passed for an already known user."""
+async def test_also_passes_sub_for_a_known_user():
+    """Test that the sub claim is also passed for an already known user."""
     access_token = create_access_token()
     user_dao, claim_dao = DummyUserDao(), DummyClaimDao()
     internal_token = await auth.exchange_token(
@@ -102,7 +102,8 @@ async def test_does_not_pass_sub_for_a_known_user():
     assert internal_token is not None
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    assert "ls_id" not in claims
+    assert claims["id"] == "john@ghga.de"
+    assert claims["ls_id"] == "john@aai.org"
 
 
 @mark.asyncio
