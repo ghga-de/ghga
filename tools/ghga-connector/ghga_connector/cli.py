@@ -59,16 +59,23 @@ def upload(  # noqa C901
     *,
     file_id: str = typer.Option(..., help="The id if the file to upload"),
     file_path: Path = typer.Option(..., help="The path to the file to upload"),
+    pubkey_path: Path = typer.Argument(
+        "./key.pub",
+        help="The path to a public key from the key pair that was used to encrypt the "
+        + "crypt4gh envelope. Defaults to the file key.pub in the current folder.",
+    ),
 ):
     """
     Command to upload a file
     """
     core.RequestsSession.configure(config.max_retries)
+
     core.upload(
         api_url=config.upload_api,
         file_id=file_id,
         file_path=file_path,
         message_display=CLIMessageDisplay(),
+        pubkey_path=pubkey_path,
     )
 
 

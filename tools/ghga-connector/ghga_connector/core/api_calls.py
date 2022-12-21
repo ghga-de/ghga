@@ -18,11 +18,14 @@
 Contains calls to the GHGA storage API
 """
 
+import base64
 import json
 from enum import Enum
+from pathlib import Path
 from time import sleep
 from typing import Dict, Iterator, Tuple, Union
 
+import crypt4gh.keys
 import requests
 from requests.structures import CaseInsensitiveDict
 
@@ -51,7 +54,12 @@ class UploadStatus(str, Enum):
     UPLOADED = "uploaded"
 
 
-def initiate_multipart_upload(*, api_url: str, file_id: str) -> Tuple[str, int]:
+def initiate_multipart_upload(
+    *,
+    api_url: str,
+    file_id: str,
+    pubkey_path: Path,
+) -> Tuple[str, int]:
     """
     Perform a RESTful API call to initiate a multipart upload
     Returns an upload id and a part size
@@ -60,7 +68,9 @@ def initiate_multipart_upload(*, api_url: str, file_id: str) -> Tuple[str, int]:
     # build url and headers
     url = f"{api_url}/uploads"
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    post_data = {"file_id": file_id}
+    public_key = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode()
+
+    post_data = {"file_id": file_id, "public_key": public_key}
     serialized_data = json.dumps(post_data)
 
     # Make function call to get upload url
@@ -344,12 +354,18 @@ def download_api_call(
     return download_url, file_size, NO_RETRY_TIME
 
 
-def start_multipart_upload(*, api_url: str, file_id: str) -> Tuple[str, int]:
+def start_multipart_upload(
+    *, api_url: str, file_id: str, pubkey_path: Path
+) -> Tuple[str, int]:
     """Try to initiate a multipart upload. If it fails, try to cancel the current upload
     can and then try to initiate a multipart upload again."""
 
     try:
-        multipart_upload = initiate_multipart_upload(api_url=api_url, file_id=file_id)
+        multipart_upload = initiate_multipart_upload(
+            api_url=api_url,
+            file_id=file_id,
+            pubkey_path=pubkey_path,
+        )
         return multipart_upload
     except exceptions.NoUploadPossibleError as error:
         file_metadata = get_file_metadata(api_url=api_url, file_id=file_id)
@@ -363,7 +379,9 @@ def start_multipart_upload(*, api_url: str, file_id: str) -> Tuple[str, int]:
             upload_status=UploadStatus.CANCELLED,
         )
 
-        multipart_upload = initiate_multipart_upload(api_url=api_url, file_id=file_id)
+        multipart_upload = initiate_multipart_upload(
+            api_url=api_url, file_id=file_id, pubkey_path=pubkey_path
+        )
 
     except Exception as error:
         raise error

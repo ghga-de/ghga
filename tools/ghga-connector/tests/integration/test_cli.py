@@ -34,6 +34,9 @@ from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
 from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
+from tests.fixtures.utils import BASE_DIR
+
+PUBLIC_KEY_FILE = BASE_DIR / "keypair/key.pub"
 
 
 @pytest.mark.parametrize(
@@ -184,6 +187,7 @@ def test_upload(
                 upload(
                     file_id=uploadable_file.file_id,
                     file_path=uploadable_file.file_path.resolve(),
+                    pubkey_path=Path(PUBLIC_KEY_FILE),
                 )
 
                 s3_fixture.storage.complete_multipart_upload(
@@ -259,6 +263,7 @@ def test_multipart_upload(
                 upload(
                     file_id=file_id,
                     file_path=Path(file.name),
+                    pubkey_path=Path(PUBLIC_KEY_FILE),
                 )
 
         # confirm upload

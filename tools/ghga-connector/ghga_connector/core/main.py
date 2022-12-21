@@ -50,16 +50,21 @@ def check_url(api_url, *, wait_time=1000) -> bool:
     return True
 
 
-def upload(  # noqa C901, pylint: disable=too-many-statements
+def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
     *,
     api_url: str,
     file_id: str,
     file_path: Path,
     message_display: AbstractMessageDisplay,
+    pubkey_path: Path,
 ) -> None:
     """
     Core command to upload a file. Can be called by CLI, GUI, etc.
     """
+
+    if not os.path.isfile(pubkey_path):
+        message_display.failure(f"The file {pubkey_path} does not exist.")
+        raise exceptions.PubKeyFileDoesNotExistError(pubkey_path=pubkey_path)
 
     if not os.path.isfile(file_path):
         message_display.failure(f"The file {file_path} does not exist.")
@@ -70,7 +75,9 @@ def upload(  # noqa C901, pylint: disable=too-many-statements
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
     try:
-        upload_id, part_size = start_multipart_upload(api_url=api_url, file_id=file_id)
+        upload_id, part_size = start_multipart_upload(
+            api_url=api_url, file_id=file_id, pubkey_path=pubkey_path
+        )
     except exceptions.NoUploadPossibleError as error:
         message_display.failure(
             f"This user can't start a multipart upload for the file_id '{file_id}'"
