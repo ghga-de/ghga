@@ -25,3 +25,4 @@ boto3==1.18.28
 ghga-event-schemas==0.7.4
 hexkit==0.8.1
 ghga-service-chassis-lib==0.16.1
+ghga-connector==0.2.4
