@@ -51,7 +51,7 @@ class StatePatch(BaseModel):
     Model containing a state parameter. Needed for the UCS patch: /uploads/... api call
     """
 
-    upload_status: UploadStatus
+    status: UploadStatus
 
 
 class StatePost(BaseModel):
@@ -293,22 +293,22 @@ async def ulc_post_files_uploads(state: StatePost):
 
 
 @app.post(
-    "/uploads/{upload_id}/parts/{part_no}/signed_posts",
-    summary="ulc_post_uploads_parts_files_signed_posts_mock",
+    "/uploads/{upload_id}/parts/{part_no}/signed_urls",
+    summary="ulc_post_uploads_parts_files_signed_urls_mock",
     status_code=200,
 )
 async def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
     """
-    Mock for the ulc POST /uploads/{upload_id}/parts/{part_no}/signed_posts call.
+    Mock for the ulc POST /uploads/{upload_id}/parts/{part_no}/signed_urls call.
     """
 
     if upload_id == "pending":
         if part_no == 1:
             url = os.environ["S3_UPLOAD_URL_1"]
-            return {"presigned_url": url}
+            return {"url": url}
         if part_no == 2:
             url = os.environ["S3_UPLOAD_URL_2"]
-            return {"presigned_url": url}
+            return {"url": url}
 
     raise HttpException(
         status_code=404,
@@ -324,7 +324,7 @@ async def ulc_patch_uploads(upload_id: str, state: StatePatch):
     """
     Mock for the ulc PATCH /uploads/{upload_id} call
     """
-    upload_status = state.upload_status
+    upload_status = state.status
 
     if upload_id == "uploaded":
         if upload_status == UploadStatus.CANCELLED:

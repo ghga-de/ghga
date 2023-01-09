@@ -113,7 +113,7 @@ def get_part_upload_url(*, api_url: str, upload_id: str, part_no: int):
     """
 
     # build url and headers
-    url = f"{api_url}/uploads/{upload_id}/parts/{part_no}/signed_posts"
+    url = f"{api_url}/uploads/{upload_id}/parts/{part_no}/signed_urls"
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
     # Make function call to get upload url
@@ -141,7 +141,7 @@ def get_part_upload_url(*, api_url: str, upload_id: str, part_no: int):
         raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
     response_body = response.json()
-    presigned_url = response_body["presigned_url"]
+    presigned_url = response_body["url"]
 
     return presigned_url
 
@@ -185,7 +185,7 @@ def patch_multipart_upload(
     # build url and headers
     url = f"{api_url}/uploads/{upload_id}"
     headers = {"Accept": "*/*", "Content-Type": "application/json"}
-    post_data = {"upload_status": upload_status}
+    post_data = {"status": upload_status}
     serialized_data = json.dumps(post_data)
 
     try:
