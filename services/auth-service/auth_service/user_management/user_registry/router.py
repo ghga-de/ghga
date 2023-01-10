@@ -125,6 +125,9 @@ async def get_user(
 ) -> User:
     """Get user data"""
     # Only data steward can request other user accounts
+    log.info(
+        "get_user: %r %r %r", id_, is_external_id(id_), auth_token.ls_id
+    )  # Remove after testing
     if not (
         auth_token.has_role("data_steward")
         or (is_external_id(id_) and id_ == auth_token.ls_id)
