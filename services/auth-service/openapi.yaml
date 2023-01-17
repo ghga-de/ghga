@@ -592,7 +592,7 @@ paths:
               schema:
                 items:
                   $ref: '#/components/schemas/Claim'
-                title: Response 200 Get Claims Users  User Id  Claims Get
+                title: Response 200 Get Claims
                 type: array
           description: User claims have been retrieved.
         '401':
