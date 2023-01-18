@@ -291,6 +291,21 @@ components:
       additionalProperties: false
       description: Complete user model with ID
       properties:
+        active_access_requests:
+          default: []
+          description: List of IDs of all active data access requests created by the
+            user
+          items:
+            type: string
+          title: Access requests
+          type: array
+        active_submissions:
+          default: []
+          description: List of IDs of all active submissions created by the user
+          items:
+            type: string
+          title: Submissions
+          type: array
         email:
           description: Preferred e-mail address of the user
           example: user@home.org
@@ -315,12 +330,6 @@ components:
         registration_date:
           format: date-time
           title: Registration date
-          type: string
-        registration_reason:
-          title: Reason for registration
-          type: string
-        research_topics:
-          title: Research topic(s)
           type: string
         status:
           allOf:
@@ -363,12 +372,6 @@ components:
           description: Full name of the user
           example: Rosalind Franklin
           title: Name
-          type: string
-        registration_reason:
-          title: Reason for registration
-          type: string
-        research_topics:
-          title: Research topic(s)
           type: string
         title:
           allOf:

@@ -58,8 +58,6 @@ async def test_user_creation(
         name="Max Headroom",
         title=AcademicTitle.DR,
         email="max@example.org",
-        research_topics="genes",
-        registration_reason="for testing",
         registration_date=datetime_utc(2022, 9, 1, 12, 0),
         status_change=StatusChange(previous=None, by=None, context="test"),
     )
@@ -70,8 +68,6 @@ async def test_user_creation(
     assert user.name == user_data.name
     assert user.title == user_data.title
     assert user.email == user_data.email
-    assert user.research_topics == user_data.research_topics
-    assert user.registration_reason == user_data.registration_reason
     assert user.registration_date == user_data.registration_date
     assert is_internal_id(user.id)
     assert user.status_change == user_data.status_change

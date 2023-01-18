@@ -36,8 +36,6 @@ MIN_USER_DATA = {
 
 OPT_USER_DATA = {
     "title": "Dr.",
-    "research_topics": "genes",
-    "registration_reason": "for testing",
 }
 
 MAX_USER_DATA = {**MIN_USER_DATA, **OPT_USER_DATA}
@@ -72,10 +70,13 @@ def test_post_user(client_with_db, user_headers):
     id_ = user.pop("id", None)
     assert is_internal_id(id_)
 
-    assert user.pop("status") == "registered"
+    assert user.pop("status") == "activated"
     assert user.pop("status_change") is None
     date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
     assert 0 <= date_diff.total_seconds() <= 10
+
+    assert user.pop("active_submissions") == []
+    assert user.pop("active_access_requests") == []
 
     assert user == user_data
 
@@ -98,10 +99,13 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
     id_ = user.pop("id", None)
     assert is_internal_id(id_)
 
-    assert user.pop("status") == "registered"
+    assert user.pop("status") == "activated"
     assert user.pop("status_change") is None
     date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
     assert 0 <= date_diff.total_seconds() <= 10
+
+    assert user.pop("active_submissions") == []
+    assert user.pop("active_access_requests") == []
 
     assert user == {**MIN_USER_DATA, **dict.fromkeys(OPT_USER_DATA)}  # type: ignore
 
@@ -301,10 +305,10 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
     assert response.status_code == status.HTTP_201_CREATED
     id_ = expected_user["id"]
 
-    assert expected_user["status"] == "registered"
+    assert expected_user["status"] == "activated"
     assert expected_user.pop("status_change") is None
 
-    update_data = {"status": "activated", "title": "Prof."}
+    update_data = {"status": "inactivated", "title": "Prof."}
     assert expected_user["status"] != update_data["status"]
     assert expected_user["title"] != update_data["title"]
     expected_user.update(update_data)
@@ -323,7 +327,7 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
 
     # can get status change as data steward
     status_change = user.pop("status_change")
-    assert status_change["previous"] == "registered"
+    assert status_change["previous"] == "activated"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
     date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
@@ -354,7 +358,7 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     expected_user = response.json()
     id_ = expected_user["id"]
 
-    assert expected_user["status"] == "registered"
+    assert expected_user["status"] == "activated"
     assert expected_user.pop("status_change") is None
 
     update_data = {"status": "inactivated"}
@@ -373,7 +377,7 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     user = response.json()
 
     status_change = user.pop("status_change")
-    assert status_change["previous"] == "registered"
+    assert status_change["previous"] == "activated"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
     date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])

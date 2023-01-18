@@ -45,6 +45,8 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+INITIAL_USER_STATUS = UserStatus.ACTIVATED
+
 
 @router.post(
     "/users",
@@ -86,7 +88,7 @@ async def post_user(
     else:
         raise HTTPException(status_code=409, detail="User was already registered.")
     full_user_data = UserData(
-        **user_data.dict(), status=UserStatus.REGISTERED, registration_date=now_as_utc()
+        **user_data.dict(), status=INITIAL_USER_STATUS, registration_date=now_as_utc()
     )
     try:
         user = await user_dao.insert(full_user_data)

@@ -89,12 +89,6 @@ class UserCreatableData(BaseDto):
         example="user@home.org",
     )
 
-    research_topics: Optional[str] = Field(default=None, title="Research topic(s)")
-
-    registration_reason: Optional[str] = Field(
-        default=None, title="Reason for registration"
-    )
-
 
 class UserModifiableData(BaseDto):
     """User data that can be modified"""
@@ -113,6 +107,17 @@ class UserAutomaticData(BaseModel):
     registration_date: DateTimeUTC = Field(default=..., title="Registration date")
 
     status_change: Optional[StatusChange] = None
+
+    active_submissions: list[str] = Field(
+        default=[],
+        title="Submissions",
+        description="List of IDs of all active submissions created by the user",
+    )
+    active_access_requests: list[str] = Field(
+        default=[],
+        title="Access requests",
+        description="List of IDs of all active data access requests created by the user",
+    )
 
 
 class UserData(UserCreatableData, UserAutomaticData):
