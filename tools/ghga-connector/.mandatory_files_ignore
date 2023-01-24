@@ -1,0 +1,10 @@
+# Optional list of files which are actually mandatory in the template
+# but are allowed to be removed in the current repository
+.devcontainer/dev_launcher
+.github/workflows/dev_cd.yaml
+.github/workflows/unit_and_int_tests.yaml
+Dockerfile
+config_schema.json
+example_config.yaml
+tests/__init__.py
+tests/fixtures/__init__.py
