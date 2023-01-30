@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -130,7 +130,7 @@ def create_internal_token(
     assert kty in ("EC", "RSA")
     header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
     claims: dict[str, Union[None, int, str]] = dict(
-        name="John Doe", email="john@home.org", status="activated"
+        name="John Doe", email="john@home.org", status="active"
     )
     iat = int(now_as_utc().timestamp())
     if expired:
@@ -192,15 +192,16 @@ class DummyUserDao:
         id_="john@ghga.de",
         name="John Doe",
         email="john@home.org",
-        ls_id="john@aai.org",
+        ext_id="john@aai.org",
+        status=UserStatus.ACTIVE,
     ):
         """Initialize the dummy UserDao"""
         self.user = User(
             id=id_,
             name=name,
             email=email,
-            ls_id=ls_id,
-            status=UserStatus.ACTIVATED,
+            ext_id=ext_id,
+            status=status,
             status_change=None,
             registration_date=datetime_utc(2020, 1, 1),
         )
@@ -213,8 +214,8 @@ class DummyUserDao:
 
     async def find_one(self, *, mapping: Mapping[str, Any]) -> Optional[User]:
         """Find the dummy user via LS-ID."""
-        user, ls_id = self.user, mapping.get("ls_id")
-        if user and ls_id and ls_id == user.ls_id:
+        user, ext_id = self.user, mapping.get("ext_id")
+        if user and ext_id and ext_id == user.ext_id:
             return user
         raise NoHitsFoundError(mapping=mapping)
 

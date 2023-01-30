@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,9 +32,10 @@ from .deps import Depends, UserDao, get_user_dao
 from .models.dto import (
     StatusChange,
     User,
-    UserCreatableData,
+    UserBasicData,
     UserData,
     UserModifiableData,
+    UserRegisteredData,
     UserStatus,
 )
 from .utils import is_external_id, is_internal_id
@@ -45,7 +46,7 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
-INITIAL_USER_STATUS = UserStatus.ACTIVATED
+INITIAL_USER_STATUS = UserStatus.ACTIVE
 
 
 @router.post(
@@ -58,7 +59,6 @@ INITIAL_USER_STATUS = UserStatus.ACTIVATED
     " Data delivered by the OIDC provider may not be altered.",
     responses={
         201: {"model": User, "description": "User was successfully registered."},
-        400: {"description": "User cannot be registered."},
         403: {"description": "Not authorized to register user."},
         409: {"description": "User was already registered."},
         422: {"description": "Validation error in submitted user data."},
@@ -66,23 +66,23 @@ INITIAL_USER_STATUS = UserStatus.ACTIVATED
     status_code=201,
 )
 async def post_user(
-    user_data: UserCreatableData,
+    user_data: UserRegisteredData,
     user_dao: UserDao = Depends(get_user_dao),
-    auth_token: AuthToken = Depends(RequireAuthToken(activated=False)),
+    auth_token: AuthToken = Depends(RequireAuthToken(active=False)),
 ) -> User:
     """Register a user"""
-    ls_id = user_data.ls_id
+    ext_id = user_data.ext_id
     # users can only register themselves
-    if ls_id != auth_token.ls_id:
+    if ext_id != auth_token.ext_id:
         raise HTTPException(status_code=403, detail="Not authorized to register user.")
     if (
         auth_token.id  # must not have been already registered
         or user_data.name != auth_token.name  # specified name must match token
         or user_data.email != auth_token.email  # specified email must match token
     ):
-        raise HTTPException(status_code=400, detail="User cannot be registered.")
+        raise HTTPException(status_code=422, detail="User cannot be registered.")
     try:
-        user = await user_dao.find_one(mapping={"ls_id": ls_id})
+        user = await user_dao.find_one(mapping={"ext_id": ext_id})
     except NoHitsFoundError:
         pass
     else:
@@ -95,9 +95,62 @@ async def post_user(
     except Exception as error:
         log.error("Could not insert user: %s", error)
         raise HTTPException(
-            status_code=400, detail="User cannot be registered."
+            status_code=500, detail="User cannot be registered."
         ) from error
     return user
+
+
+@router.put(
+    "/users/{id}",
+    operation_id="put_user",
+    tags=["users"],
+    summary="Update a user",
+    description="Endpoint used to update a registered user"
+    " when their name or email used by LS Login have changed."
+    " May only be performed by the users themselves."
+    " Data delivered by the OIDC provider may not be altered.",
+    responses={
+        204: {"description": "User was successfully updated."},
+        403: {"description": "Not authorized to update user."},
+        422: {"description": "Validation error in submitted user data."},
+    },
+    status_code=204,
+)
+async def put_user(
+    user_data: UserBasicData,
+    id_: str = Path(
+        ...,
+        alias="id",
+        title="Internal ID",
+    ),
+    user_dao: UserDao = Depends(get_user_dao),
+    auth_token: AuthToken = Depends(RequireAuthToken(active=False)),
+) -> Response:
+    """Update a user"""
+    # users can only update themselves,
+    # invalid users are allowed to update themselves in order to become valid again
+    if not (
+        is_internal_id(id_)
+        and id_ == auth_token.id
+        and auth_token.status in (UserStatus.ACTIVE, UserStatus.INVALID)
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized to update user.")
+    if (
+        user_data.name != auth_token.name  # specified name must match token
+        or user_data.email != auth_token.email  # specified email must match token
+    ):
+        raise HTTPException(status_code=422, detail="User cannot be updated.")
+    try:
+        user = await user_dao.get_by_id(id_)
+        user = user.copy(update=user_data.dict())
+        await user_dao.update(user)
+    except Exception as error:
+        log.error("Could not update user: %s", error)
+        raise HTTPException(
+            status_code=500, detail="User cannot be updated."
+        ) from error
+
+    return Response(status_code=204)
 
 
 @router.get(
@@ -120,25 +173,22 @@ async def get_user(
     id_: str = Path(
         ...,
         alias="id",
-        title="Internal ID or LS ID",
+        title="Internal ID or External (LS) ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
-    auth_token: AuthToken = Depends(RequireAuthToken(activated=False)),
+    auth_token: AuthToken = Depends(RequireAuthToken(active=False)),
 ) -> User:
     """Get user data"""
     # Only data steward can request other user accounts
-    log.info(
-        "get_user: %r %r %r", id_, is_external_id(id_), auth_token.ls_id
-    )  # Remove after testing
     if not (
         auth_token.has_role("data_steward")
-        or (is_external_id(id_) and id_ == auth_token.ls_id)
+        or (is_external_id(id_) and id_ == auth_token.ext_id)
         or (is_internal_id(id_) and id_ == auth_token.id)
     ):
         raise HTTPException(status_code=403, detail="Not authorized to request user.")
     try:
         if is_external_id(id_):
-            user = await user_dao.find_one(mapping={"ls_id": id_})
+            user = await user_dao.find_one(mapping={"ext_id": id_})
         elif is_internal_id(id_):
             user = await user_dao.get_by_id(id_)
         else:

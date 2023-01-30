@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,6 @@ Note: If a path_prefix is used for the Emissary AuthService,
 then this must be also specified in the config setting api_root_path.
 """
 
-import logging  # Remove after testing
 from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
@@ -42,8 +41,6 @@ from .basic import basic_auth
 from .headers import get_bearer_token
 
 configure_logging()
-
-log = logging.getLogger(__name__)  # remove after testing
 
 app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
 configure_app(app, config=CONFIG)
@@ -101,9 +98,6 @@ async def ext_auth(  # pylint:disable=too-many-arguments
 
 def path_needs_ext_info(path: str, method: str) -> bool:
     """Check whether the given request path and method need external user info."""
-    log.info(
-        "path_needs_ext_info: %r %r %r", path, method, API_EXT_PATH
-    )  # Remove after testing
     if API_EXT_PATH:
         if not path.startswith(API_EXT_PATH):
             return False

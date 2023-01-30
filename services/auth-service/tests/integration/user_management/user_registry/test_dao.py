@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,8 +53,8 @@ async def test_user_creation(
     user_dao = await user_dao_factory.get_user_dao()
 
     user_data = UserData(
-        ls_id="max@ls.org",
-        status=UserStatus.ACTIVATED,
+        ext_id="max@ls.org",
+        status=UserStatus.ACTIVE,
         name="Max Headroom",
         title=AcademicTitle.DR,
         email="max@example.org",
@@ -63,7 +63,7 @@ async def test_user_creation(
     )
     user = await user_dao.insert(user_data)
     assert user and isinstance(user, User)
-    assert user.ls_id == user_data.ls_id
+    assert user.ext_id == user_data.ext_id
     assert user.status == user_data.status
     assert user.name == user_data.name
     assert user.title == user_data.title

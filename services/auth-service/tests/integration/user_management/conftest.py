@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,9 +29,9 @@ def config_for_user_management() -> None:
 
 @fixture(autouse=True, scope="package")
 def user_headers() -> dict[str, str]:
-    """Get headers with authorization for a user with data steward role."""
+    """Get headers with authorization for an unregistered user."""
     return get_headers_for(
-        ls_id="max@ls.org", name="Max Headroom", email="max@example.org"
+        ext_id="max@ls.org", name="Max Headroom", email="max@example.org"
     )
 
 

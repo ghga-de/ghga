@@ -312,15 +312,15 @@ components:
           format: email
           title: E-Mail
           type: string
+        ext_id:
+          description: External (Life Science) ID
+          example: user@lifescience-ri.eu
+          format: email
+          title: External ID
+          type: string
         id:
           description: Internally used ID
           title: ID
-          type: string
-        ls_id:
-          description: Life Science ID
-          example: user@lifescience-ri.eu
-          format: email
-          title: LS ID
           type: string
         name:
           description: Full name of the user
@@ -345,28 +345,22 @@ components:
           title: Academic title
       required:
       - registration_date
-      - ls_id
       - name
       - email
+      - ext_id
       - status
       - id
       title: User
       type: object
-    UserCreatableData:
+    UserBasicData:
       additionalProperties: false
-      description: User data
+      description: Basic data of a user
       properties:
         email:
           description: Preferred e-mail address of the user
           example: user@home.org
           format: email
           title: E-Mail
-          type: string
-        ls_id:
-          description: Life Science ID
-          example: user@lifescience-ri.eu
-          format: email
-          title: LS ID
           type: string
         name:
           description: Full name of the user
@@ -379,10 +373,9 @@ components:
           description: Academic title of the user
           title: Academic title
       required:
-      - ls_id
       - name
       - email
-      title: UserCreatableData
+      title: UserBasicData
       type: object
     UserModifiableData:
       additionalProperties: false
@@ -400,13 +393,44 @@ components:
           title: Academic title
       title: UserModifiableData
       type: object
+    UserRegisteredData:
+      additionalProperties: false
+      description: Basic data of a registered user
+      properties:
+        email:
+          description: Preferred e-mail address of the user
+          example: user@home.org
+          format: email
+          title: E-Mail
+          type: string
+        ext_id:
+          description: External (Life Science) ID
+          example: user@lifescience-ri.eu
+          format: email
+          title: External ID
+          type: string
+        name:
+          description: Full name of the user
+          example: Rosalind Franklin
+          title: Name
+          type: string
+        title:
+          allOf:
+          - $ref: '#/components/schemas/AcademicTitle'
+          description: Academic title of the user
+          title: Academic title
+      required:
+      - name
+      - email
+      - ext_id
+      title: UserRegisteredData
+      type: object
     UserStatus:
       description: User status enum
       enum:
-      - registered
-      - activated
-      - inactivated
-      - deleted
+      - active
+      - inactive
+      - invalid
       title: UserStatus
       type: string
     VisaType:
@@ -432,7 +456,7 @@ info:
   license:
     name: Apache 2.0
   title: User Management API
-  version: 0.2.2
+  version: 0.2.3
 openapi: 3.0.2
 paths:
   /health:
@@ -457,7 +481,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserCreatableData'
+              $ref: '#/components/schemas/UserRegisteredData'
         required: true
       responses:
         '201':
@@ -466,8 +490,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: User was successfully registered.
-        '400':
-          description: User cannot be registered.
         '403':
           description: Not authorized to register user.
         '409':
@@ -519,7 +541,7 @@ paths:
         name: id
         required: true
         schema:
-          title: Internal ID or LS ID
+          title: Internal ID or External (LS) ID
           type: string
       responses:
         '200':
@@ -575,6 +597,36 @@ paths:
       security:
       - HTTPBearer: []
       summary: Modify user data
+      tags:
+      - users
+    put:
+      description: Endpoint used to update a registered user when their name or email
+        used by LS Login have changed. May only be performed by the users themselves.
+        Data delivered by the OIDC provider may not be altered.
+      operationId: put_user
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          title: Internal ID
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBasicData'
+        required: true
+      responses:
+        '204':
+          description: User was successfully updated.
+        '403':
+          description: Not authorized to update user.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Update a user
       tags:
       - users
   /users/{user_id}/claims:

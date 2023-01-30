@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@ from ..fixtures import (  # noqa: F401; pylint: disable=unused-import
 )
 
 MIN_USER_DATA = {
-    "ls_id": "max@ls.org",
+    "ext_id": "max@ls.org",
     "name": "Max Headroom",
     "email": "max@example.org",
 }
@@ -70,7 +70,7 @@ def test_post_user(client_with_db, user_headers):
     id_ = user.pop("id", None)
     assert is_internal_id(id_)
 
-    assert user.pop("status") == "activated"
+    assert user.pop("status") == "active"
     assert user.pop("status_change") is None
     date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
     assert 0 <= date_diff.total_seconds() <= 10
@@ -99,7 +99,7 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
     id_ = user.pop("id", None)
     assert is_internal_id(id_)
 
-    assert user.pop("status") == "activated"
+    assert user.pop("status") == "active"
     assert user.pop("status_change") is None
     date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
     assert 0 <= date_diff.total_seconds() <= 10
@@ -119,7 +119,7 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
 def test_post_user_with_status(client_with_db, user_headers):
     """Test that status field is rejected when registering a user."""
 
-    user_data = {**MIN_USER_DATA, "status": "activated"}
+    user_data = {**MIN_USER_DATA, "status": "active"}
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -131,7 +131,7 @@ def test_post_user_with_different_name(client, user_headers):
     user_data = {**MAX_USER_DATA, "name": "Max Liebermann"}
     response = client.post("/users", json=user_data, headers=user_headers)
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
     assert error["detail"] == "User cannot be registered."
 
@@ -142,7 +142,7 @@ def test_post_user_with_different_email(client, user_headers):
     user_data = {**MAX_USER_DATA, "email": "max@fake.org"}
     response = client.post("/users", json=user_data, headers=user_headers)
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
     assert error["detail"] == "User cannot be registered."
 
@@ -158,10 +158,10 @@ def test_post_user_with_invalid_email(client, user_headers):
     assert error["detail"][0]["msg"] == "value is not a valid email address"
 
 
-def test_post_user_with_different_ls_id(client, user_headers):
-    """Test that registering a user with a different LS ID does not work."""
+def test_post_user_with_different_ext_id(client, user_headers):
+    """Test that registering a user with a different external ID does not work."""
 
-    user_data = {**MAX_USER_DATA, "ls_id": "frodo@ls.org"}
+    user_data = {**MAX_USER_DATA, "ext_id": "frodo@ls.org"}
     response = client.post("/users", json=user_data, headers=user_headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -169,10 +169,118 @@ def test_post_user_with_different_ls_id(client, user_headers):
     assert error["detail"] == "Not authorized to register user."
 
 
-def test_post_user_unauthenticated(client_with_db, user_headers):
+def test_post_user_unauthenticated(client_with_db):
     """Test that registering a user without authentication does not work."""
 
     response = client_with_db.post("/users", json=MAX_USER_DATA)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error["detail"] == "Not authenticated"
+
+
+def test_put_user(client_with_db, user_headers):
+    """Test that updating a user works."""
+
+    old_data = MAX_USER_DATA
+    response = client_with_db.post("/users", json=old_data, headers=user_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    id_ = response.json()["id"]
+    assert is_internal_id(id_)
+
+    new_data = {"name": "Max Headhall", "email": "head@example.org", "title": "Prof."}
+    for key, value in new_data.items():
+        assert value != old_data[key]
+
+    headers = get_headers_for(id=id_, name=new_data["name"], email=new_data["email"])
+
+    response = client_with_db.put(f"/users/{id_}", json=new_data, headers=headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    response = client_with_db.get(f"/users/{id_}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    user = response.json()
+
+    assert user.pop("id") == id_
+    assert user.pop("ext_id") == old_data["ext_id"]
+    assert user.pop("status") == "active"
+    assert user.pop("status_change") is None
+    date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
+    assert 0 <= date_diff.total_seconds() <= 10
+    assert user.pop("active_submissions") == []
+    assert user.pop("active_access_requests") == []
+
+    assert user == new_data
+
+
+def test_put_nonexisting_user(client_with_db):
+    """Test updating a non-existing user."""
+
+    user_data = MAX_USER_DATA.copy()
+    del user_data["ext_id"]
+
+    id_ = "nonexisting-user-id"
+    headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
+
+    response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_put_user_with_too_much_data(client_with_db):
+    """Test that updating a user with too much data does not work."""
+
+    user_data = MAX_USER_DATA
+    id_ = "nonexisting-user-id"
+    headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
+
+    response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    error = response.json()
+    assert error["detail"][0]["msg"] == "extra fields not permitted"
+
+
+def test_put_user_with_invalid_data(client_with_db):
+    """Test that updating a user with invalid email does not work."""
+
+    user_data = MAX_USER_DATA.copy()
+    del user_data["ext_id"]
+    id_ = "nonexisting-user-id"
+    headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
+
+    user_data["email"] = "invalid"
+
+    response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    error = response.json()
+    assert error["detail"][0]["msg"] == "value is not a valid email address"
+
+
+def test_put_inactive_user(client_with_db, user_headers):
+    """Test updating an inactive user."""
+
+    user_data = MAX_USER_DATA
+    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    id_ = response.json()["id"]
+    assert is_internal_id(id_)
+
+    user_data = user_data.copy()
+    del user_data["ext_id"]
+    headers = get_headers_for(
+        id=id_,
+        name=user_data["name"],
+        email=user_data["email"],
+        status="inactive",
+    )
+    response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_put_user_unauthenticated(client_with_db, user_headers):
+    """Test that updating a user without authentication does not work."""
+
+    response = client_with_db.put("/users/nonexisting-user-id", json=MAX_USER_DATA)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
@@ -229,15 +337,15 @@ def test_get_user_via_id(client_with_db, user_headers):
     assert user == expected_user
 
 
-def test_get_user_via_ls_id(client_with_db, user_headers):
-    """Test that a registered user can be found via LS ID."""
+def test_get_user_via_ext_id(client_with_db, user_headers):
+    """Test that a registered user can be found via external ID."""
 
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     expected_user = response.json()
     assert response.status_code == status.HTTP_201_CREATED
 
-    id_ = expected_user["ls_id"]
+    id_ = expected_user["ext_id"]
     response = client_with_db.get(f"/users/{id_}", headers=user_headers)
 
     assert response.status_code == status.HTTP_200_OK
@@ -256,7 +364,7 @@ def test_get_different_user_as_data_steward(
     assert response.status_code == status.HTTP_201_CREATED
     expected_user = response.json()
 
-    id_ = expected_user["ls_id"]
+    id_ = expected_user["ext_id"]
     response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
 
     assert response.status_code == status.HTTP_200_OK
@@ -305,10 +413,10 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
     assert response.status_code == status.HTTP_201_CREATED
     id_ = expected_user["id"]
 
-    assert expected_user["status"] == "activated"
+    assert expected_user["status"] == "active"
     assert expected_user.pop("status_change") is None
 
-    update_data = {"status": "inactivated", "title": "Prof."}
+    update_data = {"status": "inactive", "title": "Prof."}
     assert expected_user["status"] != update_data["status"]
     assert expected_user["title"] != update_data["title"]
     expected_user.update(update_data)
@@ -327,7 +435,7 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
 
     # can get status change as data steward
     status_change = user.pop("status_change")
-    assert status_change["previous"] == "activated"
+    assert status_change["previous"] == "active"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
     date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
@@ -358,10 +466,10 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     expected_user = response.json()
     id_ = expected_user["id"]
 
-    assert expected_user["status"] == "activated"
+    assert expected_user["status"] == "active"
     assert expected_user.pop("status_change") is None
 
-    update_data = {"status": "inactivated"}
+    update_data = {"status": "inactive"}
     assert expected_user["status"] != update_data["status"]
     expected_user.update(update_data)
 
@@ -377,7 +485,7 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     user = response.json()
 
     status_change = user.pop("status_change")
-    assert status_change["previous"] == "activated"
+    assert status_change["previous"] == "active"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
     date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
@@ -415,7 +523,7 @@ def test_patch_user_as_same_user(client_with_db, user_headers, steward_headers):
     id_ = expected_user["id"]
 
     # check that users cannot change their own status
-    update_data = {"status": "inactivated"}
+    update_data = {"status": "inactive"}
     assert expected_user["status"] != update_data["status"]
     headers = get_headers_for(id=id_, name="Max Headroom", email="max@example.org")
     response = client_with_db.patch(f"/users/{id_}", json=update_data, headers=headers)

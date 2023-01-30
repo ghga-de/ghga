@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,18 +42,18 @@ async def test_rejects_an_expired_access_token():
 async def test_exchanges_token_for_unknown_user_if_requested():
     """Test token exchange for a valid but unknown user with pass_sub flag."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(ls_id="not.john@aai.org")
+    user_dao = DummyUserDao(ext_id="not.john@aai.org")
     internal_token = await auth.exchange_token(
         access_token, pass_sub=True, user_dao=user_dao
     )
     assert internal_token is not None
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"email", "name", "ls_id", "exp", "iat"}
+    expected_claims = {"email", "name", "ext_id", "exp", "iat"}
     assert set(claims) == expected_claims
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["ls_id"] == "john@aai.org"
+    assert claims["ext_id"] == "john@aai.org"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
@@ -63,7 +63,7 @@ async def test_exchanges_token_for_unknown_user_if_requested():
 async def test_does_not_exchange_for_unknown_user_if_not_requested():
     """Test token exchange for a valid but unknown user without pass_sub flag."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(ls_id="not.john@aai.org")
+    user_dao = DummyUserDao(ext_id="not.john@aai.org")
     assert await auth.exchange_token(access_token, user_dao=user_dao) is None
 
 
@@ -83,11 +83,11 @@ async def test_exchanges_access_token_for_a_known_user():
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
     assert claims["id"] == "john@ghga.de"
-    assert claims["status"] == "activated"
+    assert claims["status"] == "active"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
-    assert user_dao.user.status is UserStatus.ACTIVATED
+    assert user_dao.user.status is UserStatus.ACTIVE
     assert user_dao.user.status_change is None
 
 
@@ -103,7 +103,7 @@ async def test_also_passes_sub_for_a_known_user():
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
     assert claims["id"] == "john@ghga.de"
-    assert claims["ls_id"] == "john@aai.org"
+    assert claims["ext_id"] == "john@aai.org"
 
 
 @mark.asyncio
@@ -120,16 +120,13 @@ async def test_exchanges_access_token_when_name_was_changed():
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
     assert claims["id"] == "john@ghga.de"
-    assert claims["status"] == "inactivated"
+    assert claims["status"] == "invalid"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
-    status_change = user_dao.user.status_change
-    assert status_change is not None
-    assert status_change.previous is UserStatus.ACTIVATED
-    assert status_change.by is None
-    assert status_change.context == "name changed"
-    assert 0 <= (now_as_utc() - status_change.change_date).total_seconds() < 5
+    user = user_dao.user
+    assert user.status is UserStatus.ACTIVE
+    assert user.status_change is None
 
 
 @mark.asyncio
@@ -146,16 +143,13 @@ async def test_exchanges_access_token_when_email_was_changed():
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
     assert claims["id"] == "john@ghga.de"
-    assert claims["status"] == "inactivated"
+    assert claims["status"] == "invalid"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
-    status_change = user_dao.user.status_change
-    assert status_change is not None
-    assert status_change.previous is UserStatus.ACTIVATED
-    assert status_change.by is None
-    assert status_change.context == "email changed"
-    assert 0 <= (now_as_utc() - status_change.change_date).total_seconds() < 5
+    user = user_dao.user
+    assert user.status is UserStatus.ACTIVE
+    assert user.status_change is None
 
 
 @mark.asyncio
@@ -172,6 +166,26 @@ async def test_adds_role_for_a_known_data_steward():
     expected_claims = {"email", "name", "id", "status", "exp", "iat", "role"}
     assert set(claims) == expected_claims
     assert claims["id"] == "james@ghga.de"
-    assert claims["status"] == "activated"
+    assert claims["status"] == "active"
 
     assert claims["role"] == "data_steward"
+
+
+@mark.asyncio
+async def test_does_not_add_role_for_a_known_inactive_data_steward():
+    """Test that the token does not contain the role for an inactive data steward."""
+    access_token = create_access_token()
+    user_dao, claim_dao = (
+        DummyUserDao(id_="james@ghga.de", status=UserStatus.INACTIVE),
+        DummyClaimDao(),
+    )
+    internal_token = await auth.exchange_token(
+        access_token, user_dao=user_dao, claim_dao=claim_dao
+    )
+    assert internal_token is not None
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"email", "name", "id", "status", "exp", "iat"}
+    assert set(claims) == expected_claims
+    assert claims["id"] == "james@ghga.de"
+    assert claims["status"] == "inactive"

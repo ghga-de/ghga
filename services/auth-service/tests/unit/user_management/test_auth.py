@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +47,7 @@ def test_decodes_and_validates_an_internal_token():
     }
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
-    assert claims["status"] == "activated"
+    assert claims["status"] == "active"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
@@ -178,7 +178,7 @@ async def test_fetches_internal_token_from_an_authorization_header(fetcher: type
     assert isinstance(token.exp, datetime)
     assert token.exp.tzinfo is UTC
     assert token.iat <= now_as_utc() < token.exp
-    assert token.status == UserStatus.ACTIVATED
+    assert token.status == UserStatus.ACTIVE
 
 
 @mark.parametrize("fetcher", [auth.FetchAuthToken, auth.RequireAuthToken])
@@ -189,7 +189,7 @@ async def test_fetches_internal_token_with_additional_attributes(fetcher: type):
     request = request_with_authorization(
         create_internal_token(
             id="some-internal-id",
-            ls_id="some-id@aai.org",
+            ext_id="some-id@aai.org",
             role="admin@some.hub",
         )
     )
@@ -201,8 +201,8 @@ async def test_fetches_internal_token_with_additional_attributes(fetcher: type):
 
     assert token.name == "John Doe"
     assert token.id == "some-internal-id"
-    assert token.ls_id == "some-id@aai.org"
-    assert token.status == UserStatus.ACTIVATED
+    assert token.ext_id == "some-id@aai.org"
+    assert token.status == UserStatus.ACTIVE
     assert token.role == "admin@some.hub"
 
 
@@ -277,10 +277,10 @@ async def test_does_not_accept_missing_token_when_required():
 
 
 @mark.asyncio
-async def test_accepts_an_inactivated_user_when_optional():
-    """Test that no error is raised when an optional user is inactivated."""
+async def test_accepts_an_inactive_user_when_optional():
+    """Test that no error is raised when an optional user is inactive."""
 
-    request = request_with_authorization(create_internal_token(status="inactivated"))
+    request = request_with_authorization(create_internal_token(status="inactive"))
 
     fetch_auth_token = auth.FetchAuthToken()
     token = await fetch_auth_token(request=request)
@@ -288,14 +288,14 @@ async def test_accepts_an_inactivated_user_when_optional():
     assert isinstance(token, auth.AuthToken)
 
     assert token.name == "John Doe"
-    assert token.status == UserStatus.INACTIVATED
+    assert token.status == UserStatus.INACTIVE
 
 
 @mark.asyncio
-async def test_does_not_accept_inactivated_user_when_required_by_default():
-    """Test that an error is raised when the user is inactivated and required."""
+async def test_does_not_accept_inactive_user_when_required_by_default():
+    """Test that an error is raised when the user is inactive and required."""
 
-    request = request_with_authorization(create_internal_token(status="inactivated"))
+    request = request_with_authorization(create_internal_token(status="inactive"))
     fetch_auth_token = auth.RequireAuthToken()
     with raises(HTTPException) as exc_info:
         assert await fetch_auth_token(request=request) is None
@@ -305,18 +305,18 @@ async def test_does_not_accept_inactivated_user_when_required_by_default():
 
 
 @mark.asyncio
-async def test_can_fetch_an_inactivated_but_required_user():
-    """Test that no error is raised when a required user may be inactivated."""
+async def test_can_fetch_an_inactive_but_required_user():
+    """Test that no error is raised when a required user may be inactive."""
 
-    request = request_with_authorization(create_internal_token(status="inactivated"))
+    request = request_with_authorization(create_internal_token(status="inactive"))
 
-    fetch_auth_token = auth.RequireAuthToken(activated=False)
+    fetch_auth_token = auth.RequireAuthToken(active=False)
     token = await fetch_auth_token(request=request)
     assert token
     assert isinstance(token, auth.AuthToken)
 
     assert token.name == "John Doe"
-    assert token.status == UserStatus.INACTIVATED
+    assert token.status == UserStatus.INACTIVE
 
 
 @mark.parametrize("required_role", [None, "", "admin", "admin@some_hub", "boss"])

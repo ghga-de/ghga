@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@ import json
 import logging
 from typing import Any, Optional
 
-from ghga_service_chassis_lib.utils import now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
@@ -29,11 +28,7 @@ from auth_service.config import CONFIG, Config
 from auth_service.user_management.claims_repository.core.utils import is_data_steward
 from auth_service.user_management.claims_repository.deps import ClaimDao
 from auth_service.user_management.user_registry.deps import Depends, UserDao
-from auth_service.user_management.user_registry.models.dto import (
-    StatusChange,
-    User,
-    UserStatus,
-)
+from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
 __all__ = ["exchange_token", "jwt_config"]
 
@@ -78,7 +73,7 @@ class JWTConfig:
     # the claims that are copied from the external to the internal token
     copied_claims = ("name", "email", "iat", "exp")
     # the key under which the subject is copied from the external token
-    copy_sub_as = "ls_id"
+    copy_sub_as = "ext_id"
 
     def __init__(self, config: Config = CONFIG) -> None:
         """Load the JWT related configuration parameters."""
@@ -125,31 +120,10 @@ class JWTConfig:
 jwt_config = JWTConfig()
 
 
-def _compare_user_data(user: User, external_claims: dict[str, Any]) -> None:
-    """Compare user data and raise an error if there is a mismatch.
-
-    The value of the raised UserDataMismatchError can be used as inactivation context.
-    """
-    if user.status == UserStatus.ACTIVATED:
-        if user.name != external_claims.get("name"):
-            raise UserDataMismatchError("name")
-        if user.email != external_claims.get("email"):
-            raise UserDataMismatchError("email")
-
-
-def _get_inactivated_user(user: User, context: str) -> User:
-    """Get an inactivated copy of the User object."""
-    return user.copy(
-        update=dict(
-            status=UserStatus.INACTIVATED.value,
-            status_change=StatusChange(
-                previous=user.status,
-                by=None,
-                context=context,
-                change_date=now_as_utc(),
-            ),
-        )
-    )
+def _user_data_matches(user: User, external_claims: dict[str, Any]) -> bool:
+    """Check whether the registered user data matches with the external claims."""
+    get = external_claims.get
+    return user.name == get("name") and user.email == get("email")
 
 
 async def exchange_token(
@@ -167,10 +141,11 @@ async def exchange_token(
     external token, and also its issued date and expiry date.
     If the user is already registered, the user id and status will be
     included in the internal token as well.
-    If name or email do not match with the external token, the user
-    is automatically deactivated in the database and internal token.
+    If name or email do not match with the external token, the user status
+    will appear as "invalid" in the internal token, but the actual status
+    will not  be changed in the user registry.
     If the user is not yet registered, and pass_sub is set, then the sub claim
-    will be included in the internal token as "ls_id", otherwise the value None
+    will be included in the internal token as "ext_id", otherwise the value None
     will be returned instead of a token.
     If the user has a special internal role, this is passed as the "role"
     claim of the internal token.
@@ -184,21 +159,20 @@ async def exchange_token(
     }
     sub = external_claims["sub"]
     try:
-        user = await user_dao.find_one(mapping={"ls_id": sub})
+        user = await user_dao.find_one(mapping={"ext_id": sub})
     except NoHitsFoundError:
         # user is not yet registered
         if not pass_sub:
             return None
     else:
         # user already exists in the registry
-        try:
-            _compare_user_data(user, external_claims)
-        except UserDataMismatchError as mismatch:
-            context = f"{mismatch} changed"
-            user = _get_inactivated_user(user, context)
-            await user_dao.update(user)
-        internal_claims.update(id=user.id, status=user.status)
-        if user.status is UserStatus.ACTIVATED and await is_data_steward(
+        status = (
+            user.status
+            if _user_data_matches(user, external_claims)
+            else UserStatus.INVALID
+        )
+        internal_claims.update(id=user.id, status=status)
+        if status is UserStatus.ACTIVE and await is_data_steward(
             user.id, user_dao=user_dao, claim_dao=claim_dao
         ):
             internal_claims.update(role="data_steward")
