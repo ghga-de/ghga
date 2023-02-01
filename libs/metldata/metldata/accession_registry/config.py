@@ -1,4 +1,4 @@
-# Copyright 2021 - 2022 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Subpackage defineing functions for publishing to or subscribing from
-asynchronous messaging topics.
-"""
+"""Config Parameter Modeling and Parsing"""
+
+from pathlib import Path
+
+from pydantic import BaseSettings, Field
+
+
+class Config(BaseSettings):
+    """Config parameters and their defaults."""
+
+    accession_registry_path: Path = Field(
+        ..., description="A file for storing the already registered accesions."
+    )

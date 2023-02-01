@@ -1,4 +1,4 @@
-# Copyright 2021 - 2022 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,21 +15,20 @@
 
 """Config Parameter Modeling and Parsing"""
 
-from ghga_service_chassis_lib.api import ApiConfigBase
-from ghga_service_chassis_lib.config import config_from_yaml
-from ghga_service_chassis_lib.pubsub import PubSubConfigBase
-from ghga_service_chassis_lib.s3 import S3ConfigBase
+from pathlib import Path
 
-from .models import SupportedLanguages
+from pydantic import BaseSettings, Field
 
 
-# Please adapt config prefix and remove unnecessary config bases:
-@config_from_yaml(prefix="my_microservice")
-class Config(ApiConfigBase, PubSubConfigBase, S3ConfigBase):
+class Config(BaseSettings):
     """Config parameters and their defaults."""
 
-    service_name: str = "my_microservice"  # Please adapt
-    language: SupportedLanguages = "Croatian"
-
-
-CONFIG = Config()
+    metadata_model: Path = Field(
+        ..., description="The path to the metadata model defined in LinkML."
+    )
+    submission_store_dir: Path = Field(
+        ..., description="The directory where the submission JSONs will be stored."
+    )
+    source_events_dir: Path = Field(
+        ..., description="The directory to which source events are published as JSON."
+    )

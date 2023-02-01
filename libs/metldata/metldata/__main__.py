@@ -1,4 +1,4 @@
-# Copyright 2021 - 2022 Universität Tübingen, DKFZ and EMBL
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,16 +15,10 @@
 
 """Entrypoint of the package"""
 
-from ghga_service_chassis_lib.api import run_server
 
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
-
-
-def run(config: Config = CONFIG):
+def run():
     """Run the service"""
-    # Please adapt to package name
-    run_server(app="my_microservice.__main__:app", config=config)
+    ...
 
 
 if __name__ == "__main__":

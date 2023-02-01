@@ -18,7 +18,6 @@ docs/README.md
 
 example_data
 
-
 tests/__init__.py
 tests/fixtures/__init__.py
 
