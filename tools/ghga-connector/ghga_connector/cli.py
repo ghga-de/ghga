@@ -86,6 +86,11 @@ def download(  # pylint: disable=too-many-arguments
     output_dir: Path = typer.Option(
         ..., help="The directory to put the downloaded file"
     ),
+    pubkey_path: Path = typer.Argument(
+        "./key.pub",
+        help="The path to a public key from the key pair that will be used to encrypt the "
+        + "crypt4gh envelope. Defaults to the file key.pub in the current folder.",
+    ),
 ):
     """
     Command to download a file
@@ -98,4 +103,5 @@ def download(  # pylint: disable=too-many-arguments
         max_wait_time=config.max_wait_time,
         part_size=config.part_size,
         message_display=CLIMessageDisplay(),
+        pubkey_path=pubkey_path,
     )

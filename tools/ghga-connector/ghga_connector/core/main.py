@@ -165,6 +165,7 @@ def download(  # pylint: disable=too-many-arguments
     part_size: int,
     message_display: AbstractMessageDisplay,
     max_wait_time: int = MAX_WAIT_TIME,
+    pubkey_path: Path,
 ) -> None:
     """
     Core command to download a file. Can be called by CLI, GUI, etc.
@@ -183,6 +184,7 @@ def download(  # pylint: disable=too-many-arguments
         file_id=file_id,
         max_wait_time=max_wait_time,
         message_display=message_display,
+        pubkey_path=pubkey_path,
     )
 
     # perform the download:
@@ -217,7 +219,7 @@ def download_parts(
     part_size: int,
 ) -> None:
     """
-    Downloads a file using a specific download_url via uploading all its parts.
+    Downloads a file using a specific download_url to download all its parts.
     """
 
     file_parts = download_file_parts(

@@ -395,6 +395,7 @@ def await_download_url(
     file_id: str,
     max_wait_time: int,
     message_display: AbstractMessageDisplay,
+    pubkey_path: Path,  # pylint: disable=unused-argument
 ) -> Tuple[str, int]:
     """Wait until download URL can be generated.
     Returns a tuple with two elements:
