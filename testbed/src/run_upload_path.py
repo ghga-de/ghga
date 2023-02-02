@@ -15,20 +15,23 @@
 """This is... UPLOAD!!!"""
 
 import asyncio
+import base64
 import hashlib
 import os
+import sys
 import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import crypt4gh.header
+import crypt4gh.keys
+import crypt4gh.lib
 from ghga_connector.cli import upload
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_chassis_lib.utils import big_temp_file
 from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig, KafkaEventPublisher
-from hexkit.providers.s3 import S3Config
-
-BASE_DIR = Path(__file__).parent.parent
+from hexkit.providers.s3 import S3Config, S3ObjectStorage
 
 
 @config_from_yaml(prefix="tb")
@@ -38,47 +41,103 @@ class Config(S3Config, KafkaConfig):
     Defaults set for not running inside devcontainer.
     """
 
+    db_connection_str: str
     file_metadata_event_topic: str
     file_metadata_event_type: str
     inbox_bucket: str
-    submitter_pubkey: str
+    vault_host: str
+    vault_port: int
+    vault_token: str
 
 
+BASE_DIR = Path(__file__).parent.parent
 CONFIG = Config()
+FILE_SIZE = 20 * 1024**2
+
+sys.set_int_max_str_digits(FILE_SIZE)
 
 
-async def run_upload():
-    """main"""
-    file_id = os.urandom(16).hex()
-    file_size = 20 * 1024**2
-    file_data, file_size, checksum = generate_file(file_size=file_size)
-    await populate_metadata(
-        file_id=file_id, decrypted_size=file_size, decrypted_sha256=checksum
-    )
-    # need path for connector
-    with NamedTemporaryFile() as tmp_file:
-        tmp_file.write(file_data)
-        tmp_file.seek(0)
-        upload_file(file_id=file_id, file_path=tmp_file.name)
+async def delegate_paths():
+    """
+    Generate and upload data for happy and unhappy paths
+    Return file IDs for later checks
+    """
+    unencrypted_data, encrypted_data, checksum = generate_file()
+    print("Uploading unencrypted file (unhappy path)")
+    unencrypted_id = await populate_data(data=unencrypted_data, checksum=checksum)
+    print("Uploading encrypted file (happy path)")
+    encrypted_id = await populate_data(data=encrypted_data, checksum=checksum)
+    return unencrypted_id, encrypted_id
 
 
-def generate_file(file_size: int):
-    """Generate encrypted test file"""
-
-    with big_temp_file(size=file_size) as random_data:
+def generate_file():
+    """Generate encrypted test file, return both unencrypted and encrypted data as bytes"""
+    with big_temp_file(size=FILE_SIZE) as random_data:
         random_data.seek(0)
         data = random_data.read()
-        size = len(data)
         checksum = hashlib.sha256(data).hexdigest()
-        return data, size, checksum
+
+        with NamedTemporaryFile() as encrypted_file:
+            random_data.seek(0)
+            private_key = crypt4gh.keys.get_private_key(
+                filepath=BASE_DIR / "example_data" / "key.sec", callback=lambda: None
+            )
+            pub_key = base64.b64decode("qx5g31H7rdsq7sgkew9ElkLIXvBje4RxDVcAHcJD8XY=")
+            encryption_keys = [(0, private_key, pub_key)]
+            crypt4gh.lib.encrypt(
+                keys=encryption_keys, infile=random_data, outfile=encrypted_file
+            )
+            encrypted_file.seek(0)
+            encrypted_data = encrypted_file.read()
+
+            return data, encrypted_data, checksum
 
 
-async def populate_metadata(file_id: str, decrypted_size: int, decrypted_sha256: str):
+async def populate_data(data: bytes, checksum: str):
+    """Populate events, storage and check initial state"""
+    file_id = os.urandom(16).hex()
+    await populate_metadata_and_upload(
+        file_id=file_id,
+        file_name=file_id,
+        data=data,
+        size=FILE_SIZE,
+        checksum=checksum,
+    )
+    await check_objectstorage(file_id=file_id)
+    return file_id
+
+
+async def populate_metadata_and_upload(
+    file_id: str, file_name: str, data: bytes, size: int, checksum: str
+):
+    """Generate and send metadata event, afterwards upload data to object storage"""
+    await populate_metadata(
+        file_id=file_id,
+        file_name=file_name,
+        decrypted_size=size,
+        decrypted_sha256=checksum,
+    )
+    # wait for possible delays in event delivery
+    time.sleep(15)
+    with NamedTemporaryFile() as tmp_file:
+        tmp_file.write(data)
+        tmp_file.flush()
+        tmp_file.seek(0)
+        upload(
+            file_id=file_id,
+            file_path=tmp_file.name,
+            pubkey_path=BASE_DIR / "example_data" / "key.pub",
+        )
+
+
+async def populate_metadata(
+    file_id: str, file_name: str, decrypted_size: int, decrypted_sha256: str
+):
     """Populate metadedata submission schema and send event for UCS"""
     metadata_files = [
         event_schemas.MetadataSubmissionFiles(
             file_id=file_id,
-            file_name="blue_milk.tar.gz",
+            file_name=file_name,
             decrypted_size=decrypted_size,
             decrypted_sha256=decrypted_sha256,
         ),
@@ -97,17 +156,17 @@ async def populate_metadata(file_id: str, decrypted_size: int, decrypted_sha256:
             key=key,
             topic=topic,
         )
-        time.sleep(10)
 
 
-def upload_file(file_id: str, file_path: str):
-    """Run file upload using the ghga-connector"""
-    upload(
-        file_id=file_id,
-        file_path=file_path,
-        pubkey_path=BASE_DIR / "example_data" / "key.pub",
+async def check_objectstorage(file_id: str):
+    """Check if object storage is populated"""
+    storage = S3ObjectStorage(config=CONFIG)
+    object_exists = await storage.does_object_exist(
+        bucket_id=CONFIG.inbox_bucket, object_id=file_id
     )
+    if not object_exists:
+        raise ValueError("Object missing in inbox")
 
 
 if __name__ == "__main__":
-    asyncio.run(run_upload())
+    asyncio.run(delegate_paths())

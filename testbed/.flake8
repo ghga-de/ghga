@@ -14,7 +14,8 @@
 ; limitations under the License.
 
 [flake8]
-ignore = E, W # ignore all style checks from pycodestyle
-              # as they are already checked by black
-exclude = .git,__pycache__,db_migration,build,dist
+ignore = E, W
+    # ignore all style checks from pycodestyle
+    # as they are already checked by black
+exclude = .git,__pycache__,build,dist
 max-complexity = 10
