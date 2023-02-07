@@ -11,6 +11,6 @@ host: 0.0.0.0
 log_level: info
 openapi_url: /openapi.json
 port: 8080
-service_name: work_package_service
+service_name: wps
 work_packages_collection: workPackages
 workers: 1

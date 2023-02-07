@@ -15,20 +15,7 @@
 
 """Entrypoint of the package"""
 
-import asyncio
-
-from ghga_service_chassis_lib.api import run_server
-from ghga_service_chassis_lib.utils import assert_tz_is_utc
-
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
-
-
-def run(config: Config = CONFIG):
-    """Run the service"""
-    assert_tz_is_utc()
-    asyncio.run(run_server(app="work_package_service.__main__:app", config=config))
-
+from wps.cli import cli
 
 if __name__ == "__main__":
-    run()
+    cli()

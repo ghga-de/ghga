@@ -12,18 +12,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Fixtures that are used in both integration and unit tests"""
+"""Utils to customize the OpenAPI script"""
 
-from fastapi.testclient import TestClient
-from pytest import fixture
+from typing import Any, Dict
 
-from wps.config import CONFIG
-from wps.main import get_rest_api
+from fastapi.openapi.utils import get_openapi
+
+from wps import __version__
+from wps.config import Config
+
+config = Config()
 
 
-@fixture(name="client")
-def fixture_client() -> TestClient:
-    """Get test client for the work package service"""
-    api = get_rest_api(config=CONFIG)
-    return TestClient(api)
+def get_openapi_schema(api) -> Dict[str, Any]:
+
+    """Generates a custom openapi schema for the service"""
+
+    return get_openapi(
+        title="Work Package Service",
+        version=__version__,
+        description="A service managing work packages for the GHGA CLI",
+        servers=[{"url": config.api_route}],
+        tags=[{"name": "workPackages"}],
+        routes=api.routes,
+    )

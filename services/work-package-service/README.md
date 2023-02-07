@@ -44,10 +44,10 @@ work-package-service
 ### Configuration:
 The [`./example-config.yaml`](./example-config.yaml) gives an overview of the available configuration options.
 Please adapt it and choose one of the following options for injecting it into the service:
-- specify the path to via the `WORK_PACKAGE_SERVICE_CONFIG_YAML` env variable
-- rename it to `.work_package_service.yaml` and place it into one of the following locations:
-  - the current working directory were you are execute the service (on unix: `./.work_package_service.yaml`)
-  - your home directory (on unix: `~/.work_package_service.yaml`)
+- specify the path to via the `WPS_CONFIG_YAML` env variable
+- rename it to `.wps.yaml` and place it into one of the following locations:
+  - the current working directory were you are execute the service (on unix: `./.wps.yaml`)
+  - your home directory (on unix: `~/.wps.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -56,8 +56,8 @@ The config yaml will be automatically parsed by the service.
 All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
 could also be set using environment variables or file secrets.
 
-For naming the environment variables, just prefix the parameter name with `MY_MICROSERVICE_`,
-e.g. for the `host` set an environment variable named `WORK_PACKAGE_SERVICE_HOST`
+For naming the environment variables, just prefix the parameter name with `WPS_`,
+e.g. for the `host` set an environment variable named `WPS_HOST`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 

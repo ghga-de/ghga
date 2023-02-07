@@ -12,22 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Config Parameter Modeling and Parsing"""
-
-from ghga_service_chassis_lib.api import ApiConfigBase
-from ghga_service_chassis_lib.config import config_from_yaml
-
-
-@config_from_yaml(prefix="work_package_service")
-class Config(ApiConfigBase):
-    """Config parameters and their defaults."""
-
-    service_name: str = "work_package_service"
-
-    db_url: str = "mongodb://localhost:27017"
-    db_name: str = "work-packages"
-    work_packages_collection: str = "workPackages"
-
-
-CONFIG = Config()
+"""Adapter implementations"""

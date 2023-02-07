@@ -13,17 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests"""
+"""Config Parameter Modeling and Parsing"""
 
-from fastapi.testclient import TestClient
-from pytest import fixture
-
-from wps.config import CONFIG
-from wps.main import get_rest_api
+from ghga_service_chassis_lib.api import ApiConfigBase
+from hexkit.config import config_from_yaml
+from hexkit.providers.mongodb import MongoDbConfig
 
 
-@fixture(name="client")
-def fixture_client() -> TestClient:
-    """Get test client for the work package service"""
-    api = get_rest_api(config=CONFIG)
-    return TestClient(api)
+@config_from_yaml(prefix="wps")
+class Config(ApiConfigBase, MongoDbConfig):
+    """Config parameters and their defaults."""
+
+    service_name: str = "wps"
+    api_route = "/api"
+
+    db_url: str = "mongodb://localhost:27017"
+    db_name: str = "work-packages"
+
+    work_packages_collection: str = "workPackages"
+
+
+CONFIG = Config()

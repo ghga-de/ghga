@@ -13,23 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Module containing the main FastAPI router and (optionally) top-level API enpoints.
-Additional endpoints might be structured in dedicated modules
-(each of them having a sub-router).
-"""
+"""Defines dataclasses for business-logic data as well as request/reply models for use
+in the API."""
 
-from fastapi import FastAPI, status
-from ghga_service_chassis_lib.api import configure_app
-
-from ..config import CONFIG
-
-app = FastAPI()
-configure_app(app, config=CONFIG)
+from pydantic import BaseModel
 
 
-@app.get("/health", summary="health", tags=["health"], status_code=status.HTTP_200_OK)
-async def health():
-    """Used to check that this service is alive"""
+class WorkPackageData(BaseModel):
+    """
+    All data necessary to describe a work package.
+    """
 
-    return {"status": "OK"}
+    name: str
+
+
+class WorkPackage(WorkPackageData):
+    """
+    A work package including a unique identifier.
+    """
+
+    id: str

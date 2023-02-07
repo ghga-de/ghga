@@ -13,17 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests"""
+"""Entrypoint of the package"""
 
-from fastapi.testclient import TestClient
-from pytest import fixture
+import asyncio
 
-from wps.config import CONFIG
-from wps.main import get_rest_api
+import typer
+
+from wps.main import run_rest
+
+cli = typer.Typer()
 
 
-@fixture(name="client")
-def fixture_client() -> TestClient:
-    """Get test client for the work package service"""
-    api = get_rest_api(config=CONFIG)
-    return TestClient(api)
+@cli.command(name="run-rest")
+def sync_run_api():
+    """Run the HTTP REST API."""
+
+    asyncio.run(run_rest())
