@@ -12,16 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Fixtures that are used in both integration and unit tests"""
+"""Test the API of the work package service."""
 
-from fastapi.testclient import TestClient
-from pytest import fixture
+from fastapi import status
 
-from work_package_service.api.main import app
+from .fixtures import fixture_client  # noqa: F401; pylint: disable=unused-import
 
 
-@fixture(name="client")
-def fixture_client() -> TestClient:
-    """Get test client for the work package service"""
-    return TestClient(app)
+def test_health_check(client):
+    """Test that the health check endpoint works."""
+
+    response = client.get("/health")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"status": "OK"}

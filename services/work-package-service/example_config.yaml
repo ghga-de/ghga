@@ -4,11 +4,13 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+db_name: work-packages
+db_url: mongodb://mongodb:27017/
 docs_url: /docs
-host: 127.0.0.1
-language: Greek
+host: 0.0.0.0
 log_level: info
 openapi_url: /openapi.json
 port: 8080
-service_name: my_microservice
+service_name: work_package_service
+work_packages_collection: workPackages
 workers: 1

@@ -19,33 +19,17 @@ Additional endpoints might be structured in dedicated modules
 (each of them having a sub-router).
 """
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI, status
 from ghga_service_chassis_lib.api import configure_app
 
 from ..config import CONFIG
-from ..core.greeting import generate_greeting
-from ..models import Greeting
-from .deps import get_config
 
 app = FastAPI()
 configure_app(app, config=CONFIG)
 
 
-@app.get("/", summary="Greet the world")
-async def index():
-    """Greet the World"""
-    return "Hello World."
+@app.get("/health", summary="health", tags=["health"], status_code=status.HTTP_200_OK)
+async def health():
+    """Used to check that this service is alive"""
 
-
-@app.get(
-    "/greet/{name}",
-    summary="Greet a person",
-    description=(
-        "Greet a person by name. You may choose a formal or an informal greeting."
-        "The language for the greeting is configured in the backend."
-    ),
-    response_model=Greeting,
-)
-async def greet(name: str, isinformal: bool = True, config=Depends(get_config)):
-    """Greet a person"""
-    return generate_greeting(name=name, language=config.language, isinformal=isinformal)
+    return {"status": "OK"}

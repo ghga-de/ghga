@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test dummy."""
+"""Work package manager"""
 
-
-def test_dummy():
-    """Just makes the CI pass."""
-    assert True
+__version__ = "0.1.0"
