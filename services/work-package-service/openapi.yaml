@@ -1,11 +1,12 @@
 info:
-  title: FastAPI
+  description: A service managing work packages for the GHGA CLI
+  title: Work Package Service
   version: 0.1.0
 openapi: 3.0.2
 paths:
   /health:
     get:
-      description: Used to check that this service is alive
+      description: Used to test if this service is alive
       operationId: health_health_get
       responses:
         '200':
@@ -15,4 +16,8 @@ paths:
           description: Successful Response
       summary: health
       tags:
-      - health
+      - workPackages
+servers:
+- url: /api
+tags:
+- name: workPackages
