@@ -163,14 +163,6 @@
       ],
       "type": "string"
     },
-    "db_url": {
-      "title": "Db Url",
-      "default": "mongodb://localhost:27017",
-      "env_names": [
-        "wps_db_url"
-      ],
-      "type": "string"
-    },
     "work_packages_collection": {
       "title": "Work Packages Collection",
       "default": "workPackages",

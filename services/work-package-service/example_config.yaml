@@ -6,10 +6,9 @@ cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
 db_connection_str: '**********'
-db_name: dev_db
-db_url: mongodb://mongodb:27017/
+db_name: dev-db
 docs_url: /docs
-host: 0.0.0.0
+host: 127.0.0.1
 log_level: info
 openapi_url: /openapi.json
 port: 8080

@@ -27,7 +27,6 @@ class Config(ApiConfigBase, MongoDbConfig):
     service_name: str = "wps"
     api_route = "/api"
 
-    db_url: str = "mongodb://localhost:27017"
     db_name: str = "work-packages"
 
     work_packages_collection: str = "workPackages"
