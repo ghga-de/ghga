@@ -45,9 +45,6 @@ class Config(S3Config, KafkaConfig):
     file_metadata_event_topic: str
     file_metadata_event_type: str
     inbox_bucket: str
-    vault_host: str
-    vault_port: int
-    vault_token: str
 
 
 BASE_DIR = Path(__file__).parent.parent
