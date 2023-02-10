@@ -13,17 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests"""
-
-from fastapi.testclient import TestClient
-from pytest import fixture
-
-from wps.config import CONFIG
-from wps.main import get_rest_api
-
-
-@fixture(name="client")
-def fixture_client() -> TestClient:
-    """Get test client for the work package service"""
-    api = get_rest_api(config=CONFIG)
-    return TestClient(api)
+"""Outbound hexagonal port definitions."""

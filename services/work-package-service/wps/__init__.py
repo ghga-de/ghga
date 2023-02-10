@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""FastAPI dependencies (used with the `Depends` feature)"""
+"""Work package manager"""
 
-from ..config import CONFIG
-
-
-def get_config():
-    """Get runtime configuration."""
-    return CONFIG
+__version__ = "0.1.0"

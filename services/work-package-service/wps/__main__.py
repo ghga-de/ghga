@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test dummy."""
+"""Entrypoint of the package"""
 
+from wps.cli import cli
 
-def test_dummy():
-    """Just makes the CI pass."""
-    assert True
+if __name__ == "__main__":
+    cli()

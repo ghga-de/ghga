@@ -12,22 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Config Parameter Modeling and Parsing"""
-
-from ghga_service_chassis_lib.api import ApiConfigBase
-from ghga_service_chassis_lib.config import config_from_yaml
-
-from .models import SupportedLanguages
-
-
-# Please adapt config prefix and remove unnecessary config bases:
-@config_from_yaml(prefix="my_microservice")
-class Config(ApiConfigBase):
-    """Config parameters and their defaults."""
-
-    service_name: str = "my_microservice"  # Please adapt
-    language: SupportedLanguages = "Croatian"
-
-
-CONFIG = Config()
+"""Hexagonal port definitions."""

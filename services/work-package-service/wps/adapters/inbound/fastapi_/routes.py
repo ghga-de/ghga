@@ -13,19 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
 
-from ghga_service_chassis_lib.api import run_server
+"""
+Module containing the main FastAPI router and all route functions.
+"""
 
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
+from fastapi import APIRouter, status
+from pydantic import BaseModel
 
-
-def run(config: Config = CONFIG):
-    """Run the service"""
-    # Please adapt to package name
-    run_server(app="my_microservice.__main__:app", config=config)
+router = APIRouter()
 
 
-if __name__ == "__main__":
-    run()
+class DeliveryDelayedModel(BaseModel):
+    """Pydantic model for 202 Response. Empty, since 202 has no body."""
+
+
+@router.get(
+    "/health",
+    summary="health",
+    tags=["workPackages"],
+    status_code=status.HTTP_200_OK,
+)
+async def health():
+    """Used to test if this service is alive"""
+
+    return {"status": "OK"}

@@ -12,18 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Fixtures that are used in both integration and unit tests"""
+"""DAO interface for accessing the database."""
 
-from fastapi.testclient import TestClient
-from pytest import fixture
+# pylint: disable=unused-import
+from hexkit.protocols.dao import DaoSurrogateId  # noqa: F401
+from hexkit.protocols.dao import ResourceNotFoundError  # noqa: F401
 
-from wps.config import CONFIG
-from wps.main import get_rest_api
+from wps.core import models
 
-
-@fixture(name="client")
-def fixture_client() -> TestClient:
-    """Get test client for the work package service"""
-    api = get_rest_api(config=CONFIG)
-    return TestClient(api)
+# port described by a type alias:
+WorkPackageDaoPort = DaoSurrogateId[models.WorkPackage, models.WorkPackageData]

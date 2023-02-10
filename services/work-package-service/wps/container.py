@@ -13,17 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests"""
+"""Module hosting the dependency injection container."""
 
-from fastapi.testclient import TestClient
-from pytest import fixture
+from hexkit.inject import ContainerBase, get_configurator, get_constructor
+from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from wps.config import CONFIG
-from wps.main import get_rest_api
+from wps.adapters.outbound.dao import WorkPackageDaoConstructor
+from wps.config import CONFIG, Config
 
 
-@fixture(name="client")
-def fixture_client() -> TestClient:
-    """Get test client for the work package service"""
-    api = get_rest_api(config=CONFIG)
-    return TestClient(api)
+class Container(ContainerBase):
+    """DI Container"""
+
+    config = get_configurator(Config)
+
+    # outbound providers:
+    dao_factory = get_constructor(MongoDbDaoFactory, config=config)
+
+    # outbound translators:
+    work_package_dao = get_constructor(
+        WorkPackageDaoConstructor,
+        name=CONFIG.work_packages_collection,
+        dao_factory=dao_factory,
+    )

@@ -13,4 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Subpackage defining a RESTful API"""
+"""Defines dataclasses for business-logic data as well as request/reply models for use
+in the API."""
+
+from pydantic import BaseModel
+
+
+class WorkPackageData(BaseModel):
+    """
+    All data necessary to describe a work package.
+    """
+
+    name: str
+
+
+class WorkPackage(WorkPackageData):
+    """
+    A work package including a unique identifier.
+    """
+
+    id: str
