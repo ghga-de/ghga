@@ -204,6 +204,8 @@ class DummyUserDao:
             status=status,
             status_change=None,
             registration_date=datetime_utc(2020, 1, 1),
+            active_submissions=[],
+            active_access_requests=[],
         )
 
     async def get_by_id(self, id_: str) -> User:

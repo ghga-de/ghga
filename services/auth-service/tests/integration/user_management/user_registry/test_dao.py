@@ -60,14 +60,23 @@ async def test_user_creation(
         email="max@example.org",
         registration_date=datetime_utc(2022, 9, 1, 12, 0),
         status_change=StatusChange(previous=None, by=None, context="test"),
+        active_submissions=["sub-1"],
+        active_access_requests=["req-1", "req-2"],
     )
-    user = await user_dao.insert(user_data)
-    assert user and isinstance(user, User)
-    assert user.ext_id == user_data.ext_id
-    assert user.status == user_data.status
-    assert user.name == user_data.name
-    assert user.title == user_data.title
-    assert user.email == user_data.email
-    assert user.registration_date == user_data.registration_date
-    assert is_internal_id(user.id)
-    assert user.status_change == user_data.status_change
+
+    for op in ("insert", "get"):
+        user = await (
+            user_dao.insert(user_data)
+            if op == "insert"
+            else user_dao.find_one(mapping={"ext_id": user_data.ext_id})
+        )
+
+        assert user and isinstance(user, User)
+        assert user.ext_id == user_data.ext_id
+        assert user.status == user_data.status
+        assert user.name == user_data.name
+        assert user.title == user_data.title
+        assert user.email == user_data.email
+        assert user.registration_date == user_data.registration_date
+        assert is_internal_id(user.id)
+        assert user.status_change == user_data.status_change
