@@ -1,4 +1,10 @@
-accession_registry_path: /path/to/accession_registry.txt
+accession_store_path: /path/to/accession_store.txt
 metadata_model: /workspace/example_data/test_model.yaml
+prefix_mapping:
+  dataset: GHGAD
+  experiment: GHGAE
+  file: GHGAF
+  sample: GHGAS
 source_events_dir: /path/to/source/event/dir
 submission_store_dir: /path/to/submission/store/dir
+suffix_length: 8

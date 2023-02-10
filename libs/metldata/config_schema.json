@@ -30,21 +30,48 @@
       "type": "string",
       "format": "path"
     },
-    "accession_registry_path": {
-      "title": "Accession Registry Path",
-      "description": "A file for storing the already registered accesions.",
+    "accession_store_path": {
+      "title": "Accession Store Path",
+      "description": "A file for storing the already registered accessions.",
       "env_names": [
-        "metldata_accession_registry_path"
+        "metldata_accession_store_path"
       ],
       "type": "string",
       "format": "path"
+    },
+    "prefix_mapping": {
+      "title": "Prefix Mapping",
+      "description": "Specifies the ID prefix (values) per resource type (keys).",
+      "example": {
+        "file": "GHGAF",
+        "experiment": "GHGAE",
+        "sample": "GHGAS",
+        "dataset": "GHGAD"
+      },
+      "env_names": [
+        "metldata_prefix_mapping"
+      ],
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "suffix_length": {
+      "title": "Suffix Length",
+      "description": "Length of the numeric ID suffix.",
+      "default": 8,
+      "env_names": [
+        "metldata_suffix_length"
+      ],
+      "type": "integer"
     }
   },
   "required": [
     "metadata_model",
     "submission_store_dir",
     "source_events_dir",
-    "accession_registry_path"
+    "accession_store_path",
+    "prefix_mapping"
   ],
   "additionalProperties": false
 }
