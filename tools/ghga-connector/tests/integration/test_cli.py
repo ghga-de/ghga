@@ -79,6 +79,7 @@ def test_multipart_download(
             download(
                 file_id=big_object.object_id,
                 output_dir=tmp_path,
+                pubkey_path=Path(PUBLIC_KEY_FILE),
             )
         with open(tmp_path / big_object.object_id, "rb") as file:
             observed_content = file.read()
@@ -139,7 +140,11 @@ def test_download(
             with pytest.raises(  # type: ignore
                 expected_exception
             ) if expected_exception else nullcontext():
-                download(file_id=file.file_id, output_dir=output_dir)
+                download(
+                    file_id=file.file_id,
+                    output_dir=output_dir,
+                    pubkey_path=Path(PUBLIC_KEY_FILE),
+                )
 
         if not expected_exception:
             assert cmp(output_dir / file.file_id, file.file_path)

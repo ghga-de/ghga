@@ -298,8 +298,11 @@ def get_file_metadata(*, api_url: str, file_id: str) -> Dict:
     return file_metadata
 
 
-def download_api_call(
-    *, api_url: str, file_id: str
+def get_download_url(
+    *,
+    api_url: str,
+    file_id: str,
+    public_key: str,
 ) -> Union[Tuple[None, None, int], Tuple[str, int, None]]:
     """
     Perform a RESTful API call to retrieve a presigned download URL.
@@ -317,10 +320,14 @@ def download_api_call(
     url = f"{api_url}/objects/{file_id}"
 
     headers = CaseInsensitiveDict(
-        {"Accept": "application/json", "Content-Type": "application/json"}
+        {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Public-Key": public_key,
+        }
     )
 
-    # Make function call to get upload url
+    # Make function call to get download url
     try:
         response = RequestsSession.get(url=url, headers=headers, timeout=TIMEOUT)
     except requests.exceptions.RequestException as request_error:
@@ -352,6 +359,17 @@ def download_api_call(
         raise exceptions.NoS3AccessMethodError(url=url)
 
     return download_url, file_size, NO_RETRY_TIME
+
+
+def get_download_urls(
+    *, api_url: str, file_id: str, public_key: str
+) -> Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]]:
+    """
+    For a specific mutli-part upload identified by the `file_id`, it returns an
+    iterator to obtain download_urls.
+    """
+    while True:
+        yield get_download_url(api_url=api_url, file_id=file_id, public_key=public_key)
 
 
 def start_multipart_upload(
@@ -395,7 +413,7 @@ def await_download_url(
     file_id: str,
     max_wait_time: int,
     message_display: AbstractMessageDisplay,
-    pubkey_path: Path,  # pylint: disable=unused-argument
+    public_key: str,
 ) -> Tuple[str, int]:
     """Wait until download URL can be generated.
     Returns a tuple with two elements:
@@ -407,7 +425,9 @@ def await_download_url(
     wait_time = 0
     while wait_time < max_wait_time:
         try:
-            response_body = download_api_call(api_url=api_url, file_id=file_id)
+            response_body = get_download_url(
+                api_url=api_url, file_id=file_id, public_key=public_key
+            )
         except exceptions.BadResponseCodeError as error:
             message_display.failure(
                 "The request was invalid and returnd a wrong HTTP status code."

@@ -20,7 +20,7 @@ Contains Calls of the Presigned URLs in order to Up- and Download Files
 
 import math
 from io import BufferedReader
-from typing import Iterator, Sequence
+from typing import Iterator, Sequence, Tuple, Union
 
 import requests
 
@@ -39,13 +39,34 @@ def download_content_range(
 
     headers = {"Range": f"bytes={start}-{end}"}
     try:
-        response = RequestsSession.get(download_url, headers=headers, timeout=TIMEOUT)
+        response = RequestsSession.get(
+            download_url, headers=headers, timeout=TIMEOUT, allow_redirects=False
+        )
     except requests.exceptions.RequestException as request_error:
         exceptions.raise_if_max_retries(request_error=request_error, url=download_url)
         raise exceptions.RequestFailedError(url=download_url) from request_error
 
     status_code = response.status_code
-    # 200, if the full file was returned, 206 else
+
+    # There should be a redirect to a new location and a new range
+    if status_code == 301:
+        url = response.headers["Location"]
+        redirect_range = response.headers["Redirect-Range"]
+
+        headers = {"Range": redirect_range}
+
+        try:
+            response = RequestsSession.get(url, headers=headers, timeout=TIMEOUT)
+
+        except requests.exceptions.RequestException as request_error:
+            exceptions.raise_if_max_retries(
+                request_error=request_error, url=download_url
+            )
+            raise exceptions.RequestFailedError(url=download_url) from request_error
+        status_code = response.status_code
+
+    # 200, if the full file was returned, 206 else. This would also catch content
+    # if served directly without redirect.
     if status_code in (200, 206):
         return response.content
 
@@ -70,7 +91,7 @@ def calc_part_ranges(
     ]
 
     if (total_file_size % part_size) > 0:
-        # if the last part is smaller than the part_size, calculate it range separately:
+        # if the last part is smaller than the part_size, calculate its range separately:
         part_ranges.append((part_size * full_part_number, total_file_size - 1))
 
     return part_ranges
@@ -78,7 +99,7 @@ def calc_part_ranges(
 
 def download_file_parts(
     *,
-    download_url: str,
+    download_urls: Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]],
     part_size: int,
     total_file_size: int,
     from_part: int = 1,
@@ -97,9 +118,9 @@ def download_file_parts(
         part_size=part_size, total_file_size=total_file_size, from_part=from_part
     )
 
-    for part_start, part_end in part_ranges:
+    for part_range, download_url in zip(part_ranges, download_urls):
         yield download_range_func(
-            download_url=download_url, start=part_start, end=part_end
+            download_url=download_url[0], start=part_range[0], end=part_range[1]
         )
 
 

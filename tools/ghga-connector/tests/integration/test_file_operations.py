@@ -16,7 +16,7 @@
 
 """Test file operations"""
 
-from typing import Optional
+from typing import Any, Iterator, Optional, Tuple, Union
 
 import pytest
 
@@ -83,9 +83,17 @@ def test_download_file_parts(
         object_id=big_object.object_id, bucket_id=big_object.bucket_id
     )
 
+    def url_generator() -> Iterator[
+        Union[Tuple[None, None, int], Tuple[str, int, None]]
+    ]:
+        while True:
+            yield download_url, 0, None
+
+    download_urls = url_generator()
+
     # prepare kwargs:
-    kwargs = {
-        "download_url": download_url,
+    kwargs: dict[str, Any] = {
+        "download_urls": download_urls,
         "part_size": part_size,
         "total_file_size": total_file_size,
     }

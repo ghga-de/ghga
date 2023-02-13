@@ -16,15 +16,18 @@
 
 """Main domain logic."""
 
+import base64
 import os
 from pathlib import Path
 
+import crypt4gh.keys
 import requests
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls import (
     UploadStatus,
     await_download_url,
+    get_download_urls,
     get_part_upload_urls,
     patch_multipart_upload,
     start_multipart_upload,
@@ -175,16 +178,23 @@ def download(  # pylint: disable=too-many-arguments
         message_display.failure(f"The directory {output_dir} does not exist.")
         raise exceptions.DirectoryDoesNotExistError(output_dir=output_dir)
 
+    if not os.path.isfile(pubkey_path):
+        message_display.failure(f"The file {pubkey_path} does not exist.")
+        raise exceptions.PubKeyFileDoesNotExistError(pubkey_path=pubkey_path)
+
     if not check_url(api_url):
         message_display.failure(f"The url {api_url} is currently not reachable.")
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
-    download_url, file_size = await_download_url(
+    public_key = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode()
+
+    # stage download and get file size
+    download_url_tuple = await_download_url(
         api_url=api_url,
         file_id=file_id,
         max_wait_time=max_wait_time,
         message_display=message_display,
-        pubkey_path=pubkey_path,
+        public_key=public_key,
     )
 
     # perform the download:
@@ -196,10 +206,12 @@ def download(  # pylint: disable=too-many-arguments
 
     try:
         download_parts(
-            file_size=file_size,
-            download_url=download_url,
+            file_id=file_id,
+            api_url=api_url,
             output_file=output_file,
             part_size=part_size,
+            file_size=download_url_tuple[1],
+            public_key=public_key,
         )
     except exceptions.MaxRetriesReachedError as error:
         # Remove file, if the download failed.
@@ -213,20 +225,24 @@ def download(  # pylint: disable=too-many-arguments
 
 def download_parts(
     *,
-    file_size: int,
-    download_url: str,
+    file_id: str,
+    api_url: str,
     output_file: str,
     part_size: int,
+    file_size: int,
+    public_key: str,
 ) -> None:
     """
     Downloads a file using a specific download_url to download all its parts.
     """
 
-    file_parts = download_file_parts(
-        download_url=download_url,
-        part_size=part_size,
-        total_file_size=file_size,
+    download_urls = get_download_urls(
+        api_url=api_url, file_id=file_id, public_key=public_key
     )
+    file_parts = download_file_parts(
+        download_urls=download_urls, part_size=part_size, total_file_size=file_size
+    )
+
     with open(output_file, "wb") as file:
-        for part in file_parts:
-            file.write(part)
+        for file_part in file_parts:
+            file.write(file_part)
