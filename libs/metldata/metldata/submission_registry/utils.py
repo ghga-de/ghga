@@ -12,16 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Config Parameter Modeling and Parsing"""
+"""Uility Collection"""
 
-from hexkit.config import config_from_yaml
+from pathlib import Path
 
-from metldata.accession_registry.config import Config as AccessionRegistryConfig
-from metldata.submission_registry.config import Config as SubmissionStoreConfig
+from metldata.submission_registry import models
 
 
-# pylint: disable=too-many-ancestors
-@config_from_yaml(prefix="metldata")
-class Config(AccessionRegistryConfig, SubmissionStoreConfig):
-    """Config parameters and their defaults."""
+def save_submission_as_json(*, submission: models.Submission, json_path: Path) -> None:
+    """Save a submission as JSON."""
+
+    with open(json_path, "w", encoding="utf-8") as file:
+        file.write(submission.json(indent=4))

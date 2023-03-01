@@ -15,20 +15,14 @@
 
 """Config Parameter Modeling and Parsing"""
 
-from pathlib import Path
+from metldata.submission_registry.event_publisher import EventPublisherConfig
+from metldata.submission_registry.metadata_validator import MetadataValidatorConfig
+from metldata.submission_registry.submission_store import SubmissionStoreConfig
 
-from pydantic import BaseSettings, Field
 
-
-class Config(BaseSettings):
+class Config(
+    SubmissionStoreConfig,
+    MetadataValidatorConfig,
+    EventPublisherConfig,
+):
     """Config parameters and their defaults."""
-
-    metadata_model: Path = Field(
-        ..., description="The path to the metadata model defined in LinkML."
-    )
-    submission_store_dir: Path = Field(
-        ..., description="The directory where the submission JSONs will be stored."
-    )
-    source_events_dir: Path = Field(
-        ..., description="The directory to which source events are published as JSON."
-    )

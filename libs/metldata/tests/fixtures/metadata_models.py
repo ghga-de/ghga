@@ -12,16 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Config Parameter Modeling and Parsing"""
+"""Metadata models."""
 
-from hexkit.config import config_from_yaml
+from tests.fixtures.utils import BASE_DIR
 
-from metldata.accession_registry.config import Config as AccessionRegistryConfig
-from metldata.submission_registry.config import Config as SubmissionStoreConfig
+VALID_METADATA_MODELS = [BASE_DIR / "minimal_model.yaml"]
 
-
-# pylint: disable=too-many-ancestors
-@config_from_yaml(prefix="metldata")
-class Config(AccessionRegistryConfig, SubmissionStoreConfig):
-    """Config parameters and their defaults."""
+INVALID_METADATA_MODELS = [
+    BASE_DIR / "minimal_model_invalid1.yaml",
+    BASE_DIR / "minimal_model_invalid2.yaml",
+]

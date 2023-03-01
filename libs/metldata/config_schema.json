@@ -3,6 +3,15 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "source_events_dir": {
+      "title": "Source Events Dir",
+      "description": "The directory where source events will be stored as JSON.",
+      "env_names": [
+        "metldata_source_events_dir"
+      ],
+      "type": "string",
+      "format": "path"
+    },
     "metadata_model": {
       "title": "Metadata Model",
       "description": "The path to the metadata model defined in LinkML.",
@@ -17,15 +26,6 @@
       "description": "The directory where the submission JSONs will be stored.",
       "env_names": [
         "metldata_submission_store_dir"
-      ],
-      "type": "string",
-      "format": "path"
-    },
-    "source_events_dir": {
-      "title": "Source Events Dir",
-      "description": "The directory to which source events are published as JSON.",
-      "env_names": [
-        "metldata_source_events_dir"
       ],
       "type": "string",
       "format": "path"
@@ -67,9 +67,9 @@
     }
   },
   "required": [
+    "source_events_dir",
     "metadata_model",
     "submission_store_dir",
-    "source_events_dir",
     "accession_store_path",
     "prefix_mapping"
   ],
