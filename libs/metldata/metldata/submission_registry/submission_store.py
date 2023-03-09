@@ -87,14 +87,14 @@ class SubmissionStore:
 
     def get_by_id(self, submission_id: str) -> models.Submission:
         """Get an existing submission by its ID.
-
         Raises:
             SubmissionDoesNotExistError: Raised when the submission does not exist.
         """
 
-        self._assert_exists(submission_id=submission_id)
-
         json_path = self._get_submission_json_path(submission_id=submission_id)
+
+        if not json_path.exists():
+            raise self.SubmissionDoesNotExistError(submission_id=submission_id)
 
         with open(json_path, "r", encoding="utf-8") as file:
             submission_dict = json.load(file)
@@ -115,7 +115,7 @@ class SubmissionStore:
         """Update an existing submission.
 
         Raises:
-            SubmissionDoesNotExistError: Raised when the submission does not exist.
+            SubmissionDoesNotExistError: when the submission does not exist.
         """
 
         self._assert_exists(submission_id=submission.id)

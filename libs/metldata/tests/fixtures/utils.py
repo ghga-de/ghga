@@ -37,7 +37,8 @@ def check_source_event(*, expected_content: models.Submission, source_events_dir
     """Check the content of a source event.
 
     Raises:
-        AssertionError: if it was not yet published or does not match the expectations.
+        AssertionError: if it does not match the expectations.
+        EventNotPublishedError: if the event was not yet published.
     """
 
     assert does_event_exist(
