@@ -1,0 +1,11 @@
+# Optional list of files which are actually static in the template
+# but are allowed to have different content in the current repository
+
+scripts/update_config_docs.py
+
+.github/workflows/check_config_docs.yaml
+
+.devcontainer/Dockerfile
+
+requirements.txt
+requirements-dev.txt
