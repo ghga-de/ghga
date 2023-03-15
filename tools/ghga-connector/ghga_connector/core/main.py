@@ -16,7 +16,6 @@
 
 """Main domain logic."""
 
-import base64
 import os
 from pathlib import Path
 
@@ -28,6 +27,7 @@ from ghga_connector.core.api_calls import (
     UploadStatus,
     await_download_url,
     get_download_urls,
+    get_file_header_envelope,
     get_part_upload_urls,
     patch_multipart_upload,
     start_multipart_upload,
@@ -108,7 +108,7 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
         message_display.failure(f"The file with id '{file_id}' was already uploaded.")
         raise error
     except exceptions.RequestFailedError as error:
-        message_display.failure("The request has failed.")
+        message_display.failure("The request to start a multipart upload has failed.")
         raise error
 
     try:
@@ -186,7 +186,13 @@ def download(  # pylint: disable=too-many-arguments
         message_display.failure(f"The url {api_url} is currently not reachable.")
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
-    public_key = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode()
+    public_key = crypt4gh.keys.get_public_key(pubkey_path)
+
+    # check output file
+    output_file = os.path.join(output_dir, file_id)
+    if os.path.isfile(output_file):
+        message_display.failure(f"The file {output_file} already exists.")
+        raise exceptions.FileAlreadyExistsError(output_file=output_file)
 
     # stage download and get file size
     download_url_tuple = await_download_url(
@@ -194,16 +200,30 @@ def download(  # pylint: disable=too-many-arguments
         file_id=file_id,
         max_wait_time=max_wait_time,
         message_display=message_display,
-        public_key=public_key,
     )
 
-    # perform the download:
+    # get file header envelope
+    try:
+        envelope = get_file_header_envelope(
+            file_id=file_id,
+            api_url=api_url,
+            public_key=public_key,
+        )
+    except (
+        exceptions.FileNotRegisteredError,
+        exceptions.EnvelopeNotFoundError,
+        exceptions.ExternalApiError,
+    ) as error:
+        message_display.failure(
+            f"The request to get an envelope for file {file_id} failed."
+        )
+        raise error
 
-    output_file = os.path.join(output_dir, file_id)
-    if os.path.isfile(output_file):
-        message_display.failure(f"The file {output_file} already exists.")
-        raise exceptions.FileAlreadyExistsError(output_file=output_file)
+    # put envelope in file
+    with open(output_file, "wb") as file:
+        file.write(envelope)
 
+    # perform the download
     try:
         download_parts(
             file_id=file_id,
@@ -211,10 +231,16 @@ def download(  # pylint: disable=too-many-arguments
             output_file=output_file,
             part_size=part_size,
             file_size=download_url_tuple[1],
-            public_key=public_key,
         )
     except exceptions.MaxRetriesReachedError as error:
         # Remove file, if the download failed.
+        os.remove(output_file)
+        raise error
+    except exceptions.NoS3AccessMethodError as error:
+        message_display.failure(
+            f"The request to return information for file {file_id}"
+            + " did not return an S3 access method."
+        )
         os.remove(output_file)
         raise error
 
@@ -230,19 +256,22 @@ def download_parts(
     output_file: str,
     part_size: int,
     file_size: int,
-    public_key: str,
 ) -> None:
     """
     Downloads a file using a specific download_url to download all its parts.
     """
 
     download_urls = get_download_urls(
-        api_url=api_url, file_id=file_id, public_key=public_key
+        api_url=api_url,
+        file_id=file_id,
     )
     file_parts = download_file_parts(
         download_urls=download_urls, part_size=part_size, total_file_size=file_size
     )
 
-    with open(output_file, "wb") as file:
-        for file_part in file_parts:
-            file.write(file_part)
+    with open(output_file, "ab") as file:
+        try:
+            for file_part in file_parts:
+                file.write(file_part)
+        except exceptions.NoS3AccessMethodError as error:
+            raise error

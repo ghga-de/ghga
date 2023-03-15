@@ -31,7 +31,6 @@ def test_read_file_parts(from_part: Optional[int]):
     part_size = 5 * 1024 * 1024
 
     with big_temp_file(file_size) as file:
-
         # Get the expected content:
         initial_offset = 0 if from_part is None else part_size * (from_part - 1)
         file.seek(initial_offset)

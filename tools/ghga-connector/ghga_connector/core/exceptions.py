@@ -118,7 +118,7 @@ class BadResponseCodeError(RuntimeError):
 
     def __init__(self, *, url: str, response_code: int):
         self.response_code = response_code
-        message = f"The request to {url} failed with response code {response_code}"
+        message = f"The request to {url} failed with response code {response_code}."
         super().__init__(message)
 
 
@@ -215,3 +215,19 @@ def raise_if_max_retries(request_error: requests.exceptions.RequestException, ur
             raise MaxRetriesReachedError(
                 url=url, reason=str(max_retry_error.reason)
             ) from max_retry_error
+
+
+class EnvelopeNotFoundError(RuntimeError):
+    """Thrown, when the envelope requested for a file could not be retrieved"""
+
+    def __init__(self, *, file_id: str):
+        message = f"The request for an envelope for the file with ID {file_id} failed."
+        super().__init__(message)
+
+
+class ExternalApiError(RuntimeError):
+    """Thrown, when the services request to an external API failed"""
+
+    def __init__(self):
+        message = "The service was unable to contact an external API."
+        super().__init__(message)

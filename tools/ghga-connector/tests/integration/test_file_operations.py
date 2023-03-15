@@ -83,9 +83,9 @@ def test_download_file_parts(
         object_id=big_object.object_id, bucket_id=big_object.bucket_id
     )
 
-    def url_generator() -> Iterator[
-        Union[Tuple[None, None, int], Tuple[str, int, None]]
-    ]:
+    def url_generator() -> (
+        Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]]
+    ):
         while True:
             yield download_url, 0, None
 

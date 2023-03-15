@@ -302,7 +302,6 @@ def get_download_url(
     *,
     api_url: str,
     file_id: str,
-    public_key: str,
 ) -> Union[Tuple[None, None, int], Tuple[str, int, None]]:
     """
     Perform a RESTful API call to retrieve a presigned download URL.
@@ -323,7 +322,6 @@ def get_download_url(
         {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Public-Key": public_key,
         }
     )
 
@@ -362,14 +360,19 @@ def get_download_url(
 
 
 def get_download_urls(
-    *, api_url: str, file_id: str, public_key: str
+    *,
+    api_url: str,
+    file_id: str,
 ) -> Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]]:
     """
     For a specific mutli-part upload identified by the `file_id`, it returns an
     iterator to obtain download_urls.
     """
     while True:
-        yield get_download_url(api_url=api_url, file_id=file_id, public_key=public_key)
+        yield get_download_url(
+            api_url=api_url,
+            file_id=file_id,
+        )
 
 
 def start_multipart_upload(
@@ -413,7 +416,6 @@ def await_download_url(
     file_id: str,
     max_wait_time: int,
     message_display: AbstractMessageDisplay,
-    public_key: str,
 ) -> Tuple[str, int]:
     """Wait until download URL can be generated.
     Returns a tuple with two elements:
@@ -426,7 +428,8 @@ def await_download_url(
     while wait_time < max_wait_time:
         try:
             response_body = get_download_url(
-                api_url=api_url, file_id=file_id, public_key=public_key
+                api_url=api_url,
+                file_id=file_id,
             )
         except exceptions.BadResponseCodeError as error:
             message_display.failure(
@@ -451,3 +454,47 @@ def await_download_url(
         sleep(retry_time)
 
     raise exceptions.MaxWaitTimeExceededError(max_wait_time=max_wait_time)
+
+
+def get_file_header_envelope(file_id: str, api_url: str, public_key: bytes) -> bytes:
+    """
+    Perform a RESTful API call to retrieve a file header envelope.
+    Returns:
+        The file header envelope (bytes object)
+    """
+
+    # encode public key in base64 (url-safe)
+    public_key_encoded = base64.urlsafe_b64encode(public_key).decode("utf-8")
+
+    # build url and headers
+    url = f"{api_url}/objects/{file_id}/envelopes/{public_key_encoded}"
+
+    headers = CaseInsensitiveDict(
+        {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+    )
+
+    # Make function call to get download url
+    try:
+        response = RequestsSession.get(url=url, headers=headers, timeout=TIMEOUT)
+    except requests.exceptions.RequestException as request_error:
+        raise exceptions.RequestFailedError(url=url) from request_error
+
+    status_code = response.status_code
+
+    if status_code == 200:
+        return base64.b64decode(response.content)
+    spec = {
+        404: {
+            "envelopeNotFoundError": lambda: exceptions.EnvelopeNotFoundError(
+                file_id=file_id
+            ),
+            "noSuchObject": lambda: exceptions.FileNotRegisteredError(file_id=file_id),
+        },
+        500: {"externalAPIError": exceptions.ExternalApiError},
+    }
+
+    ResponseExceptionTranslator(spec=spec).handle(response=response)
+    raise exceptions.BadResponseCodeError(url=url, response_code=status_code)

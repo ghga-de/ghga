@@ -48,25 +48,7 @@ def download_content_range(
 
     status_code = response.status_code
 
-    # There should be a redirect to a new location and a new range
-    if status_code == 301:
-        url = response.headers["Location"]
-        redirect_range = response.headers["Redirect-Range"]
-
-        headers = {"Range": redirect_range}
-
-        try:
-            response = RequestsSession.get(url, headers=headers, timeout=TIMEOUT)
-
-        except requests.exceptions.RequestException as request_error:
-            exceptions.raise_if_max_retries(
-                request_error=request_error, url=download_url
-            )
-            raise exceptions.RequestFailedError(url=download_url) from request_error
-        status_code = response.status_code
-
-    # 200, if the full file was returned, 206 else. This would also catch content
-    # if served directly without redirect.
+    # 200, if the full file was returned, 206 else.
     if status_code in (200, 206):
         return response.content
 

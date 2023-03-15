@@ -86,6 +86,12 @@ FILES: Dict[str, FileState] = {
         file_path=TEST_FILE_PATHS[3],
         populate_storage=True,
     ),
+    "file_envelope_missing": FileState(
+        file_id="envelope-missing",
+        grouping_label="outbox",
+        file_path=TEST_FILE_PATHS[3],
+        populate_storage=True,
+    ),
     "file_not_downloadable": FileState(
         file_id="not-downloadable",
         grouping_label="outbox",

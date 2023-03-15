@@ -21,6 +21,7 @@ The drs3 mock sends back a "wait 1 minute" for file_id == "1m"
 All other file_ids will fail
 """
 
+import base64
 import os
 from datetime import datetime, timezone
 from enum import Enum
@@ -131,6 +132,17 @@ class DrsObjectServe(BaseModel):
     access_methods: List[AccessMethod]
 
 
+class HttpEnvelopeResponse(JSONResponse):
+    """Return base64 encoded envelope bytes"""
+
+    response_id = "envelope"
+
+    def __init__(self, *, envelope: str, status_code: int = 200):
+        """Construct message and init the response."""
+
+        super().__init__(content=envelope, status_code=status_code)
+
+
 class HttpException(Exception):
     """Testing stand in for httpyexpect HttpException without content validation"""
 
@@ -170,7 +182,6 @@ async def ready():
 
 @app.get("/objects/{file_id}", summary="drs3_mock")
 async def drs3_objects(file_id: str):
-
     """
     Mock for the drs3 /objects/{file_id} call
     """
@@ -180,8 +191,7 @@ async def drs3_objects(file_id: str):
             status_code=status.HTTP_202_ACCEPTED, headers={"Retry-After": "10"}
         )
 
-    if file_id == "downloadable" or file_id == "big-downloadable":
-
+    if file_id in ("downloadable", "big-downloadable", "envelope-missing"):
         return DrsObjectServe(
             file_id=file_id,
             self_uri=f"drs://localhost:8080//{file_id}",
@@ -199,6 +209,25 @@ async def drs3_objects(file_id: str):
     raise HTTPException(
         status_code=404,
         detail=(f'The DRSObject with the id "{file_id}" does not exist.'),
+    )
+
+
+@app.get("/objects/{file_id}/envelopes/{public_key}", summary="drs3_envelope_mock")
+async def drs3_objects_envelopes(file_id: str, public_key: str):
+    """
+    Mock for the dcs /objects/{file_id}/envelopes/{public_key} call
+    """
+
+    if file_id in ("downloadable", "big-downloadable"):
+        response_str = str.encode(os.environ["FAKE_HEADER_ENVELOPE"])
+        envelope = base64.b64encode(response_str).decode("utf-8")
+        return HttpEnvelopeResponse(envelope=envelope)
+
+    raise HttpException(
+        status_code=404,
+        exception_id="noSuchObject",
+        description=(f'The DRSObject with the id "{file_id}" does not exist.'),
+        data={"file_id": file_id},
     )
 
 
@@ -320,7 +349,6 @@ async def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int
 
 @app.patch("/uploads/{upload_id}", summary="ulc_patch_uploads_mock", status_code=204)
 async def ulc_patch_uploads(upload_id: str, state: StatePatch):
-
     """
     Mock for the ulc PATCH /uploads/{upload_id} call
     """

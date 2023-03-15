@@ -17,4 +17,4 @@
 CLI - Client to perform up- and download operations to and from a local ghga instance
 """
 
-__version__ = "0.2.8"
+__version__ = "0.2.9"

@@ -60,7 +60,6 @@ def get_big_s3_object(
     """
 
     with big_temp_file(object_size) as big_file:
-
         object_fixture = ObjectFixture(
             file_path=big_file.name,
             bucket_id=s3_fixture.existing_buckets[0],

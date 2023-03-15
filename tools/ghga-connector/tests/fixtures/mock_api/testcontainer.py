@@ -37,6 +37,7 @@ class MockAPIContainer(DockerContainer):
         s3_upload_url_1: str = "test://upload.url",
         s3_upload_url_2: str = "test://upload.url",
         s3_download_file_size: int = 146,
+        fake_envelope: str = "Fake_envelope",
         image: str = "ghga/fastapi_essentials:0.73.0",
         port: int = 8000,
     ) -> None:
@@ -57,6 +58,7 @@ class MockAPIContainer(DockerContainer):
         self.with_env("S3_UPLOAD_URL_1", s3_upload_url_1)
         self.with_env("S3_UPLOAD_URL_2", s3_upload_url_2)
         self.with_env("S3_DOWNLOAD_FIELD_SIZE", s3_download_file_size)
+        self.with_env("FAKE_HEADER_ENVELOPE", fake_envelope)
         self.with_volume_mapping(host=str(APP_MODULE_PATH), container="/app.py")
         self.with_command(
             f"python3 -m uvicorn --host 0.0.0.0 --port {self._port} --app-dir / app:app"

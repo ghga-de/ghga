@@ -67,9 +67,13 @@ def test_multipart_download(
         object_id=big_object.object_id,
         expires_after=180,
     )
+
+    fake_envelope = "Thisisafakeenvelope"
+
     with MockAPIContainer(
         s3_download_url=download_url,
         s3_download_file_size=file_size_,
+        fake_envelope=fake_envelope,
     ) as api:
         api_url = api.get_connection_url()
         with patch(
@@ -81,10 +85,13 @@ def test_multipart_download(
                 output_dir=tmp_path,
                 pubkey_path=Path(PUBLIC_KEY_FILE),
             )
+
+        big_file_content = str.encode(fake_envelope)
+        big_file_content += big_object.content
         with open(tmp_path / big_object.object_id, "rb") as file:
             observed_content = file.read()
 
-        assert observed_content == big_object.content
+        assert observed_content == big_file_content
 
 
 @pytest.mark.parametrize(
@@ -100,6 +107,7 @@ def test_multipart_download(
         ),
         (False, False, "file_retry", exceptions.MaxWaitTimeExceededError),
         (False, True, "file_downloadable", exceptions.DirectoryDoesNotExistError),
+        (False, False, "file_envelope_missing", exceptions.FileNotRegisteredError),
     ],
 )
 def test_download(
@@ -117,7 +125,6 @@ def test_download(
     file = state.FILES[file_name]
 
     if file.populate_storage:
-
         download_url = s3_fixture.storage.get_object_download_url(
             bucket_id=file.grouping_label,
             object_id=file.file_id,
@@ -127,9 +134,12 @@ def test_download(
     else:
         download_url = ""
 
+    fake_envelope = "Thisisafakeenvelope"
+
     with MockAPIContainer(
         s3_download_url=download_url,
         s3_download_file_size=os.path.getsize(file.file_path),
+        fake_envelope=fake_envelope,
     ) as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
@@ -146,8 +156,17 @@ def test_download(
                     pubkey_path=Path(PUBLIC_KEY_FILE),
                 )
 
+        tmp_file = tmp_path / "file_with_envelope"
+
+        # Copy fake envelope into new temp file, then append the test file
+        with tmp_file.open("wb") as file_write:
+            with file.file_path.open("rb") as file_read:
+                buffer = file_read.read()
+                file_write.write(str.encode(fake_envelope))
+                file_write.write(buffer)
+
         if not expected_exception:
-            assert cmp(output_dir / file.file_id, file.file_path)
+            assert cmp(output_dir / file.file_id, tmp_file)
 
 
 @pytest.mark.parametrize(
