@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test the utils module."""
+"""Test the utils.utc_dates module."""
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel
 from pytest import mark, raises
 
-from ghga_service_commons.utils import UTC, DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTC, DateTimeUTC, now_as_utc
 
 
 @mark.parametrize(

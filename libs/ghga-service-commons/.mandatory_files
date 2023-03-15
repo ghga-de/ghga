@@ -5,7 +5,6 @@
 # existence, their content is not evaluated and
 # may differ from that of the template repository.
 
-.devcontainer/dev_install
 .devcontainer/dev_launcher
 .devcontainer/devcontainer.json
 .devcontainer/docker-compose.yml
@@ -24,5 +23,8 @@ tests/fixtures/__init__.py
 Dockerfile
 config_schema.json
 example_config.yaml
+LICENSE
 README.md
 setup.py
+setup.cfg
+requirements-dev.txt

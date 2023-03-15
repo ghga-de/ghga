@@ -13,24 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Test the utils.temp_file module."""
 
-import asyncio
-
-from ghga_service_commons.api import run_server
-from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
-
-from .api import app  # noqa: F401 pylint: disable=unused-import
-from .config import get_config
+from ghga_service_commons.utils.temp_files import big_temp_file
 
 
-def run():
-    """Run the service"""
-    assert_tz_is_utc()
-    asyncio.run(
-        run_server(app="hello_world_web_server.__main__:app", config=get_config())
-    )
+def test_big_temp_file():
+    """Test that the big_temp_file generator works."""
 
-
-if __name__ == "__main__":
-    run()
+    with big_temp_file(42) as temp_file:
+        assert temp_file.name.isascii()
+        temp_file.seek(0)
+        file_content = temp_file.read()
+        assert file_content.isascii()
+        assert 42 <= len(file_content) < 50

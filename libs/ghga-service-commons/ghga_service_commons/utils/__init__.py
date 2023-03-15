@@ -13,24 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
-
-import asyncio
-
-from ghga_service_commons.api import run_server
-from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
-
-from .api import app  # noqa: F401 pylint: disable=unused-import
-from .config import get_config
-
-
-def run():
-    """Run the service"""
-    assert_tz_is_utc()
-    asyncio.run(
-        run_server(app="hello_world_web_server.__main__:app", config=get_config())
-    )
-
-
-if __name__ == "__main__":
-    run()
+"""General utilities that don't require heavy dependencies."""

@@ -13,51 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""General utilities that don't require heavy dependencies."""
+"""Utilities for ensuring the consistent use of the UTC timezone."""
 
 from __future__ import annotations
 
-from abc import ABC
-from contextlib import contextmanager
 from datetime import datetime, timezone
-from tempfile import NamedTemporaryFile
-from typing import Any, BinaryIO, Callable, Generator, cast
+from typing import Any, Callable, Generator
 
 from pydantic import parse_obj_as
 
-__all__ = [
-    "DateTimeUTC",
-    "UTC",
-    "assert_tz_is_utc",
-    "big_temp_file",
-    "now_as_utc",
-]
+__all__ = ["DateTimeUTC", "UTC", "assert_tz_is_utc", "now_as_utc"]
 
 UTC = timezone.utc
-
-
-class NamedBinaryIO(ABC, BinaryIO):
-    """Return type of NamedTemporaryFile."""
-
-    name: str
-
-
-@contextmanager
-def big_temp_file(size: int) -> Generator[NamedBinaryIO, None, None]:
-    """Generates a big file with approximately the specified size in bytes."""
-    current_size = 0
-    current_number = 0
-    next_number = 1
-    with NamedTemporaryFile("w+b") as temp_file:
-        while current_size <= size:
-            byte_addition = f"{current_number}\n".encode("ASCII")
-            current_size += len(byte_addition)
-            temp_file.write(byte_addition)
-            previous_number = current_number
-            current_number = next_number
-            next_number = previous_number + current_number
-        temp_file.flush()
-        yield cast(NamedBinaryIO, temp_file)
 
 
 class DateTimeUTC(datetime):

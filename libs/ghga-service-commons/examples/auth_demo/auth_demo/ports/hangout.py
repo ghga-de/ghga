@@ -12,25 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
+"""An inbound port for the demo application."""
 
-import asyncio
-
-from ghga_service_commons.api import run_server
-from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
-
-from .api import app  # noqa: F401 pylint: disable=unused-import
-from .config import get_config
+from abc import ABC, abstractmethod
+from typing import Optional
 
 
-def run():
-    """Run the service"""
-    assert_tz_is_utc()
-    asyncio.run(
-        run_server(app="hello_world_web_server.__main__:app", config=get_config())
-    )
+class HangoutPort(ABC):
+    """An inbound port for a demo application showing personalized welcome messages."""
 
+    @abstractmethod
+    async def reception(self, name: Optional[str] = None) -> str:
+        """A method that is not protected at all."""
+        ...
 
-if __name__ == "__main__":
-    run()
+    @abstractmethod
+    async def lobby(self, name: str) -> str:
+        """A method that can be accessed only by authenticated users."""
+        ...
+
+    @abstractmethod
+    async def lounge(self, name: str) -> str:
+        """A method that can be accessed only by VIP users."""
+        ...
