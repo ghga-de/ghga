@@ -12,5 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Unit tests"""
+"""Test for the simple hello world demo service."""
+
+from fastapi.testclient import TestClient
+from hello_world_web_server.__main__ import app
+
+client = TestClient(app)
+
+
+def test_hello_world():
+    """Test that the hello world app works as expected."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == "Hello World."

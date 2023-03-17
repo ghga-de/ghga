@@ -34,14 +34,20 @@ def get_configured_container(config: Config) -> Container:
     return container
 
 
+def get_configured_app(config: Config) -> FastAPI:
+    """Create and configure the FastAPI app"""
+    app = FastAPI()
+    app.include_router(router)
+    configure_app(app, config=config)
+    return app
+
+
 async def configure_and_run_server():
     """Run the HTTP API."""
     config = Config()
     async with get_configured_container(config) as container:
         container.wire(modules=["auth_demo.router", "auth_demo.auth.policies"])
-        app = FastAPI()
-        app.include_router(router)
-        configure_app(app, config=config)
+        app = get_configured_app(config)
         await run_server(app=app, config=config)
 
 
