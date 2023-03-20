@@ -26,9 +26,9 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 
 from ..auth import AuthToken, RequireAuthToken
+from .core.utils import user_exists
 from .deps import ClaimDao, Depends, get_claim_dao
 from .models.dto import Claim, ClaimCreation, ClaimFullCreation, ClaimUpdate
-from .utils import user_exists
 
 __all__ = ["router"]
 

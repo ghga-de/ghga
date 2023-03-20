@@ -205,7 +205,7 @@ async def get_user(
     if not auth_token.has_role("data_steward"):
         # only data stewards should be able to see the status change information
         if user.status_change is not None:
-            user = user.copy(update=dict(status_change=None))
+            user = user.copy(update={"status_change": None})
     return user
 
 

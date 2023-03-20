@@ -38,8 +38,7 @@ async def user_exists(user_id: str, user_dao: UserDao) -> bool:
         await user_dao.get_by_id(user_id)
     except ResourceNotFoundError:
         return False
-    else:
-        return True
+    return True
 
 
 async def is_data_steward(

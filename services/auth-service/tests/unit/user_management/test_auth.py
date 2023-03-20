@@ -339,7 +339,6 @@ async def test_can_require_a_certain_role(
     fetch_auth_token = auth.RequireAuthToken(role=required_role)
 
     if accept:
-
         token = await fetch_auth_token(request=request)
         assert token
         assert isinstance(token, auth.AuthToken)
@@ -348,7 +347,6 @@ async def test_can_require_a_certain_role(
         assert token.role == user_role
 
     else:
-
         with raises(HTTPException) as exc_info:
             await fetch_auth_token(request=request)
 

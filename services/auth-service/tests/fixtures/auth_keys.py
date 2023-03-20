@@ -18,7 +18,7 @@
 
 from importlib import reload
 from os import environ
-from typing import Optional
+from typing import Any
 
 from jwcrypto import jwk
 
@@ -37,23 +37,28 @@ def generate_jwk_set() -> jwk.JWKSet:
     return jwk_set
 
 
-def generate_keys() -> dict[str, Optional[str]]:
+def generate_keys() -> dict[str, Any]:
     """Generate dictionary with signing keys."""
     auth_adapter = environ.get("AUTH_SERVICE_RUN_AUTH_ADAPTER") == "true"
     int_keys = generate_jwk().export
-    env = dict(
-        AUTH_SERVICE_AUTH_INT_KEYS=int_keys(private_key=auth_adapter),
-        TEST_AUTH_SERVICE_AUTH_INT_KEYS=int_keys(private_key=True),
-    )
+    env: dict[str, Any] = {
+        "AUTH_SERVICE_AUTH_INT_KEYS": int_keys(private_key=auth_adapter),
+        "TEST_AUTH_SERVICE_AUTH_INT_KEYS": int_keys(private_key=True),
+    }
     if auth_adapter:
         ext_keys = generate_jwk_set().export
         env.update(
-            AUTH_SERVICE_AUTH_EXT_KEYS=ext_keys(private_keys=False),
-            TEST_AUTH_SERVICE_AUTH_EXT_KEYS=ext_keys(private_keys=True),
+            {
+                "AUTH_SERVICE_AUTH_EXT_KEYS": ext_keys(private_keys=False),
+                "TEST_AUTH_SERVICE_AUTH_EXT_KEYS": ext_keys(private_keys=True),
+            }
         )
     else:
         env.update(
-            AUTH_SERVICE_AUTH_EXT_KEYS=None, TEST_AUTH_SERVICE_AUTH_EXT_KEYS=None
+            {
+                "AUTH_SERVICE_AUTH_EXT_KEYS": None,
+                "TEST_AUTH_SERVICE_AUTH_EXT_KEYS": None,
+            }
         )
     return env
 
