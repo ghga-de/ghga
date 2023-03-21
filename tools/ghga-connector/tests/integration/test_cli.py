@@ -36,7 +36,9 @@ from tests.fixtures.mock_api.testcontainer import MockAPIContainer
 from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
 from tests.fixtures.utils import BASE_DIR
 
-PUBLIC_KEY_FILE = BASE_DIR / "keypair/key.pub"
+KEY_DIR = BASE_DIR / "keypair"
+PUBLIC_KEY_FILE = KEY_DIR / "key.pub"
+PRIVATE_KEY_FILE = KEY_DIR / "key.sec"
 
 
 @pytest.mark.parametrize(
@@ -77,7 +79,7 @@ def test_multipart_download(
     ) as api:
         api_url = api.get_connection_url()
         with patch(
-            "ghga_connector.cli.config",
+            "ghga_connector.cli.CONFIG",
             get_test_config(download_api=api_url, part_size=part_size),
         ):
             download(
@@ -144,7 +146,7 @@ def test_download(
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
         with patch(
-            "ghga_connector.cli.config",
+            "ghga_connector.cli.CONFIG",
             get_test_config(download_api=api_url),
         ):
             with pytest.raises(  # type: ignore
@@ -204,14 +206,15 @@ def test_upload(
     with MockAPIContainer(s3_upload_url_1=upload_url) as api:
         api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
-        with patch("ghga_connector.cli.config", get_test_config(upload_api=api_url)):
+        with patch("ghga_connector.cli.CONFIG", get_test_config(upload_api=api_url)):
             with pytest.raises(  # type: ignore
                 expected_exception
             ) if expected_exception else nullcontext():
                 upload(
                     file_id=uploadable_file.file_id,
                     file_path=uploadable_file.file_path.resolve(),
-                    pubkey_path=Path(PUBLIC_KEY_FILE),
+                    submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
+                    submitter_private_key_path=Path(PRIVATE_KEY_FILE),
                 )
 
                 s3_fixture.storage.complete_multipart_upload(
@@ -281,13 +284,14 @@ def test_multipart_upload(
         # create big temp file
         with big_temp_file(file_size) as file:
             with patch(
-                "ghga_connector.cli.config",
+                "ghga_connector.cli.CONFIG",
                 get_test_config(upload_api=api_url),
             ):
                 upload(
                     file_id=file_id,
                     file_path=Path(file.name),
-                    pubkey_path=Path(PUBLIC_KEY_FILE),
+                    submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
+                    submitter_private_key_path=Path(PRIVATE_KEY_FILE),
                 )
 
         # confirm upload

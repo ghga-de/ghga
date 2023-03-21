@@ -40,10 +40,12 @@ class Config(BaseSettings):
     )
     max_wait_time: int = Field(
         core.MAX_WAIT_TIME,
-        description=(
-            "Maximal time in seconds to wait before quitting without a download."
-        ),
+        description="Maximal time in seconds to wait before quitting without a download.",
     )
     part_size: int = Field(
         core.DEFAULT_PART_SIZE, description="The part size to use for download."
+    )
+    server_pubkey: str = Field(
+        ...,
+        description="Base64 encoded current GHGA public key for Crypt4GH encryption",
     )

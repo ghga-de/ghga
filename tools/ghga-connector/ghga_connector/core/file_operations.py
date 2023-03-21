@@ -18,15 +18,45 @@
 Contains Calls of the Presigned URLs in order to Up- and Download Files
 """
 
+import base64
 import math
 from io import BufferedReader
+from pathlib import Path
+from tempfile import mkstemp
 from typing import Iterator, Sequence, Tuple, Union
 
+import crypt4gh.keys
+import crypt4gh.lib
 import requests
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.constants import TIMEOUT
 from ghga_connector.core.session import RequestsSession
+
+
+class Crypt4GHEncryptor:
+    """Convenience class to deal with Crypt4GH encryption"""
+
+    def __init__(
+        self,
+        server_pubkey: str,
+        submitter_private_key_path: Path,
+    ) -> None:
+        self.server_public = base64.b64decode(server_pubkey)
+        self.submitter_private = crypt4gh.keys.get_private_key(
+            submitter_private_key_path, callback=None
+        )
+
+    def encrypt_file(self, *, file_path: Path) -> str:
+        """Encrypt provided file using Crypt4GH lib"""
+        keys = [(0, self.submitter_private, self.server_public)]
+        with file_path.open("rb") as infile:
+            # NamedTemporaryFile cannot be opened a second time on Windows, manually
+            # deal with setup + teardown instead
+            raw_fd, outfile_path = mkstemp()
+            with open(raw_fd, "wb") as outfile:
+                crypt4gh.lib.encrypt(keys=keys, infile=infile, outfile=outfile)
+            return outfile_path
 
 
 def download_content_range(

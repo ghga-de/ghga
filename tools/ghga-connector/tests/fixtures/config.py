@@ -25,6 +25,7 @@ DEFAULT_TEST_CONFIG = Config(
     max_retries=0,
     max_wait_time=2,
     part_size=core.DEFAULT_PART_SIZE,
+    server_pubkey="qx5g31H7rdsq7sgkew9ElkLIXvBje4RxDVcAHcJD8XY=",
 )
 
 

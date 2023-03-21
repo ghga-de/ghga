@@ -47,7 +47,18 @@
         "ghga_connector_part_size"
       ],
       "type": "integer"
+    },
+    "server_pubkey": {
+      "title": "Server Pubkey",
+      "description": "Base64 encoded current GHGA public key for Crypt4GH encryption",
+      "env_names": [
+        "ghga_connector_server_pubkey"
+      ],
+      "type": "string"
     }
   },
+  "required": [
+    "server_pubkey"
+  ],
   "additionalProperties": false
 }

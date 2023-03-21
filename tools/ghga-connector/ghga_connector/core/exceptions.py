@@ -49,10 +49,18 @@ class FileDoesNotExistError(RuntimeError):
 
 
 class PubKeyFileDoesNotExistError(RuntimeError):
-    """Thrown, when the specified public key file already exists."""
+    """Thrown, when the specified public key file does not exist."""
 
     def __init__(self, *, pubkey_path: Path):
         message = f"The public key file {pubkey_path} does not exist."
+        super().__init__(message)
+
+
+class PrivateKeyFileDoesNotExistError(RuntimeError):
+    """Thrown, when the specified private key file does exist."""
+
+    def __init__(self, *, private_key_path: Path):
+        message = f"The private key file {private_key_path} does not exist."
         super().__init__(message)
 
 

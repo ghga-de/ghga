@@ -23,7 +23,7 @@ import typer
 from ghga_connector import core
 from ghga_connector.config import Config
 
-config = Config()  # will be patched for testing
+CONFIG = Config()  # will be patched for testing
 
 
 class CLIMessageDisplay(core.AbstractMessageDisplay):
@@ -59,23 +59,30 @@ def upload(  # noqa C901
     *,
     file_id: str = typer.Option(..., help="The id if the file to upload"),
     file_path: Path = typer.Option(..., help="The path to the file to upload"),
-    pubkey_path: Path = typer.Argument(
+    submitter_pubkey_path: Path = typer.Argument(
         "./key.pub",
-        help="The path to a public key from the key pair that was used to encrypt the "
+        help="The path to a public key from the key pair that was announced in the "
+        + "metadata. Defaults to the file key.pub in the current folder.",
+    ),
+    submitter_private_key_path: Path = typer.Argument(
+        "./key.sec",
+        help="The path to a private key from the key pair that will be used to encrypt the "
         + "crypt4gh envelope. Defaults to the file key.pub in the current folder.",
     ),
 ):
     """
     Command to upload a file
     """
-    core.RequestsSession.configure(config.max_retries)
+    core.RequestsSession.configure(CONFIG.max_retries)
 
     core.upload(
-        api_url=config.upload_api,
+        api_url=CONFIG.upload_api,
         file_id=file_id,
         file_path=file_path,
         message_display=CLIMessageDisplay(),
-        pubkey_path=pubkey_path,
+        server_pubkey=CONFIG.server_pubkey,
+        submitter_pubkey_path=submitter_pubkey_path,
+        submitter_private_key_path=submitter_private_key_path,
     )
 
 
@@ -95,13 +102,13 @@ def download(  # pylint: disable=too-many-arguments
     """
     Command to download a file
     """
-    core.RequestsSession.configure(config.max_retries)
+    core.RequestsSession.configure(CONFIG.max_retries)
     core.download(
-        api_url=config.download_api,
+        api_url=CONFIG.download_api,
         file_id=file_id,
         output_dir=output_dir,
-        max_wait_time=config.max_wait_time,
-        part_size=config.part_size,
+        max_wait_time=CONFIG.max_wait_time,
+        part_size=CONFIG.part_size,
         message_display=CLIMessageDisplay(),
         pubkey_path=pubkey_path,
     )

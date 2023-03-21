@@ -34,6 +34,7 @@ from ghga_connector.core.api_calls import (
 )
 from ghga_connector.core.constants import MAX_WAIT_TIME
 from ghga_connector.core.file_operations import (
+    Crypt4GHEncryptor,
     download_file_parts,
     read_file_parts,
     upload_file_part,
@@ -59,15 +60,25 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
     file_id: str,
     file_path: Path,
     message_display: AbstractMessageDisplay,
-    pubkey_path: Path,
+    server_pubkey: str,
+    submitter_pubkey_path: Path,
+    submitter_private_key_path: Path,
 ) -> None:
     """
     Core command to upload a file. Can be called by CLI, GUI, etc.
     """
 
-    if not os.path.isfile(pubkey_path):
-        message_display.failure(f"The file {pubkey_path} does not exist.")
-        raise exceptions.PubKeyFileDoesNotExistError(pubkey_path=pubkey_path)
+    if not os.path.isfile(submitter_pubkey_path):
+        message_display.failure(f"The file {submitter_pubkey_path} does not exist.")
+        raise exceptions.PubKeyFileDoesNotExistError(pubkey_path=submitter_pubkey_path)
+
+    if not os.path.isfile(submitter_private_key_path):
+        message_display.failure(
+            f"The file {submitter_private_key_path} does not exist."
+        )
+        raise exceptions.PrivateKeyFileDoesNotExistError(
+            private_key_path=submitter_private_key_path
+        )
 
     if not os.path.isfile(file_path):
         message_display.failure(f"The file {file_path} does not exist.")
@@ -79,7 +90,7 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
 
     try:
         upload_id, part_size = start_multipart_upload(
-            api_url=api_url, file_id=file_id, pubkey_path=pubkey_path
+            api_url=api_url, file_id=file_id, pubkey_path=submitter_pubkey_path
         )
     except exceptions.NoUploadPossibleError as error:
         message_display.failure(
@@ -111,18 +122,28 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
         message_display.failure("The request to start a multipart upload has failed.")
         raise error
 
+    encryptor = Crypt4GHEncryptor(
+        server_pubkey=server_pubkey,
+        submitter_private_key_path=submitter_private_key_path,
+    )
+
+    encrypted_file_path = encryptor.encrypt_file(file_path=file_path)
+
     try:
         upload_file_parts(
             api_url=api_url,
             upload_id=upload_id,
             part_size=part_size,
-            file_path=file_path,
+            file_path=Path(encrypted_file_path),
         )
     except exceptions.MaxRetriesReachedError as error:
         message_display.failure(
             "The upload has failed too many times. The upload was aborted."
         )
         raise error
+    finally:
+        # remove temporary encrypted file
+        os.remove(encrypted_file_path)
 
     try:
         patch_multipart_upload(
