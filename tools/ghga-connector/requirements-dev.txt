@@ -6,3 +6,4 @@
 testcontainers==3.4.1
 fastapi==0.89.1
 uvicorn[standard]==0.20.0
+ghga-service-chassis-lib[s3]==0.17.7
