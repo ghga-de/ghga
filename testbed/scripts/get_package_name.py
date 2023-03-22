@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
@@ -5,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,8 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utils for Fixture handling"""
+"""Extracts the package name from the setup.cfg"""
 
-from pathlib import Path
 
-BASE_DIR = Path(__file__).parent.resolve()
+def get_package_name() -> str:
+    """Extracts the package name"""
+    return "src"
+
+
+def run():
+    """Run this script."""
+    package_name = get_package_name()
+    print(package_name)
+
+
+if __name__ == "__main__":
+    run()

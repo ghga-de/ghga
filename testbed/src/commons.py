@@ -12,9 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Utils for Fixture handling"""
+"""Common constants for use in other modules"""
 
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent.resolve()
+from hexkit.config import config_from_yaml
+from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.s3 import S3Config
+
+
+@config_from_yaml(prefix="tb")
+class Config(S3Config, KafkaConfig):
+    """
+    Custom Config class for the test app.
+    Defaults set for not running inside devcontainer.
+    """
+
+    db_connection_str: str
+    file_metadata_event_topic: str
+    file_metadata_event_type: str
+    inbox_bucket: str
+
+
+BASE_DIR = Path(__file__).parent.parent
+DATA_DIR = BASE_DIR / "example_data"
+TEST_DIR = BASE_DIR / "test_data"
+CONFIG = Config()
+FILE_SIZE = 20 * 1024**2
