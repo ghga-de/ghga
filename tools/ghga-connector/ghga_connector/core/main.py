@@ -20,12 +20,12 @@ import os
 from pathlib import Path
 
 import crypt4gh.keys
-import requests
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls import (
     UploadStatus,
     await_download_url,
+    check_url,
     get_download_urls,
     get_file_header_envelope,
     get_part_upload_urls,
@@ -36,22 +36,11 @@ from ghga_connector.core.constants import MAX_WAIT_TIME
 from ghga_connector.core.file_operations import (
     Crypt4GHEncryptor,
     download_file_parts,
+    is_file_encrypted,
     read_file_parts,
     upload_file_part,
 )
 from ghga_connector.core.message_display import AbstractMessageDisplay
-
-
-def check_url(api_url, *, wait_time=1000) -> bool:
-    """
-    Checks, if an url is reachable within a certain time
-    """
-    try:
-        # timeout takes seconds, was ms in curl, convert accordingly
-        requests.get(url=api_url, timeout=wait_time / 1000)
-    except requests.exceptions.RequestException:
-        return False
-    return True
 
 
 def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
@@ -68,11 +57,11 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
     Core command to upload a file. Can be called by CLI, GUI, etc.
     """
 
-    if not os.path.isfile(submitter_pubkey_path):
+    if not submitter_pubkey_path.is_file():
         message_display.failure(f"The file {submitter_pubkey_path} does not exist.")
         raise exceptions.PubKeyFileDoesNotExistError(pubkey_path=submitter_pubkey_path)
 
-    if not os.path.isfile(submitter_private_key_path):
+    if not submitter_private_key_path.is_file():
         message_display.failure(
             f"The file {submitter_private_key_path} does not exist."
         )
@@ -80,9 +69,17 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
             private_key_path=submitter_private_key_path
         )
 
-    if not os.path.isfile(file_path):
+    if not file_path.is_file():
         message_display.failure(f"The file {file_path} does not exist.")
         raise exceptions.FileDoesNotExistError(file_path=file_path)
+
+    if is_file_encrypted(file_path):
+        message_display.failure(
+            f"The file {file_path} is already Crypt4GH encrypted."
+            + "\nThis is currently not supported."
+            + " Please provide your data without Crypt4GH encryption."
+        )
+        raise exceptions.FileAlreadyEncryptedError(file_path=file_path)
 
     if not check_url(api_url):
         message_display.failure(f"The url {api_url} is currently not reachable.")

@@ -16,6 +16,7 @@
 
 """Tests for the up- and download functions of the cli"""
 
+import base64
 import os
 import pathlib
 from contextlib import nullcontext
@@ -24,12 +25,14 @@ from pathlib import Path
 from typing import Optional
 from unittest.mock import patch
 
+import crypt4gh.keys
 import pytest
 from ghga_service_chassis_lib.utils import big_temp_file
 
 from ghga_connector.cli import download, upload
 from ghga_connector.core import exceptions
 from ghga_connector.core.constants import DEFAULT_PART_SIZE
+from ghga_connector.core.file_operations import Crypt4GHEncryptor
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
@@ -178,6 +181,7 @@ def test_download(
         (False, "file_uploadable", None),
         (False, "file_not_uploadable", exceptions.FileNotRegisteredError),
         (False, "file_with_bad_path", exceptions.FileDoesNotExistError),
+        (False, "encrypted_file", exceptions.FileAlreadyEncryptedError),
     ],
 )
 def test_upload(
@@ -189,6 +193,16 @@ def test_upload(
     """Test the upload of a file, expects Abort, if the file was not found"""
 
     uploadable_file = state.FILES[file_name]
+
+    if file_name == "encrypted_file":
+        # encrypt test file on the fly
+        server_pubkey = base64.b64encode(
+            crypt4gh.keys.get_public_key(PUBLIC_KEY_FILE)
+        ).decode("utf-8")
+        encryptor = Crypt4GHEncryptor(
+            server_pubkey=server_pubkey, submitter_private_key_path=PRIVATE_KEY_FILE
+        )
+        encrypted_path = encryptor.encrypt_file(file_path=uploadable_file.file_path)
 
     # initiate upload
     upload_id = s3_fixture.storage.init_multipart_upload(
@@ -210,12 +224,20 @@ def test_upload(
             with pytest.raises(  # type: ignore
                 expected_exception
             ) if expected_exception else nullcontext():
-                upload(
-                    file_id=uploadable_file.file_id,
-                    file_path=uploadable_file.file_path.resolve(),
-                    submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-                    submitter_private_key_path=Path(PRIVATE_KEY_FILE),
-                )
+                if file_name == "encrypted_file":
+                    upload(
+                        file_id=uploadable_file.file_id,
+                        file_path=Path(encrypted_path).resolve(),
+                        submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
+                        submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                    )
+                else:
+                    upload(
+                        file_id=uploadable_file.file_id,
+                        file_path=uploadable_file.file_path.resolve(),
+                        submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
+                        submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                    )
 
                 s3_fixture.storage.complete_multipart_upload(
                     upload_id=upload_id,

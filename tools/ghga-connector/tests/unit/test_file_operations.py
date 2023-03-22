@@ -16,12 +16,21 @@
 
 """Test file operations"""
 
+import base64
+import os
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Optional
 
+import crypt4gh.keys
 import pytest
 from ghga_service_chassis_lib.utils import big_temp_file
 
-from ghga_connector.core.file_operations import read_file_parts
+from ghga_connector.core.file_operations import (
+    Crypt4GHEncryptor,
+    is_file_encrypted,
+    read_file_parts,
+)
 
 
 @pytest.mark.parametrize("from_part", (None, 3))
@@ -49,3 +58,27 @@ def test_read_file_parts(from_part: Optional[int]):
             obtained_content += part
 
         assert expected_content == obtained_content
+
+
+def test_encryption():
+    """Encrypt a file and check if it is actually encrypted"""
+    file_size = 20 * 1024 * 1024
+    key_dir = Path(__file__).parent.parent / "fixtures" / "keypair"
+    pubkey_path = key_dir / "key.pub"
+    private_key_path = key_dir / "key.sec"
+
+    pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
+
+    with NamedTemporaryFile() as file:
+        # fill source file with random data
+        file.write(os.urandom(file_size))
+        file.seek(0)
+
+        # produce encrypted file
+        encryptor = Crypt4GHEncryptor(
+            server_pubkey=pubkey, submitter_private_key_path=private_key_path
+        )
+        encrypted_file_loc = encryptor.encrypt_file(file_path=Path(file.name))
+
+        assert is_file_encrypted(Path(encrypted_file_loc))
+        os.remove(encrypted_file_loc)

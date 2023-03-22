@@ -54,6 +54,18 @@ class UploadStatus(str, Enum):
     UPLOADED = "uploaded"
 
 
+def check_url(api_url, *, wait_time=1000) -> bool:
+    """
+    Checks, if an url is reachable within a certain time
+    """
+    try:
+        # timeout takes seconds, was ms in curl, convert accordingly
+        requests.get(url=api_url, timeout=wait_time / 1000)
+    except requests.exceptions.RequestException:
+        return False
+    return True
+
+
 def initiate_multipart_upload(
     *,
     api_url: str,

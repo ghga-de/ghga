@@ -59,6 +59,23 @@ class Crypt4GHEncryptor:
             return outfile_path
 
 
+def is_file_encrypted(file_path: Path):
+    """Checks if a file is Crypt4GH encrypted"""
+
+    with file_path.open("rb") as input_file:
+        num_relevant_bytes = 12
+        file_header = input_file.read(num_relevant_bytes)
+
+        magic_number = b"crypt4gh"
+        version = b"\x01\x00\x00\x00"
+
+        if file_header != magic_number + version:
+            return False
+
+    # If file header is correct, assume file is Crypt4GH encrypted
+    return True
+
+
 def download_content_range(
     *,
     download_url: str,

@@ -40,6 +40,14 @@ class FileAlreadyExistsError(RuntimeError):
         super().__init__(message)
 
 
+class FileAlreadyEncryptedError(RuntimeError):
+    """Thrown, when the specified file is already encrypted."""
+
+    def __init__(self, *, file_path: Path):
+        message = f"The file {file_path} is already Crypt4GH encrypted."
+        super().__init__(message)
+
+
 class FileDoesNotExistError(RuntimeError):
     """Thrown, when the specified file does not exist."""
 

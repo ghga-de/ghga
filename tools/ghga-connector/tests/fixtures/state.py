@@ -56,6 +56,12 @@ class FileState:
 
 
 FILES: Dict[str, FileState] = {
+    "encrypted_file": FileState(
+        file_id="encrypted",
+        grouping_label="inbox",
+        file_path=TEST_FILE_PATHS[0],
+        populate_storage=False,
+    ),
     "file_uploadable": FileState(
         file_id="uploadable",
         grouping_label="inbox",
