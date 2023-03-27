@@ -12,24 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
+"""Test the OIDC Discovery helper class."""
 
-import asyncio
+from auth_service.auth_adapter.core.auth import OIDCDiscovery
 
-from ghga_service_chassis_lib.api import run_server
-from ghga_service_chassis_lib.utils import assert_tz_is_utc
-
-from .config import CONFIG, Config
+LS_AAI = "https://proxy.aai.lifescience-ri.eu"
 
 
-def run(config: Config = CONFIG):
-    """Run the service"""
-    assert_tz_is_utc()
-    service = "auth_adapter" if config.run_auth_adapter else "user_management"
-    print(f"Starting {service} service")
-    asyncio.run(run_server(app=f"auth_service.{service}.api.main:app", config=config))
+def test_ls_aai_jwks_str():
+    """Test the JWKS discovery."""
+    discovery = OIDCDiscovery(LS_AAI)
+    assert discovery.jwks_str.startswith('{"keys": [{')
 
 
-if __name__ == "__main__":
-    run()
+def test_ls_aai_token_endpoint():
+    """Test the userinfo endpoint discovery."""
+    discovery = OIDCDiscovery(LS_AAI)
+    assert discovery.token_endpoint == LS_AAI + "/OIDC/token"
+
+
+def test_ls_aai_userinfo_endpoint():
+    """Test the userinfo endpoint discovery."""
+    discovery = OIDCDiscovery(LS_AAI)
+    assert discovery.userinfo_endpoint == LS_AAI + "/OIDC/userinfo"

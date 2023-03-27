@@ -26,6 +26,7 @@ from ghga_service_chassis_lib.config import config_from_yaml
 from ghga_service_chassis_lib.utils import DateTimeUTC, now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
+from pydantic import EmailStr
 
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.models.dto import (
@@ -47,7 +48,7 @@ class AdditionalConfig(ApiConfigBase):
     Should be set as additional environment variables when running the test.
     """
 
-    # full internal key for user management and auth adatper
+    # full internal key for user management and auth adapter
     auth_int_keys: str
     # full external key set for auth adapter
     auth_ext_keys: Optional[str] = None
@@ -87,16 +88,14 @@ def create_access_token(
     kty = key["kty"]
     assert kty in ("EC", "RSA")
     header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
-    claims: dict[str, Union[None, str, int]] = dict(
-        name="John Doe",
-        email="john@home.org",
-        jti="123-456-789-0",
-        sub="john@aai.org",
-        iss=CONFIG.oidc_authority_url,
-        client_id=CONFIG.oidc_client_id,
-        foo="bar",
-        token_class="access_token",
-    )
+    claims: dict[str, Union[None, str, int]] = {
+        "jti": "123-456-789-0",
+        "sub": "john@aai.org",
+        "iss": CONFIG.oidc_authority_url,
+        "client_id": CONFIG.oidc_client_id,
+        "foo": "bar",
+        "token_class": "access_token",
+    }
     iat = int(now_as_utc().timestamp())
     if expired:
         exp = iat - 60 * 10  # expired 10 minutes ago
@@ -187,12 +186,14 @@ def request_with_authorization(token: str = "") -> Request:
 class DummyUserDao:
     """UserDao that can retrieve one dummy user."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         id_="john@ghga.de",
         name="John Doe",
-        email="john@home.org",
-        ext_id="john@aai.org",
+        email=EmailStr("john@home.org"),
+        title=None,
+        ext_id=EmailStr("john@aai.org"),
         status=UserStatus.ACTIVE,
     ):
         """Initialize the dummy UserDao"""
@@ -200,6 +201,7 @@ class DummyUserDao:
             id=id_,
             name=name,
             email=email,
+            title=title,
             ext_id=ext_id,
             status=status,
             status_change=None,

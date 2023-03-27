@@ -18,7 +18,7 @@
 
 from ghga_service_chassis_lib.utils import now_as_utc
 from jwcrypto import jwk
-from pytest import mark, raises
+from pytest import raises
 
 from auth_service.auth_adapter.core import auth
 from auth_service.config import CONFIG
@@ -33,20 +33,16 @@ def test_decodes_and_validates_a_valid_access_token():
     assert isinstance(claims, dict)
     assert set(claims) == {
         "client_id",
-        "email",
         "exp",
         "foo",
         "iat",
         "iss",
         "jti",
-        "name",
         "sub",
         "token_class",
     }
     assert claims["client_id"] == CONFIG.oidc_client_id
     assert claims["iss"] == CONFIG.oidc_authority_url
-    assert claims["name"] == "John Doe"
-    assert claims["email"] == "john@home.org"
     assert claims["jti"] == "123-456-789-0"
     assert claims["sub"] == "john@aai.org"
     assert claims["foo"] == "bar"
@@ -62,7 +58,7 @@ def test_validates_access_token_with_rsa_signature():
     access_token = create_access_token(key=key)
     claims = auth.decode_and_validate_token(access_token, key=key)
     assert isinstance(claims, dict)
-    assert claims["name"] == "John Doe"
+    assert claims["sub"] == "john@aai.org"
 
 
 def test_validates_access_token_with_ec_signature():
@@ -71,7 +67,7 @@ def test_validates_access_token_with_ec_signature():
     access_token = create_access_token(key=key)
     claims = auth.decode_and_validate_token(access_token, key=key)
     assert isinstance(claims, dict)
-    assert claims["name"] == "John Doe"
+    assert claims["sub"] == "john@aai.org"
 
 
 def test_does_not_validate_an_empty_token():
@@ -132,33 +128,6 @@ def test_does_not_validate_an_access_token_with_invalid_issuer():
         " Expected 'https://proxy.aai.lifescience-ri.eu'"
         " got 'https://proxy.aai.badscience-ri.eu'"
     )
-
-
-@mark.parametrize("empty_claim", [None, ""])
-def test_does_not_validate_an_access_token_with_missing_subject(empty_claim):
-    """Test that an access token with a missing subject is rejected."""
-    access_token = create_access_token(sub=empty_claim)
-    with raises(auth.TokenValidationError) as exc_info:
-        auth.decode_and_validate_token(access_token)
-    assert str(exc_info.value) == "The subject claim is missing."
-
-
-@mark.parametrize("empty_claim", [None, ""])
-def test_does_not_validate_an_access_token_with_missing_name(empty_claim):
-    """Test that an access token with a missing name is rejected."""
-    access_token = create_access_token(name=empty_claim)
-    with raises(auth.TokenValidationError) as exc_info:
-        auth.decode_and_validate_token(access_token)
-    assert str(exc_info.value) == "Missing value for name claim."
-
-
-@mark.parametrize("empty_claim", [None, ""])
-def test_does_not_validate_an_access_token_with_missing_email(empty_claim):
-    """Test that an access token with a missing email is rejected."""
-    access_token = create_access_token(email=empty_claim)
-    with raises(auth.TokenValidationError) as exc_info:
-        auth.decode_and_validate_token(access_token)
-    assert str(exc_info.value) == "Missing value for email claim."
 
 
 def test_does_not_validate_an_expired_access_token():

@@ -18,8 +18,11 @@
 
 import json
 import logging
+from functools import cached_property, lru_cache
 from typing import Any, Optional
 
+import httpx
+from fastapi import status
 from hexkit.protocols.dao import NoHitsFoundError
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
@@ -34,13 +37,15 @@ __all__ = ["exchange_token", "jwt_config"]
 
 log = logging.getLogger(__name__)
 
+TIMEOUT = 30  # network timeout in seconds
+
 
 class AuthAdapterError(Exception):
     """Auth adapter related error."""
 
 
 class ConfigurationMissingKey(AuthAdapterError):
-    """Missing key in configuration"""
+    """Missing key in configuration."""
 
 
 class TokenSigningError(AuthAdapterError):
@@ -55,32 +60,106 @@ class UserDataMismatchError(AuthAdapterError):
     """Raised when user claims do not match the registered user data."""
 
 
+class UserInfoError(AuthAdapterError):
+    """Error when retrieving data from the userinfo endpoint."""
+
+
+class ConfigurationDiscoveryError(ConfigurationMissingKey):
+    """Raised when configuration is missing and cannot be discovery."""
+
+
+class OIDCDiscovery:
+    """Helper class for using the OIDC discovery mechanism.
+
+    Configuration is only checked and data fetched over the network if needed,
+    and all network requests are cached.
+    """
+
+    def __init__(self, authority_url: str):
+        """Initialize with the authority URL."""
+        if not authority_url.endswith("/"):
+            authority_url += "/"
+        self.authority_url = authority_url
+
+    @property
+    def config_url(self) -> str:
+        """Get the URL for the configuration."""
+        return self.authority_url + ".well-known/openid-configuration"
+
+    @cached_property
+    def config(self) -> dict[str, Any]:
+        """Fetch the OIDC configuration directory."""
+        respsonse = httpx.get(self.config_url, timeout=TIMEOUT)
+        config = respsonse.json()
+        if not isinstance(config, dict) or "version" not in config:
+            raise ConfigurationDiscoveryError("Unexpected discovery object")
+        return config
+
+    @cached_property
+    def jwks_str(self) -> str:
+        """Fetch the JSON string with the JWKS."""
+        jwks_uri = self.config.get("jwks_uri")
+        if not jwks_uri or not isinstance(jwks_uri, str):
+            raise ConfigurationDiscoveryError("Cannot discover JWKS URI")
+        if not jwks_uri.startswith(self.authority_url):
+            raise ConfigurationDiscoveryError("Unexpected JWKS URI")
+        jwks_response = httpx.get(jwks_uri, timeout=TIMEOUT)
+        jwks_dict = jwks_response.json()
+        if not isinstance(jwks_dict, dict) or "keys" not in jwks_dict:
+            raise ConfigurationDiscoveryError("Unexpected JWKS object")
+        return jwks_response.text
+
+    @property
+    def token_endpoint(self) -> str:
+        """Fetch the URL of the token endpoint."""
+        token_endpoint = self.config.get("token_endpoint")
+        if not token_endpoint or not isinstance(token_endpoint, str):
+            raise ConfigurationDiscoveryError("Cannot discover token endpoint")
+        return token_endpoint
+
+    @property
+    def userinfo_endpoint(self) -> str:
+        """Fetch the URL of the userinfo endpoint."""
+        userinfo_endpoint = self.config.get("userinfo_endpoint")
+        if not userinfo_endpoint or not isinstance(userinfo_endpoint, str):
+            raise ConfigurationDiscoveryError("Cannot discover userinfo endpoint")
+        return userinfo_endpoint
+
+
 class JWTConfig:
     """A container for the JWT related configuration."""
 
     external_jwks: jwk.JWKSet  # the external public key set
     internal_jwk: jwk.JWK  # the internal key pair
     external_algs: Optional[list[str]] = None  # allowed external signing algorithms
-    check_claims: dict[str, Any] = {  # claims that shall be verified
+    check_at_claims: dict[str, Any] = {  # access token claims that shall be verified
         "iat": None,
         "exp": None,
         "jti": None,
         "sub": None,
-        "name": None,
-        "email": None,
         "token_class": "access_token",
     }
-    # the claims that are copied from the external to the internal token
-    copied_claims = ("name", "email", "iat", "exp")
+    check_ui_claims: dict[str, Any] = {  # userinfo claims that shall be verified
+        "sub": None,
+        "name": None,
+        "email": None,
+    }
+    # the claims that are copied from the external access token to the internal token
+    copy_at_claims = ("iat", "exp")
+    # the claims that are copied from the external userinfo to the internal token
+    copy_ui_claims = ("name", "email")
     # the key under which the subject is copied from the external token
     copy_sub_as = "ext_id"
+    userinfo_endpoint: str
 
     def __init__(self, config: Config = CONFIG) -> None:
         """Load the JWT related configuration parameters."""
+        discovery = OIDCDiscovery(config.oidc_authority_url)
 
         external_keys = config.auth_ext_keys
         if not external_keys:
-            raise ConfigurationMissingKey("No external signing keys configured.")
+            log.warning("No external signing keys configured, using discovery.")
+            external_keys = discovery.jwks_str
         external_jwks = jwk.JWKSet.from_json(external_keys)
         if not any(external_jwk.has_public for external_jwk in external_jwks):
             raise ConfigurationMissingKey("No public external signing keys found.")
@@ -105,19 +184,33 @@ class JWTConfig:
         else:
             log.warning("Allowed external signing algorithms not configured.")
             self.external_algs = None
-        authority_url = config.oidc_authority_url
-        if authority_url:
-            self.check_claims["iss"] = authority_url
-        else:
-            log.warning("No OIDC authority URL configured.")
+        self.check_at_claims["iss"] = discovery.authority_url[:-1]
         client_id = config.oidc_client_id
         if client_id:
-            self.check_claims["client_id"] = client_id
+            self.check_at_claims["client_id"] = client_id
         else:
             log.warning("No OIDC client ID configured.")
 
+        userinfo_endpoint = str(config.oidc_userinfo_endpoint)
+        if not userinfo_endpoint:
+            log.warning("No external userinfo endpoint configured, using discovery.")
+            userinfo_endpoint = str(discovery.userinfo_endpoint)
+        self.userinfo_endpoint = userinfo_endpoint
+
 
 jwt_config = JWTConfig()
+
+
+@lru_cache(maxsize=1024)
+def fetch_user_info(access_token: str) -> dict[str, Any]:
+    """Fetch info for the given access token from the userinfo endpoint."""
+    response = httpx.get(
+        jwt_config.userinfo_endpoint,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    if response.status_code != status.HTTP_200_OK:
+        raise UserInfoError(f"Cannot request userinfo: {response.reason_phrase}")
+    return response.json()
 
 
 def _user_data_matches(user: User, external_claims: dict[str, Any]) -> bool:
@@ -137,11 +230,12 @@ async def exchange_token(
     If the provided external token is valid, a corresponding internal token
     will be returned.
 
-    The internal token will contain the name and email taken from the
-    external token, and also its issued date and expiry date.
-    If the user is already registered, the user id and status will be
+    The internal token will contain relevant claims from the access token and
+    the user info as configured.
+
+    If the user is already registered, the user id, status and title will be
     included in the internal token as well.
-    If name or email do not match with the external token, the user status
+    If name or email do not match with the external userinfo, the user status
     will appear as "invalid" in the internal token, but the actual status
     will not  be changed in the user registry.
     If the user is not yet registered, and pass_sub is set, then the sub claim
@@ -150,29 +244,35 @@ async def exchange_token(
     If the user has a special internal role, this is passed as the "role"
     claim of the internal token.
 
-    If the external token is invalid a TokenValidationError is raised.
+    If the external token is invalid, a TokenValidationError is raised.
+    If the user info cannot be requested, a UserInfoError is raised.
     If the internal token cannot be signed, a TokenSigningError is raised.
     """
-    external_claims = decode_and_validate_token(external_token)
-    internal_claims = {
-        claim: external_claims[claim] for claim in jwt_config.copied_claims
-    }
-    sub = external_claims["sub"]
+    at_claims = decode_and_validate_token(external_token)
+    _assert_at_claims_not_empty(at_claims)
+    sub = at_claims["sub"]
     try:
         user = await user_dao.find_one(mapping={"ext_id": sub})
     except NoHitsFoundError:
         # user is not yet registered
         if not pass_sub:
             return None
-    else:
+        user = None
+    ui_claims = fetch_user_info(external_token)
+    _assert_ui_claims_not_empty(ui_claims)
+    if ui_claims["sub"] != sub:
+        raise UserInfoError("Subject in userinfo differs from access token.")
+    copy_claims = jwt_config.copy_at_claims
+    internal_claims = {claim: at_claims[claim] for claim in copy_claims}
+    copy_claims = jwt_config.copy_ui_claims
+    internal_claims.update({claim: ui_claims[claim] for claim in copy_claims})
+    if user:
         # user already exists in the registry
-        status = (
-            user.status
-            if _user_data_matches(user, external_claims)
-            else UserStatus.INVALID
+        user_status = (
+            user.status if _user_data_matches(user, ui_claims) else UserStatus.INVALID
         )
-        internal_claims.update(id=user.id, status=status)
-        if status is UserStatus.ACTIVE and await is_data_steward(
+        internal_claims.update(id=user.id, status=user_status, title=user.title)
+        if user_status is UserStatus.ACTIVE and await is_data_steward(
             user.id, user_dao=user_dao, claim_dao=claim_dao
         ):
             internal_claims.update(role="data_steward")
@@ -181,19 +281,27 @@ async def exchange_token(
     return sign_and_encode_token(internal_claims)
 
 
-def _assert_claims_not_empty(claims: dict[str, Any]) -> None:
-    """Make sure that all important claims are not empty.
+def _assert_at_claims_not_empty(at_claims: dict[str, Any]) -> None:
+    """Make sure that all important access token claims are not empty.
 
     Note that JWT.validate() checks only whether claims exist, but we also
     want to make sure that the copied claims are not null or empty strings.
 
     Raises a TokenValidationError in case one of the claims is empty.
     """
-    if not claims["sub"]:
-        raise TokenValidationError("The subject claim is missing.")
-    for claim in jwt_config.copied_claims:
-        if not claims[claim]:
+    for claim in jwt_config.check_at_claims:
+        if not at_claims[claim]:
             raise TokenValidationError(f"Missing value for {claim} claim.")
+
+
+def _assert_ui_claims_not_empty(ui_claims: dict[str, Any]) -> None:
+    """Make sure that all important user info claims are not empty.
+
+    Raises a UserInfoError in case one of the claims is empty.
+    """
+    for claim in jwt_config.check_ui_claims:
+        if not ui_claims.get(claim):
+            raise UserInfoError(f"Missing value for {claim} claim.")
 
 
 def decode_and_validate_token(
@@ -212,17 +320,15 @@ def decode_and_validate_token(
             jwt=access_token,
             key=key,
             algs=jwt_config.external_algs,
-            check_claims=jwt_config.check_claims,
+            check_claims=jwt_config.check_at_claims,
             expected_type="JWS",
         )
     except (JWException, UnicodeDecodeError, KeyError, TypeError, ValueError) as exc:
         raise TokenValidationError(f"Not a valid token: {exc}") from exc
     try:
-        claims = json.loads(token.claims)
+        return json.loads(token.claims)
     except json.JSONDecodeError as exc:
         raise TokenValidationError("Claims cannot be decoded") from exc
-    _assert_claims_not_empty(claims)
-    return claims
 
 
 def sign_and_encode_token(

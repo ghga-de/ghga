@@ -36,7 +36,7 @@ from auth_service.user_management.user_registry.deps import (
 )
 
 from .. import DESCRIPTION, TITLE, VERSION
-from ..core.auth import TokenValidationError, exchange_token
+from ..core.auth import TokenValidationError, UserInfoError, exchange_token
 from .basic import basic_auth
 from .headers import get_bearer_token
 
@@ -87,6 +87,10 @@ async def ext_auth(  # pylint:disable=too-many-arguments
         except TokenValidationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token"
+            ) from exc
+        except UserInfoError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Error in user info"
             ) from exc
     else:
         internal_token = ""  # nosec

@@ -15,10 +15,12 @@
 
 """Test the api module"""
 
+import re
 from base64 import b64encode
 
 from fastapi import status
 from ghga_service_chassis_lib.utils import now_as_utc
+from pytest import fixture
 
 from auth_service.auth_adapter.api.headers import get_bearer_token
 from auth_service.config import CONFIG
@@ -41,6 +43,19 @@ API_EXT_PATH = CONFIG.api_ext_path.strip("/")
 if API_EXT_PATH:
     API_EXT_PATH += "/"
 USERS_PATH = f"/{API_EXT_PATH}users"
+
+USER_INFO = {
+    "name": "John Doe",
+    "email": "john@home.org",
+    "sub": "john@aai.org",
+}
+RE_USER_INFO_URL = re.compile(".*/userinfo$")
+
+
+@fixture
+def non_mocked_hosts() -> list:
+    """Do not mock requests to the test server."""
+    return ["testserver"]
 
 
 def test_get_from_root(client):
@@ -212,9 +227,11 @@ def test_does_not_authorize_invalid_users(client):
 
 
 def test_token_exchange_for_unknown_user(
-    client,
+    client, httpx_mock
 ):  # pylint:disable=too-many-statements
     """Test the token exchange for authenticated but unknown users."""
+
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     user_dao = DummyUserDao(ext_id="not.john@aai.org")
     client.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -317,7 +334,7 @@ def test_token_exchange_for_unknown_user(
 
 
 def test_token_exchange_for_known_user(
-    client,
+    client, httpx_mock
 ):  # pylint:disable=too-many-statements
     """Test the token exchange for authenticated and registered users."""
 
@@ -331,6 +348,8 @@ def test_token_exchange_for_known_user(
     assert user.status_change is None
 
     # Check that we get an internal token for the user
+
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     auth = f"Bearer {create_access_token()}"
     response = client.get("/some/path", headers={"Authorization": auth})
@@ -347,20 +366,25 @@ def test_token_exchange_for_known_user(
     assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "status", "exp", "iat"}
+    expected_claims = {"id", "name", "email", "status", "title", "exp", "iat"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == user.id
     assert claims["name"] == user.name
     assert claims["email"] == user.email
     assert claims["status"] == "active"
+    assert claims["title"] is None
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
     # Check that the user becomes invalid when the name has changed
 
-    auth = f"Bearer {create_access_token(name='John Foo')}"
+    httpx_mock.add_response(
+        url=RE_USER_INFO_URL, json={**USER_INFO, "name": "John Foo"}
+    )
+
+    auth = f"Bearer {create_access_token()}"
     response = client.get("/some/path", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
@@ -375,20 +399,25 @@ def test_token_exchange_for_known_user(
     assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "status", "exp", "iat"}
+    expected_claims = {"id", "name", "email", "status", "title", "exp", "iat"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == user.id
     assert claims["name"] == "John Foo"  # changed name in internal token
     assert claims["email"] == user.email
     assert claims["status"] == "invalid"  # because there is a name mismatch
+    assert claims["title"] is None
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
     # Check that the user becomes invalid when the mail has changed
 
-    auth = f"Bearer {create_access_token(email='john@foo.org')}"
+    httpx_mock.add_response(
+        url=RE_USER_INFO_URL, json={**USER_INFO, "email": "john@foo.org"}
+    )
+
+    auth = f"Bearer {create_access_token()}"
     response = client.get("/some/path", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
@@ -403,13 +432,14 @@ def test_token_exchange_for_known_user(
     assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "status", "exp", "iat"}
+    expected_claims = {"id", "name", "email", "status", "title", "exp", "iat"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == user.id
     assert claims["name"] == user.name
     assert claims["email"] == "john@foo.org"  # changed mail in internal token
     assert claims["status"] == "invalid"  # because there is a name mismatch
+    assert claims["title"] is None
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
@@ -421,8 +451,10 @@ def test_token_exchange_for_known_user(
     assert user.status_change is None
 
 
-def test_token_exchange_with_x_token(client):
+def test_token_exchange_with_x_token(client, httpx_mock):
     """Test that the external access token can be passed in separate header."""
+
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     user_dao = DummyUserDao(ext_id="not.john@aai.org")
     client.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -466,12 +498,14 @@ def test_token_exchange_with_x_token(client):
 
 
 def test_token_exchange_for_known_data_steward(
-    client,
+    client, httpx_mock
 ):  # pylint:disable=too-many-statements
     """Test the token exchange for an authenticated data steward."""
 
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+
     # add a dummy user who is a data steward
-    user_dao: UserDao = DummyUserDao(id_="james@ghga.de")
+    user_dao: UserDao = DummyUserDao(id_="james@ghga.de", title="Dr.")
     client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     claim_dao: ClaimDao = DummyClaimDao()
     client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
@@ -489,12 +523,13 @@ def test_token_exchange_for_known_data_steward(
     assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "status", "exp", "iat", "role"}
+    expected_claims = {"id", "name", "email", "status", "title", "exp", "iat", "role"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == user.id
     assert claims["name"] == user.name
     assert claims["email"] == user.email
+    assert claims["title"] == "Dr."
     assert claims["status"] == "active"
 
     # check that the data steward role appears in the token
