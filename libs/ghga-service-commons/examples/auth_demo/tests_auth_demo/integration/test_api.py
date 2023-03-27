@@ -49,10 +49,10 @@ def get_token(users: list[dict], name: str) -> str:
     assert "is_vip" in user
     token = user["token"]
     assert len(token) > 80
+    assert token.count(".") == 2
     chars = token.replace(".", "").replace("-", "").replace("_", "")
     assert chars.isalnum()
     assert chars.isascii()
-    assert token.count(".") == 2
     return token
 
 
@@ -143,6 +143,7 @@ def test_lounge(client):
 
     response = client.get("/lounge", headers={"Authorization": f"Bearer {token_ada}"})
     assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "Not authorized"}
 
     response = client.get("/lounge", headers={"Authorization": f"Bearer {token_grace}"})
     assert response.status_code == status.HTTP_200_OK

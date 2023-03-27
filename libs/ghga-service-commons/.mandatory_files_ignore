@@ -5,6 +5,8 @@
 
 .github/workflows/dev_cd.yaml
 
+scripts/script_utils/fastapi_app_location.py
+
 Dockerfile
 config_schema.json
 example_config.yaml

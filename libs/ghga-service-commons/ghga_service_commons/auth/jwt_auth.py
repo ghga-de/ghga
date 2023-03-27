@@ -24,7 +24,7 @@ from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
 from pydantic import BaseSettings, Field, ValidationError
 
-from ghga_service_commons.auth.context import AuthContext_co, AuthContextProtocol
+from ghga_service_commons.auth.context import AuthContext, AuthContextProtocol
 
 __all__ = ["JWTAuthConfig", "JWTAuthContextProvider"]
 
@@ -58,18 +58,18 @@ class JWTAuthConfig(BaseSettings):
     )
 
 
-class JWTAuthContextProvider(AuthContextProtocol[AuthContext_co]):
+class JWTAuthContextProvider(AuthContextProtocol[AuthContext]):
     """A JWT based provider implementing the AuthContextProtocol."""
 
     @classmethod
     @asynccontextmanager
     async def construct(
-        cls, *, config: JWTAuthConfig, context_class: type[AuthContext_co]
+        cls, *, config: JWTAuthConfig, context_class: type[AuthContext]
     ):
         """Make this usable as an async dependency."""
         yield cls(config=config, context_class=context_class)
 
-    def __init__(self, *, config: JWTAuthConfig, context_class: type[AuthContext_co]):
+    def __init__(self, *, config: JWTAuthConfig, context_class: type[AuthContext]):
         """Initialize the provider with the given configuration.
 
         Raises a JWTAuthConfigError if the configuration is invalid.
@@ -90,7 +90,7 @@ class JWTAuthContextProvider(AuthContextProtocol[AuthContext_co]):
         self._map_claims = config.auth_map_claims
         self._context_class = context_class
 
-    async def get_context(self, token: str) -> Optional[AuthContext_co]:
+    async def get_context(self, token: str) -> Optional[AuthContext]:
         """Get an authentication and authorization context from a token.
 
         The token must be a serialized and signed JSON web token.

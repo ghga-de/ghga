@@ -16,11 +16,13 @@
 
 """Config parameters."""
 
-from auth_demo.auth.config import AuthConfig
+from auth_demo.auth.config import DemoAuthConfig
 from auth_demo.core import HangoutConfig
 
 from ghga_service_commons.api import ApiConfigBase
 
+__all__ = ["Config"]
 
-class Config(ApiConfigBase, AuthConfig, HangoutConfig):
+
+class Config(ApiConfigBase, DemoAuthConfig, HangoutConfig):
     """Config parameters and their defaults."""

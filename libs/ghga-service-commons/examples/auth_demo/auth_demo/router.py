@@ -16,14 +16,14 @@
 
 """FastAPI router for the example application."""
 
-from auth_demo.auth.policies import AuthContext, get_auth, require_auth, require_vip
+from typing import Optional
+
+from auth_demo.auth.policies import DemoAuthContext, get_auth, require_auth, require_vip
 from auth_demo.container import Container  # type: ignore
 from auth_demo.ports.hangout import HangoutPort
 from auth_demo.users import create_example_users
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
-
-provide_hangout = Depends(Provide[Container.hangout])
 
 router = APIRouter()
 
@@ -40,13 +40,13 @@ async def root():
 @router.get("/users")
 async def users():
     """Return a list of users with tokens for testing."""
-    return create_example_users()
+    return {"users": create_example_users()}
 
 
 @router.get("/status")
 @inject
 async def status(
-    auth_context: AuthContext = get_auth,
+    auth_context: DemoAuthContext = get_auth,
 ):
     """This endpoint shows the current login status."""
     expires = str(auth_context.expires) if auth_context else None
@@ -56,7 +56,8 @@ async def status(
 @router.get("/reception")
 @inject
 async def reception(
-    auth_context: AuthContext = get_auth, hangout: HangoutPort = provide_hangout
+    auth_context: Optional[DemoAuthContext] = get_auth,
+    hangout: HangoutPort = Depends(Provide[Container.hangout]),
 ):
     """This endpoint is freely available, but personalized."""
     name = auth_context.name if auth_context else None
@@ -66,7 +67,8 @@ async def reception(
 @router.get("/lobby")
 @inject
 async def protected(
-    auth_context: AuthContext = require_auth, hangout: HangoutPort = provide_hangout
+    auth_context: DemoAuthContext = require_auth,
+    hangout: HangoutPort = Depends(Provide[Container.hangout]),
 ):
     """This endpoint requires authentication."""
     return {"message": await hangout.lobby(auth_context.name)}
@@ -75,7 +77,8 @@ async def protected(
 @router.get("/lounge")
 @inject
 async def admin(
-    auth_context: AuthContext = require_vip, hangout: HangoutPort = provide_hangout
+    auth_context: DemoAuthContext = require_vip,
+    hangout: HangoutPort = Depends(Provide[Container.hangout]),
 ):
     """This endpoint requires VIP status."""
     return {"message": await hangout.lounge(auth_context.name)}

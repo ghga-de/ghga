@@ -19,9 +19,8 @@
 from typing import NamedTuple
 
 from auth_demo.auth.config import AUTH_KEY_PAIR
-from jwcrypto import jwt
 
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 
 
 class UserInfo(NamedTuple):
@@ -39,22 +38,9 @@ EXAMPLE_USERS: list[UserInfo] = [
 ]
 
 
-def create_token(user: UserInfo) -> str:
-    """Create an auth token that can be used for testing."""
-    key = AUTH_KEY_PAIR
-    header = {"alg": "ES256"}
-    iat = int(now_as_utc().timestamp())
-    exp = iat + 60 * 10  # valid for 10 minutes
-    claims = {**user._asdict(), "iat": iat, "exp": exp}
-    token = jwt.JWT(header=header, claims=claims)
-    token.make_signed_token(key)
-    return token.serialize()
-
-
-def create_example_users():
+def create_example_users() -> list[dict]:
     """Create a couple of example users for the application."""
-    return {
-        "users": [
-            {**user._asdict(), "token": create_token(user)} for user in EXAMPLE_USERS
-        ]
-    }
+    users = [user._asdict() for user in EXAMPLE_USERS]
+    for user in users:
+        user["token"] = sign_and_serialize_token(user, AUTH_KEY_PAIR)
+    return users

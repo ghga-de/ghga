@@ -19,12 +19,14 @@ scripts/license_checker.py
 scripts/get_package_name.py
 scripts/update_config_docs.py
 scripts/update_template_files.py
+scripts/update_openapi_docs.py
 scripts/README.md
 
 .github/workflows/check_config_docs.yaml
 .github/workflows/check_template_files.yaml
 .github/workflows/static_code_analysis.yaml
 .github/workflows/unit_and_int_tests.yaml
+.github/workflows/check_openapi_spec.yaml
 
 example_data/README.md
 

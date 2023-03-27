@@ -14,16 +14,4 @@
 # limitations under the License.
 #
 
-"""Test for the simple hello world demo service."""
-
-from fastapi.testclient import TestClient
-from hello_world_web_server.__main__ import app
-
-client = TestClient(app)
-
-
-def test_hello_world():
-    """Test that the hello world app works as expected."""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.json() == "Hello World."
+"""Tests for the simple hello world demo app."""

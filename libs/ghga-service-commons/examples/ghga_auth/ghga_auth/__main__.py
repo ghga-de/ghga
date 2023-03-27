@@ -12,15 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Utils for fixture handling"""
+"""Main entry point of the package."""
 
-from pathlib import Path
+from ghga_auth.main import run
 
-import yaml
-
-
-def read_yaml(path: Path) -> dict:
-    """Read yaml file and return content as dict."""
-    with open(path, "r") as file_:
-        return yaml.safe_load(file_)
+if __name__ == "__main__":
+    run()

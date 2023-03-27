@@ -13,14 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utils for fixture handling"""
-
-from pathlib import Path
-
-import yaml
-
-
-def read_yaml(path: Path) -> dict:
-    """Read yaml file and return content as dict."""
-    with open(path, "r") as file_:
-        return yaml.safe_load(file_)
+"""Unit tests for the utils package."""

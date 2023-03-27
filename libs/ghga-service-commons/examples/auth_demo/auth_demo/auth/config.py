@@ -16,18 +16,18 @@
 
 """Configuration of the auth context."""
 
-__all__ = ["AuthContext", "AuthConfig"]
+__all__ = ["DemoAuthContext", "DemoAuthConfig"]
 
-from typing import Any
+from typing import Any, cast
 
-from auth_demo.util import generate_jwk
 from pydantic import BaseModel, Field
 
-from ghga_service_commons.auth.jwtauth import JWTAuthConfig
+from ghga_service_commons.auth.jwt_auth import JWTAuthConfig
+from ghga_service_commons.utils.jwt_helpers import generate_jwk
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
 
 
-class AuthContext(BaseModel):
+class DemoAuthContext(BaseModel):
     """Example auth context."""
 
     name: str = Field(..., description="The name of the user")
@@ -39,9 +39,9 @@ class AuthContext(BaseModel):
 AUTH_KEY_PAIR = generate_jwk()
 
 
-class AuthConfig(JWTAuthConfig):
+class DemoAuthConfig(JWTAuthConfig):
     """Config parameters and their defaults for the example auth context."""
 
-    auth_key: str = AUTH_KEY_PAIR.export(private_key=False)
+    auth_key: str = cast(str, AUTH_KEY_PAIR.export(private_key=False))
     auth_check_claims: dict[str, Any] = {"name": None, "exp": None}
     auth_map_claims: dict[str, str] = {"exp": "expires"}

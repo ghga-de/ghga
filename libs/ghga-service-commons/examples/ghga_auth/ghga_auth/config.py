@@ -14,13 +14,21 @@
 # limitations under the License.
 #
 
-"""Signing key generation"""
+"""Config parameters."""
 
-from jwcrypto import jwk
+from typing import cast
 
-__all__ = ["generate_jwk"]
+from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.auth.ghga import AuthConfig
+from ghga_service_commons.utils.jwt_helpers import generate_jwk
+
+__all__ = ["Config"]
+
+# create a key pair for signing and validating JSON web tokens
+AUTH_KEY_PAIR = generate_jwk()
 
 
-def generate_jwk() -> jwk.JWK:
-    """Generate a random EC based JWK."""
-    return jwk.JWK.generate(kty="EC", crv="P-256")
+class Config(ApiConfigBase, AuthConfig):
+    """Config parameters and their defaults."""
+
+    auth_key: str = cast(str, AUTH_KEY_PAIR.export(private_key=False))

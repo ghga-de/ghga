@@ -12,15 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Utils for fixture handling"""
+"""Test the hello world app."""
 
-from pathlib import Path
+from fastapi.testclient import TestClient
+from hello_world_web_server.__main__ import app
 
-import yaml
+client = TestClient(app)
 
 
-def read_yaml(path: Path) -> dict:
-    """Read yaml file and return content as dict."""
-    with open(path, "r") as file_:
-        return yaml.safe_load(file_)
+def test_hello_world():
+    """Test that the hello world app works as expected."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == "Hello World."

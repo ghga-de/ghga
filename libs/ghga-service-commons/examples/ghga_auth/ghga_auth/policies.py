@@ -14,36 +14,37 @@
 # limitations under the License.
 #
 
-"""App specific policies using the AuthContext provider with FastAPI.
+"""GHGA specific policies using the AuthContext provider with FastAPI.
 
 See the router.py module for how to use these policies in REST endpoints.
 """
 
+from functools import partial
 from typing import Optional
 
-from auth_demo.auth.config import DemoAuthContext
-from auth_demo.container import Container  # type: ignore
 from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from ghga_auth.container import Container  # type: ignore
 
 from ghga_service_commons.auth.context import AuthContextProtocol
+from ghga_service_commons.auth.ghga import AuthContext, has_role
 from ghga_service_commons.auth.policies import (
     get_auth_context_using_credentials,
     require_auth_token_using_credentials,
 )
 
-__all__ = ["DemoAuthContext", "get_auth", "require_auth", "require_vip"]
+__all__ = ["AuthContext", "get_auth", "require_auth", "require_admin"]
 
 
 @inject
 async def get_auth_context(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
-    auth_provider: AuthContextProtocol[DemoAuthContext] = Depends(
+    auth_provider: AuthContextProtocol[AuthContext] = Depends(
         Provide[Container.auth_provider]
     ),
-) -> Optional[DemoAuthContext]:
-    """Get an authentication and authorization context using FastAPI."""
+) -> Optional[AuthContext]:
+    """Get a GHGA authentication and authorization context using FastAPI."""
     context = await get_auth_context_using_credentials(credentials, auth_provider)
     return context  # workaround mypy issue #12156
 
@@ -51,29 +52,27 @@ async def get_auth_context(
 @inject
 async def require_auth_context(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[DemoAuthContext] = Depends(
+    auth_provider: AuthContextProtocol[AuthContext] = Depends(
         Provide[Container.auth_provider]
     ),
-) -> DemoAuthContext:
-    """Require an authentication and authorization context using FastAPI."""
+) -> AuthContext:
+    """Require a GHGA authentication and authorization context using FastAPI."""
     return await require_auth_token_using_credentials(credentials, auth_provider)
 
 
-def check_vip(context: DemoAuthContext) -> bool:
-    """Check if the given auth context belongs to a VIP."""
-    return context.is_vip
+is_admin = partial(has_role, role="admin")
 
 
 @inject
-async def require_vip_context(
+async def require_admin_context(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[DemoAuthContext] = Depends(
+    auth_provider: AuthContextProtocol[AuthContext] = Depends(
         Provide[Container.auth_provider]
     ),
-) -> DemoAuthContext:
+) -> AuthContext:
     """Require a VIP authentication and authorization context using FastAPI."""
     return await require_auth_token_using_credentials(
-        credentials, auth_provider, check_vip
+        credentials, auth_provider, is_admin
     )
 
 
@@ -83,5 +82,5 @@ get_auth = Security(get_auth_context)
 # policy for requiring and getting an auth token
 require_auth = Security(require_auth_context)
 
-# policy fo requiring and getting an auth token with VIP status
-require_vip = Security(require_vip_context)
+# policy fo requiring and getting an auth token with admin role
+require_admin = Security(require_admin_context)
