@@ -24,6 +24,7 @@ from ghga_service_commons.auth.ghga import (
     AuthContext,
     UserStatus,
     has_role,
+    is_active,
 )
 from ghga_service_commons.utils.jwt_helpers import generate_jwk
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
@@ -60,11 +61,28 @@ def test_has_role():
     assert not has_role(context, "operator")
     assert has_role(context, "admin@office")
     assert not has_role(context, "admin@home")
+    context.status = UserStatus.INACTIVE
+    assert not has_role(context, "admin")
+    assert not has_role(context, "admin@office")
+    context.status = UserStatus.INVALID
+    assert not has_role(context, "admin")
+    assert not has_role(context, "admin@office")
+
+
+def test_is_active():
+    """Test that the active state of the GHGA auth context can be checked."""
+    context = AuthContext(**context_kwargs)
+    assert is_active(context)
+    context.status = UserStatus.INACTIVE
+    assert not is_active(context)
+    context.status = UserStatus.INVALID
+    assert not is_active(context)
 
 
 def test_create_auth_config():
     """Test that a GHGA auth config can be crated."""
-    config = AuthConfig(auth_key=generate_jwk().export(private_key=False))
+    auth_key = generate_jwk().export(private_key=False)
+    config = AuthConfig(auth_key=auth_key)  # pyright: ignore
     assert config.auth_algs == ["ES256"]
     assert config.auth_check_claims == {
         "name": None,

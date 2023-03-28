@@ -27,7 +27,7 @@ from pytest import fixture
 
 async def get_app() -> FastAPI:
     """Get the demo app."""
-    config = Config()
+    config = Config()  # pyright: ignore
     async with get_configured_container(config) as container:
         container.wire(modules=["auth_demo.router", "auth_demo.auth.policies"])
         return get_configured_app(config)

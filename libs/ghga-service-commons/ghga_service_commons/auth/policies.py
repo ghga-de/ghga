@@ -27,7 +27,10 @@ from starlette.status import HTTP_403_FORBIDDEN
 
 from ghga_service_commons.auth.context import AuthContext, AuthContextProtocol
 
-__all__ = ["get_auth_context_using_credentials", "require_auth_token_using_credentials"]
+__all__ = [
+    "get_auth_context_using_credentials",
+    "require_auth_context_using_credentials",
+]
 
 
 async def get_auth_context_using_credentials(
@@ -50,7 +53,7 @@ async def get_auth_context_using_credentials(
         ) from error
 
 
-async def require_auth_token_using_credentials(
+async def require_auth_context_using_credentials(
     credentials: HTTPAuthorizationCredentials,
     auth_provider: AuthContextProtocol[AuthContext],
     predicate: Callable[[AuthContext], bool] = lambda _context: True,

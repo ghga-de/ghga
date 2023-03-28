@@ -44,7 +44,7 @@ def get_configured_app(config: Config) -> FastAPI:
 
 async def configure_and_run_server():
     """Run the HTTP API."""
-    config = Config()
+    config = Config()  # pyright: ignore
     async with get_configured_container(config) as container:
         container.wire(modules=["auth_demo.router", "auth_demo.auth.policies"])
         app = get_configured_app(config)

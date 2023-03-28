@@ -30,7 +30,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.policies import (
     get_auth_context_using_credentials,
-    require_auth_token_using_credentials,
+    require_auth_context_using_credentials,
 )
 
 __all__ = ["DemoAuthContext", "get_auth", "require_auth", "require_vip"]
@@ -56,7 +56,7 @@ async def require_auth_context(
     ),
 ) -> DemoAuthContext:
     """Require an authentication and authorization context using FastAPI."""
-    return await require_auth_token_using_credentials(credentials, auth_provider)
+    return await require_auth_context_using_credentials(credentials, auth_provider)
 
 
 def check_vip(context: DemoAuthContext) -> bool:
@@ -72,7 +72,7 @@ async def require_vip_context(
     ),
 ) -> DemoAuthContext:
     """Require a VIP authentication and authorization context using FastAPI."""
-    return await require_auth_token_using_credentials(
+    return await require_auth_context_using_credentials(
         credentials, auth_provider, check_vip
     )
 

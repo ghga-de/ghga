@@ -19,7 +19,13 @@
 from typing import Optional
 
 from fastapi import APIRouter
-from ghga_auth.policies import AuthContext, get_auth, require_admin, require_auth
+from ghga_auth.policies import (
+    AuthContext,
+    get_auth,
+    require_active,
+    require_admin,
+    require_auth,
+)
 
 router = APIRouter()
 
@@ -36,7 +42,13 @@ async def require_auth_route(context: AuthContext = require_auth):
     return {"context": context.dict()}
 
 
+@router.get("/require_active")
+async def require_active_route(context: AuthContext = require_active):
+    """Require and return active auth context."""
+    return {"context": context.dict()}
+
+
 @router.get("/require_admin")
 async def require_admin_route(context: AuthContext = require_admin):
-    """Require and return auth context with admin role."""
+    """Require and return active auth context with admin role."""
     return {"context": context.dict()}

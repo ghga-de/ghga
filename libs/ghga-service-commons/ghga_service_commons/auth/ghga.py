@@ -25,7 +25,14 @@ from pydantic import BaseModel, EmailStr, Field
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
 
-__all__ = ["AcademicTitle", "AuthConfig", "AuthContext", "UserStatus", "has_role"]
+__all__ = [
+    "AcademicTitle",
+    "AuthConfig",
+    "AuthContext",
+    "UserStatus",
+    "has_role",
+    "is_active",
+]
 
 
 class UserStatus(str, Enum):
@@ -80,8 +87,15 @@ class AuthContext(BaseModel):
     )
 
 
+def is_active(context: AuthContext) -> bool:
+    """Check whether the given context has an active status."""
+    return context.status is UserStatus.ACTIVE
+
+
 def has_role(context: AuthContext, role: str) -> bool:
-    """Check whether the given context has the given role."""
+    """Check whether the given context is active and has the given role."""
+    if not is_active(context):
+        return False
     user_role = context.role
     if user_role and "@" not in role:
         user_role = user_role.split("@", 1)[0]

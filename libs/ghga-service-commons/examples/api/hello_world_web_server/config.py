@@ -35,4 +35,4 @@ class Config(ApiConfigBase):
 @lru_cache
 def get_config():
     """Get config parameter."""
-    return Config()
+    return Config()  # pyright: ignore
