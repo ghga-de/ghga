@@ -18,10 +18,10 @@
 from hexkit.config import config_from_yaml
 
 from metldata.accession_registry.config import Config as AccessionRegistryConfig
-from metldata.submission_registry.config import Config as SubmissionStoreConfig
+from metldata.submission_registry.config import Config as SubmissionRegistryConfig
 
 
 # pylint: disable=too-many-ancestors
 @config_from_yaml(prefix="metldata")
-class Config(AccessionRegistryConfig, SubmissionStoreConfig):
+class Config(AccessionRegistryConfig, SubmissionRegistryConfig):
     """Config parameters and their defaults."""

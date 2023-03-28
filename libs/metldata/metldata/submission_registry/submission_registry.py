@@ -20,10 +20,15 @@ from typing import Any
 
 from ghga_service_chassis_lib.utils import now_as_utc
 
+from metldata.model_utils.config import MetadataModelConfig
+from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.submission_registry import models
 from metldata.submission_registry.event_publisher import EventPublisher
-from metldata.submission_registry.metadata_validator import MetadataValidator
 from metldata.submission_registry.submission_store import SubmissionStore
+
+
+class SubmissionRegistryConfig(MetadataModelConfig):
+    """Config parameters and their defaults."""
 
 
 class SubmissionRegistry:
@@ -58,14 +63,14 @@ class SubmissionRegistry:
     def __init__(
         self,
         *,
+        config: SubmissionRegistryConfig,
         submission_store: SubmissionStore,
-        metadata_validator: MetadataValidator,
         event_publisher: EventPublisher,
     ):
         """Initialize with dependencies and config parameters."""
 
         self._submission_store = submission_store
-        self._metadata_validator = metadata_validator
+        self._metadata_validator = MetadataValidator(model=config.metadata_model)
         self._event_publisher = event_publisher
 
     def _get_submission_with_status(

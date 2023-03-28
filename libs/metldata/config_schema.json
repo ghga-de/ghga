@@ -12,11 +12,11 @@
       "type": "string",
       "format": "path"
     },
-    "metadata_model": {
-      "title": "Metadata Model",
+    "metadata_model_path": {
+      "title": "Metadata Model Path",
       "description": "The path to the metadata model defined in LinkML.",
       "env_names": [
-        "metldata_metadata_model"
+        "metldata_metadata_model_path"
       ],
       "type": "string",
       "format": "path"
@@ -68,7 +68,7 @@
   },
   "required": [
     "source_events_dir",
-    "metadata_model",
+    "metadata_model_path",
     "submission_store_dir",
     "accession_store_path",
     "prefix_mapping"

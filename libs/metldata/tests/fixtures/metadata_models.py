@@ -16,11 +16,29 @@
 
 """Metadata models."""
 
+from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.utils import BASE_DIR
 
-VALID_METADATA_MODELS = [BASE_DIR / "minimal_model.yaml"]
+EXAMPLE_MODEL_DIR = BASE_DIR / "example_models"
+VALID_MINIMAL_MODEL_EXAMPLE_PATH = EXAMPLE_MODEL_DIR / "minimal_model.yaml"
 
-INVALID_METADATA_MODELS = [
-    BASE_DIR / "minimal_model_invalid1.yaml",
-    BASE_DIR / "minimal_model_invalid2.yaml",
+
+def _get_example_model(name: str) -> MetadataModel:
+    """Get example model."""
+
+    return MetadataModel.init_from_path(EXAMPLE_MODEL_DIR / f"{name}.yaml")
+
+
+MINIMAL_VALID_METADATA_MODEL = _get_example_model("minimal_model")
+ADVANCED_VALID_METADATA_MODEL = _get_example_model("advanced_model")
+VALID_METADATA_MODELS = [MINIMAL_VALID_METADATA_MODEL, ADVANCED_VALID_METADATA_MODEL]
+
+ROOT_CLASS_INVALID_MODELS = [
+    _get_example_model(f"minimal_model_root_class_missing{idx}") for idx in range(1, 3)
 ]
+
+ANCHORS_INVALID_MODELS = [
+    _get_example_model(f"minimal_model_anchors_invalid{idx}") for idx in range(1, 5)
+]
+
+INVALID_METADATA_MODELS = ROOT_CLASS_INVALID_MODELS + ANCHORS_INVALID_MODELS

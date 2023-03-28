@@ -2,3 +2,4 @@
 # but are allowed to be removed in the current repository
 
 .github/workflows/dev_cd.yaml
+scripts/script_utils/fastapi_app_location.py

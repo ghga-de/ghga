@@ -1,5 +1,5 @@
 accession_store_path: /path/to/accession_store.txt
-metadata_model: /workspace/example_data/test_model.yaml
+metadata_model_path: /workspace/tests/fixtures/example_models/advanced_model.yaml
 prefix_mapping:
   dataset: GHGAD
   experiment: GHGAE
