@@ -20,14 +20,20 @@ import logging
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
-from ghga_service_chassis_lib.utils import now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import (
     MultipleHitsFoundError,
     NoHitsFoundError,
     ResourceNotFoundError,
 )
 
-from ..auth import AuthToken, RequireAuthToken
+from ..auth import (
+    AuthContext,
+    is_steward,
+    require_active,
+    require_auth,
+    require_steward,
+)
 from .deps import Depends, UserDao, get_user_dao
 from .models.dto import (
     StatusChange,
@@ -68,17 +74,17 @@ INITIAL_USER_STATUS = UserStatus.ACTIVE
 async def post_user(
     user_data: UserRegisteredData,
     user_dao: UserDao = Depends(get_user_dao),
-    auth_token: AuthToken = Depends(RequireAuthToken(active=False)),
+    auth_context: AuthContext = require_auth,
 ) -> User:
     """Register a user"""
     ext_id = user_data.ext_id
     # users can only register themselves
-    if ext_id != auth_token.ext_id:
+    if ext_id != auth_context.ext_id:
         raise HTTPException(status_code=403, detail="Not authorized to register user.")
     if (
-        auth_token.id  # must not have been already registered
-        or user_data.name != auth_token.name  # specified name must match token
-        or user_data.email != auth_token.email  # specified email must match token
+        auth_context.id  # must not have been already registered
+        or user_data.name != auth_context.name  # specified name must match token
+        or user_data.email != auth_context.email  # specified email must match token
     ):
         raise HTTPException(status_code=422, detail="User cannot be registered.")
     try:
@@ -124,20 +130,20 @@ async def put_user(
         title="Internal ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
-    auth_token: AuthToken = Depends(RequireAuthToken(active=False)),
+    auth_context: AuthContext = require_auth,
 ) -> Response:
     """Update a user"""
     # users can only update themselves,
     # invalid users are allowed to update themselves in order to become valid again
     if not (
         is_internal_id(id_)
-        and id_ == auth_token.id
-        and auth_token.status in (UserStatus.ACTIVE, UserStatus.INVALID)
+        and id_ == auth_context.id
+        and auth_context.status in (UserStatus.ACTIVE, UserStatus.INVALID)
     ):
         raise HTTPException(status_code=403, detail="Not authorized to update user.")
     if (
-        user_data.name != auth_token.name  # specified name must match token
-        or user_data.email != auth_token.email  # specified email must match token
+        user_data.name != auth_context.name  # specified name must match token
+        or user_data.email != auth_context.email  # specified email must match token
     ):
         raise HTTPException(status_code=422, detail="User cannot be updated.")
     try:
@@ -176,14 +182,14 @@ async def get_user(
         title="Internal ID or External (LS) ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
-    auth_token: AuthToken = Depends(RequireAuthToken(active=False)),
+    auth_context: AuthContext = require_auth,
 ) -> User:
     """Get user data"""
     # Only data steward can request other user accounts
     if not (
-        auth_token.has_role("data_steward")
-        or (is_external_id(id_) and id_ == auth_token.ext_id)
-        or (is_internal_id(id_) and id_ == auth_token.id)
+        is_steward(auth_context)
+        or (is_external_id(id_) and id_ == auth_context.ext_id)
+        or (is_internal_id(id_) and id_ == auth_context.id)
     ):
         raise HTTPException(status_code=403, detail="Not authorized to request user.")
     try:
@@ -202,7 +208,7 @@ async def get_user(
         raise HTTPException(
             status_code=500, detail="The user cannot be requested."
         ) from error
-    if not auth_token.has_role("data_steward"):
+    if not is_steward(auth_context):
         # only data stewards should be able to see the status change information
         if user.status_change is not None:
             user = user.copy(update={"status_change": None})
@@ -232,7 +238,7 @@ async def patch_user(
         title="Internal ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
-    auth_token: AuthToken = Depends(RequireAuthToken()),
+    auth_context: AuthContext = require_active,
 ) -> Response:
     """Modify user data"""
     update_data = user_data.dict(exclude_unset=True)
@@ -240,8 +246,8 @@ async def patch_user(
     # but only data stewards are allowed to modify other accounts
     allowed = (
         "status" not in update_data
-        if id_ == auth_token.id
-        else auth_token.has_role("data_steward")
+        if id_ == auth_context.id
+        else is_steward(auth_context)
     )
     if not allowed:
         raise HTTPException(
@@ -254,7 +260,7 @@ async def patch_user(
         if "status" in update_data and update_data["status"] != user.status:
             update_data["status_change"] = StatusChange(
                 previous=user.status,
-                by=auth_token.id,
+                by=auth_context.id,
                 context="manual change",
                 change_date=now_as_utc(),
             )
@@ -295,10 +301,10 @@ async def delete_user(
         title="Internal ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
-    auth_token: AuthToken = Depends(RequireAuthToken(role="data_steward")),
+    auth_context: AuthContext = require_steward,
 ) -> Response:
     """Delete user"""
-    if id_ == auth_token.id:
+    if id_ == auth_context.id:
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this user."
         )

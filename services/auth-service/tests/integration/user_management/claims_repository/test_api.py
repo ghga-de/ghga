@@ -27,14 +27,14 @@ from ..fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_client_with_db,
 )
 
-CLAIM_DATA = dict(
-    visa_type="GHGA_ROLE",
-    visa_value="data-steward@ghga.de",
-    assertion_date="2022-09-01T12:00:00+00:00",
-    valid_from="2022-10-01T12:00:00+00:00",
-    valid_until="2022-10-31T12:00:00+00:00",
-    source="https://ghga.de",
-)
+CLAIM_DATA = {
+    "visa_type": "GHGA_ROLE",
+    "visa_value": "data-steward@ghga.de",
+    "assertion_date": "2022-09-01T12:00:00+00:00",
+    "valid_from": "2022-10-01T12:00:00+00:00",
+    "valid_until": "2022-10-31T12:00:00+00:00",
+    "source": "https://ghga.de",
+}
 
 
 def test_health_check(client):
@@ -111,7 +111,7 @@ def test_post_claim_without_permission(client, no_steward_headers):
         "/users/john@ghga.de/claims", json=CLAIM_DATA, headers=no_steward_headers
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.json()["detail"] == "Not authenticated"
+    assert response.json()["detail"] == "Not authorized"
 
 
 def test_get_claims(client_with_db, steward_headers):
@@ -179,7 +179,7 @@ def test_get_claims_without_permission(client, no_steward_headers):
 
     response = client.get("/users/john@ghga.de/claims", headers=no_steward_headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.json()["detail"] == "Not authenticated"
+    assert response.json()["detail"] == "Not authorized"
 
 
 def test_patch_claim(client_with_db, steward_headers):
@@ -300,7 +300,7 @@ def test_patch_claim_without_permission(client, no_steward_headers):
         headers=no_steward_headers,
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.json()["detail"] == "Not authenticated"
+    assert response.json()["detail"] == "Not authorized"
 
 
 def test_delete_claim(client_with_db, steward_headers):
@@ -399,4 +399,4 @@ def test_delete_claim_without_permission(client, no_steward_headers):
         "/users/some-user/claims/some-claim", headers=no_steward_headers
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.json()["detail"] == "Not authenticated"
+    assert response.json()["detail"] == "Not authorized"

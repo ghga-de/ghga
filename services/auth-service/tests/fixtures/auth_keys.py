@@ -42,10 +42,10 @@ def generate_jwk_set() -> jwk.JWKSet:
 def generate_keys() -> dict[str, Any]:
     """Generate dictionary with signing keys."""
     auth_adapter = environ.get("AUTH_SERVICE_RUN_AUTH_ADAPTER") == "true"
-    int_keys = generate_jwk().export
+    int_key = generate_jwk().export
     env: dict[str, Any] = {
-        "AUTH_SERVICE_AUTH_INT_KEYS": int_keys(private_key=auth_adapter),
-        "TEST_AUTH_SERVICE_AUTH_INT_KEYS": int_keys(private_key=True),
+        "AUTH_SERVICE_AUTH_KEY": int_key(private_key=auth_adapter),
+        "TEST_AUTH_SERVICE_AUTH_KEY": int_key(private_key=True),
     }
     if auth_adapter:
         ext_keys = generate_jwk_set().export
@@ -89,11 +89,10 @@ def reload_auth_key_config(auth_adapter: bool) -> None:
     """Reload the configuration for the signing keys."""
     environ["AUTH_SERVICE_RUN_AUTH_ADAPTER"] = "true" if auth_adapter else "false"
     set_auth_keys_env()
-    from auth_service.config import CONFIG
 
-    config = CONFIG.__class__()
-    CONFIG.auth_ext_keys = config.auth_ext_keys
-    CONFIG.auth_int_keys = config.auth_int_keys
+    from auth_service import config
+
+    reload(config)
 
     if auth_adapter:
         from auth_service.auth_adapter.core import auth

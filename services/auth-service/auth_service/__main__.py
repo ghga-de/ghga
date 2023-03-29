@@ -17,8 +17,8 @@
 
 import asyncio
 
-from ghga_service_chassis_lib.api import run_server
-from ghga_service_chassis_lib.utils import assert_tz_is_utc
+from ghga_service_commons.api import run_server
+from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 
 from .config import CONFIG, Config
 

@@ -20,7 +20,7 @@ Core utilities for the Claims Repository.
 
 from typing import Callable
 
-from ghga_service_chassis_lib.utils import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import UserDao

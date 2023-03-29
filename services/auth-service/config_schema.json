@@ -3,6 +3,50 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "auth_key": {
+      "title": "Auth Key",
+      "env_names": [
+        "auth_service_auth_key"
+      ],
+      "type": "string"
+    },
+    "auth_algs": {
+      "title": "Auth Algs",
+      "default": [
+        "ES256"
+      ],
+      "env_names": [
+        "auth_service_auth_algs"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "auth_check_claims": {
+      "title": "Auth Check Claims",
+      "default": {
+        "name": null,
+        "email": null,
+        "iat": null,
+        "exp": null
+      },
+      "env_names": [
+        "auth_service_auth_check_claims"
+      ],
+      "type": "object"
+    },
+    "auth_map_claims": {
+      "title": "Auth Map Claims",
+      "default": {},
+      "env_names": [
+        "auth_service_auth_map_claims"
+      ],
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "host": {
       "title": "Host",
       "description": "IP of the host.",
@@ -159,13 +203,6 @@
       ],
       "type": "string"
     },
-    "auth_int_keys": {
-      "title": "Auth Int Keys",
-      "env_names": [
-        "auth_service_auth_int_keys"
-      ],
-      "type": "string"
-    },
     "auth_ext_keys": {
       "title": "Auth Ext Keys",
       "env_names": [
@@ -252,7 +289,7 @@
     },
     "db_url": {
       "title": "Db Url",
-      "default": "mongodb://localhost:27017",
+      "default": "mongodb://mongodb:27017",
       "env_names": [
         "auth_service_db_url"
       ],

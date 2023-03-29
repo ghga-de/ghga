@@ -20,7 +20,7 @@ Definitions and helper functions for validating user claims.
 
 from typing import Callable
 
-from ghga_service_chassis_lib.utils import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
 
 from ....config import CONFIG
 from ..models.dto import AuthorityLevel, Claim, VisaType

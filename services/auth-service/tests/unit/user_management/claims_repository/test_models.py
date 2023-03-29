@@ -16,7 +16,7 @@
 
 """Test Claims models and show some usage examples."""
 
-from ghga_service_chassis_lib.utils import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import DateTimeUTC
 from pytest import mark, raises
 
 from auth_service.user_management.claims_repository.models.dto import (
@@ -58,7 +58,7 @@ def test_good_visa_values(value):
         "bad@email@org",
         "ftp://bad.url.org",
         ["not-an-identity"],
-        [dict(iss="foo", sub="bar")],
+        [{"iss": "foo", "sub": "bar"}],
     ],
 )
 def test_bad_visa_values(value):

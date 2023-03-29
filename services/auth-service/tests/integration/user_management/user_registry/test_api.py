@@ -18,7 +18,7 @@
 from datetime import datetime
 
 from fastapi import status
-from ghga_service_chassis_lib.utils import now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from auth_service.user_management.user_registry.utils import is_internal_id
 
@@ -634,7 +634,7 @@ def test_delete_user_as_same_user(client):
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
-    assert error == {"detail": "Not authenticated"}
+    assert error == {"detail": "Not authorized"}
 
     # even data stewards cannot delete their own accounts
     headers = get_headers_for(

@@ -21,7 +21,7 @@ Note: we currently use the DTOs also as the core entities.
 from enum import Enum
 from typing import Optional
 
-from ghga_service_chassis_lib.utils import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import DateTimeUTC
 from pydantic import BaseModel, EmailStr, Field
 
 __all__ = ["User", "UserData", "UserStatus", "StatusChange"]

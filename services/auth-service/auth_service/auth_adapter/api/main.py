@@ -25,7 +25,7 @@ then this must be also specified in the config setting api_root_path.
 from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
-from ghga_service_chassis_lib.api import configure_app
+from ghga_service_commons.api import configure_app
 
 from auth_service.config import CONFIG, configure_logging
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao

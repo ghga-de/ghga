@@ -21,12 +21,11 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Mapping, Optional, Union
 
 from fastapi import Request
-from ghga_service_chassis_lib.api import ApiConfigBase
-from ghga_service_chassis_lib.config import config_from_yaml
-from ghga_service_chassis_lib.utils import DateTimeUTC, now_as_utc
+from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from hexkit.config import config_from_yaml
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
-from pydantic import EmailStr
 
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.models.dto import (
@@ -34,7 +33,7 @@ from auth_service.user_management.claims_repository.models.dto import (
     Claim,
     VisaType,
 )
-from auth_service.user_management.user_registry.models.dto import User, UserStatus
+from auth_service.user_management.user_registry.models.dto import User
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -49,20 +48,20 @@ class AdditionalConfig(ApiConfigBase):
     """
 
     # full internal key for user management and auth adapter
-    auth_int_keys: str
+    auth_key: str
     # full external key set for auth adapter
     auth_ext_keys: Optional[str] = None
 
 
 class SigningKeys:
-    """Signign keys that can be used for testing."""
+    """Signing keys that can be used for testing."""
 
     internal_jwk: jwk.JWK
-    external_jwk: Optional[jwk.JWKSet]
+    external_jwk: Optional[jwk.JWK]
 
     def __init__(self):
-        config = AdditionalConfig()
-        self.internal_jwk = jwk.JWK.from_json(config.auth_int_keys)
+        config = AdditionalConfig()  # pyright: ignore
+        self.internal_jwk = jwk.JWK.from_json(config.auth_key)
         self.external_jwk = (
             jwk.JWKSet.from_json(config.auth_ext_keys).get_key("test")
             if config.auth_ext_keys
@@ -128,9 +127,11 @@ def create_internal_token(
     kty = key["kty"]
     assert kty in ("EC", "RSA")
     header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
-    claims: dict[str, Union[None, int, str]] = dict(
-        name="John Doe", email="john@home.org", status="active"
-    )
+    claims: dict[str, Union[None, int, str]] = {
+        "name": "John Doe",
+        "email": "john@home.org",
+        "status": "active",
+    }
     iat = int(now_as_utc().timestamp())
     if expired:
         exp = iat - 60 * 10  # expired 10 minutes ago
@@ -180,7 +181,7 @@ def get_claims_from_token(token: str, key: Optional[jwk.JWK] = None) -> dict[str
 def request_with_authorization(token: str = "") -> Request:
     """Get a dummy request with the given bearer token in the authorization header."""
     authorization = f"Bearer {token}".encode("ascii")
-    return Request(dict(type="http", headers=[(b"authorization", authorization)]))
+    return Request({"type": "http", "headers": [(b"authorization", authorization)]})
 
 
 class DummyUserDao:
@@ -191,19 +192,19 @@ class DummyUserDao:
         self,
         id_="john@ghga.de",
         name="John Doe",
-        email=EmailStr("john@home.org"),
+        email="john@home.org",
         title=None,
-        ext_id=EmailStr("john@aai.org"),
-        status=UserStatus.ACTIVE,
+        ext_id="john@aai.org",
+        status="active",
     ):
         """Initialize the dummy UserDao"""
         self.user = User(
             id=id_,
             name=name,
-            email=email,
+            email=email,  # pyright: ignore
             title=title,
-            ext_id=ext_id,
-            status=status,
+            ext_id=ext_id,  # pyright: ignore
+            status=status,  # pyright: ignore
             status_change=None,
             registration_date=datetime_utc(2020, 1, 1),
             active_submissions=[],

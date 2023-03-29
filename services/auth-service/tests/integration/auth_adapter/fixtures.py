@@ -15,14 +15,15 @@
 
 """Fixtures for the auth adapter integration tests"""
 
-import importlib
+from importlib import reload
+from os import environ
 from typing import Generator
 
 from fastapi.testclient import TestClient
 from pytest import fixture
 
+from auth_service import config
 from auth_service.auth_adapter.api import main
-from auth_service.config import CONFIG
 
 
 @fixture(name="client")
@@ -36,10 +37,12 @@ def fixture_client() -> Generator[TestClient, None, None]:
 def fixture_with_basic_auth() -> Generator[str, None, None]:
     """Run test with Basic authentication"""
     user, pwd = "testuser", "testpwd"
-    CONFIG.basic_auth_user = user
-    CONFIG.basic_auth_pwd = pwd
-    importlib.reload(main)
+    environ["AUTH_SERVICE_BASIC_AUTH_USER"] = user
+    environ["AUTH_SERVICE_BASIC_AUTH_PWD"] = pwd
+    reload(config)
+    reload(main)
     yield f"{user}:{pwd}"
-    CONFIG.basic_auth_user = None
-    CONFIG.basic_auth_pwd = None
-    importlib.reload(main)
+    del environ["AUTH_SERVICE_BASIC_AUTH_USER"]
+    del environ["AUTH_SERVICE_BASIC_AUTH_PWD"]
+    reload(config)
+    reload(main)

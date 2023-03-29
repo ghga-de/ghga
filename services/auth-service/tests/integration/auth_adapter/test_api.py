@@ -17,9 +17,10 @@
 
 import re
 from base64 import b64encode
+from typing import cast
 
 from fastapi import status
-from ghga_service_chassis_lib.utils import now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import fixture
 
 from auth_service.auth_adapter.api.headers import get_bearer_token
@@ -338,11 +339,11 @@ def test_token_exchange_for_known_user(
 ):  # pylint:disable=too-many-statements
     """Test the token exchange for authenticated and registered users."""
 
-    user_dao: UserDao = DummyUserDao()
+    user_dao: UserDao = cast(UserDao, DummyUserDao())
     client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    claim_dao: ClaimDao = DummyClaimDao()
+    claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
     client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
-    user = user_dao.user
+    user = user_dao.user  # pyright: ignore
 
     assert user.status is UserStatus.ACTIVE
     assert user.status_change is None
@@ -447,7 +448,7 @@ def test_token_exchange_for_known_user(
     # Check that the user was not changed in the database
     assert user.name == "John Doe"
     assert user.email == "john@home.org"
-    assert user.status == UserStatus.ACTIVE
+    assert user.status is UserStatus.ACTIVE
     assert user.status_change is None
 
 
@@ -505,11 +506,11 @@ def test_token_exchange_for_known_data_steward(
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     # add a dummy user who is a data steward
-    user_dao: UserDao = DummyUserDao(id_="james@ghga.de", title="Dr.")
+    user_dao: UserDao = cast(UserDao, DummyUserDao(id_="james@ghga.de", title="Dr."))
     client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    claim_dao: ClaimDao = DummyClaimDao()
+    claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
     client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
-    user = user_dao.user
+    user = user_dao.user  # pyright: ignore
 
     auth = f"Bearer {create_access_token()}"
     response = client.get("/some/path", headers={"Authorization": auth})

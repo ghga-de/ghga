@@ -16,7 +16,7 @@
 
 """Unit tests for the auth adapter core token validation feature"""
 
-from ghga_service_chassis_lib.utils import now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from jwcrypto import jwk
 from pytest import raises
 

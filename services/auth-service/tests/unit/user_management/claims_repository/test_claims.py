@@ -18,7 +18,7 @@
 
 from datetime import datetime
 
-from ghga_service_chassis_lib.utils import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import DateTimeUTC
 
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.core.claims import (
@@ -47,7 +47,7 @@ def test_is_valid_claim():
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
         creation_by="user-id",
-    )
+    )  # pyright: ignore
     assert is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 17))
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2020, 1, 1))
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 7))
@@ -73,7 +73,7 @@ def test_is_data_steward_claim():
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
         creation_by="user-id",
-    )
+    )  # pyright: ignore
     assert is_data_steward_claim(good_claim)
 
     bad_claim = good_claim.copy(update=dict(visa_type=VisaType.AFFILIATION_AND_ROLE))

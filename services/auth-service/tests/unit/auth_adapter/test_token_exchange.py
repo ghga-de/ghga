@@ -17,16 +17,15 @@
 """Unit tests for the auth adapter core token exchange feature"""
 
 import re
+from typing import cast
 
-from ghga_service_chassis_lib.utils import now_as_utc
-from pydantic import EmailStr
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import mark, raises
 
 from auth_service.auth_adapter.core import auth
-from auth_service.user_management.user_registry.models.dto import (
-    AcademicTitle,
-    UserStatus,
-)
+from auth_service.user_management.claims_repository.deps import ClaimDao
+from auth_service.user_management.user_registry.deps import UserDao
+from auth_service.user_management.user_registry.models.dto import UserStatus
 
 from ...fixtures.utils import (
     DummyClaimDao,
@@ -75,7 +74,7 @@ async def test_rejects_an_access_token_with_bad_token_class():
 async def test_rejects_user_info_with_mismatch_in_sub(httpx_mock):
     """Test the token exchange for a mismatch in subject claims."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(ext_id=EmailStr("not.john@aai.org"))
+    user_dao: UserDao = cast(UserDao, DummyUserDao(ext_id="not.john@aai.org"))
     httpx_mock.add_response(
         url=RE_USER_INFO_URL, json={**USER_INFO, "sub": "john@foo.org"}
     )
@@ -90,7 +89,7 @@ async def test_rejects_user_info_with_mismatch_in_sub(httpx_mock):
 async def test_rejects_user_info_with_missing_name(httpx_mock):
     """Test the token exchange for a missing name in user info."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(ext_id=EmailStr("not.john@aai.org"))
+    user_dao: UserDao = cast(UserDao, DummyUserDao(ext_id="not.john@aai.org"))
     user_info = {**USER_INFO, "name": None}  # type: ignore
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=user_info)
     with raises(auth.UserInfoError, match="Missing value for name claim"):
@@ -101,7 +100,7 @@ async def test_rejects_user_info_with_missing_name(httpx_mock):
 async def test_rejects_user_info_with_missing_email(httpx_mock):
     """Test the token exchange for a missing email in user info."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(ext_id=EmailStr("not.john@aai.org"))
+    user_dao: UserDao = cast(UserDao, DummyUserDao(ext_id="not.john@aai.org"))
     user_info = {**USER_INFO, "email": None}  # type: ignore
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=user_info)
     with raises(auth.UserInfoError, match="Missing value for email claim"):
@@ -112,7 +111,7 @@ async def test_rejects_user_info_with_missing_email(httpx_mock):
 async def test_exchanges_token_for_unknown_user_if_requested(httpx_mock):
     """Test token exchange for a valid but unknown user with pass_sub flag."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(ext_id="not.john@aai.org")
+    user_dao: UserDao = cast(UserDao, DummyUserDao(ext_id="not.john@aai.org"))
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
     internal_token = await auth.exchange_token(
         access_token, pass_sub=True, user_dao=user_dao
@@ -134,7 +133,7 @@ async def test_exchanges_token_for_unknown_user_if_requested(httpx_mock):
 async def test_does_not_exchange_for_unknown_user_if_not_requested():
     """Test token exchange for a valid but unknown user without pass_sub flag."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(ext_id=EmailStr("not.john@aai.org"))
+    user_dao: UserDao = cast(UserDao, DummyUserDao(ext_id="not.john@aai.org"))
     assert await auth.exchange_token(access_token, user_dao=user_dao) is None
 
 
@@ -142,7 +141,8 @@ async def test_does_not_exchange_for_unknown_user_if_not_requested():
 async def test_exchanges_access_token_for_a_known_user(httpx_mock):
     """Test the token exchange for a valid and already known user."""
     access_token = create_access_token()
-    user_dao, claim_dao = DummyUserDao(), DummyClaimDao()
+    user_dao: UserDao = cast(UserDao, DummyUserDao())
+    claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
     internal_token = await auth.exchange_token(
         access_token, user_dao=user_dao, claim_dao=claim_dao
@@ -160,15 +160,18 @@ async def test_exchanges_access_token_for_a_known_user(httpx_mock):
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
-    assert user_dao.user.status is UserStatus.ACTIVE
-    assert user_dao.user.status_change is None
+    user = user_dao.user  # pyright: ignore
+    assert user.status is UserStatus.ACTIVE
+    assert user.status_change is None
+    assert user.title is None
 
 
 @mark.asyncio
 async def test_also_passes_sub_for_a_known_user(httpx_mock):
     """Test that the sub claim is also passed for an already known user."""
     access_token = create_access_token()
-    user_dao, claim_dao = DummyUserDao(), DummyClaimDao()
+    user_dao: UserDao = cast(UserDao, DummyUserDao())
+    claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
     internal_token = await auth.exchange_token(
         access_token, pass_sub=True, user_dao=user_dao, claim_dao=claim_dao
@@ -184,7 +187,7 @@ async def test_also_passes_sub_for_a_known_user(httpx_mock):
 async def test_exchanges_access_token_when_name_was_changed(httpx_mock):
     """Test the token exchange for a valid user with a different name."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(name="John Foo")
+    user_dao: UserDao = cast(UserDao, DummyUserDao(name="John Foo"))
     httpx_mock.add_response(url=re.compile(".*/userinfo$"), json=USER_INFO)
     internal_token = await auth.exchange_token(access_token, user_dao=user_dao)
     assert internal_token is not None
@@ -200,16 +203,17 @@ async def test_exchanges_access_token_when_name_was_changed(httpx_mock):
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
-    user = user_dao.user
+    user = user_dao.user  # pyright: ignore
     assert user.status is UserStatus.ACTIVE
     assert user.status_change is None
+    assert user.title is None
 
 
 @mark.asyncio
 async def test_exchanges_access_token_when_email_was_changed(httpx_mock):
     """Test the token exchange for a valid user with a different email."""
     access_token = create_access_token()
-    user_dao = DummyUserDao(email=EmailStr("john@elsewhere.org"))
+    user_dao: UserDao = cast(UserDao, DummyUserDao(email="john@elsewhere.org"))
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
     internal_token = await auth.exchange_token(access_token, user_dao=user_dao)
     assert internal_token is not None
@@ -225,19 +229,18 @@ async def test_exchanges_access_token_when_email_was_changed(httpx_mock):
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
-    user = user_dao.user
+    user = user_dao.user  # pyright: ignore
     assert user.status is UserStatus.ACTIVE
     assert user.status_change is None
+    assert user.title is None
 
 
 @mark.asyncio
 async def test_adds_role_for_a_known_data_steward(httpx_mock):
     """Test that the internal token contains the role for a data steward."""
     access_token = create_access_token()
-    user_dao, claim_dao = (
-        DummyUserDao(id_="james@ghga.de", title=AcademicTitle.DR),
-        DummyClaimDao(),
-    )
+    user_dao: UserDao = cast(UserDao, DummyUserDao(id_="james@ghga.de", title="Dr."))
+    claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
     internal_token = await auth.exchange_token(
         access_token, user_dao=user_dao, claim_dao=claim_dao
@@ -258,12 +261,10 @@ async def test_adds_role_for_a_known_data_steward(httpx_mock):
 async def test_does_not_add_role_for_a_known_inactive_data_steward(httpx_mock):
     """Test that the token does not contain the role for an inactive data steward."""
     access_token = create_access_token()
-    user_dao, claim_dao = (
-        DummyUserDao(
-            id_="james@ghga.de", title=AcademicTitle.DR, status=UserStatus.INACTIVE
-        ),
-        DummyClaimDao(),
+    user_dao: UserDao = cast(
+        UserDao, DummyUserDao(id_="james@ghga.de", title="Dr.", status="inactive")
     )
+    claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
     internal_token = await auth.exchange_token(
         access_token, user_dao=user_dao, claim_dao=claim_dao

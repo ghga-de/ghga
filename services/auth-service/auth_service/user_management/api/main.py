@@ -20,7 +20,7 @@ Additional endpoints might be structured in dedicated modules
 """
 
 from fastapi import FastAPI, status
-from ghga_service_chassis_lib.api import configure_app
+from ghga_service_commons.api import configure_app
 
 from auth_service.config import CONFIG, configure_logging
 from auth_service.user_management import (

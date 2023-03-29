@@ -19,7 +19,7 @@
 import json
 import logging
 from functools import cached_property, lru_cache
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import httpx
 from fastapi import status
@@ -89,8 +89,8 @@ class OIDCDiscovery:
     @cached_property
     def config(self) -> dict[str, Any]:
         """Fetch the OIDC configuration directory."""
-        respsonse = httpx.get(self.config_url, timeout=TIMEOUT)
-        config = respsonse.json()
+        response = httpx.get(self.config_url, timeout=TIMEOUT)
+        config = response.json()
         if not isinstance(config, dict) or "version" not in config:
             raise ConfigurationDiscoveryError("Unexpected discovery object")
         return config
@@ -150,6 +150,7 @@ class JWTConfig:
     copy_ui_claims = ("name", "email")
     # the key under which the subject is copied from the external token
     copy_sub_as = "ext_id"
+    # the URL of the userinfo endpoint
     userinfo_endpoint: str
 
     def __init__(self, config: Config = CONFIG) -> None:
@@ -170,10 +171,10 @@ class JWTConfig:
             )
         self.external_jwks = external_jwks
 
-        internal_keys = config.auth_int_keys
-        if not internal_keys:
+        internal_key = config.auth_key
+        if not internal_key:
             raise ConfigurationMissingKey("No internal signing keys configured.")
-        internal_jwk = jwk.JWK.from_json(internal_keys)
+        internal_jwk = jwk.JWK.from_json(internal_key)
         if not internal_jwk.has_private:
             raise ConfigurationMissingKey("No private internal signing keys found.")
         self.internal_jwk = internal_jwk
@@ -235,9 +236,11 @@ async def exchange_token(
 
     If the user is already registered, the user id, status and title will be
     included in the internal token as well.
+
     If name or email do not match with the external userinfo, the user status
     will appear as "invalid" in the internal token, but the actual status
     will not  be changed in the user registry.
+
     If the user is not yet registered, and pass_sub is set, then the sub claim
     will be included in the internal token as "ext_id", otherwise the value None
     will be returned instead of a token.
@@ -305,7 +308,7 @@ def _assert_ui_claims_not_empty(ui_claims: dict[str, Any]) -> None:
 
 
 def decode_and_validate_token(
-    access_token: str, key: jwk.JWKSet = jwt_config.external_jwks
+    access_token: str, key: Union[jwk.JWK, jwk.JWKSet] = jwt_config.external_jwks
 ) -> dict[str, Any]:
     """Decode and validate the given JSON Web Token.
 

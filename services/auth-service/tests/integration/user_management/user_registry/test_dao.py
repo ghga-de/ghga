@@ -16,7 +16,7 @@
 
 """Test user specific DAOs."""
 
-from ghga_service_chassis_lib.utils import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import DateTimeUTC
 from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=unused-import
     mongodb_fixture,
 )
