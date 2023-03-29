@@ -16,7 +16,7 @@
 """In this module object construction and dependency injection is carried out."""
 
 from fastapi import FastAPI
-from ghga_service_chassis_lib.api import configure_app, run_server
+from ghga_service_commons.api import configure_app, run_server
 
 from wps.adapters.inbound.fastapi_.custom_openapi import get_openapi_schema
 from wps.adapters.inbound.fastapi_.routes import router

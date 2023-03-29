@@ -19,13 +19,8 @@ Module containing the main FastAPI router and all route functions.
 """
 
 from fastapi import APIRouter, status
-from pydantic import BaseModel
 
 router = APIRouter()
-
-
-class DeliveryDelayedModel(BaseModel):
-    """Pydantic model for 202 Response. Empty, since 202 has no body."""
 
 
 @router.get(
@@ -36,5 +31,4 @@ class DeliveryDelayedModel(BaseModel):
 )
 async def health():
     """Used to test if this service is alive"""
-
     return {"status": "OK"}

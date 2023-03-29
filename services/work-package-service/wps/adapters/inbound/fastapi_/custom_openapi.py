@@ -27,8 +27,7 @@ config = Config()
 
 
 def get_openapi_schema(api) -> Dict[str, Any]:
-
-    """Generates a custom openapi schema for the service"""
+    """Generate a custom OpenAPI schema for the service."""
 
     return get_openapi(
         title="Work Package Service",
