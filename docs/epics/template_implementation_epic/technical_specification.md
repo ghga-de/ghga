@@ -1,13 +1,27 @@
 # \<Epic Title\> (\<Epic Code Name\>)
 **Epic Type:** Implementation Epic
-  
+
+Epic planning and implementation follows the
+[Epic Planning and Marathon SOP](https://docs.ghga-dev.de/main/sops/sop001_epic_planning.html).
+
 **Attention: Please do not put any confidential content here.**
 
 \<Please replace all appearances of `<...>`.\>
 
-## Scope:
-A scope definition can be found here: \<Insert Link to epic documentation on confluence.\>
-## User Journeys
+## Scope
+### Outline:
+\<Provide a brief outline of the goal of this epic in one or few sentences.\>
+
+### Included/Required:
+\<List the required features without going into too much technical detail.\>
+
+### Optional:
+\<List any optional features that may or may not be realized as part of this epic.\>
+
+### Not included:
+\<List features that will not be addressed as part of this epic.\>
+
+## User Journeys (optional)
 
 This epic covers the following user journeys:
 
@@ -16,36 +30,19 @@ This epic covers the following user journeys:
 
 ![\<Example Image\>](./images/data_upload.jpg)
 
-## User Journeys that are not part of this Epic:
-
-- \<Provide a list here.\>
-
-
 ## API Definitions:
-
-The definitions are hosted here:
-
-
-\<Please list the APIs of all relevant services as demonstrated in the following: \>
 
 ### RESTful/Synchronous:
 
-The RESTful service API are described using OpenAPI:
+\<List all endpoints in the following way:\>
 
+- GET /samples/{sample_id}: Get metadata on a sample
+- POST /submissions: Post a submission
+- ...
 
-**\<Example Service\>**: [OpenAPI YAML](api_definitions/rest/example_service.yaml), [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/template/api_definitions/rest/example_service.yaml)
+### Payload Schemas for Events:
 
-(The OpenAPI specifications are hosted in the `./api_defitions/rest` sub-directory. Please make sure the links are pointing to the main branch, even if the file doesn't exist there because the PR has not being merged, yet.)
-
-### Payload Schemas for Asynchronous Topics:
-
-The payloads for asynchronous topics are described using JSON schemas:
-
-
-- \<my_example_event_type\>: [JSON Schema](https://raw.githubusercontent.com/ghga-de/ghga-message-schemas/main/ghga_message_schemas/json_schemas/drs_object_registered.json)
-
-
-(The JSON schemas should be defined in the following repository: https://github.com/ghga-de/ghga-message-schemas. Please insert only links from the main branch.)
+\<Describe the schema of event either using example events or json schemas\>
 
 
 ## Additional Implementation Details:

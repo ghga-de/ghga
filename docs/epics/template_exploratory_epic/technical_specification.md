@@ -1,26 +1,33 @@
 # \<Epic Title\> (\<Epic Code Name\>)
 **Epic Type:** Exploratory Epic
 
+Epic planning and implementation follows the
+[Epic Planning and Marathon SOP](https://docs.ghga-dev.de/main/sops/sop001_epic_planning.html)
+
 **Attention: Please do not put any confidential content here.**
 
 \<Please replace all appearances of `<...>`.\>
 
 ## Principle Components of Exploration:
 
-\<Try to decompose the exploratory epics into components or categories of tasks:\>
+Principal topics and components that shall be part of this exporation.
+Moreover, lists the questions that shall be answered.
 
 - \<Provide a list here.\>
 
+## Not part of this Exploration:
+
+All aspects that shall be ignored during the exploration:
+
+- \<Provide a list here.\>
 
 ## Material and Resources:
 
-\<List any materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and any (external) persons/experts to talk to here:\>
+Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and any (external) persons/experts to talk to:
 
 - \<Provide a list here.\>
 
-## User Journeys
-
-\<This is optional for exploratory epics\>
+## User Journeys (Optional)
 
 This epic covers the following user journeys:
 
@@ -28,12 +35,6 @@ This epic covers the following user journeys:
 
 
 ![\<Example Image\>](./images/data_upload.jpg)
-
-## User Journeys that are not part of this Epic:
-\<This is optional for exploratory epics\>
-#
-- \<Provide a list here.\>
-
 
 ## Additional Implementation Details:
 
