@@ -10,7 +10,6 @@
 .devcontainer/docker-compose.yml
 .devcontainer/Dockerfile
 
-.github/workflows/dev_cd.yaml
 
 docs/README.md
 

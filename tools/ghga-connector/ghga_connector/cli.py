@@ -16,8 +16,10 @@
 
 """ CLI-specific wrappers around core functions."""
 
+import os
 from pathlib import Path
 
+import crypt4gh.keys
 import typer
 
 from ghga_connector import core
@@ -103,12 +105,26 @@ def download(  # pylint: disable=too-many-arguments
     Command to download a file
     """
     core.RequestsSession.configure(CONFIG.max_retries)
+    message_display = CLIMessageDisplay()
+
+    if not os.path.isfile(pubkey_path):
+        message_display.failure(f"The file {pubkey_path} does not exist.")
+        raise core.exceptions.PubKeyFileDoesNotExistError(pubkey_path=pubkey_path)
+
+    wps_info = core.get_wps_info(config=CONFIG)
+    # get and compare user public keys
+    announced_user_pubkey = wps_info.user_pubkey
+    provided_pubkey = crypt4gh.keys.get_public_key(pubkey_path)
+
+    if announced_user_pubkey != provided_pubkey:
+        raise core.exceptions.PubkeyMismatchError()
+
     core.download(
         api_url=CONFIG.download_api,
         file_id=file_id,
         output_dir=output_dir,
         max_wait_time=CONFIG.max_wait_time,
         part_size=CONFIG.part_size,
-        message_display=CLIMessageDisplay(),
+        message_display=message_display,
         pubkey_path=pubkey_path,
     )

@@ -34,7 +34,6 @@ class Config(BaseSettings):
         "https://hd-dev.ghga-dev.de/drs3/ga4gh/drs/v1",
         description="URL to the root of the DRS-compatible API used for download.",
     )
-
     max_retries: int = Field(
         core.MAX_RETRIES, description="Number of times to retry failed API calls."
     )
@@ -47,5 +46,15 @@ class Config(BaseSettings):
     )
     server_pubkey: str = Field(
         ...,
-        description="Base64 encoded current GHGA public key for Crypt4GH encryption",
+        description="Base64 encoded current GHGA public key for Crypt4GH encryption.",
     )
+    wps_file_list: list[str] = Field(
+        ..., description="List of file IDs to be downloaded."
+    )
+    wps_file_endings: list[str] = Field(
+        ...,
+        description="File endings for downloaded files."
+        + " Order needs to correspond to the order of file IDs.",
+    )
+    wps_user_id: str = Field(..., description="Internal user ID.")
+    wps_user_pubkey: str = Field(..., description="Announced user public key.")

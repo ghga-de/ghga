@@ -20,6 +20,7 @@ Contains calls to the GHGA storage API
 
 import base64
 import json
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from time import sleep
@@ -52,6 +53,19 @@ class UploadStatus(str, Enum):
     PENDING = "pending"
     REJECTED = "rejected"
     UPLOADED = "uploaded"
+
+
+@dataclass
+class WPSInfo:
+    """
+    Container for WPS endpoint information
+    """
+
+    file_ids: list[str]
+    file_endings: list[str]
+    ghga_pubkey: bytes
+    user_id: str
+    user_pubkey: bytes
 
 
 def check_url(api_url, *, wait_time=1000) -> bool:
@@ -510,3 +524,21 @@ def get_file_header_envelope(file_id: str, api_url: str, public_key: bytes) -> b
 
     ResponseExceptionTranslator(spec=spec).handle(response=response)
     raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
+
+
+def get_wps_info(config):
+    """
+    Call WPS endpoint and retrieve necessary information.
+    For now, mock the call and return information from config.
+    """
+    ghga_pubkey = base64.b64decode(config.server_pubkey)
+    user_pubkey = base64.b64decode(config.wps_user_pubkey)
+
+    wps_info = WPSInfo(
+        file_ids=config.wps_file_list,
+        file_endings=config.wps_file_endings,
+        ghga_pubkey=ghga_pubkey,
+        user_id=config.wps_user_id,
+        user_pubkey=user_pubkey,
+    )
+    return wps_info

@@ -19,6 +19,7 @@ It should not contain any service API-related code.
 """
 
 from . import exceptions  # noqa: F401
+from .api_calls import get_wps_info  # noqa: F401
 from .constants import (  # noqa: F401
     DEFAULT_PART_SIZE,
     MAX_PART_NUMBER,

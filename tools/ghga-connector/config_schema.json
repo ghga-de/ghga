@@ -50,15 +50,57 @@
     },
     "server_pubkey": {
       "title": "Server Pubkey",
-      "description": "Base64 encoded current GHGA public key for Crypt4GH encryption",
+      "description": "Base64 encoded current GHGA public key for Crypt4GH encryption.",
       "env_names": [
         "ghga_connector_server_pubkey"
+      ],
+      "type": "string"
+    },
+    "wps_file_list": {
+      "title": "Wps File List",
+      "description": "List of file IDs to be downloaded.",
+      "env_names": [
+        "ghga_connector_wps_file_list"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "wps_file_endings": {
+      "title": "Wps File Endings",
+      "description": "File endings for downloaded files. Order needs to correspond to the order of file IDs.",
+      "env_names": [
+        "ghga_connector_wps_file_endings"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "wps_user_id": {
+      "title": "Wps User Id",
+      "description": "Internal user ID.",
+      "env_names": [
+        "ghga_connector_wps_user_id"
+      ],
+      "type": "string"
+    },
+    "wps_user_pubkey": {
+      "title": "Wps User Pubkey",
+      "description": "Announced user public key.",
+      "env_names": [
+        "ghga_connector_wps_user_pubkey"
       ],
       "type": "string"
     }
   },
   "required": [
-    "server_pubkey"
+    "server_pubkey",
+    "wps_file_list",
+    "wps_file_endings",
+    "wps_user_id",
+    "wps_user_pubkey"
   ],
   "additionalProperties": false
 }

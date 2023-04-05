@@ -64,6 +64,17 @@ class PubKeyFileDoesNotExistError(RuntimeError):
         super().__init__(message)
 
 
+class PubkeyMismatchError(RuntimeError):
+    """
+    Thrown when the user public key announced in the submission metadata retrieved from
+    the work package service does not match the user public key provided to the connector
+    """
+
+    def __init__(self):
+        message = "Provided user public key does not match announced user public key."
+        super().__init__(message)
+
+
 class PrivateKeyFileDoesNotExistError(RuntimeError):
     """Thrown, when the specified private key file does exist."""
 
