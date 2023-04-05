@@ -16,20 +16,92 @@
 """Defines dataclasses for business-logic data as well as request/reply models for use
 in the API."""
 
-from pydantic import BaseModel
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
+
+from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from pydantic import BaseModel, EmailStr, Field
+
+__all__ = [
+    "WorkType",
+    "WorkOrderToken",
+    "WorkPackageCreationData",
+    "WorkPackageData",
+    "WorkPackage",
+]
 
 
-class WorkPackageData(BaseModel):
-    """
-    All data necessary to describe a work package.
-    """
+class BaseDto(BaseModel):
+    """Base model preconfigured for use as Dto."""
 
-    name: str
+    class Config:  # pylint: disable=missing-class-docstring
+        extra = "forbid"
+        frozen = True
+
+
+class WorkType(str, Enum):
+    """The type of work that a work package describes."""
+
+    DOWNLOAD = "download"
+    UPLOAD = "upload"
+
+
+@dataclass(frozen=True)
+class WorkOrderToken:
+    """A class describing the payload of a work order token."""
+
+    type: WorkType
+    file_id: str
+    user_id: str
+    public_key: str
+    full_user_name: str
+    email: str
+
+
+class WorkPackageCreationData(BaseDto):
+    """All data necessary to create a work package."""
+
+    user_id: str
+    dataset_id: str
+    type: WorkType
+    file_ids: Optional[list[str]] = Field(
+        default=None,
+        description="IDs of all included files."
+        " If None, all files of the dataset are assumed as target.",
+    )
+    user_public_crypt4gh_key: str = Field(
+        default=...,
+        description="The user's public Crpyt4GH key in base64 encoding",
+    )
+
+
+class WorkPackageData(WorkPackageCreationData):
+    """All data that describes a work package."""
+
+    file_ids: list[str] = Field(default=..., description="IDs of all included files")
+    file_extensions: dict[str, str] = Field(
+        default=...,
+        description="Mapping from file IDs to file extensions",
+    )
+    full_user_name: str = Field(
+        default=...,
+        description="The user's full name including academic title",
+    )
+    email: EmailStr = Field(default=..., description="E-Mail address of the user")
+    token_hash: str = Field(
+        default=...,
+        description="Hash of the workpackage access token",
+    )
+    created: DateTimeUTC = Field(
+        default=..., description="Creation date of the work package"
+    )
+    expires: DateTimeUTC = Field(
+        default=..., title="Expiration date of the work pacakge"
+    )
 
 
 class WorkPackage(WorkPackageData):
-    """
-    A work package including a unique identifier.
-    """
+    """A work package including a unique identifier."""
 
-    id: str
+    id: str = Field(default=..., description="ID of the work package")

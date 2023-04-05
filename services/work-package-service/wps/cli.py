@@ -18,6 +18,7 @@
 import asyncio
 
 import typer
+from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 
 from wps.main import run_rest
 
@@ -28,4 +29,5 @@ cli = typer.Typer()
 def sync_run_api():
     """Run the HTTP REST API."""
 
+    assert_tz_is_utc()
     asyncio.run(run_rest())
