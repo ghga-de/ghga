@@ -40,7 +40,7 @@ __all__ = [
 
 
 class BaseDto(BaseModel):
-    """Base model preconfigured for use as Dto."""
+    """Base model pre-configured for use as Dto."""
 
     class Config:  # pylint: disable=missing-class-docstring
         extra = "forbid"
@@ -112,35 +112,37 @@ class Identity(BaseDto):
 class ClaimCreation(BaseDto):
     """A claim made about a user with a user ID"""
 
-    visa_type: str = Field(default=..., title="Visa type", example="AffiliationAndRole")
+    visa_type: VisaType = Field(default=..., example="AffiliationAndRole")
     visa_value: Union[EmailStr, HttpUrl, list[Identity]] = Field(
         default=...,
-        title="Scope of the claim depending of the visa type",
+        description="Scope of the claim depending of the visa type",
         example="faculty@home.org",
     )
 
     assertion_date: DateTimeUTC = Field(
-        ..., title="Assertion date", example="2022-11-30T12:00:00Z"
+        ...,
+        description="Date when the assertion was made",
+        example="2022-11-30T12:00:00Z",
     )
     valid_from: DateTimeUTC = Field(
-        ..., title="Start date of validity", example="2023-01-01T00:00:00Z"
+        ..., description="Start date of validity", example="2023-01-01T00:00:00Z"
     )
     valid_until: DateTimeUTC = Field(
-        ..., title="End date of validity", example="2023-12-31T23:59:59Z"
+        ..., description="End date of validity", example="2023-12-31T23:59:59Z"
     )
 
     source: HttpUrl = Field(
-        ..., title="Asserting organization", example="https://home.org"
+        ..., description="Asserting organization", example="https://home.org"
     )  # organization making the assertion
     sub_source: Optional[HttpUrl] = Field(
-        None, title="Asserting sub-organization", example="https://dac.home.org"
+        None, description="Asserting sub-organization", example="https://dac.home.org"
     )  # e.g. DAC or Data Hub
     asserted_by: Optional[AuthorityLevel] = Field(
-        None, title="Authority level", example="so"
+        None, description="Authority level", example="so"
     )
 
     conditions: Optional[list[list[Condition]]] = Field(
-        None, title="Set of conditions"
+        None, description="Set of conditions"
     )  # nested list (first level OR, second level AND)
 
     @validator("valid_until")
@@ -154,27 +156,31 @@ class ClaimCreation(BaseDto):
 class ClaimUpdate(BaseDto):
     """A set of attributes that shall be updated in a claim."""
 
-    revocation_date: DateTimeUTC = Field(..., title="Date of revocation")
+    revocation_date: DateTimeUTC = Field(..., description="Date of revocation")
 
 
 class ClaimFullCreation(ClaimCreation):
     """A claim about a user with a user ID and all data except the claim ID"""
 
     user_id: str = Field(  # actually UUID
-        default=..., title="ID", description="Internally used ID of the user"
+        default=..., description="Internally used ID of the user"
     )
 
-    creation_date: DateTimeUTC = Field(..., title="Date of creation of this claim")
-    creation_by: str = Field(..., title="Who created this claim (user ID)")
-    revocation_date: Optional[DateTimeUTC] = Field(
-        None, title="If revoked, date of revocation"
+    creation_date: DateTimeUTC = Field(
+        ..., description="Date of creation of this claim"
     )
-    revocation_by: Optional[str] = Field(None, title="Who revoked this claim (user ID)")
+    creation_by: str = Field(..., description="Who created this claim (user ID)")
+    revocation_date: Optional[DateTimeUTC] = Field(
+        None, description="If revoked, date of revocation"
+    )
+    revocation_by: Optional[str] = Field(
+        None, description="Who revoked this claim (user ID)"
+    )
 
 
 class Claim(ClaimFullCreation):
     """A claim about a user with a claim ID"""
 
     id: str = Field(  # actually UUID
-        default=..., title="ID", description="Internally used ID of the claim"
+        default=..., description="Internally used ID of the claim"
     )

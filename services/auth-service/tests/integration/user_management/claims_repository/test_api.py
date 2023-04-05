@@ -16,8 +16,10 @@
 """Test the REST API"""
 
 from operator import itemgetter
+from typing import Any
 
 from fastapi import status
+from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from auth_service.user_management.user_registry.deps import get_user_dao
 
@@ -27,13 +29,22 @@ from ..fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_client_with_db,
 )
 
-CLAIM_DATA = {
-    "visa_type": "GHGA_ROLE",
+ROLE_CLAIM_DATA = {
+    "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
     "visa_value": "data-steward@ghga.de",
     "assertion_date": "2022-09-01T12:00:00+00:00",
     "valid_from": "2022-10-01T12:00:00+00:00",
     "valid_until": "2022-10-31T12:00:00+00:00",
     "source": "https://ghga.de",
+    "asserted_by": "system",
+}
+
+DATASET_CLAIM_DATA = {
+    "visa_type": "ControlledAccessGrants",
+    "visa_value": "https://ghga.de/datasets/some-dataset-id",
+    "assertion_date": "2022-06-01T12:00:00+00:00",
+    "source": "https://ghga.de",
+    "asserted_by": "system",
 }
 
 
@@ -61,7 +72,7 @@ def test_post_claim(client_with_db, steward_headers):
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     response = client_with_db.post(
-        "/users/john@ghga.de/claims", json=CLAIM_DATA, headers=steward_headers
+        "/users/john@ghga.de/claims", json=ROLE_CLAIM_DATA, headers=steward_headers
     )
 
     claim = response.json()
@@ -73,18 +84,17 @@ def test_post_claim(client_with_db, steward_headers):
     assert claim_id.count("-") == 4
     assert claim.pop("user_id") == "john@ghga.de"
     assert claim.pop("sub_source") is None
-    assert claim.pop("asserted_by") is None
     assert claim.pop("conditions") is None
     assert claim.pop("revocation_date") is None
     assert claim.pop("revocation_by") is None
     assert claim.pop("creation_date") is not None
     assert claim.pop("creation_by") is not None
 
-    assert claim == CLAIM_DATA
+    assert claim == ROLE_CLAIM_DATA
 
     # test with non-existing user
     response = client_with_db.post(
-        "/users/john@haag.de/claims", json=CLAIM_DATA, headers=steward_headers
+        "/users/john@haag.de/claims", json=ROLE_CLAIM_DATA, headers=steward_headers
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
@@ -94,7 +104,7 @@ def test_post_claim_for_same_user(client, steward_headers):
     """Test that creating a user claim for the same user does not work."""
 
     response = client.post(
-        "/users/steve-internal/claims", json=CLAIM_DATA, headers=steward_headers
+        "/users/steve-internal/claims", json=ROLE_CLAIM_DATA, headers=steward_headers
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json()["detail"] == "Cannot modify own claims."
@@ -103,12 +113,12 @@ def test_post_claim_for_same_user(client, steward_headers):
 def test_post_claim_without_permission(client, no_steward_headers):
     """Test that creating a user claim without permission does not work."""
 
-    response = client.post("/users/john@ghga.de/claims", json=CLAIM_DATA)
+    response = client.post("/users/john@ghga.de/claims", json=ROLE_CLAIM_DATA)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json()["detail"] == "Not authenticated"
 
     response = client.post(
-        "/users/john@ghga.de/claims", json=CLAIM_DATA, headers=no_steward_headers
+        "/users/john@ghga.de/claims", json=ROLE_CLAIM_DATA, headers=no_steward_headers
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json()["detail"] == "Not authorized"
@@ -123,10 +133,11 @@ def test_get_claims(client_with_db, steward_headers):
     user_id = "john@ghga.de"
 
     # post two different claims
-    claim1 = CLAIM_DATA
+    claim1 = ROLE_CLAIM_DATA
     claim2 = {
         **claim1,
-        "visa_type": "RESEARCHER_STATUS",
+        "assertion_date": "2022-09-01T13:00:00+00:00",
+        "visa_type": "ResearcherStatus",
         "visa_value": "researcher@ghga.de",
     }
     posted_claims = []
@@ -136,19 +147,18 @@ def test_get_claims(client_with_db, steward_headers):
         )
         assert response.status_code == status.HTTP_201_CREATED
         posted_claims.append(response.json())
-    posted_claims.sort(key=itemgetter("visa_type"))
 
     response = client_with_db.get(f"/users/{user_id}/claims", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     requested_claims = response.json()
-    posted_claims.sort(key=itemgetter("visa_type"))
+    requested_claims.sort(key=itemgetter("assertion_date"))
 
     assert requested_claims == posted_claims
 
     assert requested_claims[0]["user_id"] == user_id
     assert requested_claims[1]["user_id"] == user_id
-    assert requested_claims[0]["visa_type"] == "GHGA_ROLE"
-    assert requested_claims[1]["visa_type"] == "RESEARCHER_STATUS"
+    assert requested_claims[0]["visa_type"] == ROLE_CLAIM_DATA["visa_type"]
+    assert requested_claims[1]["visa_type"] == "ResearcherStatus"
     assert requested_claims[0]["visa_value"] != requested_claims[1]["visa_value"]
 
     # test with non-existing user
@@ -192,7 +202,7 @@ def test_patch_claim(client_with_db, steward_headers):
 
     # post test claim
     response = client_with_db.post(
-        f"/users/{user_id}/claims", json=CLAIM_DATA, headers=steward_headers
+        f"/users/{user_id}/claims", json=ROLE_CLAIM_DATA, headers=steward_headers
     )
     posted_claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -210,7 +220,7 @@ def test_patch_claim(client_with_db, steward_headers):
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    # tset that claim has been revoked
+    # test that claim has been revoked
     response = client_with_db.get(f"/users/{user_id}/claims", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
@@ -312,9 +322,9 @@ def test_delete_claim(client_with_db, steward_headers):
     user_id = "john@ghga.de"
 
     # post two different claims
-    claim1 = CLAIM_DATA.copy()
-    claim2 = CLAIM_DATA.copy()
-    claim2["visa_type"] = "RESEARCHER_STATUS"
+    claim1 = ROLE_CLAIM_DATA.copy()
+    claim2 = ROLE_CLAIM_DATA.copy()
+    claim2["visa_type"] = "ResearcherStatus"
     for claim in (claim1, claim2):
         response = client_with_db.post(
             f"/users/{user_id}/claims", json=claim, headers=steward_headers
@@ -350,7 +360,7 @@ def test_delete_claim(client_with_db, steward_headers):
     assert len(claims) == 1
     claim = claims[0]
     assert claim["id"] == claim2["id"]
-    assert claim["visa_type"] == "RESEARCHER_STATUS"
+    assert claim["visa_type"] == "ResearcherStatus"
 
     # delete again
     response = client_with_db.delete(
@@ -400,3 +410,77 @@ def test_delete_claim_without_permission(client, no_steward_headers):
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json()["detail"] == "Not authorized"
+
+
+def test_get_download_access(client_with_db, steward_headers):
+    """Test that checking for download access works."""
+
+    user_dao = DummyUserDao()
+    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+
+    # post valid access permission for some-dataset-id
+
+    claim_data: dict[str, Any] = DATASET_CLAIM_DATA.copy()
+    current_timestamp = now_as_utc().timestamp()
+    claim_data["valid_from"] = current_timestamp
+    claim_data["valid_until"] = current_timestamp + 60
+
+    response = client_with_db.post(
+        "/users/john@ghga.de/claims", json=claim_data, headers=steward_headers
+    )
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/some-dataset-id"
+    assert claim["user_id"] == "john@ghga.de"
+
+    # post invalid access permission for former-dataset-id
+
+    claim_data["visa_value"] = claim_data["visa_value"].replace("some", "former")
+    claim_data["valid_from"] = current_timestamp - 60
+    claim_data["valid_until"] = current_timestamp - 30
+
+    response = client_with_db.post(
+        "/users/john@ghga.de/claims", json=claim_data, headers=steward_headers
+    )
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/former-dataset-id"
+    assert claim["user_id"] == "john@ghga.de"
+
+    # check access for wrong user
+
+    response = client_with_db.get(
+        "/datasets/some-dataset-id/users/jane@ghga.de/download-access"
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "The user was not found."
+
+    # check access for right user
+
+    response = client_with_db.get(
+        "/datasets/some-dataset-id/users/john@ghga.de/download-access"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == "true"
+
+    # check access when permission exists but is not valid any more
+
+    response = client_with_db.get(
+        "/datasets/former-dataset-id/users/john@ghga.de/download-access"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == "false"
+
+    # check access when dataset and permission does not exist
+
+    response = client_with_db.get(
+        "/datasets/another-dataset-id/users/john@ghga.de/download-access"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == "false"

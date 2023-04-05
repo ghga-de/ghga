@@ -53,14 +53,14 @@ class BaseDto(BaseModel):
 class StatusChange(BaseDto):
     """Details of a status change"""
 
-    previous: UserStatus = Field(default=None, title="Previous user status")
+    previous: UserStatus = Field(default=None, description="Previous user status")
     by: Optional[str] = Field(
         default=None,
-        title="Status changed by",
+        title="Changed by",
         description="ID of the user who changed the status",
     )
-    context: str = Field(default=None, title="Status change context")
-    change_date: DateTimeUTC = Field(default=None, title="Date of last change")
+    context: str = Field(default=None, description="Status change context")
+    change_date: DateTimeUTC = Field(default=None, description="Date of last change")
 
 
 class UserBasicData(BaseDto):
@@ -68,7 +68,6 @@ class UserBasicData(BaseDto):
 
     name: str = Field(
         default=...,
-        title="Name",
         description="Full name of the user",
         example="Rosalind Franklin",
     )
@@ -77,7 +76,6 @@ class UserBasicData(BaseDto):
     )
     email: EmailStr = Field(
         default=...,
-        title="E-Mail",
         description="Preferred e-mail address of the user",
         example="user@home.org",
     )
@@ -98,7 +96,7 @@ class UserModifiableData(BaseDto):
     """User data that can be modified"""
 
     status: Optional[UserStatus] = Field(
-        None, title="Status", description="Registration status of the user"
+        None, description="Registration status of the user"
     )
     title: Optional[AcademicTitle] = Field(
         None, title="Academic title", description="Academic title of the user"
@@ -108,18 +106,16 @@ class UserModifiableData(BaseDto):
 class UserAutomaticData(BaseModel):
     """User data that is automatically created except the ID"""
 
-    registration_date: DateTimeUTC = Field(default=..., title="Registration date")
+    registration_date: DateTimeUTC = Field(default=...)
 
     status_change: Optional[StatusChange] = None
 
     active_submissions: list[str] = Field(
         default=[],
-        title="Submissions",
         description="List of IDs of all active submissions created by the user",
     )
     active_access_requests: list[str] = Field(
         default=[],
-        title="Access requests",
         description="List of IDs of all active data access requests created by the user",
     )
 
@@ -128,13 +124,11 @@ class UserData(UserRegisteredData, UserAutomaticData):
     """User data model without the ID"""
 
     status: UserStatus = Field(
-        default=..., title="Status", description="Registration status of the user"
+        default=..., description="Registration status of the user"
     )
 
 
 class User(UserData):
     """Complete user model with ID"""
 
-    id: str = Field(  # actually UUID
-        default=..., title="ID", description="Internally used ID"
-    )
+    id: str = Field(default=..., description="Internally used ID")  # actually UUID

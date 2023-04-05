@@ -17,6 +17,7 @@
 "Routes for managing user claims"
 
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
@@ -26,15 +27,18 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 
 from ..auth import AuthContext, require_steward
+from .core.claims import has_download_access_for_dataset, is_valid_claim
 from .core.utils import user_exists
 from .deps import ClaimDao, Depends, get_claim_dao
-from .models.dto import Claim, ClaimCreation, ClaimFullCreation, ClaimUpdate
+from .models.dto import Claim, ClaimCreation, ClaimFullCreation, ClaimUpdate, VisaType
 
 __all__ = ["router"]
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+BooleanAsString = Literal["false", "true"]
 
 
 user_not_found_error = HTTPException(status_code=404, detail="The user was not found.")
@@ -65,7 +69,7 @@ async def post_claim(
     user_id: str = Path(
         ...,
         alias="user_id",
-        title="Internal ID of the user",
+        description="Internal ID of the user",
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
@@ -118,7 +122,7 @@ async def get_claims(
     user_id: str = Path(
         ...,
         alias="user_id",
-        title="Internal ID of the user",
+        description="Internal ID of the user",
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
@@ -151,12 +155,12 @@ async def patch_user(
     user_id: str = Path(
         ...,
         alias="user_id",
-        title="Internal user ID",
+        description="Internal user ID",
     ),
     claim_id: str = Path(
         ...,
         alias="claim_id",
-        title="Internal claim ID",
+        description="Internal claim ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
@@ -212,12 +216,12 @@ async def delete_claim(
     user_id: str = Path(
         ...,
         alias="user_id",
-        title="Internal user ID",
+        description="Internal user ID",
     ),
     claim_id: str = Path(
         ...,
         alias="claim_id",
-        title="Internal claim ID",
+        description="Internal claim ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
@@ -244,3 +248,50 @@ async def delete_claim(
         raise claim_not_found_error from error
 
     return Response(status_code=204)
+
+
+@router.get(
+    "/datasets/{dataset_id}/users/{user_id}/download-access",
+    operation_id="get_download_access",
+    tags=["datasets"],
+    summary="Check download access permission",
+    description="Endpoint to check whether the given dataset"
+    " can be downloaded by the given user. For internal use only.",
+    responses={
+        200: {
+            "description": "Download access has been checked.",
+        },
+        404: {"description": "The user was not found."},
+        422: {"description": "Validation error in submitted user IDs."},
+    },
+    status_code=200,
+)
+async def get_download_access(
+    dataset_id: str = Path(
+        ...,
+        alias="dataset_id",
+        description="Internal ID of the user",
+    ),
+    user_id: str = Path(
+        ...,
+        alias="user_id",
+        description="Internal ID of the user",
+    ),
+    user_dao: UserDao = Depends(get_user_dao),
+    claim_dao: ClaimDao = Depends(get_claim_dao),
+    # internal service, authorization without token via service mesh
+) -> BooleanAsString:
+    """Check download access permission"""
+    if not await user_exists(user_id, user_dao):
+        raise user_not_found_error
+
+    async for claim in claim_dao.find_all(
+        mapping={
+            "user_id": user_id,
+            "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS,
+        }
+    ):
+        if is_valid_claim(claim) and has_download_access_for_dataset(claim, dataset_id):
+            return "true"
+
+    return "false"

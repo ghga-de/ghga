@@ -127,7 +127,7 @@ async def put_user(
     id_: str = Path(
         ...,
         alias="id",
-        title="Internal ID",
+        description="Internal ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
     auth_context: AuthContext = require_auth,
@@ -179,7 +179,7 @@ async def get_user(
     id_: str = Path(
         ...,
         alias="id",
-        title="Internal ID or External (LS) ID",
+        description="Internal ID or External (LS) ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
     auth_context: AuthContext = require_auth,
@@ -235,7 +235,7 @@ async def patch_user(
     id_: str = Path(
         ...,
         alias="id",
-        title="Internal ID",
+        description="Internal ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
     auth_context: AuthContext = require_active,
@@ -298,7 +298,7 @@ async def delete_user(
     id_: str = Path(
         ...,
         alias="id",
-        title="Internal ID",
+        description="Internal ID",
     ),
     user_dao: UserDao = Depends(get_user_dao),
     auth_context: AuthContext = require_steward,

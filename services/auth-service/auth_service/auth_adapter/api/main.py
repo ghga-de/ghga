@@ -59,6 +59,12 @@ async def ext_auth_well_known() -> dict:
     return {}
 
 
+@app.api_route("/service-logo.png", methods=["GET"])
+async def ext_auth_service_logo() -> dict:
+    """Unprotected route for the service logo."""
+    return {}
+
+
 @app.api_route("/{path:path}", methods=HANDLE_METHODS)
 async def ext_auth(  # pylint:disable=too-many-arguments
     path: str,

@@ -249,7 +249,7 @@ class DummyClaimDao:
             valid_until=valid_date + timedelta(7),
             creation_date=valid_date - timedelta(10),
             creation_by="maria@ghga.de",
-        )
+        )  # pyright: ignore
 
     async def get_by_id(self, id_: str) -> Claim:
         """Get the dummy user claim via its ID."""
