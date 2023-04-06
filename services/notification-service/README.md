@@ -1,42 +1,14 @@
 
+![tests](https://github.com/ghga-de/notification-service/actions/workflows/unit_and_int_tests.yaml/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/ghga-de/notification-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/notification-service?branch=main)
+# Notification-Service
 
-
-# Microservice Repository Template
-
-This repo is a template for creating a new microservice.
-
-The directories, files, and their structure herein are recommendations
-from the GHGA Dev Team.
-
-## Naming Conventions
-The github repository contains only lowercase letters, numbers, and hyphens "-",
-e.g.: `my-microservice`
-
-The python package (and thus the source repository) contains underscores "_"
-instead of hyphens, e.g.: `my_microservice`
-
-The command-line script that is used to run the service, the docker repository
-(published to docker hub), and the helm chart (not part of this repository) use the
-same pattern as the repository name, e.g.: `my-microservice`
-## Adapt to your service
-This is just a template and needs some adaption to your specific use case.
-
-Please search for **"please adapt"** comments. They will indicate all locations
-that need modification. Once the adaptions are in place, please remove these #
-comments.
-
-The following should serve as a template for the final repo's README,
-please adapt it accordingly (e.g. replace all occurrences of `my-microservice` or `my_microservice`
-with the final package name and don't forget to adapt the links):
-
----
-
-**\# please adapt the links of following badges:**
-![tests](https://github.com/ghga-de/my-microservice/actions/workflows/unit_and_int_tests.yaml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/my-microservice/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/my-microservice?branch=main)
-# My-Microservice
-
-A description explaining the use case of this service.
+This service is used to handle notifications, especially email notifications.
+Other microservices in the ecosystem can publish the appropriate notification event and
+this service will process it accordingly. The primary use is to send emails based on
+notification event content. For instance, a service might want to notify a user that
+their upload was successful. The service in question could publish an event with that
+information, and the notification service would take care of the rest.
 
 ## Documentation:
 
@@ -46,17 +18,17 @@ An extensive documentation can be found [here](...) (coming soon).
 ### Installation
 We recommend using the provided Docker container.
 
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/my-microservice):
+A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-service):
 ```bash
 # Please feel free to choose the version as needed:
-docker pull ghga/my-microservice:<version>
+docker pull ghga/notification-service:<version>
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
 # (Please feel free to adapt the name/tag.)
-docker build -t ghga/my-microservice:<version> .
+docker build -t ghga/notification-service:<version> .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -64,7 +36,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/my-microservice:<version>
+docker run -p 8080:8080 ghga/notification-service:<version>
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -73,16 +45,16 @@ If you prefer not to use containers, you may install the service from source:
 pip install .
 
 # to run the service:
-my-microservice
+ns
 ```
 
 ### Configuration:
 The [`./example-config.yaml`](./example-config.yaml) gives an overview of the available configuration options.
 Please adapt it and choose one of the following options for injecting it into the service:
-- specify the path to via the `MY_MICROSERVICE_CONFIG_YAML` env variable
-- rename it to `.my_microservice.yaml` and place it into one of the following locations:
-  - the current working directory were you are execute the service (on unix: `./.my_microservice.yaml`)
-  - your home directory (on unix: `~/.my_microservice.yaml`)
+- specify the path to via the `NS_CONFIG_YAML` env variable
+- rename it to `.ns.yaml` and place it into one of the following locations:
+  - the current working directory were you are execute the service (on unix: `./.ns.yaml`)
+  - your home directory (on unix: `~/.ns.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -91,8 +63,8 @@ The config yaml will be automatically parsed by the service.
 All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
 could also be set using environment variables or file secrets.
 
-For naming the environment variables, just prefix the parameter name with `MY_MICROSERVICE_`,
-e.g. for the `host` set an environment variable named `MY_MICROSERVICE_HOST`
+For naming the environment variables, just prefix the parameter name with `NS_`,
+e.g. for the `host` set an environment variable named `NS_HOST`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 

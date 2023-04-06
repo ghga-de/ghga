@@ -1,2 +1,5 @@
 # Optional list of files which are actually static in the template
 # but are allowed to have different content in the current repository
+.github/workflows/check_openapi_spec.yaml
+
+scripts/update_openapi_docs.py

@@ -3,152 +3,42 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
-    "host": {
-      "title": "Host",
-      "description": "IP of the host.",
-      "default": "127.0.0.1",
-      "env_names": [
-        "my_microservice_host"
-      ],
-      "type": "string"
-    },
-    "port": {
-      "title": "Port",
-      "description": "Port to expose the server on the specified host",
-      "default": 8080,
-      "env_names": [
-        "my_microservice_port"
-      ],
-      "type": "integer"
-    },
-    "log_level": {
-      "title": "Log Level",
-      "description": "Controls the verbosity of the log.",
-      "default": "info",
-      "env_names": [
-        "my_microservice_log_level"
-      ],
-      "enum": [
-        "critical",
-        "error",
-        "warning",
-        "info",
-        "debug",
-        "trace"
-      ],
-      "type": "string"
-    },
-    "auto_reload": {
-      "title": "Auto Reload",
-      "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
-      "default": false,
-      "env_names": [
-        "my_microservice_auto_reload"
-      ],
-      "type": "boolean"
-    },
-    "workers": {
-      "title": "Workers",
-      "description": "Number of workers processes to run.",
-      "default": 1,
-      "env_names": [
-        "my_microservice_workers"
-      ],
-      "type": "integer"
-    },
-    "api_root_path": {
-      "title": "Api Root Path",
-      "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
-      "default": "/",
-      "env_names": [
-        "my_microservice_api_root_path"
-      ],
-      "type": "string"
-    },
-    "openapi_url": {
-      "title": "Openapi Url",
-      "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
-      "default": "/openapi.json",
-      "env_names": [
-        "my_microservice_openapi_url"
-      ],
-      "type": "string"
-    },
-    "docs_url": {
-      "title": "Docs Url",
-      "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
-      "default": "/docs",
-      "env_names": [
-        "my_microservice_docs_url"
-      ],
-      "type": "string"
-    },
-    "cors_allowed_origins": {
-      "title": "Cors Allowed Origins",
-      "description": "A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.",
-      "example": [
-        "https://example.org",
-        "https://www.example.org"
-      ],
-      "env_names": [
-        "my_microservice_cors_allowed_origins"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "cors_allow_credentials": {
-      "title": "Cors Allow Credentials",
-      "description": "Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.",
-      "example": [
-        "https://example.org",
-        "https://www.example.org"
-      ],
-      "env_names": [
-        "my_microservice_cors_allow_credentials"
-      ],
-      "type": "boolean"
-    },
-    "cors_allowed_methods": {
-      "title": "Cors Allowed Methods",
-      "description": "A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.",
-      "example": [
-        "*"
-      ],
-      "env_names": [
-        "my_microservice_cors_allowed_methods"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "cors_allowed_headers": {
-      "title": "Cors Allowed Headers",
-      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
-      "example": [],
-      "env_names": [
-        "my_microservice_cors_allowed_headers"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
     "service_name": {
       "title": "Service Name",
-      "default": "my_microservice",
+      "default": "ns",
       "env_names": [
-        "my_microservice_service_name"
+        "ns_service_name"
       ],
       "type": "string"
+    },
+    "service_instance_id": {
+      "title": "Service Instance Id",
+      "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
+      "example": "germany-bw-instance-001",
+      "env_names": [
+        "ns_service_instance_id"
+      ],
+      "type": "string"
+    },
+    "kafka_servers": {
+      "title": "Kafka Servers",
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "example": [
+        "localhost:9092"
+      ],
+      "env_names": [
+        "ns_kafka_servers"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "language": {
       "title": "Language",
       "default": "Croatian",
       "env_names": [
-        "my_microservice_language"
+        "ns_language"
       ],
       "enum": [
         "Greek",
@@ -159,5 +49,9 @@
       "type": "string"
     }
   },
+  "required": [
+    "service_instance_id",
+    "kafka_servers"
+  ],
   "additionalProperties": false
 }

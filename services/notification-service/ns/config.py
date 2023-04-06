@@ -13,21 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Config Parameter Modeling and Parsing"""
 
-import asyncio
+from hexkit.config import config_from_yaml
+from hexkit.providers.akafka import KafkaConfig
 
-from ghga_service_commons.api import run_server
-
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
+from .models import SupportedLanguages
 
 
-def run(config: Config = CONFIG):
-    """Run the service"""
-    # Please adapt to package name
-    asyncio.run(run_server(app="my_microservice.__main__:app", config=config))
+@config_from_yaml(prefix="ns")
+class Config(KafkaConfig):
+    """Config parameters and their defaults."""
+
+    service_name: str = "ns"
+    language: SupportedLanguages = "Croatian"
 
 
-if __name__ == "__main__":
-    run()
+CONFIG = Config()

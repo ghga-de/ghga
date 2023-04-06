@@ -3,4 +3,4 @@
 -r requirements-dev-common.txt
 
 # additional requirements can be listed here
-testcontainers[kafka,mongo]==3.4.1
+testcontainers[kafka]==3.4.1
