@@ -1,5 +1,4 @@
 kafka_servers:
 - kafka:9092
-language: Greek
 service_instance_id: '1'
 service_name: ns

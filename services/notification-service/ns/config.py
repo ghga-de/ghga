@@ -18,15 +18,12 @@
 from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig
 
-from .models import SupportedLanguages
-
 
 @config_from_yaml(prefix="ns")
 class Config(KafkaConfig):
     """Config parameters and their defaults."""
 
     service_name: str = "ns"
-    language: SupportedLanguages = "Croatian"
 
 
 CONFIG = Config()

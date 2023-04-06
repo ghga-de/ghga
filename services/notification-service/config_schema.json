@@ -33,20 +33,6 @@
       "items": {
         "type": "string"
       }
-    },
-    "language": {
-      "title": "Language",
-      "default": "Croatian",
-      "env_names": [
-        "ns_language"
-      ],
-      "enum": [
-        "Greek",
-        "Croatian",
-        "French",
-        "German"
-      ],
-      "type": "string"
     }
   },
   "required": [
