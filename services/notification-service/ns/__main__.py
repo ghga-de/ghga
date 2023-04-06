@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""FastAPI dependencies (used with the `Depends` feature)"""
-
-from ..config import CONFIG
+"""Entrypoint of the package"""
 
 
-def get_config():
-    """Get runtime configuration."""
-    return CONFIG
+def run():
+    """Run the service"""
+
+
+if __name__ == "__main__":
+    run()
