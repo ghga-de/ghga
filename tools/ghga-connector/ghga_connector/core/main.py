@@ -32,7 +32,6 @@ from ghga_connector.core.api_calls import (
     patch_multipart_upload,
     start_multipart_upload,
 )
-from ghga_connector.core.constants import MAX_WAIT_TIME
 from ghga_connector.core.file_operations import (
     Crypt4GHEncryptor,
     download_file_parts,
@@ -185,7 +184,7 @@ def download(  # pylint: disable=too-many-arguments
     output_dir: Path,
     part_size: int,
     message_display: AbstractMessageDisplay,
-    max_wait_time: int = MAX_WAIT_TIME,
+    max_wait_time: int,
     pubkey_path: Path,
 ) -> None:
     """

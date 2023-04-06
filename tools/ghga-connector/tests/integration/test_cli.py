@@ -83,10 +83,13 @@ def test_multipart_download(
         api_url = api.get_connection_url()
         with patch(
             "ghga_connector.cli.CONFIG",
-            get_test_config(download_api=api_url, part_size=part_size),
+            get_test_config(
+                download_api=api_url,
+                part_size=part_size,
+                wps_file_list=[big_object.object_id],
+            ),
         ):
             download(
-                file_id=big_object.object_id,
                 output_dir=tmp_path,
                 pubkey_path=Path(PUBLIC_KEY_FILE),
             )
@@ -100,19 +103,21 @@ def test_multipart_download(
 
 
 @pytest.mark.parametrize(
-    "bad_url,bad_outdir,file_name,expected_exception",
+    "bad_url,bad_outdir,file_name,expected_exception,proceed_on_missing",
     [
-        (True, False, "file_downloadable", exceptions.ApiNotReachableError),
-        (False, False, "file_downloadable", None),
+        (True, False, "file_downloadable", exceptions.ApiNotReachableError, True),
+        (False, False, "file_downloadable", None, True),
+        (False, False, "file_not_downloadable", None, True),
+        (False, False, "file_not_downloadable", None, False),
+        (False, False, "file_retry", exceptions.MaxWaitTimeExceededError, True),
+        (False, True, "file_downloadable", exceptions.DirectoryDoesNotExistError, True),
         (
             False,
             False,
-            "file_not_downloadable",
-            exceptions.BadResponseCodeError,
+            "file_envelope_missing",
+            exceptions.FileNotRegisteredError,
+            True,
         ),
-        (False, False, "file_retry", exceptions.MaxWaitTimeExceededError),
-        (False, True, "file_downloadable", exceptions.DirectoryDoesNotExistError),
-        (False, False, "file_envelope_missing", exceptions.FileNotRegisteredError),
     ],
 )
 def test_download(
@@ -122,6 +127,7 @@ def test_download(
     expected_exception: type[Optional[Exception]],
     s3_fixture: S3Fixture,  # noqa: F811
     tmp_path: pathlib.Path,
+    proceed_on_missing: bool,
 ):
     """Test the download of a file"""
 
@@ -150,16 +156,24 @@ def test_download(
 
         with patch(
             "ghga_connector.cli.CONFIG",
-            get_test_config(download_api=api_url),
+            get_test_config(download_api=api_url, wps_file_list=[file.file_id]),
         ):
-            with pytest.raises(  # type: ignore
-                expected_exception
-            ) if expected_exception else nullcontext():
-                download(
-                    file_id=file.file_id,
-                    output_dir=output_dir,
-                    pubkey_path=Path(PUBLIC_KEY_FILE),
-                )
+            # needed to mock user input
+            with patch(
+                "ghga_connector.core.batch_processing._get_input",
+                return_value="yes" if proceed_on_missing else "no",
+            ):
+                with pytest.raises(  # type: ignore
+                    expected_exception
+                ) if expected_exception else nullcontext():
+                    download(
+                        output_dir=output_dir,
+                        pubkey_path=Path(PUBLIC_KEY_FILE),
+                    )
+
+        # BadResponseCode is no longer propagated and file at path does not exist
+        if file_name == "file_not_downloadable":
+            return
 
         tmp_file = tmp_path / "file_with_envelope"
 

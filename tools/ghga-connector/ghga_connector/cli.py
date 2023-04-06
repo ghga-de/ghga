@@ -91,9 +91,8 @@ def upload(  # noqa C901
 @cli.command()
 def download(  # pylint: disable=too-many-arguments
     *,
-    file_id: str = typer.Option(..., help="The id if the file to upload"),
     output_dir: Path = typer.Option(
-        ..., help="The directory to put the downloaded file"
+        ..., help="The directory to put the downloaded files into"
     ),
     pubkey_path: Path = typer.Argument(
         "./key.pub",
@@ -119,12 +118,22 @@ def download(  # pylint: disable=too-many-arguments
     if announced_user_pubkey != provided_pubkey:
         raise core.exceptions.PubkeyMismatchError()
 
-    core.download(
+    file_stager = core.FileStager(
         api_url=CONFIG.download_api,
-        file_id=file_id,
-        output_dir=output_dir,
-        max_wait_time=CONFIG.max_wait_time,
-        part_size=CONFIG.part_size,
         message_display=message_display,
-        pubkey_path=pubkey_path,
+        max_wait_time=CONFIG.max_wait_time,
     )
+    file_stager.check_and_stage(file_ids=wps_info.file_ids_with_ending.keys())
+
+    while any((file_stager.staged_files, file_stager.unstaged_files)):
+        for file_id in file_stager.staged_files:
+            core.download(
+                api_url=CONFIG.download_api,
+                file_id=file_id,
+                output_dir=output_dir,
+                max_wait_time=CONFIG.max_wait_time,
+                part_size=CONFIG.part_size,
+                message_display=message_display,
+                pubkey_path=pubkey_path,
+            )
+        file_stager.update_staged_files()

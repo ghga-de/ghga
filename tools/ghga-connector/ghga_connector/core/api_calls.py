@@ -61,8 +61,7 @@ class WPSInfo:
     Container for WPS endpoint information
     """
 
-    file_ids: list[str]
-    file_endings: list[str]
+    file_ids_with_ending: dict[str, str]
     ghga_pubkey: bytes
     user_id: str
     user_pubkey: bytes
@@ -534,9 +533,10 @@ def get_wps_info(config):
     ghga_pubkey = base64.b64decode(config.server_pubkey)
     user_pubkey = base64.b64decode(config.wps_user_pubkey)
 
+    file_ids_with_ending = dict(zip(config.wps_file_list, config.wps_file_endings))
+
     wps_info = WPSInfo(
-        file_ids=config.wps_file_list,
-        file_endings=config.wps_file_endings,
+        file_ids_with_ending=file_ids_with_ending,
         ghga_pubkey=ghga_pubkey,
         user_id=config.wps_user_id,
         user_pubkey=user_pubkey,
