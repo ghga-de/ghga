@@ -412,8 +412,8 @@ def test_delete_claim_without_permission(client, no_steward_headers):
     assert response.json()["detail"] == "Not authorized"
 
 
-def test_get_download_access(client_with_db, steward_headers):
-    """Test that checking for download access works."""
+def test_check_download_access(client_with_db, steward_headers):
+    """Test that checking download access for a single dataset works."""
 
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -456,7 +456,7 @@ def test_get_download_access(client_with_db, steward_headers):
     # check access for wrong user
 
     response = client_with_db.get(
-        "/datasets/some-dataset-id/users/jane@ghga.de/download-access"
+        "/download-access/users/jane@ghga.de/datasets/some-dataset-id"
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
@@ -464,7 +464,7 @@ def test_get_download_access(client_with_db, steward_headers):
     # check access for right user
 
     response = client_with_db.get(
-        "/datasets/some-dataset-id/users/john@ghga.de/download-access"
+        "/download-access/users/john@ghga.de/datasets/some-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == "true"
@@ -472,7 +472,7 @@ def test_get_download_access(client_with_db, steward_headers):
     # check access when permission exists but is not valid any more
 
     response = client_with_db.get(
-        "/datasets/former-dataset-id/users/john@ghga.de/download-access"
+        "/download-access/users/john@ghga.de/datasets/former-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == "false"
@@ -480,7 +480,85 @@ def test_get_download_access(client_with_db, steward_headers):
     # check access when dataset and permission does not exist
 
     response = client_with_db.get(
-        "/datasets/another-dataset-id/users/john@ghga.de/download-access"
+        "/download-access/users/john@ghga.de/datasets/another-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == "false"
+
+
+def test_get_datasets_with_download_access(client_with_db, steward_headers):
+    """Test that getting all datasets with download access works."""
+
+    user_dao = DummyUserDao()
+    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+
+    # should not have downloadable datasets in the beginning
+
+    response = client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+    # post valid access permission for some-dataset-id
+
+    claim_data: dict[str, Any] = DATASET_CLAIM_DATA.copy()
+    current_timestamp = now_as_utc().timestamp()
+    claim_data["valid_from"] = current_timestamp
+    claim_data["valid_until"] = current_timestamp + 60
+
+    response = client_with_db.post(
+        "/users/john@ghga.de/claims", json=claim_data, headers=steward_headers
+    )
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/some-dataset-id"
+    assert claim["user_id"] == "john@ghga.de"
+
+    # post valid access permission for another-dataset-id
+
+    claim_data["visa_value"] = claim_data["visa_value"].replace("some", "another")
+
+    response = client_with_db.post(
+        "/users/john@ghga.de/claims", json=claim_data, headers=steward_headers
+    )
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/another-dataset-id"
+    assert claim["user_id"] == "john@ghga.de"
+
+    # post invalid access permission for former-dataset-id
+
+    claim_data["visa_value"] = claim_data["visa_value"].replace("another", "former")
+    claim_data["valid_from"] = current_timestamp - 60
+    claim_data["valid_until"] = current_timestamp - 30
+
+    response = client_with_db.post(
+        "/users/john@ghga.de/claims", json=claim_data, headers=steward_headers
+    )
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/former-dataset-id"
+    assert claim["user_id"] == "john@ghga.de"
+
+    # check access for wrong user
+
+    response = client_with_db.get("/download-access/users/jane@ghga.de/datasets")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "The user was not found."
+
+    # check access for right user
+
+    response = client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    assert response.status_code == status.HTTP_200_OK
+    dataset_ids = response.json()
+
+    assert isinstance(dataset_ids, list)
+    assert sorted(dataset_ids) == ["another-dataset-id", "some-dataset-id"]

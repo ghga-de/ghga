@@ -18,7 +18,7 @@
 Definitions and helper functions for validating user claims.
 """
 
-from typing import Callable
+from typing import Callable, Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
 
@@ -26,16 +26,18 @@ from ....config import CONFIG
 from ..models.dto import AuthorityLevel, Claim, VisaType
 
 __all__ = [
+    "dataset_id_for_download_access",
     "is_valid_claim",
     "is_internal_claim",
     "is_data_steward_claim",
-    "get_value_for_dataset",
+    "get_dataset_for_value",
     "has_download_access_for_dataset",
 ]
 
 
 INTERNAL_SOURCE = CONFIG.organization_url
 DATA_STEWARD_ROLE = "data_steward"
+DATASET_PREFIX = f"{INTERNAL_SOURCE}/datasets/"
 
 
 def is_valid_claim(claim: Claim, now: Callable[[], DateTimeUTC] = now_as_utc) -> bool:
@@ -66,9 +68,11 @@ def is_data_steward_claim(claim: Claim) -> bool:
     return role_name == DATA_STEWARD_ROLE
 
 
-def get_value_for_dataset(dataset_id: str) -> str:
-    """Return the Visa URL Claim for the given dataset."""
-    return f"{INTERNAL_SOURCE}/datasets/{dataset_id}"
+def get_dataset_for_value(value: str) -> Optional[str]:
+    """Return the dataset ID if the given value is a Visa URL Claim for a dataset."""
+    if not value.startswith(DATASET_PREFIX):
+        return None
+    return value.removeprefix(DATASET_PREFIX)
 
 
 def has_download_access_for_dataset(claim: Claim, dataset_id: str) -> bool:
@@ -78,5 +82,14 @@ def has_download_access_for_dataset(claim: Claim, dataset_id: str) -> bool:
     visa_value = claim.visa_value
     if not isinstance(visa_value, str):
         return False
-    dataset_value = get_value_for_dataset(dataset_id)
-    return visa_value == dataset_value
+    return get_dataset_for_value(visa_value) == dataset_id
+
+
+def dataset_id_for_download_access(claim: Claim) -> Optional[str]:
+    """Return dataset ID if the given claim gives download access to a dataset."""
+    if not is_internal_claim(claim, VisaType.CONTROLLED_ACCESS_GRANTS):
+        return None
+    visa_value = claim.visa_value
+    if not isinstance(visa_value, str):
+        return None
+    return get_dataset_for_value(visa_value)

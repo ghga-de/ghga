@@ -478,20 +478,12 @@ info:
   version: 0.3.0
 openapi: 3.0.2
 paths:
-  /datasets/{dataset_id}/users/{user_id}/download-access:
+  /download-access/users/{user_id}/datasets:
     get:
-      description: Endpoint to check whether the given dataset can be downloaded by
-        the given user. For internal use only.
-      operationId: get_download_access
+      description: Endpoint to get a list of the IDs of all datasets that can be downloaded
+        by the given user. For internal use only.
+      operationId: get_download_access_list
       parameters:
-      - description: Internal ID of the user
-        in: path
-        name: dataset_id
-        required: true
-        schema:
-          description: Internal ID of the user
-          title: Dataset Id
-          type: string
       - description: Internal ID of the user
         in: path
         name: user_id
@@ -505,17 +497,56 @@ paths:
           content:
             application/json:
               schema:
+                items:
+                  type: string
+                title: Response Get Download Access List
+                type: array
+          description: Dataset IDs with download access have been retrieved.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Get list of all dataset IDs with download access permission
+      tags:
+      - datasets
+  /download-access/users/{user_id}/datasets/{dataset_id}:
+    get:
+      description: Endpoint to check whether the given dataset can be downloaded by
+        the given user. For internal use only.
+      operationId: check_download_access
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          title: User Id
+          type: string
+      - description: Internal ID of the dataset
+        in: path
+        name: dataset_id
+        required: true
+        schema:
+          description: Internal ID of the dataset
+          title: Dataset Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
                 enum:
                 - 'false'
                 - 'true'
-                title: Response Get Download Access
+                title: Response Check Download Access
                 type: string
           description: Download access has been checked.
         '404':
           description: The user was not found.
         '422':
           description: Validation error in submitted user IDs.
-      summary: Check download access permission
+      summary: Check download access permission for a dataset
       tags:
       - datasets
   /health:

@@ -27,7 +27,11 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 
 from ..auth import AuthContext, require_steward
-from .core.claims import has_download_access_for_dataset, is_valid_claim
+from .core.claims import (
+    dataset_id_for_download_access,
+    has_download_access_for_dataset,
+    is_valid_claim,
+)
 from .core.utils import user_exists
 from .deps import ClaimDao, Depends, get_claim_dao
 from .models.dto import Claim, ClaimCreation, ClaimFullCreation, ClaimUpdate, VisaType
@@ -251,10 +255,10 @@ async def delete_claim(
 
 
 @router.get(
-    "/datasets/{dataset_id}/users/{user_id}/download-access",
-    operation_id="get_download_access",
+    "/download-access/users/{user_id}/datasets/{dataset_id}",
+    operation_id="check_download_access",
     tags=["datasets"],
-    summary="Check download access permission",
+    summary="Check download access permission for a dataset",
     description="Endpoint to check whether the given dataset"
     " can be downloaded by the given user. For internal use only.",
     responses={
@@ -266,12 +270,56 @@ async def delete_claim(
     },
     status_code=200,
 )
-async def get_download_access(
+async def check_download_access(
+    user_id: str = Path(
+        ...,
+        alias="user_id",
+        description="Internal ID of the user",
+    ),
     dataset_id: str = Path(
         ...,
         alias="dataset_id",
-        description="Internal ID of the user",
+        description="Internal ID of the dataset",
     ),
+    user_dao: UserDao = Depends(get_user_dao),
+    claim_dao: ClaimDao = Depends(get_claim_dao),
+    # internal service, authorization without token via service mesh
+) -> BooleanAsString:
+    """Check download access permission for a given dataset"""
+    if not await user_exists(user_id, user_dao):
+        raise user_not_found_error
+
+    # run through all controlled access grants for the user
+    async for claim in claim_dao.find_all(
+        mapping={
+            "user_id": user_id,
+            "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS,
+        }
+    ):
+        # check whether the claim is valid and for the right source
+        if is_valid_claim(claim) and has_download_access_for_dataset(claim, dataset_id):
+            return "true"
+
+    return "false"
+
+
+@router.get(
+    "/download-access/users/{user_id}/datasets",
+    operation_id="get_download_access_list",
+    tags=["datasets"],
+    summary="Get list of all dataset IDs with download access permission",
+    description="Endpoint to get a list of the IDs of all datasets that"
+    " can be downloaded by the given user. For internal use only.",
+    responses={
+        200: {
+            "description": "Dataset IDs with download access have been retrieved.",
+        },
+        404: {"description": "The user was not found."},
+        422: {"description": "Validation error in submitted user IDs."},
+    },
+    status_code=200,
+)
+async def get_datasets_with_download_access(
     user_id: str = Path(
         ...,
         alias="user_id",
@@ -280,18 +328,21 @@ async def get_download_access(
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
     # internal service, authorization without token via service mesh
-) -> BooleanAsString:
-    """Check download access permission"""
+) -> list[str]:
+    """Get list of all dataset IDs with download access permission"""
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
-    async for claim in claim_dao.find_all(
-        mapping={
-            "user_id": user_id,
-            "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS,
-        }
-    ):
-        if is_valid_claim(claim) and has_download_access_for_dataset(claim, dataset_id):
-            return "true"
-
-    return "false"
+    # fetch all valid controlled access grants for the user
+    dataset_ids = [
+        dataset_id_for_download_access(claim)
+        async for claim in claim_dao.find_all(
+            mapping={
+                "user_id": user_id,
+                "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS,
+            }
+        )
+        if is_valid_claim(claim)
+    ]
+    # filter out datasets from different sources and sort for reproducible output
+    return sorted(dataset_id for dataset_id in dataset_ids if dataset_id)
