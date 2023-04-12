@@ -18,6 +18,7 @@
 
 import os
 from pathlib import Path
+from queue import Queue
 
 import crypt4gh.keys
 
@@ -34,6 +35,7 @@ from ghga_connector.core.api_calls import (
 )
 from ghga_connector.core.file_operations import (
     Crypt4GHEncryptor,
+    calc_part_ranges,
     download_file_parts,
     is_file_encrypted,
     read_file_parts,
@@ -236,13 +238,10 @@ def download(  # pylint: disable=too-many-arguments
         )
         raise error
 
-    # put envelope in file
-    with open(output_file, "wb") as file:
-        file.write(envelope)
-
     # perform the download
     try:
         download_parts(
+            envelope=envelope,
             file_id=file_id,
             api_url=api_url,
             output_file=output_file,
@@ -268,27 +267,51 @@ def download(  # pylint: disable=too-many-arguments
 
 def download_parts(
     *,
-    file_id: str,
-    api_url: str,
-    output_file: str,
+    max_concurrent_downloads: int = 5,
+    max_queue_size: int = 10,
     part_size: int,
     file_size: int,
-) -> None:
+    api_url: str,
+    file_id: str,
+    output_file: str,
+    envelope: bytes,
+):
     """
-    Downloads a file using a specific download_url to download all its parts.
+    Downloads a file from the given URL using multiple threads and saves it to a file.
+
+    :param max_concurrent_downloads: Maximum number of parallel downloads.
+    :param max_queue_size: Maximum size of the queue.
+    :param part_size: Size of each part to download.
     """
 
+    # Split the file into parts based on the part size
+    part_ranges = calc_part_ranges(part_size=part_size, total_file_size=file_size)
+
+    # Create a queue object to store downloaded parts
+    queue: Queue = Queue(maxsize=max_queue_size)
+
+    # Get the download urls
     download_urls = get_download_urls(
         api_url=api_url,
         file_id=file_id,
     )
-    file_parts = download_file_parts(
-        download_urls=download_urls, part_size=part_size, total_file_size=file_size
+
+    # Download the file parts in parallel
+    download_file_parts(
+        max_concurrent_downloads=max_concurrent_downloads,
+        queue=queue,
+        part_ranges=part_ranges,
+        download_urls=download_urls,
     )
 
-    with open(output_file, "ab") as file:
-        try:
-            for file_part in file_parts:
-                file.write(file_part)
-        except exceptions.NoS3AccessMethodError as error:
-            raise error
+    # Write the downloaded parts to a file
+    with open(output_file, "wb") as file:
+        # put envelope in file
+        downloaded_size = len(envelope)
+        file.write(envelope)
+        while downloaded_size < file_size:
+            start, part = queue.get()
+            file.seek(start + len(envelope))
+            file.write(part)
+            downloaded_size += len(part)
+            queue.task_done()

@@ -19,11 +19,13 @@ Contains Calls of the Presigned URLs in order to Up- and Download Files
 """
 
 import base64
+import concurrent.futures
 import math
 from io import BufferedReader
 from pathlib import Path
+from queue import Queue
 from tempfile import mkstemp
-from typing import Iterator, Sequence, Tuple, Union
+from typing import Any, Iterator, Sequence, Tuple, Union
 
 import crypt4gh.keys
 import crypt4gh.lib
@@ -81,7 +83,8 @@ def download_content_range(
     download_url: str,
     start: int,
     end: int,
-) -> bytes:
+    queue: Queue,
+) -> None:
     """Download a specific range of a file's content using a presigned download url."""
 
     headers = {"Range": f"bytes={start}-{end}"}
@@ -97,9 +100,36 @@ def download_content_range(
 
     # 200, if the full file was returned, 206 else.
     if status_code in (200, 206):
-        return response.content
+        queue.put((start, response.content))
+        return
 
     raise exceptions.BadResponseCodeError(url=download_url, response_code=status_code)
+
+
+def download_file_parts(
+    max_concurrent_downloads: int,
+    queue: Queue,
+    part_ranges: Sequence[Tuple[int, int]],
+    download_urls: Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]],
+    download_part_funct=download_content_range,
+) -> None:
+    """
+    Download stuff
+    """
+    # Download the parts using a thread pool executor
+    executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=max_concurrent_downloads,
+    )
+
+    for part_range, download_url in zip(part_ranges, download_urls):
+        kwargs: dict[str, Any] = {
+            "download_url": download_url[0],
+            "start": part_range[0],
+            "end": part_range[1],
+            "queue": queue,
+        }
+
+        executor.submit(download_part_funct, **kwargs)
 
 
 def calc_part_ranges(
@@ -124,33 +154,6 @@ def calc_part_ranges(
         part_ranges.append((part_size * full_part_number, total_file_size - 1))
 
     return part_ranges
-
-
-def download_file_parts(
-    *,
-    download_urls: Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]],
-    part_size: int,
-    total_file_size: int,
-    from_part: int = 1,
-    download_range_func=download_content_range,
-    calc_ranges_func=calc_part_ranges,
-) -> Iterator[bytes]:
-    """
-    Returns an iterator to obtain the bytes content of a file in a part by part fashion.
-
-    By default it start with the first part but you may also start from a specific part
-    in the middle of the file using the `from_part` argument. This might be useful to
-    resume an interrupted reading process.
-    """
-
-    part_ranges = calc_ranges_func(
-        part_size=part_size, total_file_size=total_file_size, from_part=from_part
-    )
-
-    for part_range, download_url in zip(part_ranges, download_urls):
-        yield download_range_func(
-            download_url=download_url[0], start=part_range[0], end=part_range[1]
-        )
 
 
 def read_file_parts(
