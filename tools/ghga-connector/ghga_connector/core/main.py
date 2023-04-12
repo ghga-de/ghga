@@ -179,7 +179,7 @@ def upload_file_parts(
             upload_file_part(presigned_url=upload_url, part=part)
 
 
-def download(  # pylint: disable=too-many-arguments
+def download(  # pylint: disable=too-many-arguments # noqa: C901
     *,
     api_url: str,
     file_id: str,
@@ -188,16 +188,17 @@ def download(  # pylint: disable=too-many-arguments
     message_display: AbstractMessageDisplay,
     max_wait_time: int,
     pubkey_path: Path,
+    file_suffix: str = "",
 ) -> None:
     """
     Core command to download a file. Can be called by CLI, GUI, etc.
     """
 
-    if not os.path.isdir(output_dir):
+    if not output_dir.is_dir():
         message_display.failure(f"The directory {output_dir} does not exist.")
         raise exceptions.DirectoryDoesNotExistError(output_dir=output_dir)
 
-    if not os.path.isfile(pubkey_path):
+    if not pubkey_path.is_file():
         message_display.failure(f"The file {pubkey_path} does not exist.")
         raise exceptions.PubKeyFileDoesNotExistError(pubkey_path=pubkey_path)
 
@@ -207,11 +208,22 @@ def download(  # pylint: disable=too-many-arguments
 
     public_key = crypt4gh.keys.get_public_key(pubkey_path)
 
+    # construct file name with suffix, if given
+    file_name = f"{file_id}"
+    if file_suffix:
+        file_name = f"{file_id}.{file_suffix}"
+
     # check output file
-    output_file = os.path.join(output_dir, file_id)
-    if os.path.isfile(output_file):
+    output_file = output_dir / f"{file_name}.c4gh"
+    if output_file.exists():
         message_display.failure(f"The file {output_file} already exists.")
-        raise exceptions.FileAlreadyExistsError(output_file=output_file)
+        raise exceptions.FileAlreadyExistsError(output_file=str(output_file))
+
+    # with_suffix() might overwrite existing suffixes, do this instead
+    output_file_ongoing = output_file.parent / (output_file.name + ".part")
+    if output_file_ongoing.exists():
+        message_display.failure(f"An ongoing download exists: {output_file_ongoing}")
+        raise exceptions.FileAlreadyExistsError(output_file=str(output_file_ongoing))
 
     # stage download and get file size
     download_url_tuple = await_download_url(
@@ -244,21 +256,24 @@ def download(  # pylint: disable=too-many-arguments
             envelope=envelope,
             file_id=file_id,
             api_url=api_url,
-            output_file=output_file,
+            output_file=str(output_file_ongoing),
             part_size=part_size,
             file_size=download_url_tuple[1],
         )
     except exceptions.MaxRetriesReachedError as error:
         # Remove file, if the download failed.
-        os.remove(output_file)
+        output_file_ongoing.unlink()
         raise error
     except exceptions.NoS3AccessMethodError as error:
         message_display.failure(
             f"The request to return information for file {file_id}"
             + " did not return an S3 access method."
         )
-        os.remove(output_file)
+        output_file_ongoing.unlink()
         raise error
+
+    # rename fully downloaded file
+    output_file_ongoing.rename(output_file)
 
     message_display.success(
         f"File with id '{file_id}' has been successfully downloaded."

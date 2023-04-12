@@ -98,7 +98,7 @@ def test_multipart_download(
 
         big_file_content = str.encode(fake_envelope)
         big_file_content += big_object.content
-        with open(tmp_path / big_object.object_id, "rb") as file:
+        with open(tmp_path / f"{big_object.object_id}.c4gh", "rb") as file:
             observed_content = file.read()
 
         assert observed_content == big_file_content
@@ -187,7 +187,7 @@ def test_download(
                 file_write.write(buffer)
 
         if not expected_exception:
-            assert cmp(output_dir / file.file_id, tmp_file)
+            assert cmp(output_dir / f"{file.file_id}.c4gh", tmp_file)
 
 
 @pytest.mark.parametrize(
