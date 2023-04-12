@@ -1,7 +1,13 @@
 # Optional list of files which are actually static in the template
 # but are allowed to have different content in the current repository
+
 .github/workflows/check_config_docs.yaml
+.github/workflows/check_openapi_spec.yaml
+
 pytest.ini
+
 scripts/script_utils/__init__.py
 scripts/script_utils/cli.py
+
 scripts/update_config_docs.py
+scripts/update_openapi_docs.py
