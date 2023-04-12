@@ -1,3 +1,93 @@
+components:
+  schemas:
+    WorkPackageCreationData:
+      additionalProperties: false
+      description: All data necessary to create a work package.
+      properties:
+        dataset_id:
+          title: Dataset Id
+          type: string
+        file_ids:
+          description: IDs of all included files. If None, all files of the dataset
+            are assumed as target.
+          items:
+            type: string
+          title: File Ids
+          type: array
+        type:
+          $ref: '#/components/schemas/WorkType'
+        user_public_crypt4gh_key:
+          description: The user's public Crpyt4GH key in base64 encoding
+          title: User Public Crypt4Gh Key
+          type: string
+      required:
+      - dataset_id
+      - type
+      - user_public_crypt4gh_key
+      title: WorkPackageCreationData
+      type: object
+    WorkPackageCreationResponse:
+      description: Response when a work package has been created.
+      properties:
+        id:
+          description: ID of the work package
+          title: Id
+          type: string
+        token:
+          description: The workpackage access token, encrypted with the user's public
+            Crypt4GH key
+          title: Token
+          type: string
+      required:
+      - id
+      - token
+      title: WorkPackageCreationResponse
+      type: object
+    WorkPackageDetails:
+      description: Details about the work package that can be requested.
+      properties:
+        created:
+          description: Creation date of the work package
+          format: date-time
+          title: Created
+          type: string
+        expires:
+          format: date-time
+          title: Expiration date of the work package
+          type: string
+        file_extensions:
+          additionalProperties:
+            type: string
+          description: Mapping from file IDs to file extensions
+          title: File Extensions
+          type: object
+        file_ids:
+          description: IDs of all included files
+          items:
+            type: string
+          title: File Ids
+          type: array
+        type:
+          $ref: '#/components/schemas/WorkType'
+      required:
+      - type
+      - file_ids
+      - file_extensions
+      - created
+      - expires
+      title: WorkPackageDetails
+      type: object
+    WorkType:
+      description: The type of work that a work package describes.
+      enum:
+      - download
+      - upload
+      title: WorkType
+      type: string
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
@@ -16,8 +106,95 @@ paths:
           description: Successful Response
       summary: health
       tags:
-      - workPackages
+      - WorkPackages
+  /work-packages:
+    post:
+      description: Endpoint used to create a new work package
+      operationId: create_work_package
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkPackageCreationData'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkPackageCreationResponse'
+          description: Work package was successfully created.
+        '403':
+          description: Not authorized to create a work package.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Create a work package
+      tags:
+      - WorkPackages
+  /work-packages/{work_package_id}:
+    get:
+      description: Endpoint used to get work package details
+      operationId: get_work_package
+      parameters:
+      - in: path
+        name: work_package_id
+        required: true
+        schema:
+          title: Work Package Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkPackageDetails'
+          description: Work package details have been found.
+        '403':
+          description: Not authorized to get the work package.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Get a work package
+      tags:
+      - WorkPackages
+  /work-packages/{work_package_id}/files/{file_id}/work-order-tokens:
+    post:
+      description: Endpoint used to create a work order token
+      operationId: create_work_order_token
+      parameters:
+      - in: path
+        name: work_package_id
+        required: true
+        schema:
+          title: Work Package Id
+          type: string
+      - in: path
+        name: file_id
+        required: true
+        schema:
+          title: File Id
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                title: Response Create Work Order Token
+                type: string
+          description: Work order token has been created.
+        '403':
+          description: Not authorized to create the work order token.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Create a work order token
+      tags:
+      - WorkPackages
 servers:
-- url: /api
+- url: /
 tags:
-- name: workPackages
+- name: WorkPackages

@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-"""FastAPI-based adapter code"""
+"""Inbound hexagonal port definitions."""

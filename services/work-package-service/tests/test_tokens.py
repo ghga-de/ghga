@@ -16,8 +16,6 @@
 
 """Test the tokens module."""
 
-import dataclasses
-
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
     generate_jwk,
@@ -78,5 +76,5 @@ def test_sign_work_order_token():
     token_dict = decode_and_validate_token(token_str, key)
     assert isinstance(token_dict, dict)
     assert token_dict.pop("exp") - token_dict.pop("iat") == 30
-    expected_token_dict = dataclasses.asdict(work_order_token)
+    expected_token_dict = work_order_token.dict()
     assert token_dict == expected_token_dict

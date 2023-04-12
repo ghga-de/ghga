@@ -16,7 +16,6 @@
 
 """Management of access tokens and work order tokens"""
 
-import dataclasses
 import hashlib
 import secrets
 import string
@@ -56,5 +55,5 @@ def sign_work_order_token(
     valid_seconds: int = WORK_ORDER_TOKEN_VALID_SECONDS,
 ):
     """Sign the given work order token."""
-    claims = dataclasses.asdict(work_order_token)
+    claims = work_order_token.dict()
     return sign_and_serialize_token(claims, key=key, valid_seconds=valid_seconds)

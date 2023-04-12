@@ -14,26 +14,22 @@
 # limitations under the License.
 #
 
-"""Utils to customize the OpenAPI script"""
+import base64
 
-from typing import Any, Dict
+from nacl.public import PrivateKey, SealedBox
 
-from fastapi.openapi.utils import get_openapi
+__all__ = ["user_crypt4gh_key_pair", "user_public_crypt4gh_key"]
 
-from wps import __version__
-from wps.config import Config
+user_crypt4gh_key_pair = PrivateKey.generate()
 
-config = Config()
+user_public_crypt4gh_key = base64.b64encode(
+    bytes(user_crypt4gh_key_pair.public_key)
+).decode("ascii")
 
 
-def get_openapi_schema(api) -> Dict[str, Any]:
-    """Generate a custom OpenAPI schema for the service."""
-
-    return get_openapi(
-        title="Work Package Service",
-        version=__version__,
-        description="A service managing work packages for the GHGA CLI",
-        servers=[{"url": config.api_route}],
-        tags=[{"name": "workPackages"}],
-        routes=api.routes,
-    )
+def decrypt(encrypted_data: str) -> str:
+    """Decrypt a str of base64 encoded ASCII data."""
+    unseal_box = SealedBox(user_crypt4gh_key_pair)
+    encrypted_bytes = base64.b64decode(encrypted_data)
+    decrypted_bytes = unseal_box.decrypt(encrypted_bytes)
+    return decrypted_bytes.decode("ascii")

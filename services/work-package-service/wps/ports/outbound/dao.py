@@ -16,11 +16,14 @@
 
 """DAO interface for accessing the database."""
 
-# pylint: disable=unused-import
-from hexkit.protocols.dao import DaoSurrogateId  # noqa: F401
-from hexkit.protocols.dao import ResourceNotFoundError  # noqa: F401
+from hexkit.protocols.dao import (  # noqa: F401; pylint: disable=unused-import
+    DaoSurrogateId,
+    ResourceNotFoundError,
+)
 
 from wps.core import models
+
+__all__ = ["WorkPackageDaoPort", "ResourceNotFoundError"]
 
 # port described by a type alias:
 WorkPackageDaoPort = DaoSurrogateId[models.WorkPackage, models.WorkPackageData]

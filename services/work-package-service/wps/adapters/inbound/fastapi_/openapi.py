@@ -14,4 +14,26 @@
 # limitations under the License.
 #
 
-"""FastAPI-based adapter code"""
+"""Utils to customize the OpenAPI script"""
+
+from typing import Any, Dict
+
+from fastapi.openapi.utils import get_openapi
+
+from wps import __version__
+from wps.config import Config
+
+
+def get_openapi_schema(api) -> Dict[str, Any]:
+    """Generate a custom OpenAPI schema for the service."""
+
+    config = Config()
+
+    return get_openapi(
+        title="Work Package Service",
+        version=__version__,
+        description="A service managing work packages for the GHGA CLI",
+        servers=[{"url": config.api_root_path}],
+        tags=[{"name": "WorkPackages"}],
+        routes=api.routes,
+    )

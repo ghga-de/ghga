@@ -34,6 +34,7 @@
 from hexkit.protocols.dao import DaoFactoryProtocol
 
 from wps.core import models
+from wps.core.repository import WorkPackageConfig
 from wps.ports.outbound.dao import WorkPackageDaoPort
 
 
@@ -45,13 +46,13 @@ class WorkPackageDaoConstructor:
 
     @staticmethod
     async def construct(
-        *, name: str, dao_factory: DaoFactoryProtocol
+        *, config: WorkPackageConfig, dao_factory: DaoFactoryProtocol
     ) -> WorkPackageDaoPort:
         """Setup the DAOs using the specified provider of the
         DaoFactoryProtocol."""
 
         return await dao_factory.get_dao(
-            name=name,
+            name=config.work_packages_collection,
             dto_model=models.WorkPackage,
             dto_creation_model=models.WorkPackageData,
             id_field="id",

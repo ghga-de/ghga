@@ -16,17 +16,19 @@
 """Defines dataclasses for business-logic data as well as request/reply models for use
 in the API."""
 
-from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
+
+from wps.core.crypt import decode_public_key
 
 __all__ = [
     "WorkType",
     "WorkOrderToken",
     "WorkPackageCreationData",
+    "WorkPackageCreationResponse",
     "WorkPackageData",
     "WorkPackage",
 ]
@@ -47,22 +49,20 @@ class WorkType(str, Enum):
     UPLOAD = "upload"
 
 
-@dataclass(frozen=True)
-class WorkOrderToken:
-    """A class describing the payload of a work order token."""
+class WorkOrderToken(BaseDto):
+    """A model describing the payload of a work order token."""
 
     type: WorkType
     file_id: str
     user_id: str
     public_key: str
     full_user_name: str
-    email: str
+    email: EmailStr
 
 
 class WorkPackageCreationData(BaseDto):
     """All data necessary to create a work package."""
 
-    user_id: str
     dataset_id: str
     type: WorkType
     file_ids: Optional[list[str]] = Field(
@@ -75,29 +75,58 @@ class WorkPackageCreationData(BaseDto):
         description="The user's public Crpyt4GH key in base64 encoding",
     )
 
+    @validator("user_public_crypt4gh_key")
+    def user_public_crypt4gh_key_valid(cls, key):  # pylint: disable=no-self-argument
+        """Validate the user's public Crypt4GH key."""
+        decode_public_key(key)
+        return key
 
-class WorkPackageData(WorkPackageCreationData):
-    """All data that describes a work package."""
 
+class WorkPackageCreationResponse(BaseModel):
+    """Response when a work package has been created."""
+
+    id: str = Field(default=..., description="ID of the work package")
+    token: str = Field(
+        default=...,
+        description="The workpackage access token,"
+        " encrypted with the user's public Crypt4GH key",
+    )
+
+
+class WorkPackageDetails(BaseModel):
+    """Details about the work package that can be requested."""
+
+    type: WorkType
     file_ids: list[str] = Field(default=..., description="IDs of all included files")
     file_extensions: dict[str, str] = Field(
         default=...,
         description="Mapping from file IDs to file extensions",
     )
+    created: DateTimeUTC = Field(
+        default=..., description="Creation date of the work package"
+    )
+    expires: DateTimeUTC = Field(
+        default=..., title="Expiration date of the work package"
+    )
+
+
+class WorkPackageData(WorkPackageDetails):
+    """All data that describes a work package."""
+
+    dataset_id: str
+    user_id: str
     full_user_name: str = Field(
         default=...,
         description="The user's full name including academic title",
     )
     email: EmailStr = Field(default=..., description="E-Mail address of the user")
+    user_public_crypt4gh_key: str = Field(
+        default=...,
+        description="The user's public Crpyt4GH key in base64 encoding",
+    )
     token_hash: str = Field(
         default=...,
         description="Hash of the workpackage access token",
-    )
-    created: DateTimeUTC = Field(
-        default=..., description="Creation date of the work package"
-    )
-    expires: DateTimeUTC = Field(
-        default=..., title="Expiration date of the work pacakge"
     )
 
 

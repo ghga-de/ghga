@@ -16,20 +16,25 @@
 """Config Parameter Modeling and Parsing"""
 
 from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
 from hexkit.providers.mongodb import MongoDbConfig
+from pydantic import SecretStr
+
+from wps.core.repository import WorkPackageConfig
 
 
 @config_from_yaml(prefix="wps")
-class Config(ApiConfigBase, MongoDbConfig):
+class Config(
+    ApiConfigBase, AuthConfig, MongoDbConfig, WorkPackageConfig
+):  # pylint: disable=too-many-ancestors
     """Config parameters and their defaults."""
 
     service_name: str = "wps"
-    api_route = "/api"
-
     db_name: str = "work-packages"
 
-    work_packages_collection: str = "workPackages"
-
-
-CONFIG = Config()
+    # the default keys are invalid and only set for creating the example configuration
+    # the public key for validating internal auth tokens
+    auth_key: str = "{}"
+    # the private key for signing work package access tokens
+    work_package_signing_key: SecretStr = SecretStr("{}")

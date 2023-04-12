@@ -3,6 +3,34 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "work_packages_collection": {
+      "title": "Work Packages Collection",
+      "description": "The name of the database collection for work packages",
+      "default": "workPacakges",
+      "env_names": [
+        "wps_work_packages_collection"
+      ],
+      "type": "string"
+    },
+    "work_package_valid_days": {
+      "title": "Work Package Valid Days",
+      "description": "How many days a work package (and its access token) stays valid",
+      "default": 30,
+      "env_names": [
+        "wps_work_package_valid_days"
+      ],
+      "type": "integer"
+    },
+    "work_package_signing_key": {
+      "title": "Work Package Signing Key",
+      "default": "**********",
+      "env_names": [
+        "wps_work_package_signing_key"
+      ],
+      "type": "string",
+      "writeOnly": true,
+      "format": "password"
+    },
     "db_connection_str": {
       "title": "Db Connection Str",
       "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
@@ -21,6 +49,54 @@
         "wps_db_name"
       ],
       "type": "string"
+    },
+    "auth_key": {
+      "title": "Auth Key",
+      "default": "{}",
+      "env_names": [
+        "wps_auth_key"
+      ],
+      "type": "string"
+    },
+    "auth_algs": {
+      "title": "Auth Algs",
+      "description": "A list of all algorithms used for signing GHGA internal tokens.",
+      "default": [
+        "ES256"
+      ],
+      "env_names": [
+        "wps_auth_algs"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "auth_check_claims": {
+      "title": "Auth Check Claims",
+      "description": "A dict of all GHGA internal claims that shall be verified.",
+      "default": {
+        "name": null,
+        "email": null,
+        "iat": null,
+        "exp": null
+      },
+      "env_names": [
+        "wps_auth_check_claims"
+      ],
+      "type": "object"
+    },
+    "auth_map_claims": {
+      "title": "Auth Map Claims",
+      "description": "A mapping of claims to attributes in the GHGA auth context.",
+      "default": {},
+      "env_names": [
+        "wps_auth_map_claims"
+      ],
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "host": {
       "title": "Host",
@@ -160,22 +236,6 @@
       "default": "wps",
       "env_names": [
         "wps_service_name"
-      ],
-      "type": "string"
-    },
-    "work_packages_collection": {
-      "title": "Work Packages Collection",
-      "default": "workPackages",
-      "env_names": [
-        "wps_work_packages_collection"
-      ],
-      "type": "string"
-    },
-    "api_route": {
-      "title": "Api Route",
-      "default": "/api",
-      "env_names": [
-        "wps_api_route"
       ],
       "type": "string"
     }

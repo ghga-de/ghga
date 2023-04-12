@@ -15,11 +15,13 @@
 
 """Module hosting the dependency injection container."""
 
+from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from hexkit.inject import ContainerBase, get_configurator, get_constructor
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from wps.adapters.outbound.dao import WorkPackageDaoConstructor
-from wps.config import CONFIG, Config
+from wps.config import Config
+from wps.core.repository import WorkPackageRepository
 
 
 class Container(ContainerBase):
@@ -33,6 +35,18 @@ class Container(ContainerBase):
     # outbound translators:
     work_package_dao = get_constructor(
         WorkPackageDaoConstructor,
-        name=CONFIG.work_packages_collection,
+        config=config,
         dao_factory=dao_factory,
+    )
+
+    # auth provider:
+    auth_provider = get_constructor(
+        GHGAAuthContextProvider,
+        config=config,
+        context_class=AuthContext,
+    )
+
+    # core components:
+    work_package_repository = get_constructor(
+        WorkPackageRepository, config=config, work_package_dao=work_package_dao
     )
