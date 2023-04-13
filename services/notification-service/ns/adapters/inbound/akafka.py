@@ -1,0 +1,57 @@
+# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+"""Event subscriber details for notification events"""
+from hexkit.custom_types import Ascii, JsonObject
+from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import BaseSettings, Field
+
+
+class EventSubTranslatorConfig(BaseSettings):
+    """Config for the event subscriber"""
+
+    notification_event_topic: str = Field(
+        ...,
+        description="Name of the event topic used to track notification events",
+        example="notifications",
+    )
+    notification_event_type: str = Field(
+        ...,
+        description="The type to use for events containing content to be sent",
+        example="notification",
+    )
+
+
+class EventSubTranslator(EventSubscriberProtocol):
+    """A translator that can consume Notification events"""
+
+    def __init__(self, *, config: EventSubTranslatorConfig):
+        self.topics_of_interest = [config.notification_event_topic]
+        self.types_of_interest = [config.notification_event_type]
+        self._config = config
+
+    async def _send_notification(self, *, payload: JsonObject):
+        """Validates the schema, then makes a call to the notifier with the payload"""
+        raise NotImplementedError()
+
+    async def _consume_validated(
+        self, *, payload: JsonObject, type_: Ascii, topic: Ascii
+    ) -> None:
+        """Consumes an event"""
+        if (
+            type_ == self._config.notification_event_type
+            and topic == self._config.notification_event_topic
+        ):
+            await self._send_notification(payload=payload)

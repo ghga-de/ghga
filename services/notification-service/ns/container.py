@@ -12,17 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+"""Contains dependency injection setup"""
+from hexkit.inject import ContainerBase, get_configurator, get_constructor
+from hexkit.providers.akafka.provider import KafkaEventSubscriber
 
-"""Entrypoint of the package"""
-import asyncio
-
-from ns.main import consume_events
-
-
-def run(run_forever: bool = True):
-    """Run the service"""
-    asyncio.run(consume_events(run_forever=run_forever))
+from ns.adapters.inbound.akafka import EventSubTranslator
+from ns.config import Config
 
 
-if __name__ == "__main__":
-    run()
+class Container(ContainerBase):
+    """Dependency-Injection Container"""
+
+    config = get_configurator(Config)
+
+    # inbound translators
+    event_sub_translator = get_constructor(EventSubTranslator, config=config)
+
+    # inbound providers
+    kafka_event_subscriber = get_constructor(
+        KafkaEventSubscriber, config=config, translator=event_sub_translator
+    )

@@ -3,6 +3,24 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "notification_event_topic": {
+      "title": "Notification Event Topic",
+      "description": "Name of the event topic used to track notification events",
+      "example": "notifications",
+      "env_names": [
+        "ns_notification_event_topic"
+      ],
+      "type": "string"
+    },
+    "notification_event_type": {
+      "title": "Notification Event Type",
+      "description": "The type to use for events containing content to be sent",
+      "example": "notification",
+      "env_names": [
+        "ns_notification_event_type"
+      ],
+      "type": "string"
+    },
     "service_name": {
       "title": "Service Name",
       "default": "ns",
@@ -36,6 +54,8 @@
     }
   },
   "required": [
+    "notification_event_topic",
+    "notification_event_type",
     "service_instance_id",
     "kafka_servers"
   ],

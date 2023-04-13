@@ -18,9 +18,11 @@
 from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig
 
+from ns.adapters.inbound.akafka import EventSubTranslatorConfig
+
 
 @config_from_yaml(prefix="ns")
-class Config(KafkaConfig):
+class Config(KafkaConfig, EventSubTranslatorConfig):
     """Config parameters and their defaults."""
 
     service_name: str = "ns"
