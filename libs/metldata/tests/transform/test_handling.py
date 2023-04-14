@@ -55,7 +55,7 @@ def test_transformation_handler_assumption_error():
         raise MetadataModelAssumptionError
 
     transformation = TransformationDefinition(
-        config=reference_inference_transformation.config,
+        config_cls=reference_inference_transformation.config_cls,
         check_model_assumptions=always_failing_assumptions,
         transform_model=reference_inference_transformation.transform_model,
         metadata_transformer_factory=reference_inference_transformation.metadata_transformer_factory,
@@ -80,7 +80,7 @@ def test_transformation_handler_model_transformation_error():
         raise MetadataModelTransformationError
 
     transformation = TransformationDefinition(
-        config=reference_inference_transformation.config,
+        config_cls=reference_inference_transformation.config_cls,
         check_model_assumptions=reference_inference_transformation.check_model_assumptions,
         transform_model=always_failing_transformation,
         metadata_transformer_factory=reference_inference_transformation.metadata_transformer_factory,

@@ -36,6 +36,17 @@ class ClassNotFoundError(ModelManipulationError):
         super().__init__(message)
 
 
+class ClassSlotNotFoundError(ModelManipulationError):
+    """Raised when a slot of a class was not found."""
+
+    def __init__(self, class_name: str, slot_name: str):
+        message = (
+            f"The slot '{slot_name}' does not exist in the class '{class_name}' of the"
+            + " metadata model."
+        )
+        super().__init__(message)
+
+
 def add_slot_if_not_exists(
     schema_view: ExportableSchemaView, new_slot: SlotDefinition
 ) -> ExportableSchemaView:
@@ -88,6 +99,48 @@ def upsert_class_slot(
     schema_view_copy = add_slot_if_not_exists(
         schema_view=schema_view_copy, new_slot=new_slot
     )
+    schema_view_copy.add_class(class_copy)
+
+    return schema_view_copy
+
+
+def delete_class_slot(
+    schema_view: ExportableSchemaView, class_name: str, slot_name: str
+) -> ExportableSchemaView:
+    """Delete a slot from a class. This slot may not be inherited but must be
+    a slot of the class itself.
+
+    Raises:
+        ClassNotFoundError: if the specified class does not exist.
+        ClassSlotNotFoundError: if the specified slot does not exist in the specified class.
+    """
+
+    class_ = schema_view.get_class(class_name=class_name)
+
+    if not class_:
+        raise ClassNotFoundError(class_name=class_name)
+
+    class_copy = deepcopy(class_)
+
+    # modify class slots:
+    all_slots = schema_view.class_slots(class_name=class_name, direct=True)
+
+    if slot_name not in all_slots:
+        raise ClassSlotNotFoundError(class_name=class_name, slot_name=slot_name)
+
+    all_slots_modified = [slot for slot in all_slots if slot != slot_name]
+
+    class_copy.slots = all_slots_modified
+
+    # update slot usage:
+    if class_copy.slot_usage:
+        if not isinstance(class_copy.slot_usage, dict):
+            raise RuntimeError(f"Unexpected slot usage for class '{class_name}'")
+        if slot_name in class_copy.slot_usage:
+            del class_copy.slot_usage[slot_name]
+
+    # add updated class to a copy of schema view:
+    schema_view_copy = deepcopy(schema_view)
     schema_view_copy.add_class(class_copy)
 
     return schema_view_copy

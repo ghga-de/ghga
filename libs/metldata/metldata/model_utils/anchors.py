@@ -159,7 +159,11 @@ def get_anchors_points_by_target(*, model: MetadataModel) -> dict[str, AnchorPoi
 def filter_anchor_points(
     *, anchor_points_by_target: dict[str, AnchorPoint], classes_of_interest: set[str]
 ) -> dict[str, AnchorPoint]:
-    """Filter the provided anchor points by a list of classes of interest."""
+    """Filter the provided anchor points by a list of classes of interest.
+
+    Raises:
+        AnchorPointNotFoundError: if no anchor point was found for a class of interest.
+    """
 
     # check if anchor points exists for all classes:
     classes_without_anchor_points = classes_of_interest.difference(

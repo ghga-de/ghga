@@ -22,10 +22,13 @@ import pytest
 from metldata.model_utils.assumptions import (
     MetadataModelAssumptionError,
     check_basic_model_assumption,
+    check_class_exists,
+    check_class_slot_exists,
 )
 from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.metadata_models import (
     INVALID_METADATA_MODELS,
+    MINIMAL_VALID_METADATA_MODEL,
     VALID_METADATA_MODELS,
 )
 
@@ -42,3 +45,49 @@ def test_metadata_model_assumption_checking(model: MetadataModel, is_valid: bool
         MetadataModelAssumptionError
     ):
         check_basic_model_assumption(model)
+
+
+@pytest.mark.parametrize(
+    "model, class_name, exists",
+    [
+        (MINIMAL_VALID_METADATA_MODEL, "Dataset", True),
+        (MINIMAL_VALID_METADATA_MODEL, "NotExistingClass", False),
+    ],
+)
+def test_check_class_exists(model: MetadataModel, class_name: str, exists: bool):
+    """Test the check_class_exists function."""
+
+    with nullcontext() if exists else pytest.raises(  # type:ignore
+        MetadataModelAssumptionError
+    ):
+        check_class_exists(model=model, class_name=class_name)
+
+
+@pytest.mark.parametrize(
+    "model, class_name, slot_name, ignore_parents, exists",
+    [
+        (MINIMAL_VALID_METADATA_MODEL, "Dataset", "alias", False, True),
+        (MINIMAL_VALID_METADATA_MODEL, "Dataset", "alias", True, False),
+        (MINIMAL_VALID_METADATA_MODEL, "Dataset", "has_file", True, True),
+        (MINIMAL_VALID_METADATA_MODEL, "Dataset", "not_existing_slot", False, False),
+        (MINIMAL_VALID_METADATA_MODEL, "NotExistingClass", "name", False, False),
+    ],
+)
+def test_check_class_slot_exists(
+    model: MetadataModel,
+    class_name: str,
+    slot_name: str,
+    ignore_parents: bool,
+    exists: bool,
+):
+    """Test the check_class_slot_exists function."""
+
+    with nullcontext() if exists else pytest.raises(  # type:ignore
+        MetadataModelAssumptionError
+    ):
+        check_class_slot_exists(
+            model=model,
+            class_name=class_name,
+            slot_name=slot_name,
+            ignore_parents=ignore_parents,
+        )

@@ -23,9 +23,13 @@ from typing import Generic, TypeVar
 import yaml
 from pydantic import BaseModel
 
-from metldata.builtin_transformations.infer_references import ReferenceInferenceConfig
+from metldata.builtin_transformations.delete_slots import slot_deletion_transformation
+from metldata.builtin_transformations.infer_references import (
+    reference_inference_transformation,
+)
 from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
+from metldata.transform.base import TransformationDefinition
 from tests.fixtures.utils import BASE_DIR
 
 Config = TypeVar("Config", bound=BaseModel)
@@ -35,11 +39,17 @@ Config = TypeVar("Config", bound=BaseModel)
 class TransformationTestCase(Generic[Config]):
     """A test case for a transformation."""
 
+    transformation_name: str
+    case_name: str
+    transformation_definition: TransformationDefinition
     config: Config
     original_model: MetadataModel
     original_metadata: Json
     transformed_model: MetadataModel
     transformed_metadata: Json
+
+    def __str__(self) -> str:
+        return f"{self.transformation_name}-{self.case_name}"
 
 
 def _read_yaml(path: Path) -> Json:
@@ -50,7 +60,10 @@ def _read_yaml(path: Path) -> Json:
 
 
 def _read_test_case(
-    config_class: type[Config], transformation_name: str, case_name: str
+    *,
+    transformation_name: str,
+    transformation_definition: TransformationDefinition,
+    case_name: str,
 ) -> TransformationTestCase[Config]:
     """Read a test case for a transformation."""
 
@@ -62,7 +75,10 @@ def _read_test_case(
     transformed_metadata_path = case_dir / "transformed_metadata.yaml"
 
     return TransformationTestCase(
-        config=config_class(**_read_yaml(config_path)),
+        transformation_name=transformation_name,
+        case_name=case_name,
+        transformation_definition=transformation_definition,
+        config=transformation_definition.config_cls(**_read_yaml(config_path)),
         original_model=MetadataModel.init_from_path(original_model_path),
         original_metadata=_read_yaml(original_metadata_path),
         transformed_model=MetadataModel.init_from_path(transformed_model_path),
@@ -70,9 +86,11 @@ def _read_test_case(
     )
 
 
-def _read_all_test_cases(
-    config_class: type[Config], transformation_name: str
-) -> list[TransformationTestCase[Config]]:
+def _read_all_test_cases_for_a_transformation(
+    *,
+    transformation_name: str,
+    transformation_definition: TransformationDefinition,
+) -> list[TransformationTestCase]:
     """Read all test cases for a transformation."""
 
     base_dir = BASE_DIR / "transformations" / transformation_name
@@ -80,15 +98,35 @@ def _read_all_test_cases(
 
     return [
         _read_test_case(
-            config_class=config_class,
             transformation_name=transformation_name,
+            transformation_definition=transformation_definition,
             case_name=case_name,
         )
         for case_name in case_names
     ]
 
 
-INFERRED_REFERENCE_TEST_CASES = _read_all_test_cases(
-    config_class=ReferenceInferenceConfig,
-    transformation_name="infer_references",
+def _read_all_test_cases(
+    *, transformations_by_name: dict[str, TransformationDefinition]
+) -> list[TransformationTestCase]:
+    """Read all test cases for the specified transformations."""
+
+    return [
+        test_case
+        for transformation_name, transformation_definition in transformations_by_name.items()
+        for test_case in _read_all_test_cases_for_a_transformation(
+            transformation_name=transformation_name,
+            transformation_definition=transformation_definition,
+        )
+    ]
+
+
+TRANSFORMATIONS_BY_NAME: dict[str, TransformationDefinition] = {
+    "infer_references": reference_inference_transformation,
+    "delete_slots": slot_deletion_transformation,
+}
+
+
+TRANSFORMATION_TEST_CASES = _read_all_test_cases(
+    transformations_by_name=TRANSFORMATIONS_BY_NAME
 )

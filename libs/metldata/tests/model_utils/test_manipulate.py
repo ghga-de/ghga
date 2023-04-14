@@ -16,9 +16,16 @@
 
 """test the manipulate module"""
 
+import pytest
 from linkml_runtime.linkml_model.meta import SlotDefinition
 
-from metldata.model_utils.manipulate import add_slot_if_not_exists, upsert_class_slot
+from metldata.model_utils.manipulate import (
+    ClassNotFoundError,
+    ClassSlotNotFoundError,
+    add_slot_if_not_exists,
+    delete_class_slot,
+    upsert_class_slot,
+)
 from tests.fixtures.metadata_models import MINIMAL_VALID_METADATA_MODEL
 
 
@@ -97,8 +104,59 @@ def test_upsert_class_slot_not_exists():
     )
 
     # check that the slot exists on the global and class level in an identical fashion:
+    assert new_slot.name in updated_schema_view.class_slots(class_name=class_name)
     updated_class_slot = updated_schema_view.induced_slot(
         slot_name=new_slot.name, class_name=class_name
     )
     updated_global_slot = updated_schema_view.get_slot(slot_name=new_slot.name)
     assert updated_class_slot.range == updated_global_slot.range == new_slot.range
+
+
+def test_delete_class_slot_happy():
+    """Test the happy path of using delete_class_slot."""
+
+    class_name = "Dataset"
+    slot_name = "has_file"
+
+    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_schema_view = original_model.schema_view
+
+    updated_schema_view = delete_class_slot(
+        schema_view=original_schema_view, class_name=class_name, slot_name=slot_name
+    )
+
+    # check that the slot does not exist on the class level anymore:
+    assert slot_name not in updated_schema_view.class_slots(class_name=class_name)
+
+    # check that the slot still exists on the global level:
+    assert updated_schema_view.get_slot(slot_name=slot_name) is not None
+
+
+def test_delete_class_slot_class_not_exists():
+    """Test delete_class_slot if the class does not exist."""
+
+    class_name = "DoesNotExist"
+    slot_name = "has_file"
+
+    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_schema_view = original_model.schema_view
+
+    with pytest.raises(ClassNotFoundError):
+        delete_class_slot(
+            schema_view=original_schema_view, class_name=class_name, slot_name=slot_name
+        )
+
+
+def test_delete_class_slot_slot_not_exists():
+    """Test delete_class_slot if the slot does not exist."""
+
+    class_name = "Dataset"
+    slot_name = "does_not_exist"
+
+    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_schema_view = original_model.schema_view
+
+    with pytest.raises(ClassSlotNotFoundError):
+        delete_class_slot(
+            schema_view=original_schema_view, class_name=class_name, slot_name=slot_name
+        )

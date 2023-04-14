@@ -73,7 +73,7 @@ class MetadataTransformer(ABC, Generic[Config]):
 class TransformationDefinition(Generic[Config]):
     """A model for describing a transformation."""
 
-    config: type[Config] = Field(
+    config_cls: type[Config] = Field(
         ..., description="The config model of the transformation."
     )
     check_model_assumptions: Callable[[MetadataModel, Config], None] = Field(

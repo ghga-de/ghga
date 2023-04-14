@@ -21,9 +21,11 @@ import pytest
 
 from metldata.metadata_utils import (
     MetadataResourceNotFoundError,
+    get_resources_of_class,
     lookup_resource_by_identifier,
+    update_resources_in_metadata,
 )
-from metldata.model_utils.anchors import get_anchors_points_by_target
+from metldata.model_utils.anchors import AnchorPoint, get_anchors_points_by_target
 from tests.fixtures.metadata import VALID_MINIMAL_METADATA_EXAMPLE
 from tests.fixtures.metadata_models import MINIMAL_VALID_METADATA_MODEL
 
@@ -65,3 +67,87 @@ def test_lookup_resource_by_identifier_not_exist():
             identifier=identifier,
             anchor_points_by_target=anchor_points_by_target,
         )
+
+
+EXAMPLE_GLOBAL_METADATA = {
+    "has_file": {
+        "test_sample_01_R1": {
+            "file_format": "fastq",
+            "file_size": 1234567890,
+        },
+        "test_sample_01_R2": {
+            "file_format": "fastq",
+            "file_size": 1234567890,
+        },
+    }
+}
+
+EXAMPLE_ANCHOR_POINTS_BY_TARGET = {
+    "File": AnchorPoint(
+        target_class="File", identifier_slot="alias", root_slot="has_file"
+    )
+}
+
+
+def test_get_resources_of_class_happy():
+    """Test the happy path of using the get_resources_of_class function."""
+
+    expected_resources = [
+        {
+            "alias": "test_sample_01_R1",
+            "file_format": "fastq",
+            "file_size": 1234567890,
+        },
+        {
+            "alias": "test_sample_01_R2",
+            "file_format": "fastq",
+            "file_size": 1234567890,
+        },
+    ]
+
+    observed_resources = get_resources_of_class(
+        class_name="File",
+        global_metadata=EXAMPLE_GLOBAL_METADATA,
+        anchor_points_by_target=EXAMPLE_ANCHOR_POINTS_BY_TARGET,
+    )
+
+    assert observed_resources == expected_resources
+
+
+def test_update_resources_in_metadata_happy():
+    """Test the happy path of using the update_resources_in_metadata function."""
+
+    modified_resources = [
+        {
+            "alias": "test_sample_01_R1",
+            "file_format": "fastq",
+            "some_new_field": "some_new_value",
+        },
+        {
+            "alias": "test_sample_01_R2",
+            "file_format": "fastq",
+            "some_new_field": "some_new_value",
+        },
+    ]
+
+    expected_metadata = {
+        "has_file": {
+            "test_sample_01_R1": {
+                "file_format": "fastq",
+                "some_new_field": "some_new_value",
+            },
+            "test_sample_01_R2": {
+                "file_format": "fastq",
+                "some_new_field": "some_new_value",
+            },
+        }
+    }
+
+    observed_metadata = update_resources_in_metadata(
+        resources=modified_resources,
+        class_name="File",
+        global_metadata=EXAMPLE_GLOBAL_METADATA,
+        anchor_points_by_target=EXAMPLE_ANCHOR_POINTS_BY_TARGET,
+    )
+
+    assert observed_metadata == expected_metadata

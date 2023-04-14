@@ -15,12 +15,63 @@
 #
 
 """Logic to check basic assumptions about the metadata model."""
-from metldata.model_utils.anchors import InvalidAnchorPointError, get_anchor_points
+from typing import Optional
+
+from metldata.model_utils.anchors import (
+    AnchorPointNotFoundError,
+    InvalidAnchorPointError,
+    filter_anchor_points,
+    get_anchors_points_by_target,
+)
 from metldata.model_utils.essentials import ROOT_CLASS, MetadataModel
 
 
 class MetadataModelAssumptionError(RuntimeError):
     """Raised when the assumptions about the metadata model are not met."""
+
+
+def check_class_exists(model: MetadataModel, class_name: str) -> None:
+    """Check that a class with the given name exists.
+
+    Raises:
+        MetadataModelAssumptionError: if validation fails.
+    """
+
+    # has a class called class_name:
+    class_ = model.schema_view.get_class(class_name=class_name)
+
+    if class_ is None:
+        raise MetadataModelAssumptionError(
+            f"A class called '{class_name}' is required but does not exist."
+        )
+
+
+def check_class_slot_exists(
+    model: MetadataModel, class_name: str, slot_name: str, ignore_parents: bool = False
+) -> None:
+    """Check that a class with the given name exists and that it has a slot with the
+    given name. If ignore_parents is set to True, slots that are inherited from parent
+    classes or mixins are ignored.
+
+    Raises:
+        MetadataModelAssumptionError: if validation fails.
+    """
+
+    check_class_exists(model=model, class_name=class_name)
+
+    all_slots = model.schema_view.class_slots(
+        class_name=class_name, direct=ignore_parents
+    )
+
+    if slot_name not in all_slots:
+        raise MetadataModelAssumptionError(
+            f"A slot called '{slot_name}' is required but does not exist"
+            + f" in the '{class_name}' class."
+            " Inherited slots are ignored."
+            if ignore_parents
+            else f"A slot called '{slot_name}' is required but does not exist"
+            + f" in the '{class_name}' class or its parents classes and mixins."
+        )
 
 
 def check_root_class_existence(model: MetadataModel) -> None:
@@ -43,19 +94,33 @@ def check_root_class_existence(model: MetadataModel) -> None:
         )
 
 
-def check_anchor_points(model: MetadataModel) -> None:
-    """Checks the anchor points of the root class.
+def check_anchor_points(
+    model: MetadataModel, classes: Optional[list[str]] = None
+) -> None:
+    """Checks the anchor points of the root class. If classes is specified, also checks
+    that anchor points for the classes exist.
 
     Raises:
         MetadataModelAssumptionError: if validation fails.
     """
 
     try:
-        _ = get_anchor_points(model=model)
+        anchor_points_by_target = get_anchors_points_by_target(model=model)
     except InvalidAnchorPointError as error:
         raise MetadataModelAssumptionError(
             f"The model has invalid anchor points: {error}"
         ) from error
+
+    if classes is not None:
+        try:
+            _ = filter_anchor_points(
+                anchor_points_by_target=anchor_points_by_target,
+                classes_of_interest=set(classes),
+            )
+        except AnchorPointNotFoundError as error:
+            raise MetadataModelAssumptionError(
+                f"The model is missing anchor points: {error}"
+            ) from error
 
 
 def check_basic_model_assumption(model: MetadataModel) -> None:

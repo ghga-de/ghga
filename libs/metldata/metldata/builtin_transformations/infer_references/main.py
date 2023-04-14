@@ -25,6 +25,7 @@ from metldata.builtin_transformations.infer_references.metadata_transform import
 from metldata.builtin_transformations.infer_references.model_transform import (
     add_references_to_model,
 )
+from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.assumptions import check_basic_model_assumption
 from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import Json, MetadataTransformer, TransformationDefinition
@@ -33,7 +34,25 @@ from metldata.transform.base import Json, MetadataTransformer, TransformationDef
 class ReferenceInferenceMetadataTransformer(
     MetadataTransformer[ReferenceInferenceConfig]
 ):
-    """A transformer that infers references in metadata based on existing once."""
+    """A transformer that infers references in metadata based on existing ones."""
+
+    def __init__(
+        self,
+        config: ReferenceInferenceConfig,
+        original_model: MetadataModel,
+        transformed_model: MetadataModel,
+    ):
+        """Initialize the transformer."""
+
+        super().__init__(
+            config=config,
+            original_model=original_model,
+            transformed_model=transformed_model,
+        )
+
+        self._anchor_points_by_target = get_anchors_points_by_target(
+            model=self._original_model
+        )
 
     def transform(self, *, metadata: Json) -> Json:
         """Transforms metadata.
@@ -45,8 +64,8 @@ class ReferenceInferenceMetadataTransformer(
 
         return add_references_to_metadata(
             metadata=metadata,
-            model=self._original_model,
             references=self._config.inferred_references,
+            anchor_points_by_target=self._anchor_points_by_target,
         )
 
 
@@ -81,7 +100,7 @@ def transform_model(
 
 
 reference_inference_transformation = TransformationDefinition[ReferenceInferenceConfig](
-    config=ReferenceInferenceConfig,
+    config_cls=ReferenceInferenceConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,
     metadata_transformer_factory=ReferenceInferenceMetadataTransformer,

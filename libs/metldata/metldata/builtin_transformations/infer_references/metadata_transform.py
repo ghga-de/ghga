@@ -24,19 +24,16 @@ from metldata.builtin_transformations.infer_references.reference import (
     InferredReference,
 )
 from metldata.metadata_utils import (
-    MetadataResourceNotFoundError,
     SelfIdLookUpError,
-    convert_list_to_inlined_dict,
-    lookup_resource_by_identifier,
+    get_resources_of_class,
     lookup_self_id,
+    update_resources_in_metadata,
 )
 from metldata.model_utils.anchors import (
     AnchorPoint,
     AnchorPointNotFoundError,
-    get_anchors_points_by_target,
     lookup_anchor_point,
 )
-from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import (
     Json,
     MetadataModelTransformationError,
@@ -123,64 +120,35 @@ def add_reference_to_metadata(
                 if the transformation of the metadata fails.
     """
 
-    try:
-        source_anchor_point = lookup_anchor_point(
-            class_name=reference.source, anchor_points_by_target=anchor_points_by_target
-        )
-    except AnchorPointNotFoundError as error:
-        raise MetadataTransformationError(
-            f"Cannot add reference '{reference}' to metadata because the source anchor"
-            + " point could not be found."
-        ) from error
+    resources = get_resources_of_class(
+        global_metadata=metadata,
+        class_name=reference.source,
+        anchor_points_by_target=anchor_points_by_target,
+    )
 
-    source_ids = metadata.get(source_anchor_point.root_slot)
-
-    if not source_ids:
-        raise MetadataTransformationError(
-            f"Cannot add reference '{reference}' to metadata because the source anchor"
-            + f" point '{source_anchor_point.root_slot}' does not exist in the"
-            + " metadata."
-        )
-
-    try:
-        source_resources = [
-            lookup_resource_by_identifier(
-                class_name=reference.source,
-                global_metadata=metadata,
-                identifier=source_id,
-                anchor_points_by_target=anchor_points_by_target,
-            )
-            for source_id in source_ids
-        ]
-    except MetadataResourceNotFoundError as error:
-        raise MetadataTransformationError(
-            f"Cannot add reference '{reference}' to metadata because not all source"
-            + " resources could be found in the metadata."
-        ) from error
-
-    modified_resources_as_list = [
+    modified_resources = [
         add_reference_to_metadata_resource(
-            resource=source_resource,
+            resource=resource,
             global_metadata=metadata,
             reference=reference,
             anchor_points_by_target=anchor_points_by_target,
         )
-        for source_resource in source_resources
+        for resource in resources
     ]
 
-    modified_resources_as_dict = convert_list_to_inlined_dict(
-        resources=modified_resources_as_list,
-        identifier_slot=source_anchor_point.identifier_slot,
+    return update_resources_in_metadata(
+        resources=modified_resources,
+        class_name=reference.source,
+        global_metadata=metadata,
+        anchor_points_by_target=anchor_points_by_target,
     )
-
-    metadata_copy = metadata.copy()
-    metadata_copy[source_anchor_point.root_slot] = modified_resources_as_dict
-
-    return metadata_copy
 
 
 def add_references_to_metadata(
-    *, metadata: Json, model: MetadataModel, references: list[InferredReference]
+    *,
+    metadata: Json,
+    references: list[InferredReference],
+    anchor_points_by_target: dict[str, AnchorPoint],
 ) -> Json:
     """Transform metadata and return the transformed one.
 
@@ -188,8 +156,6 @@ def add_references_to_metadata(
         MetadataTransformationError:
             if the transformation of the metadata fails.
     """
-
-    anchor_points_by_target = get_anchors_points_by_target(model=model)
 
     for reference in references:
         metadata = add_reference_to_metadata(
