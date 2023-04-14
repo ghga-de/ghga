@@ -1,0 +1,13 @@
+infer_references:
+  inferred_ref_map:
+    Experiment:
+      has_file:
+        path: "Experiment(has_sample)>Sample(has_file)>File"
+        multivalued: true
+delete_slots:
+  slots_to_delete:
+    File:
+      - filename
+      - checksum
+    Sample:
+      - description

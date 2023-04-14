@@ -17,10 +17,8 @@
 """Transformation test cases."""
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Generic, TypeVar
 
-import yaml
 from pydantic import BaseModel
 
 from metldata.builtin_transformations.delete_slots import slot_deletion_transformation
@@ -30,7 +28,7 @@ from metldata.builtin_transformations.infer_references import (
 from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import TransformationDefinition
-from tests.fixtures.utils import BASE_DIR
+from tests.fixtures.utils import BASE_DIR, read_yaml
 
 Config = TypeVar("Config", bound=BaseModel)
 
@@ -52,13 +50,6 @@ class TransformationTestCase(Generic[Config]):
         return f"{self.transformation_name}-{self.case_name}"
 
 
-def _read_yaml(path: Path) -> Json:
-    """Read a YAML file."""
-
-    with open(path, "r", encoding="utf-8") as file:
-        return yaml.safe_load(file)
-
-
 def _read_test_case(
     *,
     transformation_name: str,
@@ -78,11 +69,11 @@ def _read_test_case(
         transformation_name=transformation_name,
         case_name=case_name,
         transformation_definition=transformation_definition,
-        config=transformation_definition.config_cls(**_read_yaml(config_path)),
+        config=transformation_definition.config_cls(**read_yaml(config_path)),
         original_model=MetadataModel.init_from_path(original_model_path),
-        original_metadata=_read_yaml(original_metadata_path),
+        original_metadata=read_yaml(original_metadata_path),
         transformed_model=MetadataModel.init_from_path(transformed_model_path),
-        transformed_metadata=_read_yaml(transformed_metadata_path),
+        transformed_metadata=read_yaml(transformed_metadata_path),
     )
 
 

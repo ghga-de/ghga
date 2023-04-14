@@ -1,0 +1,40 @@
+has_file:
+  test_sample_01_R1:
+    format: fastq
+    size: 299943
+  test_sample_01_R2:
+    format: fastq
+    size: 234243
+  test_sample_02_R1:
+    format: fastq
+    size: 92345234
+  test_sample_02_R2:
+    format: fastq
+    size: 234243
+has_dataset:
+  test_dataset_01:
+    has_file:
+      - test_sample_01_R1
+      - test_sample_01_R2
+      - test_sample_02_R1
+      - test_sample_02_R2
+has_sample:
+  test_sample_01:
+    has_file:
+      - test_sample_01_R1
+      - test_sample_01_R2
+  test_sample_02:
+    has_file:
+      - test_sample_02_R1
+      - test_sample_02_R2
+has_experiment:
+  test_experiment_01:
+    description: A test experiment.
+    has_sample:
+      - test_sample_01
+      - test_sample_02
+    has_file:
+      - test_sample_01_R1
+      - test_sample_01_R2
+      - test_sample_02_R1
+      - test_sample_02_R2

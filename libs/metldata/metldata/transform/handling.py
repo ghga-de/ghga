@@ -16,10 +16,37 @@
 
 """Logic for handling Transformation."""
 
+from pydantic import BaseModel
+
 from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
 from metldata.model_utils.metadata_validator import MetadataValidator
-from metldata.transform.base import Config, TransformationDefinition
+from metldata.transform.base import (
+    Config,
+    TransformationDefinition,
+    WorkflowConfig,
+    WorkflowDefinition,
+    WorkflowStep,
+    WorkflowStepBase,
+)
+
+
+class WorkflowConfigMissmatchError(RuntimeError):
+    """Raised when the provided workflow config does not match the config class of the
+    workflow definition.
+    """
+
+    def __init__(
+        self, workflow_definition: WorkflowDefinition, workflow_config: Config
+    ):
+        """Initialize the error with the workflow definition and the config."""
+
+        message = (
+            f"The config {workflow_config} is not an instance of the config class "
+            f"{workflow_definition.config_cls} of the workflow definition "
+            f"{workflow_definition}."
+        )
+        super().__init__(message)
 
 
 class TransformationHandler:
@@ -77,3 +104,160 @@ class TransformationHandler:
         self._transformed_metadata_validator.validate(transformed_metadata)
 
         return transformed_metadata
+
+
+class ResolvedWorkflowStep(WorkflowStepBase):
+    """A resolved workflow step contains a transformation handler."""
+
+    transformation_handler: TransformationHandler
+
+    class Config:
+        """Config for ResolvedWorkflowStep."""
+
+        arbitrary_types_allowed = True
+
+
+class ResolvedWorkflow(WorkflowDefinition):
+    """A resolved workflow contains a list of resolved workflow steps."""
+
+    steps: dict[str, ResolvedWorkflowStep]  # type: ignore
+    workflow_config: WorkflowConfig
+
+
+def check_workflow_config(
+    *, workflow_definition: WorkflowDefinition, workflow_config: WorkflowConfig
+):
+    """Checks if the config is an instance of the config class of the workflow
+    definition.
+
+    Raises:
+        WorkflowConfigMissmatchError:
+    """
+
+    if workflow_config.schema_json() == workflow_definition.schema_json():
+        raise WorkflowConfigMissmatchError(
+            workflow_definition=workflow_definition, workflow_config=workflow_config
+        )
+
+
+def resolve_workflow_step(
+    *,
+    workflow_step: WorkflowStep,
+    step_name: str,
+    workflow_definition: WorkflowDefinition,
+    workflow_config: WorkflowConfig,
+    original_model: MetadataModel,
+) -> ResolvedWorkflowStep:
+    """Translates a workflow step given a workflow definition and a workflow config
+    into a resolved workflow step.
+    """
+
+    check_workflow_config(
+        workflow_definition=workflow_definition, workflow_config=workflow_config
+    )
+
+    transformation_config: BaseModel = getattr(workflow_config, step_name)
+    transformation_handler = TransformationHandler(
+        transformation_definition=workflow_step.transformation_definition,
+        transformation_config=transformation_config,
+        original_model=original_model,
+    )
+    return ResolvedWorkflowStep(
+        transformation_handler=transformation_handler,
+        input=workflow_step.input,
+        description=workflow_step.description,
+    )
+
+
+def resolve_workflow(
+    workflow_definition: WorkflowDefinition,
+    original_model: MetadataModel,
+    workflow_config: WorkflowConfig,
+) -> ResolvedWorkflow:
+    """Translates a workflow definition given an input model and a workflow config into
+    a resolved workflow.
+    """
+
+    check_workflow_config(
+        workflow_definition=workflow_definition, workflow_config=workflow_config
+    )
+
+    resolved_steps: dict[str, ResolvedWorkflowStep] = {}
+    for step_name in workflow_definition.step_order:
+        workflow_step = workflow_definition.steps[step_name]
+        input_model = (
+            original_model
+            if workflow_step.input is None
+            else resolved_steps[
+                workflow_step.input
+            ].transformation_handler.transformed_model
+        )
+
+        resolved_steps[step_name] = resolve_workflow_step(
+            workflow_step=workflow_step,
+            step_name=step_name,
+            workflow_definition=workflow_definition,
+            workflow_config=workflow_config,
+            original_model=input_model,
+        )
+
+    return ResolvedWorkflow(
+        steps=resolved_steps,
+        workflow_config=workflow_config,
+        description=workflow_definition.description,
+        artifacts=workflow_definition.artifacts,
+    )
+
+
+def get_model_artifacts_from_resolved_workflow(resolved_workflow: ResolvedWorkflow):
+    """Returns a dictionary of models for artifacts produced by resolved workflow."""
+
+    return {
+        artifact_name: resolved_workflow.steps[
+            step_name
+        ].transformation_handler.transformed_model
+        for artifact_name, step_name in resolved_workflow.artifacts.items()
+    }
+
+
+class WorkflowHandler:
+    """Used for executing workflows described in a WorkflowDefinition."""
+
+    def __init__(
+        self,
+        workflow_definition: WorkflowDefinition,
+        workflow_config: WorkflowConfig,
+        original_model: MetadataModel,
+    ):
+        """Initialize the WorkflowHandler with a workflow deinition, a matching
+        config, and a metadata model. The workflow definition is translated into a
+        resolved workflow.
+        """
+
+        self._resolved_workflow = resolve_workflow(
+            workflow_definition=workflow_definition,
+            original_model=original_model,
+            workflow_config=workflow_config,
+        )
+
+        self.artifact_models = get_model_artifacts_from_resolved_workflow(
+            self._resolved_workflow
+        )
+
+    def run(self, *, metadata: Json) -> dict[str, Json]:
+        """Run the workflow definition on metadata to generate artifacts."""
+
+        transformed_metadata: dict[str, Json] = {}
+        for step_name in self._resolved_workflow.step_order:
+            step = self._resolved_workflow.steps[step_name]
+            input_metadata = (
+                metadata if step.input is None else transformed_metadata[step.input]
+            )
+            transformed_metadata[
+                step_name
+            ] = step.transformation_handler.transform_metadata(input_metadata)
+
+        return {
+            artifact_name: transformed_metadata[step_name]
+            for artifact_name, step_name in self._resolved_workflow.artifacts.items()
+        }

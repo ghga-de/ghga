@@ -29,8 +29,16 @@ from metldata.transform.base import (
     MetadataModelTransformationError,
     TransformationDefinition,
 )
-from metldata.transform.handling import TransformationHandler
+from metldata.transform.handling import TransformationHandler, WorkflowHandler
 from tests.fixtures.metadata_models import ADVANCED_VALID_METADATA_MODEL
+from tests.fixtures.workflows import (
+    EXAMPLE_ARTIFACT_MODELS,
+    EXAMPLE_ARTIFACTS,
+    EXAMPLE_CONFIG,
+    EXAMPLE_ORIGINAL_METADATA,
+    EXAMPLE_ORIGINAL_MODEL,
+    EXAMPLE_WORKFLOW_DEFINITION,
+)
 
 VALID_EXAMPLE_CONFIG = ReferenceInferenceConfig(
     inferred_ref_map={
@@ -92,3 +100,28 @@ def test_transformation_handler_model_transformation_error():
             transformation_config=VALID_EXAMPLE_CONFIG,
             original_model=ADVANCED_VALID_METADATA_MODEL,
         )
+
+
+def test_workflow_handler_artifact_models():
+    """Test generating artifact models using the WorkflowHandler with a workflow defintion."""
+
+    workflow_handler = WorkflowHandler(
+        workflow_definition=EXAMPLE_WORKFLOW_DEFINITION,
+        workflow_config=EXAMPLE_CONFIG,
+        original_model=EXAMPLE_ORIGINAL_MODEL,
+    )
+
+    assert workflow_handler.artifact_models == EXAMPLE_ARTIFACT_MODELS
+
+
+def test_workflow_handler_artifacts():
+    """Test generating artifacts using the WorkflowHandler with a workflow defintion."""
+
+    workflow_handler = WorkflowHandler(
+        workflow_definition=EXAMPLE_WORKFLOW_DEFINITION,
+        workflow_config=EXAMPLE_CONFIG,
+        original_model=EXAMPLE_ORIGINAL_MODEL,
+    )
+
+    artifacts = workflow_handler.run(metadata=EXAMPLE_ORIGINAL_METADATA)
+    assert artifacts == EXAMPLE_ARTIFACTS
