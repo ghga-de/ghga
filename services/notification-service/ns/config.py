@@ -26,6 +26,8 @@ class Config(KafkaConfig, EventSubTranslatorConfig):
     """Config parameters and their defaults."""
 
     service_name: str = "ns"
+    plaintext_email_template: str
+    html_email_template: str
 
 
 CONFIG = Config()

@@ -51,13 +51,29 @@
       "items": {
         "type": "string"
       }
+    },
+    "plaintext_email_template": {
+      "title": "Plaintext Email Template",
+      "env_names": [
+        "ns_plaintext_email_template"
+      ],
+      "type": "string"
+    },
+    "html_email_template": {
+      "title": "Html Email Template",
+      "env_names": [
+        "ns_html_email_template"
+      ],
+      "type": "string"
     }
   },
   "required": [
     "notification_event_topic",
     "notification_event_type",
     "service_instance_id",
-    "kafka_servers"
+    "kafka_servers",
+    "plaintext_email_template",
+    "html_email_template"
   ],
   "additionalProperties": false
 }

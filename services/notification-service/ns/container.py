@@ -19,12 +19,16 @@ from hexkit.providers.akafka.provider import KafkaEventSubscriber
 
 from ns.adapters.inbound.akafka import EventSubTranslator
 from ns.config import Config
+from ns.core.notifier import Notifier
 
 
 class Container(ContainerBase):
     """Dependency-Injection Container"""
 
     config = get_configurator(Config)
+
+    # domain components
+    notifier = get_constructor(Notifier, config=config)
 
     # inbound translators
     event_sub_translator = get_constructor(EventSubTranslator, config=config)
