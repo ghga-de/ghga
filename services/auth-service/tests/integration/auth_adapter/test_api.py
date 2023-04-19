@@ -139,7 +139,7 @@ def test_basic_auth(with_basic_auth, client):
 
 
 def test_basic_auth_well_known(with_basic_auth, client):
-    """Test that GET from well-known path is excluded from basic authentication."""
+    """Test that fetching from well-known path is excluded from basic authentication."""
 
     assert with_basic_auth
 
@@ -148,7 +148,20 @@ def test_basic_auth_well_known(with_basic_auth, client):
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
+    response = client.head("/.well-known/some/thing")
+
+    assert response.status_code == status.HTTP_200_OK
+
+    response = client.options("/.well-known/some/thing")
+
+    assert response.status_code == status.HTTP_200_OK
+
     response = client.post("/.well-known/some/thing")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.text == "GHGA Data Portal: Not authenticated"
+
+    response = client.delete("/.well-known/some/thing")
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.text == "GHGA Data Portal: Not authenticated"
@@ -157,6 +170,18 @@ def test_basic_auth_well_known(with_basic_auth, client):
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.text == "GHGA Data Portal: Not authenticated"
+
+
+def test_basic_auth_service_logo(with_basic_auth, client):
+    """Test that fetching the service logo is excluded from basic authentication."""
+
+    assert with_basic_auth
+
+    response = client.get("/service-logo.png")
+    assert response.status_code == status.HTTP_200_OK
+
+    response = client.head("/.well-known/some/thing")
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_does_not_authorize_invalid_users(client):

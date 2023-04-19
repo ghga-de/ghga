@@ -46,26 +46,28 @@ app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
 configure_app(app, config=CONFIG)
 
 # the auth adapter needs to handle all HTTP methods
-HANDLE_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
+READ_METHODS = ["GET", "HEAD", "OPTIONS"]
+WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"]
+ALL_METHODS = READ_METHODS + WRITE_METHODS
 
 API_EXT_PATH = CONFIG.api_ext_path.strip("/")
 if API_EXT_PATH:
     API_EXT_PATH += "/"
 
 
-@app.api_route("/.well-known/{path:path}", methods=["GET"])
+@app.api_route("/.well-known/{path:path}", methods=READ_METHODS)
 async def ext_auth_well_known() -> dict:
     """Unprotected route for the .well-known URLs."""
     return {}
 
 
-@app.api_route("/service-logo.png", methods=["GET"])
+@app.api_route("/service-logo.png", methods=READ_METHODS)
 async def ext_auth_service_logo() -> dict:
     """Unprotected route for the service logo."""
     return {}
 
 
-@app.api_route("/{path:path}", methods=HANDLE_METHODS)
+@app.api_route("/{path:path}", methods=ALL_METHODS)
 async def ext_auth(  # pylint:disable=too-many-arguments
     path: str,
     request: Request,
