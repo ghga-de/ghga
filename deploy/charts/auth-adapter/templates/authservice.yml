@@ -1,0 +1,8 @@
+apiVersion: getambassador.io/v3alpha1
+kind: AuthService
+metadata:
+  name: authentication
+spec:
+  auth_service: "auth-adapter.data-portal:8080"
+  allowed_request_headers:
+    - "X-Authorization"

@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: auth-adapter
+  name: auth-adapter
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: auth-adapter
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/tls-skip-verify: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/agent-inject-secret-variables: "secret/data/auth-adapter/data"
+        vault.hashicorp.com/agent-inject-template-variables: |
+          {{ with secret "secret/data/auth-adapter/data" -}}
+          export AUTH_SERVICE_BASIC_AUTH_USER="{{ .Data.data.user }}"
+          export AUTH_SERVICE_BASIC_AUTH_PWD="{{ .Data.data.pass }}"
+          export AUTH_SERVICE_DB_URL="{{ .Data.data.db_url }}"
+          {{- end }}
+        vault.hashicorp.com/agent-inject-secret-oidc: "secret/data/data-portal-ui/react"
+        vault.hashicorp.com/agent-inject-template-oidc: |
+          {{ with secret "secret/data/data-portal-ui/react" -}}
+          export AUTH_SERVICE_OIDC_CLIENT_ID="{{ .Data.data.REACT_APP_OIDC_CLIENT_ID }}"
+          {{- end }}
+        vault.hashicorp.com/agent-inject-secret-int-keys: "secret/data/auth/priv"
+        vault.hashicorp.com/agent-inject-template-int-keys: |
+          {{ with secret "secret/data/auth/priv" -}}
+          export AUTH_SERVICE_AUTH_KEY='{{ .Data.data.data }}'
+          {{- end }}
+        vault.hashicorp.com/agent-inject-secret-ext-keys: "secret/data/auth/pub/ext"
+        vault.hashicorp.com/agent-inject-template-ext-keys: |
+          {{ with secret "secret/data/auth/pub/ext" -}}
+          export AUTH_SERVICE_AUTH_EXT_KEYS='{{ .Data.data.data }}'
+          {{- end }}
+        vault.hashicorp.com/role: "auth-adapter-role"
+        vault.hashicorp.com/agent-run-as-same-user: "true"
+      labels:
+        app: auth-adapter
+        version: staging
+        sidecar.istio.io/inject: "true"
+    spec:
+      serviceAccountName: auth-adapter
+      containers:
+        - env:
+            - name: AUTH_SERVICE_RUN_AUTH_ADAPTER
+              value: "true"
+            - name: AUTH_SERVICE_HOST
+              value: 0.0.0.0
+            - name: AUTH_SERVICE_PORT
+              value: "8080"
+            - name: AUTH_SERVICE_DB_NAME
+              value: auth-db
+          image: ghga/auth-service:0.0.0-60-e8c69d2-main
+          command:
+            - bash
+            - -c
+          args:
+            - |
+              source /vault/secrets/variables
+              source /vault/secrets/oidc
+              source /vault/secrets/ext-keys
+              source /vault/secrets/int-keys
+              shred /vault/secrets/*
+              auth-service
+          name: auth-adapter
+          securityContext:
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: "RuntimeDefault"
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256M
+            requests:
+              cpu: 100m
+              memory: 64M
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+      restartPolicy: Always
+      volumes: null

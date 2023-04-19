@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: auth-adapter
+    version: 1
+  name: auth-adapter
+spec:
+  type: ClusterIP
+  ports:
+    - name: tcp-web
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: auth-adapter
