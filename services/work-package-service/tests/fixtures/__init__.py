@@ -66,12 +66,19 @@ def fixture_bad_auth_headers() -> dict[str, str]:
     return headers_for_token(token)
 
 
+@fixture
+def non_mocked_hosts() -> list[str]:
+    """Get hosts that are not mocked by pytest-httpx."""
+    return ["test"]
+
+
 @async_fixture(name="client")
 async def fixture_client(mongodb_fixture) -> AsyncGenerator[AsyncClient, None]:
     """Get test client for the work package service"""
 
     config = Config(
         auth_key=AUTH_KEY_PAIR.export_public(),
+        download_access_url="http://access",
         work_package_signing_key=SecretStr(SIGNING_KEY_PAIR.export_private()),
         **mongodb_fixture.config.dict(),
     )

@@ -16,6 +16,7 @@ cors_allowed_origins: []
 db_connection_str: '**********'
 db_name: dev-db
 docs_url: /docs
+download_access_url: http://127.0.0.1:8080/download_access
 host: 127.0.0.1
 log_level: info
 openapi_url: /openapi.json
@@ -23,5 +24,5 @@ port: 8080
 service_name: wps
 work_package_signing_key: '**********'
 work_package_valid_days: 30
-work_packages_collection: workPacakges
+work_packages_collection: workPackages
 workers: 1

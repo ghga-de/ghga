@@ -6,7 +6,7 @@
     "work_packages_collection": {
       "title": "Work Packages Collection",
       "description": "The name of the database collection for work packages",
-      "default": "workPacakges",
+      "default": "workPackages",
       "env_names": [
         "wps_work_packages_collection"
       ],
@@ -23,7 +23,8 @@
     },
     "work_package_signing_key": {
       "title": "Work Package Signing Key",
-      "default": "**********",
+      "description": "The private key for signing work order tokens",
+      "example": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}",
       "env_names": [
         "wps_work_package_signing_key"
       ],
@@ -50,9 +51,19 @@
       ],
       "type": "string"
     },
+    "download_access_url": {
+      "title": "Download Access Url",
+      "description": "URL pointing to the internal download access API.",
+      "example": "http://127.0.0.1/download_access",
+      "env_names": [
+        "wps_download_access_url"
+      ],
+      "type": "string"
+    },
     "auth_key": {
-      "title": "Auth Key",
-      "default": "{}",
+      "title": "Internal public key",
+      "description": "The GHGA internal public key for validating the token signature.",
+      "example": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}",
       "env_names": [
         "wps_auth_key"
       ],
@@ -241,7 +252,10 @@
     }
   },
   "required": [
-    "db_connection_str"
+    "work_package_signing_key",
+    "db_connection_str",
+    "download_access_url",
+    "auth_key"
   ],
   "additionalProperties": false
 }

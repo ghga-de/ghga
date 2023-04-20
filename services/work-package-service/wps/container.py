@@ -20,6 +20,7 @@ from hexkit.inject import ContainerBase, get_configurator, get_constructor
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from wps.adapters.outbound.dao import WorkPackageDaoConstructor
+from wps.adapters.outbound.http import AccessCheckAdapter
 from wps.config import Config
 from wps.core.repository import WorkPackageRepository
 
@@ -46,7 +47,13 @@ class Container(ContainerBase):
         context_class=AuthContext,
     )
 
+    # download access adaptr:
+    download_access_checks = get_constructor(AccessCheckAdapter, config=config)
+
     # core components:
     work_package_repository = get_constructor(
-        WorkPackageRepository, config=config, work_package_dao=work_package_dao
+        WorkPackageRepository,
+        config=config,
+        access_check=download_access_checks,
+        work_package_dao=work_package_dao,
     )

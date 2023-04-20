@@ -12,23 +12,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Config Parameter Modeling and Parsing"""
+"""Outbound access checks"""
 
-from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.auth.ghga import AuthConfig
-from hexkit.config import config_from_yaml
-from hexkit.providers.mongodb import MongoDbConfig
+from abc import ABC, abstractmethod
 
-from wps.adapters.outbound.http import AccessCheckConfig
-from wps.core.repository import WorkPackageConfig
+__all__ = ["AccessCheckPort"]
 
 
-@config_from_yaml(prefix="wps")
-class Config(
-    ApiConfigBase, AuthConfig, AccessCheckConfig, MongoDbConfig, WorkPackageConfig
-):  # pylint: disable=too-many-ancestors
-    """Config parameters and their defaults."""
+class AccessCheckPort(ABC):
+    """A port for checking access permissions for datasets."""
 
-    service_name: str = "wps"
-    db_name: str = "work-packages"
+    class AccessCheckError(RuntimeError):
+        """Raised when the access check failed without result."""
+
+    @abstractmethod
+    async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
+        """Check whether the given user has download access for the given dataset."""
+        ...
+
+    @abstractmethod
+    async def get_datasets_with_download_access(self, user_id: str) -> list[str]:
+        """Get all datasets that the given user is allowed to download."""
+        ...

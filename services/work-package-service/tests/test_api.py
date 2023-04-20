@@ -29,6 +29,7 @@ from .fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_bad_auth_headers,
     fixture_client,
     headers_for_token,
+    non_mocked_hosts,
 )
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 
@@ -71,8 +72,16 @@ async def test_get_work_package_unauthorized(client):
 
 
 @mark.asyncio
-async def test_create_work_order_token(client, auth_headers):
+async def test_create_work_order_token(client, auth_headers, httpx_mock):
     """Test that work order tokens can be properly created."""
+
+    # mock the access check for the test dataset
+
+    httpx_mock.add_response(
+        method="GET",
+        url="http://access/users/john-doe@ghga.de/datasets/some-dataset-id",
+        text="true",
+    )
 
     # create a work package
 

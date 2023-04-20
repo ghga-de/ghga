@@ -38,6 +38,7 @@ from wps.core.repository import WorkPackageConfig, WorkPackageRepository
 from wps.core.tokens import hash_token
 
 from .fixtures import AUTH_CLAIMS, SIGNING_KEY_PAIR
+from .fixtures.access import AccessCheckMock
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 
 work_package_config = WorkPackageConfig(
@@ -58,7 +59,9 @@ async def test_work_package_repository(
         dao_factory=mongodb_fixture.dao_factory,
     )
     repository = WorkPackageRepository(
-        config=work_package_config, work_package_dao=work_package_dao
+        config=work_package_config,
+        access_check=AccessCheckMock(),
+        work_package_dao=work_package_dao,
     )
 
     # create work package
