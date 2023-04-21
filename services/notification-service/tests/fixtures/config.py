@@ -20,8 +20,9 @@ from typing import Dict, List, Optional
 
 from pydantic.env_settings import BaseSettings
 
+from ns.adapters.outbound.smtp_client import SmtpClientConfig
 from ns.config import Config
-from tests.fixtures.utils import BASE_DIR
+from tests.fixtures.utils import BASE_DIR, get_free_port
 
 TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 
@@ -41,4 +42,9 @@ def get_config(
     return Config(config_yaml=default_config_yaml, **sources_dict)  # type: ignore
 
 
-DEFAULT_CONFIG = get_config()
+SMTP_TEST_CONFIG = SmtpClientConfig(
+    smtp_host="127.0.0.1",
+    smtp_port=get_free_port(),
+    login_user="test@example.com",
+    login_password="test123",
+)

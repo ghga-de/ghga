@@ -14,9 +14,13 @@
 # limitations under the License.
 #
 """Event subscriber details for notification events"""
+import ghga_event_schemas.pydantic_ as event_schemas
+from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import BaseSettings, Field
+
+from ns.ports.inbound.notifier import NotifierPort
 
 
 class EventSubTranslatorConfig(BaseSettings):
@@ -37,14 +41,18 @@ class EventSubTranslatorConfig(BaseSettings):
 class EventSubTranslator(EventSubscriberProtocol):
     """A translator that can consume Notification events"""
 
-    def __init__(self, *, config: EventSubTranslatorConfig):
+    def __init__(self, *, config: EventSubTranslatorConfig, notifier: NotifierPort):
         self.topics_of_interest = [config.notification_event_topic]
         self.types_of_interest = [config.notification_event_type]
         self._config = config
+        self._notifier = notifier
 
     async def _send_notification(self, *, payload: JsonObject):
         """Validates the schema, then makes a call to the notifier with the payload"""
-        raise NotImplementedError()
+        validated_payload = get_validated_payload(
+            payload=payload, schema=event_schemas.Notification
+        )
+        await self._notifier.send_notification(notification=validated_payload)
 
     async def _consume_validated(
         self, *, payload: JsonObject, type_: Ascii, topic: Ascii

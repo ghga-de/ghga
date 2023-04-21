@@ -3,6 +3,63 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "plaintext_email_template": {
+      "title": "Plaintext Email Template",
+      "description": "The plaintext template to use for email notifications",
+      "env_names": [
+        "ns_plaintext_email_template"
+      ],
+      "type": "string"
+    },
+    "html_email_template": {
+      "title": "Html Email Template",
+      "description": "The HTML template to use for email notifications",
+      "env_names": [
+        "ns_html_email_template"
+      ],
+      "type": "string"
+    },
+    "from_address": {
+      "title": "From Address",
+      "description": "The sender's address.",
+      "env_names": [
+        "ns_from_address"
+      ],
+      "type": "string",
+      "format": "email"
+    },
+    "smtp_host": {
+      "title": "Smtp Host",
+      "description": "The mail server host to connect to",
+      "env_names": [
+        "ns_smtp_host"
+      ],
+      "type": "string"
+    },
+    "smtp_port": {
+      "title": "Smtp Port",
+      "description": "The port for the mail server connection",
+      "env_names": [
+        "ns_smtp_port"
+      ],
+      "type": "integer"
+    },
+    "login_user": {
+      "title": "Login User",
+      "description": "The login username or email",
+      "env_names": [
+        "ns_login_user"
+      ],
+      "type": "string"
+    },
+    "login_password": {
+      "title": "Login Password",
+      "description": "The login password",
+      "env_names": [
+        "ns_login_password"
+      ],
+      "type": "string"
+    },
     "notification_event_topic": {
       "title": "Notification Event Topic",
       "description": "Name of the event topic used to track notification events",
@@ -51,29 +108,20 @@
       "items": {
         "type": "string"
       }
-    },
-    "plaintext_email_template": {
-      "title": "Plaintext Email Template",
-      "env_names": [
-        "ns_plaintext_email_template"
-      ],
-      "type": "string"
-    },
-    "html_email_template": {
-      "title": "Html Email Template",
-      "env_names": [
-        "ns_html_email_template"
-      ],
-      "type": "string"
     }
   },
   "required": [
+    "plaintext_email_template",
+    "html_email_template",
+    "from_address",
+    "smtp_host",
+    "smtp_port",
+    "login_user",
+    "login_password",
     "notification_event_topic",
     "notification_event_type",
     "service_instance_id",
-    "kafka_servers",
-    "plaintext_email_template",
-    "html_email_template"
+    "kafka_servers"
   ],
   "additionalProperties": false
 }

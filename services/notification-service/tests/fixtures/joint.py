@@ -39,7 +39,7 @@ class JointFixture:
 async def joint_fixture(
     kafka_fixture: KafkaFixture,  # noqa: F811
 ) -> AsyncGenerator[JointFixture, None]:
-    """A fixture that embeds all other fixtures for API-level integration testing"""
+    """A fixture that embeds all other fixtures for integration testing"""
 
     # merge configs from different sources with the default one:
     config = get_config(sources=[kafka_fixture.config])

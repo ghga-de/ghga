@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
 """Contains a port for the notifier"""
 from abc import ABC, abstractmethod
 
@@ -23,17 +23,17 @@ class NotifierPort(ABC):
     """Describes a notifier service in basic detail"""
 
     class VariableNotSuppliedError(KeyError):
-        """Raised when an html template contains a variable that isn't supplied"""
+        """Raised when a template references a variable that isn't supplied"""
 
         def __init__(self, *, variable: str):
             message = f"Nothing supplied for template variable {variable}"
             super().__init__(message)
 
     class BadTemplateFormat(ValueError):
-        """Raised when the html template contains improperly formatted content"""
+        """Raised when the template contains improperly formatted content"""
 
-        def __init__(self, *, problem: str):
-            message = f"Problem with HTML template: {problem}"
+        def __init__(self, *, template_type: str, problem: str):
+            message = f"Problem with the {template_type} template: {problem}"
             super().__init__(message)
 
     @abstractmethod

@@ -18,6 +18,7 @@ from hexkit.inject import ContainerBase, get_configurator, get_constructor
 from hexkit.providers.akafka.provider import KafkaEventSubscriber
 
 from ns.adapters.inbound.akafka import EventSubTranslator
+from ns.adapters.outbound.smtp_client import SmtpClient
 from ns.config import Config
 from ns.core.notifier import Notifier
 
@@ -27,11 +28,16 @@ class Container(ContainerBase):
 
     config = get_configurator(Config)
 
+    # outbound translator
+    smtp_client = get_constructor(SmtpClient, config=config)
+
     # domain components
-    notifier = get_constructor(Notifier, config=config)
+    notifier = get_constructor(Notifier, config=config, smtp_client=smtp_client)
 
     # inbound translators
-    event_sub_translator = get_constructor(EventSubTranslator, config=config)
+    event_sub_translator = get_constructor(
+        EventSubTranslator, config=config, notifier=notifier
+    )
 
     # inbound providers
     kafka_event_subscriber = get_constructor(

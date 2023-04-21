@@ -19,15 +19,12 @@ from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig
 
 from ns.adapters.inbound.akafka import EventSubTranslatorConfig
+from ns.adapters.outbound.smtp_client import SmtpClientConfig
+from ns.core.notifier import NotifierConfig
 
 
 @config_from_yaml(prefix="ns")
-class Config(KafkaConfig, EventSubTranslatorConfig):
+class Config(KafkaConfig, EventSubTranslatorConfig, SmtpClientConfig, NotifierConfig):
     """Config parameters and their defaults."""
 
     service_name: str = "ns"
-    plaintext_email_template: str
-    html_email_template: str
-
-
-CONFIG = Config()

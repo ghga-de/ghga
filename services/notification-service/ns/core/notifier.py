@@ -14,26 +14,41 @@
 # limitations under the License.
 #
 """Contains the concrete implementation of a NotifierPort"""
-
 from email.message import EmailMessage
 from string import Template
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from pydantic import BaseSettings, EmailStr, Field
 
-from ns.config import Config
 from ns.ports.inbound.notifier import NotifierPort
+from ns.ports.outbound.smtp_client import SmtpClientPort
+
+
+class NotifierConfig(BaseSettings):
+    """Config details for the notifier"""
+
+    plaintext_email_template: str = Field(
+        ..., description="The plaintext template to use for email notifications"
+    )
+    html_email_template: str = Field(
+        ..., description="The HTML template to use for email notifications"
+    )
+    from_address: EmailStr = Field(..., description="The sender's address.")
 
 
 class Notifier(NotifierPort):
     """Implementation of the Notifier Port"""
 
-    def __init__(self, *, config: Config):
-        """Initialize the Notifier with configured host, port, and so on"""
+    def __init__(self, *, config: NotifierConfig, smtp_client: SmtpClientPort):
+        """Initialize the Notifier with configuration and smtp client"""
         self._config = config
+        self._smtp_client = smtp_client
 
     async def send_notification(self, *, notification: event_schemas.Notification):
         """Sends notifications based on the channel info provided (e.g. email addresses)"""
-        raise NotImplementedError
+        if len(notification.recipient_email) > 0:
+            message = self._construct_email(notification=notification)
+            self._smtp_client.send_email_message(message)
 
     def _construct_email(
         self, *, notification: event_schemas.Notification
@@ -44,6 +59,7 @@ class Notifier(NotifierPort):
         message["Cc"] = notification.email_cc
         message["Bcc"] = notification.email_bcc
         message["Subject"] = notification.subject
+        message["From"] = self._config.from_address
 
         payload_as_dict = notification.dict()
 
@@ -54,7 +70,9 @@ class Notifier(NotifierPort):
         except KeyError as err:
             raise self.VariableNotSuppliedError(variable=err.args[0]) from err
         except ValueError as err:
-            raise self.BadTemplateFormat(problem=err.args[0]) from err
+            raise self.BadTemplateFormat(
+                template_type="plaintext", problem=err.args[0]
+            ) from err
 
         message.set_content(plaintext_email)
 
@@ -66,7 +84,9 @@ class Notifier(NotifierPort):
         except KeyError as err:
             raise self.VariableNotSuppliedError(variable=err.args[0]) from err
         except ValueError as err:
-            raise self.BadTemplateFormat(problem=err.args[0]) from err
+            raise self.BadTemplateFormat(
+                template_type="html", problem=err.args[0]
+            ) from err
 
         # add the html version to the EmailMessage object
         message.add_alternative(html_email, subtype="html")
