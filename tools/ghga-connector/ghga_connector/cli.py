@@ -110,6 +110,10 @@ def download(  # pylint: disable=too-many-arguments
         message_display.failure(f"The file {pubkey_path} does not exist.")
         raise core.exceptions.PubKeyFileDoesNotExistError(pubkey_path=pubkey_path)
 
+    if not output_dir.is_dir():
+        message_display.failure(f"The directory {output_dir} does not exist.")
+        raise core.exceptions.DirectoryDoesNotExistError(output_dir=output_dir)
+
     wps_info = core.get_wps_info(config=CONFIG)
     # get and compare user public keys
     announced_user_pubkey = wps_info.user_pubkey
@@ -118,18 +122,28 @@ def download(  # pylint: disable=too-many-arguments
     if announced_user_pubkey != provided_pubkey:
         raise core.exceptions.PubkeyMismatchError()
 
-    file_stager = core.FileStager(
+    file_ids_with_extension = wps_info.file_ids_with_extension
+
+    io_handler = core.CliIoHandler()
+    staging_parameters = core.StagingParameters(
         api_url=CONFIG.download_api,
-        message_display=message_display,
+        file_ids_with_extension=file_ids_with_extension,
         max_wait_time=CONFIG.max_wait_time,
     )
-    file_stager.check_and_stage(file_ids=wps_info.file_ids_with_ending.keys())
 
-    while any((file_stager.staged_files, file_stager.unstaged_files)):
-        for file_id in file_stager.staged_files:
+    file_stager = core.FileStager(
+        message_display=message_display,
+        io_handler=io_handler,
+        staging_parameters=staging_parameters,
+    )
+    file_stager.check_and_stage(output_dir=output_dir)
+
+    while file_stager.file_ids_remain():
+        for file_id in file_stager.get_staged():
             core.download(
                 api_url=CONFIG.download_api,
                 file_id=file_id,
+                file_extension=file_ids_with_extension[file_id],
                 output_dir=output_dir,
                 max_wait_time=CONFIG.max_wait_time,
                 part_size=CONFIG.part_size,

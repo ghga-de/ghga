@@ -24,6 +24,14 @@ import urllib3.exceptions
 from ghga_connector.core.constants import MAX_PART_NUMBER
 
 
+class AbortBatchProcessError(RuntimeError):
+    """Thrown when user selected to not proceed with batch proccesing"""
+
+    def __init__(self):
+        message = "Aborting batch process"
+        super().__init__(message)
+
+
 class DirectoryDoesNotExistError(RuntimeError):
     """Thrown, when the specified directory does not exist."""
 
@@ -157,6 +165,20 @@ class NoUploadPossibleError(RuntimeError):
             "It is not possible to start a multipart upload for file with id"
             + f" '{file_id}', because this download is already pending or has been"
             + " accepted."
+        )
+        super().__init__(message)
+
+
+class DownloadFinalizationError(RuntimeError):
+    """
+    Thrown when a downloaded file cannot be moved to its final location, as another file
+    already exists at that location that was not present at the beginning of the batch process
+    """
+
+    def __init__(self, *, file_path: Path):
+        message = (
+            "Cannot move downloaded file to its final location as another file "
+            + f"unexpectedly exists at {file_path}"
         )
         super().__init__(message)
 
