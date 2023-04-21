@@ -17,6 +17,7 @@
 """Test the access check adapter."""
 
 from pytest import fixture, mark
+from pytest_httpx import HTTPXMock
 
 from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
 
@@ -31,7 +32,9 @@ def fixture_access_check() -> AccessCheckAdapter:
 
 
 @mark.asyncio
-async def test_check_download_access(access_check: AccessCheckAdapter, httpx_mock):
+async def test_check_download_access(
+    access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
+):
     """Test checking the download access"""
     check_access = access_check.check_download_access
     httpx_mock.add_response(
@@ -55,7 +58,9 @@ async def test_check_download_access(access_check: AccessCheckAdapter, httpx_moc
 
 
 @mark.asyncio
-async def test_get_download_datasets(access_check: AccessCheckAdapter, httpx_mock):
+async def test_get_download_datasets(
+    access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
+):
     """Test getting the datasets for download access"""
     get_datasets = access_check.get_datasets_with_download_access
     httpx_mock.add_response(

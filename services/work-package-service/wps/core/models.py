@@ -35,11 +35,30 @@ __all__ = [
 
 
 class BaseDto(BaseModel):
-    """Base model preconfigured for use as Dto."""
+    """Base model pre-configured for use as Dto."""
 
     class Config:  # pylint: disable=missing-class-docstring
         extra = "forbid"
         frozen = True
+
+
+class DatasetFile(BaseDto):
+    """A file as that is part of a dataset."""
+
+    id: str = Field(..., description="The file ID.")
+    description: Optional[str] = Field(..., description="The description of the file.")
+    extension: str = Field(..., description="The file extension with a leading dot.")
+
+
+class Dataset(BaseDto):
+    """A model describing a dataset."""
+
+    id: str = Field(default=..., description="ID of the dataset")
+    title: str = Field(default=..., description="The title of the dataset.")
+    description: Optional[str] = Field(
+        ..., description="The description of the dataset."
+    )
+    files: list[DatasetFile] = Field(..., description="Files contained in the dataset.")
 
 
 class WorkType(str, Enum):
@@ -54,6 +73,7 @@ class WorkOrderToken(BaseDto):
 
     type: WorkType
     file_id: str
+    file_ext: str
     user_id: str
     public_key: str
     full_user_name: str
@@ -72,7 +92,7 @@ class WorkPackageCreationData(BaseDto):
     )
     user_public_crypt4gh_key: str = Field(
         default=...,
-        description="The user's public Crpyt4GH key in base64 encoding",
+        description="The user's public Crypt4GH key in base64 encoding",
     )
 
     @validator("user_public_crypt4gh_key")
@@ -88,7 +108,7 @@ class WorkPackageCreationResponse(BaseModel):
     id: str = Field(default=..., description="ID of the work package")
     token: str = Field(
         default=...,
-        description="The workpackage access token,"
+        description="The work package access token,"
         " encrypted with the user's public Crypt4GH key",
     )
 
@@ -97,10 +117,10 @@ class WorkPackageDetails(BaseModel):
     """Details about the work package that can be requested."""
 
     type: WorkType
-    file_ids: list[str] = Field(default=..., description="IDs of all included files")
-    file_extensions: dict[str, str] = Field(
+    files: dict[str, str] = Field(
         default=...,
-        description="Mapping from file IDs to file extensions",
+        description="IDs of all included files mapped to their file extensions",
+        example={"file-id-1": ".json", "file-id-2": ".csv"},
     )
     created: DateTimeUTC = Field(
         default=..., description="Creation date of the work package"
@@ -122,11 +142,11 @@ class WorkPackageData(WorkPackageDetails):
     email: EmailStr = Field(default=..., description="E-Mail address of the user")
     user_public_crypt4gh_key: str = Field(
         default=...,
-        description="The user's public Crpyt4GH key in base64 encoding",
+        description="The user's public Crypt4GH key in base64 encoding",
     )
     token_hash: str = Field(
         default=...,
-        description="Hash of the workpackage access token",
+        description="Hash of the work package access token",
     )
 
 

@@ -35,7 +35,29 @@ from hexkit.protocols.dao import DaoFactoryProtocol
 
 from wps.core import models
 from wps.core.repository import WorkPackageConfig
-from wps.ports.outbound.dao import WorkPackageDaoPort
+from wps.ports.outbound.dao import DatasetDaoPort, WorkPackageDaoPort
+
+__all__ = ["DatasetDaoConstructor", "WorkPackageDaoConstructor"]
+
+
+class DatasetDaoConstructor:
+    """Constructor compatible with the hexkit.inject.AsyncConstructable type.
+
+    Used to construct a DAO for datasets.
+    """
+
+    @staticmethod
+    async def construct(
+        *, config: WorkPackageConfig, dao_factory: DaoFactoryProtocol
+    ) -> DatasetDaoPort:
+        """Setup the DAOs using the specified provider of the
+        DaoFactoryProtocol."""
+
+        return await dao_factory.get_dao(
+            name=config.datasets_collection,
+            dto_model=models.Dataset,
+            id_field="id",
+        )
 
 
 class WorkPackageDaoConstructor:

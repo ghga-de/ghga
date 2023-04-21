@@ -3,6 +3,15 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "datasets_collection": {
+      "title": "Datasets Collection",
+      "description": "The name of the database collection for datasets",
+      "default": "datasets",
+      "env_names": [
+        "wps_datasets_collection"
+      ],
+      "type": "string"
+    },
     "work_packages_collection": {
       "title": "Work Packages Collection",
       "description": "The name of the database collection for work packages",
@@ -48,6 +57,55 @@
       "default": "work-packages",
       "env_names": [
         "wps_db_name"
+      ],
+      "type": "string"
+    },
+    "service_name": {
+      "title": "Service Name",
+      "default": "wps",
+      "env_names": [
+        "wps_service_name"
+      ],
+      "type": "string"
+    },
+    "service_instance_id": {
+      "title": "Service Instance Id",
+      "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
+      "example": "germany-bw-instance-001",
+      "env_names": [
+        "wps_service_instance_id"
+      ],
+      "type": "string"
+    },
+    "kafka_servers": {
+      "title": "Kafka Servers",
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "example": [
+        "localhost:9092"
+      ],
+      "env_names": [
+        "wps_kafka_servers"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dataset_overview_event_topic": {
+      "title": "Dataset Overview Event Topic",
+      "description": "Name of the topic for events that inform about datasets.",
+      "example": "metadata",
+      "env_names": [
+        "wps_dataset_overview_event_topic"
+      ],
+      "type": "string"
+    },
+    "dataset_overview_event_type": {
+      "title": "Dataset Overview Event Type",
+      "description": "The type to use for events that inform about datasets.",
+      "example": "metadata_dataset_overview",
+      "env_names": [
+        "wps_dataset_overview_event_type"
       ],
       "type": "string"
     },
@@ -241,19 +299,15 @@
       "items": {
         "type": "string"
       }
-    },
-    "service_name": {
-      "title": "Service Name",
-      "default": "wps",
-      "env_names": [
-        "wps_service_name"
-      ],
-      "type": "string"
     }
   },
   "required": [
     "work_package_signing_key",
     "db_connection_str",
+    "service_instance_id",
+    "kafka_servers",
+    "dataset_overview_event_topic",
+    "dataset_overview_event_type",
     "download_access_url",
     "auth_key"
   ],

@@ -23,6 +23,8 @@ from fastapi.openapi.utils import get_openapi
 from wps import __version__
 from wps.config import Config
 
+__all__ = ["get_openapi_schema"]
+
 
 def get_openapi_schema(api) -> Dict[str, Any]:
     """Generate a custom OpenAPI schema for the service."""

@@ -26,6 +26,7 @@ from pydantic import BaseSettings, Field, SecretStr
 
 from wps.core.crypt import encrypt
 from wps.core.models import (
+    Dataset,
     WorkOrderToken,
     WorkPackage,
     WorkPackageCreationData,
@@ -40,12 +41,20 @@ from wps.core.tokens import (
 )
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 from wps.ports.outbound.access import AccessCheckPort
-from wps.ports.outbound.dao import ResourceNotFoundError, WorkPackageDaoPort
+from wps.ports.outbound.dao import (
+    DatasetDaoPort,
+    ResourceNotFoundError,
+    WorkPackageDaoPort,
+)
 
 
 class WorkPackageConfig(BaseSettings):
     """Config parameters needed for the WorkPackageRepository."""
 
+    datasets_collection: str = Field(
+        "datasets",
+        description="The name of the database collection for datasets",
+    )
     work_packages_collection: str = Field(
         "workPackages",
         description="The name of the database collection for work packages",
@@ -69,6 +78,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         *,
         config: WorkPackageConfig,
         access_check: AccessCheckPort,
+        dataset_dao: DatasetDaoPort,
         work_package_dao: WorkPackageDaoPort,
     ):
         """Initialize with specific configuration and outbound adapter."""
@@ -79,17 +89,26 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         if not self._signing_key.has_private:
             raise KeyError("No private work order signing key found.")
         self._access = access_check
+        self._dataset_dao = dataset_dao
         self._dao = work_package_dao
 
     # pylint: disable=too-many-locals
     async def create(
         self, creation_data: WorkPackageCreationData, auth_context: AuthContext
     ) -> WorkPackageCreationResponse:
-        """Create a work package and store it in the repository."""
+        """Create a work package and store it in the repository.
+
+        In the following cases, a WorkPackageAccessError is raised:
+        - no internal user specified via auth_context
+        - no access permission to the specified dataset
+        - the specified work type is not supported
+        - the files in th dataset cannot be determined
+        - no existing files in the dataset have been specified
+        """
 
         user_id = auth_context.id
         if user_id is None:
-            raise self.WorkPackageAccessError("Missing user context")
+            raise self.WorkPackageAccessError("No internal user specified")
         dataset_id = creation_data.dataset_id
         work_type = creation_data.type
 
@@ -97,14 +116,27 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             if not await self._access.check_download_access(user_id, dataset_id):
                 raise self.WorkPackageAccessError("Missing dataset access permission")
         else:
-            raise NotImplementedError("Unsupported work type")
+            raise self.WorkPackageAccessError("Unsupported work type")
 
-        # Here we still need to check whether all file IDs are contained
-        # in the dataset specified in creation_data,
-        # and replaced with all file IDs if empty.
-        # The file extensions need to be also determined here.
-        file_ids = creation_data.file_ids
-        file_extensions: dict[str, str] = {}
+        try:
+            dataset = await self.get_dataset(dataset_id)
+        except self.DatasetNotFoundError as error:
+            raise self.WorkPackageAccessError(
+                "Cannot determine dataset files"
+            ) from error
+
+        file_ids = [file.id for file in dataset.files]
+        if creation_data.file_ids is not None:
+            # if file_ids is not passed as None, restrict the file set
+            file_id_set = set(creation_data.file_ids)
+            file_ids = [file_id for file_id in file_ids if file_id in file_id_set]
+        if not file_ids:
+            raise self.WorkPackageAccessError("No existing files have been specified")
+
+        file_id_set = set(file_ids)
+        files = {
+            file.id: file.extension for file in dataset.files if file.id in file_id_set
+        }
 
         full_user_name = auth_context.name
         if auth_context.title:
@@ -119,8 +151,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         work_package_data = WorkPackageData(
             dataset_id=dataset_id,
             type=work_type,
-            file_ids=file_ids,
-            file_extensions=file_extensions,
+            files=files,
             user_id=user_id,
             full_user_name=full_user_name,
             email=auth_context.email,
@@ -188,12 +219,13 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             check_valid=check_valid,
             work_package_access_token=work_package_access_token,
         )
-        if file_id not in work_package.file_ids:
+        if file_id not in work_package.files:
             raise self.WorkPackageAccessError("File is not contained in work package")
         public_key = work_package.user_public_crypt4gh_key
         wot = WorkOrderToken(
             type=work_package.type,
             file_id=file_id,
+            file_ext=work_package.files[file_id],
             user_id=work_package.user_id,
             public_key=public_key,
             full_user_name=work_package.full_user_name,
@@ -201,3 +233,20 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         )
         signed_wot = sign_work_order_token(wot, self._signing_key)
         return encrypt(signed_wot, public_key)
+
+    async def register_dataset(self, dataset: Dataset) -> None:
+        """Register a dataset with all of its files."""
+        # write the dataset to the database
+        await self._dataset_dao.insert(dataset)
+        # await self._dataset_dao.upsert(dataset)
+
+    async def get_dataset(self, dataset_id: str) -> Dataset:
+        """Get a registered dataset using the given ID.
+
+        If the dataset does not exist, a DatasetNotFoundError will be raised.
+        """
+        # get the dataset from the database
+        try:
+            return await self._dataset_dao.get_by_id(dataset_id)
+        except ResourceNotFoundError as error:
+            raise self.DatasetNotFoundError("Dataset not found") from error

@@ -22,6 +22,7 @@ from typing import Optional
 from ghga_service_commons.auth.ghga import AuthContext
 
 from wps.core.models import (
+    Dataset,
     WorkPackage,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
@@ -32,7 +33,10 @@ class WorkPackageRepositoryPort(ABC):
     """A repository for work packages."""
 
     class WorkPackageAccessError(KeyError):
-        """Error that is raised when a work pacakge cannot be accessed."""
+        """Error that is raised when a work package cannot be accessed."""
+
+    class DatasetNotFoundError(KeyError):
+        """Error that is raised when a dataset does not exist."""
 
     @abstractmethod
     async def create(
@@ -74,5 +78,18 @@ class WorkPackageRepositoryPort(ABC):
         - if check_valid is set and the work package has expired
         - if a work_package_access_token is specified and it does not match
           the token hash that is stored in the work package
+        """
+        ...
+
+    @abstractmethod
+    async def register_dataset(self, dataset: Dataset) -> None:
+        """Register a dataset with all of its files."""
+        ...
+
+    @abstractmethod
+    async def get_dataset(self, dataset_id: str) -> Dataset:
+        """Get a registered dataset using the given ID.
+
+        If the dataset does not exist, a DatasetNotFoundError will be raised.
         """
         ...

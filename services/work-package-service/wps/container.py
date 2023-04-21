@@ -17,9 +17,11 @@
 
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from hexkit.inject import ContainerBase, get_configurator, get_constructor
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from wps.adapters.outbound.dao import WorkPackageDaoConstructor
+from wps.adapters.inbound.event_sub import EventSubTranslator
+from wps.adapters.outbound.dao import DatasetDaoConstructor, WorkPackageDaoConstructor
 from wps.adapters.outbound.http import AccessCheckAdapter
 from wps.config import Config
 from wps.core.repository import WorkPackageRepository
@@ -39,6 +41,11 @@ class Container(ContainerBase):
         config=config,
         dao_factory=dao_factory,
     )
+    dataset_dao = get_constructor(
+        DatasetDaoConstructor,
+        config=config,
+        dao_factory=dao_factory,
+    )
 
     # auth provider:
     auth_provider = get_constructor(
@@ -47,7 +54,7 @@ class Container(ContainerBase):
         context_class=AuthContext,
     )
 
-    # download access adaptr:
+    # download access adapter:
     download_access_checks = get_constructor(AccessCheckAdapter, config=config)
 
     # core components:
@@ -55,5 +62,18 @@ class Container(ContainerBase):
         WorkPackageRepository,
         config=config,
         access_check=download_access_checks,
+        dataset_dao=dataset_dao,
         work_package_dao=work_package_dao,
+    )
+
+    # inbound translators:
+    event_sub_translator = get_constructor(
+        EventSubTranslator,
+        work_package_repository=work_package_repository,
+        config=config,
+    )
+
+    # inbound providers:
+    event_subscriber = get_constructor(
+        KafkaEventSubscriber, config=config, translator=event_sub_translator
     )

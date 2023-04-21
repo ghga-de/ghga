@@ -23,7 +23,7 @@ import logging
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
-from wps.adapters.inbound.fastapi_.auth import (
+from wps.adapters.inbound.http.auth import (
     AuthContext,
     requires_auth_context,
     requires_work_package_access_token,
@@ -79,7 +79,10 @@ async def create_work_package(
     auth_context: AuthContext = requires_auth_context,
 ) -> WorkPackageCreationResponse:
     """Create a work package using an internal auth token with a user context."""
-    return await repository.create(creation_data, auth_context=auth_context)
+    try:
+        return await repository.create(creation_data, auth_context=auth_context)
+    except repository.WorkPackageAccessError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
 
 
 @router.get(
@@ -119,13 +122,10 @@ async def get_work_package(
             work_package_access_token=work_package_access_token,
         )
     except repository.WorkPackageAccessError as error:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to get the work package."
-        ) from error
+        raise HTTPException(status_code=403, detail=str(error)) from error
     return WorkPackageDetails(
         type=package.type,
-        file_ids=package.file_ids,
-        file_extensions=package.file_extensions,
+        files=package.files,
         created=package.created,
         expires=package.expires,
     )
@@ -161,7 +161,7 @@ async def create_work_order_token(
     ),
     work_package_access_token: str = requires_work_package_access_token,
 ) -> str:
-    """Get an excrypted work order token using a work package access token."""
+    """Get an encrypted work order token using a work package access token."""
     try:
         if not (work_package_id and file_id and work_package_access_token):
             raise repository.WorkPackageAccessError
@@ -172,6 +172,4 @@ async def create_work_order_token(
             work_package_access_token=work_package_access_token,
         )
     except repository.WorkPackageAccessError as error:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to create the work order token."
-        ) from error
+        raise HTTPException(status_code=403, detail=str(error)) from error

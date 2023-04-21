@@ -17,7 +17,7 @@ components:
         type:
           $ref: '#/components/schemas/WorkType'
         user_public_crypt4gh_key:
-          description: The user's public Crpyt4GH key in base64 encoding
+          description: The user's public Crypt4GH key in base64 encoding
           title: User Public Crypt4Gh Key
           type: string
       required:
@@ -34,7 +34,7 @@ components:
           title: Id
           type: string
         token:
-          description: The workpackage access token, encrypted with the user's public
+          description: The work package access token, encrypted with the user's public
             Crypt4GH key
           title: Token
           type: string
@@ -55,24 +55,20 @@ components:
           format: date-time
           title: Expiration date of the work package
           type: string
-        file_extensions:
+        files:
           additionalProperties:
             type: string
-          description: Mapping from file IDs to file extensions
-          title: File Extensions
+          description: IDs of all included files mapped to their file extensions
+          example:
+            file-id-1: .json
+            file-id-2: .csv
+          title: Files
           type: object
-        file_ids:
-          description: IDs of all included files
-          items:
-            type: string
-          title: File Ids
-          type: array
         type:
           $ref: '#/components/schemas/WorkType'
       required:
       - type
-      - file_ids
-      - file_extensions
+      - files
       - created
       - expires
       title: WorkPackageDetails

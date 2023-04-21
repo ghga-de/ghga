@@ -27,7 +27,7 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=
 from pydantic import SecretStr
 from pytest import mark, raises
 
-from wps.adapters.outbound.dao import WorkPackageDaoConstructor
+from wps.adapters.outbound.dao import DatasetDaoConstructor, WorkPackageDaoConstructor
 from wps.core.models import (
     WorkPackage,
     WorkPackageCreationData,
@@ -40,6 +40,7 @@ from wps.core.tokens import hash_token
 from .fixtures import AUTH_CLAIMS, SIGNING_KEY_PAIR
 from .fixtures.access import AccessCheckMock
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
+from .fixtures.datasets import DATASET
 
 work_package_config = WorkPackageConfig(
     work_package_signing_key=SecretStr(SIGNING_KEY_PAIR.export_private()),
@@ -54,6 +55,10 @@ async def test_work_package_repository(
 
     # create repository
 
+    dataset_dao = await DatasetDaoConstructor.construct(
+        config=work_package_config,
+        dao_factory=mongodb_fixture.dao_factory,
+    )
     work_package_dao = await WorkPackageDaoConstructor.construct(
         config=work_package_config,
         dao_factory=mongodb_fixture.dao_factory,
@@ -61,18 +66,22 @@ async def test_work_package_repository(
     repository = WorkPackageRepository(
         config=work_package_config,
         access_check=AccessCheckMock(),
+        dataset_dao=dataset_dao,
         work_package_dao=work_package_dao,
     )
 
-    # create work package
+    # announce dataset
+    await repository.register_dataset(DATASET)
 
-    iat = now_as_utc() - timedelta(1)  # validy is assumed by the repository
-    auth_context = AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)
+    # create work package for all files
+
+    iat = now_as_utc() - timedelta(1)  # validity is assumed by the repository
+    auth_context = AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)  # pylance: ignore
 
     creation_data = WorkPackageCreationData(
         dataset_id="some-dataset-id",
         type=WorkType.DOWNLOAD,
-        file_ids=["some-file-id", "another-file-id"],
+        file_ids=None,
         user_public_crypt4gh_key=user_public_crypt4gh_key,
     )
 
@@ -99,14 +108,19 @@ async def test_work_package_repository(
         work_package_id, check_valid=True, work_package_access_token=wpat
     )
 
+    full_user_name = (auth_context.title or "Tester") + " " + auth_context.name
+
     assert isinstance(package, WorkPackage)
     assert package.dataset_id == "some-dataset-id"
     assert package.type == WorkType.DOWNLOAD
-    assert package.file_ids == ["some-file-id", "another-file-id"]
-    assert package.file_extensions == {}
+    assert package.files == {
+        "file-id-1": ".json",
+        "file-id-2": ".csv",
+        "file-id-3": ".bam",
+    }
     assert package.user_public_crypt4gh_key == user_public_crypt4gh_key
     assert package.user_id == auth_context.id
-    assert package.full_user_name == auth_context.title + " " + auth_context.name
+    assert package.full_user_name == full_user_name
     assert package.email == auth_context.email
     assert package.token_hash == hash_token(wpat)
     assert (package.expires - package.created).days == 30
@@ -115,7 +129,7 @@ async def test_work_package_repository(
 
     with raises(repository.WorkPackageAccessError):
         await repository.work_order_token(
-            "invalid-work-package-id", "some-file-id", work_package_access_token=wpat
+            "invalid-work-package-id", "file-id-1", work_package_access_token=wpat
         )
 
     with raises(repository.WorkPackageAccessError):
@@ -125,11 +139,11 @@ async def test_work_package_repository(
 
     with raises(repository.WorkPackageAccessError):
         await repository.work_order_token(
-            work_package_id, "some-file-id", work_package_access_token="invalid-token"
+            work_package_id, "file-id-1", work_package_access_token="invalid-token"
         )
 
     wot = await repository.work_order_token(
-        work_package_id, "some-file-id", work_package_access_token=wpat
+        work_package_id, "file-id-3", work_package_access_token=wpat
     )
     assert wot is not None
 
@@ -140,7 +154,59 @@ async def test_work_package_repository(
     assert wot_claims.pop("exp") - wot_claims.pop("iat") == 30
     assert wot_claims == {
         "type": package.type.value,
-        "file_id": "some-file-id",
+        "file_id": "file-id-3",
+        "file_ext": ".bam",
+        "user_id": package.user_id,
+        "public_key": user_public_crypt4gh_key,
+        "full_user_name": package.full_user_name,
+        "email": package.email,
+    }
+
+    # create another work package for specific files
+
+    iat = now_as_utc() - timedelta(1)  # validity is assumed by the repository
+    auth_context = AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)
+
+    creation_data = WorkPackageCreationData(
+        dataset_id="some-dataset-id",
+        type=WorkType.DOWNLOAD,
+        file_ids=["file-id-1", "file-id-3", "non-existing-file"],
+        user_public_crypt4gh_key=user_public_crypt4gh_key,
+    )
+
+    creation_response = await repository.create(creation_data, auth_context)
+
+    assert isinstance(creation_response, WorkPackageCreationResponse)
+    work_package_id = creation_response.id
+    encrypted_wpat = creation_response.token
+    wpat = decrypt(encrypted_wpat)
+
+    # crate work order token
+
+    with raises(repository.WorkPackageAccessError):
+        await repository.work_order_token(
+            work_package_id, "non-existing-file", work_package_access_token=wpat
+        )
+
+    with raises(repository.WorkPackageAccessError):
+        await repository.work_order_token(
+            work_package_id, "file-id-2", work_package_access_token=wpat
+        )
+
+    wot = await repository.work_order_token(
+        work_package_id, "file-id-1", work_package_access_token=wpat
+    )
+    assert wot is not None
+
+    # check the content of the work order token
+
+    wot = decrypt(wot)
+    wot_claims = decode_and_validate_token(wot, SIGNING_KEY_PAIR.public())
+    assert wot_claims.pop("exp") - wot_claims.pop("iat") == 30
+    assert wot_claims == {
+        "type": package.type.value,
+        "file_id": "file-id-1",
+        "file_ext": ".json",
         "user_id": package.user_id,
         "public_key": user_public_crypt4gh_key,
         "full_user_name": package.full_user_name,
