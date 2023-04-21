@@ -23,7 +23,8 @@ This token is encrypted and needs to be decrypted before use and needs to be pro
 
 ### Work Order Token processing
 
-A work order token needs to be retrieved each time a new pre-signed URL is generated and the expiry date needs to be checked and the token rejected if it is expired.
+A work order token needs to be retrieved each time a new pre-signed URL is generated or a Crypt4GH envelope is requested.
+The retrieved token is a JSON web token (JWT) and has to be sent in the request header (Authorization header using the Bearer schema, i.e. `Authorization: Bearer <token>`) to the respective DCS endpoints, i.e. `/objects/{object_id}` and `/objects/{object_id}/envelopes/{public_key}` where it needs to be validated to authorize the corresponding request.
 
 ## Human Resource/Time Estimation:
 
