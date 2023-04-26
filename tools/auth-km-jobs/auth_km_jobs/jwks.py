@@ -1,6 +1,6 @@
 """JSON Web Key Management"""
 
-import requests
+import httpx
 from jwcrypto import jwk
 
 OIDC_AUTHORITY_URL = "https://proxy.aai.lifescience-ri.eu/"
@@ -12,7 +12,7 @@ TIMEOUT = 30  # timeout in seconds
 
 def fetch_external_jwks() -> str:
     """Fetch the JSON string with the external JWKS."""
-    config_respsonse = requests.get(DISCOVERY_URL, timeout=TIMEOUT)
+    config_respsonse = httpx.get(DISCOVERY_URL, timeout=TIMEOUT)
     config_dict = config_respsonse.json()
     if not isinstance(config_dict, dict) or "version" not in config_dict:
         raise ValueError("Unexpected discovery object")
@@ -21,7 +21,7 @@ def fetch_external_jwks() -> str:
         raise ValueError("Cannot discover JWKS URI")
     if not jwks_uri.startswith(OIDC_AUTHORITY_URL):
         raise ValueError("Unexpected JWKS URI")
-    jwks_response = requests.get(jwks_uri, timeout=TIMEOUT)
+    jwks_response = httpx.get(jwks_uri, timeout=TIMEOUT)
     jwks_dict = jwks_response.json()
     if not isinstance(jwks_dict, dict) or "keys" not in jwks_dict:
         raise ValueError("Unexpected JWKS object")

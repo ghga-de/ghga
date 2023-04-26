@@ -9,12 +9,14 @@ DEFAULT_NAMESPACE = "vault"
 DEFAULT_TOKEN = "dev-token"
 DEFAULT_KEY = "data"
 
-PATH_PRIVATE = "auth/priv"
-PATH_PUBLIC_INTERNAL = "auth/pub/int"
-PATH_PUBLIC_EXTERNAL = "auth/pub/ext"
+PATH_INT_PRIVATE = "auth/priv/int"
+PATH_INT_PUBLIC = "auth/pub/int"
+PATH_EXT_PUBLIC = "auth/pub/ext"
+PATH_WPS_PRIVATE = "auth/priv/wps"
+PATH_WPS_PUBLIC = "auth/pub/wps"
 
 VERIFY_WRITE = True  # read back from vault and compare
-SHOW_EXTERNAL_KEYS = False  # print public key set
+SHOW_EXTERNAL_KEYS = True  # print public key set
 
 SSL_VERIFY = False  # could also be path to the certificate
 TIMEOUT = 15  # timeout in seconds
@@ -61,18 +63,28 @@ def store_in_vault(path: str, value: str):
     return create_response
 
 
-def store_private_key(key: str):
-    """Store the private key as JSON value."""
-    return store_in_vault(PATH_PRIVATE, key)
+def store_private_int_key(key: str):
+    """Store the private internal auth key as JSON value."""
+    return store_in_vault(PATH_INT_PRIVATE, key)
 
 
-def store_internal_public_key(key: str):
-    """Store the internal public key as JSON value."""
-    return store_in_vault(PATH_PUBLIC_INTERNAL, key)
+def store_public_int_key(key: str):
+    """Store the public internal auth key as JSON value."""
+    return store_in_vault(PATH_INT_PUBLIC, key)
 
 
-def store_external_public_key(key: str):
-    """Store the external public key as JSON value."""
+def store_public_ext_key(key: str):
+    """Store the public external (OIDC) auth key set as JSON value."""
     if SHOW_EXTERNAL_KEYS:
-        print("EXternal key set:", key)
-    return store_in_vault(PATH_PUBLIC_EXTERNAL, key)
+        print("External auth key set:", key)
+    return store_in_vault(PATH_EXT_PUBLIC, key)
+
+
+def store_private_wps_key(key: str):
+    """Store the private work package signing key as JSON value."""
+    return store_in_vault(PATH_WPS_PRIVATE, key)
+
+
+def store_public_wps_key(key: str):
+    """Store the public work package validation key as JSON value."""
+    return store_in_vault(PATH_WPS_PUBLIC, key)

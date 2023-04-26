@@ -1,7 +1,7 @@
 
 # GHGA Auth Key Management Jobs
 
-This repo contains the script that manages internal and external auth keys.
+This repo contains the script that manages JWT signing keys used by GHGA.
 
 This script can be executed as a Kubernetes Job, either regularly or on demand.
 
@@ -9,9 +9,10 @@ This script can be executed as a Kubernetes Job, either regularly or on demand.
 
 The following subcommands can be executed using `run <command name>`:
 
-- `refresh-int-keys`: Recreate internal signing keys and store them in the vault
-- `refresh-ext-keys`: Refetch external public key set and store it in the vault
-- `refresh-all-keys`: Refresh both internal and external keys in the vault
+- `refresh-int-keys`: Recreate internal auth token signing keys and store them in the vault
+- `refresh-wps-keys`: Recreate internal work package signing keys and store them in the vault
+- `refresh-ext-keys`: Refetch the external auth (OIDC) public key set and store it in the vault
+- `refresh-all-keys`: Refresh all internal and external token signing keys in the vault
 
 ## Environment variables
 
@@ -25,6 +26,8 @@ The following environment variables are evaluated:
 
 The following vault paths are used:
 
-- `auth/priv`: private keys
-- `auth/pub/int`: public keys (internal)
-- `auth/pub/ext`: public keys (external)
+- `auth/priv/int`: private keys for internal auth tokens
+- `auth/pub/int`: public keys for internal auth tokens
+- `auth/pub/ext`: public keys for external (OIDC) auth tokens
+- `auth/priv/wps`: private keys for signing work package tokens
+- `auth/pub/wps`: public keys for validating work package tokens
