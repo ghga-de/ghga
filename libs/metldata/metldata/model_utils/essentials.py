@@ -79,6 +79,10 @@ class MetadataModel(SchemaDefinition):
                         del class_["from_schema"]
                     if "slot_usage" in class_:
                         for slot in class_["slot_usage"].values():
+                            if "alias" in slot:
+                                del slot["alias"]
+                            if "from_schema" in slot:
+                                del slot["from_schema"]
                             if "domain_of" in slot:
                                 del slot["domain_of"]
             if "slots" in model_dict:

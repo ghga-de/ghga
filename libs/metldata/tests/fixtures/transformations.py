@@ -21,6 +21,9 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
+from metldata.builtin_transformations.custom_embeddings import (
+    custom_embedding_transformation,
+)
 from metldata.builtin_transformations.delete_slots import slot_deletion_transformation
 from metldata.builtin_transformations.infer_references import (
     reference_inference_transformation,
@@ -115,6 +118,7 @@ def _read_all_test_cases(
 TRANSFORMATIONS_BY_NAME: dict[str, TransformationDefinition] = {
     "infer_references": reference_inference_transformation,
     "delete_slots": slot_deletion_transformation,
+    "custom_embedding": custom_embedding_transformation,
 }
 
 

@@ -170,13 +170,13 @@ def convert_inlined_dict_to_list(
     ]
 
 
-def get_resources_of_class(
+def get_resource_dict_of_class(
     *,
     class_name: str,
     global_metadata: Json,
     anchor_points_by_target: dict[str, AnchorPoint],
-) -> list[Json]:
-    """Get all instances of the given class from the provided global metadata.
+) -> dict[str, Json]:
+    """Get all instances as dict of the given class from the provided global metadata.
 
     Raises:
         MetadataAnchorMismatchError:
@@ -193,8 +193,34 @@ def get_resources_of_class(
             + " in the global metadata."
         )
 
+    return global_metadata[anchor_point.root_slot]
+
+
+def get_resources_of_class(
+    *,
+    class_name: str,
+    global_metadata: Json,
+    anchor_points_by_target: dict[str, AnchorPoint],
+) -> list[Json]:
+    """Get all instances of the given class from the provided global metadata.
+
+    Raises:
+        MetadataAnchorMismatchError:
+            if the provided metadata does not match the expected anchor points.
+    """
+
+    resources = get_resource_dict_of_class(
+        class_name=class_name,
+        global_metadata=global_metadata,
+        anchor_points_by_target=anchor_points_by_target,
+    )
+
+    anchor_point = lookup_anchor_point(
+        class_name=class_name, anchor_points_by_target=anchor_points_by_target
+    )
+
     return convert_inlined_dict_to_list(
-        resources=global_metadata[anchor_point.root_slot],
+        resources=resources,
         identifier_slot=anchor_point.identifier_slot,
     )
 
