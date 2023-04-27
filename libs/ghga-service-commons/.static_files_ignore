@@ -6,6 +6,7 @@ scripts/update_openapi_docs.py
 
 .github/workflows/check_config_docs.yaml
 .github/workflows/check_openapi_spec.yaml
+.github/workflows/cd.yaml
 
 .devcontainer/dev_install
 .devcontainer/Dockerfile

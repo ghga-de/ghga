@@ -3,8 +3,6 @@
 
 .devcontainer/dev_launcher
 
-.github/workflows/dev_cd.yaml
-
 scripts/script_utils/fastapi_app_location.py
 
 Dockerfile
