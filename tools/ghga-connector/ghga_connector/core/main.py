@@ -19,8 +19,7 @@
 import os
 from pathlib import Path
 from queue import Queue
-
-import crypt4gh.keys
+from typing import List
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls import (
@@ -179,7 +178,7 @@ def upload_file_parts(
             upload_file_part(presigned_url=upload_url, part=part)
 
 
-def download(  # pylint: disable=too-many-arguments # noqa: C901
+def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C901, R0914
     *,
     api_url: str,
     file_id: str,
@@ -187,7 +186,7 @@ def download(  # pylint: disable=too-many-arguments # noqa: C901
     part_size: int,
     message_display: AbstractMessageDisplay,
     max_wait_time: int,
-    pubkey_path: Path,
+    submitter_public_key: bytes,
     file_extension: str = "",
 ) -> None:
     """
@@ -197,8 +196,6 @@ def download(  # pylint: disable=too-many-arguments # noqa: C901
     if not check_url(api_url):
         message_display.failure(f"The url {api_url} is currently not reachable.")
         raise exceptions.ApiNotReachableError(api_url=api_url)
-
-    public_key = crypt4gh.keys.get_public_key(pubkey_path)
 
     # construct file name with suffix, if given
     file_name = f"{file_id}"
@@ -229,7 +226,7 @@ def download(  # pylint: disable=too-many-arguments # noqa: C901
         envelope = get_file_header_envelope(
             file_id=file_id,
             api_url=api_url,
-            public_key=public_key,
+            public_key=submitter_public_key,
         )
     except (
         exceptions.FileNotRegisteredError,
@@ -323,3 +320,26 @@ def download_parts(
             file.write(part)
             downloaded_size += len(part)
             queue.task_done()
+
+
+def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> List[str]:
+    """
+    Expect the work package id and access token as a colon separated string
+    The user will have to input this manually to avoid it becomming part of the
+    command line history.
+    """
+    for _ in range(max_tries):
+        work_package_string = input(
+            "Paste the complete work package string you got from the UI: "
+        )
+        work_package_parts = work_package_string.split(":")
+        if len(work_package_parts) != 2:
+            message_display.display(
+                "Invalid input. Please enter the work package string you got from the UI unaltered."
+            )
+            continue
+        return work_package_parts
+    message_display.failure(
+        f"Tried {max_tries} times to parse the work package string and failed."
+    )
+    raise exceptions.InvalidWorkPackageToken(tries=max_tries)

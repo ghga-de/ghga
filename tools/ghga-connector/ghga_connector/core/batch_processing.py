@@ -131,7 +131,7 @@ class StagingParameters:
         api_url: str,
         file_ids_with_extension: dict[str, str],
         max_wait_time: int,
-        retry_after: int = 120,
+        retry_after: int = 60,
     ) -> None:
         self.api_url = api_url
         self.check_api_available()

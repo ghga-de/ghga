@@ -12,12 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Constants used throught the core."""
+"""
+This file contains general utility api calls
+"""
 
-DEFAULT_PART_SIZE = 16 * 1024 * 1024
-TIMEOUT = 60
-MAX_PART_NUMBER = 10000
-MAX_RETRIES = 5
-MAX_WAIT_TIME = 60 * 60
+import requests
+
+
+def check_url(api_url, *, wait_time=1) -> bool:
+    """
+    Checks, if an url is reachable within a certain time
+    """
+    try:
+        requests.get(url=api_url, timeout=wait_time)
+    except requests.exceptions.RequestException:
+        return False
+    return True

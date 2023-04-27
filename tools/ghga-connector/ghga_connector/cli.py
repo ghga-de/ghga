@@ -16,7 +16,6 @@
 
 """ CLI-specific wrappers around core functions."""
 
-import os
 from pathlib import Path
 
 import crypt4gh.keys
@@ -94,32 +93,47 @@ def download(  # pylint: disable=too-many-arguments
     output_dir: Path = typer.Option(
         ..., help="The directory to put the downloaded files into"
     ),
-    pubkey_path: Path = typer.Argument(
+    submitter_pubkey_path: Path = typer.Argument(
         "./key.pub",
-        help="The path to a public key from the key pair that will be used to encrypt the "
+        help="The path to a public key from the key pair that was announced in the "
+        + "metadata. Defaults to the file key.pub in the current folder.",
+    ),
+    submitter_private_key_path: Path = typer.Argument(
+        "./key.sec",
+        help="The path to a private key from the key pair that will be used to encrypt the "
         + "crypt4gh envelope. Defaults to the file key.pub in the current folder.",
     ),
 ):
     """
-    Command to download a file
+    Command to download files
     """
     core.RequestsSession.configure(CONFIG.max_retries)
     message_display = CLIMessageDisplay()
 
-    if not os.path.isfile(pubkey_path):
-        message_display.failure(f"The file {pubkey_path} does not exist.")
-        raise core.exceptions.PubKeyFileDoesNotExistError(pubkey_path=pubkey_path)
+    if not submitter_pubkey_path.is_file():
+        message_display.failure(f"The file {submitter_pubkey_path} does not exist.")
+        raise core.exceptions.PubKeyFileDoesNotExistError(
+            pubkey_path=submitter_pubkey_path
+        )
 
     if not output_dir.is_dir():
         message_display.failure(f"The directory {output_dir} does not exist.")
         raise core.exceptions.DirectoryDoesNotExistError(output_dir=output_dir)
 
+    submitter_public_key = crypt4gh.keys.get_public_key(filepath=submitter_pubkey_path)
+    submitter_private_key = crypt4gh.keys.get_private_key(
+        filepath=submitter_private_key_path, callback=None
+    )
+
+    # get work package access token and id from user input, will be used in later PR
+    _, token = core.main.get_wps_token(max_tries=3, message_display=message_display)
+    _ = core.crypt.decrypt(data=token, key=submitter_private_key)
+
     wps_info = core.get_wps_info(config=CONFIG)
     # get and compare user public keys
     announced_user_pubkey = wps_info.user_pubkey
-    provided_pubkey = crypt4gh.keys.get_public_key(pubkey_path)
 
-    if announced_user_pubkey != provided_pubkey:
+    if announced_user_pubkey != submitter_public_key:
         raise core.exceptions.PubkeyMismatchError()
 
     file_ids_with_extension = wps_info.file_ids_with_extension
@@ -148,6 +162,6 @@ def download(  # pylint: disable=too-many-arguments
                 max_wait_time=CONFIG.max_wait_time,
                 part_size=CONFIG.part_size,
                 message_display=message_display,
-                pubkey_path=pubkey_path,
+                submitter_public_key=submitter_public_key,
             )
         file_stager.update_staged_files()

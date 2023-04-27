@@ -280,3 +280,11 @@ class ExternalApiError(RuntimeError):
     def __init__(self):
         message = "The service was unable to contact an external API."
         super().__init__(message)
+
+
+class InvalidWorkPackageToken(RuntimeError):
+    """Thrown, when the work package string pasted by the user could not be parsed"""
+
+    def __init__(self, *, tries: int):
+        message = f"Parsing of the work package string failed {tries} times."
+        super().__init__(message)
