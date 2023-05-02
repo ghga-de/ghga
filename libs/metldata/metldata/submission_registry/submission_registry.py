@@ -18,7 +18,7 @@
 
 from typing import Any
 
-from ghga_service_chassis_lib.utils import now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from metldata.model_utils.config import MetadataModelConfig
 from metldata.model_utils.metadata_validator import MetadataValidator

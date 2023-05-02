@@ -30,7 +30,7 @@ from metldata.transform.base import (
     TransformationDefinition,
 )
 from metldata.transform.handling import TransformationHandler, WorkflowHandler
-from tests.fixtures.metadata_models import ADVANCED_VALID_METADATA_MODEL
+from tests.fixtures.metadata_models import VALID_ADVANCED_METADATA_MODEL
 from tests.fixtures.workflows import (
     EXAMPLE_ARTIFACT_MODELS,
     EXAMPLE_ARTIFACTS,
@@ -73,7 +73,7 @@ def test_transformation_handler_assumption_error():
         _ = TransformationHandler(
             transformation_definition=transformation,
             transformation_config=VALID_EXAMPLE_CONFIG,
-            original_model=ADVANCED_VALID_METADATA_MODEL,
+            original_model=VALID_ADVANCED_METADATA_MODEL,
         )
 
 
@@ -98,7 +98,7 @@ def test_transformation_handler_model_transformation_error():
         _ = TransformationHandler(
             transformation_definition=transformation,
             transformation_config=VALID_EXAMPLE_CONFIG,
-            original_model=ADVANCED_VALID_METADATA_MODEL,
+            original_model=VALID_ADVANCED_METADATA_MODEL,
         )
 
 

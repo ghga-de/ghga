@@ -27,7 +27,7 @@ from metldata.metadata_utils import (
 )
 from metldata.model_utils.anchors import AnchorPoint, get_anchors_points_by_target
 from tests.fixtures.metadata import VALID_MINIMAL_METADATA_EXAMPLE
-from tests.fixtures.metadata_models import MINIMAL_VALID_METADATA_MODEL
+from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 
 
 def test_lookup_resource_by_identifier_happy():
@@ -38,7 +38,7 @@ def test_lookup_resource_by_identifier_happy():
     expected_resource["alias"] = identifier
 
     anchor_points_by_target = get_anchors_points_by_target(
-        model=MINIMAL_VALID_METADATA_MODEL
+        model=VALID_MINIMAL_METADATA_MODEL
     )
     observed_resource = lookup_resource_by_identifier(
         class_name="File",
@@ -57,7 +57,7 @@ def test_lookup_resource_by_identifier_not_exist():
     identifier = "non_existing_identifier"
 
     anchor_points_by_target = get_anchors_points_by_target(
-        model=MINIMAL_VALID_METADATA_MODEL
+        model=VALID_MINIMAL_METADATA_MODEL
     )
 
     with pytest.raises(MetadataResourceNotFoundError):

@@ -28,8 +28,8 @@ from metldata.model_utils.assumptions import (
 from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.metadata_models import (
     INVALID_METADATA_MODELS,
-    MINIMAL_VALID_METADATA_MODEL,
     VALID_METADATA_MODELS,
+    VALID_MINIMAL_METADATA_MODEL,
 )
 
 
@@ -50,8 +50,8 @@ def test_metadata_model_assumption_checking(model: MetadataModel, is_valid: bool
 @pytest.mark.parametrize(
     "model, class_name, exists",
     [
-        (MINIMAL_VALID_METADATA_MODEL, "Dataset", True),
-        (MINIMAL_VALID_METADATA_MODEL, "NotExistingClass", False),
+        (VALID_MINIMAL_METADATA_MODEL, "Dataset", True),
+        (VALID_MINIMAL_METADATA_MODEL, "NotExistingClass", False),
     ],
 )
 def test_check_class_exists(model: MetadataModel, class_name: str, exists: bool):
@@ -66,11 +66,11 @@ def test_check_class_exists(model: MetadataModel, class_name: str, exists: bool)
 @pytest.mark.parametrize(
     "model, class_name, slot_name, ignore_parents, exists",
     [
-        (MINIMAL_VALID_METADATA_MODEL, "Dataset", "alias", False, True),
-        (MINIMAL_VALID_METADATA_MODEL, "Dataset", "alias", True, False),
-        (MINIMAL_VALID_METADATA_MODEL, "Dataset", "has_file", True, True),
-        (MINIMAL_VALID_METADATA_MODEL, "Dataset", "not_existing_slot", False, False),
-        (MINIMAL_VALID_METADATA_MODEL, "NotExistingClass", "name", False, False),
+        (VALID_MINIMAL_METADATA_MODEL, "Dataset", "alias", False, True),
+        (VALID_MINIMAL_METADATA_MODEL, "Dataset", "alias", True, False),
+        (VALID_MINIMAL_METADATA_MODEL, "Dataset", "has_file", True, True),
+        (VALID_MINIMAL_METADATA_MODEL, "Dataset", "not_existing_slot", False, False),
+        (VALID_MINIMAL_METADATA_MODEL, "NotExistingClass", "name", False, False),
     ],
 )
 def test_check_class_slot_exists(

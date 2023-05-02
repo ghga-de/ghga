@@ -31,7 +31,7 @@ from metldata.model_utils.anchors import (
 from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.metadata_models import (
     ANCHORS_INVALID_MODELS,
-    MINIMAL_VALID_METADATA_MODEL,
+    VALID_MINIMAL_METADATA_MODEL,
 )
 
 EXAMPLE_ANCHOR_POINTS = {
@@ -56,7 +56,7 @@ def test_get_anchor_points_happy():
 
     expected_anchor_points = EXAMPLE_ANCHOR_POINTS
 
-    observed_anchor_points = get_anchor_points(model=MINIMAL_VALID_METADATA_MODEL)
+    observed_anchor_points = get_anchor_points(model=VALID_MINIMAL_METADATA_MODEL)
 
     assert observed_anchor_points == expected_anchor_points
 
@@ -75,7 +75,7 @@ def test_get_anchor_points_by_target_happy():
     expected_anchor_points = EXAMPLE_ANCHOR_POINTS_BY_TARGET
 
     observed_anchor_points = get_anchors_points_by_target(
-        model=MINIMAL_VALID_METADATA_MODEL
+        model=VALID_MINIMAL_METADATA_MODEL
     )
 
     assert observed_anchor_points == expected_anchor_points

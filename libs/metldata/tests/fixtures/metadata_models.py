@@ -29,9 +29,9 @@ def _get_example_model(name: str) -> MetadataModel:
     return MetadataModel.init_from_path(EXAMPLE_MODEL_DIR / f"{name}.yaml")
 
 
-MINIMAL_VALID_METADATA_MODEL = _get_example_model("minimal_model")
-ADVANCED_VALID_METADATA_MODEL = _get_example_model("advanced_model")
-VALID_METADATA_MODELS = [MINIMAL_VALID_METADATA_MODEL, ADVANCED_VALID_METADATA_MODEL]
+VALID_MINIMAL_METADATA_MODEL = _get_example_model("minimal_model")
+VALID_ADVANCED_METADATA_MODEL = _get_example_model("advanced_model")
+VALID_METADATA_MODELS = [VALID_MINIMAL_METADATA_MODEL, VALID_ADVANCED_METADATA_MODEL]
 
 ROOT_CLASS_INVALID_MODELS = [
     _get_example_model(f"minimal_model_root_class_missing{idx}") for idx in range(1, 3)

@@ -15,7 +15,7 @@
 
 """Testing the event publisher."""
 
-from ghga_service_chassis_lib.utils import now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from metldata.config import Config
 from metldata.submission_registry import models

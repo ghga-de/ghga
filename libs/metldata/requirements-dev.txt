@@ -3,3 +3,4 @@
 -r requirements-dev-common.txt
 
 # additional requirements can be listed here
+hexkit[test-mongodb]

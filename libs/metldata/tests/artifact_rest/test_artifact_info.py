@@ -14,17 +14,25 @@
 # limitations under the License.
 #
 
-"""Test the identifiers module."""
+"""Test the artifact_info module."""
 
-from metldata.model_utils.identifiers import get_class_identifiers
+from metldata.artifacts_rest.artifact_info import load_artifact_info
 from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 
 
-def test_get_class_identifiers_happy():
-    """Test the happy path of using the get_class_identifiers function."""
+def test_load_artifact_info():
+    """Test happy path of using load_artifact_info."""
 
-    expected_identifiers = {"File": "alias", "Dataset": "alias"}
+    expected_artifact_name = "test_artifact"
+    expected_artifact_description = "This is a test artifact."
+    expected_resource_class_names = {"File", "Dataset"}
 
-    observed_identifiers = get_class_identifiers(model=VALID_MINIMAL_METADATA_MODEL)
+    artifact_info = load_artifact_info(
+        model=VALID_MINIMAL_METADATA_MODEL,
+        name=expected_artifact_name,
+        description=expected_artifact_description,
+    )
 
-    assert observed_identifiers == expected_identifiers
+    assert artifact_info.name == expected_artifact_name
+    assert artifact_info.description == expected_artifact_description
+    assert artifact_info.resource_classes.keys() == expected_resource_class_names

@@ -29,7 +29,7 @@ from metldata.model_utils.manipulate import (
     disable_identifier_slot,
     upsert_class_slot,
 )
-from tests.fixtures.metadata_models import MINIMAL_VALID_METADATA_MODEL
+from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 
 
 def test_add_slot_if_not_exists_exists():
@@ -38,7 +38,7 @@ def test_add_slot_if_not_exists_exists():
     # try to change existing has_file slot to string:
     new_slot = SlotDefinition(name="has_file", range="string")
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     updated_schema_view = add_slot_if_not_exists(
@@ -55,7 +55,7 @@ def test_add_slot_if_not_exists_not_exists():
 
     new_slot = SlotDefinition(name="test", range="string")
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     updated_schema_view = add_slot_if_not_exists(
@@ -75,7 +75,7 @@ def test_upsert_class_slot_exists():
     class_name = "Dataset"
     new_slot = SlotDefinition(name="has_file", range="string")
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     updated_schema_view = upsert_class_slot(
@@ -99,7 +99,7 @@ def test_upsert_class_slot_not_exists():
     class_name = "Dataset"
     new_slot = SlotDefinition(name="test", range="string")
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     updated_schema_view = upsert_class_slot(
@@ -121,7 +121,7 @@ def test_delete_class_slot_happy():
     class_name = "Dataset"
     slot_name = "has_file"
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     updated_schema_view = delete_class_slot(
@@ -141,7 +141,7 @@ def test_delete_class_slot_class_not_exists():
     class_name = "DoesNotExist"
     slot_name = "has_file"
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     with pytest.raises(ClassNotFoundError):
@@ -156,7 +156,7 @@ def test_delete_class_slot_slot_not_exists():
     class_name = "Dataset"
     slot_name = "does_not_exist"
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     with pytest.raises(ClassSlotNotFoundError):
@@ -173,7 +173,7 @@ def test_add_slot_usage_annotation():
     annotation_key = "usage"
     annotation_value = "required"
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     updated_schema_view = add_slot_usage_annotation(
@@ -199,7 +199,7 @@ def test_disable_identifier_slot():
 
     class_name = "Dataset"
 
-    original_model = MINIMAL_VALID_METADATA_MODEL
+    original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
 
     updated_schema_view = disable_identifier_slot(

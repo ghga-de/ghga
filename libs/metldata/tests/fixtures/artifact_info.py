@@ -14,17 +14,23 @@
 # limitations under the License.
 #
 
-"""Test the identifiers module."""
+"""Example of ArtifactInfo objects."""
 
-from metldata.model_utils.identifiers import get_class_identifiers
+from metldata.artifacts_rest.artifact_info import load_artifact_info
 from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
+from tests.fixtures.workflows import EXAMPLE_ARTIFACT_MODELS
 
+# artifact info for the minimal valid metadata model:
+MINIMAL_ARTIFACT_INFO = load_artifact_info(
+    name="valid_minimal_metadata_model",
+    description="This is a minimal valid metadata model.",
+    model=VALID_MINIMAL_METADATA_MODEL,
+)
 
-def test_get_class_identifiers_happy():
-    """Test the happy path of using the get_class_identifiers function."""
-
-    expected_identifiers = {"File": "alias", "Dataset": "alias"}
-
-    observed_identifiers = get_class_identifiers(model=VALID_MINIMAL_METADATA_MODEL)
-
-    assert observed_identifiers == expected_identifiers
+# artifact infos for the example workflow:
+EXAMPLE_ARTIFACT_INFOS = [
+    load_artifact_info(
+        name=artifact_name, description=artifact_name, model=artifact_model
+    )
+    for artifact_name, artifact_model in EXAMPLE_ARTIFACT_MODELS.items()
+]
