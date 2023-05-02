@@ -1,0 +1,4 @@
+replicas: 1
+ucsHost: "0.0.0.0"
+ucsPort: "8080"
+apiRootPath: "/api/ucs"

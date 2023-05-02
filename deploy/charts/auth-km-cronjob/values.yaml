@@ -1,0 +1,5 @@
+cronSchedule: '0 2 12 12 *'
+command:
+  - "bash"
+  - "-c"
+  - "source /vault/secrets/variables && run refresh-int-keys"

@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: data-portal-ui
+  name: data-portal-ui
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: data-portal-ui
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/tls-skip-verify: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/agent-inject-secret-variables: 'secret/data/data-portal-ui/react'
+        vault.hashicorp.com/agent-inject-template-variables: |
+          {{ with secret "secret/data/data-portal-ui/react" -}}
+          export REACT_APP_OIDC_CLIENT_ID="{{ .Data.data.REACT_APP_OIDC_CLIENT_ID }}"
+          {{- end }}
+        vault.hashicorp.com/agent-run-as-same-user: "true"
+        vault.hashicorp.com/role: "data-portal-ui-role"
+      labels:
+        app: data-portal-ui
+        sidecar.istio.io/inject: "true"
+        version: staging
+    spec:
+      serviceAccountName: data-portal-ui
+      containers:
+      - env:
+        - name: DATA_PORTAL_UI_HOST
+          value: {{ .Values.uiHost }}
+        - name: DATA_PORTAL_UI_PORT
+          value: {{ .Values.uiPort }}
+        - name: DATA_PORTAL_UI_SVC_REPOSITORY_URL
+          value: {{ .Values.svcRepositoryUrl }}
+        - name: DATA_PORTAL_UI_SVC_SEARCH_URL
+          value: {{ .Values.svcSearchUrl }}
+        - name: REACT_APP_CLIENT_URL
+          value: {{ .Values.clientUrl }}
+        image: ghga/data-portal-ui:0.0.0-193-6587ec5-main
+        command: ["bash"]
+        args:  [ '-c', 'source /vault/secrets/variables && rm -f /vault/secrets/variables && /service/configure_build_serve/run.py']
+        name: data-portal-ui
+        securityContext:
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+          #readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          seccompProfile:
+            type: "RuntimeDefault"
+        ports:
+        - containerPort: {{ .Values.uiPort }}
+        readinessProbe:
+          tcpSocket:
+            port: {{ .Values.uiPort }}
+          initialDelaySeconds: 240
+          periodSeconds: 15
+        livenessProbe:
+          tcpSocket:
+            port: {{ .Values.uiPort }}
+          initialDelaySeconds: 240
+          periodSeconds: 15
+        resources:
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+      restartPolicy: Always
+      volumes: null

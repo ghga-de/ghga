@@ -1,0 +1,16 @@
+apiRootPath: "/api/repository"
+corsAllowedHeaders: '["*"]'
+corsAllowedMethods: '["*"]'
+corsAllowedOrigins: '["*"]'
+corsAllowedCredentials: 'true'
+dbName: "metadata-catalog"
+serviceHost: "0.0.0.0"
+servicePort: "8080"
+logLevel: "debug"
+resources:
+  limits:
+    cpu: "1500m"
+    memory: "2048M"
+  requests:
+    cpu: "100m"
+    memory: "64M"

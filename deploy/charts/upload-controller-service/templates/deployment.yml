@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upload-controller-service
+  labels:
+    app: upload-controller-service
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: upload-controller-service
+  template:
+    metadata:
+      name: upload-controller-service
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/tls-skip-verify: "true"
+        vault.hashicorp.com/agent-inject-secret-variables: 'secret/data/files/ucs'
+        vault.hashicorp.com/agent-inject-template-variables: |
+          {{ with secret "secret/data/files/ucs" -}}
+            export UCS_DB_URL="{{ .Data.data.db_url }}"
+          export UCS_S3_ACCESS_KEY_ID="{{ .Data.data.s3_access }}"
+          export UCS_S3_ENDPOINT_URL="{{ .Data.data.s3_url }}"
+          export UCS_S3_INBOX_BUCKET_ID="{{ .Data.data.s3_inbox_bucket }}"
+          export UCS_S3_SECRET_ACCESS_KEY="{{ .Data.data.s3_secret }}"
+          {{- end }}
+        vault.hashicorp.com/role: "files-io-role"
+      labels:
+        app: upload-controller-service
+        version: 1-dev
+        logging-enabled: "true"
+    spec:
+      serviceAccountName: upload-controller-service
+      containers:
+      - name: upload-controller-service
+        securityContext:
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - all
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+        image: ghga/upload-controller-service:0.3.0-23-gf1fda2f-main
+        command: ["bash"]
+        args: [ '-c', 'source /vault/secrets/variables && ucs run-api']
+        ports:
+        - name: http
+          containerPort: {{ .Values.ucsPort }}
+          protocol: TCP
+        volumeMounts:
+        - name: config
+          mountPath: "/home/appuser"
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: upload-controller-service

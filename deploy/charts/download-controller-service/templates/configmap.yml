@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drs3
+data:
+  .dcs.yaml: |
+    api_root_path: {{ .Values.apiRootPath }}
+    api_route: {{ .Values.apiRoute }}
+    auto_reload: true
+    aws_config_ini: null
+    cors_allow_credentials: false
+    cors_allowed_headers: []
+    cors_allowed_methods: []
+    cors_allowed_origins: []
+    db_print_logs: false
+    docs_url: /docs
+    host: {{ .Values.drs3Host }}
+    log_level: info
+    openapi_url: /openapi.json
+    port: {{ .Values.drs3Port }}
+    rabbitmq_host: rabbitmq
+    rabbitmq_port: 5672
+    s3_session_token: null
+    service_name: drs3
+    topic_name_drs_object_registered: drs-object-registered
+    topic_name_file_registered: file-internally-registered
+    topic_name_file_staged: file_staged_for_download
+    topic_name_stage_request: non_staged_file_requested
+    workers: 1

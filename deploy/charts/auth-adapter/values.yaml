@@ -1,0 +1,6 @@
+podAnnotations: {}
+command: []
+args: []
+image:
+  name: ghga/auth-service
+  tag: 0.3.1

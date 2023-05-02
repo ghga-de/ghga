@@ -1,0 +1,34 @@
+podAnnotations:
+  vault.hashicorp.com/agent-inject: "true"
+  vault.hashicorp.com/agent-init-first: "true"
+  vault.hashicorp.com/tls-skip-verify: "true"
+  vault.hashicorp.com/agent-pre-populate-only: "true"
+  vault.hashicorp.com/agent-inject-secret-variables: "secret/data/auth-adapter/data"
+  vault.hashicorp.com/agent-inject-template-variables: |
+    {{ with secret "secret/data/auth-adapter/data" -}}
+    export AUTH_SERVICE_BASIC_AUTH_USER="{{ .Data.data.user }}"
+    export AUTH_SERVICE_BASIC_AUTH_PWD="{{ .Data.data.pass }}"
+    export AUTH_SERVICE_DB_URL="{{ .Data.data.db_url }}"
+    {{- end }}
+  vault.hashicorp.com/agent-inject-secret-oidc: "secret/data/data-portal-ui/react"
+  vault.hashicorp.com/agent-inject-template-oidc: |
+    {{ with secret "secret/data/data-portal-ui/react" -}}
+    export AUTH_SERVICE_OIDC_CLIENT_ID="{{ .Data.data.REACT_APP_OIDC_CLIENT_ID }}"
+    {{- end }}
+  vault.hashicorp.com/agent-inject-secret-int-keys: "secret/data/auth/priv"
+  vault.hashicorp.com/agent-inject-template-int-keys: |
+    {{ with secret "secret/data/auth/priv" -}}
+    export AUTH_SERVICE_AUTH_KEY='{{ .Data.data.data }}'
+    {{- end }}
+  vault.hashicorp.com/agent-inject-secret-ext-keys: "secret/data/auth/pub/ext"
+  vault.hashicorp.com/agent-inject-template-ext-keys: |
+    {{ with secret "secret/data/auth/pub/ext" -}}
+    export AUTH_SERVICE_AUTH_EXT_KEYS='{{ .Data.data.data }}'
+    {{- end }}
+  vault.hashicorp.com/role: "auth-adapter-role"
+  vault.hashicorp.com/agent-run-as-same-user: "true"
+command: ["sh", "-c"]
+args:
+  [
+    'for f in /vault/secrets/*; do [[ -f "$f" ]] && . "$f";  done && shred -fuz /vault/secrets/* && auth-service',
+  ]

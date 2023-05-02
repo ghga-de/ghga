@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: metadata-catalog
+  name: metadata-catalog
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: metadata-catalog
+  template:
+    metadata:
+      annotations:
+      labels:
+        app: metadata-catalog
+        sidecar.istio.io/inject: "true"
+        version: staging
+    spec:
+      containers:
+        - env:
+            - name: METADATA_CATALOG_HOST
+              value: {{ .Values.catalogHost }}
+            - name: METADATA_CATALOG_PORT
+              value: {{ .Values.catalogPort }}
+            - name: METADATA_CATALOG_SVC_SEARCH_URL
+              value: {{ .Values.svcSearchUrl }}
+            - name: METADATA_CATALOG_SVC_REPOSITORY_URL
+              value: {{ .Values.svcRepositoryUrl }}
+          image: ghga/metadata-catalog:0.0.0-59-031dafb-main
+          name: metadata-catalog
+          securityContext:
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - all
+            #readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: "RuntimeDefault"
+          ports:
+            - containerPort: {{ .Values.catalogPort }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.catalogPort }}
+            initialDelaySeconds: 240
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.catalogPort }}
+            initialDelaySeconds: 240
+            periodSeconds: 15 
+          resources:
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}

@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    app: auth-km-cronjob
+  name: auth-km-cronjob
+spec:
+  schedule: {{ .Values.cronSchedule }}
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      labels:
+        app: auth-km-cronjob
+    spec:
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-init-first: "true"
+            vault.hashicorp.com/tls-skip-verify: "true"
+            vault.hashicorp.com/agent-inject-secret-variables: 'secret/data/auth/token'
+            vault.hashicorp.com/agent-inject-template-variables: |
+              {{ with secret "secret/data/auth/token" -}}
+              export VAULT_TOKEN="{{ .Data.data.token }}" #We have to change that to application credentials
+              {{- end }}
+            vault.hashicorp.com/role: "auth-km-job-role"
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+        spec:
+          serviceAccountName: auth-km-job
+          containers:
+          - env:
+            - name: VAULT_ADDR
+              value: "https://hashicorp-vault.vault:8200"
+            - name: VAULT_NAMESPACE
+              value: "vault"
+            image: ghga/auth-km-jobs:0.0.0-26-8e5cb6a-main
+            command: {{ .Values.command }}
+            name: auth-km-job
+            securityContext:
+              runAsUser: 1000
+              capabilities:
+                drop:
+                  - ALL
+              seccompProfile:
+                type: "RuntimeDefault"
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+          restartPolicy: Never
