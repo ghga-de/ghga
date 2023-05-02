@@ -12,7 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""A library that contains the common functionality used in services of GHGA"""
+"""Testing the testing module."""
 
-__version__ = "0.3.0"
+import pytest
+from fastapi import FastAPI
+
+from ghga_service_commons.api.testing import AsyncTestClient
+
+
+@pytest.mark.asyncio
+async def test_async_test_client():
+    """Test the AsyncTestClient."""
+
+    app = FastAPI()
+
+    @app.get("/")
+    def index():
+        return "Hello World"
+
+    async with AsyncTestClient(app) as client:
+        response = await client.get("/")
+
+    assert response.status_code == 200
+    assert response.json() == "Hello World"
