@@ -82,7 +82,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             DatasetFile(
                 id=payload_file.accession,
                 extension=payload_file.file_extension,
-                description=payload_file.description,
+                # we don't need the file description here for now
             )
             for payload_file in validated_payload.files
         ]

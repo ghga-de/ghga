@@ -36,6 +36,6 @@ def get_openapi_schema(api) -> Dict[str, Any]:
         version=__version__,
         description="A service managing work packages for the GHGA CLI",
         servers=[{"url": config.api_root_path}],
-        tags=[{"name": "WorkPackages"}],
+        tags=[{"name": "WorkPackages"}, {"name": "Datasets"}],
         routes=api.routes,
     )

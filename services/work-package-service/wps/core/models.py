@@ -46,7 +46,6 @@ class DatasetFile(BaseDto):
     """A file as that is part of a dataset."""
 
     id: str = Field(..., description="The file ID.")
-    description: Optional[str] = Field(..., description="The description of the file.")
     extension: str = Field(..., description="The file extension with a leading dot.")
 
 
@@ -73,9 +72,8 @@ class WorkOrderToken(BaseDto):
 
     type: WorkType
     file_id: str
-    file_ext: str
     user_id: str
-    public_key: str
+    user_public_crypt4gh_key: str
     full_user_name: str
     email: EmailStr
 

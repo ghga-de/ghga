@@ -1,5 +1,51 @@
 components:
   schemas:
+    Dataset:
+      additionalProperties: false
+      description: A model describing a dataset.
+      properties:
+        description:
+          description: The description of the dataset.
+          title: Description
+          type: string
+        files:
+          description: Files contained in the dataset.
+          items:
+            $ref: '#/components/schemas/DatasetFile'
+          title: Files
+          type: array
+        id:
+          description: ID of the dataset
+          title: Id
+          type: string
+        title:
+          description: The title of the dataset.
+          title: Title
+          type: string
+      required:
+      - id
+      - title
+      - description
+      - files
+      title: Dataset
+      type: object
+    DatasetFile:
+      additionalProperties: false
+      description: A file as that is part of a dataset.
+      properties:
+        extension:
+          description: The file extension with a leading dot.
+          title: Extension
+          type: string
+        id:
+          description: The file ID.
+          title: Id
+          type: string
+      required:
+      - id
+      - extension
+      title: DatasetFile
+      type: object
     WorkPackageCreationData:
       additionalProperties: false
       description: All data necessary to create a work package.
@@ -103,6 +149,37 @@ paths:
       summary: health
       tags:
       - WorkPackages
+  /users/{user_id}/datasets:
+    get:
+      description: Endpoint used to get details for all datasets that are accessible
+        to the given user
+      operationId: get_datasets
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          title: User Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Dataset'
+                title: Response 200 Get Datasets
+                type: array
+          description: Datasets have been fetched.
+        '403':
+          description: Not authorized to get datasets.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Get all datasets of the given user
+      tags:
+      - Datasets
   /work-packages:
     post:
       description: Endpoint used to create a new work package
@@ -194,3 +271,4 @@ servers:
 - url: /
 tags:
 - name: WorkPackages
+- name: Datasets

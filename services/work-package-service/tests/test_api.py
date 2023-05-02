@@ -38,6 +38,7 @@ from .fixtures import (  # noqa: F401 # pylint: disable=unused-import
     non_mocked_hosts,
 )
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
+from .fixtures.datasets import DATASET
 
 CREATION_DATA = {
     "dataset_id": "some-dataset-id",
@@ -81,7 +82,7 @@ async def test_get_work_package_unauthorized(client: AsyncClient):
 
 @mark.asyncio
 async def test_create_work_order_token(
-    client: AsyncClient, auth_headers, httpx_mock: HTTPXMock
+    client: AsyncClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
 ):
     """Test that work order tokens can be properly created."""
 
@@ -214,9 +215,81 @@ async def test_create_work_order_token(
     assert token_dict == {
         "type": "download",
         "file_id": "file-id-3",
-        "file_ext": ".bam",
         "user_id": "john-doe@ghga.de",
-        "public_key": user_public_crypt4gh_key,
+        "user_public_crypt4gh_key": user_public_crypt4gh_key,
         "full_user_name": "Dr. John Doe",
         "email": "john@home.org",
     }
+
+
+@mark.asyncio
+async def test_get_datasets_unauthenticated(client: AsyncClient):
+    """Test that the list of accessible datasets cannot be fetched unauthenticated."""
+
+    response = await client.get("/users/john-doe@ghga.de/datasets")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@mark.asyncio
+async def test_get_datasets_for_another_user(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+):
+    """Test that the list of accessible datasets for another user cannot be fetched."""
+
+    response = await client.get(
+        "/users/john-foo@ghga.de/datasets", headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@mark.asyncio
+async def test_get_datasets_when_none_authorized(
+    client: AsyncClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
+):
+    """Test that no datasets are fetched when none are accessible."""
+
+    # mock the access check for the test dataset
+
+    httpx_mock.add_response(
+        method="GET",
+        url="http://access/users/john-doe@ghga.de/datasets",
+        json=["some-other-dataset-id"],
+    )
+
+    # get the list of datasets
+
+    response = await client.get(
+        "/users/john-doe@ghga.de/datasets", headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response_data = response.json()
+    assert isinstance(response_data, list)
+    assert response_data == []
+
+
+@mark.asyncio
+async def test_get_datasets(
+    client: AsyncClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
+):
+    """Test that the list of accessible datasets can be fetched."""
+
+    # mock the access check for the test dataset
+
+    httpx_mock.add_response(
+        method="GET",
+        url="http://access/users/john-doe@ghga.de/datasets",
+        json=["some-dataset-id", "some-non-existing-dataset-id"],
+    )
+
+    # get the list of datasets
+
+    response = await client.get(
+        "/users/john-doe@ghga.de/datasets", headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response_data = response.json()
+    assert isinstance(response_data, list)
+    assert response_data == [DATASET]

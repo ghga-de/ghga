@@ -26,6 +26,7 @@ from wps.core.models import (
     WorkPackage,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
+    WorkType,
 )
 
 
@@ -40,7 +41,7 @@ class WorkPackageRepositoryPort(ABC):
 
     @abstractmethod
     async def create(
-        self, creation_data: WorkPackageCreationData, auth_context: AuthContext
+        self, *, creation_data: WorkPackageCreationData, auth_context: AuthContext
     ) -> WorkPackageCreationResponse:
         """Create a work package and store it in the repository."""
         ...
@@ -49,6 +50,7 @@ class WorkPackageRepositoryPort(ABC):
     async def get(
         self,
         work_package_id: str,
+        *,
         check_valid: bool = True,
         work_package_access_token: Optional[str] = None,
     ) -> WorkPackage:
@@ -65,6 +67,7 @@ class WorkPackageRepositoryPort(ABC):
     @abstractmethod
     async def work_order_token(
         self,
+        *,
         work_package_id: str,
         file_id: str,
         check_valid: bool = True,
@@ -91,5 +94,16 @@ class WorkPackageRepositoryPort(ABC):
         """Get a registered dataset using the given ID.
 
         If the dataset does not exist, a DatasetNotFoundError will be raised.
+        """
+        ...
+
+    @abstractmethod
+    async def get_datasets(
+        self, *, auth_context: AuthContext, work_type: Optional[WorkType] = None
+    ) -> list[Dataset]:
+        """Get the list of all datasets accessible to the authenticated user.
+
+        A work type can be specified for filtering the datasets, but currently
+        only downloadable datasets are supported.
         """
         ...

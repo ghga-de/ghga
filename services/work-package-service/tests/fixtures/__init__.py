@@ -16,37 +16,44 @@
 """Fixtures that are used in both integration and unit tests"""
 
 import asyncio
+from datetime import timedelta
 from typing import AsyncGenerator
 
+from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
     sign_and_serialize_token,
 )
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from httpx import AsyncClient
-from pydantic import SecretStr
 from pytest import fixture
 from pytest_asyncio import fixture as async_fixture
 
+from wps.adapters.outbound.dao import DatasetDaoConstructor, WorkPackageDaoConstructor
 from wps.config import Config
 from wps.container import Container
+from wps.core.repository import WorkPackageConfig, WorkPackageRepository
 from wps.main import (  # pylint: disable=import-outside-toplevel
     get_container,
     get_rest_api,
 )
 
+from .access import AccessCheckMock
 from .datasets import DATASET_OVERVIEW_EVENT
 
 __all__ = [
+    "AUTH_CLAIMS",
     "AUTH_KEY_PAIR",
     "SIGNING_KEY_PAIR",
-    "AUTH_CLAIMS",
-    "headers_for_token",
+    "fixture_auth_context",
     "fixture_auth_headers",
     "fixture_bad_auth_headers",
-    "fixture_container",
     "fixture_client",
+    "fixture_container",
+    "fixture_repository",
+    "headers_for_token",
     "non_mocked_hosts",
 ]
 
@@ -84,6 +91,36 @@ def fixture_bad_auth_headers() -> dict[str, str]:
     return headers_for_token(token)
 
 
+@fixture(name="auth_context")
+def fixture_auth_context() -> AuthContext:
+    """Fixture for getting an auth context"""
+    iat = now_as_utc() - timedelta(1)  # validity is actually assumed by the repository
+    return AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)  # pyright: ignore
+
+
+@async_fixture(name="repository")
+async def fixture_repository(mongodb_fixture: MongoDbFixture) -> WorkPackageRepository:
+    """Fixture for creating a configured repository"""
+    work_package_config = WorkPackageConfig(
+        work_package_signing_key=SIGNING_KEY_PAIR.export_private()  # pyright: ignore
+    )
+    dataset_dao = await DatasetDaoConstructor.construct(
+        config=work_package_config,
+        dao_factory=mongodb_fixture.dao_factory,
+    )
+    work_package_dao = await WorkPackageDaoConstructor.construct(
+        config=work_package_config,
+        dao_factory=mongodb_fixture.dao_factory,
+    )
+    repository = WorkPackageRepository(
+        config=work_package_config,
+        access_check=AccessCheckMock(),
+        dataset_dao=dataset_dao,
+        work_package_dao=work_package_dao,
+    )
+    return repository
+
+
 @fixture
 def non_mocked_hosts() -> list[str]:
     """Get hosts that are not mocked by pytest-httpx."""
@@ -98,9 +135,9 @@ async def fixture_container(
 
     # create configuration for testing
     config = Config(
-        auth_key=AUTH_KEY_PAIR.export_public(),
+        auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
         download_access_url="http://access",
-        work_package_signing_key=SecretStr(SIGNING_KEY_PAIR.export_private()),
+        work_package_signing_key=SIGNING_KEY_PAIR.export_private(),  # pyright: ignore
         **kafka_fixture.config.dict(),
         **mongodb_fixture.config.dict(),
     )
@@ -116,7 +153,7 @@ async def fixture_container(
 
         # populate database with published dataset
         event_subscriber = await container.event_subscriber()
-        await asyncio.wait_for(event_subscriber.run(forever=False), timeout=5)
+        await asyncio.wait_for(event_subscriber.run(forever=False), timeout=10)
 
         # return the configured and wired container
         yield container

@@ -26,9 +26,9 @@ DATASET = Dataset(
     title="Test dataset 1",
     description="The first test dataset",
     files=[
-        DatasetFile(id="file-id-1", description="The first file", extension=".json"),
-        DatasetFile(id="file-id-2", description="The second file", extension=".csv"),
-        DatasetFile(id="file-id-3", description="The third file", extension=".bam"),
+        DatasetFile(id="file-id-1", extension=".json"),
+        DatasetFile(id="file-id-2", extension=".csv"),
+        DatasetFile(id="file-id-3", extension=".bam"),
     ],
 )
 

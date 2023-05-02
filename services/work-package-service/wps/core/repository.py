@@ -94,7 +94,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
     # pylint: disable=too-many-locals
     async def create(
-        self, creation_data: WorkPackageCreationData, auth_context: AuthContext
+        self, *, creation_data: WorkPackageCreationData, auth_context: AuthContext
     ) -> WorkPackageCreationResponse:
         """Create a work package and store it in the repository.
 
@@ -167,6 +167,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
     async def get(
         self,
         work_package_id: str,
+        *,
         check_valid: bool = True,
         work_package_access_token: Optional[str] = None,
     ) -> WorkPackage:
@@ -195,11 +196,12 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
                 ):
                     raise self.WorkPackageAccessError("Access has been revoked")
             else:
-                raise NotImplementedError("Cannot validate unsupported work type")
+                raise self.WorkPackageAccessError("Unsupported work type")
         return work_package
 
     async def work_order_token(
         self,
+        *,
         work_package_id: str,
         file_id: str,
         check_valid: bool = True,
@@ -221,18 +223,17 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         )
         if file_id not in work_package.files:
             raise self.WorkPackageAccessError("File is not contained in work package")
-        public_key = work_package.user_public_crypt4gh_key
+        user_public_crypt4gh_key = work_package.user_public_crypt4gh_key
         wot = WorkOrderToken(
             type=work_package.type,
             file_id=file_id,
-            file_ext=work_package.files[file_id],
             user_id=work_package.user_id,
-            public_key=public_key,
+            user_public_crypt4gh_key=user_public_crypt4gh_key,
             full_user_name=work_package.full_user_name,
             email=work_package.email,
         )
         signed_wot = sign_work_order_token(wot, self._signing_key)
-        return encrypt(signed_wot, public_key)
+        return encrypt(signed_wot, user_public_crypt4gh_key)
 
     async def register_dataset(self, dataset: Dataset) -> None:
         """Register a dataset with all of its files."""
@@ -250,3 +251,28 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             return await self._dataset_dao.get_by_id(dataset_id)
         except ResourceNotFoundError as error:
             raise self.DatasetNotFoundError("Dataset not found") from error
+
+    async def get_datasets(
+        self, *, auth_context: AuthContext, work_type: Optional[WorkType] = None
+    ) -> list[Dataset]:
+        """Get the list of all datasets accessible to the authenticated user.
+
+        A work type can be specified for filtering the datasets. If no work type is
+        specified, the datasets for all work types (upload and download) are returned.
+
+        Note that currently only downloadable datasets are supported.
+        """
+        user_id = auth_context.id
+        if user_id is None:
+            raise self.WorkPackageAccessError("No internal user specified")
+        if work_type is not None and work_type != WorkType.DOWNLOAD:
+            raise self.WorkPackageAccessError("Unsupported work type")
+        dataset_ids = await self._access.get_datasets_with_download_access(user_id)
+        datasets: list[Dataset] = []
+        for dataset_id in dataset_ids:
+            try:
+                dataset = await self.get_dataset(dataset_id)
+            except self.DatasetNotFoundError:
+                continue
+            datasets.append(dataset)
+        return datasets

@@ -30,6 +30,7 @@ from wps.adapters.inbound.http.auth import (
 )
 from wps.container import Container
 from wps.core.models import (
+    Dataset,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
     WorkPackageDetails,
@@ -80,7 +81,9 @@ async def create_work_package(
 ) -> WorkPackageCreationResponse:
     """Create a work package using an internal auth token with a user context."""
     try:
-        return await repository.create(creation_data, auth_context=auth_context)
+        return await repository.create(
+            creation_data=creation_data, auth_context=auth_context
+        )
     except repository.WorkPackageAccessError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
 
@@ -166,10 +169,48 @@ async def create_work_order_token(
         if not (work_package_id and file_id and work_package_access_token):
             raise repository.WorkPackageAccessError
         return await repository.work_order_token(
-            work_package_id,
-            file_id,
+            work_package_id=work_package_id,
+            file_id=file_id,
             check_valid=True,
             work_package_access_token=work_package_access_token,
         )
     except repository.WorkPackageAccessError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
+
+
+@router.get(
+    "/users/{user_id}/datasets",
+    operation_id="get_datasets",
+    tags=["Datasets"],
+    summary="Get all datasets of the given user",
+    description="Endpoint used to get details for all datasets"
+    " that are accessible to the given user",
+    responses={
+        200: {
+            "model": list[Dataset],
+            "description": "Datasets have been fetched.",
+        },
+        403: {"description": "Not authorized to get datasets."},
+        422: {"description": "Validation error in submitted user data."},
+    },
+    status_code=200,
+)
+@inject
+async def get_datasets(
+    user_id: str = Path(
+        ...,
+        alias="user_id",
+    ),
+    repository: WorkPackageRepositoryPort = Depends(
+        Provide[Container.work_package_repository]
+    ),
+    auth_context: AuthContext = requires_auth_context,
+) -> list[Dataset]:
+    """Get datasets using an internal auth token with a user context."""
+    try:
+        if user_id != auth_context.id:
+            raise repository.WorkPackageAccessError("Not authorized to get datasets")
+        datasets = await repository.get_datasets(auth_context=auth_context)
+    except repository.WorkPackageAccessError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    return datasets
