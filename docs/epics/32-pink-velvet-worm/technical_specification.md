@@ -34,6 +34,34 @@ The hits returned in the response will contain the fully embedded documents, whi
     - count: integer - hit count (although 'hits' will only contain up to 'limit' elements)
     - hits: list - contains the search results
 
+- GET /rpc/search-options: Get a list of searchable classes (resource types) and their facetable properties.
+  - Response Body:
+    - searchable_classes: JSON - for each class, contains the name of the class, a description, and its facetable properties
+
+## Additional Implementation Details:
+
+### Configuration
+
+The searchable classes, or resource types, will be moved into configuration and made available at deploy time. Therefore, any class intended to be made available through the search service will need to be defined under the **searchable_classes** config variable. Each searchable class should contain the **description** as a string and any **facetable_properties** as a list of strings.
+
+Example:
+
+```
+searchable_classes:
+  Dataset:
+    description: Dataset grouping files under controlled access.
+    facetable_properties: [
+      "type", # a property directly part of the dataset
+      "study.type", # a property that is part of study that is embedded into this dataset
+      "study.project.alias" # a property part of a deeply embedded resource
+    ]
+  Study:
+    description: A study addressing a specific research question.
+    facetable_properties: [
+      "study.type",
+      "study.project.alias"
+      ]
+```
 
 ## Human Resource/Time Estimation:
 
