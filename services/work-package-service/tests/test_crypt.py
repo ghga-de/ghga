@@ -14,28 +14,98 @@
 # limitations under the License.
 #
 
+"""Test the helper functions for encryption."""
+
 import base64
 
 from pytest import raises
 
-from wps.core.crypt import decode_public_key, encrypt
-
-from .fixtures.crypt import decrypt, user_public_crypt4gh_key
+from wps.core.crypt import validate_public_key
 
 
-def test_decode_public_key():
-    """Test that invalid public keys can be detected."""
-    with raises(ValueError, match="Incorrect padding"):
-        decode_public_key("foo")
-    with raises(ValueError, match="The public key must be exactly 32 bytes long"):
-        decode_public_key(base64.b64encode(b"foo").decode("ascii"))
-    decode_public_key(base64.b64encode(b"foo4" * 8).decode("ascii"))
-    decode_public_key(user_public_crypt4gh_key)
+def encode(key: bytes) -> str:
+    """Get base64 encoded key."""
+    return base64.b64encode(key).decode("ascii")
 
 
-def test_encrypt():
-    """Test that ASCII strings can be properly encrypted."""
-    data = "Hello, World!"
-    encrypted_data = encrypt(data, user_public_crypt4gh_key)
-    decrypted_data = decrypt(encrypted_data)
-    assert decrypted_data == data
+def test_valid_public_key():
+    """Test that a valid public key passes."""
+    key = encode(b"foo-bar." * 4)  # 32 bytes
+    assert validate_public_key(key) == key
+
+
+def test_empty_public_key():
+    """Test that an empty public key does not pass."""
+    with raises(ValueError, match="empty"):
+        assert validate_public_key(None)  # type: ignore
+    with raises(ValueError, match="empty"):
+        assert validate_public_key("")
+    with raises(ValueError, match="Invalid"):
+        assert validate_public_key("null")
+
+
+def test_invalid_public_key():
+    """Test that an invalid public key does not pass."""
+    key = encode(b"foo-bar." * 2)  # 16 bytes
+    with raises(ValueError, match="Invalid"):
+        assert validate_public_key(key)
+    key = encode(b"foo-bar." * 5)  # 50 bytes
+    with raises(ValueError, match="Invalid"):
+        assert validate_public_key(key)
+
+
+def test_private_key_instead_of_public_key():
+    """Test that passing a private key throws."""
+    key = encode(b"c4gh-v1" + 46 * b"x")
+    with raises(ValueError, match="Invalid"):
+        validate_public_key(key)
+
+
+def test_valid_public_key_wrapped_as_crypt4gh_public_key():
+    """Test that a properly wrapped valid public key passes.
+
+    Also test that only the key itself is returned.
+    """
+    key = encode(b"bar-baz." * 4)
+    wrapped_key = (
+        "-----BEGIN CRYPT4GH PUBLIC KEY-----\n"
+        + key
+        + "\n-----END CRYPT4GH PUBLIC KEY-----\n"
+    )
+    assert validate_public_key(wrapped_key) == key
+
+
+def test_private_key_wrapped_as_crypt4gh_public_key():
+    """Test that a private key wrapped as public throws."""
+    key = encode(b"c4gh-v1" + 46 * b"x")
+    wrapped_key = (
+        "-----BEGIN CRYPT4GH PUBLIC KEY-----\n"
+        + key
+        + "\n-----END CRYPT4GH PUBLIC KEY-----\n"
+    )
+    with raises(ValueError, match="Invalid"):
+        validate_public_key(wrapped_key)
+
+
+def test_valid_public_key_wrapped_as_non_crypt4gh_public_key():
+    """Test that wrapping as a non Crypt4GH public key throws."""
+    key = encode(b"bar-baz." * 4)
+    wrapped_key = (
+        "-----BEGIN CRYPT9GH PUBLIC KEY-----\n"
+        + key
+        + "\n-----END CRYPT9GH PUBLIC KEY-----\n"
+    )
+    with raises(ValueError, match="Invalid"):
+        validate_public_key(wrapped_key)
+
+
+def test_valid_public_key_wrapped_as_crypt4gh_private_key():
+    """Test that wrapping as a Crypt4GH private key throws."""
+    key = encode(b"bar-baz." * 4)
+    wrapped_key = (
+        "-----BEGIN CRYPT4GH PRIVATE KEY-----\n"
+        + key
+        + "\n-----END CRYPT4GH PRIVATE KEY-----\n"
+    )
+    with raises(ValueError, match="Do not pass a private key"):
+        validate_public_key(wrapped_key)

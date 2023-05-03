@@ -14,22 +14,19 @@
 # limitations under the License.
 #
 
-import base64
+from ghga_service_commons.utils.crypt import decrypt as decrypt_with_key
+from ghga_service_commons.utils.crypt import encode_key, generate_key_pair
 
-from nacl.public import PrivateKey, SealedBox
+__all__ = [
+    "decrypt",
+    "user_public_crypt4gh_key",
+]
 
-__all__ = ["user_crypt4gh_key_pair", "user_public_crypt4gh_key"]
+user_crypt4gh_key_pair = generate_key_pair()
 
-user_crypt4gh_key_pair = PrivateKey.generate()
-
-user_public_crypt4gh_key = base64.b64encode(
-    bytes(user_crypt4gh_key_pair.public_key)
-).decode("ascii")
+user_public_crypt4gh_key = encode_key(user_crypt4gh_key_pair.public)
 
 
-def decrypt(encrypted_data: str) -> str:
+def decrypt(data: str) -> str:
     """Decrypt a str of base64 encoded ASCII data."""
-    unseal_box = SealedBox(user_crypt4gh_key_pair)
-    encrypted_bytes = base64.b64decode(encrypted_data)
-    decrypted_bytes = unseal_box.decrypt(encrypted_bytes)
-    return decrypted_bytes.decode("ascii")
+    return decrypt_with_key(data, user_crypt4gh_key_pair.private)

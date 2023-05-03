@@ -22,7 +22,7 @@ from typing import Optional
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
 from pydantic import BaseModel, EmailStr, Field, validator
 
-from wps.core.crypt import decode_public_key
+from wps.core.crypt import validate_public_key
 
 __all__ = [
     "WorkType",
@@ -96,8 +96,7 @@ class WorkPackageCreationData(BaseDto):
     @validator("user_public_crypt4gh_key")
     def user_public_crypt4gh_key_valid(cls, key):  # pylint: disable=no-self-argument
         """Validate the user's public Crypt4GH key."""
-        decode_public_key(key)
-        return key
+        return validate_public_key(key)
 
 
 class WorkPackageCreationResponse(BaseModel):

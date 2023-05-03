@@ -57,6 +57,22 @@ def test_good_creation_data():
     assert data.file_ids == ["some-file-id", "another-file-id"]
     assert data.user_public_crypt4gh_key == user_public_crypt4gh_key
 
+    wrapped_key = (
+        "\n\n-----BEGIN CRYPT4GH PUBLIC KEY-----\n"
+        + user_public_crypt4gh_key
+        + "\n-----END CRYPT4GH PUBLIC KEY-----\n\n"
+    )
+    data = WorkPackageCreationData(
+        dataset_id="123-foo-456",
+        type=WorkType.UPLOAD,
+        file_ids=None,
+        user_public_crypt4gh_key=wrapped_key,
+    )
+    assert data.dataset_id == "123-foo-456"
+    assert data.type == WorkType.UPLOAD
+    assert data.file_ids is None
+    assert data.user_public_crypt4gh_key == user_public_crypt4gh_key
+
 
 def test_bad_creation_data():
     """Test instantiating invalid work package creation DTO."""

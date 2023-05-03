@@ -16,31 +16,27 @@
 
 """Helper functions for encryption."""
 
-import base64
+import re
 
-from nacl.public import PublicKey, SealedBox
+from ghga_service_commons.utils.crypt import decode_key
 
-__all__ = ["encrypt", "decode_public_key"]
+__all__ = ["validate_public_key"]
 
 
-def decode_public_key(key: str) -> PublicKey:
-    """Return the given base64 encoded public key as a PublicKey object.
+_re_pem_private = re.compile("-.*PRIVATE.*-")
+_re_pem_public = re.compile("-----(BEGIN|END) CRYPT4GH PUBLIC KEY-----")
 
-    Raises a ValueError if the given key is invalid.
+
+def validate_public_key(key: str) -> str:
+    """Validate the given base64 encoded public key.
+
+    Raises a ValueError if the given key is invalid as a public key.
+    Also strips headers and footers from PEM format file.
     """
-    try:
-        decoded_key = base64.b64decode(key)
-    except base64.binascii.Error as error:  # type: ignore
-        raise ValueError(str(error)) from error
-    return PublicKey(decoded_key)
-
-
-def encrypt(data: str, key: str) -> str:
-    """Encrypt a str of ASCII characters with a base64 encoded Crypt4GH key.
-
-    The result will be base64 encoded again.
-    """
-    sealed_box = SealedBox(decode_public_key(key))
-    decoded_data = bytes(data, encoding="ascii")
-    encrypted = sealed_box.encrypt(decoded_data)
-    return base64.b64encode(encrypted).decode("ascii")
+    if not key or not isinstance(key, str):
+        raise ValueError("Key must be a non-empty string")
+    if _re_pem_private.search(key):
+        raise ValueError("Do not pass a private key")
+    key = _re_pem_public.sub("", key).strip()
+    decode_key(key)
+    return key

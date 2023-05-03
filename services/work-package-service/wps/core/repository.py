@@ -20,11 +20,11 @@ from datetime import timedelta
 from typing import Optional
 
 from ghga_service_commons.auth.ghga import AuthContext
+from ghga_service_commons.utils.crypt import encrypt
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from jwcrypto import jwk
 from pydantic import BaseSettings, Field, SecretStr
 
-from wps.core.crypt import encrypt
 from wps.core.models import (
     Dataset,
     WorkOrderToken,
