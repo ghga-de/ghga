@@ -14,10 +14,4 @@
 # limitations under the License.
 #
 
-"""A collection of custom types."""
-
-from typing import Any
-
-from typing_extensions import TypeAlias
-
-Json: TypeAlias = dict[str, Any]
+"""Loads artifacts into running services."""

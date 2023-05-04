@@ -20,6 +20,7 @@
 import httpx
 import pytest
 from fastapi import FastAPI
+from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb.testutils import mongodb_fixture  # noqa: F401
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -43,7 +44,7 @@ async def get_example_app_client(
 
     app = FastAPI()
     app.include_router(router)
-    return httpx.AsyncClient(app=app, base_url="http://localhost:8080")
+    return AsyncTestClient(app)
 
 
 @pytest.mark.asyncio

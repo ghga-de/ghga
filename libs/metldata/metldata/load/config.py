@@ -14,10 +14,18 @@
 # limitations under the License.
 #
 
-"""A collection of custom types."""
+"""Config parameters and their defaults."""
 
-from typing import Any
+from ghga_service_commons.api import ApiConfigBase
+from hexkit.providers.mongodb import MongoDbConfig
+from pydantic import Field
 
-from typing_extensions import TypeAlias
+from metldata.artifacts_rest.config import ArtifactsRestConfig
 
-Json: TypeAlias = dict[str, Any]
+
+class ArtifactLoaderAPIConfig(ArtifactsRestConfig, ApiConfigBase, MongoDbConfig):
+    """Config settings and their defaults."""
+
+    loader_token_hashes: list[str] = Field(
+        ..., description="Hashes of tokens used to authenticate for loading artifact."
+    )

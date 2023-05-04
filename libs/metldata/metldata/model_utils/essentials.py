@@ -21,17 +21,26 @@ from __future__ import annotations
 import dataclasses
 import json
 from contextlib import contextmanager
-from copy import deepcopy
+from copy import copy, deepcopy
+from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Generator
+from typing import Any, Generator
 
+import jsonasobj2
 import yaml
 from linkml_runtime import SchemaView
 from linkml_runtime.linkml_model import SchemaDefinition
 
 # The name of the root class of a model:
 ROOT_CLASS = "Submission"
+
+
+@lru_cache
+def schema_view_from_model(model: MetadataModel) -> SchemaView:
+    """Get a schema view instance from the metadata model."""
+
+    return ExportableSchemaView(model)
 
 
 class MetadataModel(SchemaDefinition):
@@ -50,7 +59,7 @@ class MetadataModel(SchemaDefinition):
     def schema_view(self) -> ExportableSchemaView:
         """Get a schema view instance from the metadata model."""
 
-        return ExportableSchemaView(self)
+        return schema_view_from_model(self)
 
     def copy(self) -> MetadataModel:
         """Copy the model."""
@@ -78,7 +87,12 @@ class MetadataModel(SchemaDefinition):
                     if "from_schema" in class_:
                         del class_["from_schema"]
                     if "slot_usage" in class_:
-                        for slot in class_["slot_usage"].values():
+                        slot_usage: Any = (
+                            jsonasobj2.as_dict(class_["slot_usage"])
+                            if isinstance(class_["slot_usage"], jsonasobj2.JsonObj)
+                            else class_["slot_usage"]
+                        )
+                        for slot in slot_usage.values():
                             if "alias" in slot:
                                 del slot["alias"]
                             if "from_schema" in slot:
@@ -136,9 +150,30 @@ class MetadataModel(SchemaDefinition):
 class ExportableSchemaView(SchemaView):
     """Extend the SchemaView by adding a method for exporting a MetadataModel."""
 
+    def __copy__(self):
+        """Return a copy of the model.
+
+        Please note, the copy will have a new uuid used for hashing.
+        """
+
+        return ExportableSchemaView(
+            schema=copy(self.schema),
+            importmap=copy(self.importmap),
+        )
+
+    def __deepcopy__(self, memo: Any):
+        """Return a deepcopy of the model.
+
+        Please note, the copy will have a new uuid used for hashing.
+        """
+
+        return ExportableSchemaView(
+            schema=deepcopy(self.schema), importmap=copy(self.importmap)
+        )
+
     def export_model(self) -> MetadataModel:
         """Export a MetadataModel."""
 
-        model_json = dataclasses.asdict(self.copy_schema())
+        model_json = dataclasses.asdict(deepcopy(self.schema))
 
         return MetadataModel(**model_json)

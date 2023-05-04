@@ -21,7 +21,7 @@ from typing import Optional
 
 from linkml.generators.jsonschemagen import JsonSchemaGenerator
 from linkml_runtime.linkml_model.annotations import Annotation
-from linkml_runtime.linkml_model.meta import ClassDefinition, ClassDefinitionName
+from linkml_runtime.linkml_model.meta import ClassDefinition
 
 from metldata.artifacts_rest.models import ArtifactInfo, ArtifactResourceClass
 from metldata.custom_types import Json
@@ -77,14 +77,45 @@ def get_resource_class_names(*, model: MetadataModel) -> list[str]:
     ]
 
 
-def load_json_schema_for_class(*, model: MetadataModel, class_name: str) -> Json:
-    """Load the JSON schema for the specified class of the metadata model."""
+def filter_json_schema_definitions(
+    *, target_definition: Json, all_definitions: dict[str, Json]
+) -> dict[str, Json]:
+    """Remove JSON schema definitions that are not used by the target_defintion."""
 
-    return json.loads(
-        JsonSchemaGenerator(
-            model, top_class=ClassDefinitionName(class_name)
-        ).serialize()
+    target_definition_str = json.dumps(target_definition)
+    return {
+        definition_name: definition_schema
+        for definition_name, definition_schema in all_definitions.items()
+        if f'"$ref": "#/$defs/{definition_name}"' in target_definition_str
+    }
+
+
+def subset_json_schema_for_class(*, global_json_schema: Json, class_name: str) -> Json:
+    """Subset a global json schema for the specified class.
+    Please note, the resulting schema might contain definitions that are not used.
+    """
+
+    definitions = global_json_schema.get("$defs")
+    if not definitions:
+        raise RuntimeError(  # This should never happen
+            "Schema does not contain definitions."
+        )
+
+    target_definition = definitions.get(class_name)
+    if not target_definition:
+        raise RuntimeError(  # This should never happen
+            f"Schema does not contain definition for class {class_name}."
+        )
+
+    filtered_definitions = filter_json_schema_definitions(
+        target_definition=target_definition, all_definitions=definitions
     )
+
+    return {
+        "$schema": global_json_schema["$schema"],
+        **target_definition,
+        "$defs": filtered_definitions,
+    }
 
 
 def load_description_for_class(
@@ -113,6 +144,8 @@ def load_resource_classes(*, model: MetadataModel) -> dict[str, ArtifactResource
 
     resource_class_names = get_resource_class_names(model=model)
 
+    global_json_schema = json.loads(JsonSchemaGenerator(model).serialize())
+
     return {
         resource_class_name: ArtifactResourceClass(
             name=resource_class_name,
@@ -123,8 +156,8 @@ def load_resource_classes(*, model: MetadataModel) -> dict[str, ArtifactResource
                 class_name=resource_class_name,
                 anchor_points_by_target=anchor_points_by_target,
             ),
-            json_schema=load_json_schema_for_class(
-                model=model, class_name=resource_class_name
+            json_schema=subset_json_schema_for_class(
+                global_json_schema=global_json_schema, class_name=resource_class_name
             ),
         )
         for resource_class_name in resource_class_names

@@ -14,10 +14,12 @@
 # limitations under the License.
 #
 
-"""A collection of custom types."""
-
-from typing import Any
+"""Data models."""
 
 from typing_extensions import TypeAlias
 
-Json: TypeAlias = dict[str, Any]
+from metldata.custom_types import Json
+
+# A dictionary of an artifact. The keys on the first correspond to artifact names.
+# The values are lists of resources for different submissions.
+ArtifactResourceDict: TypeAlias = dict[str, list[Json]]

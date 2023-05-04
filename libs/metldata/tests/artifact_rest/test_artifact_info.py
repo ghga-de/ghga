@@ -16,8 +16,94 @@
 
 """Test the artifact_info module."""
 
-from metldata.artifacts_rest.artifact_info import load_artifact_info
+from metldata.artifacts_rest.artifact_info import (
+    load_artifact_info,
+    subset_json_schema_for_class,
+)
 from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
+
+
+def test_subset_json_schema_for_class():
+    """Test happy path of using subset_json_schema_for_class."""
+
+    # a global schema that uses File and Dataset definitions on the top level:
+    global_json_schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "datasets": {
+                "items": {
+                    "additionalProperties": {"$ref": "#/$defs/Dataset"},
+                    "type": "object",
+                },
+                "type": "array",
+            },
+            "files": {
+                "items": {
+                    "additionalProperties": {"$ref": "#/$defs/File"},
+                    "type": "object",
+                },
+                "type": "array",
+            },
+        },
+        "required": ["files", "datasets"],
+        "type": "object",
+        "$defs": {
+            "Dataset": {
+                "properties": {
+                    "files": {
+                        "items": {
+                            "additionalProperties": {"$ref": "#/$defs/File"},
+                            "type": "object",
+                        },
+                        "type": "array",
+                    }
+                },
+                "required": ["files"],
+                "type": "object",
+            },
+            "File": {
+                "properties": {
+                    "checksum": {"type": "string"},
+                    "size": {"type": "integer"},
+                },
+                "required": ["size", "checksum"],
+                "type": "object",
+            },
+        },
+    }
+
+    # generate a subset schema for the Dataset class:
+    observed_subschema = subset_json_schema_for_class(
+        global_json_schema=global_json_schema, class_name="Dataset"
+    )
+
+    # the subset schema should only contain the File defintion as it is used by the
+    # Dataset class:
+    expected_subschema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "files": {
+                "items": {
+                    "additionalProperties": {"$ref": "#/$defs/File"},
+                    "type": "object",
+                },
+                "type": "array",
+            }
+        },
+        "required": ["files"],
+        "type": "object",
+        "$defs": {
+            "File": {
+                "properties": {
+                    "checksum": {"type": "string"},
+                    "size": {"type": "integer"},
+                },
+                "required": ["size", "checksum"],
+                "type": "object",
+            },
+        },
+    }
+    assert observed_subschema == expected_subschema
 
 
 def test_load_artifact_info():
