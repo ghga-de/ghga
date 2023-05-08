@@ -81,11 +81,11 @@ The work order tokens are signed by the Work Package Service. A separate key pai
 To allow the Work Package Service to check whether a given user has *download* access to a given dataset, the claims repository provides the following *internal* endpoint:
 
 - `GET /download-access/users/{user_id}/datasets`
-  - authorization: only internal from download controller (via Istio)
+  - authorization: only internal from download controller (via service mesh)
   - returns a list of all dataset IDs that can be downloaded by the user
 
 - `GET /download-access/users/{user_id}/datasets/{dataset_id}`
-  - authorization: only internal from download controller (via Istio)
+  - authorization: only internal from download controller (via service mesh)
   - returns `true` or `false` as a scalar resource
 
 *Possible extension (not in this epic)*: Instead of true/false, the latter endpoint could return null or the date when the access expires (null could be confused with unlimited access though). This could be used by the Work Package Service to limit the expiration date of the tokens, even though the Work Package Service re-checks access on every operation anyway.
@@ -98,7 +98,7 @@ Note that this is a shortcut as long as we don't have a visa issuer service. Lat
 
 #### Access checks by the Frontend
 
-In order to provide the user with a list of downloadable datasets, the Work Package Service combines the information from the access checks explained above with information about the dataset as explained below and makes it avaliable to the frontend via the following endpoint:
+In order to provide the user with a list of downloadable datasets, the Work Package Service combines the information from the access checks explained above with information about the dataset as explained below and makes it available to the frontend via the following endpoint:
 
 - `GET /users/{user_id}/datasets`
   - auth header: internal access token with the user context
@@ -106,7 +106,7 @@ In order to provide the user with a list of downloadable datasets, the Work Pack
 
 Note: The `users/` part has been included in the endpoint to make it more RESTful, even though the user is already known from the user context. The endpoint must validate that the `user_id` matches the auth context. It is assumed that this endpoint is used with a special prefix for the work package service so that this does not collide e.g. with the `/users` endpoint of the user registry.
 
-*Possible extension (not in this epic)*: The dataset objects returned here could be supplemented with information on when user access expires, obtained via the acess checks explained above, if these are extended as well. This information could then be also shown to the user on the profile page or the work package creation page.
+*Possible extension (not in this epic)*: The dataset objects returned here could be supplemented with information on when user access expires, obtained via the access checks explained above, if these are extended as well. This information could then be also shown to the user on the profile page or the work package creation page.
 
 #### Access checks by the Download/Upload Controllers
 
@@ -154,9 +154,10 @@ To populate this collection, the Work Package Service listens to [events](https:
 ### Frontend
 
 As part of this epic, a simple form for creating work packages should be added to the data portal as frontend. The form should allow to:
+
 - Select a dataset from the list of accessible datasets
 - Show the description of the dataset
-- Enter a list of file IDs to restrict the scope of the work pacakge (if the list is empty, all files will be included)
+- Enter a list of file IDs to restrict the scope of the work package (if the list is empty, all files will be included)
 - Create a work package and access token after clicking a submit button
 - Show the access token together with the work package ID in the format that can be pasted to the CLI (GHGA connector)
 - Add a button to copy this to the clipboard
