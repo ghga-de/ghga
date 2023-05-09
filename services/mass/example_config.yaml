@@ -4,11 +4,19 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+db_connection_str: '**********'
+db_name: metadata-store
 docs_url: /docs
 host: 127.0.0.1
-language: Greek
 log_level: info
 openapi_url: /openapi.json
 port: 8080
-service_name: my_microservice
+searchable_classes:
+  Dataset:
+    description: Dataset grouping files under controlled access.
+    facetable_properties:
+    - type
+    - study.type
+    - study.project.alias
+service_name: mass
 workers: 1

@@ -15,6 +15,30 @@
 
 """Utils for Fixture handling"""
 
+import json
 from pathlib import Path
 
+from pydantic import BaseModel
+
+from mass.core.models import Resource
+
 BASE_DIR = Path(__file__).parent.resolve()
+
+
+def dto_to_document(dto: BaseModel):
+    """Convert a BaseModel to a mongodb-compatible document"""
+    document = json.loads(dto.json())
+    document["_id"] = document.pop("id_")
+    return document
+
+
+def get_resources_from_file(filename: str):
+    """Utility function to load resources from a file"""
+    with open(filename, "r", encoding="utf-8") as file:
+        json_object = json.loads(file.read())
+        resources = []
+        for item in json_object["items"]:
+            id_ = item.pop("id")
+            resource = Resource(id_=id_, content=item)
+            resources.append(dto_to_document(resource))
+        return resources

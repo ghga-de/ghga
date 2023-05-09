@@ -3,12 +3,43 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "searchable_classes": {
+      "title": "Searchable Classes",
+      "description": "A collection of searchable_classes with facetable properties",
+      "env_names": [
+        "mass_searchable_classes"
+      ],
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/SearchableClass"
+      }
+    },
+    "db_connection_str": {
+      "title": "Db Connection Str",
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "example": "mongodb://localhost:27017",
+      "env_names": [
+        "mass_db_connection_str"
+      ],
+      "type": "string",
+      "writeOnly": true,
+      "format": "password"
+    },
+    "db_name": {
+      "title": "Db Name",
+      "description": "Name of the database located on the MongoDB server.",
+      "example": "my-database",
+      "env_names": [
+        "mass_db_name"
+      ],
+      "type": "string"
+    },
     "host": {
       "title": "Host",
       "description": "IP of the host.",
       "default": "127.0.0.1",
       "env_names": [
-        "my_microservice_host"
+        "mass_host"
       ],
       "type": "string"
     },
@@ -17,7 +48,7 @@
       "description": "Port to expose the server on the specified host",
       "default": 8080,
       "env_names": [
-        "my_microservice_port"
+        "mass_port"
       ],
       "type": "integer"
     },
@@ -26,7 +57,7 @@
       "description": "Controls the verbosity of the log.",
       "default": "info",
       "env_names": [
-        "my_microservice_log_level"
+        "mass_log_level"
       ],
       "enum": [
         "critical",
@@ -43,7 +74,7 @@
       "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
       "default": false,
       "env_names": [
-        "my_microservice_auto_reload"
+        "mass_auto_reload"
       ],
       "type": "boolean"
     },
@@ -52,7 +83,7 @@
       "description": "Number of workers processes to run.",
       "default": 1,
       "env_names": [
-        "my_microservice_workers"
+        "mass_workers"
       ],
       "type": "integer"
     },
@@ -61,7 +92,7 @@
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "default": "/",
       "env_names": [
-        "my_microservice_api_root_path"
+        "mass_api_root_path"
       ],
       "type": "string"
     },
@@ -70,7 +101,7 @@
       "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
       "default": "/openapi.json",
       "env_names": [
-        "my_microservice_openapi_url"
+        "mass_openapi_url"
       ],
       "type": "string"
     },
@@ -79,7 +110,7 @@
       "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
       "default": "/docs",
       "env_names": [
-        "my_microservice_docs_url"
+        "mass_docs_url"
       ],
       "type": "string"
     },
@@ -91,7 +122,7 @@
         "https://www.example.org"
       ],
       "env_names": [
-        "my_microservice_cors_allowed_origins"
+        "mass_cors_allowed_origins"
       ],
       "type": "array",
       "items": {
@@ -106,7 +137,7 @@
         "https://www.example.org"
       ],
       "env_names": [
-        "my_microservice_cors_allow_credentials"
+        "mass_cors_allow_credentials"
       ],
       "type": "boolean"
     },
@@ -117,7 +148,7 @@
         "*"
       ],
       "env_names": [
-        "my_microservice_cors_allowed_methods"
+        "mass_cors_allowed_methods"
       ],
       "type": "array",
       "items": {
@@ -129,7 +160,7 @@
       "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
       "example": [],
       "env_names": [
-        "my_microservice_cors_allowed_headers"
+        "mass_cors_allowed_headers"
       ],
       "type": "array",
       "items": {
@@ -138,26 +169,43 @@
     },
     "service_name": {
       "title": "Service Name",
-      "default": "my_microservice",
+      "default": "mass",
       "env_names": [
-        "my_microservice_service_name"
-      ],
-      "type": "string"
-    },
-    "language": {
-      "title": "Language",
-      "default": "Croatian",
-      "env_names": [
-        "my_microservice_language"
-      ],
-      "enum": [
-        "Greek",
-        "Croatian",
-        "French",
-        "German"
+        "mass_service_name"
       ],
       "type": "string"
     }
   },
-  "additionalProperties": false
+  "required": [
+    "searchable_classes",
+    "db_connection_str",
+    "db_name"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "SearchableClass": {
+      "title": "SearchableClass",
+      "description": "Represents a searchable artifact or resource type",
+      "type": "object",
+      "properties": {
+        "description": {
+          "title": "Description",
+          "description": "A brief description of the resource type",
+          "type": "string"
+        },
+        "facetable_properties": {
+          "title": "Facetable Properties",
+          "description": "A list of of the facetable properties for the resource type",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "description",
+        "facetable_properties"
+      ]
+    }
+  }
 }

@@ -17,17 +17,22 @@
 
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
+from hexkit.providers.mongodb.provider import MongoDbConfig
+from pydantic import BaseSettings, Field
 
-from .models import SupportedLanguages
+from mass.core.models import SearchableClass
 
 
-# Please adapt config prefix and remove unnecessary config bases:
-@config_from_yaml(prefix="my_microservice")
-class Config(ApiConfigBase):
+class SearchableClassesConfig(BaseSettings):
+    """Provides configuration validation for the searchable_classes"""
+
+    searchable_classes: dict[str, SearchableClass] = Field(
+        ..., description="A collection of searchable_classes with facetable properties"
+    )
+
+
+@config_from_yaml(prefix="mass")
+class Config(ApiConfigBase, MongoDbConfig, SearchableClassesConfig):
     """Config parameters and their defaults."""
 
-    service_name: str = "my_microservice"  # Please adapt
-    language: SupportedLanguages = "Croatian"
-
-
-CONFIG = Config()
+    service_name: str = "mass"
