@@ -18,7 +18,7 @@
 
 from typing import Callable, Coroutine, Optional
 
-from fastapi import Depends, HTTPException, Security
+from fastapi import Depends, HTTPException, Response, Security
 from fastapi.routing import APIRouter
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ghga_service_commons.auth.context import AuthContextProtocol
@@ -117,5 +117,7 @@ async def rest_api_factory(
             artifact_info_dict=artifact_info_dict,
             dao_collection=dao_collection,
         )
+
+        return Response(status_code=204)
 
     return router

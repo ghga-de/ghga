@@ -24,7 +24,7 @@ from pydantic import BaseSettings, Field
 from metldata.accession_registry.accession_store import AccessionStore
 
 
-class AccessionHandlerConfig(BaseSettings):
+class AccessionRegistryConfig(BaseSettings):
     """Config parameters and their defaults."""
 
     prefix_mapping: dict[str, str] = Field(
@@ -41,8 +41,8 @@ class AccessionHandlerConfig(BaseSettings):
     suffix_length: int = Field(8, description="Length of the numeric ID suffix.")
 
 
-class AccessionHandler:
-    """Main class handling the accession handler."""
+class AccessionRegistry:
+    """Main class handling the accession registry."""
 
     class UnkownResourceTypeError(RuntimeError):
         """Raised when a resource type is specified that is unkown."""
@@ -61,7 +61,7 @@ class AccessionHandler:
         """Raised when a the generation of a new accession failed."""
 
     def __init__(
-        self, *, config: AccessionHandlerConfig, accession_store: AccessionStore
+        self, *, config: AccessionRegistryConfig, accession_store: AccessionStore
     ):
         """Initialize with config."""
 

@@ -35,6 +35,10 @@ class AnchorPointNotFoundError(RuntimeError):
     """Raised when no anchor point was found for a specific class."""
 
 
+class ClassNotAnchoredError(RuntimeError):
+    """Raised when a class is not anchored."""
+
+
 class AnchorPoint(BaseModel):
     """A model for describing an anchor point for the specified target class."""
 
@@ -195,3 +199,30 @@ def lookup_anchor_point(
         )
 
     return anchor_point
+
+
+def get_classes_by_anchor_point(*, model: MetadataModel) -> dict[str, str]:
+    """Get a mapping from the root slot where a class is anchored to the corresponding
+    class."""
+
+    anchor_points = get_anchor_points(model=model)
+
+    return {
+        anchor_point.root_slot: anchor_point.target_class
+        for anchor_point in anchor_points
+    }
+
+
+def lookup_class_by_anchor_point(
+    *, root_slot: str, classes_by_anchor_point: dict[str, str]
+) -> str:
+    """Lookup the class for the given anchor point."""
+
+    class_name = classes_by_anchor_point.get(root_slot)
+
+    if class_name is None:
+        raise ClassNotAnchoredError(
+            f"Cannot find class for anchor point with root slot '{root_slot}'."
+        )
+
+    return class_name

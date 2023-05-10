@@ -15,36 +15,74 @@
 
 """Testing the event publisher."""
 
+import json
+
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from metldata.config import Config
+from metldata.event_handling import FileSystemEventPublisher
 from metldata.submission_registry import models
-from metldata.submission_registry.event_publisher import EventPublisher
-from tests.fixtures.config import config_fixture  # noqa:402
-from tests.fixtures.utils import check_source_event
+from metldata.submission_registry.event_publisher import SourceEventPublisher
+from tests.fixtures.config import config_fixture  # noqa: F401
+from tests.fixtures.event_handling import file_system_event_fixture  # noqa: F401
+from tests.fixtures.event_handling import Event, FileSystemEventFixture
 
 
-def test_happy(config_fixture: Config):  # noqa: F811
+def check_source_events(
+    *,
+    expected_submissions: list[models.Submission],
+    source_event_topic: str,
+    source_event_type: str,
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
+    """Check the content of a source event.
+
+    Raises:
+        AssertionError: if it does not match the expectations.
+        EventNotPublishedError: if the event was not yet published.
+    """
+
+    expected_events = [
+        Event(
+            topic=source_event_topic,
+            type_=source_event_type,
+            key=expected_submission.id,
+            payload=json.loads(expected_submission.json()),
+        )
+        for expected_submission in expected_submissions
+    ]
+
+    file_system_event_fixture.expect_events(expected_events=expected_events)
+
+
+def test_happy(
+    config_fixture: Config,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
     """Test the happy path of publishing a submission."""
 
-    event_publisher = EventPublisher(config=config_fixture)
+    provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
+    event_publisher = SourceEventPublisher(config=config_fixture, provider=provider)
 
     # publish a submission:
     submission = models.Submission(
         id="submission001",
         title="test",
         description="test",
-        content={"test": "test"},
-        status_history=[
+        content={"test_class": {"test_id1": "test"}},
+        accession_map={"test_class": {"test_id1": "test_accession1"}},
+        status_history=(
             models.StatusChange(
                 timestamp=now_as_utc(), new_status=models.SubmissionStatus.PENDING
-            )
-        ],
+            ),
+        ),
     )
     event_publisher.publish_submission(submission)
 
     # check published source event:
-    check_source_event(
-        expected_content=submission,
-        source_events_dir=config_fixture.source_events_dir,
+    check_source_events(
+        expected_submissions=[submission],
+        source_event_topic=config_fixture.source_event_topic,
+        source_event_type=config_fixture.source_event_type,
+        file_system_event_fixture=file_system_event_fixture,
     )

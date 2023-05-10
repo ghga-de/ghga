@@ -21,7 +21,7 @@ from operator import attrgetter
 from typing import Any, Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator, validator
 
 
 class SubmissionStatus(Enum):
@@ -53,23 +53,40 @@ class SubmissionHeader(BaseModel):
     description: Optional[str] = Field(None, description="An optional description.")
 
 
-class SubmissionCreation(SubmissionHeader):
-    """Essential data for creating a submission."""
-
-    content: Optional[dict[str, Any]] = Field(
-        None, description="The metadata content of the submission. "
-    )
-
-
-class Submission(SubmissionCreation):
+class Submission(SubmissionHeader):
     """A model for describing a submission."""
 
     id: str
 
-    status_history: list[StatusChange] = Field(
-        default_factory=lambda: [
-            StatusChange(timestamp=now_as_utc(), new_status=SubmissionStatus.PENDING)
-        ],
+    content: Optional[dict[str, dict[str, Any]]] = Field(
+        None,
+        description=(
+            "The metadata content of the submission. Keys on the top level correspond to"
+            + " names of anchored metadata classes. Keys and values on the second level"
+            + " correspond to the user-defined aliases and contents of class instance. Please note,"
+            + " that the user-defined alias might only be unique within the scope of"
+            + " the coressponding class and this submission."
+        ),
+    )
+
+    accession_map: dict[str, dict[str, str]] = Field(
+        default_factory=dict,
+        description=(
+            "A map of user-specified id to system-generated accession for metadata"
+            + " resources. Keys on the top level correspond to names of metadata classes."
+            + " Keys on the second level correspond to user-specified aliases."
+            + " Values on the second level correspond to system-generated accessions."
+            + " Please note, that the user-defined alias might only be unique within"
+            + " the scope of the coressponding class and this submission. By contrast,"
+            + " the system-generated accession is unique across all classes and"
+            + " submissions."
+        ),
+    )
+
+    status_history: tuple[StatusChange, ...] = Field(
+        default_factory=lambda: (
+            StatusChange(timestamp=now_as_utc(), new_status=SubmissionStatus.PENDING),
+        ),
         description="A history of status changes.",
     )
 
@@ -83,3 +100,49 @@ class Submission(SubmissionCreation):
         sorted_history = sorted(self.status_history, key=attrgetter("timestamp"))
 
         return sorted_history[-1].new_status
+
+    # pylint: disable=no-self-argument
+    @validator("accession_map")
+    def check_accession_uniqueness(
+        cls, value: dict[str, dict[str, str]]
+    ) -> dict[str, dict[str, str]]:
+        """Check that no accessions are re-used accross classes."""
+
+        total_resources = 0
+        all_accessions: set[str] = set()
+
+        for resources in value.values():
+            total_resources += len(resources)
+            all_accessions.update(resources.values())
+
+        if len(all_accessions) != total_resources:
+            raise ValueError("Accessions are not unique.")
+
+        return value
+
+    # pylint: disable=no-self-argument
+    @root_validator(skip_on_failure=True)
+    def check_accession_map_sync(cls, values):
+        """Check that for all anchored resources specified in the content an entry
+        exists in the access_map."""
+
+        if not values["content"]:
+            if values["accession_map"]:
+                raise ValueError(
+                    "The accession_map is not empty, but the content is empty."
+                )
+            return values
+
+        if values["content"].keys() != values["accession_map"].keys():
+            raise ValueError(
+                "The classes mentioned in the content and accession_map do not match."
+            )
+
+        for anchor, resources in values["content"].items():
+            if values["accession_map"][anchor].keys() != resources.keys():
+                raise ValueError(
+                    f"The resources mentioned for the class at anchor point '{anchor}'"
+                    + " in the content and accession_map do not match."
+                )
+
+        return values

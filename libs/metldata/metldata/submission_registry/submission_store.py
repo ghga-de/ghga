@@ -18,12 +18,10 @@
 
 import json
 from pathlib import Path
-from uuid import uuid4
 
 from pydantic import BaseSettings, Field
 
 from metldata.submission_registry import models
-from metldata.submission_registry.utils import save_submission_as_json
 
 
 class SubmissionStoreConfig(BaseSettings):
@@ -46,6 +44,15 @@ class SubmissionStore:
             )
             super().__init__(message)
 
+    class SubmissionAlreadyExistError(RuntimeError):
+        """Raised when a Submission already exists."""
+
+        def __init__(self, *, submission_id: str):
+            message = (
+                "The submission with the following ID already exists: " + submission_id
+            )
+            super().__init__(message)
+
     def __init__(self, *, config: SubmissionStoreConfig):
         """Initialize with config parameters."""
 
@@ -57,17 +64,12 @@ class SubmissionStore:
 
         return self._config.submission_store_dir / f"{submission_id}.json"
 
-    @staticmethod
-    def _generate_new_submission_id():
-        """Generate a new submission ID."""
-
-        return str(uuid4())
-
     def _save(self, *, submission: models.Submission) -> None:
         """Save a submission to a JSON file."""
 
         json_path = self._get_submission_json_path(submission_id=submission.id)
-        save_submission_as_json(submission=submission, json_path=json_path)
+        with open(json_path, "w", encoding="utf-8") as file:
+            file.write(submission.json(indent=4))
 
     def exists(self, *, submission_id: str) -> bool:
         """Check whether a submission with the specified ID exists."""
@@ -85,6 +87,16 @@ class SubmissionStore:
         if not self.exists(submission_id=submission_id):
             raise self.SubmissionDoesNotExistError(submission_id=submission_id)
 
+    def _assert_not_exists(self, *, submission_id: str):
+        """Assert that a submission with the specified ID does not exist.
+
+        Raises:
+            SubmissionAlreadyExistError: Raised when the submission already exist.
+        """
+
+        if self.exists(submission_id=submission_id):
+            raise self.SubmissionAlreadyExistError(submission_id=submission_id)
+
     def get_by_id(self, submission_id: str) -> models.Submission:
         """Get an existing submission by its ID.
         Raises:
@@ -101,15 +113,15 @@ class SubmissionStore:
 
         return models.Submission(**submission_dict)
 
-    def insert_new(self, *, submission: models.SubmissionCreation) -> models.Submission:
-        """Save a new submission. Return submission including its assigned ID."""
+    def insert_new(self, *, submission: models.Submission) -> None:
+        """Save a new submission.
 
-        submission_id = self._generate_new_submission_id()
-        submission_with_id = models.Submission(id=submission_id, **submission.dict())
+        Raises:
+            SubmissionAlreadyExistError: when the submission already exists.
+        """
 
-        self._save(submission=submission_with_id)
-
-        return submission_with_id
+        self._assert_not_exists(submission_id=submission.id)
+        self._save(submission=submission)
 
     def update_existing(self, *, submission: models.Submission) -> None:
         """Update an existing submission.

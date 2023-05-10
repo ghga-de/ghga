@@ -23,10 +23,10 @@ from metldata.config import Config
 from tests.fixtures.metadata_models import VALID_MINIMAL_MODEL_EXAMPLE_PATH
 
 PREFIX_MAPPING = {
-    "file": "GHGAF",
-    "experiment": "GHGAE",
-    "sample": "GHGAS",
-    "dataset": "GHGAD",
+    "File": "GHGAF",
+    "Experiment": "GHGAE",
+    "Sample": "GHGAS",
+    "Dataset": "GHGAD",
 }
 
 
@@ -35,12 +35,10 @@ def config_fixture() -> Generator[Config, None, None]:
     """Generate a test config."""
 
     with TemporaryDirectory() as submission_store_dir:
-        with TemporaryDirectory() as source_events_dir:
-            with NamedTemporaryFile() as accession_store_path:
-                yield Config(
-                    metadata_model_path=VALID_MINIMAL_MODEL_EXAMPLE_PATH,
-                    submission_store_dir=submission_store_dir,
-                    source_events_dir=source_events_dir,
-                    accession_store_path=accession_store_path.name,
-                    prefix_mapping=PREFIX_MAPPING,
-                )
+        with NamedTemporaryFile() as accession_store_path:
+            yield Config(
+                metadata_model_path=VALID_MINIMAL_MODEL_EXAMPLE_PATH,
+                submission_store_dir=submission_store_dir,
+                accession_store_path=accession_store_path.name,
+                prefix_mapping=PREFIX_MAPPING,
+            )

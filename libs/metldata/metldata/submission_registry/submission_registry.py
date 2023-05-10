@@ -20,10 +20,16 @@ from typing import Any
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
+from metldata.accession_registry.accession_registry import AccessionRegistry
+from metldata.model_utils.anchors import get_classes_by_anchor_point
 from metldata.model_utils.config import MetadataModelConfig
 from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.submission_registry import models
-from metldata.submission_registry.event_publisher import EventPublisher
+from metldata.submission_registry.event_publisher import SourceEventPublisher
+from metldata.submission_registry.identifiers import (
+    generate_accession_map,
+    generate_submission_id,
+)
 from metldata.submission_registry.submission_store import SubmissionStore
 
 
@@ -65,13 +71,18 @@ class SubmissionRegistry:
         *,
         config: SubmissionRegistryConfig,
         submission_store: SubmissionStore,
-        event_publisher: EventPublisher,
+        event_publisher: SourceEventPublisher,
+        accession_registry: AccessionRegistry,
     ):
         """Initialize with dependencies and config parameters."""
 
         self._submission_store = submission_store
         self._metadata_validator = MetadataValidator(model=config.metadata_model)
         self._event_publisher = event_publisher
+        self._accession_registry = accession_registry
+        self._classes_by_anchor_point = get_classes_by_anchor_point(
+            model=config.metadata_model
+        )
 
     def _get_submission_with_status(
         self, *, id_: str, expected_status: models.SubmissionStatus
@@ -99,12 +110,14 @@ class SubmissionRegistry:
 
     def init_submission(self, *, header: models.SubmissionHeader) -> str:
         """Initialize a new submission by providing header information. Returns the
-        ID of the created submission."""
+        ID of the created submission. No source event is published, yet, since the
+        submission content is still empty."""
 
-        submission_creation = models.SubmissionCreation(**header.dict())
-        submission = self._submission_store.insert_new(submission=submission_creation)
+        id_ = generate_submission_id()
+        submission_creation = models.Submission(id=id_, **header.dict())
+        self._submission_store.insert_new(submission=submission_creation)
 
-        return submission.id
+        return id_
 
     def get_submission(self, *, id_: str) -> models.Submission:
         """Get details on the existing submission with the specified id.
@@ -133,17 +146,25 @@ class SubmissionRegistry:
         """
 
         submission = self._get_submission_with_status(
-            id_=submission_id, expected_status=models.SubmissionStatus.PENDING
+            id_=submission_id,
+            expected_status=models.SubmissionStatus.PENDING,
         )
 
         # raises ValidationError if not valid:
         self._metadata_validator.validate(content)
 
-        # update the submission object in the store:
-        updated_submission = submission.copy(update={"content": content})
+        updated_accession_map = generate_accession_map(
+            content=content,
+            existing_accession_map=submission.accession_map,
+            accession_registry=self._accession_registry,
+            classes_by_anchor_point=self._classes_by_anchor_point,
+        )
+
+        updated_submission = submission.copy(
+            update={"content": content, "accession_map": updated_accession_map}
+        )
         self._submission_store.update_existing(submission=updated_submission)
 
-        # publish updated submission as source event:
         self._event_publisher.publish_submission(updated_submission)
 
     def complete_submission(self, *, id_: str) -> None:
@@ -167,13 +188,12 @@ class SubmissionRegistry:
         if submission.content is None:
             raise self.ContentEmptyError(submission_id=id_)
 
-        updated_submission = submission.copy()
-        updated_submission.status_history.append(
-            models.StatusChange(
-                timestamp=now_as_utc(), new_status=models.SubmissionStatus.COMPLETED
-            )
+        status_change = models.StatusChange(
+            timestamp=now_as_utc(), new_status=models.SubmissionStatus.COMPLETED
+        )
+        updated_submission = submission.copy(
+            update={"status_history": submission.status_history + (status_change,)}
         )
         self._submission_store.update_existing(submission=updated_submission)
 
-        # publish updated submission as source event:
         self._event_publisher.publish_submission(updated_submission)

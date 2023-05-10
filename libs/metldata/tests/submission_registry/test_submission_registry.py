@@ -16,32 +16,45 @@
 
 """Test the submission registry."""
 
-
 import pytest
 
+from metldata.accession_registry.accession_registry import AccessionRegistry
+from metldata.accession_registry.accession_store import AccessionStore
 from metldata.config import Config
+from metldata.event_handling import FileSystemEventPublisher
 from metldata.submission_registry import models
-from metldata.submission_registry.event_publisher import EventPublisher
+from metldata.submission_registry.event_publisher import SourceEventPublisher
 from metldata.submission_registry.submission_registry import SubmissionRegistry
 from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.config import config_fixture  # noqa: F401
+from tests.fixtures.event_handling import file_system_event_fixture  # noqa: F401
+from tests.fixtures.event_handling import FileSystemEventFixture
 from tests.fixtures.metadata import (
     INVALID_MINIMAL_METADATA_EXAMPLES,
     VALID_MINIMAL_METADATA_EXAMPLES,
 )
-from tests.fixtures.utils import check_source_event, does_event_exist
+from tests.submission_registry.test_event_publisher import check_source_events
 
 
-def test_happy(config_fixture: Config):  # noqa: F811
+def test_happy(
+    config_fixture: Config,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
     """Test the happy path of using the submission registry."""
 
     # inject dependencies:
     submission_store = SubmissionStore(config=config_fixture)
-    event_publisher = EventPublisher(config=config_fixture)
+    provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
+    event_publisher = SourceEventPublisher(config=config_fixture, provider=provider)
+    accession_store = AccessionStore(config=config_fixture)
+    accession_registry = AccessionRegistry(
+        config=config_fixture, accession_store=accession_store
+    )
     submission_registry = SubmissionRegistry(
         config=config_fixture,
         submission_store=submission_store,
         event_publisher=event_publisher,
+        accession_registry=accession_registry,
     )
 
     # create a new submission:
@@ -54,12 +67,6 @@ def test_happy(config_fixture: Config):  # noqa: F811
     assert observed_submission.description == submission_header.description
     assert observed_submission.content is None
     assert observed_submission.current_status == models.SubmissionStatus.PENDING
-
-    # check that source event is not yet present:
-    assert not does_event_exist(
-        submission_id=observed_submission.id,
-        source_events_dir=config_fixture.source_events_dir,
-    )
 
     # provide content:
     submission_content = VALID_MINIMAL_METADATA_EXAMPLES[0]
@@ -83,10 +90,17 @@ def test_happy(config_fixture: Config):  # noqa: F811
     assert observed_submission.content == submission_content_updated
     assert observed_submission.current_status == models.SubmissionStatus.PENDING
 
+    # check accessions are in store:
+    for class_ in observed_submission.accession_map.values():
+        for accession in class_.values():
+            assert accession_store.exists(accession=accession)
+
     # check published source event:
-    check_source_event(
-        expected_content=observed_submission,
-        source_events_dir=config_fixture.source_events_dir,
+    check_source_events(
+        expected_submissions=[observed_submission],
+        source_event_topic=config_fixture.source_event_topic,
+        source_event_type=config_fixture.source_event_type,
+        file_system_event_fixture=file_system_event_fixture,
     )
 
     # declare submission is complete:
@@ -97,22 +111,33 @@ def test_happy(config_fixture: Config):  # noqa: F811
     assert observed_submission.current_status == models.SubmissionStatus.COMPLETED
 
     # check published source event:
-    check_source_event(
-        expected_content=observed_submission,
-        source_events_dir=config_fixture.source_events_dir,
+    check_source_events(
+        expected_submissions=[observed_submission],
+        source_event_topic=config_fixture.source_event_topic,
+        source_event_type=config_fixture.source_event_type,
+        file_system_event_fixture=file_system_event_fixture,
     )
 
 
-def test_failed_content_validation(config_fixture: Config):  # noqa: F811
+def test_failed_content_validation(
+    config_fixture: Config,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
     """Test that invalid content cannot be upserted."""
 
     # inject dependencies:
     submission_store = SubmissionStore(config=config_fixture)
-    event_publisher = EventPublisher(config=config_fixture)
+    provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
+    event_publisher = SourceEventPublisher(config=config_fixture, provider=provider)
+    accession_store = AccessionStore(config=config_fixture)
+    accession_registry = AccessionRegistry(
+        config=config_fixture, accession_store=accession_store
+    )
     submission_registry = SubmissionRegistry(
         config=config_fixture,
         submission_store=submission_store,
         event_publisher=event_publisher,
+        accession_registry=accession_registry,
     )
 
     # create a new submission:
@@ -134,16 +159,25 @@ def test_failed_content_validation(config_fixture: Config):  # noqa: F811
     assert observed_submission_original == observed_submission_updated
 
 
-def test_update_after_completion(config_fixture: Config):  # noqa: F811
+def test_update_after_completion(
+    config_fixture: Config,  # noqa: F811
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
     """Test no updates can be carried out after completion."""
 
     # inject dependencies:
     submission_store = SubmissionStore(config=config_fixture)
-    event_publisher = EventPublisher(config=config_fixture)
+    provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
+    event_publisher = SourceEventPublisher(config=config_fixture, provider=provider)
+    accession_store = AccessionStore(config=config_fixture)
+    accession_registry = AccessionRegistry(
+        config=config_fixture, accession_store=accession_store
+    )
     submission_registry = SubmissionRegistry(
         config=config_fixture,
         submission_store=submission_store,
         event_publisher=event_publisher,
+        accession_registry=accession_registry,
     )
 
     # create a new submission:

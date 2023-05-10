@@ -5,6 +5,7 @@ prefix_mapping:
   experiment: GHGAE
   file: GHGAF
   sample: GHGAS
-source_events_dir: /path/to/source/event/dir
+source_event_topic: source_events
+source_event_type: source_event
 submission_store_dir: /path/to/submission/store/dir
 suffix_length: 8

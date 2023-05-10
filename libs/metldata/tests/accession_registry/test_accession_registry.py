@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Testing the accession handler."""
+"""Testing the accession registry."""
 
-from metldata.accession_registry.accession_handler import AccessionHandler
+from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.config import Config
 from tests.fixtures.config import config_fixture  # noqa: F401
@@ -25,7 +25,7 @@ def test_get_accession_happy(config_fixture: Config):  # noqa: F811
     """Test the happy path of getting 10 accession for each resource type."""
 
     accession_store = AccessionStore(config=config_fixture)
-    accession_handler = AccessionHandler(
+    accession_registry = AccessionRegistry(
         config=config_fixture, accession_store=accession_store
     )
 
@@ -36,7 +36,7 @@ def test_get_accession_happy(config_fixture: Config):  # noqa: F811
             expected_prefix = config_fixture.prefix_mapping[resource_type]
             expected_length = len(expected_prefix) + config_fixture.suffix_length
 
-            accession = accession_handler.get_accession(resource_type=resource_type)
+            accession = accession_registry.get_accession(resource_type=resource_type)
 
             assert accession.startswith(expected_prefix)
             assert len(accession) == expected_length

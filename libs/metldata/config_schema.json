@@ -3,14 +3,23 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
-    "source_events_dir": {
-      "title": "Source Events Dir",
-      "description": "The directory where source events will be stored as JSON.",
+    "source_event_topic": {
+      "title": "Source Event Topic",
+      "description": "Name of the topic to which source events are published.",
+      "default": "source_events",
       "env_names": [
-        "metldata_source_events_dir"
+        "metldata_source_event_topic"
       ],
-      "type": "string",
-      "format": "path"
+      "type": "string"
+    },
+    "source_event_type": {
+      "title": "Source Event Type",
+      "description": "Name of the event type for source events.",
+      "default": "source_event",
+      "env_names": [
+        "metldata_source_event_type"
+      ],
+      "type": "string"
     },
     "metadata_model_path": {
       "title": "Metadata Model Path",
@@ -67,7 +76,6 @@
     }
   },
   "required": [
-    "source_events_dir",
     "metadata_model_path",
     "submission_store_dir",
     "accession_store_path",

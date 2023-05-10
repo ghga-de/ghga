@@ -68,7 +68,7 @@ async def test_load_artifacts_endpoint_happy(
         json=artifact_resources,
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     # check that the artifact resources were loaded based on an example:
     expected_artifact_name = "inferred_and_public"
@@ -96,7 +96,7 @@ async def test_load_artifacts_endpoint_happy(
         json={},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     # confirm that example resource was deleted:
     with pytest.raises(ResourceNotFoundError):

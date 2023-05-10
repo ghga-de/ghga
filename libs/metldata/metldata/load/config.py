@@ -21,11 +21,19 @@ from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
 from metldata.artifacts_rest.config import ArtifactsRestConfig
+from metldata.event_handling import FileSystemEventConfig
+from metldata.load.collect import ArtifactCollectorConfig
 
 
 class ArtifactLoaderAPIConfig(ArtifactsRestConfig, ApiConfigBase, MongoDbConfig):
-    """Config settings and their defaults."""
+    """Config settings for the loader API."""
 
     loader_token_hashes: list[str] = Field(
         ..., description="Hashes of tokens used to authenticate for loading artifact."
     )
+
+
+class ArtifactLoaderClientConfig(ArtifactCollectorConfig, FileSystemEventConfig):
+    """Config settings for the loader client."""
+
+    loader_api_root: str = Field(..., description="Root URL of the loader API.")

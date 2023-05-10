@@ -16,39 +16,37 @@
 
 """Logic for the publication of source events."""
 
-from pathlib import Path
+import asyncio
+import json
 
+from hexkit.protocols.eventpub import EventPublisherProtocol
 from pydantic import BaseSettings, Field
 
 from metldata.submission_registry import models
-from metldata.submission_registry.utils import save_submission_as_json
 
 
-class EventPublisherConfig(BaseSettings):
+class SourceEventPublisherConfig(BaseSettings):
     """Config parameters and their defaults."""
 
-    source_events_dir: Path = Field(
-        ..., description="The directory where source events will be stored as JSON."
+    source_event_topic: str = Field(
+        "source_events",
+        description="Name of the topic to which source events are published.",
+    )
+    source_event_type: str = Field(
+        "source_event", description="Name of the event type for source events."
     )
 
 
-def get_source_event_path(*, submission_id: str, source_events_dir: Path) -> Path:
-    """Get the path for a source event."""
-
-    return source_events_dir / f"{submission_id}.json"
-
-
-class EventPublisher:
+class SourceEventPublisher:
     """Handles publication of source events."""
 
     def __init__(
-        self,
-        *,
-        config: EventPublisherConfig,
+        self, *, config: SourceEventPublisherConfig, provider: EventPublisherProtocol
     ):
         """Initialize with config parameters."""
 
         self._config = config
+        self._provider = provider
 
     def publish_submission(self, submission: models.Submission):
         """Publish the current submission as source event"""
@@ -56,8 +54,12 @@ class EventPublisher:
         if submission.content is None:
             raise ValueError("Submission content must be defined.")
 
-        json_path = get_source_event_path(
-            submission_id=submission.id,
-            source_events_dir=self._config.source_events_dir,
+        payload = json.loads(submission.json())
+        asyncio.run(
+            self._provider.publish(
+                topic=self._config.source_event_topic,
+                type_=self._config.source_event_type,
+                key=submission.id,
+                payload=payload,
+            )
         )
-        save_submission_as_json(submission=submission, json_path=json_path)
