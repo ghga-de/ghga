@@ -77,10 +77,10 @@ def test_multipart_download(
     tmp_path: pathlib.Path,
     monkeypatch,
 ):
+    """Test the multipart download of a file"""
     # The download function will ask the user for input.
     monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
 
-    """Test the multipart download of a file"""
     big_object = get_big_s3_object(s3_fixture, object_size=file_size)
 
     # right now the desired file size is only

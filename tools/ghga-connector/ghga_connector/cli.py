@@ -16,6 +16,7 @@
 
 """ CLI-specific wrappers around core functions."""
 
+import os
 from pathlib import Path
 
 import crypt4gh.keys
@@ -91,7 +92,7 @@ def upload(  # noqa C901
 def download(  # pylint: disable=too-many-arguments
     *,
     output_dir: Path = typer.Option(
-        ..., help="The directory to put the downloaded files into"
+        ..., help="The directory to put the downloaded files into."
     ),
     submitter_pubkey_path: Path = typer.Argument(
         "./key.pub",
@@ -165,3 +166,86 @@ def download(  # pylint: disable=too-many-arguments
                 submitter_public_key=submitter_public_key,
             )
         file_stager.update_staged_files()
+
+
+@cli.command()
+def decrypt(  # noqa: C901
+    *,
+    input_dir: Path = typer.Option(
+        ...,
+        help="Path to the directory containing files that should be decrypted using a "
+        + "common decryption key.",
+    ),
+    output_dir: Path = typer.Option(
+        None,
+        help="Optional path to a directory the decrypted file should be written to. "
+        + "Defaults to current working directory.",
+    ),
+    decryption_private_key_path: Path = typer.Option(
+        ...,
+        help="Path to the private key that should be used to decrypt the file.",
+    ),
+):
+    """Command to decrypt a downloaded file"""
+
+    message_display = CLIMessageDisplay()
+
+    if not input_dir.is_dir():
+        message_display.failure(
+            f"Input directory {input_dir} does not exist or is not a directory."
+        )
+
+    if not output_dir:
+        output_dir = Path(os.getcwd())
+
+    if output_dir.exists() and not output_dir.is_dir():
+        message_display.failure(
+            f"Output directory location {input_dir} exists, but is not a directory."
+        )
+
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True)
+
+    errors = {}
+    skipped_files = []
+    for input_file in input_dir.iterdir():
+        if not input_file.is_file() or not input_file.suffix == ".c4gh":
+            skipped_files.append((str(input_file)))
+            continue
+
+        # strip the .c4gh extension for the output file
+        output_file = output_dir / input_file.with_suffix("")
+
+        if output_file.exists():
+            errors[
+                str(input_file)
+            ] = f"File already exists at {output_file}, will not overwrite."
+            continue
+
+        try:
+            core.decrypt_file(
+                input_file=input_file,
+                output_file=output_file,
+                decryption_private_key_path=decryption_private_key_path,
+            )
+        except ValueError as error:
+            errors[
+                str(input_file)
+            ] = f"Could not decrypt the provided file with the given key.\nError: {str(error)}"
+            continue
+
+        message_display.success(
+            f"Successfully decrypted file {input_file} to location {output_dir}."
+        )
+
+    if skipped_files:
+        message_display.display(
+            "The following files were skipped as they are not .c4gh files"
+        )
+        for file in skipped_files:
+            message_display.display(f"- {file}")
+
+    if errors:
+        message_display.failure("The following files could not be decrypted:")
+        for input_path, cause in errors.items():
+            message_display.failure(f"- {input_path}:\n\t{cause}")

@@ -49,7 +49,7 @@ class Crypt4GHEncryptor:
             submitter_private_key_path, callback=None
         )
 
-    def encrypt_file(self, *, file_path: Path) -> str:
+    def encrypt_file(self, *, file_path: Path) -> Path:
         """Encrypt provided file using Crypt4GH lib"""
         keys = [(0, self.submitter_private, self.server_public)]
         with file_path.open("rb") as infile:
@@ -58,7 +58,23 @@ class Crypt4GHEncryptor:
             raw_fd, outfile_path = mkstemp()
             with open(raw_fd, "wb") as outfile:
                 crypt4gh.lib.encrypt(keys=keys, infile=infile, outfile=outfile)
-            return outfile_path
+            return Path(outfile_path)
+
+
+class Crypt4GHDecryptor:
+    """Convenience class to deal with Crypt4GH decryption"""
+
+    def __init__(self, decryption_key_path: Path):
+        self.decryption_key = crypt4gh.keys.get_private_key(
+            decryption_key_path, callback=None
+        )
+
+    def decrypt_file(self, *, input_path: Path, output_path: Path):
+        """Decrypt provided file using Crypt4GH lib"""
+        keys = [(0, self.decryption_key, None)]
+        with input_path.open("rb") as infile:
+            with output_path.open("wb") as outfile:
+                crypt4gh.lib.decrypt(keys=keys, infile=infile, outfile=outfile)
 
 
 def is_file_encrypted(file_path: Path):

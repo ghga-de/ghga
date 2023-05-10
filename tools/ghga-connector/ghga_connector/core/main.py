@@ -33,6 +33,7 @@ from ghga_connector.core.api_calls import (
     start_multipart_upload,
 )
 from ghga_connector.core.file_operations import (
+    Crypt4GHDecryptor,
     Crypt4GHEncryptor,
     calc_part_ranges,
     download_file_parts,
@@ -343,3 +344,11 @@ def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> Li
         f"Tried {max_tries} times to parse the work package string and failed."
     )
     raise exceptions.InvalidWorkPackageToken(tries=max_tries)
+
+
+def decrypt_file(
+    input_file: Path, output_file: Path, decryption_private_key_path: Path
+):
+    """Delegate decryption of a file Crypt4GH"""
+    decryptor = Crypt4GHDecryptor(decryption_key_path=decryption_private_key_path)
+    decryptor.decrypt_file(input_path=input_file, output_path=output_file)

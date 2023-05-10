@@ -27,6 +27,7 @@ import pytest
 from ghga_service_chassis_lib.utils import big_temp_file
 
 from ghga_connector.core.file_operations import (
+    Crypt4GHDecryptor,
     Crypt4GHEncryptor,
     is_file_encrypted,
     read_file_parts,
@@ -60,8 +61,8 @@ def test_read_file_parts(from_part: Optional[int]):
         assert expected_content == obtained_content
 
 
-def test_encryption():
-    """Encrypt a file and check if it is actually encrypted"""
+def test_encryption_decryption():
+    """Encrypt and decrypt a file to check if it is actually encrypted"""
     file_size = 20 * 1024 * 1024
     key_dir = Path(__file__).parent.parent / "fixtures" / "keypair"
     pubkey_path = key_dir / "key.pub"
@@ -69,16 +70,23 @@ def test_encryption():
 
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
 
-    with NamedTemporaryFile() as file:
-        # fill source file with random data
-        file.write(os.urandom(file_size))
-        file.seek(0)
+    with NamedTemporaryFile() as in_file:
+        with NamedTemporaryFile() as out_file:
+            # fill source file with random data
+            in_file.write(os.urandom(file_size))
+            in_file.seek(0)
 
-        # produce encrypted file
-        encryptor = Crypt4GHEncryptor(
-            server_pubkey=pubkey, submitter_private_key_path=private_key_path
-        )
-        encrypted_file_loc = encryptor.encrypt_file(file_path=Path(file.name))
+            # produce encrypted file
+            encryptor = Crypt4GHEncryptor(
+                server_pubkey=pubkey, submitter_private_key_path=private_key_path
+            )
+            encrypted_file_loc = encryptor.encrypt_file(file_path=Path(in_file.name))
 
-        assert is_file_encrypted(Path(encrypted_file_loc))
-        os.remove(encrypted_file_loc)
+            assert is_file_encrypted(encrypted_file_loc)
+            decryptor = Crypt4GHDecryptor(decryption_key_path=private_key_path)
+            decryptor.decrypt_file(
+                input_path=encrypted_file_loc,
+                output_path=Path(out_file.name),
+            )
+
+            assert in_file.read() == out_file.read()
