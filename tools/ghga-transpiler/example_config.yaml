@@ -10,5 +10,5 @@ language: Greek
 log_level: info
 openapi_url: /openapi.json
 port: 8080
-service_name: my_microservice
+service_name: ghga_transpiler
 workers: 1

@@ -22,11 +22,11 @@ from .models import SupportedLanguages
 
 
 # Please adapt config prefix and remove unnecessary config bases:
-@config_from_yaml(prefix="my_microservice")
+@config_from_yaml(prefix="ghga_transpiler")
 class Config(ApiConfigBase):
     """Config parameters and their defaults."""
 
-    service_name: str = "my_microservice"  # Please adapt
+    service_name: str = "ghga_transpiler"  # Please adapt
     language: SupportedLanguages = "Croatian"
 
 

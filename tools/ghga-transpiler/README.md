@@ -13,7 +13,7 @@ The github repository contains only lowercase letters, numbers, and hyphens "-",
 e.g.: `my-microservice`
 
 The python package (and thus the source repository) contains underscores "_"
-instead of hyphens, e.g.: `my_microservice`
+instead of hyphens, e.g.: `ghga_transpiler`
 
 The command-line script that is used to run the service, the docker repository
 (published to docker hub), and the helm chart (not part of this repository) use the
@@ -26,7 +26,7 @@ that need modification. Once the adaptions are in place, please remove these #
 comments.
 
 The following should serve as a template for the final repo's README,
-please adapt it accordingly (e.g. replace all occurrences of `my-microservice` or `my_microservice`
+please adapt it accordingly (e.g. replace all occurrences of `my-microservice` or `ghga_transpiler`
 with the final package name and don't forget to adapt the links):
 
 ---
@@ -79,10 +79,10 @@ my-microservice
 ### Configuration:
 The [`./example-config.yaml`](./example-config.yaml) gives an overview of the available configuration options.
 Please adapt it and choose one of the following options for injecting it into the service:
-- specify the path to via the `MY_MICROSERVICE_CONFIG_YAML` env variable
-- rename it to `.my_microservice.yaml` and place it into one of the following locations:
-  - the current working directory were you are execute the service (on unix: `./.my_microservice.yaml`)
-  - your home directory (on unix: `~/.my_microservice.yaml`)
+- specify the path to via the `ghga_transpiler_CONFIG_YAML` env variable
+- rename it to `.ghga_transpiler.yaml` and place it into one of the following locations:
+  - the current working directory were you are execute the service (on unix: `./.ghga_transpiler.yaml`)
+  - your home directory (on unix: `~/.ghga_transpiler.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -91,8 +91,8 @@ The config yaml will be automatically parsed by the service.
 All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
 could also be set using environment variables or file secrets.
 
-For naming the environment variables, just prefix the parameter name with `MY_MICROSERVICE_`,
-e.g. for the `host` set an environment variable named `MY_MICROSERVICE_HOST`
+For naming the environment variables, just prefix the parameter name with `ghga_transpiler_`,
+e.g. for the `host` set an environment variable named `ghga_transpiler_HOST`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 
