@@ -2,3 +2,5 @@
 # but are allowed to be removed in the current repository
 
 scripts/script_utils/fastapi_app_location.py
+
+config_schema.json
