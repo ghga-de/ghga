@@ -17,11 +17,12 @@
 
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
+from pydantic import Extra
 
 
 # Please adapt config prefix and remove unnecessary config bases:
 @config_from_yaml(prefix="ghga_transpiler")
-class Config(ApiConfigBase):
+class Config(ApiConfigBase, extra=Extra.allow):  # type: ignore
     """Config parameters and their defaults."""
 
     service_name: str = "ghga_transpiler"  # Please adapt
