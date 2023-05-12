@@ -35,3 +35,10 @@ class Resource(BaseModel):
 
     id_: str = Field(..., description="The identifier for this resource")
     content: JsonObject = Field(..., description="The actual content of the resource")
+
+
+class Filter(BaseModel):
+    """Represents a filter used to refine results"""
+
+    key: str = Field(..., description="The field to filter")
+    value: str = Field(..., description="The value the field must match")

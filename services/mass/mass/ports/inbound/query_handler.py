@@ -17,11 +17,21 @@
 
 from abc import ABC, abstractmethod
 
+from hexkit.custom_types import JsonObject
+
 
 class QueryHandlerPort(ABC):
     """Port for the query handler"""
 
     @abstractmethod
-    async def handle_query(self, *, class_name: str):
+    async def handle_query(
+        self,
+        *,
+        class_name: str,
+        query: str,
+        filters: list[JsonObject],
+        skip: int,
+        limit: int
+    ):
         """Processes a query"""
         ...

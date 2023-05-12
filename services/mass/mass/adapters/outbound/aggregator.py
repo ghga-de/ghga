@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 """Contains concrete implementation of the Aggregator and its Factory"""
+
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.provider import MongoDbConfig
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -29,7 +30,7 @@ class Aggregator(AggregatorPort):
         """initialize with a MongoDB collection"""
         self._collection = collection
 
-    async def aggregate(self, *, pipeline: list[JsonObject]) -> list:
+    async def aggregate(self, *, pipeline: list[JsonObject]) -> list[JsonObject]:
         return await self._collection.aggregate(pipeline=pipeline).to_list(None)
 
 
@@ -44,7 +45,7 @@ class AggregatorFactory:
         )
         self._db = self._client[self._config.db_name]
 
-    def get_aggregator(self, *, name: str):
+    def get_aggregator(self, *, name: str) -> Aggregator:
         """Returns an aggregator with a collection set up"""
         collection = self._db[name]
         return Aggregator(collection=collection)

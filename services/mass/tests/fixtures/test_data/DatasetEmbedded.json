@@ -1,54 +1,47 @@
 {
   "items": [
     {
-      "category": "stoncher",
-      "field1": "Some information for field1.",
-      "has_items_in_list": [
+      "category": "hotel",
+      "field1": "Miami",
+      "has_object": {
+        "id": "HotelAlphaObject",
+        "type": "piano"
+      },
+      "has_rooms": [
         {
-          "has_flux_opulator": {
-            "id": "29n3-2f2f-j324",
-            "ramguppy_coefficient": 3
-          },
-          "id": "it3m-1n-li57-1",
-          "list_item_prop1": "Invaluable information"
+          "id": "HotelAlphaLarge",
+          "type": "large room"
         },
         {
-          "has_flux_opulator": {
-            "id": "92ij-ofn4-8h2j",
-            "ramguppy_coefficient": 2
-          },
-          "id": "it3m-1n-li57-2",
-          "list_item_prop1": null
+          "id": "HotelAlphaPoolside",
+          "type": "poolside room"
         }
       ],
-      "has_thing": {
-        "has_subthing": {
-          "fact": "This subthing is shared by the things embedded in both datasets",
-          "id": "alskdflkjsd222",
-          "subthing_property_alpha": "A strange property",
-          "subthing_property_beta": "A mundane property"
-        },
-        "id": "2oie9f2iej2l2kef2ief",
-        "thing_property1": "Property 1 info",
-        "thing_property2": "Property 2 info"
-      },
-      "id": "845a3c6d-4d3f-4256-b2b7-cd737a1b4ae1"
+      "id": "1HotelAlpha-id",
+      "type": "resort"
     },
     {
-      "category": "stoncher",
-      "field1": "This field1 is different.",
-      "has_thing": {
-        "has_subthing": {
-          "fact": "This subthing is shared by the things embedded in both datasets",
-          "id": "alskdflkjsd222",
-          "subthing_property_alpha": "A strange property",
-          "subthing_property_beta": "A mundane property"
-        },
-        "id": "928nf9283nn",
-        "thing_property1": "Slightly different property 1 info",
-        "thing_property2": null
+      "category": "hotel",
+      "field1": "Denver",
+      "has_object": {
+        "id": "HotelBetaObject",
+        "type": "kitchen"
       },
-      "id": "2134132-123-4-dks"
+      "id": "2HotelBeta-id",
+      "type": "luxury"
+    },
+    {
+      "category": "zoo",
+      "field1": "Amsterdam",
+      "has_animal": {
+        "id": "ZooAnimal",
+        "type": "giraffe"
+      },
+      "has_object": {
+        "id": "zoo-object",
+        "type": "concessions stand"
+      },
+      "id": "3zoo-id"
     }
   ]
 }
