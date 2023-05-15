@@ -20,6 +20,7 @@ from ghga_service_commons.utils.utc_dates import DateTimeUTC
 from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=unused-import
     mongodb_fixture,
 )
+from pydantic import EmailStr
 from pytest import mark
 
 from auth_service.user_management.user_registry.deps import (
@@ -53,11 +54,11 @@ async def test_user_creation(
     user_dao = await user_dao_factory.get_user_dao()
 
     user_data = UserData(
-        ext_id="max@ls.org",
+        ext_id=EmailStr("max@ls.org"),
         status=UserStatus.ACTIVE,
         name="Max Headroom",
         title=AcademicTitle.DR,
-        email="max@example.org",
+        email=EmailStr("max@example.org"),
         registration_date=datetime_utc(2022, 9, 1, 12, 0),
         status_change=StatusChange(previous=None, by=None, context="test"),
         active_submissions=["sub-1"],

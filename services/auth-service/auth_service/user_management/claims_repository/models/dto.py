@@ -31,6 +31,7 @@ __all__ = [
     "ClaimFullCreation",
     "ClaimMatch",
     "ClaimUpdate",
+    "ClaimValidity",
     "Condition",
     "Identity",
     "MatchClaim",
@@ -109,7 +110,25 @@ class Identity(BaseDto):
 
 
 # pylint: disable=no-self-argument
-class ClaimCreation(BaseDto):
+class ClaimValidity(BaseDto):
+    """Start and end dates for validating claims."""
+
+    valid_from: DateTimeUTC = Field(
+        ..., description="Start date of validity", example="2023-01-01T00:00:00Z"
+    )
+    valid_until: DateTimeUTC = Field(
+        ..., description="End date of validity", example="2023-12-31T23:59:59Z"
+    )
+
+    @validator("valid_until")
+    def period_is_valid(cls, value, values):
+        """Validate that the dates of the period are in the right order."""
+        if "valid_from" in values and value <= values["valid_from"]:
+            raise ValueError("'valid_until' must be later than 'valid_from'")
+        return value
+
+
+class ClaimCreation(ClaimValidity):
     """A claim made about a user with a user ID"""
 
     visa_type: VisaType = Field(default=..., example="AffiliationAndRole")
@@ -123,12 +142,6 @@ class ClaimCreation(BaseDto):
         ...,
         description="Date when the assertion was made",
         example="2022-11-30T12:00:00Z",
-    )
-    valid_from: DateTimeUTC = Field(
-        ..., description="Start date of validity", example="2023-01-01T00:00:00Z"
-    )
-    valid_until: DateTimeUTC = Field(
-        ..., description="End date of validity", example="2023-12-31T23:59:59Z"
     )
 
     source: HttpUrl = Field(
@@ -144,13 +157,6 @@ class ClaimCreation(BaseDto):
     conditions: Optional[list[list[Condition]]] = Field(
         None, description="Set of conditions"
     )  # nested list (first level OR, second level AND)
-
-    @validator("valid_until")
-    def period_is_valid(cls, value, values):
-        """Validate that the dates of the period are in the right order."""
-        if "valid_from" in values and value <= values["valid_from"]:
-            raise ValueError("'valid_until' must be later than 'valid_from'")
-        return value
 
 
 class ClaimUpdate(BaseDto):
@@ -169,12 +175,8 @@ class ClaimFullCreation(ClaimCreation):
     creation_date: DateTimeUTC = Field(
         ..., description="Date of creation of this claim"
     )
-    creation_by: str = Field(..., description="Who created this claim (user ID)")
     revocation_date: Optional[DateTimeUTC] = Field(
         None, description="If revoked, date of revocation"
-    )
-    revocation_by: Optional[str] = Field(
-        None, description="Who revoked this claim (user ID)"
     )
 
 

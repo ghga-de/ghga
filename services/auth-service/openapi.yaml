@@ -40,10 +40,6 @@ components:
             type: array
           title: Conditions
           type: array
-        creation_by:
-          description: Who created this claim (user ID)
-          title: Creation By
-          type: string
         creation_date:
           description: Date of creation of this claim
           format: date-time
@@ -52,10 +48,6 @@ components:
         id:
           description: Internally used ID of the claim
           title: Id
-          type: string
-        revocation_by:
-          description: Who revoked this claim (user ID)
-          title: Revocation By
           type: string
         revocation_date:
           description: If revoked, date of revocation
@@ -113,15 +105,14 @@ components:
           example: faculty@home.org
           title: Visa Value
       required:
+      - valid_from
+      - valid_until
       - visa_type
       - visa_value
       - assertion_date
-      - valid_from
-      - valid_until
       - source
       - user_id
       - creation_date
-      - creation_by
       - id
       title: Claim
       type: object
@@ -195,11 +186,11 @@ components:
           example: faculty@home.org
           title: Visa Value
       required:
+      - valid_from
+      - valid_until
       - visa_type
       - visa_value
       - assertion_date
-      - valid_from
-      - valid_until
       - source
       title: ClaimCreation
       type: object
@@ -232,6 +223,27 @@ components:
       required:
       - revocation_date
       title: ClaimUpdate
+      type: object
+    ClaimValidity:
+      additionalProperties: false
+      description: Start and end dates for validating claims.
+      properties:
+        valid_from:
+          description: Start date of validity
+          example: '2023-01-01T00:00:00Z'
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          example: '2023-12-31T23:59:59Z'
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - valid_from
+      - valid_until
+      title: ClaimValidity
       type: object
     Condition:
       additionalProperties: false
@@ -549,6 +561,48 @@ paths:
       summary: Check download access permission for a dataset
       tags:
       - datasets
+    post:
+      description: Endpoint to add a controlled access grant for a given dataset so
+        that it can be downloaded by the given user. For internal use only.
+      operationId: grant_download_access
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          title: User Id
+          type: string
+      - description: Internal ID of the dataset
+        in: path
+        name: dataset_id
+        required: true
+        schema:
+          description: Internal ID of the dataset
+          title: Dataset Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimValidity'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '204':
+          description: Download access has been granted.
+        '404':
+          description: The user or the dataset was not found.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Grant download access permission for a dataset
+      tags:
+      - datasets
   /health:
     get:
       description: Used to check that this service is alive
@@ -752,14 +806,10 @@ paths:
           description: User claims have been retrieved.
         '401':
           description: Not authorized to get user claims.
-        '403':
-          description: Not authorized to request claims.
         '404':
           description: The user was not found.
         '422':
           description: Validation error in submitted user ID.
-      security:
-      - HTTPBearer: []
       summary: Get all claims for a given user
       tags:
       - claims
@@ -790,16 +840,12 @@ paths:
           description: Claim was successfully stored.
         '400':
           description: Claim cannot be stored.
-        '403':
-          description: Not authorized to create claims.
         '404':
           description: The user was not found.
         '409':
           description: Claim was already stored.
         '422':
           description: Validation error in submitted ID or claims data.
-      security:
-      - HTTPBearer: []
       summary: Store a user claim
       tags:
       - claims
@@ -832,14 +878,10 @@ paths:
           description: Successful Response
         '204':
           description: User claim was successfully deleted.
-        '403':
-          description: Not authorized to delete claims.
         '404':
           description: The user claim was not found.
         '422':
           description: Validation error in submitted user or claim ID.
-      security:
-      - HTTPBearer: []
       summary: Delete an existing user claim
       tags:
       - claims
@@ -877,14 +919,10 @@ paths:
           description: Successful Response
         '204':
           description: User claim was successfully saved.
-        '403':
-          description: Not authorized to modify claims.
         '404':
           description: The user claim was not found.
         '422':
           description: Validation error in submitted user data.
-      security:
-      - HTTPBearer: []
       summary: Revoke an existing user claim
       tags:
       - claims

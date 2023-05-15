@@ -1,3 +1,4 @@
+add_as_data_stewards: []
 api_ext_path: /api/auth
 api_root_path: /
 auth_algs:

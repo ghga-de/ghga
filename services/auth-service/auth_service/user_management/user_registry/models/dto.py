@@ -53,7 +53,9 @@ class BaseDto(BaseModel):
 class StatusChange(BaseDto):
     """Details of a status change"""
 
-    previous: UserStatus = Field(default=None, description="Previous user status")
+    previous: Optional[UserStatus] = Field(
+        default=None, description="Previous user status"
+    )
     by: Optional[str] = Field(
         default=None,
         title="Changed by",

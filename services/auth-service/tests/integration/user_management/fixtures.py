@@ -15,15 +15,20 @@
 
 """Fixtures for the user management integration tests"""
 
+import asyncio
 from typing import Generator
 
 from fastapi.testclient import TestClient
+from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.protocols.dao import ResourceNotFoundError
+from pydantic import EmailStr
 from pytest import fixture
 from testcontainers.mongodb import MongoDbContainer
 
 from auth_service.config import Config
-from auth_service.deps import get_config
+from auth_service.deps import get_config, get_mongodb_config, get_mongodb_dao_factory
 from auth_service.user_management.api.main import app
+from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
 
 @fixture(name="client")
@@ -32,14 +37,45 @@ def fixture_client() -> TestClient:
     return TestClient(app)
 
 
+data_steward = User(
+    id="the-id-of-rod-steward",
+    ext_id=EmailStr("rod@ls.org"),
+    name="Rod Steward",
+    email=EmailStr("rod@example.org"),
+    status=UserStatus.ACTIVE,
+    registration_date=now_as_utc(),
+)
+
+add_as_data_stewards = [data_steward.ext_id]
+
+
+async def seed_database(config: Config) -> None:
+    """Seed the database with a dummy user that will become a data steward."""
+    user_dao = await get_mongodb_dao_factory(config=get_mongodb_config(config)).get_dao(
+        name=config.users_collection,
+        dto_model=User,
+        id_field="id",
+    )
+    try:
+        await user_dao.get_by_id(data_steward.id)
+    except ResourceNotFoundError:
+        await user_dao.insert(data_steward)
+
+
 @fixture(name="client_with_db")
 def fixture_client_with_db() -> Generator[TestClient, None, None]:
     """Get test client for the user manager with a test database."""
 
     with MongoDbContainer() as mongodb:
         connection_url = mongodb.get_connection_url()
-        config = Config(db_url=connection_url, db_name="test-user-management")
+        config = Config(
+            db_url=connection_url,
+            db_name="test-user-management",
+            add_as_data_stewards=add_as_data_stewards,
+        )  # pyright: ignore
+        asyncio.run(seed_database(config))
 
         app.dependency_overrides[get_config] = lambda: config
-        yield TestClient(app)
+        with TestClient(app) as client:
+            yield client
         app.dependency_overrides.clear()

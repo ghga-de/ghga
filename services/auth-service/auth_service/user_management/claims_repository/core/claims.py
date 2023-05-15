@@ -18,14 +18,18 @@
 Definitions and helper functions for validating user claims.
 """
 
+from datetime import timedelta
 from typing import Callable, Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from pydantic import EmailStr, HttpUrl, parse_obj_as
 
 from ....config import CONFIG
-from ..models.dto import AuthorityLevel, Claim, VisaType
+from ..models.dto import AuthorityLevel, Claim, ClaimFullCreation, VisaType
 
 __all__ = [
+    "create_controlled_access_claim",
+    "create_data_steward_claim",
     "dataset_id_for_download_access",
     "is_valid_claim",
     "is_internal_claim",
@@ -36,6 +40,7 @@ __all__ = [
 
 
 INTERNAL_SOURCE = CONFIG.organization_url
+INTERNAL_DOMAIN = INTERNAL_SOURCE.split("://", 1)[-1]
 DATA_STEWARD_ROLE = "data_steward"
 DATASET_PREFIX = f"{INTERNAL_SOURCE}/datasets/"
 
@@ -57,6 +62,29 @@ def is_internal_claim(claim: Claim, visa_type: VisaType) -> bool:
     )
 
 
+# Data Steward Claims
+
+
+def create_data_steward_claim(user_id: str, valid_days=365) -> ClaimFullCreation:
+    """Create a claim for a data steward."""
+    valid_from = now_as_utc()
+    valid_until = now_as_utc() + timedelta(days=valid_days)
+    return ClaimFullCreation(
+        visa_type=VisaType.GHGA_ROLE,
+        visa_value=parse_obj_as(EmailStr, f"{DATA_STEWARD_ROLE}@{INTERNAL_DOMAIN}"),
+        assertion_date=valid_from,
+        valid_from=valid_from,
+        valid_until=valid_until,
+        source=INTERNAL_SOURCE,
+        sub_source=None,
+        asserted_by=AuthorityLevel.SYSTEM,
+        conditions=None,
+        user_id=user_id,
+        creation_date=valid_from,
+        revocation_date=None,
+    )
+
+
 def is_data_steward_claim(claim: Claim) -> bool:
     """Check whether the given claim asserts a data steward role."""
     if not is_internal_claim(claim, VisaType.GHGA_ROLE):
@@ -66,6 +94,30 @@ def is_data_steward_claim(claim: Claim) -> bool:
         return False
     role_name = visa_value.split("@", 1)[0]
     return role_name == DATA_STEWARD_ROLE
+
+
+# Controlled Access Claims
+
+
+def create_controlled_access_claim(
+    user_id: str, dataset_id: str, valid_from: DateTimeUTC, valid_until: DateTimeUTC
+) -> ClaimFullCreation:
+    """Create a claim for a controlled access grant."""
+    creation_date = now_as_utc()
+    return ClaimFullCreation(
+        visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
+        visa_value=parse_obj_as(HttpUrl, DATASET_PREFIX + dataset_id),
+        assertion_date=creation_date,
+        valid_from=valid_from,
+        valid_until=valid_until,
+        source=INTERNAL_SOURCE,
+        sub_source=None,
+        asserted_by=AuthorityLevel.DAC,
+        conditions=None,
+        user_id=user_id,
+        creation_date=creation_date,
+        revocation_date=None,
+    )
 
 
 def get_dataset_for_value(value: str) -> Optional[str]:

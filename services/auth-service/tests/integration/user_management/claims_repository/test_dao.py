@@ -50,7 +50,7 @@ async def test_claim_creation(
     claim_dao = await claim_dao_factory.get_claim_dao()
 
     claim_data = ClaimFullCreation(
-        user_id="som-internal-user-id",
+        user_id="some-internal-user-id",
         visa_type=VisaType.GHGA_ROLE,
         visa_value="data-steward@ghga.de",
         assertion_date=datetime_utc(2022, 9, 1),
@@ -58,8 +58,7 @@ async def test_claim_creation(
         valid_until=datetime_utc(2022, 10, 31),
         source="https://ghga.de",
         creation_date=datetime_utc(2022, 9, 15),
-        creation_by="another-internal-user-id",
-    )
+    )  # pyright: ignore
     claim = await claim_dao.insert(claim_data)
     assert claim and isinstance(claim, Claim)
     assert claim.id is not None
@@ -73,6 +72,4 @@ async def test_claim_creation(
     assert claim.asserted_by is None
     assert claim.conditions is None
     assert claim.creation_date == claim_data.creation_date
-    assert claim.creation_by == claim_data.creation_by
     assert claim.revocation_date is None
-    assert claim.revocation_by is None

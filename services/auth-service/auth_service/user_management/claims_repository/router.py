@@ -26,15 +26,22 @@ from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
 
-from ..auth import AuthContext, require_steward
 from .core.claims import (
+    create_controlled_access_claim,
     dataset_id_for_download_access,
     has_download_access_for_dataset,
     is_valid_claim,
 )
 from .core.utils import user_exists
 from .deps import ClaimDao, Depends, get_claim_dao
-from .models.dto import Claim, ClaimCreation, ClaimFullCreation, ClaimUpdate, VisaType
+from .models.dto import (
+    Claim,
+    ClaimCreation,
+    ClaimFullCreation,
+    ClaimUpdate,
+    ClaimValidity,
+    VisaType,
+)
 
 __all__ = ["router"]
 
@@ -49,7 +56,6 @@ user_not_found_error = HTTPException(status_code=404, detail="The user was not f
 claim_not_found_error = HTTPException(
     status_code=404, detail="The user claim was not found."
 )
-own_claim_error = HTTPException(status_code=403, detail="Cannot modify own claims.")
 
 
 @router.post(
@@ -61,7 +67,6 @@ own_claim_error = HTTPException(status_code=403, detail="Cannot modify own claim
     responses={
         201: {"model": Claim, "description": "Claim was successfully stored."},
         400: {"description": "Claim cannot be stored."},
-        403: {"description": "Not authorized to create claims."},
         404: {"description": "The user was not found."},
         409: {"description": "Claim was already stored."},
         422: {"description": "Validation error in submitted ID or claims data."},
@@ -77,24 +82,17 @@ async def post_claim(
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
-    auth_context: AuthContext = require_steward,
 ) -> Claim:
     """Store a user claim"""
-    if user_id == auth_context.id:
-        raise own_claim_error
-
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
     current_date = now_as_utc()
-    current_user_id = "someone"  # needs to be changed
     full_claim = ClaimFullCreation(
         **claim_creation.dict(),
         user_id=user_id,
         creation_date=current_date,
-        creation_by=current_user_id,
         revocation_date=None,
-        revocation_by=None
     )
 
     try:
@@ -116,7 +114,6 @@ async def post_claim(
     responses={
         200: {"model": list[Claim], "description": "User claims have been retrieved."},
         401: {"description": "Not authorized to get user claims."},
-        403: {"description": "Not authorized to request claims."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user ID."},
     },
@@ -130,7 +127,6 @@ async def get_claims(
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
-    _auth_context: AuthContext = require_steward,
 ) -> list[Claim]:
     """Get all claims for a given user"""
     if not await user_exists(user_id, user_dao):
@@ -148,7 +144,6 @@ async def get_claims(
     description="Endpoint used to revoke a claim for a specified user.",
     responses={
         204: {"description": "User claim was successfully saved."},
-        403: {"description": "Not authorized to modify claims."},
         404: {"description": "The user claim was not found."},
         422: {"description": "Validation error in submitted user data."},
     },
@@ -168,12 +163,8 @@ async def patch_user(
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
-    auth_context: AuthContext = require_steward,
 ) -> Response:
     """Revoke an existing user claim"""
-    if user_id == auth_context.id:
-        raise own_claim_error
-
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
@@ -189,11 +180,7 @@ async def patch_user(
     if claim.revocation_date and revocation_date > claim.revocation_date:
         raise HTTPException(status_code=422, detail="Already revoked earlier.")
 
-    current_user_id = "someone"  # needs to be changed
-
-    claim = claim.copy(
-        update={"revocation_date": revocation_date, "revocation_by": current_user_id}
-    )
+    claim = claim.copy(update={"revocation_date": revocation_date})
     try:
         await claim_dao.update(claim)
     except ResourceNotFoundError as error:
@@ -210,7 +197,6 @@ async def patch_user(
     description="Endpoint used to delete an existing user claim.",
     responses={
         204: {"description": "User claim was successfully deleted."},
-        403: {"description": "Not authorized to delete claims."},
         404: {"description": "The user claim was not found."},
         422: {"description": "Validation error in submitted user or claim ID."},
     },
@@ -229,12 +215,8 @@ async def delete_claim(
     ),
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
-    auth_context: AuthContext = require_steward,
 ) -> Response:
     """Delete an existing user claim"""
-    if user_id == auth_context.id:
-        raise own_claim_error
-
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
@@ -254,6 +236,49 @@ async def delete_claim(
     return Response(status_code=204)
 
 
+@router.post(
+    "/download-access/users/{user_id}/datasets/{dataset_id}",
+    operation_id="grant_download_access",
+    tags=["datasets"],
+    summary="Grant download access permission for a dataset",
+    description="Endpoint to add a controlled access grant for a given"
+    " dataset so that it can be downloaded by the given user."
+    " For internal use only.",
+    responses={
+        204: {"description": "Download access has been granted."},
+        404: {"description": "The user or the dataset was not found."},
+        422: {"description": "Validation error in submitted user IDs."},
+    },
+    status_code=200,
+)
+async def grant_download_access(
+    validity: ClaimValidity,
+    user_id: str = Path(
+        ...,
+        alias="user_id",
+        description="Internal ID of the user",
+    ),
+    dataset_id: str = Path(
+        ...,
+        alias="dataset_id",
+        description="Internal ID of the dataset",
+    ),
+    user_dao: UserDao = Depends(get_user_dao),
+    claim_dao: ClaimDao = Depends(get_claim_dao),
+    # internal service, authorization without token via service mesh
+) -> Response:
+    """Grant download access permission for a given dataset to a given user."""
+    if not await user_exists(user_id, user_dao):
+        raise user_not_found_error
+
+    claim = create_controlled_access_claim(
+        user_id, dataset_id, validity.valid_from, validity.valid_until
+    )
+    await claim_dao.insert(claim)
+
+    return Response(status_code=204)
+
+
 @router.get(
     "/download-access/users/{user_id}/datasets/{dataset_id}",
     operation_id="check_download_access",
@@ -262,9 +287,7 @@ async def delete_claim(
     description="Endpoint to check whether the given dataset"
     " can be downloaded by the given user. For internal use only.",
     responses={
-        200: {
-            "description": "Download access has been checked.",
-        },
+        200: {"description": "Download access has been checked."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user IDs."},
     },
@@ -285,7 +308,7 @@ async def check_download_access(
     claim_dao: ClaimDao = Depends(get_claim_dao),
     # internal service, authorization without token via service mesh
 ) -> BooleanAsString:
-    """Check download access permission for a given dataset"""
+    """Check download access permission for a given dataset by a given user"""
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
@@ -329,7 +352,7 @@ async def get_datasets_with_download_access(
     claim_dao: ClaimDao = Depends(get_claim_dao),
     # internal service, authorization without token via service mesh
 ) -> list[str]:
-    """Get list of all dataset IDs with download access permission"""
+    """Get list of all dataset IDs with download access permission for a given user"""
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
 
