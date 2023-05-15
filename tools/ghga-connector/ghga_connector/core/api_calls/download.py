@@ -189,6 +189,7 @@ def get_file_header_envelope(file_id: str, api_url: str, public_key: bytes) -> b
 
     if status_code == 200:
         return base64.b64decode(response.content)
+
     spec = {
         404: {
             "envelopeNotFoundError": lambda: exceptions.EnvelopeNotFoundError(

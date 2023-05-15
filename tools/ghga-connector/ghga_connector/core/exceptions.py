@@ -288,3 +288,17 @@ class InvalidWorkPackageToken(RuntimeError):
     def __init__(self, *, tries: int):
         message = f"Parsing of the work package string failed {tries} times."
         super().__init__(message)
+
+
+class NoWorkPackageAccessError(RuntimeError):
+    """
+    Thrown when the given auth token does not provide access for
+    a specific work package id (response code 403)
+    """
+
+    def __init__(self, *, work_package_id: str):
+        message = (
+            "This auth token is not valid "
+            f"for the work package with the id '{work_package_id}'."
+        )
+        super().__init__(message)

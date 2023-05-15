@@ -19,7 +19,7 @@ It should not contain any service API-related code.
 """
 
 from . import exceptions  # noqa: F401
-from .api_calls import get_wps_info  # noqa: F401
+from .api_calls import get_wps_file_info  # noqa: F401
 from .batch_processing import CliIoHandler, FileStager, StagingParameters  # noqa: F401
 from .constants import (  # noqa: F401
     DEFAULT_PART_SIZE,
@@ -27,7 +27,6 @@ from .constants import (  # noqa: F401
     MAX_RETRIES,
     MAX_WAIT_TIME,
 )
-from .crypt import decrypt, encrypt  # noqa: F401
 from .main import decrypt_file, download, upload  # noqa: F401
 from .message_display import AbstractMessageDisplay, MessageColors  # noqa: F401
 from .session import RequestsSession  # noqa: F401

@@ -4,11 +4,4 @@ max_wait_time: 3600
 part_size: 16777216
 server_pubkey: dummy-pubkey
 upload_api: https://hd-dev.ghga-dev.de/ucs
-wps_file_endings:
-- .zip
-- .tar.gz
-wps_file_list:
-- file1
-- file2
-wps_user_id: user_1
-wps_user_pubkey: P1oBHfr9AA37Kg8WW79RKKpDZlp77KoFx+n+3sLzPBY=
+wps_api_url: http://127.0.0.1

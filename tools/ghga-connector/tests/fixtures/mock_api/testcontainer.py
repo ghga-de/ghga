@@ -38,18 +38,18 @@ class MockAPIContainer(DockerContainer):
         s3_upload_url_2: str = "test://upload.url",
         s3_download_file_size: int = 146,
         fake_envelope: str = "Fake_envelope",
-        image: str = "ghga/fastapi_essentials:0.73.0",
+        image: str = "ghga/fastapi_essentials:0.94.1",
         port: int = 8000,
     ) -> None:
         """Initialize the Fastapi test container.
 
         Args:
             image (str, optional):
-                The docker image from docker hub. Defaults to "ghga/fastapi_essentials:0.73.0".
+                The docker image from docker hub. Defaults to "ghga/fastapi_essentials:0.94.1".
             port (int, optional):
                 The port to reach the FastAPI. Defaults to 8000.
         """
-        super(MockAPIContainer, self).__init__(image=image)
+        super().__init__(image=image)
 
         self._port = port
 

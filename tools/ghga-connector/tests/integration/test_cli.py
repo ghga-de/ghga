@@ -22,8 +22,8 @@ import pathlib
 from contextlib import nullcontext
 from filecmp import cmp
 from pathlib import Path
-from typing import Any, List, Optional
-from unittest.mock import patch
+from typing import Optional
+from unittest.mock import Mock, patch
 
 import crypt4gh.keys
 import pytest
@@ -32,31 +32,12 @@ from ghga_service_chassis_lib.utils import big_temp_file
 from ghga_connector.cli import download, upload
 from ghga_connector.core import exceptions
 from ghga_connector.core.constants import DEFAULT_PART_SIZE
-from ghga_connector.core.crypt import encrypt
 from ghga_connector.core.file_operations import Crypt4GHEncryptor
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
 from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
-from tests.fixtures.utils import BASE_DIR
-
-KEY_DIR = BASE_DIR / "keypair"
-PUBLIC_KEY_FILE = KEY_DIR / "key.pub"
-PRIVATE_KEY_FILE = KEY_DIR / "key.sec"
-
-
-def mock_wps_token(max_tries: int, message_display: Any) -> List[str]:
-    """
-    Helper util to mock user input
-    """
-
-    id = "1"
-    token = "abcde"
-
-    pubkey = crypt4gh.keys.get_public_key(PUBLIC_KEY_FILE)
-
-    wps_token = [id, encrypt(token, pubkey)]
-    return wps_token
+from tests.fixtures.utils import PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, mock_wps_token
 
 
 @pytest.mark.parametrize(
@@ -78,10 +59,14 @@ def test_multipart_download(
     monkeypatch,
 ):
     """Test the multipart download of a file"""
+    big_object = get_big_s3_object(s3_fixture, object_size=file_size)
+
     # The download function will ask the user for input.
     monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
-
-    big_object = get_big_s3_object(s3_fixture, object_size=file_size)
+    monkeypatch.setattr(
+        "ghga_connector.core.get_wps_file_info",
+        Mock(return_value=dict(zip([big_object.object_id], [""]))),
+    )
 
     # right now the desired file size is only
     # approximately met by the provided big file:
@@ -107,8 +92,7 @@ def test_multipart_download(
             get_test_config(
                 download_api=api_url,
                 part_size=part_size,
-                wps_file_list=[big_object.object_id],
-                wps_file_endings=[""],
+                wps_api_url=api.get_connection_url(),
             ),
         ):
             download(
@@ -160,13 +144,16 @@ def test_download(
     monkeypatch,
 ):
     """Test the download of a file"""
-
-    # The download function will ask the user for input.
-    monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
-
     output_dir = Path("/non/existing/path") if bad_outdir else tmp_path
 
     file = state.FILES[file_name]
+
+    # The download function will ask the user for input.
+    monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
+    monkeypatch.setattr(
+        "ghga_connector.core.get_wps_file_info",
+        Mock(return_value=dict(zip([file.file_id], [""]))),
+    )
 
     if file.populate_storage:
         download_url = s3_fixture.storage.get_object_download_url(
@@ -189,11 +176,7 @@ def test_download(
 
         with patch(
             "ghga_connector.cli.CONFIG",
-            get_test_config(
-                download_api=api_url,
-                wps_file_list=[file.file_id],
-                wps_file_endings=[""],
-            ),
+            get_test_config(download_api=api_url, wps_api_url=api.get_connection_url()),
         ):
             # needed to mock user input
             with patch(

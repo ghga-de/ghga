@@ -16,24 +16,32 @@
 
 """Tests for API Calls"""
 
+import json
+import re
 from contextlib import nullcontext
-from typing import Optional
-from unittest.mock import Mock
+from typing import Any, Mapping, Optional, Union
+from unittest.mock import Mock, patch
 
 import pytest
+import requests
+from requests.models import Response
 
 from ghga_connector.core.api_calls import (
     UploadStatus,
     get_part_upload_urls,
+    get_wps_file_info,
     patch_multipart_upload,
 )
 from ghga_connector.core.exceptions import (
+    BadResponseCodeError,
     CantChangeUploadStatusError,
     MaxPartNoExceededError,
     MaxRetriesReachedError,
+    NoWorkPackageAccessError,
     UploadNotRegisteredError,
 )
 from tests.fixtures.mock_api.testcontainer import MockAPIContainer
+from tests.fixtures.utils import mock_wps_token
 
 
 @pytest.mark.parametrize(
@@ -118,3 +126,86 @@ def test_get_part_upload_urls(
 
             if part_no >= end_part:
                 break
+
+
+class MockResponse:
+    """Mock response"""
+
+    def __init__(self, *, content: Any, status_code: int):
+        self.status_code = status_code
+        self.content = json.dumps(content)
+
+    def json(self):
+        """Mock serialization"""
+        return json.loads(self.content)
+
+
+class MockSession(requests.Session):
+    """Session object mocking specific calls with provided response"""
+
+    def __init__(self, response: MockResponse):
+        self.response = response
+        super().__init__()
+
+    def get(  # pylint: disable=arguments-differ
+        self,
+        url: str,
+        *,
+        headers: Union[  # pylint: disable=unused-argument
+            Mapping[str, Union[str, bytes, None]], None
+        ],
+        timeout: Union[  # pylint: disable=unused-argument
+            Union[float, tuple[float, float], tuple[float, None]], None
+        ] = 5,
+    ) -> Response:
+        if re.match(".+/work-packages/.+", url):
+            return self.response
+        raise ValueError("Unsupported")
+
+
+def test_get_wps_file_info():
+    """Test response handling with some mock - just make sure code paths work"""
+
+    files = {"file_1": ".tar.gz"}
+
+    patched_response = MockResponse(content={"files": files}, status_code=200)
+
+    with patch(
+        "ghga_connector.core.session.RequestsSession.session",
+        MockSession(response=patched_response),
+    ):
+        wp_id, wp_token = mock_wps_token(1, None)
+        response = get_wps_file_info(
+            work_package_id=wp_id,
+            token=wp_token,
+            wps_api_url="http://127.0.0.1/work-packages/wp_1",
+        )
+        assert response == files
+
+    patched_response = MockResponse(content={"files": files}, status_code=403)
+
+    with patch(
+        "ghga_connector.core.session.RequestsSession.session",
+        MockSession(response=patched_response),
+    ):
+        with pytest.raises(NoWorkPackageAccessError):
+            wp_id, wp_token = mock_wps_token(1, None)
+            response = get_wps_file_info(
+                work_package_id=wp_id,
+                token=wp_token,
+                wps_api_url="http://127.0.0.1/work-packages/wp_1",
+            )
+
+    patched_response = MockResponse(content=None, status_code=500)
+
+    with patch(
+        "ghga_connector.core.session.RequestsSession.session",
+        MockSession(response=patched_response),
+    ):
+        with pytest.raises(BadResponseCodeError):
+            wp_id, wp_token = mock_wps_token(1, None)
+            response = get_wps_file_info(
+                work_package_id=wp_id,
+                token=wp_token,
+                wps_api_url="http://127.0.0.1/work-packages/wp_1",
+            )

@@ -34,4 +34,4 @@ from .upload import (  # noqa: F401
     start_multipart_upload,
 )
 from .utils import check_url  # noqa: F401
-from .work_package import get_wps_info  # noqa: F401
+from .work_package import get_wps_file_info  # noqa: F401

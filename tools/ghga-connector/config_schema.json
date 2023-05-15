@@ -56,51 +56,18 @@
       ],
       "type": "string"
     },
-    "wps_file_list": {
-      "title": "Wps File List",
-      "description": "List of file IDs to be downloaded.",
+    "wps_api_url": {
+      "title": "Wps Api Url",
+      "description": "URL to the root of the WPS API.",
       "env_names": [
-        "ghga_connector_wps_file_list"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "wps_file_endings": {
-      "title": "Wps File Endings",
-      "description": "File endings for downloaded files. Order needs to correspond to the order of file IDs.",
-      "env_names": [
-        "ghga_connector_wps_file_endings"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "wps_user_id": {
-      "title": "Wps User Id",
-      "description": "Internal user ID.",
-      "env_names": [
-        "ghga_connector_wps_user_id"
-      ],
-      "type": "string"
-    },
-    "wps_user_pubkey": {
-      "title": "Wps User Pubkey",
-      "description": "Announced user public key.",
-      "env_names": [
-        "ghga_connector_wps_user_pubkey"
+        "ghga_connector_wps_api_url"
       ],
       "type": "string"
     }
   },
   "required": [
     "server_pubkey",
-    "wps_file_list",
-    "wps_file_endings",
-    "wps_user_id",
-    "wps_user_pubkey"
+    "wps_api_url"
   ],
   "additionalProperties": false
 }

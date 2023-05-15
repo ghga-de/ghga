@@ -19,7 +19,7 @@
 from ghga_service_chassis_lib.config import config_from_yaml
 from pydantic import BaseSettings, Field
 
-from ghga_connector import core
+from ghga_connector.core.constants import DEFAULT_PART_SIZE, MAX_RETRIES, MAX_WAIT_TIME
 
 
 @config_from_yaml(prefix="ghga_connector")
@@ -35,26 +35,17 @@ class Config(BaseSettings):
         description="URL to the root of the DRS-compatible API used for download.",
     )
     max_retries: int = Field(
-        core.MAX_RETRIES, description="Number of times to retry failed API calls."
+        MAX_RETRIES, description="Number of times to retry failed API calls."
     )
     max_wait_time: int = Field(
-        core.MAX_WAIT_TIME,
+        MAX_WAIT_TIME,
         description="Maximal time in seconds to wait before quitting without a download.",
     )
     part_size: int = Field(
-        core.DEFAULT_PART_SIZE, description="The part size to use for download."
+        DEFAULT_PART_SIZE, description="The part size to use for download."
     )
     server_pubkey: str = Field(
         ...,
         description="Base64 encoded current GHGA public key for Crypt4GH encryption.",
     )
-    wps_file_list: list[str] = Field(
-        ..., description="List of file IDs to be downloaded."
-    )
-    wps_file_endings: list[str] = Field(
-        ...,
-        description="File endings for downloaded files."
-        + " Order needs to correspond to the order of file IDs.",
-    )
-    wps_user_id: str = Field(..., description="Internal user ID.")
-    wps_user_pubkey: str = Field(..., description="Announced user public key.")
+    wps_api_url: str = Field(..., description="URL to the root of the WPS API.")
