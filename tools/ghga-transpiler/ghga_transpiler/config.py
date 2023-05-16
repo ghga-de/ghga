@@ -20,10 +20,10 @@ from pydantic import BaseSettings
 
 
 @config_from_yaml(prefix="ghga_transpiler")
-class Config(BaseSettings):  # type: ignore
+class Config(BaseSettings):
     """Config parameters and their defaults."""
 
-    service_name: str = "ghga_transpiler"  # Please adapt
+    service_name: str = "ghga_transpiler"
 
 
 CONFIG = Config()
