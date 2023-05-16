@@ -15,14 +15,12 @@
 
 """Config Parameter Modeling and Parsing"""
 
-from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
-from pydantic import Extra
+from pydantic import BaseSettings
 
 
-# Please adapt config prefix and remove unnecessary config bases:
 @config_from_yaml(prefix="ghga_transpiler")
-class Config(ApiConfigBase, extra=Extra.allow):  # type: ignore
+class Config(BaseSettings):  # type: ignore
     """Config parameters and their defaults."""
 
     service_name: str = "ghga_transpiler"  # Please adapt
