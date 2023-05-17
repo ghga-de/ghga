@@ -16,8 +16,26 @@
 """Contains the port for a query handler"""
 
 from abc import ABC, abstractmethod
+from typing import Optional
 
-from hexkit.custom_types import JsonObject
+from mass.core import models
+
+
+class ClassNotConfiguredError(RuntimeError):
+    """Raised when searching for class_name that isn't configured"""
+
+    def __init__(self, class_name: str):
+        message = f"Class with name '{class_name}' not configured."
+        super().__init__(message)
+
+
+class SearchError(RuntimeError):
+    """Raised when there is a problem searching with the query parameters."""
+
+    def __init__(self):
+        super().__init__(
+            "Error executing search. Possibly a problem with the supplied parameters."
+        )
 
 
 class QueryHandlerPort(ABC):
@@ -29,9 +47,9 @@ class QueryHandlerPort(ABC):
         *,
         class_name: str,
         query: str,
-        filters: list[JsonObject],
+        filters: list[models.Filter],
         skip: int,
-        limit: int
+        limit: Optional[int] = None,
     ):
         """Processes a query"""
         ...

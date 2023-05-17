@@ -18,9 +18,14 @@ from typing import Optional
 
 from hexkit.custom_types import JsonObject
 
-from mass.core import models, utils
-from mass.ports.inbound.query_handler import QueryHandlerPort
-from mass.ports.outbound.aggregator import AggregatorCollectionPort
+from mass.config import SearchableClassesConfig
+from mass.core import models
+from mass.ports.inbound.query_handler import (
+    ClassNotConfiguredError,
+    QueryHandlerPort,
+    SearchError,
+)
+from mass.ports.outbound.aggregator import AggregationError, AggregatorCollectionPort
 from mass.ports.outbound.dao import DaoCollectionPort
 
 
@@ -30,10 +35,12 @@ class QueryHandler(QueryHandlerPort):
     def __init__(
         self,
         *,
+        config: SearchableClassesConfig,
         aggregator_collection: AggregatorCollectionPort,
         dao_collection: DaoCollectionPort,
     ):
         """Initialize the query handler with resource daos/aggregators"""
+        self._config = config
         self._aggregator_collection = aggregator_collection
         self._dao_collection = dao_collection
 
@@ -50,16 +57,30 @@ class QueryHandler(QueryHandlerPort):
         filters: list[models.Filter],
         skip: int = 0,
         limit: Optional[int] = None,
-    ) -> list[models.Resource]:
+    ) -> models.QueryResults:
         """Return resources that match query"""
-        pipeline = utils.build_pipeline(
-            query=query, filters=filters, skip=skip, limit=limit
-        )
+
+        # get configured facet fields for given resource class
+        try:
+            facet_fields = self._config.searchable_classes[
+                class_name
+            ].facetable_properties
+        except KeyError as err:
+            raise ClassNotConfiguredError(class_name=class_name) from err
+
+        # run the aggregation. Results will have {facets, count, hits} format
         aggregator = self._aggregator_collection.get_aggregator(class_name=class_name)
-        aggregator_results: list[JsonObject] = await aggregator.aggregate(
-            pipeline=pipeline
-        )
-        query_results: list[models.Resource] = [
-            utils.document_to_resource(document=item) for item in aggregator_results
-        ]
+        try:
+            aggregator_results: JsonObject = await aggregator.aggregate(
+                query=query,
+                filters=filters,
+                facet_fields=facet_fields,
+                skip=skip,
+                limit=limit,
+            )
+        except AggregationError as exc:
+            raise SearchError() from exc
+
+        query_results = models.QueryResults(**aggregator_results)
+
         return query_results

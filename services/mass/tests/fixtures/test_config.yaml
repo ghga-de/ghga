@@ -19,9 +19,4 @@ db_name: metadata-store
 searchable_classes:
   DatasetEmbedded:
     description: Dataset with embedded references.
-    facetable_properties:
-      [
-        "category",
-        "thing.thing_property1",
-        "thing.subthing.subthing_property_alpha",
-      ]
+    facetable_properties: ["category", "field1", "has_object.type"]

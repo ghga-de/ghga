@@ -40,6 +40,7 @@ class Container(ContainerBase):
 
     query_handler = get_constructor(
         QueryHandler,
+        config=config,
         dao_collection=dao_collection,
         aggregator_collection=aggregator_collection,
     )

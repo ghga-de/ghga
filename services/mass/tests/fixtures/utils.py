@@ -38,7 +38,7 @@ def get_resources_from_file(filename: str):
         json_object = json.loads(file.read())
         resources = []
         for item in json_object["items"]:
-            id_ = item.pop("id")
+            id_ = item.pop("id_")
             resource = Resource(id_=id_, content=item)
             resources.append(dto_to_document(resource))
         return resources

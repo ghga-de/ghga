@@ -14,13 +14,21 @@
 # limitations under the License.
 #
 """Contains concrete implementation of the Aggregator and its Factory"""
+from typing import Optional
 
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.provider import MongoDbConfig
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import OperationFailure
 
+from mass.adapters.outbound import utils
 from mass.config import SearchableClassesConfig
-from mass.ports.outbound.aggregator import AggregatorCollectionPort, AggregatorPort
+from mass.core import models
+from mass.ports.outbound.aggregator import (
+    AggregationError,
+    AggregatorCollectionPort,
+    AggregatorPort,
+)
 
 
 class Aggregator(AggregatorPort):
@@ -30,8 +38,43 @@ class Aggregator(AggregatorPort):
         """initialize with a MongoDB collection"""
         self._collection = collection
 
-    async def aggregate(self, *, pipeline: list[JsonObject]) -> list[JsonObject]:
-        return await self._collection.aggregate(pipeline=pipeline).to_list(None)
+    async def aggregate(
+        self,
+        *,
+        query: str,
+        filters: list[models.Filter],
+        facet_fields: list[str],
+        skip: int = 0,
+        limit: Optional[int] = None,
+    ) -> JsonObject:
+        # build the aggregation pipeline
+        pipeline = utils.build_pipeline(
+            query=query,
+            filters=filters,
+            facet_fields=facet_fields,
+            skip=skip,
+            limit=limit,
+        )
+
+        try:
+            [results] = [
+                item async for item in self._collection.aggregate(pipeline=pipeline)
+            ]
+        except OperationFailure as err:
+            aggregation_details = (
+                f"query={query}, "
+                + "filters={[{filter_.key: filter_.value} for filter_ in filters]}, "
+                + "facet_fields={facet_fields}, skip={skip}, limit={limit}"
+                + ". Check that all documents have required facet fields."
+            )
+            raise AggregationError(aggregation_details=aggregation_details) from err
+
+        # replace __ with . in facet keys
+        for i, facet in enumerate(results["facets"]):
+            facet["key"] = facet["key"].replace("__", ".")
+            results["facets"][i] = facet
+
+        return results
 
 
 class AggregatorFactory:

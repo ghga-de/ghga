@@ -15,15 +15,35 @@
 #
 """Contains the outbound ports for the Aggregator and AggregatorCollection classes"""
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from hexkit.custom_types import JsonObject
+
+from mass.core import models
+
+
+class AggregationError(RuntimeError):
+    """Raised when something goes wrong with the aggregation operation"""
+
+    def __init__(self, aggregation_details: str):
+        super().__init__(
+            f"Something went wrong while aggregating with: {aggregation_details}"
+        )
 
 
 class AggregatorPort(ABC):
     """Describes an aggregator class, which performs aggregation ops on a mongodb collection"""
 
     @abstractmethod
-    async def aggregate(self, *, pipeline: list[JsonObject]):
+    async def aggregate(
+        self,
+        *,
+        query: str,
+        filters: list[models.Filter],
+        facet_fields: list[str],
+        skip: int = 0,
+        limit: Optional[int] = None,
+    ) -> JsonObject:
         """Applies an aggregation pipeline to a mongodb collection"""
         ...
 
