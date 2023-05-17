@@ -34,7 +34,6 @@
 from hexkit.protocols.dao import DaoFactoryProtocol
 
 from ars.core import models
-from ars.core.repository import AccessRequestConfig
 from ars.ports.outbound.dao import AccessRequestDaoPort
 
 __all__ = ["AccessRequestDaoConstructor"]
@@ -47,14 +46,12 @@ class AccessRequestDaoConstructor:
     """
 
     @staticmethod
-    async def construct(
-        *, config: AccessRequestConfig, dao_factory: DaoFactoryProtocol
-    ) -> AccessRequestDaoPort:
+    async def construct(*, dao_factory: DaoFactoryProtocol) -> AccessRequestDaoPort:
         """Setup the DAOs using the specified provider of the
         DaoFactoryProtocol."""
 
         return await dao_factory.get_dao(
-            name=config.access_requests_collection,
+            name="accessRequests",
             dto_model=models.AccessRequest,
             dto_creation_model=models.AccessRequestData,
             id_field="id",

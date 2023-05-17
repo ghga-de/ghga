@@ -1,9 +1,252 @@
+components:
+  schemas:
+    AccessRequest:
+      additionalProperties: false
+      description: An access request including a unique identifier.
+      properties:
+        access_ends:
+          description: Requested end date of access
+          format: date-time
+          title: Access Ends
+          type: string
+        access_starts:
+          description: Requested start date of access
+          format: date-time
+          title: Access Starts
+          type: string
+        changed_by:
+          description: The ID of the data steward who made the status change
+          title: Changed By
+          type: string
+        dataset_id:
+          title: Dataset Id
+          type: string
+        email:
+          description: Contact e-mail address of the requester
+          format: email
+          title: Email
+          type: string
+        full_user_name:
+          description: The requester's full name including academic title
+          title: Full User Name
+          type: string
+        id:
+          description: ID of the access request
+          title: Id
+          type: string
+        request_created:
+          description: Creation date of the access request
+          format: date-time
+          title: Request Created
+          type: string
+        request_text:
+          description: Text note submitted with the request
+          title: Request Text
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AccessRequestStatus'
+          default: pending
+          description: The status of this access request
+        status_changed:
+          description: Last change date of the status of this request
+          format: date-time
+          title: Status Changed
+          type: string
+        user_id:
+          title: User Id
+          type: string
+      required:
+      - user_id
+      - dataset_id
+      - email
+      - request_text
+      - access_starts
+      - access_ends
+      - full_user_name
+      - request_created
+      - id
+      title: AccessRequest
+      type: object
+    AccessRequestCreationData:
+      additionalProperties: false
+      description: All data necessary to create an access request.
+      properties:
+        access_ends:
+          description: Requested end date of access
+          format: date-time
+          title: Access Ends
+          type: string
+        access_starts:
+          description: Requested start date of access
+          format: date-time
+          title: Access Starts
+          type: string
+        dataset_id:
+          title: Dataset Id
+          type: string
+        email:
+          description: Contact e-mail address of the requester
+          format: email
+          title: Email
+          type: string
+        request_text:
+          description: Text note submitted with the request
+          title: Request Text
+          type: string
+        user_id:
+          title: User Id
+          type: string
+      required:
+      - user_id
+      - dataset_id
+      - email
+      - request_text
+      - access_starts
+      - access_ends
+      title: AccessRequestCreationData
+      type: object
+    AccessRequestPatchData:
+      additionalProperties: false
+      description: All data that describes an access request patch.
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AccessRequestStatus'
+          description: The new status of this access request
+      required:
+      - status
+      title: AccessRequestPatchData
+      type: object
+    AccessRequestStatus:
+      description: The status of an access request.
+      enum:
+      - allowed
+      - denied
+      - pending
+      title: AccessRequestStatus
+      type: string
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
   version: 0.1.0
 openapi: 3.0.2
-paths: {}
+paths:
+  /access-requests:
+    get:
+      description: Endpoint used to get existing access requests
+      operationId: get_access_request
+      parameters:
+      - in: query
+        name: dataset_id
+        required: false
+        schema:
+          title: Dataset Id
+          type: string
+      - in: query
+        name: user_id
+        required: false
+        schema:
+          title: User Id
+          type: string
+      - in: query
+        name: status
+        required: false
+        schema:
+          $ref: '#/components/schemas/AccessRequestStatus'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AccessRequest'
+                title: Response 200 Get Access Request
+                type: array
+          description: Access requests have been fetched.
+        '403':
+          description: Not authorized to get access requests.
+        '422':
+          description: Validation error in submitted parameters.
+      security:
+      - HTTPBearer: []
+      summary: Get access requests
+      tags:
+      - AccessRequests
+    post:
+      description: Endpoint used to create a new access request
+      operationId: create_access_request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessRequestCreationData'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                title: Response 201 Create Access Request
+                type: string
+          description: Access request was successfully created
+        '403':
+          description: Not authorized to create an access request.
+        '422':
+          description: Validation error in submitted data.
+      security:
+      - HTTPBearer: []
+      summary: Create an access request
+      tags:
+      - AccessRequests
+  /access-requests/{access_request_id}:
+    patch:
+      description: Endpoint used to set the status of an access request
+      operationId: patch_access_request
+      parameters:
+      - in: path
+        name: access_request_id
+        required: true
+        schema:
+          title: Access Request Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessRequestPatchData'
+        required: true
+      responses:
+        '204':
+          description: Status was successfully changed
+        '403':
+          description: Not authorized to create an access request.
+        '404':
+          description: Access request does not exist.
+        '422':
+          description: Validation error in submitted data.
+      security:
+      - HTTPBearer: []
+      summary: Set status of an access request
+      tags:
+      - AccessRequests
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - AccessRequests
 servers:
 - url: /
 tags:

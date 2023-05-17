@@ -35,7 +35,6 @@ class Container(ContainerBase):
     # outbound translators:
     access_request_dao = get_constructor(
         AccessRequestDaoConstructor,
-        config=config,
         dao_factory=dao_factory,
     )
 

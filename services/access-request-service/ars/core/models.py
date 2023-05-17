@@ -26,6 +26,7 @@ __all__ = [
     "AccessRequest",
     "AccessRequestCreationData",
     "AccessRequestData",
+    "AccessRequestPatchData",
     "AccessRequestStatus",
 ]
 
@@ -85,6 +86,15 @@ class AccessRequestData(AccessRequestCreationData):
     changed_by: Optional[str] = Field(
         default=None,
         description="The ID of the data steward who made the status change",
+    )
+
+
+class AccessRequestPatchData(BaseDto):
+    """All data that describes an access request patch."""
+
+    status: AccessRequestStatus = Field(
+        default=...,
+        description="The new status of this access request",
     )
 
 

@@ -31,7 +31,6 @@ class Config(ApiConfigBase, AuthConfig, MongoDbConfig, AccessRequestConfig):
     service_name: str = "ars"
     db_name: str = "access-requests"
 
-    access_requests_collection: str = "accessRequests"
     access_upfront_max_days: int = 6 * 30
     access_grant_min_days: int = 7
     access_grant_max_days: int = 2 * 365

@@ -14,8 +14,11 @@
 # limitations under the License.
 #
 
+"""Test the access request repository"""
+
 from collections.abc import AsyncIterator, Mapping
 from datetime import timedelta
+from operator import attrgetter
 from typing import Any, Optional
 
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext, UserStatus
@@ -67,7 +70,6 @@ auth_context_steward = AuthContext(
 
 
 config = AccessRequestConfig(
-    access_requests_collection="dummy-collection",
     access_upfront_max_days=365,
     access_grant_min_days=30,
     access_grant_max_days=2 * 365,
@@ -315,7 +317,9 @@ async def test_cannot_create_request_too_long():
 async def test_can_get_all_requests_as_data_steward():
     """Test that a data steward can get all requests."""
     requests = await repository.get(auth_context=auth_context_steward)
-    assert requests == ACCESS_REQUESTS
+    assert requests == sorted(
+        ACCESS_REQUESTS, key=attrgetter("request_created"), reverse=True
+    )
 
 
 @mark.asyncio
@@ -323,11 +327,15 @@ async def test_can_get_all_own_requests_as_requester():
     """Test that requesters can get their own requests."""
     requests = await repository.get(auth_context=auth_context_doe)
     assert 0 < len(requests) < len(ACCESS_REQUESTS)
-    assert requests == [
-        request
-        for request in ACCESS_REQUESTS
-        if request.full_user_name == "Dr. John Doe"
-    ]
+    assert requests == sorted(
+        (
+            request.copy(update={"changed_by": None})  # data steward is hidden
+            for request in ACCESS_REQUESTS
+            if request.full_user_name == "Dr. John Doe"
+        ),
+        key=attrgetter("request_created"),
+        reverse=True,
+    )
 
 
 @mark.asyncio
@@ -361,7 +369,7 @@ async def test_data_steward_can_get_requests_for_specific_dataset():
     )
     assert len(requests) == 1
     assert requests == [
-        request
+        request.copy(update={"changed_by": None})  # data steward is hidden
         for request in ACCESS_REQUESTS
         if request.dataset_id == "another-dataset"
     ]

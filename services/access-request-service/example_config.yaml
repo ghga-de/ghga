@@ -1,6 +1,5 @@
 access_grant_max_days: 730
 access_grant_min_days: 7
-access_requests_collection: accessRequests
 access_upfront_max_days: 180
 api_root_path: /
 auth_algs:

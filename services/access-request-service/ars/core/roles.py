@@ -12,18 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Defines dataclasses for holding business-logic data"""
+"""Define roles to be used for authentication."""
 
-from datetime import datetime
+__all__ = ["DATA_STEWARD_ROLE"]
 
-from pydantic import BaseModel, Field
-
-
-class MessageBase(BaseModel):
-    """A message base container"""
-
-    message: str = Field(..., description="The message content.")
-    created_at: datetime = Field(
-        ..., description="The date/time when the message was created"
-    )
+DATA_STEWARD_ROLE = "data_steward"

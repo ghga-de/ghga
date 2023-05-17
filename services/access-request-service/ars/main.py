@@ -18,8 +18,8 @@
 from fastapi import FastAPI
 from ghga_service_commons.api import configure_app, run_server
 
-from ars.adapters.inbound.http.openapi import get_openapi_schema
-from ars.adapters.inbound.http.routes import router
+from ars.adapters.inbound.fastapi_.openapi import get_openapi_schema
+from ars.adapters.inbound.fastapi_.routes import router
 from ars.config import Config
 from ars.container import Container
 
@@ -31,9 +31,9 @@ def get_container(*, config: Config) -> Container:
     container.config.load_config(config)
     container.wire(
         modules=[
-            "ars.adapters.inbound.http.auth",
-            "ars.adapters.inbound.http.openapi",
-            "ars.adapters.inbound.http.routes",
+            "ars.adapters.inbound.fastapi_.auth",
+            "ars.adapters.inbound.fastapi_.openapi",
+            "ars.adapters.inbound.fastapi_.routes",
         ]
     )
     return container

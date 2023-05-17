@@ -3,14 +3,6 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
-    "access_requests_collection": {
-      "title": "Access Requests Collection",
-      "default": "accessRequests",
-      "env_names": [
-        "ars_access_requests_collection"
-      ],
-      "type": "string"
-    },
     "access_upfront_max_days": {
       "title": "Access Upfront Max Days",
       "default": 180,

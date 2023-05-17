@@ -1,37 +1,37 @@
 
-
+[![tests](https://github.com/ghga-de/access-request-service/actions/workflows/unit_and_int_tests.yaml/badge.svg)](https://github.com/ghga-de/access-request-service/actions/workflows/unit_and_int_tests.yaml)
+[![Coverage Status](https://coveralls.io/repos/github/ghga-de/access-request-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/access-request-service?branch=main)
 
 # Access Request Service
 
-The access request service manages access requests and serves as a backend for the GHGA Data Portal.
+Access Request Service
 
-## Documentation:
+## Description
 
-An extensive documentation can be found [here](...) (coming soon).
+The access request service manages access requests and serves as a backend
+for the GHGA Data Portal.
 
-## Quick Start
-### Installation
+
+## Installation
 We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/access-request-service):
 ```bash
-# Please feel free to choose the version as needed:
-docker pull ghga/access-request-service:<version>
+docker pull ghga/access-request-service:0.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-# (Please feel free to adapt the name/tag.)
-docker build -t ghga/access-request-service:<version> .
+docker build -t ghga/access-request-service:0.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
 for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
-# The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/access-request-service:<version>
+# The entrypoint is preconfigured:
+docker run -p 8080:8080 ghga/access-request-service:0.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -39,17 +39,76 @@ If you prefer not to use containers, you may install the service from source:
 # Execute in the repo's root dir:
 pip install .
 
-# to run the service:
-ars
+# To run the service:
+ars --help
 ```
 
-### Configuration:
-The [`./example-config.yaml`](./example-config.yaml) gives an overview of the available configuration options.
-Please adapt it and choose one of the following options for injecting it into the service:
-- specify the path to via the `ARS_CONFIG_YAML` env variable
-- rename it to `.ars.yaml` and place it into one of the following locations:
-  - the current working directory were you are execute the service (on unix: `./.ars.yaml`)
-  - your home directory (on unix: `~/.ars.yaml`)
+## Configuration
+### Parameters
+
+The service requires the following configuration parameters:
+- **`access_upfront_max_days`** *(integer)*: Default: `180`.
+
+- **`access_grant_min_days`** *(integer)*: Default: `7`.
+
+- **`access_grant_max_days`** *(integer)*: Default: `730`.
+
+- **`db_connection_str`** *(string)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+
+- **`db_name`** *(string)*: Default: `access-requests`.
+
+- **`auth_key`** *(string)*: The GHGA internal public key for validating the token signature.
+
+- **`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens. Default: `['ES256']`.
+
+  - **Items** *(string)*
+
+- **`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{'name': None, 'email': None, 'iat': None, 'exp': None}`.
+
+- **`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
+
+  - **Additional Properties** *(string)*
+
+- **`host`** *(string)*: IP of the host. Default: `127.0.0.1`.
+
+- **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
+
+- **`log_level`** *(string)*: Controls the verbosity of the log. Must be one of: `['critical', 'error', 'warning', 'info', 'debug', 'trace']`. Default: `info`.
+
+- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `False`.
+
+- **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+
+- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `/`.
+
+- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `/openapi.json`.
+
+- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `/docs`.
+
+- **`cors_allowed_origins`** *(array)*: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.
+
+  - **Items** *(string)*
+
+- **`cors_allow_credentials`** *(boolean)*: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.
+
+- **`cors_allowed_methods`** *(array)*: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.
+
+  - **Items** *(string)*
+
+- **`cors_allowed_headers`** *(array)*: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.
+
+  - **Items** *(string)*
+
+- **`service_name`** *(string)*: Default: `ars`.
+
+
+### Usage:
+
+A template YAML for configurating the service can be found at
+[`./example-config.yaml`](./example-config.yaml).
+Please adapt it, rename it to `.ars.yaml`, and place it into one of the following locations:
+- in the current working directory were you are execute the service (on unix: `./.ars.yaml`)
+- in your home directory (on unix: `~/.ars.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -58,8 +117,8 @@ The config yaml will be automatically parsed by the service.
 All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
 could also be set using environment variables or file secrets.
 
-For naming the environment variables, just prefix the parameter name with `ARS_`,
-e.g. for the `host` set an environment variable named `ARS_HOST`
+For naming the environment variables, just prefix the parameter name with `ars_`,
+e.g. for the `host` set an environment variable named `ars_host`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 
@@ -67,45 +126,44 @@ To using file secrets please refer to the
 [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support)
 of the pydantic documentation.
 
+## HTTP API
+An OpenAPI specification for this service can be found [here](./openapi.yaml).
+
+## Architecture and Design:
+
+This is a Python-based service following the Triple Hexagonal Architecture pattern.
+It uses protocol/provider pairs and dependency injection mechanisms provided by the
+[hexkit](https://github.com/ghga-de/hexkit) library.
+
 
 ## Development
 For setting up the development environment, we rely on the
 [devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode
 in combination with Docker Compose.
 
-To use it, you have to have Docker Compose as well as vscode with its "Remote - Containers" extension (`ms-vscode-remote.remote-containers`) installed.
+To use it, you have to have Docker Compose as well as vscode with its "Remote - Containers"
+extension (`ms-vscode-remote.remote-containers`) installed.
 Then open this repository in vscode and run the command
 `Remote-Containers: Reopen in Container` from the vscode "Command Palette".
 
 This will give you a full-fledged, pre-configured development environment including:
 - infrastructural dependencies of the service (databases, etc.)
 - all relevant vscode extensions pre-installed
-- pre-configured linting and auto-formatting
+- pre-configured linting and auto-formating
 - a pre-configured debugger
 - automatic license-header insertion
 
-Moreover, inside the devcontainer, there are two convenience commands available
-(please type them in the integrated terminal of vscode):
-- `dev_install` - install the service with all development dependencies,
-installs pre-commit, and applies any migration scripts to the test database
-(please run that if you are starting the devcontainer for the first time
-or if you added any python dependencies to the [`./setup.cfg`](./setup.cfg))
-- `dev_launcher` - starts the service with the development config yaml
-(located in the `./.devcontainer/` dir)
+Moreover, inside the devcontainer, a convenience commands `dev_install` is available.
+It installs the service with all development dependencies, installs pre-commit.
 
-If you prefer not to use vscode, you could get a similar setup (without the editor specific features)
-by running the following commands:
-``` bash
-# Execute in the repo's root dir:
-cd ./.devcontainer
-
-# build and run the environment with docker-compose
-docker-compose up
-
-# attach to the main container:
-# (you can open multiple shell sessions like this)
-docker exec -it devcontainer_app_1 /bin/bash
-```
+The installation is performed automatically when you build the devcontainer. However,
+if you update dependencies in the [`./setup.cfg`](./setup.cfg) or the
+[`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
 
 ## License
-This repository is free to use and modify according to the [Apache 2.0 License](./LICENSE).
+This repository is free to use and modify according to the
+[Apache 2.0 License](./LICENSE).
+
+## Readme Generation
+This readme is autogenerate, please see [`readme_generation.md`](./readme_generation.md)
+for details.
