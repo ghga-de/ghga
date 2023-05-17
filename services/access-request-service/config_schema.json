@@ -3,12 +3,112 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "access_requests_collection": {
+      "title": "Access Requests Collection",
+      "default": "accessRequests",
+      "env_names": [
+        "ars_access_requests_collection"
+      ],
+      "type": "string"
+    },
+    "access_upfront_max_days": {
+      "title": "Access Upfront Max Days",
+      "default": 180,
+      "env_names": [
+        "ars_access_upfront_max_days"
+      ],
+      "type": "integer"
+    },
+    "access_grant_min_days": {
+      "title": "Access Grant Min Days",
+      "default": 7,
+      "env_names": [
+        "ars_access_grant_min_days"
+      ],
+      "type": "integer"
+    },
+    "access_grant_max_days": {
+      "title": "Access Grant Max Days",
+      "default": 730,
+      "env_names": [
+        "ars_access_grant_max_days"
+      ],
+      "type": "integer"
+    },
+    "db_connection_str": {
+      "title": "Db Connection Str",
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "example": "mongodb://localhost:27017",
+      "env_names": [
+        "ars_db_connection_str"
+      ],
+      "type": "string",
+      "writeOnly": true,
+      "format": "password"
+    },
+    "db_name": {
+      "title": "Db Name",
+      "default": "access-requests",
+      "env_names": [
+        "ars_db_name"
+      ],
+      "type": "string"
+    },
+    "auth_key": {
+      "title": "Internal public key",
+      "description": "The GHGA internal public key for validating the token signature.",
+      "example": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}",
+      "env_names": [
+        "ars_auth_key"
+      ],
+      "type": "string"
+    },
+    "auth_algs": {
+      "title": "Auth Algs",
+      "description": "A list of all algorithms used for signing GHGA internal tokens.",
+      "default": [
+        "ES256"
+      ],
+      "env_names": [
+        "ars_auth_algs"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "auth_check_claims": {
+      "title": "Auth Check Claims",
+      "description": "A dict of all GHGA internal claims that shall be verified.",
+      "default": {
+        "name": null,
+        "email": null,
+        "iat": null,
+        "exp": null
+      },
+      "env_names": [
+        "ars_auth_check_claims"
+      ],
+      "type": "object"
+    },
+    "auth_map_claims": {
+      "title": "Auth Map Claims",
+      "description": "A mapping of claims to attributes in the GHGA auth context.",
+      "default": {},
+      "env_names": [
+        "ars_auth_map_claims"
+      ],
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "host": {
       "title": "Host",
       "description": "IP of the host.",
       "default": "127.0.0.1",
       "env_names": [
-        "my_microservice_host"
+        "ars_host"
       ],
       "type": "string"
     },
@@ -17,7 +117,7 @@
       "description": "Port to expose the server on the specified host",
       "default": 8080,
       "env_names": [
-        "my_microservice_port"
+        "ars_port"
       ],
       "type": "integer"
     },
@@ -26,7 +126,7 @@
       "description": "Controls the verbosity of the log.",
       "default": "info",
       "env_names": [
-        "my_microservice_log_level"
+        "ars_log_level"
       ],
       "enum": [
         "critical",
@@ -43,7 +143,7 @@
       "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
       "default": false,
       "env_names": [
-        "my_microservice_auto_reload"
+        "ars_auto_reload"
       ],
       "type": "boolean"
     },
@@ -52,7 +152,7 @@
       "description": "Number of workers processes to run.",
       "default": 1,
       "env_names": [
-        "my_microservice_workers"
+        "ars_workers"
       ],
       "type": "integer"
     },
@@ -61,7 +161,7 @@
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "default": "/",
       "env_names": [
-        "my_microservice_api_root_path"
+        "ars_api_root_path"
       ],
       "type": "string"
     },
@@ -70,7 +170,7 @@
       "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
       "default": "/openapi.json",
       "env_names": [
-        "my_microservice_openapi_url"
+        "ars_openapi_url"
       ],
       "type": "string"
     },
@@ -79,7 +179,7 @@
       "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
       "default": "/docs",
       "env_names": [
-        "my_microservice_docs_url"
+        "ars_docs_url"
       ],
       "type": "string"
     },
@@ -91,7 +191,7 @@
         "https://www.example.org"
       ],
       "env_names": [
-        "my_microservice_cors_allowed_origins"
+        "ars_cors_allowed_origins"
       ],
       "type": "array",
       "items": {
@@ -106,7 +206,7 @@
         "https://www.example.org"
       ],
       "env_names": [
-        "my_microservice_cors_allow_credentials"
+        "ars_cors_allow_credentials"
       ],
       "type": "boolean"
     },
@@ -117,7 +217,7 @@
         "*"
       ],
       "env_names": [
-        "my_microservice_cors_allowed_methods"
+        "ars_cors_allowed_methods"
       ],
       "type": "array",
       "items": {
@@ -129,7 +229,7 @@
       "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
       "example": [],
       "env_names": [
-        "my_microservice_cors_allowed_headers"
+        "ars_cors_allowed_headers"
       ],
       "type": "array",
       "items": {
@@ -138,26 +238,16 @@
     },
     "service_name": {
       "title": "Service Name",
-      "default": "my_microservice",
+      "default": "ars",
       "env_names": [
-        "my_microservice_service_name"
-      ],
-      "type": "string"
-    },
-    "language": {
-      "title": "Language",
-      "default": "Croatian",
-      "env_names": [
-        "my_microservice_language"
-      ],
-      "enum": [
-        "Greek",
-        "Croatian",
-        "French",
-        "German"
+        "ars_service_name"
       ],
       "type": "string"
     }
   },
+  "required": [
+    "db_connection_str",
+    "auth_key"
+  ],
   "additionalProperties": false
 }

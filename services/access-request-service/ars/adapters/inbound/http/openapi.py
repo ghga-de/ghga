@@ -12,22 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
+"""Utils to customize the OpenAPI script"""
 
-import asyncio
+from typing import Any, Dict
 
-from ghga_service_commons.api import run_server
+from fastapi.openapi.utils import get_openapi
 
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
+from ars import __version__
+from ars.config import Config
 
-
-def run(config: Config = CONFIG):
-    """Run the service"""
-    # Please adapt to package name
-    asyncio.run(run_server(app="my_microservice.__main__:app", config=config))
+__all__ = ["get_openapi_schema"]
 
 
-if __name__ == "__main__":
-    run()
+def get_openapi_schema(api) -> Dict[str, Any]:
+    """Generate a custom OpenAPI schema for the service."""
+
+    config = Config()
+
+    return get_openapi(
+        title="Access Request Service",
+        version=__version__,
+        description="A service managing access requests for the GHGA Data Portal",
+        servers=[{"url": config.api_root_path}],
+        tags=[{"name": "AccessRequests"}],
+        routes=api.routes,
+    )

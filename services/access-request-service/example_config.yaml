@@ -1,14 +1,28 @@
+access_grant_max_days: 730
+access_grant_min_days: 7
+access_requests_collection: accessRequests
+access_upfront_max_days: 180
 api_root_path: /
-auto_reload: false
-cors_allow_credentials: null
-cors_allowed_headers: null
-cors_allowed_methods: null
-cors_allowed_origins: null
+auth_algs:
+- ES256
+auth_check_claims:
+  email: null
+  exp: null
+  iat: null
+  name: null
+auth_key: '{}'
+auth_map_claims: {}
+auto_reload: true
+cors_allow_credentials: false
+cors_allowed_headers: []
+cors_allowed_methods: []
+cors_allowed_origins: []
+db_connection_str: '**********'
+db_name: dev-db
 docs_url: /docs
 host: 127.0.0.1
-language: Greek
 log_level: info
 openapi_url: /openapi.json
 port: 8080
-service_name: my_microservice
+service_name: ars
 workers: 1

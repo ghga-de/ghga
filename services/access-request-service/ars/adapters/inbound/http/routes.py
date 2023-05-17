@@ -13,4 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Subpackage defining a RESTful API"""
+
+"""
+Module containing the main FastAPI router and all route functions.
+"""
+
+import logging
+
+from fastapi import APIRouter
+
+__all__ = ["router"]
+
+log = logging.getLogger(__name__)
+
+router = APIRouter()
