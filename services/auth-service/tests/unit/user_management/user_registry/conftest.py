@@ -13,10 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Auth Service
+"""Test configuration for the user management"""
 
-The GHGA auth service contains all services needed for the management,
-authentication and authorization of users.
-"""
+from pytest import fixture
 
-__version__ = "0.4.0"
+from ....fixtures import auth_keys
+
+
+@fixture(autouse=True, scope="package")
+def config_for_user_registry() -> None:
+    """Set the environment for the user registry"""
+    auth_keys.reload_auth_key_config(auth_adapter=False)

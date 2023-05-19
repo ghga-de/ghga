@@ -23,7 +23,7 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from auth_service.user_management.user_registry.utils import is_internal_id
 
 from ....fixtures.utils import get_headers_for
-from ..fixtures import (  # noqa: F401; pylint: disable=unused-import
+from .fixtures import (  # noqa: F401; pylint: disable=unused-import
     fixture_client,
     fixture_client_with_db,
 )
@@ -72,7 +72,9 @@ def test_post_user(client_with_db, user_headers):
 
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
-    date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
+    date_diff = now_as_utc() - datetime.fromisoformat(
+        user.pop("registration_date")
+    )  # pyright: ignore
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user.pop("active_submissions") == []
@@ -101,7 +103,9 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
 
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
-    date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
+    date_diff = now_as_utc() - datetime.fromisoformat(
+        user.pop("registration_date")
+    )  # pyright: ignore
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user.pop("active_submissions") == []
@@ -206,7 +210,9 @@ def test_put_user(client_with_db, user_headers):
     assert user.pop("ext_id") == old_data["ext_id"]
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
-    date_diff = now_as_utc() - datetime.fromisoformat(user.pop("registration_date"))
+    date_diff = now_as_utc() - datetime.fromisoformat(
+        user.pop("registration_date")
+    )  # pyright: ignore
     assert 0 <= date_diff.total_seconds() <= 10
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
@@ -438,7 +444,9 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
     assert status_change["previous"] == "active"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
-    date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
+    date_diff = now_as_utc() - datetime.fromisoformat(
+        status_change["change_date"]
+    )  # pyright: ignore
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == expected_user
@@ -451,7 +459,9 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
 
     # cannot get status change as normal user
     assert user.pop("status_change") is None
-    date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
+    date_diff = now_as_utc() - datetime.fromisoformat(
+        status_change["change_date"]
+    )  # pyright: ignore
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == expected_user
@@ -488,7 +498,9 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     assert status_change["previous"] == "active"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
-    date_diff = now_as_utc() - datetime.fromisoformat(status_change["change_date"])
+    date_diff = now_as_utc() - datetime.fromisoformat(
+        status_change["change_date"]
+    )  # pyright: ignore
     assert 0 <= date_diff.total_seconds() <= 10
 
     assert user == expected_user

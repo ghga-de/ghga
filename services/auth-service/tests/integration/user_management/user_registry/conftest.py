@@ -17,10 +17,30 @@
 
 from pytest import fixture
 
-from ...fixtures import auth_keys
+from ....fixtures import auth_keys
+from ....fixtures.utils import get_headers_for
 
 
 @fixture(autouse=True, scope="package")
-def config_for_user_management() -> None:
-    """Set the environment for the user management"""
+def config_for_user_registry() -> None:
+    """Set the environment for the user registry"""
     auth_keys.reload_auth_key_config(auth_adapter=False)
+
+
+@fixture(autouse=True, scope="package")
+def user_headers() -> dict[str, str]:
+    """Get headers with authorization for an unregistered user."""
+    return get_headers_for(
+        ext_id="max@ls.org", name="Max Headroom", email="max@example.org"
+    )
+
+
+@fixture(autouse=True, scope="package")
+def steward_headers() -> dict[str, str]:
+    """Get headers with authorization for a user with data steward role."""
+    return get_headers_for(
+        id="steve-internal",
+        name="Steve Steward",
+        email="steve@archive.org",
+        role="data_steward",
+    )

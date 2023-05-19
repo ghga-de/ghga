@@ -16,7 +16,7 @@
 """Config Parameter Modeling and Parsing"""
 
 import logging.config
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from ghga_service_commons.api import ApiConfigBase, LogLevel
 from ghga_service_commons.auth.ghga import AuthConfig
@@ -88,6 +88,8 @@ class Config(ApiConfigBase, AuthConfig):
     # realm for basic authentication
     basic_auth_realm: str = "GHGA Data Portal"
 
+    # if not run as auth adapter, which APIs should be provided
+    include_apis: list[Literal["users", "claims"]] = ["users"]
     # a list of external IDs of data stewards to seed the claims repository with
     add_as_data_stewards: list[str] = []
 

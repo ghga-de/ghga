@@ -53,6 +53,8 @@ async def seed_data_steward_claims(config: Config) -> None:
     This function removes all existing data steward claims and then adds such
     claims for all data stewards specified via external user ID in the config.
     """
+    if "claims" not in config.include_apis:
+        return
     data_stewards = config.add_as_data_stewards
     if not data_stewards:
         log.warning("No data stewards are defined in the configuration.")

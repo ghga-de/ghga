@@ -53,7 +53,12 @@ async def lifespan(app: FastAPI):  # pylint: disable=redefined-outer-name
     We currently use it to seed the database with the data steward claims.
     """
     config = app.dependency_overrides.get(get_config, get_config)()
-    await seed_data_steward_claims(config)
+    include_apis = config.include_apis
+    if "users" in include_apis:
+        app.include_router(users_router)
+    if "claims" in include_apis:
+        app.include_router(claims_router)
+        await seed_data_steward_claims(config)
     yield
 
 
@@ -68,9 +73,6 @@ app = FastAPI(
 )
 
 configure_app(app, config=get_config())
-
-app.include_router(users_router)
-app.include_router(claims_router)
 
 
 @app.get("/health", summary="health", tags=["health"], status_code=status.HTTP_200_OK)

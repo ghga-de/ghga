@@ -246,6 +246,23 @@
       ],
       "type": "string"
     },
+    "include_apis": {
+      "title": "Include Apis",
+      "default": [
+        "users"
+      ],
+      "env_names": [
+        "auth_service_include_apis"
+      ],
+      "type": "array",
+      "items": {
+        "enum": [
+          "users",
+          "claims"
+        ],
+        "type": "string"
+      }
+    },
     "add_as_data_stewards": {
       "title": "Add As Data Stewards",
       "default": [],
