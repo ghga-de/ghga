@@ -29,11 +29,6 @@ def pipeline_match_text_search(*, query: str) -> JsonObject:
     return {"$match": text_search}
 
 
-def replace_periods(*, field_name: str) -> str:
-    """convert field names with . to __ e.g.: obj.type -> obj__type"""
-    return field_name.replace(".", "__")
-
-
 def args_for_getfield(*, root_object_name: str, field_name: str) -> tuple[str, str]:
     """fieldpath names can't have '.', so specify any nested fields with $getField"""
     prefix = f"${root_object_name}"
@@ -59,17 +54,17 @@ def pipeline_match_filters_stage(*, filters: list[models.Filter]) -> JsonObject:
 
 
 def pipeline_apply_facets(
-    *, facet_fields: list[str], skip: int, limit: Optional[int] = None
+    *, facet_fields: list[models.FacetLabel], skip: int, limit: Optional[int] = None
 ):
     """Uses a list of facetable property names to build the subquery for faceting"""
     segment: dict[str, list[JsonObject]] = {}
 
-    for field in facet_fields:
+    for facet in facet_fields:
         prefix, specified_field = args_for_getfield(
-            root_object_name="content", field_name=field
+            root_object_name="content", field_name=facet.key
         )
 
-        segment[replace_periods(field_name=field)] = [
+        segment[facet.name] = [
             {
                 "$group": {
                     "_id": {"$getField": {"field": specified_field, "input": prefix}},
@@ -99,21 +94,21 @@ def pipeline_apply_facets(
     return {"$facet": segment}
 
 
-def pipeline_project(*, facet_fields: list[str]) -> JsonObject:
+def pipeline_project(*, facet_fields: list[models.FacetLabel]) -> JsonObject:
     """Reshape the query so the facets are contained in a top level object"""
     segment: dict[str, Any] = {"hits": 1, "facets": []}
     segment["count"] = {"$arrayElemAt": ["$count.total", 0]}
 
     # add a segment for each facet to summarize the options
-    for facet_name in facet_fields:
-        facet_name = facet_name.replace(".", "__")
+    for facet in facet_fields:
         segment["facets"].append(
             {
-                "key": facet_name,
+                "key": facet.key,
+                "name": facet.name,
                 "options": {
                     "$arrayToObject": {
                         "$map": {
-                            "input": f"${facet_name}",
+                            "input": f"${facet.name}",
                             "as": "temp",
                             "in": {"k": "$$temp._id", "v": "$$temp.count"},
                         }
@@ -128,7 +123,7 @@ def build_pipeline(
     *,
     query: str,
     filters: list[models.Filter],
-    facet_fields: list[str],
+    facet_fields: list[models.FacetLabel],
     skip: int = 0,
     limit: Optional[int] = None,
 ) -> list[JsonObject]:

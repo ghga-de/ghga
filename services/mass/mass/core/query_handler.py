@@ -62,7 +62,7 @@ class QueryHandler(QueryHandlerPort):
 
         # get configured facet fields for given resource class
         try:
-            facet_fields = self._config.searchable_classes[
+            facet_fields: list[models.FacetLabel] = self._config.searchable_classes[
                 class_name
             ].facetable_properties
         except KeyError as err:

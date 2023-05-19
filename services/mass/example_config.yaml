@@ -15,8 +15,11 @@ searchable_classes:
   Dataset:
     description: Dataset grouping files under controlled access.
     facetable_properties:
-    - type
-    - study.type
-    - study.project.alias
+    - key: type
+      name: Type
+    - key: study.type
+      name: Study Type
+    - key: study.project.alias
+      name: Project Alias
 service_name: mass
 workers: 1

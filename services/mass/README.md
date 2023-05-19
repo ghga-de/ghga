@@ -113,13 +113,19 @@ The service requires the following configuration parameters:
 ## Definitions
 
 
+- **`FacetLabel`** *(object)*: Contains the key and corresponding user-friendly name for a facet.
+
+  - **`key`** *(string)*: The raw facet key, such as study.type.
+
+  - **`name`** *(string)*: The user-friendly name for the facet. Default: ``.
+
 - **`SearchableClass`** *(object)*: Represents a searchable artifact or resource type.
 
   - **`description`** *(string)*: A brief description of the resource type.
 
   - **`facetable_properties`** *(array)*: A list of of the facetable properties for the resource type.
 
-    - **Items** *(string)*
+    - **Items**: Refer to *#/definitions/FacetLabel*.
 
 
 ### Usage:

@@ -43,7 +43,7 @@ class Aggregator(AggregatorPort):
         *,
         query: str,
         filters: list[models.Filter],
-        facet_fields: list[str],
+        facet_fields: list[models.FacetLabel],
         skip: int = 0,
         limit: Optional[int] = None,
     ) -> JsonObject:
@@ -68,11 +68,6 @@ class Aggregator(AggregatorPort):
                 + ". Check that all documents have required facet fields."
             )
             raise AggregationError(aggregation_details=aggregation_details) from err
-
-        # replace __ with . in facet keys
-        for i, facet in enumerate(results["facets"]):
-            facet["key"] = facet["key"].replace("__", ".")
-            results["facets"][i] = facet
 
         return results
 

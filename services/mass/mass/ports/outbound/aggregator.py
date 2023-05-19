@@ -40,7 +40,7 @@ class AggregatorPort(ABC):
         *,
         query: str,
         filters: list[models.Filter],
-        facet_fields: list[str],
+        facet_fields: list[models.FacetLabel],
         skip: int = 0,
         limit: Optional[int] = None,
     ) -> JsonObject:

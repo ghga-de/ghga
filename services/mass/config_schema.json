@@ -183,6 +183,27 @@
   ],
   "additionalProperties": false,
   "definitions": {
+    "FacetLabel": {
+      "title": "FacetLabel",
+      "description": "Contains the key and corresponding user-friendly name for a facet",
+      "type": "object",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "description": "The raw facet key, such as study.type",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "description": "The user-friendly name for the facet",
+          "default": "",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    },
     "SearchableClass": {
       "title": "SearchableClass",
       "description": "Represents a searchable artifact or resource type",
@@ -198,7 +219,7 @@
           "description": "A list of of the facetable properties for the resource type",
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/FacetLabel"
           }
         }
       },

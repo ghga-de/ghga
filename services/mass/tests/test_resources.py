@@ -94,10 +94,14 @@ async def test_facets_returned(joint_fixture: JointFixture):  # noqa: F811
     )
 
     config = get_config()
-    facets = config.searchable_classes["DatasetEmbedded"].facetable_properties
+    facets: list[models.FacetLabel] = config.searchable_classes[
+        "DatasetEmbedded"
+    ].facetable_properties
+    facet_key_to_name = {x.key: x.name for x in facets}
 
     for facet in results_faceted.facets:
-        assert facet.key in facets
+        assert facet.key in facet_key_to_name
+        assert facet.name == facet_key_to_name[facet.key]
         if facet.key == "category":
             assert len(facet.options) == 1
             assert facet.options["hotel"] == 2
