@@ -3,6 +3,15 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "data_steward_email": {
+      "title": "Data Steward Email",
+      "description": "An email address that can be used to notify data stewards",
+      "env_names": [
+        "ars_data_steward_email"
+      ],
+      "type": "string",
+      "format": "email"
+    },
     "access_upfront_max_days": {
       "title": "Access Upfront Max Days",
       "default": 180,
@@ -26,6 +35,53 @@
         "ars_access_grant_max_days"
       ],
       "type": "integer"
+    },
+    "notification_event_topic": {
+      "title": "Notification Event Topic",
+      "default": "notifications",
+      "env_names": [
+        "ars_notification_event_topic"
+      ],
+      "type": "string"
+    },
+    "notification_event_type": {
+      "title": "Notification Event Type",
+      "default": "notification",
+      "env_names": [
+        "ars_notification_event_type"
+      ],
+      "type": "string"
+    },
+    "service_name": {
+      "title": "Service Name",
+      "default": "ars",
+      "env_names": [
+        "ars_service_name"
+      ],
+      "type": "string"
+    },
+    "service_instance_id": {
+      "title": "Service Instance Id",
+      "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
+      "example": "germany-bw-instance-001",
+      "env_names": [
+        "ars_service_instance_id"
+      ],
+      "type": "string"
+    },
+    "kafka_servers": {
+      "title": "Kafka Servers",
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "example": [
+        "localhost:9092"
+      ],
+      "env_names": [
+        "ars_kafka_servers"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "db_connection_str": {
       "title": "Db Connection Str",
@@ -227,17 +283,12 @@
       "items": {
         "type": "string"
       }
-    },
-    "service_name": {
-      "title": "Service Name",
-      "default": "ars",
-      "env_names": [
-        "ars_service_name"
-      ],
-      "type": "string"
     }
   },
   "required": [
+    "data_steward_email",
+    "service_instance_id",
+    "kafka_servers",
     "db_connection_str",
     "auth_key"
   ],

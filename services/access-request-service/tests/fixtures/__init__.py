@@ -22,7 +22,9 @@ from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
     sign_and_serialize_token,
 )
+from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from pydantic import EmailStr
 from pytest import fixture
 from pytest_asyncio import fixture as async_fixture
 
@@ -90,6 +92,7 @@ def fixture_auth_headers_steward_inactive() -> dict[str, str]:
 
 @async_fixture(name="container")
 async def fixture_container(
+    kafka_fixture: KafkaFixture,
     mongodb_fixture: MongoDbFixture,
 ) -> AsyncGenerator[Container, None]:
     """Populate database and get configured container"""
@@ -97,6 +100,8 @@ async def fixture_container(
     # create configuration for testing
     config = Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
+        data_steward_email=EmailStr("steward@ghga.de"),
+        **kafka_fixture.config.dict(),
         **mongodb_fixture.config.dict(),
     )
 

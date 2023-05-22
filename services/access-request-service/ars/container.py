@@ -17,9 +17,11 @@
 
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from hexkit.inject import ContainerBase, get_configurator, get_constructor
+from hexkit.providers.akafka import KafkaEventPublisher
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from ars.adapters.outbound.dao import AccessRequestDaoConstructor
+from ars.adapters.outbound.event_pub import NotificationEmitter
 from ars.config import Config
 from ars.core.repository import AccessRequestRepository
 
@@ -32,10 +34,16 @@ class Container(ContainerBase):
     # outbound providers:
     dao_factory = get_constructor(MongoDbDaoFactory, config=config)
 
+    event_publisher = get_constructor(KafkaEventPublisher, config=config)
+
     # outbound translators:
     access_request_dao = get_constructor(
         AccessRequestDaoConstructor,
         dao_factory=dao_factory,
+    )
+
+    notification_emitter = get_constructor(
+        NotificationEmitter, config=config, event_publisher=event_publisher
     )
 
     # auth provider:
@@ -48,5 +56,6 @@ class Container(ContainerBase):
     access_request_repository = get_constructor(
         AccessRequestRepository,
         access_request_dao=access_request_dao,
+        notification_emitter=notification_emitter,
         config=config,
     )

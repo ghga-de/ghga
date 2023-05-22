@@ -22,7 +22,7 @@ from typing import Any, Optional
 
 from ghga_service_commons.auth.ghga import AuthContext, has_role
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from pydantic import BaseSettings, Field
+from pydantic import BaseSettings, EmailStr, Field
 
 from ars.core.models import (
     AccessRequest,
@@ -30,15 +30,29 @@ from ars.core.models import (
     AccessRequestData,
     AccessRequestStatus,
 )
+from ars.core.notifications import (
+    REQUEST_ALLOWED_CONFIRMATION,
+    REQUEST_ALLOWED_NOTIFICATION,
+    REQUEST_CREATED_CONFIRMATION,
+    REQUEST_CREATED_NOTIFICATION,
+    REQUEST_DENIED_CONFIRMATION,
+    REQUEST_DENIED_NOTIFICATION,
+    Notification,
+)
 from ars.core.roles import DATA_STEWARD_ROLE
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
+from ars.ports.outbound.notification_emitter import NotificationEmitterPort
 
 __all__ = ["AccessRequestConfig", "AccessRequestRepository"]
 
 
 class AccessRequestConfig(BaseSettings):
     """Config parameters needed for the AccessRequestRepository."""
+
+    data_steward_email: Optional[EmailStr] = Field(
+        ..., description="An email address that can be used to notify data stewards"
+    )
 
     access_upfront_max_days: int = Field(
         ..., description="The maximum lead time in days to request access grants"
@@ -59,13 +73,16 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         *,
         config: AccessRequestConfig,
         access_request_dao: AccessRequestDaoPort,
+        notification_emitter: NotificationEmitterPort,
     ):
         """Initialize with specific configuration and outbound adapter."""
         self._config = config
         self._max_lead_time = timedelta(days=config.access_upfront_max_days)
         self._min_duration = timedelta(days=config.access_grant_min_days)
         self._max_duration = timedelta(days=config.access_grant_max_days)
+        self._data_steward_email = self._config.data_steward_email
         self._dao = access_request_dao
+        self._notification_emitter = notification_emitter
 
     async def create(
         self, creation_data: AccessRequestCreationData, *, auth_context: AuthContext
@@ -106,7 +123,26 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             request_created=request_created,
         )
 
-        return await self._dao.insert(access_request_data)
+        request = await self._dao.insert(access_request_data)
+
+        # notify data steward
+        data_steward_email = self._data_steward_email
+        if data_steward_email:
+            await self._notify(
+                recipient_email=data_steward_email,
+                recipient_name="Data Steward",
+                request=request,
+                notification=REQUEST_CREATED_CONFIRMATION,
+            )
+        # notify requester
+        await self._notify(
+            recipient_email=access_request_data.email,
+            recipient_name=full_user_name,
+            request=request,
+            notification=REQUEST_CREATED_NOTIFICATION,
+        )
+
+        return request
 
     async def get(
         self,
@@ -177,9 +213,6 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if request.status != AccessRequestStatus.PENDING:
             raise self.AccessRequestError("Status cannot be reverted")
 
-        # Should set the status in the claims repository here
-        # if it has been approved and proceed only if this succeeds.
-
         modified_request = request.copy(
             update={
                 "status": status,
@@ -190,7 +223,47 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         await self._dao.update(modified_request)
 
+        # Should set the status in the claims repository here
+        # if it has been approved, and raise an error and rollback
+        # the above update if this does not succeed.
+
+        # notify data steward
+        data_steward_email = self._data_steward_email
+        if data_steward_email:
+            await self._notify(
+                recipient_email=data_steward_email,
+                recipient_name="Data Steward",
+                request=request,
+                notification=REQUEST_DENIED_CONFIRMATION
+                if status == AccessRequestStatus.DENIED
+                else REQUEST_ALLOWED_CONFIRMATION,
+            )
+        # notify requester
+        await self._notify(
+            recipient_email=request.email,
+            recipient_name=request.full_user_name,
+            request=request,
+            notification=REQUEST_DENIED_NOTIFICATION
+            if status == AccessRequestStatus.DENIED
+            else REQUEST_ALLOWED_NOTIFICATION,
+        )
+
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:
         """Blank out internal information in the request"""
         return request.copy(update={"changed_by": None})
+
+    async def _notify(
+        self,
+        recipient_email: EmailStr,
+        recipient_name: str,
+        request: AccessRequest,
+        notification: Notification,
+    ) -> None:
+        """Send the given notification to the specified recipient."""
+        await self._notification_emitter.notify(
+            email=recipient_email,
+            full_name=recipient_name,
+            subject=notification.subject,
+            text=notification.text.format(**request.dict()).strip(),
+        )

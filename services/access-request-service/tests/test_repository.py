@@ -19,7 +19,7 @@
 from collections.abc import AsyncIterator, Mapping
 from datetime import timedelta
 from operator import attrgetter
-from typing import Any, Optional
+from typing import Any, NamedTuple, Optional
 
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext, UserStatus
 from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
@@ -34,6 +34,7 @@ from ars.core.models import (
 )
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
+from ars.ports.outbound.notification_emitter import NotificationEmitterPort
 
 datetime_utc = DateTimeUTC.construct
 
@@ -73,6 +74,7 @@ config = AccessRequestConfig(
     access_upfront_max_days=365,
     access_grant_min_days=30,
     access_grant_max_days=2 * 365,
+    data_steward_email=auth_context_steward.email,
 )
 
 
@@ -182,8 +184,46 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         self.last_upsert = dto
 
 
+class NotificationRecord(NamedTuple):
+    """Class that records a sent notification while testing."""
+
+    recipient: str
+    subject: str
+    text: str
+
+
+class NotificationEmitterDummy(NotificationEmitterPort):
+    """Dummy notification emitter for testing."""
+
+    notifications: dict[str, NotificationRecord]
+
+    def reset(self) -> None:
+        """Reset the recorded notification."""
+        self.notifications = {}
+
+    @property
+    def num_notifications(self):
+        """Get total number of recorded notifications."""
+        return len(self.notifications)
+
+    def notification_for(self, email: str) -> NotificationRecord:
+        """Get recorded notification to the given email."""
+        return self.notifications[email]
+
+    async def notify(
+        self, *, email: EmailStr, full_name: str, subject: str, text: str
+    ) -> None:
+        if email in self.notifications:
+            raise RuntimeError(f"A notification to {email} was already sent.")
+        self.notifications[email] = NotificationRecord(full_name, subject, text)
+
+
 dao = AccessRequestDaoDummy()
-repository = AccessRequestRepository(config=config, access_request_dao=dao)
+notification_emitter = NotificationEmitterDummy()
+
+repository = AccessRequestRepository(
+    config=config, access_request_dao=dao, notification_emitter=notification_emitter
+)
 
 
 @mark.asyncio
@@ -200,11 +240,15 @@ async def test_can_create_request():
         access_ends=access_ends,
     )
     dao.last_upsert = None
+    notification_emitter.reset()
     creation_date = now_as_utc()
+
     request = await repository.create(creation_data, auth_context=auth_context_doe)
+
     assert request.id == "newly-created-id"
     assert request.user_id == "id-of-john-doe@ghga.de"
     assert request.dataset_id == "some-dataset"
+    assert request.email == "me@john-doe.name"
     assert request.request_text == "Can I access some dataset?"
     assert request.access_starts == request.request_created
     assert request.access_ends == creation_data.access_ends
@@ -213,7 +257,27 @@ async def test_can_create_request():
     assert 0 <= (request.request_created - creation_date).seconds < 5
     assert request.status_changed is None
     assert request.changed_by is None
+
     assert dao.last_upsert == request
+
+    assert notification_emitter.num_notifications == 2
+    notification = notification_emitter.notification_for("steward@ghga.de")
+    assert notification.recipient == "Data Steward"
+    assert "access request has been created" in notification.subject
+    assert (
+        notification.text
+        == "Dr. John Doe requested to download the dataset some-dataset.\n\n"
+        + "The specified contact email address is: me@john-doe.name"
+    )
+    notification = notification_emitter.notification_for("me@john-doe.name")
+    assert notification.recipient == "Dr. John Doe"
+    assert "Your data download access request" in notification.subject
+    assert (
+        notification.text
+        == "Your request to download the dataset some-dataset has been registered.\n\n"
+        + "You should be contacted by one of our data stewards"
+        + " in the next three workdays."
+    )
 
 
 @mark.asyncio
@@ -248,12 +312,17 @@ async def test_silently_correct_request_that_is_too_early():
         access_ends=access_ends,
     )
     dao.last_upsert = None
+    notification_emitter.reset()
+
     request = await repository.create(creation_data, auth_context=auth_context_doe)
+
     assert 0 <= (request.request_created - creation_date).seconds < 5
     assert request.access_starts != creation_data.access_starts
     assert request.access_starts == request.request_created
     assert request.access_ends == creation_data.access_ends
     assert dao.last_upsert == request
+
+    assert notification_emitter.num_notifications == 2
 
 
 @mark.asyncio
@@ -269,10 +338,16 @@ async def test_cannot_create_request_too_much_in_advance():
         access_starts=access_starts,
         access_ends=access_ends,
     )
+    dao.last_upsert = None
+    notification_emitter.reset()
+
     with raises(
         repository.AccessRequestInvalidDuration, match="Access start date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
+
+    assert dao.last_upsert is None
+    assert notification_emitter.num_notifications == 0
 
 
 @mark.asyncio
@@ -288,10 +363,16 @@ async def test_cannot_create_request_too_short():
         access_starts=access_starts,
         access_ends=access_ends,
     )
+    dao.last_upsert = None
+    notification_emitter.reset()
+
     with raises(
         repository.AccessRequestInvalidDuration, match="Access end date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
+
+    assert dao.last_upsert is None
+    assert notification_emitter.num_notifications == 0
 
 
 @mark.asyncio
@@ -307,10 +388,16 @@ async def test_cannot_create_request_too_long():
         access_starts=access_starts,
         access_ends=access_ends,
     )
+    dao.last_upsert = None
+    notification_emitter.reset()
+
     with raises(
         repository.AccessRequestInvalidDuration, match="Access end date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
+
+    assert dao.last_upsert is None
+    assert notification_emitter.num_notifications == 0
 
 
 @mark.asyncio
@@ -417,11 +504,14 @@ async def test_set_status_to_allowed():
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
     dao.last_upsert = None
+    notification_emitter.reset()
+
     await repository.update(
         "request-id-4",
         status=AccessRequestStatus.ALLOWED,
         auth_context=auth_context_steward,
     )
+
     changed_request = dao.last_upsert
     assert changed_request is not None
     changed_dict = changed_request.dict()
@@ -432,12 +522,36 @@ async def test_set_status_to_allowed():
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
 
+    assert notification_emitter.num_notifications == 2
+    notification = notification_emitter.notification_for("steward@ghga.de")
+    assert notification.recipient == "Data Steward"
+    assert "download access has been allowed" in notification.subject
+    assert (
+        notification.text
+        == "The request by Dr. John Doe to download the dataset\n"
+        + "new-dataset has now been registered as allowed\n"
+        + "and the access has been granted."
+    )
+    notification = notification_emitter.notification_for("me@john-doe.name")
+    assert notification.recipient == "Dr. John Doe"
+    assert "Your data download access request has been accepted" in notification.subject
+    assert (
+        notification.text
+        == "We are glad to inform you that your request to download the dataset\n"
+        + "new-dataset has been accepted.\n\n"
+        + "You can now start download the dataset as explained in the GHGA Data Portal."
+    )
+
 
 @mark.asyncio
 async def test_set_status_to_allowed_when_it_is_already_allowed():
     """Test setting the status of a request to the same state."""
     request = await dao.get_by_id("request-id-1")
     assert request.status == AccessRequestStatus.ALLOWED
+
+    dao.last_upsert = None
+    notification_emitter.reset()
+
     with raises(repository.AccessRequestError, match="Same status is already set"):
         await repository.update(
             "request-id-1",
@@ -445,12 +559,19 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
             auth_context=auth_context_steward,
         )
 
+    assert dao.last_upsert is None
+    assert notification_emitter.num_notifications == 0
+
 
 @mark.asyncio
 async def test_set_status_to_allowed_when_it_is_already_denied():
     """Test setting the status of a request to allowed that has already been denied."""
     request = await dao.get_by_id("request-id-3")
     assert request.status == AccessRequestStatus.DENIED
+
+    dao.last_upsert = None
+    notification_emitter.reset()
+
     with raises(repository.AccessRequestError, match="Status cannot be reverted"):
         await repository.update(
             "request-id-3",
@@ -462,6 +583,9 @@ async def test_set_status_to_allowed_when_it_is_already_denied():
 @mark.asyncio
 async def test_set_status_of_non_existing_request():
     """Test setting the status of a request that does not exist."""
+    dao.last_upsert = None
+    notification_emitter.reset()
+
     with raises(
         repository.AccessRequestNotFoundError, match="Access request not found"
     ):
@@ -471,13 +595,22 @@ async def test_set_status_of_non_existing_request():
             auth_context=auth_context_steward,
         )
 
+    assert dao.last_upsert is None
+    assert notification_emitter.num_notifications == 0
+
 
 @mark.asyncio
 async def test_set_status_when_not_a_data_steward():
     """Test setting the status of a request when not being a data steward."""
+    dao.last_upsert = None
+    notification_emitter.reset()
+
     with raises(repository.AccessRequestError, match="Not authorized"):
         await repository.update(
             "request-id-4",
             status=AccessRequestStatus.ALLOWED,
             auth_context=auth_context_doe,
         )
+
+    assert dao.last_upsert is None
+    assert notification_emitter.num_notifications == 0

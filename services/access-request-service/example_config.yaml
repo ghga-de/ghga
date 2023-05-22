@@ -16,12 +16,18 @@ cors_allow_credentials: false
 cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
+data_steward_email: helpdesk@ghga.de
 db_connection_str: '**********'
 db_name: dev-db
 docs_url: /docs
 host: 127.0.0.1
+kafka_servers:
+- kafka:9092
 log_level: info
+notification_event_topic: notifications
+notification_event_type: notification
 openapi_url: /openapi.json
 port: 8080
+service_instance_id: '1'
 service_name: ars
 workers: 1

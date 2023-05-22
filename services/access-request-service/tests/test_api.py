@@ -14,12 +14,19 @@
 # limitations under the License.
 #
 
-"""Test the REST API of the access request service"""
+"""Integration test using the REST API of the access request service"""
 
+import re
 from datetime import timedelta
+from typing import NamedTuple, Sequence, cast
 
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.providers.akafka.testutils import (  # noqa: F401 # pylint: disable=unused-import
+    KafkaFixture,
+    RecordedEvent,
+    kafka_fixture,
+)
 from hexkit.providers.mongodb.testutils import (  # noqa: F401 # pylint: disable=unused-import
     mongodb_fixture,
 )
@@ -55,6 +62,34 @@ def assert_is_uuid(value: str):
     assert value.count("-") == 4
 
 
+class NotificationPayload(NamedTuple):
+    """Class that stores an expected notification event payload."""
+
+    email: str
+    name: str
+    subject: str  # regex pattern
+    text: str  # regex pattern
+
+
+def assert_recorded_events(
+    recorded_events: Sequence[RecordedEvent],
+    expected_payloads: list[NotificationPayload],
+) -> None:
+    """Assert that the recorded events are as expected."""
+    assert len(recorded_events) == len(expected_payloads)
+    for event, expected in zip(recorded_events, expected_payloads):
+        assert event.type_ == "notification"
+        assert event.key == expected.email
+        got = event.payload
+        assert isinstance(got, dict)
+        assert got["recipient_email"] == expected.email
+        assert got["email_cc"] == []
+        assert got["email_bcc"] == []
+        assert got["recipient_name"] == expected.name
+        assert re.search(expected.subject, cast(str, got["subject"]))
+        assert re.search(expected.text, cast(str, got["plaintext_body"]))
+
+
 @mark.asyncio
 async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
@@ -67,17 +102,40 @@ async def test_health_check(client: AsyncTestClient):
 
 @mark.asyncio
 async def test_create_access_request(
-    client: AsyncTestClient, auth_headers_doe: dict[str, str]
+    client: AsyncTestClient,
+    auth_headers_doe: dict[str, str],
+    kafka_fixture: KafkaFixture,  # noqa: F811 # pylint: disable=redefined-outer-name
 ):
     """Test that an active user can create an access request."""
 
-    response = await client.post(
-        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
-    )
+    async with kafka_fixture.record_events(in_topic="notifications") as recorder:
+        response = await client.post(
+            "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+        )
+
     assert response.status_code == 201
 
     access_request_id = response.json()
     assert_is_uuid(access_request_id)
+
+    # check that notifications have been sent
+    assert_recorded_events(
+        recorder.recorded_events,
+        [
+            NotificationPayload(
+                "steward@ghga.de",
+                "Data Steward",
+                "A data download access request has been created",
+                "Dr. John Doe requested to download the dataset some-dataset",
+            ),
+            NotificationPayload(
+                "me@john-doe.name",
+                "Dr. John Doe",
+                "Your data download access request has been registered",
+                "Your request to download the dataset some-dataset has been registered",
+            ),
+        ],
+    )
 
 
 @mark.asyncio
@@ -274,6 +332,7 @@ async def test_patch_access_request(
     client: AsyncTestClient,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
+    kafka_fixture: KafkaFixture,  # noqa: F811 # pylint: disable=redefined-outer-name
 ):
     """Test that data stewards can change the status of access requests."""
 
@@ -286,12 +345,34 @@ async def test_patch_access_request(
     assert_is_uuid(access_request_id)
 
     # set status to allowed as data steward
-    response = await client.patch(
-        f"/access-requests/{access_request_id}",
-        json={"status": "allowed"},
-        headers=auth_headers_steward,
+    async with kafka_fixture.record_events(in_topic="notifications") as recorder:
+        response = await client.patch(
+            f"/access-requests/{access_request_id}",
+            json={"status": "allowed"},
+            headers=auth_headers_steward,
+        )
+        assert response.status_code == 204
+
+    # check that notifications have been sent
+    # check that notifications have been sent
+    print(recorder.recorded_events)
+    assert_recorded_events(
+        recorder.recorded_events,
+        [
+            NotificationPayload(
+                "steward@ghga.de",
+                "Data Steward",
+                "Data download access has been allowed",
+                "some-dataset has now been registered as allowed",
+            ),
+            NotificationPayload(
+                "me@john-doe.name",
+                "Dr. John Doe",
+                "Your data download access request has been accepted",
+                "You can now start download the dataset",
+            ),
+        ],
     )
-    assert response.status_code == 204
 
     # get request as user
     response = await client.get("/access-requests", headers=auth_headers_doe)

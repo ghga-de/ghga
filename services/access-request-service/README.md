@@ -47,11 +47,25 @@ ars --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`data_steward_email`** *(string)*: An email address that can be used to notify data stewards.
+
 - **`access_upfront_max_days`** *(integer)*: Default: `180`.
 
 - **`access_grant_min_days`** *(integer)*: Default: `7`.
 
 - **`access_grant_max_days`** *(integer)*: Default: `730`.
+
+- **`notification_event_topic`** *(string)*: Default: `notifications`.
+
+- **`notification_event_type`** *(string)*: Default: `notification`.
+
+- **`service_name`** *(string)*: Default: `ars`.
+
+- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+
+- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+
+  - **Items** *(string)*
 
 - **`db_connection_str`** *(string)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
@@ -98,8 +112,6 @@ The service requires the following configuration parameters:
 - **`cors_allowed_headers`** *(array)*: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.
 
   - **Items** *(string)*
-
-- **`service_name`** *(string)*: Default: `ars`.
 
 
 ### Usage:
