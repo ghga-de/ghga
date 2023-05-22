@@ -51,5 +51,10 @@ class QueryHandlerPort(ABC):
         skip: int,
         limit: Optional[int] = None,
     ):
-        """Processes a query"""
+        """Processes a query
+        Raises:
+            ClassNotConfiguredError - when the class_name parameter does not
+                match any configured class
+            SearchError - when the search operation fails
+        """
         ...

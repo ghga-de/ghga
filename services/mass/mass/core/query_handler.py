@@ -58,8 +58,6 @@ class QueryHandler(QueryHandlerPort):
         skip: int = 0,
         limit: Optional[int] = None,
     ) -> models.QueryResults:
-        """Return resources that match query"""
-
         # get configured facet fields for given resource class
         try:
             facet_fields: list[models.FacetLabel] = self._config.searchable_classes[

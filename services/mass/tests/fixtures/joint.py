@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from typing import AsyncGenerator
 
 import pytest_asyncio
+from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.mongodb.testutils import (  # noqa: F401
     MongoDbFixture,
     mongodb_fixture,
@@ -28,7 +29,7 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
 
 from mass.config import Config
 from mass.container import Container
-from mass.main import get_configured_container
+from mass.main import get_configured_container, get_rest_api
 from tests.fixtures.config import get_config
 from tests.fixtures.mongo import populated_mongodb_fixture  # noqa: F401
 
@@ -40,6 +41,7 @@ class JointFixture:
     config: Config
     container: Container
     mongodb: MongoDbFixture
+    rest_client: AsyncTestClient
 
 
 @pytest_asyncio.fixture
@@ -53,9 +55,14 @@ async def joint_fixture(
 
     # create a DI container instance:translators
     async with get_configured_container(config=config) as container:
+        container.wire(modules=["mass.adapters.inbound.fastapi_.routes"])
+
         # setup an API test client:
-        yield JointFixture(
-            config=config,
-            container=container,
-            mongodb=populated_mongodb_fixture,
-        )
+        api = get_rest_api(config=config)
+        async with AsyncTestClient(app=api) as rest_client:
+            yield JointFixture(
+                config=config,
+                container=container,
+                mongodb=populated_mongodb_fixture,
+                rest_client=rest_client,
+            )

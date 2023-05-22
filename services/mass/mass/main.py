@@ -15,7 +15,7 @@
 #
 """Top-level functionality for the microservice"""
 from fastapi import FastAPI
-from ghga_service_commons.api import configure_app
+from ghga_service_commons.api import configure_app, run_server
 
 from mass.adapters.inbound.fastapi_.routes import router
 from mass.config import Config
@@ -46,4 +46,9 @@ def get_rest_api(*, config: Config) -> FastAPI:
 
 async def run_rest():
     """Run the server"""
-    return True
+    config = Config()
+
+    async with get_configured_container(config=config) as container:
+        container.wire(modules=["mass.adapters.inbound.fastapi_.routes"])
+        api = get_rest_api(config=config)
+        await run_server(app=api, config=config)

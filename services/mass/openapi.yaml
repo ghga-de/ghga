@@ -1,5 +1,244 @@
+components:
+  schemas:
+    Facet:
+      description: Represents a facet's key, name, and the discovered options for
+        the facet
+      properties:
+        key:
+          description: The raw facet key, such as study.type
+          title: Key
+          type: string
+        name:
+          default: ''
+          description: The user-friendly name for the facet
+          title: Name
+          type: string
+        options:
+          additionalProperties:
+            type: integer
+          description: The list of options for the facet
+          title: Options
+          type: object
+      required:
+      - key
+      - options
+      title: Facet
+      type: object
+    FacetLabel:
+      description: Contains the key and corresponding user-friendly name for a facet
+      properties:
+        key:
+          description: The raw facet key, such as study.type
+          title: Key
+          type: string
+        name:
+          default: ''
+          description: The user-friendly name for the facet
+          title: Name
+          type: string
+      required:
+      - key
+      title: FacetLabel
+      type: object
+    Filter:
+      description: Represents a filter used to refine results
+      properties:
+        key:
+          description: The field to filter
+          title: Key
+          type: string
+        value:
+          description: The value the field must match
+          title: Value
+          type: string
+      required:
+      - key
+      - value
+      title: Filter
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    QueryResults:
+      description: Contains the facets, hit count, and hits
+      properties:
+        count:
+          default: 0
+          description: The number of results found
+          title: Count
+          type: integer
+        facets:
+          default: []
+          description: Contains the faceted fields
+          items:
+            $ref: '#/components/schemas/Facet'
+          title: Facets
+          type: array
+        hits:
+          default: []
+          description: The search results
+          items:
+            $ref: '#/components/schemas/Resource'
+          title: Hits
+          type: array
+      title: QueryResults
+      type: object
+    Resource:
+      description: Represents an artifact or resource class such as a Dataset, Sample,
+        Study, etc.
+      properties:
+        content:
+          additionalProperties:
+            anyOf:
+            - type: integer
+            - type: number
+            - type: string
+            - type: boolean
+            - items: {}
+              type: array
+            - type: object
+          description: The actual content of the resource
+          title: Content
+          type: object
+        id_:
+          description: The identifier for this resource
+          title: 'Id '
+          type: string
+      required:
+      - id_
+      - content
+      title: Resource
+      type: object
+    SearchParameters:
+      description: Represents the data submitted in a search query
+      properties:
+        class_name:
+          description: The name of the resource class, e.g. Dataset
+          title: Class Name
+          type: string
+        filters:
+          default: []
+          description: The filters to apply to the search
+          items:
+            $ref: '#/components/schemas/Filter'
+          title: Filters
+          type: array
+        limit:
+          description: Limit the results to this number
+          title: Limit
+          type: integer
+        query:
+          default: ''
+          description: The keyword search for the query
+          title: Query
+          type: string
+        skip:
+          default: 0
+          description: The number of results to skip for pagination
+          title: Skip
+          type: integer
+      required:
+      - class_name
+      title: SearchParameters
+      type: object
+    SearchableClass:
+      description: Represents a searchable artifact or resource type
+      properties:
+        description:
+          description: A brief description of the resource type
+          title: Description
+          type: string
+        facetable_properties:
+          description: A list of of the facetable properties for the resource type
+          items:
+            $ref: '#/components/schemas/FacetLabel'
+          title: Facetable Properties
+          type: array
+      required:
+      - description
+      - facetable_properties
+      title: SearchableClass
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
 info:
   title: FastAPI
   version: 0.1.0
 openapi: 3.0.2
-paths: {}
+paths:
+  /rpc/search:
+    post:
+      description: Perform search query
+      operationId: search_rpc_search_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchParameters'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResults'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Perform a search using query string and filter parameters
+  /rpc/search-options:
+    get:
+      description: 'Returns the configured searchable classes. This describes which
+        resource classes
+
+        are accounted for in the system, as well as their facetable properties. The
+        facetable
+
+        properties represent specific data properties that will be aggregated alongside
+        the
+
+        search hits for further search refinement. They contain a key, which is used
+        by the
+
+        system, and a name, which is more user-friendly.'
+      operationId: search_options_rpc_search_options_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  $ref: '#/components/schemas/SearchableClass'
+                title: Response Search Options Rpc Search Options Get
+                type: object
+          description: Successful Response
+      summary: Retrieve all configured resource classes and facetable properties
