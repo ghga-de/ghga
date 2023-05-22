@@ -24,6 +24,7 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from pydantic import ValidationError
 
 from metldata.submission_registry.models import (
+    AccessionMap,
     StatusChange,
     Submission,
     SubmissionStatus,
@@ -114,7 +115,7 @@ def test_submission_current_status():
     ],
 )
 def test_submission_accession_map_validation(
-    accession_map: dict[str, dict[str, str]], is_valid: bool
+    accession_map: AccessionMap, is_valid: bool
 ):
     """Tests validation of the accession map."""
 

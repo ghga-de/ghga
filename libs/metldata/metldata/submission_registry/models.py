@@ -22,6 +22,9 @@ from typing import Any, Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
 from pydantic import BaseModel, Field, root_validator, validator
+from typing_extensions import TypeAlias
+
+AccessionMap: TypeAlias = dict[str, dict[str, str]]
 
 
 class SubmissionStatus(Enum):
@@ -69,7 +72,7 @@ class Submission(SubmissionHeader):
         ),
     )
 
-    accession_map: dict[str, dict[str, str]] = Field(
+    accession_map: AccessionMap = Field(
         default_factory=dict,
         description=(
             "A map of user-specified id to system-generated accession for metadata"
@@ -103,9 +106,7 @@ class Submission(SubmissionHeader):
 
     # pylint: disable=no-self-argument
     @validator("accession_map")
-    def check_accession_uniqueness(
-        cls, value: dict[str, dict[str, str]]
-    ) -> dict[str, dict[str, str]]:
+    def check_accession_uniqueness(cls, value: AccessionMap) -> AccessionMap:
         """Check that no accessions are re-used accross classes."""
 
         total_resources = 0

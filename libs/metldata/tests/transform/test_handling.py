@@ -25,6 +25,7 @@ from metldata.builtin_transformations.infer_references.main import (
 )
 from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import (
+    MetadataAnnotation,
     MetadataModelAssumptionError,
     MetadataModelTransformationError,
     TransformationDefinition,
@@ -123,5 +124,8 @@ def test_workflow_handler_artifacts():
         original_model=EXAMPLE_ORIGINAL_MODEL,
     )
 
-    artifacts = workflow_handler.run(metadata=EXAMPLE_ORIGINAL_METADATA)
+    artifacts = workflow_handler.run(
+        metadata=EXAMPLE_ORIGINAL_METADATA,
+        annotation=MetadataAnnotation(accession_map={}),
+    )
     assert artifacts == EXAMPLE_ARTIFACTS

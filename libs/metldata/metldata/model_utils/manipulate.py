@@ -213,6 +213,19 @@ def _get_root_class(*, schema_view: ExportableSchemaView) -> ClassDefinition:
     return root_class
 
 
+def upsert_class(
+    *, schema_view: ExportableSchemaView, class_definition: ClassDefinition
+) -> ExportableSchemaView:
+    """Return an updated schema view with the provided class definition being added or
+    updated."""
+
+    modified_schema_view = deepcopy(schema_view)
+    modified_schema_view.schema.classes[class_definition.name] = class_definition
+    modified_schema_view.set_modified()
+
+    return modified_schema_view
+
+
 def add_anchor_point(
     *,
     schema_view: ExportableSchemaView,

@@ -29,7 +29,12 @@ from metldata.builtin_transformations.delete_slots.model_transform import (
 from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.assumptions import check_anchor_points
 from metldata.model_utils.essentials import MetadataModel
-from metldata.transform.base import Json, MetadataTransformer, TransformationDefinition
+from metldata.transform.base import (
+    Json,
+    MetadataAnnotation,
+    MetadataTransformer,
+    TransformationDefinition,
+)
 
 
 def check_model_assumptions(model: MetadataModel, config: SlotDeletionConfig):
@@ -68,8 +73,17 @@ class SlotDeletionMetadataTransformer(MetadataTransformer[SlotDeletionConfig]):
             model=self._original_model
         )
 
-    def transform(self, *, metadata: Json) -> Json:
-        """Delete slots from classes in the metadata."""
+    def transform(self, *, metadata: Json, annotation: MetadataAnnotation) -> Json:
+        """Transforms metadata.
+
+        Args:
+            metadata: The metadata to be transformed.
+            annotation: The annotation on the metadata.
+
+        Raises:
+            MetadataTransformationError:
+                if the transformation fails.
+        """
 
         return delete_class_slots(
             metadata=metadata,

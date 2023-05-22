@@ -23,6 +23,7 @@ from metldata.model_utils.essentials import MetadataModel
 from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.transform.base import (
     Config,
+    MetadataAnnotation,
     TransformationDefinition,
     WorkflowConfig,
     WorkflowDefinition,
@@ -89,10 +90,16 @@ class TransformationHandler:
             model=self.transformed_model
         )
 
-    def transform_metadata(self, metadata: Json) -> Json:
+    def transform_metadata(
+        self, metadata: Json, *, annotation: MetadataAnnotation
+    ) -> Json:
         """Transforms metadata using the transformation definition. Validates the
         original metadata against the original model and the transformed metadata
         against the transformed model.
+
+        Args:
+            metadata: The metadata to be transformed.
+            annotation: The annotation on the metadata.
 
         Raises:
             MetadataTransformationError:
@@ -100,7 +107,9 @@ class TransformationHandler:
         """
 
         self._original_metadata_validator.validate(metadata)
-        transformed_metadata = self._metadata_transformer.transform(metadata=metadata)
+        transformed_metadata = self._metadata_transformer.transform(
+            metadata=metadata, annotation=annotation
+        )
         self._transformed_metadata_validator.validate(transformed_metadata)
 
         return transformed_metadata
@@ -244,8 +253,9 @@ class WorkflowHandler:
             self._resolved_workflow
         )
 
-    def run(self, *, metadata: Json) -> dict[str, Json]:
-        """Run the workflow definition on metadata to generate artifacts."""
+    def run(self, *, metadata: Json, annotation: MetadataAnnotation) -> dict[str, Json]:
+        """Run the workflow definition on metadata and its annotation to generate
+        artifacts."""
 
         transformed_metadata: dict[str, Json] = {}
         for step_name in self._resolved_workflow.step_order:
@@ -255,7 +265,9 @@ class WorkflowHandler:
             )
             transformed_metadata[
                 step_name
-            ] = step.transformation_handler.transform_metadata(input_metadata)
+            ] = step.transformation_handler.transform_metadata(
+                input_metadata, annotation=annotation
+            )
 
         return {
             artifact_name: transformed_metadata[step_name]

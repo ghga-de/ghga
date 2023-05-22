@@ -28,6 +28,25 @@ from metldata.custom_types import Json
 # pylint: disable=unused-import
 from metldata.model_utils.assumptions import MetadataModelAssumptionError  # noqa: F401
 from metldata.model_utils.essentials import MetadataModel
+from metldata.submission_registry.models import AccessionMap
+
+
+class MetadataAnnotation(BaseModel):
+    """Annotation on a given metadata submission."""
+
+    accession_map: AccessionMap = Field(
+        ...,
+        description=(
+            "A map of user-specified id to system-generated accession for metadata"
+            + " resources. Keys on the top level correspond to names of metadata classes."
+            + " Keys on the second level correspond to user-specified aliases."
+            + " Values on the second level correspond to system-generated accessions."
+            + " Please note that the user-defined alias might only be unique within"
+            + " the scope of the corresponding class and this submission. By contrast,"
+            + " the system-generated accession is unique across all classes and"
+            + " submissions."
+        ),
+    )
 
 
 class MetadataModelTransformationError(RuntimeError):
@@ -59,8 +78,12 @@ class MetadataTransformer(ABC, Generic[Config]):
         self._transformed_model = transformed_model
 
     @abstractmethod
-    def transform(self, *, metadata: Json) -> Json:
+    def transform(self, *, metadata: Json, annotation: MetadataAnnotation) -> Json:
         """Transforms metadata.
+
+        Args:
+            metadata: The metadata to be transformed.
+            annotation: The annotation on the metadata.
 
         Raises:
             MetadataTransformationError:

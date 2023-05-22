@@ -22,6 +22,7 @@ from uuid import uuid4
 
 from metldata.accession_registry import AccessionRegistry
 from metldata.model_utils.anchors import lookup_class_by_anchor_point
+from metldata.submission_registry.models import AccessionMap
 
 
 def generate_submission_id() -> str:
@@ -34,7 +35,7 @@ def lookup_accession(
     *,
     anchor: str,
     alias: str,
-    accession_map: dict[str, dict[str, str]],
+    accession_map: AccessionMap,
 ) -> Optional[str]:
     """Lookup the accession for a resource with the provided user-defined alias of
     the class with the provided anchor. If no accession exists, None is returned."""
@@ -46,7 +47,7 @@ def get_accession(
     *,
     anchor: str,
     alias: str,
-    accession_map: dict[str, dict[str, str]],
+    accession_map: AccessionMap,
     accession_registry: AccessionRegistry,
     classes_by_anchor_point: dict[str, str],
 ) -> str:
@@ -69,10 +70,10 @@ def get_accession(
 def generate_accession_map(
     *,
     content: dict[str, dict[str, Any]],
-    existing_accession_map: Optional[dict[str, dict[str, str]]] = None,
+    existing_accession_map: Optional[AccessionMap] = None,
     accession_registry: AccessionRegistry,
     classes_by_anchor_point: dict[str, str],
-) -> dict[str, dict[str, str]]:
+) -> AccessionMap:
     """Generate an accession map for the provided content.
 
     If an existing accession map is provided, an updated version is returned. Thereby,

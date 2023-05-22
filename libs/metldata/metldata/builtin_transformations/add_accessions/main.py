@@ -14,16 +14,17 @@
 # limitations under the License.
 #
 
-"""A transformation to generate custom embeddings for classes of a metadata model."""
+"""A transformation to add accessions to metadata."""
 
-from metldata.builtin_transformations.custom_embeddings.config import (
-    CustomEmbeddingConfig,
+from metldata.builtin_transformations.add_accessions.config import (
+    AccessionAdditionConfig,
 )
-from metldata.builtin_transformations.custom_embeddings.metadata_transform import (
-    add_custom_embeddings_to_metadata,
+from metldata.builtin_transformations.add_accessions.metadata_transform import (
+    add_accessions_to_metadata,
+    get_references,
 )
-from metldata.builtin_transformations.custom_embeddings.model_transform import (
-    add_custom_embedded_classes,
+from metldata.builtin_transformations.add_accessions.model_transform import (
+    add_accessions_to_model,
 )
 from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.assumptions import check_basic_model_assumption
@@ -36,12 +37,14 @@ from metldata.transform.base import (
 )
 
 
-class CustomEmbeddingMetadataTransformer(MetadataTransformer[CustomEmbeddingConfig]):
-    """A transformer that generates custom embedding for classes of a metadata model."""
+class AccessionAdditionMetadataTransformer(
+    MetadataTransformer[AccessionAdditionConfig]
+):
+    """A transformer to add accessions to metadata."""
 
     def __init__(
         self,
-        config: CustomEmbeddingConfig,
+        config: AccessionAdditionConfig,
         original_model: MetadataModel,
         transformed_model: MetadataModel,
     ):
@@ -56,6 +59,10 @@ class CustomEmbeddingMetadataTransformer(MetadataTransformer[CustomEmbeddingConf
         self._anchor_points_by_target = get_anchors_points_by_target(
             model=self._original_model
         )
+        self._references = get_references(
+            metadata_model=self._original_model,
+            anchor_points_by_target=self._anchor_points_by_target,
+        )
 
     def transform(self, *, metadata: Json, annotation: MetadataAnnotation) -> Json:
         """Transforms metadata.
@@ -69,17 +76,17 @@ class CustomEmbeddingMetadataTransformer(MetadataTransformer[CustomEmbeddingConf
                 if the transformation fails.
         """
 
-        return add_custom_embeddings_to_metadata(
+        return add_accessions_to_metadata(
             metadata=metadata,
-            embedding_profiles=self._config.embedding_profiles,
-            model=self._original_model,
+            accession_map=annotation.accession_map,
+            references=self._references,
             anchor_points_by_target=self._anchor_points_by_target,
         )
 
 
 def check_model_assumptions(
     model: MetadataModel,
-    config: CustomEmbeddingConfig,  # pylint: disable=unused-argument
+    config: AccessionAdditionConfig,  # pylint: disable=unused-argument
 ) -> None:
     """Check the assumptions of the model.
 
@@ -92,7 +99,7 @@ def check_model_assumptions(
 
 
 def transform_model(
-    model: MetadataModel, config: CustomEmbeddingConfig
+    model: MetadataModel, config: AccessionAdditionConfig
 ) -> MetadataModel:
     """Transform the metadata model.
 
@@ -101,15 +108,16 @@ def transform_model(
             if the transformation fails.
     """
 
-    return add_custom_embedded_classes(
+    return add_accessions_to_model(
         model=model,
-        embedding_profiles=config.embedding_profiles,
+        accession_slot_name=config.accession_slot_name,
+        accession_slot_description=config.accession_slot_description,
     )
 
 
-custom_embedding_transformation = TransformationDefinition[CustomEmbeddingConfig](
-    config_cls=CustomEmbeddingConfig,
+accession_addition_transformation = TransformationDefinition[AccessionAdditionConfig](
+    config_cls=AccessionAdditionConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,
-    metadata_transformer_factory=CustomEmbeddingMetadataTransformer,
+    metadata_transformer_factory=AccessionAdditionMetadataTransformer,
 )

@@ -21,6 +21,9 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
+from metldata.builtin_transformations.add_accessions import (
+    accession_addition_transformation,
+)
 from metldata.builtin_transformations.custom_embeddings import (
     custom_embedding_transformation,
 )
@@ -30,7 +33,7 @@ from metldata.builtin_transformations.infer_references import (
 )
 from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
-from metldata.transform.base import TransformationDefinition
+from metldata.transform.base import MetadataAnnotation, TransformationDefinition
 from tests.fixtures.utils import BASE_DIR, read_yaml
 
 Config = TypeVar("Config", bound=BaseModel)
@@ -46,6 +49,7 @@ class TransformationTestCase(Generic[Config]):
     config: Config
     original_model: MetadataModel
     original_metadata: Json
+    metadata_annotation: MetadataAnnotation
     transformed_model: MetadataModel
     transformed_metadata: Json
 
@@ -65,6 +69,7 @@ def _read_test_case(
     config_path = case_dir / "config.yaml"
     original_model_path = case_dir / "original_model.yaml"
     original_metadata_path = case_dir / "original_metadata.yaml"
+    metadata_annotation_path = case_dir / "metadata_annotation.yaml"
     transformed_model_path = case_dir / "transformed_model.yaml"
     transformed_metadata_path = case_dir / "transformed_metadata.yaml"
 
@@ -75,6 +80,11 @@ def _read_test_case(
         config=transformation_definition.config_cls(**read_yaml(config_path)),
         original_model=MetadataModel.init_from_path(original_model_path),
         original_metadata=read_yaml(original_metadata_path),
+        metadata_annotation=(
+            MetadataAnnotation(**read_yaml(metadata_annotation_path))
+            if metadata_annotation_path.exists()
+            else MetadataAnnotation(accession_map={})
+        ),
         transformed_model=MetadataModel.init_from_path(transformed_model_path),
         transformed_metadata=read_yaml(transformed_metadata_path),
     )
@@ -116,6 +126,7 @@ def _read_all_test_cases(
 
 
 TRANSFORMATIONS_BY_NAME: dict[str, TransformationDefinition] = {
+    "add_accessions": accession_addition_transformation,
     "infer_references": reference_inference_transformation,
     "delete_slots": slot_deletion_transformation,
     "custom_embedding": custom_embedding_transformation,

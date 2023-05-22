@@ -17,6 +17,7 @@
 """Test the builtin transformations using pre-defined test cases."""
 
 import pytest
+import yaml
 
 from metldata.transform.handling import TransformationHandler
 from tests.fixtures.transformations import (
@@ -56,6 +57,11 @@ def test_metadata_transformations(
         transformation_config=test_case.config,
         original_model=test_case.original_model,
     )
-    transformed_metadata = handler.transform_metadata(test_case.original_metadata)
+    transformed_metadata = handler.transform_metadata(
+        test_case.original_metadata, annotation=test_case.metadata_annotation
+    )
+
+    with open("observed.yaml", "w") as file:
+        yaml.safe_dump(transformed_metadata, file)
 
     assert transformed_metadata == test_case.transformed_metadata
