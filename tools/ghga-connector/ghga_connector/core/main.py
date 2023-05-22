@@ -24,6 +24,7 @@ from typing import List
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls import (
     UploadStatus,
+    WorkPackageAccessor,
     await_download_url,
     check_url,
     get_download_urls,
@@ -182,12 +183,13 @@ def upload_file_parts(
 def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C901, R0914
     *,
     api_url: str,
-    file_id: str,
     output_dir: Path,
     part_size: int,
     message_display: AbstractMessageDisplay,
     max_wait_time: int,
     submitter_public_key: bytes,
+    work_package_accessor: WorkPackageAccessor,
+    file_id: str,
     file_extension: str = "",
 ) -> None:
     """
@@ -216,18 +218,18 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
 
     # stage download and get file size
     download_url_tuple = await_download_url(
-        api_url=api_url,
         file_id=file_id,
         max_wait_time=max_wait_time,
         message_display=message_display,
+        work_package_accessor=work_package_accessor,
     )
 
     # get file header envelope
     try:
         envelope = get_file_header_envelope(
             file_id=file_id,
-            api_url=api_url,
             public_key=submitter_public_key,
+            work_package_accessor=work_package_accessor,
         )
     except (
         exceptions.FileNotRegisteredError,
@@ -243,11 +245,11 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     try:
         download_parts(
             envelope=envelope,
-            file_id=file_id,
-            api_url=api_url,
             output_file=str(output_file_ongoing),
+            file_id=file_id,
             part_size=part_size,
             file_size=download_url_tuple[1],
+            work_package_accessor=work_package_accessor,
         )
     except exceptions.MaxRetriesReachedError as error:
         # Remove file, if the download failed.
@@ -277,10 +279,10 @@ def download_parts(
     max_queue_size: int = 10,
     part_size: int,
     file_size: int,
-    api_url: str,
     file_id: str,
     output_file: str,
     envelope: bytes,
+    work_package_accessor: WorkPackageAccessor,
 ):
     """
     Downloads a file from the given URL using multiple threads and saves it to a file.
@@ -298,8 +300,7 @@ def download_parts(
 
     # Get the download urls
     download_urls = get_download_urls(
-        api_url=api_url,
-        file_id=file_id,
+        file_id=file_id, work_package_accessor=work_package_accessor
     )
 
     # Download the file parts in parallel

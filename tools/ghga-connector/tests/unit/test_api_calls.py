@@ -28,13 +28,13 @@ from requests.models import Response
 
 from ghga_connector.core.api_calls import (
     UploadStatus,
+    WorkPackageAccessor,
     get_part_upload_urls,
-    get_wps_file_info,
     patch_multipart_upload,
 )
 from ghga_connector.core.exceptions import (
-    BadResponseCodeError,
     CantChangeUploadStatusError,
+    InvalidWPSResponseError,
     MaxPartNoExceededError,
     MaxRetriesReachedError,
     NoWorkPackageAccessError,
@@ -175,11 +175,14 @@ def test_get_wps_file_info():
         MockSession(response=patched_response),
     ):
         wp_id, wp_token = mock_wps_token(1, None)
-        response = get_wps_file_info(
-            work_package_id=wp_id,
-            token=wp_token,
-            wps_api_url="http://127.0.0.1/work-packages/wp_1",
+        work_package_accessor = WorkPackageAccessor(
+            access_token=wp_token,
+            api_url="http://127.0.0.1",
+            dcs_api_url="",
+            package_id=wp_id,
+            submitter_private_key="",
         )
+        response = work_package_accessor.get_package_files()
         assert response == files
 
     patched_response = MockResponse(content={"files": files}, status_code=403)
@@ -190,11 +193,14 @@ def test_get_wps_file_info():
     ):
         with pytest.raises(NoWorkPackageAccessError):
             wp_id, wp_token = mock_wps_token(1, None)
-            response = get_wps_file_info(
-                work_package_id=wp_id,
-                token=wp_token,
-                wps_api_url="http://127.0.0.1/work-packages/wp_1",
+            work_package_accessor = WorkPackageAccessor(
+                access_token=wp_token,
+                api_url="http://127.0.0.1",
+                dcs_api_url="",
+                package_id=wp_id,
+                submitter_private_key="",
             )
+            response = work_package_accessor.get_package_files()
 
     patched_response = MockResponse(content=None, status_code=500)
 
@@ -202,10 +208,13 @@ def test_get_wps_file_info():
         "ghga_connector.core.session.RequestsSession.session",
         MockSession(response=patched_response),
     ):
-        with pytest.raises(BadResponseCodeError):
+        with pytest.raises(InvalidWPSResponseError):
             wp_id, wp_token = mock_wps_token(1, None)
-            response = get_wps_file_info(
-                work_package_id=wp_id,
-                token=wp_token,
-                wps_api_url="http://127.0.0.1/work-packages/wp_1",
+            work_package_accessor = WorkPackageAccessor(
+                access_token=wp_token,
+                api_url="http://127.0.0.1",
+                dcs_api_url="",
+                package_id=wp_id,
+                submitter_private_key="",
             )
+            response = work_package_accessor.get_package_files()

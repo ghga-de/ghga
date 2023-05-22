@@ -133,11 +133,14 @@ def download(  # pylint: disable=too-many-arguments
     )
     decrypted_token = crypt.decrypt(data=work_package_token, key=submitter_private_key)
 
-    file_ids_with_extension = core.get_wps_file_info(
-        work_package_id=work_package_id,
-        token=decrypted_token,
-        wps_api_url=CONFIG.wps_api_url,
+    work_package_accessor = core.WorkPackageAccessor(
+        access_token=decrypted_token,
+        api_url=CONFIG.wps_api_url,
+        dcs_api_url=CONFIG.download_api,
+        package_id=work_package_id,
+        submitter_private_key=submitter_private_key,
     )
+    file_ids_with_extension = work_package_accessor.get_package_files()
 
     io_handler = core.CliIoHandler()
     staging_parameters = core.StagingParameters(
@@ -150,6 +153,7 @@ def download(  # pylint: disable=too-many-arguments
         message_display=message_display,
         io_handler=io_handler,
         staging_parameters=staging_parameters,
+        work_package_accessor=work_package_accessor,
     )
     file_stager.check_and_stage(output_dir=output_dir)
 
@@ -164,6 +168,7 @@ def download(  # pylint: disable=too-many-arguments
                 part_size=CONFIG.part_size,
                 message_display=message_display,
                 submitter_public_key=submitter_public_key,
+                work_package_accessor=work_package_accessor,
             )
         file_stager.update_staged_files()
 

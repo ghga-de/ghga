@@ -21,7 +21,11 @@ from pathlib import Path
 from time import sleep
 
 from ghga_connector.core import exceptions
-from ghga_connector.core.api_calls import check_url, get_download_url
+from ghga_connector.core.api_calls import (
+    WorkPackageAccessor,
+    check_url,
+    get_download_url,
+)
 from ghga_connector.core.message_display import AbstractMessageDisplay
 
 
@@ -171,7 +175,9 @@ class StagingState:
         """Delegate adding unstaged file ids"""
         self.unstaged_files.append(file_id)
 
-    def update_staged_files_wait(self, *, api_url: str, max_wait_time: int) -> bool:
+    def update_staged_files_wait(
+        self, *, max_wait_time: int, work_package_accessor: WorkPackageAccessor
+    ) -> bool:
         """
         Update staged file list after all previously staged files have been processed.
         Caller has to make sure, that all file ids in self.staged_files have actually
@@ -184,7 +190,9 @@ class StagingState:
         remaining_unstaged = []
 
         for file_id in self.unstaged_files:
-            dl_url = get_download_url(api_url=api_url, file_id=file_id)
+            dl_url = get_download_url(
+                file_id=file_id, work_package_accessor=work_package_accessor
+            )
             if dl_url[0]:
                 self.staged_files.append(file_id)
             else:
@@ -213,6 +221,7 @@ class FileStager:  # pylint: disable=too-many-instance-attributes
     io_handler: BatchIoHandler
     staging_parameters: StagingParameters
     staging_state: StagingState = field(default_factory=StagingState, init=False)
+    work_package_accessor: WorkPackageAccessor
 
     def check_and_stage(self, output_dir: Path):
         """Call DRS endpoint to stage files. Report file ids with 404 responses to user."""
@@ -224,7 +233,7 @@ class FileStager:  # pylint: disable=too-many-instance-attributes
         for file_id in self.staging_parameters.file_ids_with_extension.keys():
             try:
                 download_information = get_download_url(
-                    api_url=self.staging_parameters.api_url, file_id=file_id
+                    file_id=file_id, work_package_accessor=self.work_package_accessor
                 )
             except exceptions.BadResponseCodeError as error:
                 if error.response_code == 404:
@@ -252,8 +261,8 @@ class FileStager:  # pylint: disable=too-many-instance-attributes
     def update_staged_files(self):
         """Delegate updating file_ids for staging and handle wait/retries."""
         while self.staging_state.update_staged_files_wait(
-            api_url=self.staging_parameters.api_url,
             max_wait_time=self.staging_parameters.max_wait_time,
+            work_package_accessor=self.work_package_accessor,
         ):
             self.message_display.display(
                 f"No staged files available, retrying in {self.staging_parameters.retry_after}"

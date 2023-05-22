@@ -22,9 +22,11 @@ from time import sleep
 from typing import Iterator, Tuple, Union
 
 import requests
+from ghga_service_commons.utils.crypt import encode_key
 from requests.structures import CaseInsensitiveDict
 
 from ghga_connector.core import exceptions
+from ghga_connector.core.api_calls.work_package import WorkPackageAccessor
 from ghga_connector.core.constants import TIMEOUT
 from ghga_connector.core.http_translation import ResponseExceptionTranslator
 from ghga_connector.core.message_display import AbstractMessageDisplay
@@ -36,10 +38,8 @@ NO_FILE_SIZE = None
 NO_RETRY_TIME = None
 
 
-def get_download_url(
-    *,
-    api_url: str,
-    file_id: str,
+def get_download_url(  # noqa: C901
+    *, file_id: str, work_package_accessor: WorkPackageAccessor
 ) -> Union[Tuple[None, None, int], Tuple[str, int, None]]:
     """
     Perform a RESTful API call to retrieve a presigned download URL.
@@ -53,12 +53,15 @@ def get_download_url(
         Otherwise, only the last element is None while the others are set.
     """
 
-    # build url and headers
-    url = f"{api_url}/objects/{file_id}"
+    # fetch a work order token
+    decrypted_token = work_package_accessor.get_work_order_token(file_id=file_id)
 
+    # build url and headers
+    url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}"
     headers = CaseInsensitiveDict(
         {
             "Accept": "application/json",
+            "Authorization": f"Bearer {decrypted_token}",
             "Content-Type": "application/json",
         }
     )
@@ -72,6 +75,14 @@ def get_download_url(
 
     status_code = response.status_code
     if status_code != 200:
+        if status_code == 403:
+            content = response.json()
+            # handle both normal and httpyexpect 403 response
+            if "description" in content:
+                cause = content["description"]
+            else:
+                cause = content["detail"]
+            raise exceptions.UnauthorizedAPICallError(url=url, cause=cause)
         if status_code != 202:
             raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
@@ -98,9 +109,7 @@ def get_download_url(
 
 
 def get_download_urls(
-    *,
-    api_url: str,
-    file_id: str,
+    *, file_id: str, work_package_accessor: WorkPackageAccessor
 ) -> Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]]:
     """
     For a specific mutli-part upload identified by the `file_id`, it returns an
@@ -108,17 +117,16 @@ def get_download_urls(
     """
     while True:
         yield get_download_url(
-            api_url=api_url,
-            file_id=file_id,
+            file_id=file_id, work_package_accessor=work_package_accessor
         )
 
 
 def await_download_url(
     *,
-    api_url: str,
     file_id: str,
     max_wait_time: int,
     message_display: AbstractMessageDisplay,
+    work_package_accessor: WorkPackageAccessor,
 ) -> Tuple[str, int]:
     """Wait until download URL can be generated.
     Returns a tuple with two elements:
@@ -131,8 +139,8 @@ def await_download_url(
     while wait_time < max_wait_time:
         try:
             response_body = get_download_url(
-                api_url=api_url,
                 file_id=file_id,
+                work_package_accessor=work_package_accessor,
             )
         except exceptions.BadResponseCodeError as error:
             message_display.failure(
@@ -159,22 +167,27 @@ def await_download_url(
     raise exceptions.MaxWaitTimeExceededError(max_wait_time=max_wait_time)
 
 
-def get_file_header_envelope(file_id: str, api_url: str, public_key: bytes) -> bytes:
+def get_file_header_envelope(
+    file_id: str, public_key: bytes, work_package_accessor: WorkPackageAccessor
+) -> bytes:
     """
     Perform a RESTful API call to retrieve a file header envelope.
     Returns:
         The file header envelope (bytes object)
     """
+    # fetch a work order token
+    decrypted_token = work_package_accessor.get_work_order_token(file_id=file_id)
 
     # encode public key in base64 (url-safe)
-    public_key_encoded = base64.urlsafe_b64encode(public_key).decode("utf-8")
+    public_key_encoded = encode_key(public_key)
 
     # build url and headers
-    url = f"{api_url}/objects/{file_id}/envelopes/{public_key_encoded}"
+    url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}/envelopes/{public_key_encoded}"
 
     headers = CaseInsensitiveDict(
         {
             "Accept": "application/json",
+            "Authorization": f"Bearer {decrypted_token}",
             "Content-Type": "application/json",
         }
     )
@@ -189,6 +202,16 @@ def get_file_header_envelope(file_id: str, api_url: str, public_key: bytes) -> b
 
     if status_code == 200:
         return base64.b64decode(response.content)
+
+    # For now unauthorized responses are not handled by httpyexpect
+    if status_code == 403:
+        content = response.json()
+        # handle both normal and httpyexpect 403 response
+        if "description" in content:
+            cause = content["description"]
+        else:
+            cause = content["detail"]
+        raise exceptions.UnauthorizedAPICallError(url=url, cause=cause)
 
     spec = {
         404: {

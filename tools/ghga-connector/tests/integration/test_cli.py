@@ -64,8 +64,12 @@ def test_multipart_download(
     # The download function will ask the user for input.
     monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
-        "ghga_connector.core.get_wps_file_info",
+        "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
         Mock(return_value=dict(zip([big_object.object_id], [""]))),
+    )
+    monkeypatch.setattr(
+        "ghga_connector.core.api_calls.work_package._decrypt",
+        lambda data, key: data,
     )
 
     # right now the desired file size is only
@@ -151,8 +155,12 @@ def test_download(
     # The download function will ask the user for input.
     monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
-        "ghga_connector.core.get_wps_file_info",
+        "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
         Mock(return_value=dict(zip([file.file_id], [""]))),
+    )
+    monkeypatch.setattr(
+        "ghga_connector.core.api_calls.work_package._decrypt",
+        lambda data, key: data,
     )
 
     if file.populate_storage:
@@ -183,14 +191,43 @@ def test_download(
                 "ghga_connector.core.batch_processing.CliInputHandler.get_input",
                 return_value="yes" if proceed_on_missing else "no",
             ):
-                with pytest.raises(  # type: ignore
-                    expected_exception
-                ) if expected_exception else nullcontext():
-                    download(
-                        output_dir=output_dir,
-                        submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-                        submitter_private_key_path=Path(PRIVATE_KEY_FILE),
-                    )
+                if file_name == "file_not_downloadable":
+                    # check both 403 scenarios
+                    with patch(
+                        "ghga_connector.core.api_calls.work_package._decrypt",
+                        lambda data, key: "authfail_normal",
+                    ):
+                        with pytest.raises(
+                            exceptions.UnauthorizedAPICallError,
+                            match="This is not the token you're looking for.",
+                        ):
+                            download(
+                                output_dir=output_dir,
+                                submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
+                                submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                            )
+                    with patch(
+                        "ghga_connector.core.api_calls.work_package._decrypt",
+                        lambda data, key: "file_id_mismatch",
+                    ):
+                        with pytest.raises(
+                            exceptions.UnauthorizedAPICallError,
+                            match="Endpoint file ID did not match file ID announced in work order token.",
+                        ):
+                            download(
+                                output_dir=output_dir,
+                                submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
+                                submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                            )
+                else:
+                    with pytest.raises(  # type: ignore
+                        expected_exception
+                    ) if expected_exception else nullcontext():
+                        download(
+                            output_dir=output_dir,
+                            submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
+                            submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                        )
 
         # BadResponseCode is no longer propagated and file at path does not exist
         if file_name == "file_not_downloadable":

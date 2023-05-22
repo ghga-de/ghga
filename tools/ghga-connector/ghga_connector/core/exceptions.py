@@ -302,3 +302,28 @@ class NoWorkPackageAccessError(RuntimeError):
             f"for the work package with the id '{work_package_id}'."
         )
         super().__init__(message)
+
+
+class InvalidWPSResponseError(RuntimeError):
+    """
+    Thrown when communication with the Work Package Service returns an unexpected response.
+    This should be used instead of BadResponseError when handling WPS results to differntiate
+    """
+
+    def __init__(self, *, url: str, response_code: int):
+        self.response_code = response_code
+        message = (
+            f"The request to the WPS at {url} failed with an unexpected response code"
+            + f" of {response_code}."
+        )
+        super().__init__(message)
+
+
+class UnauthorizedAPICallError(RuntimeError):
+    """
+    Thrown when a 403 is returned from a call requiring a work order token for authorization
+    """
+
+    def __init__(self, *, url: str, cause: str):
+        message = f"Could not authorize call to {url}: {cause}"
+        super().__init__(message)
