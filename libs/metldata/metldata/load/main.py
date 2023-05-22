@@ -20,8 +20,7 @@ from functools import partial
 
 from fastapi import FastAPI
 from ghga_service_commons.api import configure_app
-from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb import MongoDbConfig, MongoDbDaoFactory
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from metldata.load.api import rest_api_factory
@@ -38,9 +37,7 @@ async def clear_database(config: MongoDbConfig):
         await db.drop_collection(collection_name)
 
 
-async def get_app(
-    config: ArtifactLoaderAPIConfig, dao_factory: DaoFactoryProtocol
-) -> FastAPI:
+async def get_app(config: ArtifactLoaderAPIConfig) -> FastAPI:
     """Get the FastAPI app for loading artifacts. Performs dependency injection."""
 
     app = FastAPI(
@@ -48,6 +45,7 @@ async def get_app(
         description="Load artifacts into services for querying via user-accessible API.",
     )
     configure_app(app=app, config=config)
+    dao_factory = MongoDbDaoFactory(config=config)
 
     api_router = await rest_api_factory(
         artifact_infos=config.artifact_infos,

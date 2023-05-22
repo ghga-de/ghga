@@ -18,14 +18,14 @@
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from metldata.config import Config
+from metldata.config import SubmissionAndTransformationConfig
 from metldata.submission_registry.models import (
     StatusChange,
     Submission,
     SubmissionStatus,
 )
 from metldata.submission_registry.submission_store import SubmissionStore
-from tests.fixtures.config import config_fixture  # noqa: F401
+from tests.fixtures.config import config_sub_fixture  # noqa: F401
 
 EXAMPLE_SUBMISSION = Submission(
     title="test",
@@ -42,11 +42,11 @@ EXAMPLE_SUBMISSION = Submission(
 )
 
 
-def test_happy(config_fixture: Config):  # noqa: F811
+def test_happy(config_sub_fixture: SubmissionAndTransformationConfig):  # noqa: F811
     """Test the happy path of inserting, querying, and updating a submission using
     the submission store."""
 
-    submission_store = SubmissionStore(config=config_fixture)
+    submission_store = SubmissionStore(config=config_sub_fixture)
 
     # make sure that sumbission does not exist:
     assert not submission_store.exists(submission_id=EXAMPLE_SUBMISSION.id)
@@ -74,10 +74,12 @@ def test_happy(config_fixture: Config):  # noqa: F811
     assert submission_updated_queried == submission_updated
 
 
-def test_query_non_existing(config_fixture: Config):  # noqa: F811
+def test_query_non_existing(
+    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+):
     """Test querying for a non-existing submission."""
 
-    submission_store = SubmissionStore(config=config_fixture)
+    submission_store = SubmissionStore(config=config_sub_fixture)
 
     with pytest.raises(SubmissionStore.SubmissionDoesNotExistError):
         _ = submission_store.get_by_id(submission_id="non-exisitng-id")

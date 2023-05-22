@@ -16,16 +16,18 @@
 """Testing the accession handler."""
 
 from metldata.accession_registry.accession_store import AccessionStore
-from metldata.config import Config
-from tests.fixtures.config import config_fixture  # noqa: F401
+from metldata.config import SubmissionAndTransformationConfig
+from tests.fixtures.config import config_sub_fixture  # noqa: F401
 
 
-def test_accession_store_happy(config_fixture: Config):  # noqa: F811
+def test_accession_store_happy(
+    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+):
     """Test accession store happy path."""
 
     expected_accessions = ["accession001", "accession002"]
 
-    accession_store = AccessionStore(config=config_fixture)
+    accession_store = AccessionStore(config=config_sub_fixture)
 
     # save accessions
     for expected_accession in expected_accessions:
@@ -36,10 +38,12 @@ def test_accession_store_happy(config_fixture: Config):  # noqa: F811
         assert accession_store.exists(accession=expected_accession)
 
 
-def test_accession_store_unkown_accession(config_fixture: Config):  # noqa: F811
+def test_accession_store_unkown_accession(
+    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+):
     """Test accession store happy path."""
 
     unknown_accession = "accession003"
 
-    accession_store = AccessionStore(config=config_fixture)
+    accession_store = AccessionStore(config=config_sub_fixture)
     assert not accession_store.exists(accession=unknown_accession)

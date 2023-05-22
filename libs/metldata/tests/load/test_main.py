@@ -43,7 +43,7 @@ async def get_configured_client(
         loader_token_hashes=[token_hash],
         **mongodb_fixture.config.dict(),
     )
-    app = await get_app(config=config, dao_factory=mongodb_fixture.dao_factory)
+    app = await get_app(config=config)
     client = AsyncTestClient(app)
     return client, token
 

@@ -17,11 +17,25 @@
 
 from hexkit.config import config_from_yaml
 
+# pylint: disable=unused-import
 from metldata.accession_registry.config import Config as AccessionRegistryConfig
+from metldata.load.config import ArtifactLoaderAPIConfig as ArtifactLoaderAPIConfig_
+from metldata.load.config import ArtifactLoaderClientConfig  # noqa: F401
 from metldata.submission_registry.config import Config as SubmissionRegistryConfig
 
 
 # pylint: disable=too-many-ancestors
-@config_from_yaml(prefix="metldata")
-class Config(AccessionRegistryConfig, SubmissionRegistryConfig):
+@config_from_yaml(prefix="metl_sub")
+class SubmissionAndTransformationConfig(
+    AccessionRegistryConfig, SubmissionRegistryConfig
+):
+    """Config parameters and their defaults."""
+
+
+# Alias for the main config:
+Config = SubmissionAndTransformationConfig  # noqa: N806
+
+
+@config_from_yaml(prefix="metl_load")
+class ArtifactLoaderAPIConfig(ArtifactLoaderAPIConfig_):
     """Config parameters and their defaults."""

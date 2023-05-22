@@ -19,11 +19,11 @@ import json
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from metldata.config import Config
+from metldata.config import SubmissionAndTransformationConfig
 from metldata.event_handling import FileSystemEventPublisher
 from metldata.submission_registry import models
 from metldata.submission_registry.event_publisher import SourceEventPublisher
-from tests.fixtures.config import config_fixture  # noqa: F401
+from tests.fixtures.config import config_sub_fixture  # noqa: F401
 from tests.fixtures.event_handling import file_system_event_fixture  # noqa: F401
 from tests.fixtures.event_handling import Event, FileSystemEventFixture
 
@@ -56,13 +56,13 @@ def check_source_events(
 
 
 def test_happy(
-    config_fixture: Config,  # noqa: F811
+    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test the happy path of publishing a submission."""
 
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
-    event_publisher = SourceEventPublisher(config=config_fixture, provider=provider)
+    event_publisher = SourceEventPublisher(config=config_sub_fixture, provider=provider)
 
     # publish a submission:
     submission = models.Submission(
@@ -82,7 +82,7 @@ def test_happy(
     # check published source event:
     check_source_events(
         expected_submissions=[submission],
-        source_event_topic=config_fixture.source_event_topic,
-        source_event_type=config_fixture.source_event_type,
+        source_event_topic=config_sub_fixture.source_event_topic,
+        source_event_type=config_sub_fixture.source_event_type,
         file_system_event_fixture=file_system_event_fixture,
     )

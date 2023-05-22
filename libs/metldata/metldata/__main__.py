@@ -15,10 +15,12 @@
 
 """Entrypoint of the package"""
 
+from metldata.cli import cli
+
 
 def run():
     """Run the service"""
-    ...
+    cli()
 
 
 if __name__ == "__main__":
