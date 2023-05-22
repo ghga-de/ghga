@@ -4,35 +4,27 @@
 
 # Mass
 
-Metadata Query Service - A service for searching metadata artifacts and filtering results.
+Metadata Artifact Search Service  - A service for searching metadata artifacts and filtering results.
 
 ## Description
 
-<!-- Please provide a short overview of the features of this service.-->
+The Metadata Artifact Search Service uses search parameters to look for metadata.
 
-This repo is a template for creating a new microservice.
+### Quick Overview of API
+There are two available API endpoints that follow the RPC pattern (not REST):
+One endpoint ("GET /rpc/search-options") will return an overview of all metadata classes that can be targeted
+by a search. The actual search endpoint ("POST /rpc/search") can be used to search for these target classes using keywords. Hits will be reported in the context of the selected target class.
+This means that target classes will be reported that match the specified search query,
+however, the target class might contain embedded other classes and the match might
+occur in these embedded classes, too.
 
-The directories, files, and their structure herein are recommendations
-from the GHGA Dev Team.
+Along with the hits, facet options are reported that can be used to filter down the hits by
+performing the same search query again but with specific facet selections being set.
 
-### Naming Conventions
-The github repository contains only lowercase letters, numbers, and hyphens "-",
-e.g.: `my-microservice`
+The search endpoint supports pagination to deal with large hit lists. Facet options can
+help avoid having to rely on this feature by filtering down the number of hits to a single page.
 
-The python package (and thus the source repository) contains underscores "_"
-instead of hyphens, e.g.: `my_microservice`
-However, an abbreviated version is prefered as package name.
-
-### Adapt to your service
-This is just a template and needs some adaption to your specific use case.
-
-Please search for **"please adapt"** comments. They will indicate all locations
-that need modification. Once the adaptions are in place, please remove these #
-comments.
-
-Finally, follow the instructions to generate the README.md described in
-[`./readme_generation.md`](./readme_generation.md). Please also adapt this markdown file
-by providing an overview of the feature of the package.
+For more information see the OpenAPI spec linked below.
 
 
 ## Installation
@@ -163,6 +155,21 @@ the corresponding structure. -->
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
 [hexkit](https://github.com/ghga-de/hexkit) library.
+
+This service is currently designed to work with MongoDB and uses an aggregation pipeline to produce search results.
+
+Typical sequence of events is as follows:
+1. Requests are received by the API, then directed to the QueryHandler in the core.
+
+2. From there, the configuration is consulted to retrieve any facetable properties for the searched resource class.
+
+3. The search parameters and facet fields are passed to the Aggregator, which builds and runs the aggregation pipeline on the appropriate collection. The aggregation pipeline is a series of stages run in sequence:
+   - The first stage runs a text match using the query string.
+   - The second stage applies a sort based on the IDs.
+   - The third stage applies any filters supplied in the search parameters.
+   - The fourth stage extract facets.
+   - The fifth/final stage transforms the results structure into {facets, hits, hit count}.
+4. Once retrieved in the Aggregator, the results are passed back to the QueryHandler where they are shoved into a QueryResults pydantic model for validation before finally being sent back to the API.
 
 
 ## Development
