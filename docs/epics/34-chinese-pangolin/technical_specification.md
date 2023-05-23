@@ -18,8 +18,8 @@ This Epic includes:
     - IFRS: Deletes the file from permanent storage (IRS would be better, but IRS does not have the connection between outward-facing file_id and S3 file name)
     - IFRS: Delete file entry from its database
     - DCS: Delete file entry from its database
-    - IFRS: Send API Call to EKSS to delete the secret
-    - IFRS: Delete file from outbox
+    - DCS: Send API Call to EKSS to delete the secret
+    - DCS: Delete file from outbox
     - Both services: Publish confirmation event afterwards
 - The EKSS provides a new RESTful HTTP DELETE endpoint /sercets/{secret_id} that deletes the corresponding secret from vault.
 
@@ -47,7 +47,7 @@ The PCS should have a single endpoint that can be accessed to delete files, conf
 
 - PCS: DELETE /files/{file_id}
     - auth header: internal access token
-    - Response: 204 'No Content'
+    - Response: 202 'Accepted'
     - If the validation of the auth header fails: 403 'Forbidden'
 
 This will internally send out a deletion event (See below.)
@@ -56,21 +56,21 @@ The EKSS will get a corresponding endpoint to delete a file secret.
 
 - EKSS: DELETE /secrets/{secret_id}:
     - no header, no body
-    - Response: 202 'Accepted'
+    - Response: 204 'No Content'
     - If the secret could not be found, send 404 with a "secretNotFoundError"
 
 ### Payload Schemas for Events:
 
 A deletion event schema will be defined in the ghga-event-schemas repository.
 The event schema will detail contain:
-    - file_id (outward-facing id of that file)
+- file_id (outward-facing id of that file)
 The exact field names and constraints will be provided in the ghga-event-schemas repository, which is considered the source of truth.
 
 This event will be used to announce a file deletion by the PCS.
 
 A deletion event confimation schema will be defined in the ghga-event-schemas repository.
 The event schema will contain:
-    - file_id (outward-facing id of that file)
+- file_id (outward-facing id of that file)
 The exact field names and constraints will be provided in the ghga-event-schemas repository, which is considered the source of truth.
 
 This event will announce the deletion of a file from the S3 storage buckets that fall within the responsibility of the service emitting the event and the removal of all corresponding entries in the service database.
