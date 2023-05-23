@@ -1,7 +1,7 @@
 ![tests](https://github.com/ghga-de/ghga-event-schemas/actions/workflows/unit_and_int_tests.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/ghga-de/ghga-event-schemas/branch/main/graph/badge.svg?token=GYH99Y71CK)](https://codecov.io/gh/ghga-de/ghga-event-schemas)
-# GHGA Message Schemas
-A package that collects schemas used for messaging between GHGA service.
+# GHGA Event Schemas
+A package that collects schemas used for events published from and subscribed by GHGA service.
 
 
 ## Quick Start

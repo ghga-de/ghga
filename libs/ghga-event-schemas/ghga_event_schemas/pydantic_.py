@@ -27,7 +27,8 @@ from ghga_event_schemas.validation import validated_upload_date
 
 
 class MetadataDatasetFile(BaseModel):
-    """A file as that is part of a Dataset.
+    """
+    A file as that is part of a Dataset.
     Only fields relevant to the WPS are included for now. May be extended.
     """
 
@@ -45,7 +46,8 @@ class MetadataDatasetFile(BaseModel):
 
 
 class MetadataDatasetOverview(BaseModel):
-    """Overview of files contained in a dataset.
+    """
+    Overview of files contained in a dataset.
     Only fields relevant to the WPS are included for now. May be extended.
     """
 
@@ -85,8 +87,10 @@ class UploadDateModel(BaseModel):
 
 
 class MetadataSubmissionFiles(BaseModel):
-    """Models files that are associated with or affected by a new or updated metadata
-    submission."""
+    """
+    Models files that are associated with or affected by a new or updated metadata
+    submission.
+    """
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
@@ -106,8 +110,10 @@ class MetadataSubmissionFiles(BaseModel):
 
 
 class MetadataSubmissionUpserted(BaseModel):
-    """This event when a new metadata submission is created or an existing one is
-    updated."""
+    """
+    This event when a new metadata submission is created or an existing one is
+    updated.
+    """
 
     associated_files: list[MetadataSubmissionFiles]
 
@@ -118,7 +124,9 @@ class MetadataSubmissionUpserted(BaseModel):
 
 
 class FileUploadReceived(UploadDateModel):
-    """This event is triggered when an new file upload was received."""
+    """
+    This event is triggered when an new file upload was received.
+    """
 
     file_id: str = Field(
         ...,
@@ -147,7 +155,9 @@ class FileUploadReceived(UploadDateModel):
 
 
 class FileUploadValidationSuccess(UploadDateModel):
-    """This event is triggered when an uploaded file was successfully validated."""
+    """
+    This event is triggered when an uploaded file was successfully validated.
+    """
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
@@ -205,7 +215,9 @@ class FileUploadValidationSuccess(UploadDateModel):
 
 
 class FileUploadValidationFailure(UploadDateModel):
-    """This event is triggered when an uploaded file failed to validate."""
+    """
+    This event is triggered when an uploaded file failed to validate.
+    """
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
@@ -222,7 +234,9 @@ class FileUploadValidationFailure(UploadDateModel):
 
 
 class FileInternallyRegistered(FileUploadValidationSuccess):
-    """This event is triggered when an newly uploaded file is internally registered."""
+    """
+    This event is triggered when an newly uploaded file is internally registered.
+    """
 
     # currently identical to the FileUploadValidationSuccess event model.
 
@@ -233,8 +247,10 @@ class FileInternallyRegistered(FileUploadValidationSuccess):
 
 
 class FileRegisteredForDownload(UploadDateModel):
-    """This event is triggered when a newly uploaded file becomes available for
-    download via a GA4GH DRS-compatible API."""
+    """
+    This event is triggered when a newly uploaded file becomes available for
+    download via a GA4GH DRS-compatible API.
+    """
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
@@ -255,8 +271,10 @@ class FileRegisteredForDownload(UploadDateModel):
 
 
 class NonStagedFileRequested(BaseModel):
-    """This event type is triggered when a user requested to download a file that is not
-    yet present in the outbox and need to be staged."""
+    """
+    This event type is triggered when a user requested to download a file that is not
+    yet present in the outbox and need to be staged.
+    """
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
@@ -273,7 +291,9 @@ class NonStagedFileRequested(BaseModel):
 
 
 class FileStagedForDownload(NonStagedFileRequested):
-    """This event type is triggered when a file is staged to the outbox storage."""
+    """
+    This event type is triggered when a file is staged to the outbox storage.
+    """
 
     # currently identical to the NonStagedFileRequested event model.
 
@@ -284,8 +304,10 @@ class FileStagedForDownload(NonStagedFileRequested):
 
 
 class FileDownloadServed(NonStagedFileRequested):
-    """This event type is triggered when a the content of a file was served
-    for download. This event might be useful for auditing."""
+    """
+    This event type is triggered when a the content of a file was served
+    for download. This event might be useful for auditing.
+    """
 
     context: str = Field(
         ...,
@@ -302,8 +324,10 @@ class FileDownloadServed(NonStagedFileRequested):
 
 
 class Notification(BaseModel):
-    """This event is emitted by services that desire to send a notification.
-    It is picked up by the notification service."""
+    """
+    This event is emitted by services that desire to send a notification.
+    It is picked up by the notification service.
+    """
 
     recipient_email: EmailStr = Field(
         ..., description="The primary recipient of the email"
@@ -327,6 +351,36 @@ class Notification(BaseModel):
         """Additional Model Config."""
 
         title = "notification"
+
+
+class FileDeletionRequested(BaseModel):
+    """
+    This event is emitted when a request to delete a certain file from the file
+    backend has been made.
+    """
+
+    file_id: str = Field(
+        ..., description="The public ID of the file as present in the metadata catalog."
+    )
+
+    class Config:
+        """Additional Model Config."""
+
+        title = "file_deletion_requested"
+
+
+class FileDeletionSuccess(FileDeletionRequested):
+    """
+    This event is emitted when a service has deleted a file from its database as well
+    as the S3 buckets it controlls.
+    """
+
+    # currently identical to the FileDeletionRequested event model.
+
+    class Config:
+        """Additional Model Config."""
+
+        title = "file_deletion_success"
 
 
 # Lists event schemas (values) by event types (key):

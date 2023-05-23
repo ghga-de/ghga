@@ -6,3 +6,6 @@ Dockerfile
 config_schema.json
 example_config.yaml
 scripts/script_utils/fastapi_app_location.py
+
+.description.md
+.design.md

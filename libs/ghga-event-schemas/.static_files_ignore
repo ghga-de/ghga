@@ -12,3 +12,8 @@ scripts/script_utils/cli.py
 
 scripts/update_config_docs.py
 scripts/update_openapi_docs.py
+
+.readme_template.md
+readme_generation.md
+scripts/update_readme.py
+.github/workflows/check_readme.yaml
