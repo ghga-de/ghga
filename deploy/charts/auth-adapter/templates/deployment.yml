@@ -22,28 +22,7 @@ spec:
     spec:
       serviceAccountName: {{ .Chart.Name }}
       containers:
-        - env:
-            - name: AUTH_SERVICE_RUN_AUTH_ADAPTER
-              value: "true"
-            - name: AUTH_SERVICE_HOST
-              value: 0.0.0.0
-            - name: AUTH_SERVICE_PORT
-              value: {{ .Values.port }}
-            - name: AUTH_SERVICE_BASIC_AUTH_USER
-              value: {{ .Values.authService.basicAuth.username }}
-            - name: AUTH_SERVICE_BASIC_AUTH_PWD
-              value: {{ .Values.authService.basicAuth.password }}
-            - name: AUTH_SERVICE_DB_URL
-              value: {{ .Values.authService.database.url }}
-            - name: AUTH_SERVICE_DB_NAME
-              value: {{ .Values.authService.database.name }}
-            - name: AUTH_SERVICE_OIDC_CLIENT_ID
-              value: {{ .Values.authService.oidcClientId }}
-            - name: AUTH_SERVICE_AUTH_KEY
-              value: {{ .Values.authService.authKey }}
-            - name: AUTH_SERVICE_AUTH_EXT_KEYS
-              value: {{ .Values.authService.authExtKeys }}
-          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
           {{- if .Values.command }}
           command:
             {{- toYaml .Values.command | nindent 12 }}
@@ -53,6 +32,27 @@ spec:
             {{- toYaml .Values.args | nindent 12 }}
           {{- end }}
           name: {{ .Chart.Name }}
+          env:
+            - name: AUTH_SERVICE_RUN_AUTH_ADAPTER
+              value: "true"
+            - name: AUTH_SERVICE_HOST
+              value: "0.0.0.0"
+            - name: AUTH_SERVICE_PORT
+              value: "{{ .Values.port }}"
+            - name: AUTH_SERVICE_BASIC_AUTH_USER
+              value: "{{ .Values.authService.basicAuth.username }}"
+            - name: AUTH_SERVICE_BASIC_AUTH_PWD
+              value: "{{ .Values.authService.basicAuth.password }}"
+            - name: AUTH_SERVICE_DB_URL
+              value: "{{ .Values.authService.database.url }}"
+            - name: AUTH_SERVICE_DB_NAME
+              value: "{{ .Values.authService.database.name }}"
+            - name: AUTH_SERVICE_OIDC_CLIENT_ID
+              value: "{{ .Values.authService.oidcClientId }}"
+            - name: AUTH_SERVICE_AUTH_KEY
+              value: "{{ .Values.authService.authKey }}"
+            - name: AUTH_SERVICE_AUTH_EXT_KEYS
+              value: "{{ .Values.authService.authExtKeys }}"
           securityContext:
             runAsUser: 1000
             capabilities:

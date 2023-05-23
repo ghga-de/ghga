@@ -4,7 +4,7 @@ kind: AuthService
 metadata:
   name: {{ .Values.authService.emissary.name}}
 spec:
-  auth_service: "{{}}.{{}}:{{ .Values.port }}"
+  auth_service: "{{ .Chart.Name }}.{{ .Release.Namespace }}:{{ .Values.port }}"
   allowed_request_headers:
     - "X-Authorization"
 {{ end }}
