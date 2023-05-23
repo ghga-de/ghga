@@ -1,2 +1,2 @@
 # Docs Folder
-Documentation is comming soon.
+Documentation is coming soon.

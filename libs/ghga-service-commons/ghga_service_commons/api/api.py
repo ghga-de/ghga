@@ -16,13 +16,18 @@
 """Functionality for initializing, configuring, and running RESTful
 webapps with FastAPI"""
 
-from typing import Dict, Literal, Optional, Sequence, Union
+from typing import Dict, Optional, Sequence, Union
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from httpyexpect.server.handlers.fastapi_ import configure_exception_handler
 from pydantic import BaseSettings, Field
+
+try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
+    from typing_extensions import Literal
+except ImportError:
+    from typing import Literal  # type: ignore
 
 # type alias for log level parameter
 LogLevel = Literal["critical", "error", "warning", "info", "debug", "trace"]
