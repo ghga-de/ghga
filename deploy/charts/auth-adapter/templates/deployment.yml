@@ -23,14 +23,7 @@ spec:
       serviceAccountName: {{ .Chart.Name }}
       containers:
         - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
-          {{- if .Values.command }}
-          command:
-            {{- toYaml .Values.command | nindent 12 }}
-          {{- end }}
-          {{- if .Values.args }}
-          args:
-            {{- toYaml .Values.args | nindent 12 }}
-          {{- end }}
+          {{- include "ghga-common.command" (list "auth-service")  | nindent 8 }}
           name: {{ .Chart.Name }}
           env:
             - name: AUTH_SERVICE_RUN_AUTH_ADAPTER

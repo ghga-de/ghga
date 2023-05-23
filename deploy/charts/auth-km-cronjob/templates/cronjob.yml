@@ -2,8 +2,8 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   labels:
-    app: {{ .Chart.Name }}
-  name: {{ .Chart.Name }}
+    app: {{ .Release.Name }}
+  name: {{ .Release.Name }}
 spec:
   schedule: {{ .Values.cronSchedule }}
   successfulJobsHistoryLimit: 1
@@ -11,7 +11,7 @@ spec:
   jobTemplate:
     metadata:
       labels:
-        app: {{ .Chart.Name }}
+        app: {{ .Release.Name }}
     spec:
       template:
         metadata:
