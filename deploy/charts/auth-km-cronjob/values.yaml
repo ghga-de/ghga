@@ -1,5 +1,16 @@
-cronSchedule: '0 2 12 12 *'
-command:
-  - "bash"
-  - "-c"
-  - "source /vault/secrets/variables && run refresh-int-keys"
+podAnnotations: {}
+command: []
+args: []
+image:
+  name: "ghga/auth-km-jobs"
+  tag: "0.0.0-26-8e5cb6a-main"
+cronSchedule: ""
+vault:
+  token: ""
+  address: "https://hashicorp-vault.vault:8200"
+  namespace: "vault"
+service:
+  keyType: ""
+  runCommands:
+   internal: run refresh-int-keys
+   external: run refresh-ext-keys

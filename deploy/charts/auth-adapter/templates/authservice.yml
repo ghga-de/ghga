@@ -1,8 +1,10 @@
+{{ if .Values.authService.emissary.enabled }}
 apiVersion: getambassador.io/v3alpha1
 kind: AuthService
 metadata:
-  name: authentication
+  name: {{ .Values.authService.emissary.name}}
 spec:
-  auth_service: "auth-adapter.data-portal:8080"
+  auth_service: "{{}}.{{}}:{{ .Values.port }}"
   allowed_request_headers:
     - "X-Authorization"
+{{ end }}

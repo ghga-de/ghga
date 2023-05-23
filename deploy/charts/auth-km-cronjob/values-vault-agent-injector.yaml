@@ -1,0 +1,11 @@
+podAnnotations:
+  vault.hashicorp.com/agent-inject: "true"
+  vault.hashicorp.com/agent-init-first: "true"
+  vault.hashicorp.com/tls-skip-verify: "true"
+  vault.hashicorp.com/agent-inject-secret-variables: 'secret/data/auth/token'
+  vault.hashicorp.com/agent-inject-template-variables: |
+    {{ with secret "secret/data/auth/token" -}}
+    export VAULT_TOKEN="{{ .Data.data.token }}" #We have to change that to application credentials
+    {{- end }}
+  vault.hashicorp.com/role: "auth-km-job-role"
+  vault.hashicorp.com/agent-pre-populate-only: "true"

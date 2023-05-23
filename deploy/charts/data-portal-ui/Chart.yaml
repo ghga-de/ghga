@@ -16,3 +16,8 @@ appVersion: "0.0.0-193-6587ec5-main"
 # The major version of the API. Minor versions and patches are not relevant as they do not
 # introduce breaking changes.
 apiVersion: v2
+
+dependencies:
+- name: ghga-common
+  version: 0.1.0
+  repository: file://../ghga-common

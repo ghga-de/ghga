@@ -2,13 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: auth-adapter
-  name: auth-adapter
+    app: {{ .Chart.Name }}
+  name: {{ .Chart.Name }}
 spec:
   revisionHistoryLimit: 1
   selector:
     matchLabels:
-      app: auth-adapter
+      app: {{ .Chart.Name }}
   template:
     metadata:
       annotations:
@@ -16,11 +16,11 @@ spec:
         {{- toYaml .Values.podAnnotations | nindent 8 }}
         {{- end }}
       labels:
-        app: auth-adapter
+        app: {{ .Chart.Name }}
         version: staging
         sidecar.istio.io/inject: "true"
     spec:
-      serviceAccountName: auth-adapter
+      serviceAccountName: {{ .Chart.Name }}
       containers:
         - env:
             - name: AUTH_SERVICE_RUN_AUTH_ADAPTER
@@ -28,9 +28,21 @@ spec:
             - name: AUTH_SERVICE_HOST
               value: 0.0.0.0
             - name: AUTH_SERVICE_PORT
-              value: "8080"
+              value: {{ .Values.port }}
+            - name: AUTH_SERVICE_BASIC_AUTH_USER
+              value: {{ .Values.authService.basicAuth.username }}
+            - name: AUTH_SERVICE_BASIC_AUTH_PWD
+              value: {{ .Values.authService.basicAuth.password }}
+            - name: AUTH_SERVICE_DB_URL
+              value: {{ .Values.authService.database.url }}
             - name: AUTH_SERVICE_DB_NAME
-              value: auth-db
+              value: {{ .Values.authService.database.name }}
+            - name: AUTH_SERVICE_OIDC_CLIENT_ID
+              value: {{ .Values.authService.oidcClientId }}
+            - name: AUTH_SERVICE_AUTH_KEY
+              value: {{ .Values.authService.authKey }}
+            - name: AUTH_SERVICE_AUTH_EXT_KEYS
+              value: {{ .Values.authService.authExtKeys }}
           image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
           {{- if .Values.command }}
           command:
@@ -40,7 +52,7 @@ spec:
           args:
             {{- toYaml .Values.args | nindent 12 }}
           {{- end }}
-          name: auth-adapter
+          name: {{ .Chart.Name }}
           securityContext:
             runAsUser: 1000
             capabilities:
@@ -52,7 +64,7 @@ spec:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.port }}
           resources:
             limits:
               cpu: 500m
@@ -62,12 +74,12 @@ spec:
               memory: 64M
           readinessProbe:
             tcpSocket:
-              port: 8080
+              port: {{ .Values.port }}
             initialDelaySeconds: 10
             periodSeconds: 15
           livenessProbe:
             tcpSocket:
-              port: 8080
+              port: {{ .Values.port }}
             initialDelaySeconds: 10
             periodSeconds: 15
       restartPolicy: Always

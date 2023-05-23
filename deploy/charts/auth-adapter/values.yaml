@@ -2,5 +2,23 @@ podAnnotations: {}
 command: []
 args: []
 image:
-  name: ghga/auth-service
-  tag: 0.3.1
+  name: "ghga/auth-service"
+  tag: "0.3.1"
+port: "8080"
+horizontalPodAutoscaler:
+  enabled: false
+  averageCpuUtilization: 75
+  averageMemoryUtilization: 75
+authService:
+  emissary:
+    enabled: false
+    name: authentication
+  basicAuth:
+    username: ""
+    password: ""
+  database:
+    url: ""
+    name: auth-db
+  oidcClientId: ""
+  authKey: ""
+  authExtKeys: ""

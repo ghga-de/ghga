@@ -1,5 +1,0 @@
-cronSchedule: '0 1 26 * *'
-command:
-  - "bash"
-  - "-c"
-  - "source /vault/secrets/variables && run refresh-ext-keys"

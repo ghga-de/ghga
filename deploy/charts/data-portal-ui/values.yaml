@@ -1,5 +1,10 @@
-uiHost: "0.0.0.0"
-uiPort: "8080"
+podAnnotations: {}
+command: []
+args: []
+image:
+  name: "ghga/data-portal-ui"
+  tag: "0.0.0-193-6587ec5-main"
+port: "8080"
 serviceTargetPort: "8080"
 svcRepositoryUrl: "/api/repository"
 svcSearchUrl: "/api/search"

@@ -2,8 +2,8 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   labels:
-    app: auth-km-cronjob
-  name: auth-km-cronjob
+    app: {{ .Chart.Name }}
+  name: {{ .Chart.Name }}
 spec:
   schedule: {{ .Values.cronSchedule }}
   successfulJobsHistoryLimit: 1
@@ -11,31 +11,32 @@ spec:
   jobTemplate:
     metadata:
       labels:
-        app: auth-km-cronjob
+        app: {{ .Chart.Name }}
     spec:
       template:
         metadata:
           annotations:
-            vault.hashicorp.com/agent-inject: "true"
-            vault.hashicorp.com/agent-init-first: "true"
-            vault.hashicorp.com/tls-skip-verify: "true"
-            vault.hashicorp.com/agent-inject-secret-variables: 'secret/data/auth/token'
-            vault.hashicorp.com/agent-inject-template-variables: |
-              {{ with secret "secret/data/auth/token" -}}
-              export VAULT_TOKEN="{{ .Data.data.token }}" #We have to change that to application credentials
-              {{- end }}
-            vault.hashicorp.com/role: "auth-km-job-role"
-            vault.hashicorp.com/agent-pre-populate-only: "true"
+            {{- if .Values.podAnnotations }}
+            {{- toYaml .Values.podAnnotations | nindent 12 }}
+            {{- end }}
         spec:
           serviceAccountName: auth-km-job
           containers:
           - env:
+            - name: VAULT_TOKEN
+              value: {{ .Values.vault.token }}
             - name: VAULT_ADDR
-              value: "https://hashicorp-vault.vault:8200"
+              value: {{ .Values.vault.address }}
             - name: VAULT_NAMESPACE
-              value: "vault"
-            image: ghga/auth-km-jobs:0.0.0-26-8e5cb6a-main
-            command: {{ .Values.command }}
+              value: {{ .Values.vault.namespace }}
+            image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+            {{- if eq .Values.service.keyType "internal" }}
+            {{- include "ghga-common.command" (list .Values.service.runCommands.internal )  | nindent 12 }}
+            {{- else if eq .Values.service.keyType "external" }}
+            {{- include "ghga-common.command" (list .Values.service.runCommands.external )  | nindent 12 }}
+            {{- else }}
+            {{- fail "value for .Values.service.keyType must be `internal` or `external`" }}
+            {{- end }}
             name: auth-km-job
             securityContext:
               runAsUser: 1000
