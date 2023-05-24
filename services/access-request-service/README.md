@@ -55,6 +55,8 @@ The service requires the following configuration parameters:
 
 - **`access_grant_max_days`** *(integer)*: Default: `730`.
 
+- **`download_access_url`** *(string)*: URL pointing to the internal download access API.
+
 - **`notification_event_topic`** *(string)*: Default: `notifications`.
 
 - **`notification_event_type`** *(string)*: Default: `notification`.

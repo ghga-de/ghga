@@ -86,10 +86,10 @@ async def create_access_request(
         request = await repository.create(
             creation_data=creation_data, auth_context=auth_context
         )
+    except repository.AccessRequestAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except repository.AccessRequestInvalidDuration as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except repository.AccessRequestError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         log.error("Could not create access request: %s", exc)
         raise HTTPException(
@@ -171,10 +171,12 @@ async def patch_access_request(
         await repository.update(
             access_request_id, status=status, auth_context=auth_context
         )
+    except repository.AccessRequestAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except repository.AccessRequestNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except repository.AccessRequestError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except repository.AccessRequestInvalidState as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         log.error("Could not modify access request: %s", exc)
         raise HTTPException(

@@ -41,6 +41,7 @@ from ars.core.notifications import (
 )
 from ars.core.roles import DATA_STEWARD_ROLE
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
+from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
 from ars.ports.outbound.notification_emitter import NotificationEmitterPort
 
@@ -74,15 +75,16 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         config: AccessRequestConfig,
         access_request_dao: AccessRequestDaoPort,
         notification_emitter: NotificationEmitterPort,
+        access_grants: AccessGrantsPort,
     ):
         """Initialize with specific configuration and outbound adapter."""
-        self._config = config
         self._max_lead_time = timedelta(days=config.access_upfront_max_days)
         self._min_duration = timedelta(days=config.access_grant_min_days)
         self._max_duration = timedelta(days=config.access_grant_max_days)
-        self._data_steward_email = self._config.data_steward_email
+        self._data_steward_email = config.data_steward_email
         self._dao = access_request_dao
         self._notification_emitter = notification_emitter
+        self._access_grants = access_grants
 
     async def create(
         self, creation_data: AccessRequestCreationData, *, auth_context: AuthContext
@@ -93,12 +95,13 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         Users may only create access requests for themselves.
 
-        Raises an AccessRequestError if the user is not authorized.
+        Raises an AccessRequestAuthorizationError if the user is not authorized.
+        Raises an AccessRequestInvalidDuration error if the dates are invalid.
         """
 
         user_id = auth_context.id
         if not user_id or creation_data.user_id != user_id:
-            raise self.AccessRequestError("Not authorized")
+            raise self.AccessRequestAuthorizationError("Not authorized")
 
         request_created = now_as_utc()
 
@@ -156,17 +159,17 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         Only data stewards may list requests created by other users.
 
-        Raises an AccessRequestError if the user is not authorized.
+        Raises an AccessRequestAuthorizationError if the user is not authorized.
         """
 
         if not auth_context.id:
-            raise self.AccessRequestError("Not authorized")
+            raise self.AccessRequestAuthorizationError("Not authorized")
         is_data_steward = has_role(auth_context, DATA_STEWARD_ROLE)
         if not is_data_steward:
             if user_id is None:
                 user_id = auth_context.id
             elif user_id != auth_context.id:
-                raise self.AccessRequestError("Not authorized")
+                raise self.AccessRequestAuthorizationError("Not authorized")
 
         mapping: dict[str, Any] = {}
         if user_id is not None:
@@ -197,21 +200,24 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         Only data stewards may use this method.
 
-        Raises an AccessRequestError if the user is not authorized.
+        Raises an AccessRequestAuthorizationError if the user is not authorized.
+        raises an AccessRequestNotFoundError if the specified request was not found.
+        raises an AccessRequestInvalidState error is the specified state is invalid.
+        Raises an AccessRequestServerError if the grant could not be registered.
         """
 
         user_id = auth_context.id
         if not user_id or not has_role(auth_context, DATA_STEWARD_ROLE):
-            raise self.AccessRequestError("Not authorized")
+            raise self.AccessRequestAuthorizationError("Not authorized")
 
         try:
             request = await self._dao.get_by_id(access_request_id)
         except ResourceNotFoundError as error:
             raise self.AccessRequestNotFoundError("Access request not found") from error
         if request.status == status:
-            raise self.AccessRequestError("Same status is already set")
+            raise self.AccessRequestInvalidState("Same status is already set")
         if request.status != AccessRequestStatus.PENDING:
-            raise self.AccessRequestError("Status cannot be reverted")
+            raise self.AccessRequestInvalidState("Status cannot be reverted")
 
         modified_request = request.copy(
             update={
@@ -223,9 +229,21 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         await self._dao.update(modified_request)
 
-        # Should set the status in the claims repository here
-        # if it has been approved, and raise an error and rollback
-        # the above update if this does not succeed.
+        if status == AccessRequestStatus.ALLOWED:
+            # Try to register as download access grant
+            try:
+                await self._access_grants.grant_download_access(
+                    user_id=request.user_id,
+                    dataset_id=request.dataset_id,
+                    valid_from=request.access_starts,
+                    valid_until=request.access_ends,
+                )
+            except self._access_grants.AccessGrantsError as error:
+                # roll back the status update
+                await self._dao.update(request)
+                raise self.AccessRequestServerError(
+                    f"Could not register the download access grant: {error}"
+                ) from error
 
         # notify data steward
         data_steward_email = self._data_steward_email

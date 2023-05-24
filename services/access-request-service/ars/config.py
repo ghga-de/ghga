@@ -22,6 +22,7 @@ from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 
 from ars.adapters.outbound.event_pub import NotificationEmitterConfig
+from ars.adapters.outbound.http import AccessGrantsConfig
 from ars.core.repository import AccessRequestConfig
 
 
@@ -33,6 +34,7 @@ class Config(
     MongoDbConfig,
     KafkaConfig,
     NotificationEmitterConfig,
+    AccessGrantsConfig,
     AccessRequestConfig,
 ):
     """Config parameters and their defaults."""

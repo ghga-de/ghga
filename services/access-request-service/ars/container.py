@@ -22,6 +22,7 @@ from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from ars.adapters.outbound.dao import AccessRequestDaoConstructor
 from ars.adapters.outbound.event_pub import NotificationEmitter
+from ars.adapters.outbound.http import AccessGrantsAdapter
 from ars.config import Config
 from ars.core.repository import AccessRequestRepository
 
@@ -46,6 +47,8 @@ class Container(ContainerBase):
         NotificationEmitter, config=config, event_publisher=event_publisher
     )
 
+    access_grants = get_constructor(AccessGrantsAdapter, config=config)
+
     # auth provider:
     auth_provider = get_constructor(
         GHGAAuthContextProvider,
@@ -57,5 +60,6 @@ class Container(ContainerBase):
         AccessRequestRepository,
         access_request_dao=access_request_dao,
         notification_emitter=notification_emitter,
+        access_grants=access_grants,
         config=config,
     )

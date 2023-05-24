@@ -16,8 +16,9 @@
 
 """Integration test using the REST API of the access request service"""
 
+import json
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import NamedTuple, Sequence, cast
 
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -31,6 +32,7 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401 # pylint: disable
     mongodb_fixture,
 )
 from pytest import mark
+from pytest_httpx import HTTPXMock
 
 from .fixtures import (  # noqa: F401 # pylint: disable=unused-import
     fixture_auth_headers_doe,
@@ -39,6 +41,7 @@ from .fixtures import (  # noqa: F401 # pylint: disable=unused-import
     fixture_auth_headers_steward_inactive,
     fixture_client,
     fixture_container,
+    non_mocked_hosts,
 )
 
 DATE_NOW = now_as_utc()
@@ -54,12 +57,22 @@ CREATION_DATA = {
 }
 
 
-def assert_is_uuid(value: str):
+def assert_is_uuid(value: str) -> None:
     """Assert that the given value is a UUID"""
     assert isinstance(value, str)
     assert value.isascii()
     assert len(value) == 36
     assert value.count("-") == 4
+
+
+def iso2timestamp(iso_date: str) -> float:
+    """Get timestamp from given date in iso format."""
+    return datetime.fromisoformat(iso_date).timestamp()
+
+
+def assert_same_datetime(date1: str, date2: str, max_diff_seconds=5) -> None:
+    """Assert that the two given dates in iso format are very close."""
+    assert abs((iso2timestamp(date2) - iso2timestamp(date1))) < max_diff_seconds
 
 
 class NotificationPayload(NamedTuple):
@@ -333,8 +346,16 @@ async def test_patch_access_request(
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
     kafka_fixture: KafkaFixture,  # noqa: F811 # pylint: disable=redefined-outer-name
+    httpx_mock: HTTPXMock,
 ):
     """Test that data stewards can change the status of access requests."""
+
+    # mock setting the the access grant
+    httpx_mock.add_response(
+        method="POST",
+        url="http://access/users/id-of-john-doe@ghga.de/datasets/some-dataset",
+        status_code=204,
+    )
 
     # create access request as user
     response = await client.post(
@@ -353,9 +374,15 @@ async def test_patch_access_request(
         )
         assert response.status_code == 204
 
+    # check that access has been granted
+    grant_request = httpx_mock.get_request()
+    assert grant_request
+    validity = json.loads(grant_request.content)
+    # validity period may start a bit later because integration tests can be slow
+    assert_same_datetime(validity["valid_from"], CREATION_DATA["access_starts"], 300)
+    assert validity["valid_until"] == CREATION_DATA["access_ends"]
+
     # check that notifications have been sent
-    # check that notifications have been sent
-    print(recorder.recorded_events)
     assert_recorded_events(
         recorder.recorded_events,
         [

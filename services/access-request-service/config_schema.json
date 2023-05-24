@@ -36,6 +36,15 @@
       ],
       "type": "integer"
     },
+    "download_access_url": {
+      "title": "Download Access Url",
+      "description": "URL pointing to the internal download access API.",
+      "example": "http://127.0.0.1/download_access",
+      "env_names": [
+        "ars_download_access_url"
+      ],
+      "type": "string"
+    },
     "notification_event_topic": {
       "title": "Notification Event Topic",
       "default": "notifications",
@@ -287,6 +296,7 @@
   },
   "required": [
     "data_steward_email",
+    "download_access_url",
     "service_instance_id",
     "kafka_servers",
     "db_connection_str",

@@ -34,11 +34,20 @@ class AccessRequestRepositoryPort(ABC):
     class AccessRequestError(RuntimeError):
         """Error that is raised when an access request cannot be processed."""
 
+    class AccessRequestAuthorizationError(AccessRequestError):
+        """Error that is raised when the user is not authorized."""
+
+    class AccessRequestInvalidState(AccessRequestError):
+        """Error raised when the status for access is invalid."""
+
     class AccessRequestInvalidDuration(AccessRequestError):
         """Error raised when the time frame for access is invalid."""
 
     class AccessRequestNotFoundError(AccessRequestError):
         """Error raised when an access request cannot be found."""
+
+    class AccessRequestServerError(AccessRequestError):
+        """Error raised when there was some kind of a server error."""
 
     @abstractmethod
     async def create(
@@ -50,7 +59,7 @@ class AccessRequestRepositoryPort(ABC):
 
         Users may only create access requests for themselves.
 
-        Raises an AccessRequestError if the user is not authorized.
+        Raises an AccessRequestAuthorizationError if the user is not authorized.
         """
         ...
 
@@ -67,7 +76,8 @@ class AccessRequestRepositoryPort(ABC):
 
         Only data stewards may list requests created by other users.
 
-        Raises an AccessRequestError if the user is not authorized.
+        Raises an AccessRequestAuthorizationError if the user is not authorized.
+        Raises an AccessRequestInvalidDuration error if the dates are invalid.
         """
         ...
 
@@ -83,6 +93,9 @@ class AccessRequestRepositoryPort(ABC):
 
         Only data stewards may use this method.
 
-        Raises an AccessRequestError if the user is not authorized.
+        Raises an AccessRequestAuthorizationError if the user is not authorized.
+        raises an AccessRequestNotFoundError if the specified request was not found.
+        raises an AccessRequestInvalidState error is the specified state is invalid.
+        Raises an AccessRequestServerError if the grant could not be registered.
         """
         ...

@@ -33,6 +33,7 @@ from ars.core.models import (
     AccessRequestStatus,
 )
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
+from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
 from ars.ports.outbound.notification_emitter import NotificationEmitterPort
 
@@ -155,7 +156,11 @@ ACCESS_REQUESTS = [
 class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
     """Dummy AccessRequest DAO for testing."""
 
-    last_upsert: Optional[AccessRequest] = None
+    last_upsert: Optional[AccessRequest]
+
+    def reset(self):
+        """Reset the last recorded upsert."""
+        self.last_upsert = None
 
     def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[AccessRequest]:
         """Find all records using a mapping."""
@@ -213,16 +218,56 @@ class NotificationEmitterDummy(NotificationEmitterPort):
     async def notify(
         self, *, email: EmailStr, full_name: str, subject: str, text: str
     ) -> None:
+        """Send a notification."""
         if email in self.notifications:
             raise RuntimeError(f"A notification to {email} was already sent.")
         self.notifications[email] = NotificationRecord(full_name, subject, text)
 
 
+class AccessGrantsDummy(AccessGrantsPort):
+    """Dummy adapter for granting download access."""
+
+    last_grant: str
+    simulate_error: bool
+
+    def reset(self) -> None:
+        """Reset the recorded grant."""
+        self.last_grant = "nothing granted so far"
+        self.simulate_error = False
+
+    async def grant_download_access(
+        self,
+        user_id: str,
+        dataset_id: str,
+        valid_from: DateTimeUTC,
+        valid_until: DateTimeUTC,
+    ) -> None:
+        """Grant download access."""
+        if self.simulate_error:
+            self.last_grant = f"to {user_id} for {dataset_id} failed"
+            raise self.AccessGrantsError
+        self.last_grant = (
+            f"to {user_id} for {dataset_id} from {valid_from} until {valid_until}"
+        )
+
+
 dao = AccessRequestDaoDummy()
 notification_emitter = NotificationEmitterDummy()
+access_grants = AccessGrantsDummy()
+
+
+def reset():
+    """Reset dummy adapters."""
+    dao.reset()
+    notification_emitter.reset()
+    access_grants.reset()
+
 
 repository = AccessRequestRepository(
-    config=config, access_request_dao=dao, notification_emitter=notification_emitter
+    config=config,
+    access_request_dao=dao,
+    notification_emitter=notification_emitter,
+    access_grants=access_grants,
 )
 
 
@@ -239,8 +284,7 @@ async def test_can_create_request():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
     creation_date = now_as_utc()
 
     request = await repository.create(creation_data, auth_context=auth_context_doe)
@@ -279,6 +323,8 @@ async def test_can_create_request():
         + " in the next three workdays."
     )
 
+    assert access_grants.last_grant == "nothing granted so far"
+
 
 @mark.asyncio
 async def test_cannot_create_request_for_somebody_else():
@@ -311,8 +357,7 @@ async def test_silently_correct_request_that_is_too_early():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
@@ -338,8 +383,7 @@ async def test_cannot_create_request_too_much_in_advance():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     with raises(
         repository.AccessRequestInvalidDuration, match="Access start date is invalid"
@@ -363,8 +407,7 @@ async def test_cannot_create_request_too_short():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     with raises(
         repository.AccessRequestInvalidDuration, match="Access end date is invalid"
@@ -388,8 +431,7 @@ async def test_cannot_create_request_too_long():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     with raises(
         repository.AccessRequestInvalidDuration, match="Access end date is invalid"
@@ -503,8 +545,7 @@ async def test_set_status_to_allowed():
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     await repository.update(
         "request-id-4",
@@ -542,6 +583,39 @@ async def test_set_status_to_allowed():
         + "You can now start download the dataset as explained in the GHGA Data Portal."
     )
 
+    assert (
+        access_grants.last_grant == "to id-of-john-doe@ghga.de for new-dataset"
+        " from 2021-01-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
+    )
+
+
+@mark.asyncio
+async def test_set_status_to_allowed_with_error_when_granting_access():
+    """Test setting the status of a request when granting fails."""
+    original_request = await dao.get_by_id("request-id-4")
+    reset()
+    access_grants.simulate_error = True
+
+    with raises(
+        repository.AccessRequestError,
+        match="Could not register the download access grant",
+    ):
+        await repository.update(
+            "request-id-4",
+            status=AccessRequestStatus.ALLOWED,
+            auth_context=auth_context_steward,
+        )
+
+    assert (
+        access_grants.last_grant == "to id-of-john-doe@ghga.de for new-dataset failed"
+    )
+
+    # make sure the status is not changed in this case, and no mails are sent out
+    changed_request = dao.last_upsert
+    assert changed_request is not None
+    assert changed_request == original_request
+    assert notification_emitter.num_notifications == 0
+
 
 @mark.asyncio
 async def test_set_status_to_allowed_when_it_is_already_allowed():
@@ -549,8 +623,7 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
     request = await dao.get_by_id("request-id-1")
     assert request.status == AccessRequestStatus.ALLOWED
 
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     with raises(repository.AccessRequestError, match="Same status is already set"):
         await repository.update(
@@ -562,6 +635,8 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
     assert dao.last_upsert is None
     assert notification_emitter.num_notifications == 0
 
+    assert access_grants.last_grant == "nothing granted so far"
+
 
 @mark.asyncio
 async def test_set_status_to_allowed_when_it_is_already_denied():
@@ -569,8 +644,7 @@ async def test_set_status_to_allowed_when_it_is_already_denied():
     request = await dao.get_by_id("request-id-3")
     assert request.status == AccessRequestStatus.DENIED
 
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     with raises(repository.AccessRequestError, match="Status cannot be reverted"):
         await repository.update(
@@ -579,12 +653,13 @@ async def test_set_status_to_allowed_when_it_is_already_denied():
             auth_context=auth_context_steward,
         )
 
+    assert access_grants.last_grant == "nothing granted so far"
+
 
 @mark.asyncio
 async def test_set_status_of_non_existing_request():
     """Test setting the status of a request that does not exist."""
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     with raises(
         repository.AccessRequestNotFoundError, match="Access request not found"
@@ -597,13 +672,13 @@ async def test_set_status_of_non_existing_request():
 
     assert dao.last_upsert is None
     assert notification_emitter.num_notifications == 0
+    assert access_grants.last_grant == "nothing granted so far"
 
 
 @mark.asyncio
 async def test_set_status_when_not_a_data_steward():
     """Test setting the status of a request when not being a data steward."""
-    dao.last_upsert = None
-    notification_emitter.reset()
+    reset()
 
     with raises(repository.AccessRequestError, match="Not authorized"):
         await repository.update(
@@ -614,3 +689,4 @@ async def test_set_status_when_not_a_data_steward():
 
     assert dao.last_upsert is None
     assert notification_emitter.num_notifications == 0
+    assert access_grants.last_grant == "nothing granted so far"

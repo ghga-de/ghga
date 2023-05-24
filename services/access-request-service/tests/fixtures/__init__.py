@@ -35,8 +35,21 @@ from ars.main import (  # pylint: disable=import-outside-toplevel
     get_rest_api,
 )
 
-AUTH_KEY_PAIR = generate_jwk()
+__all__ = [
+    "AUTH_KEY_PAIR",
+    "AUTH_CLAIMS_DOE",
+    "AUTH_CLAIMS_STEWARD",
+    "fixture_auth_headers_doe",
+    "fixture_auth_headers_steward",
+    "fixture_auth_headers_doe_inactive",
+    "fixture_auth_headers_steward_inactive",
+    "fixture_client",
+    "headers_for_token",
+    "non_mocked_hosts",
+]
 
+
+AUTH_KEY_PAIR = generate_jwk()
 
 AUTH_CLAIMS_DOE = {
     "name": "John Doe",
@@ -100,6 +113,7 @@ async def fixture_container(
     # create configuration for testing
     config = Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
+        download_access_url="http://access",
         data_steward_email=EmailStr("steward@ghga.de"),
         **kafka_fixture.config.dict(),
         **mongodb_fixture.config.dict(),
@@ -111,10 +125,18 @@ async def fixture_container(
 
 
 @async_fixture(name="client")
-async def fixture_client(container: Container) -> AsyncGenerator[AsyncTestClient, None]:
+async def fixture_client(
+    container: Container,
+) -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for the access request service"""
 
     config = container.config()
     api = get_rest_api(config=config)
     async with AsyncTestClient(app=api) as client:
         yield client
+
+
+@fixture
+def non_mocked_hosts() -> list[str]:
+    """Get hosts that are not mocked by pytest-httpx."""
+    return ["test", "localhost"]
