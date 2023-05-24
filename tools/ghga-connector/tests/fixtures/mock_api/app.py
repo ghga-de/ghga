@@ -25,7 +25,13 @@ import base64
 import os
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Literal
+from typing import List
+
+try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
+    from typing_extensions import Literal
+except ImportError:
+    from typing import Literal  # type: ignore
+
 
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response

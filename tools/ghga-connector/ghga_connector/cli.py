@@ -65,12 +65,12 @@ def upload(  # noqa C901
     submitter_pubkey_path: Path = typer.Argument(
         "./key.pub",
         help="The path to a public key from the key pair that was announced in the "
-        + "metadata. Defaults to the file key.pub in the current folder.",
+        + "metadata. Defaults to key.pub in the current folder.",
     ),
     submitter_private_key_path: Path = typer.Argument(
         "./key.sec",
         help="The path to a private key from the key pair that will be used to encrypt the "
-        + "crypt4gh envelope. Defaults to the file key.pub in the current folder.",
+        + "crypt4gh envelope. Defaults to key in the current folder.",
     ),
 ):
     """
@@ -98,12 +98,12 @@ def download(  # pylint: disable=too-many-arguments
     submitter_pubkey_path: Path = typer.Argument(
         "./key.pub",
         help="The path to a public key from the key pair that was announced in the "
-        + "metadata. Defaults to the file key.pub in the current folder.",
+        + "metadata. Defaults to key.pub in the current folder.",
     ),
     submitter_private_key_path: Path = typer.Argument(
         "./key.sec",
-        help="The path to a private key from the key pair that will be used to encrypt the "
-        + "crypt4gh envelope. Defaults to the file key.pub in the current folder.",
+        help="The path to a private key from the key pair that will be used to decrypt the"
+        + "work package access and work order tokens. Defaults to key in the current folder.",
     ),
 ):
     """

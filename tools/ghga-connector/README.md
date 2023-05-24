@@ -10,12 +10,17 @@ GHGA Connector - A CLI client application for interacting with the GHGA system.
 
 <!-- Please provide a short overview of the features of this service.-->
 
+The GHGA Connector is a command line client facilitating interaction with the file storage infrastructure of GHGA.
+To this end, it provides commands for the up- and download of files that interact with the RESTful APIs exposed by the Upload Controller Service (https://github.com/ghga-de/upload-controller-service) and Download Controller Service (https://github.com/ghga-de/download-controller-service), respectively.
 
-This package uses PycURL and thus has curl (https://curl.se/) as a dependency. On Debian-based Linux distributions, you can install cURL using:
+When uploading, the Connector expects an unencrypted file that is subsequently encrypted according to the Crypt4GH standard (https://www.ga4gh.org/news_item/crypt4gh-a-secure-method-for-sharing-human-genetic-data/) and only afterwards uploaded to the GHGA storage infrastructure.
 
-```
-sudo apt install libcurl4-openssl-dev libssl-dev
-```
+When downloading, the resulting file is still encrypted in this manner and can be decrypted using the Connector's decrypt command.
+As the user is expected to download multiple files, this command takes a directory location as input and an optional output directory location can be provided, creating the directory if it does not yet exist (defaulting to the current working directory, if none is provided).
+
+Most of the commands need the submitter's private key that matches the public key announced to GHGA.
+The private key is used for file encryption in the upload path and decryption of the work package access and work order tokens during download.
+Additionally, the decrypt command needs the private key to decrypt the downloaded file.
 
 
 ## Installation
@@ -99,9 +104,13 @@ of the pydantic documentation.
 Mention anything that deviates from the standard triple hexagonal architecture and
 the corresponding structure. -->
 
-This is a Python-based service following the Triple Hexagonal Architecture pattern.
-It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+This is a Python-based client enabling interaction with GHGA's file services.
+Contrary to the design of the actual services, the client does not follow the triple-hexagonal architecture.
+The client is roughly structured into three parts:
+
+1. A command line interface using typer is provided at the highest level of the package, i.e. directly within the ghga_connector directory.
+2. Functionality dealing with intermediate transformations, delegating work and handling state is provided within the core module.
+3. core.api_calls provides abstractions over S3 and work package service interactions.
 
 
 ## Development
