@@ -67,10 +67,10 @@ ghga_transpiler --help
 ```
 
 ## Configuration
-<!-- ### Parameters -->
+### Parameters
 
-<!-- The service requires the following configuration parameters:
--->
+The service requires the following configuration parameters:
+
 
 ### Usage:
 
