@@ -81,7 +81,7 @@ async def populate_metadata_and_upload(
 async def populate_metadata(
     file_id: str, file_name: str, decrypted_size: int, decrypted_sha256: str
 ):
-    """Populate metadedata submission schema and send event for UCS"""
+    """Populate metadata submission schema and send event for UCS"""
     metadata_files = [
         event_schemas.MetadataSubmissionFiles(
             file_id=file_id,
