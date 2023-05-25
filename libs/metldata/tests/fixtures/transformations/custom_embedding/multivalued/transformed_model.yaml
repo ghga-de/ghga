@@ -156,28 +156,28 @@ classes:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
         annotations:
           hidden: true
       has_dataset:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
         annotations:
           hidden: true
       has_sample:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
         annotations:
           hidden: true
       has_experiment:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
         annotations:
           hidden: true
       dataset_with_files:
@@ -186,14 +186,14 @@ classes:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
       experiment_fully_embedded:
         description: Fully embedded Experiments.
         range: ExperimentFullyEmbedded
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
 
 slots:
   alias:
@@ -249,7 +249,7 @@ slots:
     required: true
     multivalued: true
     inlined: true
-    inlined_as_list: false
+    inlined_as_list: true
 
   experiment_fully_embedded:
     description: Fully embedded Experiments.
@@ -257,7 +257,7 @@ slots:
     required: true
     multivalued: true
     inlined: true
-    inlined_as_list: false
+    inlined_as_list: true
 
 enums:
   file format enum:

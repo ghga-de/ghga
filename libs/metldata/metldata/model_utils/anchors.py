@@ -86,10 +86,10 @@ def check_root_slot(slot: SlotDefinition):
             + " however, slots in the root class must be inlined."
         )
 
-    if slot.inlined_as_list:
+    if not slot.inlined_as_list:
         raise InvalidAnchorPointError(
-            f"The inlined_as_list attribute for slot '{slot.name}' is set to True,"
-            + " however, slots in the root class may not be inlined."
+            f"The inlined_as_list attribute for slot '{slot.name}' is set to False,"
+            + " however, slots in the root class must be inlined as list."
         )
 
     if not slot.required:
@@ -201,7 +201,18 @@ def lookup_anchor_point(
     return anchor_point
 
 
-def get_classes_by_anchor_point(*, model: MetadataModel) -> dict[str, str]:
+def invert_anchor_points_by_target(
+    anchor_points_by_target: dict[str, AnchorPoint]
+) -> dict[str, str]:
+    """Convert the anchor points by target dict into an class by anchor point dict."""
+
+    return {
+        anchor_point.root_slot: class_name
+        for class_name, anchor_point in anchor_points_by_target.items()
+    }
+
+
+def get_target_by_anchor_point(*, model: MetadataModel) -> dict[str, str]:
     """Get a mapping from the root slot where a class is anchored to the corresponding
     class."""
 
@@ -214,11 +225,11 @@ def get_classes_by_anchor_point(*, model: MetadataModel) -> dict[str, str]:
 
 
 def lookup_class_by_anchor_point(
-    *, root_slot: str, classes_by_anchor_point: dict[str, str]
+    *, root_slot: str, target_by_anchor_point: dict[str, str]
 ) -> str:
     """Lookup the class for the given anchor point."""
 
-    class_name = classes_by_anchor_point.get(root_slot)
+    class_name = target_by_anchor_point.get(root_slot)
 
     if class_name is None:
         raise ClassNotAnchoredError(

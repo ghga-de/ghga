@@ -16,12 +16,12 @@
 
 """Logic for transforming metadata."""
 
-
 from collections import defaultdict
 
 from pydantic import Json
 from typing_extensions import TypeAlias
 
+from metldata.metadata_utils import lookup_self_id
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.essentials import MetadataModel
 from metldata.submission_registry.models import AccessionMap
@@ -69,8 +69,9 @@ def lookup_accession(
 def add_accession_to_resource(
     *,
     resource: Json,
+    class_name: str,
     old_identifier_slot: str,
-    old_identifier: str,
+    accession_slot_name: str,
     accession_map: AccessionMap,
     references: dict[str, str],
 ) -> Json:
@@ -93,7 +94,16 @@ def add_accession_to_resource(
             if the transformation of the metadata fails.
     """
 
-    new_resource: Json = {old_identifier_slot: old_identifier}
+    old_identifier = lookup_self_id(
+        resource=resource, identifier_slot=old_identifier_slot
+    )
+    new_identifier = lookup_accession(
+        target_class=class_name,
+        old_identifier=old_identifier,
+        accession_map=accession_map,
+    )
+
+    new_resource: Json = {accession_slot_name: new_identifier}
 
     for slot_name, slot_value in resource.items():
         if slot_name in references:
@@ -122,6 +132,7 @@ def add_accession_to_resource(
 def add_accessions_to_metadata(
     *,
     metadata: Json,
+    accession_slot_name: str,
     accession_map: AccessionMap,
     references: References,
     anchor_points_by_target: dict[str, AnchorPoint],
@@ -136,7 +147,7 @@ def add_accessions_to_metadata(
     modified_metadata = {}
 
     for target_class_name, anchor_point in anchor_points_by_target.items():
-        target_resources = {}
+        target_resources = []
         target_accession_map = accession_map.get(target_class_name)
         if target_accession_map is None:
             raise MetadataTransformationError(
@@ -144,20 +155,16 @@ def add_accessions_to_metadata(
                 + f" {target_class_name}."
             )
 
-        for old_identifier, old_resource in metadata[anchor_point.root_slot].items():
-            new_identifier = lookup_accession(
-                target_class=target_class_name,
-                old_identifier=old_identifier,
-                accession_map=accession_map,
-            )
+        for old_resource in metadata[anchor_point.root_slot]:
             new_resource = add_accession_to_resource(
                 resource=old_resource,
+                class_name=target_class_name,
                 old_identifier_slot=anchor_point.identifier_slot,
-                old_identifier=old_identifier,
+                accession_slot_name=accession_slot_name,
                 accession_map=accession_map,
                 references=references[target_class_name],
             )
-            target_resources[new_identifier] = new_resource
+            target_resources.append(new_resource)
 
         modified_metadata[anchor_point.root_slot] = target_resources
 

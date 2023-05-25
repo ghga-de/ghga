@@ -28,7 +28,7 @@ from metldata.metadata_utils import (
     MetadataResourceNotFoundError,
     get_resource_dict_of_class,
     lookup_resource_by_identifier,
-    update_resources_in_metadata,
+    upsert_resources_in_metadata,
 )
 from metldata.model_utils.anchors import AnchorPoint, lookup_anchor_point
 from metldata.model_utils.essentials import MetadataModel
@@ -181,13 +181,11 @@ def add_custom_embedding_to_metadata(
     anchor_points_by_target_modified[
         embedding_profile.target_class
     ] = embedded_class_anchor_point
-    metadata_modified = metadata.copy()
-    metadata_modified[embedded_class_anchor_point.root_slot] = {}
 
-    return update_resources_in_metadata(
+    return upsert_resources_in_metadata(
         resources=resources,
         class_name=embedding_profile.target_class,
-        global_metadata=metadata_modified,
+        global_metadata=metadata,
         anchor_points_by_target=anchor_points_by_target_modified,
     )
 

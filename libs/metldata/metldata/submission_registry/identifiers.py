@@ -17,11 +17,20 @@
 """Logic for handling identifiers and accessions."""
 
 from functools import partial
-from typing import Any, Optional
+from typing import Iterable, Optional
 from uuid import uuid4
 
+from pydantic import Json
+
 from metldata.accession_registry import AccessionRegistry
-from metldata.model_utils.anchors import lookup_class_by_anchor_point
+from metldata.custom_types import SubmissionContent
+from metldata.metadata_utils import lookup_self_id
+from metldata.model_utils.anchors import (
+    AnchorPoint,
+    invert_anchor_points_by_target,
+    lookup_anchor_point,
+    lookup_class_by_anchor_point,
+)
 from metldata.submission_registry.models import AccessionMap
 
 
@@ -49,7 +58,7 @@ def get_accession(
     alias: str,
     accession_map: AccessionMap,
     accession_registry: AccessionRegistry,
-    classes_by_anchor_point: dict[str, str],
+    target_by_anchor_point: dict[str, str],
 ) -> str:
     """Get the accession for a resource with the provided user-defined alias of
     the class with the provided anchor. If no entry can be found in the provided accession map,
@@ -62,17 +71,42 @@ def get_accession(
         return accession
 
     class_name = lookup_class_by_anchor_point(
-        root_slot=anchor, classes_by_anchor_point=classes_by_anchor_point
+        root_slot=anchor, target_by_anchor_point=target_by_anchor_point
     )
     return accession_registry.get_accession(resource_type=class_name)
 
 
+def get_aliases_for_resources(
+    *,
+    resources: list[Json],
+    root_slot: str,
+    anchor_points_by_target: dict[str, AnchorPoint],
+) -> Iterable[str]:
+    """Get the aliases for the provided resources."""
+
+    target_by_anchor_point = invert_anchor_points_by_target(
+        anchor_points_by_target=anchor_points_by_target
+    )
+
+    class_name = lookup_class_by_anchor_point(
+        root_slot=root_slot, target_by_anchor_point=target_by_anchor_point
+    )
+    anchor_point = lookup_anchor_point(
+        class_name=class_name, anchor_points_by_target=anchor_points_by_target
+    )
+
+    for resource in resources:
+        yield lookup_self_id(
+            resource=resource, identifier_slot=anchor_point.identifier_slot
+        )
+
+
 def generate_accession_map(
     *,
-    content: dict[str, dict[str, Any]],
+    content: SubmissionContent,
     existing_accession_map: Optional[AccessionMap] = None,
     accession_registry: AccessionRegistry,
-    classes_by_anchor_point: dict[str, str],
+    anchor_points_by_target: dict[str, AnchorPoint],
 ) -> AccessionMap:
     """Generate an accession map for the provided content.
 
@@ -83,16 +117,25 @@ def generate_accession_map(
     if existing_accession_map is None:
         existing_accession_map = {}
 
+    target_by_anchor_point = invert_anchor_points_by_target(
+        anchor_points_by_target=anchor_points_by_target
+    )
+
     get_accession_ = partial(
         get_accession,
         accession_map=existing_accession_map,
         accession_registry=accession_registry,
-        classes_by_anchor_point=classes_by_anchor_point,
+        target_by_anchor_point=target_by_anchor_point,
     )
 
     return {
         anchor: {
-            alias: get_accession_(anchor=anchor, alias=alias) for alias in resources
+            alias: get_accession_(anchor=anchor, alias=alias)
+            for alias in get_aliases_for_resources(
+                resources=resources,
+                root_slot=anchor,
+                anchor_points_by_target=anchor_points_by_target,
+            )
         }
         for anchor, resources in content.items()
     }

@@ -69,8 +69,8 @@ def test_happy(
         id="submission001",
         title="test",
         description="test",
-        content={"test_class": {"test_id1": "test"}},
-        accession_map={"test_class": {"test_id1": "test_accession1"}},
+        content={"test_class": [{"alias": "test_alias1"}]},
+        accession_map={"test_class": {"test_alias1": "test_accession1"}},
         status_history=(
             models.StatusChange(
                 timestamp=now_as_utc(), new_status=models.SubmissionStatus.PENDING

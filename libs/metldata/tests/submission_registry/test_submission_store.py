@@ -30,8 +30,8 @@ from tests.fixtures.config import config_sub_fixture  # noqa: F401
 EXAMPLE_SUBMISSION = Submission(
     title="test",
     description="test",
-    content={"test_class": {"test_alias1": "test"}},
-    accession_map={"test_class": {"test_alias1": "test_id1"}},
+    content={"test_class": [{"alias": "test_alias1"}]},
+    accession_map={"test_class": {"test_alias1": "test_accession1"}},
     id="testsubmission001",
     status_history=(
         StatusChange(

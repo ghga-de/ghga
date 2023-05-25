@@ -135,8 +135,8 @@ def resolve_target_ids_passive_element(  # noqa: C901
             f"Cannot resolve path element: '{error}'"
         ) from error
 
-    target_resources_by_dict = global_metadata.get(target_anchor_point.root_slot)
-    if target_resources_by_dict is None:
+    target_resources = global_metadata.get(target_anchor_point.root_slot)
+    if target_resources is None:
         raise PathElementResolutionError(
             "Cannot resolve path element: No target resources found for"
             + f" root slot '{target_anchor_point.root_slot}'."
@@ -144,12 +144,16 @@ def resolve_target_ids_passive_element(  # noqa: C901
 
     # lookup the target resources:
     target_ids_of_interest: set[str] = set()
-    for target_id, target_resource in target_resources_by_dict.items():
+    for target_resource in target_resources:
         referenced_source_ids = lookup_foreign_ids(
             resource=target_resource, slot=path_element.slot
         )
 
         if source_identifier in referenced_source_ids:
+            target_id = lookup_self_id(
+                resource=target_resource,
+                identifier_slot=target_anchor_point.identifier_slot,
+            )
             target_ids_of_interest.add(target_id)
 
     return target_ids_of_interest

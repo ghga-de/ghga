@@ -16,12 +16,12 @@
 
 """Logic for handling submissions."""
 
-from typing import Any
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from metldata.accession_registry.accession_registry import AccessionRegistry
-from metldata.model_utils.anchors import get_classes_by_anchor_point
+from metldata.custom_types import SubmissionContent
+from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.config import MetadataModelConfig
 from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.submission_registry import models
@@ -80,7 +80,7 @@ class SubmissionRegistry:
         self._metadata_validator = MetadataValidator(model=config.metadata_model)
         self._event_publisher = event_publisher
         self._accession_registry = accession_registry
-        self._classes_by_anchor_point = get_classes_by_anchor_point(
+        self._anchor_points_by_target = get_anchors_points_by_target(
             model=config.metadata_model
         )
 
@@ -130,7 +130,7 @@ class SubmissionRegistry:
         return self._submission_store.get_by_id(id_)
 
     def upsert_submission_content(
-        self, *, submission_id: str, content: dict[str, Any]
+        self, *, submission_id: str, content: SubmissionContent
     ) -> None:
         """Insert or update the content of a pending submission.
         The metadata is validated against the model, persisted in the submission store,
@@ -157,7 +157,7 @@ class SubmissionRegistry:
             content=content,
             existing_accession_map=submission.accession_map,
             accession_registry=self._accession_registry,
-            classes_by_anchor_point=self._classes_by_anchor_point,
+            anchor_points_by_target=self._anchor_points_by_target,
         )
 
         updated_submission = submission.copy(

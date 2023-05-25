@@ -15,6 +15,7 @@
 #
 """Test the identifiers module."""
 
+from metldata.model_utils.anchors import AnchorPoint
 from metldata.submission_registry.identifiers import generate_accession_map
 
 
@@ -42,13 +43,19 @@ def test_generate_accession_map():
 
     accession_registry = FakeAccessionRegistry()
     content = {
-        "class1_anchor": {"test_alias1": "test"},
-        "class2_anchor": {"test_alias2": "test", "test_alias3": "test"},
+        "class1_anchor": [{"alias": "test_alias1"}],
+        "class2_anchor": [{"alias": "test_alias2"}, {"alias": "test_alias3"}],
     }
-    classes_by_anchor_point = {
-        "class1_anchor": "Class1",
-        "class2_anchor": "Class2",
-        "class3_anchor": "Class3",
+    anchor_points_by_target = {
+        "Class1": AnchorPoint(
+            root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
+        ),
+        "Class2": AnchorPoint(
+            root_slot="class2_anchor", target_class="Class2", identifier_slot="alias"
+        ),
+        "Class3": AnchorPoint(
+            root_slot="class3_anchor", target_class="Class3", identifier_slot="alias"
+        ),
     }
     existing_accession_map = {
         "class2_anchor": {"test_alias2": "existing_class2_accession1"},
@@ -66,7 +73,7 @@ def test_generate_accession_map():
         content=content,
         existing_accession_map=existing_accession_map,
         accession_registry=accession_registry,  # type: ignore
-        classes_by_anchor_point=classes_by_anchor_point,
+        anchor_points_by_target=anchor_points_by_target,
     )
 
     assert observed_accession_map == expected_accession_map

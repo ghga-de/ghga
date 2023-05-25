@@ -27,7 +27,7 @@ from metldata.metadata_utils import (
     SelfIdLookUpError,
     get_resources_of_class,
     lookup_self_id,
-    update_resources_in_metadata,
+    upsert_resources_in_metadata,
 )
 from metldata.model_utils.anchors import (
     AnchorPoint,
@@ -136,7 +136,7 @@ def add_reference_to_metadata(
         for resource in resources
     ]
 
-    return update_resources_in_metadata(
+    return upsert_resources_in_metadata(
         resources=modified_resources,
         class_name=reference.source,
         global_metadata=metadata,

@@ -21,3 +21,5 @@ from typing import Any
 from typing_extensions import TypeAlias
 
 Json: TypeAlias = dict[str, Any]
+
+SubmissionContent = dict[str, list[Json]]

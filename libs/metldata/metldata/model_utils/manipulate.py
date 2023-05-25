@@ -245,7 +245,7 @@ def add_anchor_point(
         multivalued=True,
         required=True,
         inlined=True,
-        inlined_as_list=False,
+        inlined_as_list=True,
         description=description,
     )
 

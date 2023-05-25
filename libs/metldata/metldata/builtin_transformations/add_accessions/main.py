@@ -78,6 +78,7 @@ class AccessionAdditionMetadataTransformer(
 
         return add_accessions_to_metadata(
             metadata=metadata,
+            accession_slot_name=self._config.accession_slot_name,
             accession_map=annotation.accession_map,
             references=self._references,
             anchor_points_by_target=self._anchor_points_by_target,

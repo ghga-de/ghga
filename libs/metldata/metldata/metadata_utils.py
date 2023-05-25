@@ -16,6 +16,7 @@
 
 """Utilities for handling metadata."""
 
+from copy import deepcopy
 from typing import cast
 
 from metldata.custom_types import Json
@@ -36,6 +37,10 @@ class MetadataAnchorMismatchError(RuntimeError):
 
 class MetadataResourceNotFoundError(RuntimeError):
     """Raised when a resource could not be found in the metadata."""
+
+
+class IdenitifierConflictError(RuntimeError):
+    """Raised when multiple resources of the same class with the same identifier exist."""
 
 
 def lookup_self_id(*, resource: Json, identifier_slot: str):
@@ -87,17 +92,6 @@ def lookup_foreign_ids(*, resource: Json, slot: str) -> set[str]:
     return foreign_ids
 
 
-def add_identifier_to_anchored_resource(
-    *,
-    resource: Json,
-    identifier: str,
-    identifier_slot: str,
-) -> Json:
-    """Anchored resources have no identifier slot. This function adds the identifier."""
-
-    return {**resource, identifier_slot: identifier}
-
-
 def lookup_resource_by_identifier(
     *,
     class_name: str,
@@ -127,30 +121,55 @@ def lookup_resource_by_identifier(
 
     resources = global_metadata[anchor_point.root_slot]
 
-    if identifier not in resources:
+    resources_dict = convert_resource_list_to_dict(
+        resources=resources, identifier_slot=anchor_point.identifier_slot
+    )
+
+    if identifier not in resources_dict:
         raise MetadataResourceNotFoundError(
             f"Could not find resource with identifier '{identifier}' of class"
             + f" '{class_name}' in the global metadata."
         )
 
-    target_resource = resources[identifier]
+    target_resource = resources_dict[identifier]
 
-    return add_identifier_to_anchored_resource(
-        resource=target_resource,
-        identifier=identifier,
-        identifier_slot=anchor_point.identifier_slot,
-    )
+    return target_resource
+
+
+def check_identifier_uniqueness(*, resources: list[Json], identifier_slot: str) -> None:
+    """Check if the identifiers of the specified resources are unique.
+
+    Raises:
+        IdenitifierConflictError:
+            if the identifiers are not unique.
+    """
+
+    identifiers = [resource[identifier_slot] for resource in resources]
+
+    if len(identifiers) != len(set(identifiers)):
+        raise IdenitifierConflictError(
+            "The identifiers of the resources are not unique."
+        )
 
 
 def convert_list_to_inlined_dict(
     *, resources: list[Json], identifier_slot: str
 ) -> dict[str, Json]:
     """Convert a list of resources of same type into a dictionary representation, i.e.
-    to "inlined_as_list=false" format."""
+    to "inlined_as_list=false" format.
+
+    Raises:
+        IdenitifierConflictError:
+            if the identifiers are not unique.
+    """
+
+    check_identifier_uniqueness(resources=resources, identifier_slot=identifier_slot)
 
     return {
         lookup_self_id(resource=resource, identifier_slot=identifier_slot): {
-            slot: resource[slot] for slot in resource if slot != identifier_slot
+            slot: deepcopy(resource[slot])
+            for slot in resource
+            if slot != identifier_slot
         }
         for resource in resources
     }
@@ -162,21 +181,40 @@ def convert_inlined_dict_to_list(
     """Convert a dictionary representation of resources into a list representation, i.e.
     to "inlined_as_list=true" format."""
 
+    resource_copy = deepcopy(resources)
+
     return [
-        add_identifier_to_anchored_resource(
-            resource=resource, identifier=identifier, identifier_slot=identifier_slot
-        )
-        for identifier, resource in resources.items()
+        {identifier_slot: identifier, **resource_copy}
+        for identifier, resource in resource_copy.items()
     ]
 
 
-def get_resource_dict_of_class(
+def convert_resource_list_to_dict(
+    *, resources: list[Json], identifier_slot: str
+) -> dict[str, Json]:
+    """Convert a list of resources of same type into a dictionary representation.
+    Unlike the `inlined_as_list=false` structure from LinkML, the dict will contain
+    resources with identifier slots.
+
+    Raises:
+
+    """
+
+    return {
+        lookup_self_id(resource=resource, identifier_slot=identifier_slot): deepcopy(
+            resource
+        )
+        for resource in resources
+    }
+
+
+def get_resources_of_class(
     *,
     class_name: str,
     global_metadata: Json,
     anchor_points_by_target: dict[str, AnchorPoint],
-) -> dict[str, Json]:
-    """Get all instances as dict of the given class from the provided global metadata.
+) -> list[Json]:
+    """Get all instances of the given class from the provided global metadata.
 
     Raises:
         MetadataAnchorMismatchError:
@@ -193,23 +231,25 @@ def get_resource_dict_of_class(
             + " in the global metadata."
         )
 
-    return global_metadata[anchor_point.root_slot]
+    return deepcopy(global_metadata[anchor_point.root_slot])
 
 
-def get_resources_of_class(
+def get_resource_dict_of_class(
     *,
     class_name: str,
     global_metadata: Json,
     anchor_points_by_target: dict[str, AnchorPoint],
-) -> list[Json]:
-    """Get all instances of the given class from the provided global metadata.
+) -> dict[str, Json]:
+    """Get all instances as dict of the given class from the provided global metadata.
+    Unlike the `inlined_as_list=false` structure from LinkML, the dict will contain
+    resources with identifier slots.
 
     Raises:
         MetadataAnchorMismatchError:
             if the provided metadata does not match the expected anchor points.
     """
 
-    resources = get_resource_dict_of_class(
+    resources = get_resources_of_class(
         class_name=class_name,
         global_metadata=global_metadata,
         anchor_points_by_target=anchor_points_by_target,
@@ -219,13 +259,12 @@ def get_resources_of_class(
         class_name=class_name, anchor_points_by_target=anchor_points_by_target
     )
 
-    return convert_inlined_dict_to_list(
-        resources=resources,
-        identifier_slot=anchor_point.identifier_slot,
+    return convert_resource_list_to_dict(
+        resources=resources, identifier_slot=anchor_point.identifier_slot
     )
 
 
-def update_resources_in_metadata(
+def upsert_resources_in_metadata(
     *,
     resources: list[Json],
     class_name: str,
@@ -233,14 +272,13 @@ def update_resources_in_metadata(
     anchor_points_by_target: dict[str, AnchorPoint],
 ) -> Json:
     """Update the provided global metadata with the provided resources of the given
-    class. Returns a copy of the updated metadata."""
+    class. If the anchor point for the given class does not yet exist, it is created.
+    Returns a copy of the updated metadata."""
 
     anchor_point = lookup_anchor_point(
         class_name=class_name, anchor_points_by_target=anchor_points_by_target
     )
 
-    resources_as_dict = convert_list_to_inlined_dict(
-        resources=resources, identifier_slot=anchor_point.identifier_slot
-    )
+    global_metadata_copy = deepcopy(global_metadata)
 
-    return {**global_metadata, anchor_point.root_slot: resources_as_dict}
+    return {**global_metadata_copy, anchor_point.root_slot: resources}

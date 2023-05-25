@@ -18,11 +18,13 @@
 
 from enum import Enum
 from operator import attrgetter
-from typing import Any, Optional
+from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, Field, validator
 from typing_extensions import TypeAlias
+
+from metldata.custom_types import SubmissionContent
 
 AccessionMap: TypeAlias = dict[str, dict[str, str]]
 
@@ -61,7 +63,7 @@ class Submission(SubmissionHeader):
 
     id: str
 
-    content: Optional[dict[str, dict[str, Any]]] = Field(
+    content: Optional[SubmissionContent] = Field(
         None,
         description=(
             "The metadata content of the submission. Keys on the top level correspond to"
@@ -120,30 +122,3 @@ class Submission(SubmissionHeader):
             raise ValueError("Accessions are not unique.")
 
         return value
-
-    # pylint: disable=no-self-argument
-    @root_validator(skip_on_failure=True)
-    def check_accession_map_sync(cls, values):
-        """Check that for all anchored resources specified in the content an entry
-        exists in the access_map."""
-
-        if not values["content"]:
-            if values["accession_map"]:
-                raise ValueError(
-                    "The accession_map is not empty, but the content is empty."
-                )
-            return values
-
-        if values["content"].keys() != values["accession_map"].keys():
-            raise ValueError(
-                "The classes mentioned in the content and accession_map do not match."
-            )
-
-        for anchor, resources in values["content"].items():
-            if values["accession_map"][anchor].keys() != resources.keys():
-                raise ValueError(
-                    f"The resources mentioned for the class at anchor point '{anchor}'"
-                    + " in the content and accession_map do not match."
-                )
-
-        return values

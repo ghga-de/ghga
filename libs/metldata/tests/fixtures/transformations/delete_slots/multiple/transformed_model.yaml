@@ -90,22 +90,22 @@ classes:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
       has_dataset:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
       has_sample:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
       has_experiment:
         required: true
         multivalued: true
         inlined: true
-        inlined_as_list: false
+        inlined_as_list: true
 
 slots:
   alias:

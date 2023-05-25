@@ -17,7 +17,7 @@
 """Logic for transforming metadata."""
 
 
-from metldata.metadata_utils import get_resources_of_class, update_resources_in_metadata
+from metldata.metadata_utils import get_resources_of_class, upsert_resources_in_metadata
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.transform.base import Json, MetadataModelTransformationError
 
@@ -55,7 +55,7 @@ def delete_class_slot(
         for resource in resources
     ]
 
-    return update_resources_in_metadata(
+    return upsert_resources_in_metadata(
         resources=modified_resources,
         class_name=class_name,
         global_metadata=metadata,
