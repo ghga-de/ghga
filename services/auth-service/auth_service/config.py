@@ -16,12 +16,17 @@
 """Config Parameter Modeling and Parsing"""
 
 import logging.config
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 from ghga_service_commons.api import ApiConfigBase, LogLevel
 from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
 from pydantic import HttpUrl, SecretStr
+
+try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
+    from typing_extensions import Literal
+except ImportError:
+    from typing import Literal  # type: ignore
 
 
 def configure_logging():

@@ -17,7 +17,6 @@
 "Routes for managing user claims"
 
 import logging
-from typing import Literal
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
@@ -42,6 +41,11 @@ from .models.dto import (
     ClaimValidity,
     VisaType,
 )
+
+try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
+    from typing_extensions import Literal
+except ImportError:
+    from typing import Literal  # type: ignore
 
 __all__ = ["router"]
 
