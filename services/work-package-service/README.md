@@ -8,9 +8,43 @@ Work Package Service
 
 ## Description
 
-<!-- Please provide a short overview of the features of this service.-->
+The work package service allows creating work packages for downloading or
+uploading dataset files and provides an authorization mechanism for these tasks
+by issuing access and work order tokens.
 
-TBD.
+### API endpoints:
+
+#### `POST /work-packages`
+
+Creates a work package.
+
+- auth header: internal access token
+- request body:
+  - `dataset_id`: string (the ID of a dataset)
+  - `type`: enum (download/upload)
+  - `file_ids`: array of strings  (null = all files of the dataset)
+  - `user_public_crypt4gh_key`: string (the user's public Crypt4GH key)
+- response body:
+  - `id`: string (the ID of the created work package)
+  - `token`: string (encrypted work and base64 encoded package access token)
+
+####  `GET /work-packages/{work_package_id}`
+
+Gets details on the specified work package.
+
+- auth header: work package access token
+
+#### `POST /work-packages/{work_package_id}/files/{file_id}/work-order-tokens`
+
+ Creates an encrypted work order token for the specified work package and file.
+
+- auth header: work package access token
+
+#### `GET /users/{user_id}/datasets`
+
+Gets a list of all dataset IDs that can be downloaded by the user.
+
+- auth header: internal access token with the user context
 
 
 ## Installation
@@ -18,13 +52,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/work-package-service):
 ```bash
-docker pull ghga/work-package-service:0.1.1
+docker pull ghga/work-package-service:0.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/work-package-service:0.1.1 .
+docker build -t ghga/work-package-service:0.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -32,7 +66,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/work-package-service:0.1.1 --help
+docker run -p 8080:8080 ghga/work-package-service:0.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -145,10 +179,6 @@ of the pydantic documentation.
 An OpenAPI specification for this service can be found [here](./openapi.yaml).
 
 ## Architecture and Design:
-<!-- Please provide an overview of the architecture and design of the code base.
-Mention anything that deviates from the standard triple hexagonal architecture and
-the corresponding structure. -->
-
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
 [hexkit](https://github.com/ghga-de/hexkit) library.

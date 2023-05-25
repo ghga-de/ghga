@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Set up and helpers for cryptography."""
+
 from ghga_service_commons.utils.crypt import decrypt as decrypt_with_key
 from ghga_service_commons.utils.crypt import encode_key, generate_key_pair
 

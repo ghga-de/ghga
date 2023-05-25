@@ -23,7 +23,7 @@ import logging
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
-from wps.adapters.inbound.http.auth import (
+from wps.adapters.inbound.fastapi_.auth import (
     AuthContext,
     requires_auth_context,
     requires_work_package_access_token,

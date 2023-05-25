@@ -29,7 +29,7 @@ __all__ = ["get_openapi_schema"]
 def get_openapi_schema(api) -> Dict[str, Any]:
     """Generate a custom OpenAPI schema for the service."""
 
-    config = Config()
+    config = Config()  # pyright: ignore
 
     return get_openapi(
         title="Work Package Service",

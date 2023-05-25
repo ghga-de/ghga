@@ -17,6 +17,7 @@
 """Test the API of the work package service."""
 
 from fastapi import status
+from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.providers.akafka.testutils import (  # noqa: F401 # pylint: disable=unused-import
     kafka_fixture,
@@ -24,7 +25,6 @@ from hexkit.providers.akafka.testutils import (  # noqa: F401 # pylint: disable=
 from hexkit.providers.mongodb.testutils import (  # noqa: F401 # pylint: disable=unused-import
     mongodb_fixture,
 )
-from httpx import AsyncClient
 from pytest import mark
 from pytest_httpx import HTTPXMock
 
@@ -49,7 +49,7 @@ CREATION_DATA = {
 
 
 @mark.asyncio
-async def test_health_check(client: AsyncClient):
+async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
 
     response = await client.get("/health")
@@ -60,7 +60,7 @@ async def test_health_check(client: AsyncClient):
 
 @mark.asyncio
 async def test_create_work_package_unauthorized(
-    client: AsyncClient, bad_auth_headers: dict[str, str]
+    client: AsyncTestClient, bad_auth_headers: dict[str, str]
 ):
     """Test that creating a work package needs authorization."""
 
@@ -73,7 +73,7 @@ async def test_create_work_package_unauthorized(
 
 
 @mark.asyncio
-async def test_get_work_package_unauthorized(client: AsyncClient):
+async def test_get_work_package_unauthorized(client: AsyncTestClient):
     """Test that getting a work package needs authorization."""
 
     response = await client.get("/work-packages/some-work-package-id")
@@ -82,7 +82,7 @@ async def test_get_work_package_unauthorized(client: AsyncClient):
 
 @mark.asyncio
 async def test_create_work_order_token(
-    client: AsyncClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
+    client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
 ):
     """Test that work order tokens can be properly created."""
 
@@ -223,7 +223,7 @@ async def test_create_work_order_token(
 
 
 @mark.asyncio
-async def test_get_datasets_unauthenticated(client: AsyncClient):
+async def test_get_datasets_unauthenticated(client: AsyncTestClient):
     """Test that the list of accessible datasets cannot be fetched unauthenticated."""
 
     response = await client.get("/users/john-doe@ghga.de/datasets")
@@ -232,7 +232,7 @@ async def test_get_datasets_unauthenticated(client: AsyncClient):
 
 @mark.asyncio
 async def test_get_datasets_for_another_user(
-    client: AsyncClient,
+    client: AsyncTestClient,
     auth_headers: dict[str, str],
 ):
     """Test that the list of accessible datasets for another user cannot be fetched."""
@@ -245,7 +245,7 @@ async def test_get_datasets_for_another_user(
 
 @mark.asyncio
 async def test_get_datasets_when_none_authorized(
-    client: AsyncClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
+    client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
 ):
     """Test that no datasets are fetched when none are accessible."""
 
@@ -271,7 +271,7 @@ async def test_get_datasets_when_none_authorized(
 
 @mark.asyncio
 async def test_get_datasets(
-    client: AsyncClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
+    client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
 ):
     """Test that the list of accessible datasets can be fetched."""
 

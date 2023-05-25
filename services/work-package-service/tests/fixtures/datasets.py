@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Sample datasets for testing."""
+
 from ghga_event_schemas.pydantic_ import MetadataDatasetFile, MetadataDatasetOverview
 
 from wps.core.models import Dataset, DatasetFile

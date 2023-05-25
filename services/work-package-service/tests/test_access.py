@@ -16,7 +16,10 @@
 
 """Test the access check adapter."""
 
-from pytest import fixture, mark
+from typing import AsyncGenerator
+
+from pytest import mark
+from pytest_asyncio import fixture as async_fixture
 from pytest_httpx import HTTPXMock
 
 from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
@@ -24,11 +27,12 @@ from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
 DOWNLOAD_ACCESS_URL = "http://test-access:1234"
 
 
-@fixture(name="access_check")
-def fixture_access_check() -> AccessCheckAdapter:
-    """Gett configured access test adapter."""
+@async_fixture(name="access_check")
+async def fixture_access_check() -> AsyncGenerator[AccessCheckAdapter, None]:
+    """Get configured access test adapter."""
     config = AccessCheckConfig(download_access_url=DOWNLOAD_ACCESS_URL)
-    return AccessCheckAdapter(config=config)
+    async with AccessCheckAdapter.construct(config=config) as adapter:
+        yield adapter
 
 
 @mark.asyncio

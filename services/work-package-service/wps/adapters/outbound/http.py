@@ -16,6 +16,9 @@
 
 """Outbound HTTP calls"""
 
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 import httpx
 from pydantic import BaseSettings, Field
 
@@ -39,15 +42,24 @@ class AccessCheckConfig(BaseSettings):
 class AccessCheckAdapter(AccessCheckPort):
     """An adapter for checking access permissions for datasets."""
 
-    def __init__(self, *, config: AccessCheckConfig):
-        """Configure the access adapter."""
+    def __init__(self, *, config: AccessCheckConfig, client: httpx.AsyncClient):
+        """Configure the access grant adapter."""
         self._url = config.download_access_url
+        self._client = client
+
+    @classmethod
+    @asynccontextmanager
+    async def construct(
+        cls, *, config: AccessCheckConfig
+    ) -> AsyncGenerator["AccessCheckAdapter", None]:
+        """Setup AccessGrantsAdapter with the given config."""
+        async with httpx.AsyncClient() as client:
+            yield cls(config=config, client=client)
 
     async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
         """Check whether the given user has download access for the given dataset."""
         url = f"{self._url}/users/{user_id}/datasets/{dataset_id}"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=TIMEOUT)
+        response = await self._client.get(url, timeout=TIMEOUT)
         if response.status_code == httpx.codes.OK:
             return response.json() is True
         if response.status_code == httpx.codes.NOT_FOUND:
@@ -57,8 +69,7 @@ class AccessCheckAdapter(AccessCheckPort):
     async def get_datasets_with_download_access(self, user_id: str) -> list[str]:
         """Get all datasets that the given user is allowed to download."""
         url = f"{self._url}/users/{user_id}/datasets"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=TIMEOUT)
+        response = await self._client.get(url, timeout=TIMEOUT)
         if response.status_code == httpx.codes.OK:
             return response.json()
         if response.status_code == httpx.codes.NOT_FOUND:

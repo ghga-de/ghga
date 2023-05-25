@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Mock implementation of the access check adapter."""
+
 from wps.ports.outbound.access import AccessCheckPort
 
 USERS_WITH_DOWNLOAD_ACCESS = ["john-doe@ghga.de"]
@@ -23,7 +25,7 @@ __all__ = ["AccessCheckMock"]
 
 
 class AccessCheckMock(AccessCheckPort):
-    """Mock checking dataset access pemisions."""
+    """Mock checking dataset access permissions."""
 
     async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
         return (

@@ -19,6 +19,7 @@ import asyncio
 from datetime import timedelta
 from typing import AsyncGenerator
 
+from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
@@ -27,7 +28,6 @@ from ghga_service_commons.utils.jwt_helpers import (
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from httpx import AsyncClient
 from pytest import fixture
 from pytest_asyncio import fixture as async_fixture
 
@@ -121,12 +121,6 @@ async def fixture_repository(mongodb_fixture: MongoDbFixture) -> WorkPackageRepo
     return repository
 
 
-@fixture
-def non_mocked_hosts() -> list[str]:
-    """Get hosts that are not mocked by pytest-httpx."""
-    return ["test"]
-
-
 @async_fixture(name="container")
 async def fixture_container(
     mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture
@@ -160,10 +154,16 @@ async def fixture_container(
 
 
 @async_fixture(name="client")
-async def fixture_client(container: Container) -> AsyncGenerator[AsyncClient, None]:
+async def fixture_client(container: Container) -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for the work package service"""
 
     config = container.config()
     api = get_rest_api(config=config)
-    async with AsyncClient(app=api, base_url="http://test") as client:
+    async with AsyncTestClient(app=api) as client:
         yield client
+
+
+@fixture
+def non_mocked_hosts() -> list[str]:
+    """Get hosts that are not mocked by pytest-httpx."""
+    return ["test", "localhost"]
