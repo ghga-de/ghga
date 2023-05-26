@@ -17,3 +17,4 @@
 
 from .jsonschema_validation import GHGAJsonSchemaValidationPlugin  # noqa: F401
 from .ref_validation import RefValidationPlugin  # noqa: F401
+from .unique_identifier_validation import UniqueIdentifierValidationPlugin  # noqa: F401

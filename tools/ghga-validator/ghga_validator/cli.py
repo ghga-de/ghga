@@ -23,13 +23,18 @@ from typing import Optional
 import typer
 
 from ghga_validator.core.validation import get_target_class, validate
-from ghga_validator.plugins import GHGAJsonSchemaValidationPlugin, RefValidationPlugin
+from ghga_validator.plugins import (
+    GHGAJsonSchemaValidationPlugin,
+    RefValidationPlugin,
+    UniqueIdentifierValidationPlugin,
+)
 
 cli = typer.Typer()
 
 VALIDATION_PLUGINS = [
-    {"plugin_class": RefValidationPlugin},
-    {"plugin_class": GHGAJsonSchemaValidationPlugin},
+    {"plugin_class": RefValidationPlugin, "plugin_args": {}},
+    {"plugin_class": GHGAJsonSchemaValidationPlugin, "plugin_args": {}},
+    {"plugin_class": UniqueIdentifierValidationPlugin, "plugin_args": {}},
 ]
 
 

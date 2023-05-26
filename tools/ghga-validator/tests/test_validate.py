@@ -18,7 +18,7 @@ from pathlib import Path
 
 from ghga_validator import BASE_DIR
 from ghga_validator.cli import validate_json
-from ghga_validator.core.validation import get_target_class
+from ghga_validator.schema_utils import get_target_class
 
 
 def test_ref_validation():

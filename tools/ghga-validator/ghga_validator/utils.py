@@ -22,7 +22,7 @@ from typing import List
 def path_as_string(error_path: List) -> str:
     """Convert the path to the error in JSON to string format
     Args:
-        error_path (Deque): path to the error in JSON
+        error_path (List): path to the error in JSON
     Returns:
         str: string representation of the error path
     """

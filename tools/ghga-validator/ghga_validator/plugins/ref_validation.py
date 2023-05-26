@@ -17,13 +17,14 @@
 
 from collections import defaultdict
 from numbers import Number
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
-from linkml_runtime.utils.schemaview import SchemaView, SlotDefinition
+from linkml_runtime.utils.schemaview import SchemaView
 from linkml_validator.models import SeverityEnum, ValidationMessage, ValidationResult
 from linkml_validator.plugins.base import BasePlugin
 
 from ghga_validator.linkml.object_iterator import ObjectIterator
+from ghga_validator.schema_utils import get_range_class
 from ghga_validator.utils import path_as_string
 
 
@@ -68,19 +69,6 @@ class RefValidationPlugin(BasePlugin):
             plugin_name=self.NAME, valid=valid, validation_messages=messages
         )
         return result
-
-    def get_range_class(self, slot_def: SlotDefinition) -> Optional[str]:
-        """Return the range class for a slot
-
-        Args:
-            slot_def (SlotDefinition): Slot Definition
-
-        Returns:
-            Optional[str]: Range class for a slot
-        """
-        return (
-            slot_def.range if slot_def.range in self.schemaview.all_classes() else None
-        )
 
     def get_all_class_ids(self, obj: Dict, target_class: str) -> Dict[str, List[str]]:
         """Get all lists of identifies of inlined objects organized by class name
@@ -127,7 +115,7 @@ class RefValidationPlugin(BasePlugin):
         ):
             for field, value in data.items():
                 slot_def = self.schemaview.induced_slot(field, class_name)
-                range_class = self.get_range_class(slot_def)
+                range_class = get_range_class(self.schemaview, slot_def)
                 if range_class and not self.schemaview.is_inlined(slot_def):
                     non_match = self.find_missing_refs(
                         value, all_class_ids[range_class]
