@@ -15,4 +15,5 @@
 
 """Plugins module"""
 
+from .jsonschema_validation import GHGAJsonSchemaValidationPlugin  # noqa: F401
 from .ref_validation import RefValidationPlugin  # noqa: F401
