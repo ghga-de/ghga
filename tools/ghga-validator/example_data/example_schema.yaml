@@ -1,0 +1,61 @@
+# Copyright 2023 Universität Tübingen, DKFZ and EMBL
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+id: https://w3id.org/Example-Schema
+name: Example-Schema
+description: >-
+  An Example Schema
+version: 0.0.0
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  example: https://w3id.org/example/
+
+default_prefix: example
+
+classes:
+  Organism:
+    slots:
+      - id
+      - name
+      - has_subtypes
+    slot_usage:
+      id:
+        identifier: true
+      name:
+        range: string
+      has_subtypes:
+        range: Organism
+        multivalued: true
+        inlined: false
+
+  OrganismList:
+    slots:
+      - organisms
+    slot_usage:
+      organisms:
+        range: Organism
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+        required: true
+
+slots:
+  id:
+  name:
+  has_subtypes:
+  organisms:

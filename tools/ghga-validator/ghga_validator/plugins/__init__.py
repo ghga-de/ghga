@@ -13,4 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Subpackage defining a RESTful API"""
+"""Plugins module"""
+
+from .ref_validation import RefValidationPlugin  # noqa: F401

@@ -13,21 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+import os
+from pathlib import Path
 
-import asyncio
-
-from ghga_service_commons.api import run_server
-
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
+from ghga_validator import BASE_DIR
+from ghga_validator.cli import validate_json
+from ghga_validator.core.validation import get_target_class
 
 
-def run(config: Config = CONFIG):
-    """Run the service"""
-    # Please adapt to package name
-    asyncio.run(run_server(app="my_microservice.__main__:app", config=config))
+def test_ref_validation():
+    """Test the validation plugin"""
+    schema = BASE_DIR / "example_data" / "example_schema.yaml"
+    file = BASE_DIR / "example_data" / "example_data.json"
+    report = BASE_DIR / "example_data" / "tmp.json"
+    target_class = get_target_class(str(Path(schema).resolve()))
 
+    assert validate_json(file, schema, report, str(target_class)) is True
 
-if __name__ == "__main__":
-    run()
+    if os.path.exists(report):
+        os.remove(report)

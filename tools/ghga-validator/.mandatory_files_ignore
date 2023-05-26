@@ -1,2 +1,7 @@
 # Optional list of files which are actually mandatory in the template
 # but are allowed to be removed in the current repository
+
+config_schema.json
+example_config.yaml
+.github/workflows/check_openapi_spec.yaml
+scripts/script_utils/fastapi_app_location.py

@@ -12,12 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""FastAPI dependencies (used with the `Depends` feature)"""
+"""Utils"""
 
-from ..config import CONFIG
+from typing import List
 
 
-def get_config():
-    """Get runtime configuration."""
-    return CONFIG
+def path_as_string(error_path: List) -> str:
+    """Convert the path to the error in JSON to string format
+    Args:
+        error_path (Deque): path to the error in JSON
+    Returns:
+        str: string representation of the error path
+    """
+    path_str = ".".join(str(elem) for elem in error_path)
+    return path_str
