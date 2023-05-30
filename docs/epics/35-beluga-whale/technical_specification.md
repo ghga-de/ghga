@@ -30,24 +30,33 @@ This epic does not include:
 This epic covers the following test journey:
 
 - Setting the initial state for the file to be downloaded:
-    - Informing the Internal File Registry Service about the file stored permanently.
-    - Creating an access claim for the file.
-    - Priming the Work Package Service.
-    - Creating a Work Package.
-- Requesting the file download from the Download Controller Service.
+    - Creating outbox and permanent storage bucket
+    - place a file in the permanent storage bucket
+    - Informing the Internal File Registry Service about the file stored permanently (event).
+    - Creating an access claim for the file (REST call)
+    - Priming the Work Package Service (event)
+    - Creating a Work Package (REST call)
+- Requesting the file download from the Download Controller Service (REST call via connector)
 - Verifying the publication of the expected `download_served` event.
-- Requesting the envelope from the Download Controller Service.
-- Decrypting the downloaded output file and comparing the checksum.
-- Removing the test artifacts.
+- Requesting the envelope from the Download Controller Service (REST call via connector).
+- Decrypting the downloaded output file and comparing the checksum (using connector).
+- Removing the test artifacts (via fixtures).
 
 
 ## Additional Implementation Details:
 
 Before executing the tests, following setup should be achieved
-- Set vault for user
+- Create storage buckets
+- Set vault AppRole for Encryption Key Store Service
 - Set auth key
 - Set signing key for Work Package Service
-- Create storage buckets
+
+Cleanup after test:
+- Extend existing fixtures to clean up the test state after executing:
+  - for MongoDB, drop used database
+  - for s3 delete used buckets
+  - for kafka delete used topics
+
 
 ## Human Resource/Time Estimation:
 
