@@ -5,16 +5,31 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Utils for Fixture handling"""
+"""Fixture for testing code that uses the S3ObjectStorage provider."""
 
-from pathlib import Path
+from typing import Generator
 
-BASE_DIR = Path(__file__).parent.resolve()
+from hexkit.providers.s3.provider import S3ObjectStorage
+from hexkit.providers.s3.testutils import S3Fixture
+from pytest import fixture
+
+from src.config import Config
+
+__all__ = ["s3_fixture"]
+
+
+@fixture
+def s3_fixture(config: Config) -> Generator[S3Fixture, None, None]:
+    """Pytest fixture for tests depending on the S3ObjectStorage."""
+
+    storage = S3ObjectStorage(config=config)
+    yield S3Fixture(config=config, storage=storage)

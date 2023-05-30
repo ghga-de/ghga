@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Package containing both unit and integration tests"""
+"""Package containing the inter service integration tests."""

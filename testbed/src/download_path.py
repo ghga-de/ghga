@@ -12,8 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Functionality for file downloading"""
 
+"""Functionality for file downloading"""
 
 from pathlib import Path
 
@@ -22,22 +22,22 @@ import crypt4gh.keys
 import crypt4gh.lib
 from ghga_connector.cli import download
 
-from src.commons import DATA_DIR
+from src.config import Config
 
 
-def download_file(file_id: str, output_dir: Path):
+def download_file(file_id: str, output_dir: Path, config: Config):
     """Download a file"""
     download(
         file_id=file_id,
         output_dir=output_dir,
-        pubkey_path=DATA_DIR / "key.pub",
+        pubkey_path=config.data_dir / "key.pub",
     )
 
 
-def decrypt_file(input_location: Path, output_location: Path):
+def decrypt_file(input_location: Path, output_location: Path, config: Config):
     """Decrypt file"""
     private_key = crypt4gh.keys.get_private_key(
-        filepath=DATA_DIR / "key.sec", callback=lambda: None
+        filepath=config.data_dir / "key.sec", callback=lambda: None
     )
     decryption_keys = [(0, private_key, None)]
 

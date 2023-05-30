@@ -13,4 +13,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests"""
+"""Fixtures for the inter service integration tests"""
+
+from typing import NamedTuple
+
+from pytest import fixture
+
+from src.config import Config
+from tests.fixtures.akafka import KafkaFixture, kafka_fixture
+from tests.fixtures.mongodb import MongoDbFixture, mongodb_fixture
+from tests.fixtures.s3 import S3Fixture, s3_fixture
+
+__all__ = [
+    "config_fixture",
+    "kafka_fixture",
+    "mongodb_fixture",
+    "s3_fixture",
+    "joint_fixture",
+]
+
+
+class JointFixture(NamedTuple):
+    """Collection of fixtures returned by `joint_fixture`."""
+
+    config: Config
+    kafka: KafkaFixture
+    mongodb: MongoDbFixture
+    s3: S3Fixture
+
+
+@fixture(name="config")  # pyright: ignore
+def config_fixture() -> Config:
+    """Get the testbed configuration."""
+    return Config()  # pyright: ignore
+
+
+# pylint: disable=redefined-outer-name
+@fixture(name="fixtures")
+def joint_fixture(
+    config: Config,
+    kafka_fixture: KafkaFixture,
+    mongodb_fixture: MongoDbFixture,
+    s3_fixture: S3Fixture,
+) -> JointFixture:
+    """A fixture that collects all fixtures for integration testing."""
+
+    return JointFixture(config, kafka_fixture, mongodb_fixture, s3_fixture)

@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Your source code might go here (as package or as scripts, as you like)"""
+"""Functions used by the inter service integration tests."""

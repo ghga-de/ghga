@@ -19,31 +19,43 @@ import time
 from pathlib import Path
 
 import pytest
-from ghga_connector.cli import config
+from ghga_connector.cli import config as connector_config
 from ghga_connector.core.api_calls import get_file_metadata, get_upload_info
 from ghga_event_schemas import pydantic_ as event_schemas
-from hexkit.providers.akafka.testutils import (
-    EventRecorder,
-    ExpectedEvent,
-    check_recorded_events,
-)
+from hexkit.providers.akafka.testutils import ExpectedEvent, check_recorded_events
 
-from src.commons import CONFIG
+from src.config import Config
 from src.download_path import decrypt_file, download_file
 from src.upload_path import delegate_paths
+from tests.fixtures import (  # noqa: F401 # pylint: disable=unused-import
+    JointFixture,
+    config_fixture,
+    joint_fixture,
+    kafka_fixture,
+    mongodb_fixture,
+    s3_fixture,
+)
 
 
 @pytest.mark.asyncio
-async def test_full_path(tmp_path):
+async def test_full_path(tmp_path: Path, fixtures: JointFixture):
     """Test up- and download path"""
-    unencrypted_id, encrypted_id, unencrypted_data, checksum = await delegate_paths()
+    unencrypted_id, encrypted_id, unencrypted_data, checksum = await delegate_paths(
+        fixtures=fixtures
+    )
 
     await check_upload_path(unencrypted_id=unencrypted_id, encrypted_id=encrypted_id)
     await check_download_path(
-        encrypted_id=encrypted_id, checksum=checksum, output_dir=tmp_path
+        encrypted_id=encrypted_id,
+        checksum=checksum,
+        output_dir=tmp_path,
+        fixtures=fixtures,
     )
     decrypt_and_check(
-        encrypted_id=encrypted_id, content=unencrypted_data, tmp_dir=tmp_path
+        encrypted_id=encrypted_id,
+        content=unencrypted_data,
+        tmp_dir=tmp_path,
+        config=fixtures.config,
     )
 
 
@@ -51,27 +63,35 @@ async def check_upload_path(*, unencrypted_id: str, encrypted_id: str):
     """Check correct state for upload path"""
     await check_upload_status(file_id=unencrypted_id, expected_status="rejected")
     # <= 180 did not work in actions, so let's currently keep it this way
-    time.sleep(240)
+    time.sleep(300)
     await check_upload_status(file_id=encrypted_id, expected_status="accepted")
 
 
 async def check_upload_status(*, file_id: str, expected_status: str):
     """Assert upload attempt state matches expected state"""
-    metadata = get_file_metadata(api_url=config.upload_api, file_id=file_id)
+    api_url = connector_config.upload_api
+    metadata = get_file_metadata(api_url=api_url, file_id=file_id)
     upload_id = metadata["latest_upload_id"]
-    upload_attempt = get_upload_info(api_url=config.upload_api, upload_id=upload_id)
+    upload_attempt = get_upload_info(api_url=api_url, upload_id=upload_id)
     assert upload_attempt["status"] == expected_status
 
 
-async def check_download_path(*, encrypted_id: str, checksum: str, output_dir: Path):
+async def check_download_path(
+    *,
+    encrypted_id: str,
+    checksum: str,
+    output_dir: Path,
+    fixtures: JointFixture,
+):
     """Check correct state for download path"""
 
     # record download_served event
-    event_recorder = EventRecorder(
-        kafka_servers=CONFIG.kafka_servers, topic="file_downloads"
-    )
-    async with event_recorder:
-        download_file(file_id=encrypted_id, output_dir=output_dir)
+    async with fixtures.kafka.record_events(
+        in_topic="file_downloads"
+    ) as event_recorder:
+        download_file(
+            file_id=encrypted_id, output_dir=output_dir, config=fixtures.config
+        )
 
     # construct expected event
     payload = event_schemas.FileDownloadServed(
@@ -92,13 +112,17 @@ async def check_download_path(*, encrypted_id: str, checksum: str, output_dir: P
     )
 
 
-def decrypt_and_check(encrypted_id: str, content: bytes, tmp_dir: Path):
+def decrypt_and_check(encrypted_id: str, content: bytes, tmp_dir: Path, config: Config):
     """Decrypt file and compare to original"""
 
     encrypted_location = tmp_dir / encrypted_id
     decrypted_location = tmp_dir / f"{encrypted_id}_decrypted"
 
-    decrypt_file(input_location=encrypted_location, output_location=decrypted_location)
+    decrypt_file(
+        input_location=encrypted_location,
+        output_location=decrypted_location,
+        config=config,
+    )
 
     with decrypted_location.open("rb") as dl_file:
         downloaded_content = dl_file.read()

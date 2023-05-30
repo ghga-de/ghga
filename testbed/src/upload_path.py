@@ -12,51 +12,62 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This is... UPLOAD!!!"""
 
-import asyncio
+"""Functionality for file uploading"""
+
 import os
 import time
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 from ghga_connector.cli import upload
 from ghga_event_schemas import pydantic_ as event_schemas
-from hexkit.providers.akafka import KafkaEventPublisher
-from hexkit.providers.s3 import S3ObjectStorage
 
-from src.commons import CONFIG, DATA_DIR, FILE_SIZE
 from src.generate_data import generate_file
+from tests.fixtures import JointFixture
 
 
-async def delegate_paths():
+async def delegate_paths(fixtures: JointFixture):
     """
     Generate and upload data for happy and unhappy paths
     Return file IDs for later checks
     """
-    unencrypted_data, encrypted_data, checksum = generate_file()
+    config = fixtures.config
+    unencrypted_data, encrypted_data, checksum = generate_file(config=config)
     print("Uploading unencrypted file (unhappy path)")
-    unencrypted_id = await populate_data(data=unencrypted_data, checksum=checksum)
+    unencrypted_id = await populate_data(
+        data=unencrypted_data, checksum=checksum, fixtures=fixtures
+    )
     print("Uploading encrypted file (happy path)")
-    encrypted_id = await populate_data(data=encrypted_data, checksum=checksum)
+    encrypted_id = await populate_data(
+        data=encrypted_data, checksum=checksum, fixtures=fixtures
+    )
     return unencrypted_id, encrypted_id, unencrypted_data, checksum
 
 
-async def populate_data(data: bytes, checksum: str):
+async def populate_data(data: bytes, checksum: str, fixtures: JointFixture):
     """Populate events, storage and check initial state"""
     file_id = os.urandom(16).hex()
     await populate_metadata_and_upload(
         file_id=file_id,
         file_name=file_id,
         data=data,
-        size=FILE_SIZE,
+        size=fixtures.config.file_size,
         checksum=checksum,
+        fixtures=fixtures,
     )
-    await check_objectstorage(file_id=file_id)
+    await check_objectstorage(file_id=file_id, fixtures=fixtures)
     return file_id
 
 
+# pylint: disable=too-many-arguments
 async def populate_metadata_and_upload(
-    file_id: str, file_name: str, data: bytes, size: int, checksum: str
+    file_id: str,
+    file_name: str,
+    data: bytes,
+    size: int,
+    checksum: str,
+    fixtures: JointFixture,
 ):
     """Generate and send metadata event, afterwards upload data to object storage"""
     await populate_metadata(
@@ -64,6 +75,7 @@ async def populate_metadata_and_upload(
         file_name=file_name,
         decrypted_size=size,
         decrypted_sha256=checksum,
+        fixtures=fixtures,
     )
     # wait for possible delays in event delivery
     time.sleep(15)
@@ -73,13 +85,17 @@ async def populate_metadata_and_upload(
         tmp_file.seek(0)
         upload(
             file_id=file_id,
-            file_path=tmp_file.name,
-            pubkey_path=DATA_DIR / "key.pub",
+            file_path=Path(tmp_file.name),
+            pubkey_path=fixtures.config.data_dir / "key.pub",
         )
 
 
 async def populate_metadata(
-    file_id: str, file_name: str, decrypted_size: int, decrypted_sha256: str
+    file_id: str,
+    file_name: str,
+    decrypted_size: int,
+    decrypted_sha256: str,
+    fixtures: JointFixture,
 ):
     """Populate metadata submission schema and send event for UCS"""
     metadata_files = [
@@ -94,27 +110,22 @@ async def populate_metadata(
         associated_files=metadata_files
     )
 
-    async with KafkaEventPublisher.construct(config=CONFIG) as publisher:
-        type_ = CONFIG.file_metadata_event_type
-        key = file_id
-        topic = CONFIG.file_metadata_event_topic
-        await publisher.publish(
-            payload=metadata_upserted.dict(),
-            type_=type_,
-            key=key,
-            topic=topic,
-        )
+    config = fixtures.config
+    type_ = config.file_metadata_event_type
+    key = file_id
+    topic = config.file_metadata_event_topic
+    await fixtures.kafka.publisher.publish(
+        payload=metadata_upserted.dict(),
+        type_=type_,
+        key=key,
+        topic=topic,
+    )
 
 
-async def check_objectstorage(file_id: str):
+async def check_objectstorage(file_id: str, fixtures: JointFixture):
     """Check if object storage is populated"""
-    storage = S3ObjectStorage(config=CONFIG)
-    object_exists = await storage.does_object_exist(
-        bucket_id=CONFIG.inbox_bucket, object_id=file_id
+    object_exists = await fixtures.s3.storage.does_object_exist(
+        bucket_id=fixtures.config.inbox_bucket, object_id=file_id
     )
     if not object_exists:
         raise ValueError("Object missing in inbox")
-
-
-if __name__ == "__main__":
-    asyncio.run(delegate_paths())
