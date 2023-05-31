@@ -14,23 +14,21 @@
 # limitations under the License.
 #
 
-"""Config parameters and their defaults."""
+"""Test the models module."""
 
-from pydantic import BaseSettings, Field
+import pytest
+from pydantic import ValidationError
+
+from metldata.builtin_transformations.merge_slots.models import SlotMergeInstruction
 
 
-class AccessionAdditionConfig(BaseSettings):
-    """Config to add accessions to a model and associated metadata."""
+def test_slot_merge_instruction_overlap():
+    """Test that an overlap in source and target slots fails with the expected
+    exception."""
 
-    accession_slot_name: str = Field(
-        "accession", description="The name of the slot to contain the accessions to."
-    )
-    accession_slot_description: str = Field(
-        "The accession for an entity.",
-        description="The description of the slot to contain the accessions to.",
-    )
-
-    class Config:
-        """Pydantic config."""
-
-        extra = "forbid"
+    with pytest.raises(ValidationError):
+        SlotMergeInstruction(
+            class_name="class_a",
+            source_slots=["some_slot", "another_slot"],
+            target_slot="some_slot",
+        )

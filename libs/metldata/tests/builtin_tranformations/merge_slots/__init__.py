@@ -14,23 +14,4 @@
 # limitations under the License.
 #
 
-"""Config parameters and their defaults."""
-
-from pydantic import BaseSettings, Field
-
-
-class AccessionAdditionConfig(BaseSettings):
-    """Config to add accessions to a model and associated metadata."""
-
-    accession_slot_name: str = Field(
-        "accession", description="The name of the slot to contain the accessions to."
-    )
-    accession_slot_description: str = Field(
-        "The accession for an entity.",
-        description="The description of the slot to contain the accessions to.",
-    )
-
-    class Config:
-        """Pydantic config."""
-
-        extra = "forbid"
+"""Test the merge_slots sub package."""

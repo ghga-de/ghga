@@ -66,3 +66,8 @@ class CustomEmbeddingConfig(BaseSettings):
             raise ValueError("Names for embedded classes must be unique.")
 
         return value
+
+    class Config:
+        """Pydantic config."""
+
+        extra = "forbid"

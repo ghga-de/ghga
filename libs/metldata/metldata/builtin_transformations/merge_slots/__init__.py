@@ -14,23 +14,11 @@
 # limitations under the License.
 #
 
-"""Config parameters and their defaults."""
+"""A transformation that merges multiple slots of a class into a single one."""
 
-from pydantic import BaseSettings, Field
-
-
-class AccessionAdditionConfig(BaseSettings):
-    """Config to add accessions to a model and associated metadata."""
-
-    accession_slot_name: str = Field(
-        "accession", description="The name of the slot to contain the accessions to."
-    )
-    accession_slot_description: str = Field(
-        "The accession for an entity.",
-        description="The description of the slot to contain the accessions to.",
-    )
-
-    class Config:
-        """Pydantic config."""
-
-        extra = "forbid"
+# shortcuts:
+# pylint: disable=unused-import
+from metldata.builtin_transformations.merge_slots.main import (  # noqa: F401
+    SlotMergingConfig,
+    slot_merging_transformation,
+)

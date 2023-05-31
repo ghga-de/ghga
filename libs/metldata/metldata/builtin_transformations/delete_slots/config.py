@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Models used to describe all inferred references based on existing references."""
+"""Config parameters and their defaults."""
 
 from pydantic import BaseSettings, Field
 
@@ -35,3 +35,8 @@ class SlotDeletionConfig(BaseSettings):
             "class_c": ["some_slot", "yet_another_slot"],
         },
     )
+
+    class Config:
+        """Pydantic config."""
+
+        extra = "forbid"

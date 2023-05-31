@@ -78,3 +78,8 @@ class ReferenceInferenceConfig(BaseSettings):
                 )
 
         return inferred_refs
+
+    class Config:
+        """Pydantic config."""
+
+        extra = "forbid"

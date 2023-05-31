@@ -43,6 +43,10 @@ class IdenitifierConflictError(RuntimeError):
     """Raised when multiple resources of the same class with the same identifier exist."""
 
 
+class SlotNotFoundError(RuntimeError):
+    """Raised when a slot cannot be found in a Metadata Resource."""
+
+
 def lookup_self_id(*, resource: Json, identifier_slot: str):
     """Lookup the ID of the specified resource."""
 
@@ -282,3 +286,16 @@ def upsert_resources_in_metadata(
     global_metadata_copy = deepcopy(global_metadata)
 
     return {**global_metadata_copy, anchor_point.root_slot: resources}
+
+
+def lookup_slot_in_resource(*, resource: Json, slot_name: str) -> Json:
+    """Lookup a slot in a resource. Raises an error if the slot does not exist."""
+
+    content = resource.get(slot_name)
+
+    if content is None:
+        raise SlotNotFoundError(
+            f"Could not find slot '{slot_name}' in resource: {resource}"
+        )
+
+    return content

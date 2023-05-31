@@ -31,6 +31,7 @@ from metldata.builtin_transformations.delete_slots import slot_deletion_transfor
 from metldata.builtin_transformations.infer_references import (
     reference_inference_transformation,
 )
+from metldata.builtin_transformations.merge_slots import slot_merging_transformation
 from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import MetadataAnnotation, TransformationDefinition
@@ -130,6 +131,7 @@ TRANSFORMATIONS_BY_NAME: dict[str, TransformationDefinition] = {
     "infer_references": reference_inference_transformation,
     "delete_slots": slot_deletion_transformation,
     "custom_embedding": custom_embedding_transformation,
+    "merge_slots": slot_merging_transformation,
 }
 
 
