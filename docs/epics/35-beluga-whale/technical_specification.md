@@ -30,16 +30,16 @@ This epic does not include:
 This epic covers the following test journey:
 
 - Setting the initial state for the file to be downloaded:
-    - Creating outbox and permanent storage bucket
-    - place a file in the permanent storage bucket
+    - Creating staging, outbox and permanent storage buckets
+    - Place a file in the staging storage bucket
     - Informing the Internal File Registry Service about the file stored permanently (event).
     - Creating an access claim for the file (REST call)
     - Priming the Work Package Service (event)
     - Creating a Work Package (REST call)
 - Requesting the file download from the Download Controller Service (REST call via connector)
 - Verifying the publication of the expected `download_served` event.
-- Requesting the envelope from the Download Controller Service (REST call via connector).
-- Decrypting the downloaded output file and comparing the checksum (using connector).
+- Optional: Requesting the envelope from the Download Controller Service (REST call via connector).
+- Optional: Decrypting the downloaded output file and comparing the checksum (using connector).
 - Removing the test artifacts (via fixtures).
 
 
