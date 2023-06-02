@@ -68,7 +68,7 @@ def test_check_class_exists(model: MetadataModel, class_name: str, exists: bool)
     [
         (VALID_MINIMAL_METADATA_MODEL, "Dataset", "alias", False, True),
         (VALID_MINIMAL_METADATA_MODEL, "Dataset", "alias", True, False),
-        (VALID_MINIMAL_METADATA_MODEL, "Dataset", "has_file", True, True),
+        (VALID_MINIMAL_METADATA_MODEL, "Dataset", "files", True, True),
         (VALID_MINIMAL_METADATA_MODEL, "Dataset", "not_existing_slot", False, False),
         (VALID_MINIMAL_METADATA_MODEL, "NotExistingClass", "name", False, False),
     ],

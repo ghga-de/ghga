@@ -32,12 +32,12 @@ from metldata.builtin_transformations.infer_references.path.path_elements import
     "path_str, expected_elements, expected_source, expected_target",
     [
         (
-            "class_a(has_class_b)>class_b",
+            "class_a(class_b)>class_b",
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_a",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_b",
                 )
             ],
@@ -46,13 +46,13 @@ from metldata.builtin_transformations.infer_references.path.path_elements import
         ),
         (
             """class_a
-                (has_class_b) >
+                (class_b) >
                 class_b""",  # containing whitespaces
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_a",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_b",
                 )
             ],
@@ -60,12 +60,12 @@ from metldata.builtin_transformations.infer_references.path.path_elements import
             "class_b",
         ),
         (
-            "class_a<(has_class_a)class_b",
+            "class_a<(class_a)class_b",
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.PASSIVE,
                     source="class_a",
-                    slot="has_class_a",
+                    slot="class_a",
                     target="class_b",
                 )
             ],
@@ -73,18 +73,18 @@ from metldata.builtin_transformations.infer_references.path.path_elements import
             "class_b",
         ),
         (
-            "class_a(has_class_b)>class_b(has_class_c)>class_c",
+            "class_a(class_b)>class_b(class_c)>class_c",
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_a",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_b",
                 ),
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_b",
-                    slot="has_class_c",
+                    slot="class_c",
                     target="class_c",
                 ),
             ],
@@ -92,18 +92,18 @@ from metldata.builtin_transformations.infer_references.path.path_elements import
             "class_c",
         ),
         (
-            "class_a(has_class_b)>class_b<(has_class_b)class_c",
+            "class_a(class_b)>class_b<(class_b)class_c",
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_a",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_b",
                 ),
                 ReferencePathElement(
                     type_=ReferencePathElementType.PASSIVE,
                     source="class_b",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_c",
                 ),
             ],
@@ -129,12 +129,12 @@ def test_reference_path(
 @pytest.mark.parametrize(
     "path_str, is_valid",
     [
-        ("class_a(has_class_b)>class_b", True),
-        ("class_a<(has_class_a)class_b", True),
-        ("class_a(has_class_b)>class_b(has_class_c)>class_c", True),
+        ("class_a(class_b)>class_b", True),
+        ("class_a<(class_a)class_b", True),
+        ("class_a(class_b)>class_b(class_c)>class_c", True),
         (12312, False),
-        ("class_a<(has_class_b)>class_b", False),
-        ("(has_class_b)>class_b(has_class_c)>class_c", False),
+        ("class_a<(class_b)>class_b", False),
+        ("(class_b)>class_b(class_c)>class_c", False),
     ],
 )
 def test_reference_path_pydantic(path_str: str, is_valid: bool):

@@ -107,7 +107,7 @@ def transform_model(
     )
 
 
-custom_embedding_transformation = TransformationDefinition[CustomEmbeddingConfig](
+CUSTOM_EMBEDDING_TRANSFORMATION = TransformationDefinition[CustomEmbeddingConfig](
     config_cls=CustomEmbeddingConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,

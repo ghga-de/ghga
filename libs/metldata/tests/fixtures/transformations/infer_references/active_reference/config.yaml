@@ -1,5 +1,5 @@
 inferred_ref_map:
   Experiment:
-    has_file:
-      path: "Experiment(has_sample)>Sample(has_file)>File"
+    files:
+      path: "Experiment(samples)>Sample(files)>File"
       multivalued: true

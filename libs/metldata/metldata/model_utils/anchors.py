@@ -144,7 +144,7 @@ def get_anchor_points(*, model: MetadataModel) -> set[AnchorPoint]:
             AnchorPoint(
                 target_class=target_class,
                 identifier_slot=identifier,
-                root_slot=root_slot.name,
+                root_slot=str(root_slot.name),
             )
         )
 

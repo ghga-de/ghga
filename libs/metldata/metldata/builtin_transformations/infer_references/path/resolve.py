@@ -189,10 +189,7 @@ def resolve_path_element(
         )
 
     if not target_ids:
-        raise PathElementResolutionError(
-            f"Cannot resolve path element for source resource '{source_resource}'"
-            + " because no target resources were found."
-        )
+        return []
 
     target_resources: list[Json] = []
     for target_id in target_ids:

@@ -116,7 +116,7 @@ def transform_model(
     )
 
 
-accession_addition_transformation = TransformationDefinition[AccessionAdditionConfig](
+ACCESSION_ADDITION_TRANSFORMATION = TransformationDefinition[AccessionAdditionConfig](
     config_cls=AccessionAdditionConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,

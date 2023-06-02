@@ -20,6 +20,6 @@
 # shortcuts:
 # pylint: disable=unused-import
 from metldata.builtin_transformations.infer_references.main import (  # noqa: F401
+    REFERENCE_INFERENCE_TRANSFORMATION,
     ReferenceInferenceConfig,
-    reference_inference_transformation,
 )

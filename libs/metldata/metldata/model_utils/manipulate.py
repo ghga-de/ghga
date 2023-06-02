@@ -44,10 +44,18 @@ class ClassNotFoundError(ModelManipulationError):
 class ClassSlotNotFoundError(ModelManipulationError):
     """Raised when a slot of a class was not found."""
 
-    def __init__(self, class_name: str, slot_name: str):
+    def __init__(
+        self,
+        class_name: str,
+        slot_name: str,
+        direct: bool = False,
+        context: Optional[str] = None,
+    ):
         message = (
-            f"The slot '{slot_name}' does not exist in the class '{class_name}' of the"
-            + " metadata model."
+            f"The slot '{slot_name}' does not exist"
+            + (" as direct slot" if direct else "")
+            + f" in the class '{class_name}' of the metadata model."
+            + (f" {context}" if context else "")
         )
         super().__init__(message)
 
@@ -143,7 +151,15 @@ def delete_class_slot(
     all_slots = schema_view.class_slots(class_name=class_name, direct=True)
 
     if slot_name not in all_slots:
-        raise ClassSlotNotFoundError(class_name=class_name, slot_name=slot_name)
+        raise ClassSlotNotFoundError(
+            class_name=class_name,
+            slot_name=slot_name,
+            direct=True,
+            context=(
+                "Please note that you cannot delete slots that are inherited from a"
+                + " parent class."
+            ),
+        )
 
     all_slots_modified = [slot for slot in all_slots if slot != slot_name]
 
@@ -176,13 +192,21 @@ def add_slot_usage_annotation(
 
     class_ = schema_view.get_class(class_name=class_name)
 
+    all_slots = schema_view.class_slots(class_name=class_name)
+    if slot_name not in all_slots:
+        raise ClassSlotNotFoundError(class_name=class_name, slot_name=slot_name)
+
     if not class_:
         raise ClassNotFoundError(class_name=class_name)
 
     class_copy = deepcopy(class_)
 
-    if not class_copy.slots or slot_name not in class_copy.slots:
-        raise ClassSlotNotFoundError(class_name=class_name, slot_name=slot_name)
+    if not class_copy.slots:
+        class_copy.slots = []
+    if not isinstance(class_copy.slots, list):
+        raise RuntimeError(f"Unexpected slots for class '{class_name}'")
+    if slot_name not in class_copy.slots:
+        class_copy.slots.append(slot_name)
 
     class_copy.slot_usage = get_normalized_slot_usage(class_=class_copy)
     if slot_name not in class_copy.slot_usage:

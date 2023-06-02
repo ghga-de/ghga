@@ -1,4 +1,4 @@
-has_file:
+files:
   - accession: TESTS0000000001
     alias: test_sample_01_R1
     filename: test_sample_01_R1.fastq
@@ -23,31 +23,31 @@ has_file:
     format: fastq
     checksum: 7e793b40583daca28a594d45bdc9218c04353581d5bbbecab88b13c068bba8a4
     size: 234243
-has_dataset:
+datasets:
   - accession: TESTD0000000001
     alias: test_dataset_01
-    has_file:
+    files:
       - TESTS0000000001
       - TESTS0000000002
       - TESTS0000000003
       - TESTS0000000004
-has_sample:
+samples:
   - accession: TESTN0000000001
     alias: test_sample_01
     description: A tests sample.
-    has_file:
+    files:
       - TESTS0000000001
       - TESTS0000000002
   - accession: TESTN0000000002
     alias: test_sample_02
     description: A tests sample.
-    has_file:
+    files:
       - TESTS0000000003
       - TESTS0000000004
-has_experiment:
+experiments:
   - accession: TESTE0000000001
     alias: test_experiment_01
     description: A test experiment.
-    has_sample:
+    samples:
       - TESTN0000000001
       - TESTN0000000002

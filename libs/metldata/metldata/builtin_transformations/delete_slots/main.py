@@ -92,7 +92,7 @@ class SlotDeletionMetadataTransformer(MetadataTransformer[SlotDeletionConfig]):
         )
 
 
-slot_deletion_transformation = TransformationDefinition[SlotDeletionConfig](
+SLOT_DELETION_TRANSFORMATION = TransformationDefinition[SlotDeletionConfig](
     config_cls=SlotDeletionConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,

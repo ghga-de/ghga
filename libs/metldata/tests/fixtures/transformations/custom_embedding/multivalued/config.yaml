@@ -3,14 +3,14 @@ embedding_profiles:
     source_class: Dataset
     description: "Datasets with embedded Files."
     embedded_references:
-      has_file: File
+      files: File
   - target_class: ExperimentFullyEmbedded
     source_class: Experiment
     description: "Fully embedded Experiments."
     embedded_references:
-      has_sample:
+      samples:
         target_class: SampleWithFiles
         source_class: Sample
         description: "Samples with embedded Files."
         embedded_references:
-          has_file: File
+          files: File

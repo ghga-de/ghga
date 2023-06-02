@@ -36,7 +36,7 @@ def test_lookup_resource_by_identifier_happy():
 
     identifier = "test_sample_01_R1"
     resource_dict = convert_resource_list_to_dict(
-        resources=VALID_MINIMAL_METADATA_EXAMPLE["has_file"], identifier_slot="alias"
+        resources=VALID_MINIMAL_METADATA_EXAMPLE["files"], identifier_slot="alias"
     )
     expected_resource = resource_dict[identifier]
 
@@ -73,7 +73,7 @@ def test_lookup_resource_by_identifier_not_exist():
 
 
 EXAMPLE_GLOBAL_METADATA = {
-    "has_file": [
+    "files": [
         {
             "alias": "test_sample_01_R1",
             "file_format": "fastq",
@@ -88,16 +88,14 @@ EXAMPLE_GLOBAL_METADATA = {
 }
 
 EXAMPLE_ANCHOR_POINTS_BY_TARGET = {
-    "File": AnchorPoint(
-        target_class="File", identifier_slot="alias", root_slot="has_file"
-    )
+    "File": AnchorPoint(target_class="File", identifier_slot="alias", root_slot="files")
 }
 
 
 def test_get_resources_of_class_happy():
     """Test the happy path of using the get_resources_of_class function."""
 
-    expected_resources = EXAMPLE_GLOBAL_METADATA["has_file"]
+    expected_resources = EXAMPLE_GLOBAL_METADATA["files"]
 
     observed_resources = get_resources_of_class(
         class_name="File",
@@ -124,7 +122,7 @@ def test_update_resources_in_metadata_happy():
         },
     ]
 
-    expected_metadata = {"has_file": modified_resources}
+    expected_metadata = {"files": modified_resources}
 
     observed_metadata = upsert_resources_in_metadata(
         resources=modified_resources,

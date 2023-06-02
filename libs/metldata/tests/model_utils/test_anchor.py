@@ -35,18 +35,16 @@ from tests.fixtures.metadata_models import (
 )
 
 EXAMPLE_ANCHOR_POINTS = {
-    AnchorPoint(target_class="File", identifier_slot="alias", root_slot="has_file"),
-    AnchorPoint(
-        target_class="Dataset", identifier_slot="alias", root_slot="has_dataset"
-    ),
+    AnchorPoint(target_class="File", identifier_slot="alias", root_slot="files"),
+    AnchorPoint(target_class="Dataset", identifier_slot="alias", root_slot="datasets"),
 }
 
 EXAMPLE_ANCHOR_POINTS_BY_TARGET = {
     "File": AnchorPoint(
-        target_class="File", identifier_slot="alias", root_slot="has_file"
+        target_class="File", identifier_slot="alias", root_slot="files"
     ),
     "Dataset": AnchorPoint(
-        target_class="Dataset", identifier_slot="alias", root_slot="has_dataset"
+        target_class="Dataset", identifier_slot="alias", root_slot="datasets"
     ),
 }
 

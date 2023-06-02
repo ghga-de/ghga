@@ -39,10 +39,10 @@ classes:
       A submission can be considered as a set of inter-related (and inter-connected)
       entities that represent a data submission to GHGA.
     slots:
-      - has_file
+      - files
 
     slot_usage:
-      has_file:
+      files:
         description: >-
           Information about one or more File entities associated with this submission.
         required: true
@@ -57,7 +57,7 @@ slots:
   description:
     description: Description of an entity.
 
-  has_file:
+  files:
     description: >-
       The file associated with an entity.
     range: File

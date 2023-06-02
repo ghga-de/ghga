@@ -1,4 +1,4 @@
-has_file:
+files:
   - alias: test_sample_01_R1
     filename: test_sample_01_R1.fastq
     format: fastq
@@ -19,9 +19,9 @@ has_file:
     format: fastq
     checksum: 7e793b40583daca28a594d45bdc9218c04353581d5bbbecab88b13c068bba8a4
     size: 234243
-has_dataset:
+datasets:
   - alias: test_dataset_01
-    has_file:
+    files:
       - test_sample_01_R1.fastq
       - test_sample_01_R2.fastq
       - test_sample_02_R1.fastq

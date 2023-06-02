@@ -35,8 +35,8 @@ from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 def test_add_slot_if_not_exists_exists():
     """Test add_slot_if_not_exists if the slot exists."""
 
-    # try to change existing has_file slot to string:
-    new_slot = SlotDefinition(name="has_file", range="string")
+    # try to change existing files slot to string:
+    new_slot = SlotDefinition(name="files", range="string")
 
     original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
@@ -71,9 +71,9 @@ def test_add_slot_if_not_exists_not_exists():
 def test_upsert_class_slot_exists():
     """Test upsert_class_slot if the slot exists."""
 
-    # change existing has_file slot to string in the Dataset class:
+    # change existing files slot to string in the Dataset class:
     class_name = "Dataset"
-    new_slot = SlotDefinition(name="has_file", range="string")
+    new_slot = SlotDefinition(name="files", range="string")
 
     original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
@@ -88,7 +88,7 @@ def test_upsert_class_slot_exists():
     )
     assert updated_class_slot.range == "string"
 
-    # check that the global slot definition has_not changed:
+    # check that the global slot definition has not changed:
     updated_global_slot = updated_schema_view.get_slot(slot_name=new_slot.name)
     assert updated_global_slot.range == "File"
 
@@ -119,7 +119,7 @@ def test_delete_class_slot_happy():
     """Test the happy path of using delete_class_slot."""
 
     class_name = "Dataset"
-    slot_name = "has_file"
+    slot_name = "files"
 
     original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
@@ -139,7 +139,7 @@ def test_delete_class_slot_class_not_exists():
     """Test delete_class_slot if the class does not exist."""
 
     class_name = "DoesNotExist"
-    slot_name = "has_file"
+    slot_name = "files"
 
     original_model = VALID_MINIMAL_METADATA_MODEL
     original_schema_view = original_model.schema_view
@@ -169,7 +169,7 @@ def test_add_slot_usage_annotation():
     """Test the happy path of using add_slot_usage_annotation."""
 
     class_name = "Dataset"
-    slot_name = "has_file"
+    slot_name = "files"
     annotation_key = "usage"
     annotation_value = "required"
 

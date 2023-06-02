@@ -89,21 +89,21 @@ classes:
       A submission can be considered as a set of inter-related (and inter-connected)
       entities that represent a data submission to GHGA.
     slots:
-      - has_file
-      - has_named_file
-      - has_dataset
+      - files
+      - named_files
+      - datasets
     slot_usage:
-      has_file:
+      files:
         required: true
         multivalued: true
         inlined: true
         inlined_as_list: true
-      has_named_file:
+      named_files:
         required: true
         multivalued: true
         inlined: true
         inlined_as_list: true
-      has_dataset:
+      datasets:
         required: true
         multivalued: true
         inlined: true
@@ -116,12 +116,12 @@ slots:
   description:
     description: Description of an entity.
 
-  has_file:
+  files:
     description: >-
       The file associated with an entity.
     range: File
 
-  has_named_file:
+  named_files:
     description: >-
       The named file associated with an entity.
     range: NamedFile
@@ -141,7 +141,7 @@ slots:
       Temporary files associated with an entity.
     range: File
 
-  has_dataset:
+  datasets:
     description: >-
       The dataset associated with an entity.
     range: Dataset

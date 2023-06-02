@@ -40,18 +40,18 @@ class ReferenceInferenceConfig(BaseSettings):
         ),
         example={
             "class_a": {
-                "has_class_d": {
-                    "path": "class_a(has_class_b)>class_b(has_class_d)>class_d",
+                "class_d": {
+                    "path": "class_a(class_b)>class_b(class_d)>class_d",
                     "multivalued": False,
                 },
-                "has_class_c": {
-                    "path": "class_a(has_class_b)>class_b<(has_class_c)class_c",
+                "class_c": {
+                    "path": "class_a(class_b)>class_b<(class_c)class_c",
                     "multivalued": True,
                 },
             },
             "class_b": {
-                "has_class_c": {
-                    "path": "class_b<(has_class_c)class_c",
+                "class_c": {
+                    "path": "class_b<(class_c)class_c",
                     "multivalued": True,
                 }
             },

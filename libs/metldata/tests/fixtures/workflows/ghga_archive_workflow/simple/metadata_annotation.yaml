@@ -1,0 +1,14 @@
+accession_map:
+  SampleFile:
+    test_sample_01_R1: TESTF0000000001
+    test_sample_01_R2: TESTF0000000002
+  ExperimentFile:
+    test_sample_02_R1: TESTF0000000003
+    test_sample_02_R2: TESTF0000000004
+  Dataset:
+    test_dataset_01: TESTD0000000001
+  Sample:
+    test_sample_01: TESTS0000000001
+    test_sample_02: TESTS0000000002
+  Experiment:
+    test_experiment_01: TESTE0000000001

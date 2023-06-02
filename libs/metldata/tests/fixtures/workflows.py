@@ -16,27 +16,34 @@
 
 """Fixtures for workflows of trandformation steps."""
 
-from metldata.builtin_transformations.delete_slots import slot_deletion_transformation
+from dataclasses import dataclass
+from typing import Generic, TypeVar
+
+from pydantic import BaseModel
+
+from metldata.builtin_transformations.delete_slots import SLOT_DELETION_TRANSFORMATION
 from metldata.builtin_transformations.infer_references import (
-    reference_inference_transformation,
+    REFERENCE_INFERENCE_TRANSFORMATION,
 )
+from metldata.builtin_workflows.ghga_archive import GHGA_ARCHIVE_WORKFLOW
+from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
-from metldata.transform.base import WorkflowDefinition, WorkflowStep
+from metldata.transform.base import MetadataAnnotation, WorkflowDefinition, WorkflowStep
 from tests.fixtures.utils import BASE_DIR, read_yaml
 
-EXAMPLE_WORKFLOW_JOB_DIR = BASE_DIR / "example_workflow"
+Config = TypeVar("Config", bound=BaseModel)
 
 EXAMPLE_WORKFLOW_DEFINITION = WorkflowDefinition(
     description="A workflow for testing.",
     steps={
         "infer_references": WorkflowStep(
             description="A step for inferring references.",
-            transformation_definition=reference_inference_transformation,
+            transformation_definition=REFERENCE_INFERENCE_TRANSFORMATION,
             input=None,
         ),
         "delete_slots": WorkflowStep(
             description="A step for deleting slots.",
-            transformation_definition=slot_deletion_transformation,
+            transformation_definition=SLOT_DELETION_TRANSFORMATION,
             input="infer_references",
         ),
     },
@@ -46,30 +53,116 @@ EXAMPLE_WORKFLOW_DEFINITION = WorkflowDefinition(
     },
 )
 
-EXAMPLE_CONFIG = EXAMPLE_WORKFLOW_DEFINITION.config_cls(
-    **read_yaml(EXAMPLE_WORKFLOW_JOB_DIR / "config.yaml")
-)
-EXAMPLE_ORIGINAL_MODEL = MetadataModel.init_from_path(
-    EXAMPLE_WORKFLOW_JOB_DIR / "original_model.yaml"
-)
-EXAMPLE_ORIGINAL_METADATA = read_yaml(
-    EXAMPLE_WORKFLOW_JOB_DIR / "original_metadata.yaml"
-)
-EXAMPLE_ARTIFACT_MODELS = {
-    artifact_name: MetadataModel.init_from_path(
-        EXAMPLE_WORKFLOW_JOB_DIR
-        / "artifacts"
-        / artifact_name
-        / "transformed_model.yaml"
+
+@dataclass(frozen=True)
+class WorkflowTestCase(Generic[Config]):
+    """A test case for a workflow."""
+
+    workflow_name: str
+    case_name: str
+    workflow_definition: WorkflowDefinition
+    config: Config
+    original_model: MetadataModel
+    original_metadata: Json
+    metadata_annotation: MetadataAnnotation
+    artifact_models: dict[str, MetadataModel]
+    artifact_metadata: dict[str, Json]
+
+    def __str__(self) -> str:
+        return f"{self.workflow_name}-{self.case_name}"
+
+
+def _read_test_case(
+    *,
+    workflow_name: str,
+    workflow_definition: WorkflowDefinition,
+    case_name: str,
+) -> WorkflowTestCase[Config]:
+    """Read a test case for a workflow."""
+
+    case_dir = BASE_DIR / "workflows" / workflow_name / case_name
+    config_path = case_dir / "config.yaml"
+    original_model_path = case_dir / "original_model.yaml"
+    original_metadata_path = case_dir / "original_metadata.yaml"
+    metadata_annotation_path = case_dir / "metadata_annotation.yaml"
+    artifacts_dir = case_dir / "artifacts"
+
+    artifact_models: dict[str, MetadataModel] = {}
+    artifact_metadata: dict[str, Json] = {}
+
+    for artifact in workflow_definition.artifacts:
+        artifact_dir = artifacts_dir / artifact
+        if artifact_dir.exists():
+            model_path = artifact_dir / "transformed_model.yaml"
+            if model_path.exists():
+                artifact_models[artifact] = MetadataModel.init_from_path(model_path)
+            metadata_path = artifact_dir / "transformed_metadata.yaml"
+            if metadata_path.exists():
+                artifact_metadata[artifact] = read_yaml(metadata_path)
+
+    return WorkflowTestCase(
+        workflow_name=workflow_name,
+        case_name=case_name,
+        workflow_definition=workflow_definition,
+        config=workflow_definition.config_cls(**read_yaml(config_path)),  # type: ignore
+        original_model=MetadataModel.init_from_path(original_model_path),
+        original_metadata=read_yaml(original_metadata_path),
+        metadata_annotation=(
+            MetadataAnnotation(**read_yaml(metadata_annotation_path))
+            if metadata_annotation_path.exists()
+            else MetadataAnnotation(accession_map={})
+        ),
+        artifact_models=artifact_models,
+        artifact_metadata=artifact_metadata,
     )
-    for artifact_name in EXAMPLE_WORKFLOW_DEFINITION.artifacts
+
+
+def _read_all_test_cases_for_a_workflow(
+    *,
+    workflow_name: str,
+    workflow_definition: WorkflowDefinition,
+) -> list[WorkflowTestCase]:
+    """Read all test cases for a workflow."""
+
+    base_dir = BASE_DIR / "workflows" / workflow_name
+    case_names = [path.name for path in base_dir.iterdir() if path.is_dir()]
+
+    return [
+        _read_test_case(
+            workflow_name=workflow_name,
+            workflow_definition=workflow_definition,
+            case_name=case_name,
+        )
+        for case_name in case_names
+    ]
+
+
+def _read_all_test_cases(
+    *, workflows_by_name: dict[str, WorkflowDefinition]
+) -> list[WorkflowTestCase]:
+    """Read all test cases for the specified workflows."""
+
+    return [
+        test_case
+        for workflow_name, workflow_definition in workflows_by_name.items()
+        for test_case in _read_all_test_cases_for_a_workflow(
+            workflow_name=workflow_name,
+            workflow_definition=workflow_definition,
+        )
+    ]
+
+
+WORKFLOWS_BY_NAME: dict[str, WorkflowDefinition] = {
+    "example_workflow": EXAMPLE_WORKFLOW_DEFINITION,
+    "ghga_archive_workflow": GHGA_ARCHIVE_WORKFLOW,
 }
-EXAMPLE_ARTIFACTS = {
-    artifact_name: read_yaml(
-        EXAMPLE_WORKFLOW_JOB_DIR
-        / "artifacts"
-        / artifact_name
-        / "transformed_metadata.yaml"
-    )
-    for artifact_name in EXAMPLE_WORKFLOW_DEFINITION.artifacts
-}
+
+WORKFLOW_TEST_CASES = _read_all_test_cases(workflows_by_name=WORKFLOWS_BY_NAME)
+
+EXAMPLE_WORKFLOW_TEST_CASES = [
+    test_case
+    for test_case in WORKFLOW_TEST_CASES
+    if test_case.workflow_name == "example_workflow"
+]
+EXAMPLE_ARTIFACT_MODELS = EXAMPLE_WORKFLOW_TEST_CASES[0].artifact_models
+EXAMPLE_ARTIFACTS = EXAMPLE_WORKFLOW_TEST_CASES[0].artifact_metadata

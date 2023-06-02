@@ -1,9 +1,9 @@
-has_file:
+files:
   - alias: some_unnamed_file
     format: txt
     checksum: 1c8aed294d5dec3330a175f6b655725fa668bfe41311e74f7ca9d85c91371b4e
     size: 123412
-has_named_file:
+named_files:
   - alias: test_sample_01_R1
     filename: test_sample_01_R1.fastq
     format: fastq
@@ -24,7 +24,7 @@ has_named_file:
     format: fastq
     checksum: 7e793b40583daca28a594d45bdc9218c04353581d5bbbecab88b13c068bba8a4
     size: 234243
-has_dataset:
+datasets:
   - alias: test_dataset_01
     temporary_files:
       - some_unnamed_file

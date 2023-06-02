@@ -87,7 +87,9 @@ def add_accession_to_resource(
         accession_map:
             The accession map that contains the accessions.
         references:
-            References from this to other anchored classes.
+            References from this to other anchored classes. The keys are the names of
+            the slots that contain the references, the values are the names of the
+            referenced classes.
 
     Raises:
         MetadataTransformationError:
@@ -107,20 +109,20 @@ def add_accession_to_resource(
 
     for slot_name, slot_value in resource.items():
         if slot_name in references:
-            target_class = references[slot_name]
+            referenced_class = references[slot_name]
             if isinstance(slot_value, list):
                 new_resource[slot_name] = [
                     lookup_accession(
-                        target_class=target_class,
-                        old_identifier=old_identifier,
+                        target_class=referenced_class,
+                        old_identifier=reference_old_identifier,
                         accession_map=accession_map,
                     )
-                    for old_identifier in slot_value
+                    for reference_old_identifier in slot_value
                 ]
             else:
                 new_resource[slot_name] = lookup_accession(
-                    target_class=target_class,
-                    old_identifier=old_identifier,
+                    target_class=referenced_class,
+                    old_identifier=slot_value,
                     accession_map=accession_map,
                 )
         else:

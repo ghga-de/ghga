@@ -22,16 +22,16 @@ from typing import Generic, TypeVar
 from pydantic import BaseModel
 
 from metldata.builtin_transformations.add_accessions import (
-    accession_addition_transformation,
+    ACCESSION_ADDITION_TRANSFORMATION,
 )
 from metldata.builtin_transformations.custom_embeddings import (
-    custom_embedding_transformation,
+    CUSTOM_EMBEDDING_TRANSFORMATION,
 )
-from metldata.builtin_transformations.delete_slots import slot_deletion_transformation
+from metldata.builtin_transformations.delete_slots import SLOT_DELETION_TRANSFORMATION
 from metldata.builtin_transformations.infer_references import (
-    reference_inference_transformation,
+    REFERENCE_INFERENCE_TRANSFORMATION,
 )
-from metldata.builtin_transformations.merge_slots import slot_merging_transformation
+from metldata.builtin_transformations.merge_slots import SLOT_MERGING_TRANSFORMATION
 from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import MetadataAnnotation, TransformationDefinition
@@ -127,11 +127,11 @@ def _read_all_test_cases(
 
 
 TRANSFORMATIONS_BY_NAME: dict[str, TransformationDefinition] = {
-    "add_accessions": accession_addition_transformation,
-    "infer_references": reference_inference_transformation,
-    "delete_slots": slot_deletion_transformation,
-    "custom_embedding": custom_embedding_transformation,
-    "merge_slots": slot_merging_transformation,
+    "add_accessions": ACCESSION_ADDITION_TRANSFORMATION,
+    "infer_references": REFERENCE_INFERENCE_TRANSFORMATION,
+    "delete_slots": SLOT_DELETION_TRANSFORMATION,
+    "custom_embedding": CUSTOM_EMBEDDING_TRANSFORMATION,
+    "merge_slots": SLOT_MERGING_TRANSFORMATION,
 }
 
 

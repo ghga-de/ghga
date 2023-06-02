@@ -9,40 +9,72 @@ imports:
 default_range: string
 
 classes:
-  File:
-    description: >-
-      A file is an object that contains information generated from a process, either an
-      Experiment or an Analysis.
+  SampleFile:
     slots:
       - alias
-      - filename
       - format
       - size
+      - filename
       - checksum
+      - sample
     slot_usage:
       alias:
         required: true
         identifier: true
-      filename:
-        required: true
       format:
-        required: true
-      checksum:
         required: true
       size:
         required: true
+      filename:
+        required: true
+      checksum:
+        required: true
+      sample:
+        required: true
+        multivalued: false
+        inlined: false
+
+  ExperimentFile:
+    slots:
+      - alias
+      - format
+      - size
+      - filename
+      - checksum
+      - experiment
+    slot_usage:
+      alias:
+        required: true
+        identifier: true
+      format:
+        required: true
+      size:
+        required: true
+      filename:
+        required: true
+      checksum:
+        required: true
+      experiment:
+        required: true
+        multivalued: false
+        inlined: false
 
   Dataset:
     description: >-
       A Dataset is a collection of Files.
     slots:
       - alias
-      - has_file
+      - sample_files
+      - experiment_files
     slot_usage:
       alias:
         required: true
         identifier: true
-      has_file:
+      sample_files:
+        required: true
+        multivalued: true
+        inlined: false
+      experiment_files:
         required: true
         multivalued: true
         inlined: false
@@ -53,16 +85,16 @@ classes:
     slots:
       - alias
       - description
-      - has_file
+      - experiment
     slot_usage:
       alias:
         required: true
         identifier: true
       description:
         required: true
-      has_file:
+      experiment:
         required: true
-        multivalued: true
+        multivalued: false
         inlined: false
 
   Experiment:
@@ -71,23 +103,12 @@ classes:
     slots:
       - alias
       - description
-      - has_sample
-      - has_file
     slot_usage:
       alias:
         required: true
         identifier: true
       description:
         required: true
-      has_sample:
-        required: true
-        multivalued: true
-        inlined: false
-      has_file:
-        required: true
-        range: File
-        multivalued: true
-        inlined: false
 
   Submission:
     tree_root: true
@@ -96,27 +117,33 @@ classes:
       A submission can be considered as a set of inter-related (and inter-connected)
       entities that represent a data submission to GHGA.
     slots:
-      - has_file
-      - has_dataset
-      - has_sample
-      - has_experiment
+      - sample_files
+      - experiment_files
+      - datasets
+      - samples
+      - experiments
     slot_usage:
-      has_file:
+      sample_files:
         required: true
         multivalued: true
         inlined: true
         inlined_as_list: true
-      has_dataset:
+      experiment_files:
         required: true
         multivalued: true
         inlined: true
         inlined_as_list: true
-      has_sample:
+      datasets:
         required: true
         multivalued: true
         inlined: true
         inlined_as_list: true
-      has_experiment:
+      samples:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+      experiments:
         required: true
         multivalued: true
         inlined: true
@@ -129,24 +156,39 @@ slots:
   description:
     description: Description of an entity.
 
-  has_file:
+  sample_files:
     description: >-
-      The file associated with an entity.
-    range: File
+      The sample files associated with an entity.
+    range: SampleFile
 
-  has_dataset:
+  experiment_files:
     description: >-
-      The dataset associated with an entity.
+      The sample files associated with an entity.
+    range: ExperimentFile
+
+  datasets:
+    description: >-
+      The datasets associated with an entity.
     range: Dataset
 
-  has_sample:
+  sample:
     description: >-
       The sample associated with an entity.
     range: Sample
 
-  has_experiment:
+  samples:
+    description: >-
+      The samples associated with an entity.
+    range: Sample
+
+  experiment:
     description: >-
       The experiment associated with an entity.
+    range: Experiment
+
+  experiments:
+    description: >-
+      The experiments associated with an entity.
     range: Experiment
 
   filename:

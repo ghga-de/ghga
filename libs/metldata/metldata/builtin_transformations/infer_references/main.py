@@ -108,7 +108,7 @@ def transform_model(
     )
 
 
-reference_inference_transformation = TransformationDefinition[ReferenceInferenceConfig](
+REFERENCE_INFERENCE_TRANSFORMATION = TransformationDefinition[ReferenceInferenceConfig](
     config_cls=ReferenceInferenceConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,

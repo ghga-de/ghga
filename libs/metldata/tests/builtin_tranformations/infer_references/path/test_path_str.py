@@ -44,12 +44,12 @@ from metldata.builtin_transformations.infer_references.path.path_str import (
 @pytest.mark.parametrize(
     "path_str, is_valid",
     [
-        ("class_a(has_class_b)>class_b", True),
-        ("class_a<(has_class_a)class_b", True),
-        ("class_1(has_class_2)>class_2", True),
-        ("ClassA(has_class_b)>ClassB", True),
+        ("class_a(class_b)>class_b", True),
+        ("class_a<(class_a)class_b", True),
+        ("class_1(class_2)>class_2", True),
+        ("ClassA(class_b)>ClassB", True),
         ("class-a(has-class_b)>class-b", False),
-        ("class_a.has_class_b>class_b", False),
+        ("class_a.class_b>class_b", False),
     ],
 )
 def test_validate_path_str_characters(path_str: str, is_valid: bool):
@@ -62,22 +62,22 @@ def test_validate_path_str_characters(path_str: str, is_valid: bool):
 @pytest.mark.parametrize(
     "path_str, is_valid",
     [
-        ("class_a(has_class_b)>class_b", True),
-        ("class_a<(has_class_a)class_b", True),
-        ("class_a(has_class_b)>class_b(has_class_c)>class_c", True),
-        ("class_a<(has_class_a)class_b(has_class_c)>class_c", True),
-        ("class_a<(has_class_a)class_b<(has_class_b)class_c", True),
+        ("class_a(class_b)>class_b", True),
+        ("class_a<(class_a)class_b", True),
+        ("class_a(class_b)>class_b(class_c)>class_c", True),
+        ("class_a<(class_a)class_b(class_c)>class_c", True),
+        ("class_a<(class_a)class_b<(class_b)class_c", True),
         (
-            "class_a(has_class_b)>class_b(has_class_c)>class_c(has_class_d)>class_d",
+            "class_a(class_b)>class_b(class_c)>class_c(class_d)>class_d",
             True,
         ),
-        ("class_a<(has_class_b)>class_b", False),
+        ("class_a<(class_b)>class_b", False),
         ("class_a>class_b", False),
-        ("class_a>(has_class_a)class_b", False),
-        ("class_a(has_class_b)<class_b", False),
-        ("class_a(has_class_b)>class_b(has_class_c)>", False),
-        ("(has_class_b)>class_b(has_class_c)>class_c", False),
-        ("class_a(has_class_b>class_b", False),
+        ("class_a>(class_a)class_b", False),
+        ("class_a(class_b)<class_b", False),
+        ("class_a(class_b)>class_b(class_c)>", False),
+        ("(class_b)>class_b(class_c)>class_c", False),
+        ("class_a(class_b>class_b", False),
     ],
 )
 def test_validate_path_str_format(path_str: str, is_valid: bool):
@@ -90,11 +90,11 @@ def test_validate_path_str_format(path_str: str, is_valid: bool):
 @pytest.mark.parametrize(
     "path_str, expected_first_element",
     [
-        ("class_a(has_class_b)>class_b", "class_a(has_class_b)>class_b"),
-        ("class_a<(has_class_a)class_b", "class_a<(has_class_a)class_b"),
+        ("class_a(class_b)>class_b", "class_a(class_b)>class_b"),
+        ("class_a<(class_a)class_b", "class_a<(class_a)class_b"),
         (
-            "class_a(has_class_b)>class_b(has_class_c)>class_c",
-            "class_a(has_class_b)>class_b",
+            "class_a(class_b)>class_b(class_c)>class_c",
+            "class_a(class_b)>class_b",
         ),
     ],
 )
@@ -108,10 +108,10 @@ def test_extract_first_element(path_str: str, expected_first_element: str):
 @pytest.mark.parametrize(
     "path_str, expected_target_class",
     [
-        ("class_a(has_class_b)>class_b", "class_b"),
-        ("class_a<(has_class_a)class_b", "class_b"),
+        ("class_a(class_b)>class_b", "class_b"),
+        ("class_a<(class_a)class_b", "class_b"),
         (
-            "class_a(has_class_b)>class_b(has_class_c)>class_c",
+            "class_a(class_b)>class_b(class_c)>class_c",
             "class_c",
         ),
     ],
@@ -126,12 +126,12 @@ def test_get_target_class(path_str: str, expected_target_class: str):
 @pytest.mark.parametrize(
     "path_str, expected_first_element, expected_remaining_path",
     [
-        ("class_a(has_class_b)>class_b", "class_a(has_class_b)>class_b", None),
-        ("class_a<(has_class_a)class_b", "class_a<(has_class_a)class_b", None),
+        ("class_a(class_b)>class_b", "class_a(class_b)>class_b", None),
+        ("class_a<(class_a)class_b", "class_a<(class_a)class_b", None),
         (
-            "class_a(has_class_b)>class_b(has_class_c)>class_c",
-            "class_a(has_class_b)>class_b",
-            "class_b(has_class_c)>class_c",
+            "class_a(class_b)>class_b(class_c)>class_c",
+            "class_a(class_b)>class_b",
+            "class_b(class_c)>class_c",
         ),
     ],
 )
@@ -150,13 +150,13 @@ def test_split_first_element(
 @pytest.mark.parametrize(
     "path_str, expected_elements",
     [
-        ("class_a(has_class_b)>class_b", ["class_a(has_class_b)>class_b"]),
-        ("class_a<(has_class_a)class_b", ["class_a<(has_class_a)class_b"]),
+        ("class_a(class_b)>class_b", ["class_a(class_b)>class_b"]),
+        ("class_a<(class_a)class_b", ["class_a<(class_a)class_b"]),
         (
-            "class_a(has_class_b)>class_b(has_class_c)>class_c",
+            "class_a(class_b)>class_b(class_c)>class_c",
             [
-                "class_a(has_class_b)>class_b",
-                "class_b(has_class_c)>class_c",
+                "class_a(class_b)>class_b",
+                "class_b(class_c)>class_c",
             ],
         ),
     ],
@@ -171,11 +171,11 @@ def test_get_string_elements(path_str: str, expected_elements: list[str]):
 @pytest.mark.parametrize(
     "string_element, is_valid",
     [
-        ("class_a(has_class_b)>class_b", True),
-        ("class_a<(has_class_a)class_b", True),
-        ("class_a<(has_class_a)>class_b", False),
+        ("class_a(class_b)>class_b", True),
+        ("class_a<(class_a)class_b", True),
+        ("class_a<(class_a)>class_b", False),
         ("class_a>class_b", False),
-        ("class_a(has_class_b)>class_b(has_class_c)>class_c", False),
+        ("class_a(class_b)>class_b(class_c)>class_c", False),
     ],
 )
 def test_validate_string_element(string_element: str, is_valid: bool):
@@ -188,8 +188,8 @@ def test_validate_string_element(string_element: str, is_valid: bool):
 @pytest.mark.parametrize(
     "string_element, expected_type",
     [
-        ("class_a(has_class_b)>class_b", ReferencePathElementType.ACTIVE),
-        ("class_a<(has_class_a)class_b", ReferencePathElementType.PASSIVE),
+        ("class_a(class_b)>class_b", ReferencePathElementType.ACTIVE),
+        ("class_a<(class_a)class_b", ReferencePathElementType.PASSIVE),
     ],
 )
 def test_get_element_type(string_element: str, expected_type: ReferencePathElementType):
@@ -202,8 +202,8 @@ def test_get_element_type(string_element: str, expected_type: ReferencePathEleme
 @pytest.mark.parametrize(
     "string_element, expected_source, expected_slot, expected_target",
     [
-        ("class_a(has_class_b)>class_b", "class_a", "has_class_b", "class_b"),
-        ("class_a<(has_class_a)class_b", "class_a", "has_class_a", "class_b"),
+        ("class_a(class_b)>class_b", "class_a", "class_b", "class_b"),
+        ("class_a<(class_a)class_b", "class_a", "class_a", "class_b"),
     ],
 )
 def test_get_element_components(
@@ -223,20 +223,20 @@ def test_get_element_components(
     "string_element, expected_object",
     [
         (
-            "class_a(has_class_b)>class_b",
+            "class_a(class_b)>class_b",
             ReferencePathElement(
                 type_=ReferencePathElementType.ACTIVE,
                 source="class_a",
-                slot="has_class_b",
+                slot="class_b",
                 target="class_b",
             ),
         ),
         (
-            "class_a<(has_class_a)class_b",
+            "class_a<(class_a)class_b",
             ReferencePathElement(
                 type_=ReferencePathElementType.PASSIVE,
                 source="class_a",
-                slot="has_class_a",
+                slot="class_a",
                 target="class_b",
             ),
         ),
@@ -255,57 +255,57 @@ def test_string_element_to_object(
     "path_str, expected_elements",
     [
         (
-            "class_a(has_class_b)>class_b",
+            "class_a(class_b)>class_b",
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_a",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_b",
                 )
             ],
         ),
         (
-            "class_a<(has_class_a)class_b",
+            "class_a<(class_a)class_b",
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.PASSIVE,
                     source="class_a",
-                    slot="has_class_a",
+                    slot="class_a",
                     target="class_b",
                 )
             ],
         ),
         (
-            "class_a(has_class_b)>class_b(has_class_c)>class_c",
+            "class_a(class_b)>class_b(class_c)>class_c",
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_a",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_b",
                 ),
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_b",
-                    slot="has_class_c",
+                    slot="class_c",
                     target="class_c",
                 ),
             ],
         ),
         (
-            "class_a(has_class_b)>class_b<(has_class_b)class_c",
+            "class_a(class_b)>class_b<(class_b)class_c",
             [
                 ReferencePathElement(
                     type_=ReferencePathElementType.ACTIVE,
                     source="class_a",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_b",
                 ),
                 ReferencePathElement(
                     type_=ReferencePathElementType.PASSIVE,
                     source="class_b",
-                    slot="has_class_b",
+                    slot="class_b",
                     target="class_c",
                 ),
             ],

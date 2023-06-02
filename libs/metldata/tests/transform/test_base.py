@@ -20,9 +20,9 @@
 import pytest
 from pydantic import ValidationError
 
-from metldata.builtin_transformations.delete_slots import slot_deletion_transformation
+from metldata.builtin_transformations.delete_slots import SLOT_DELETION_TRANSFORMATION
 from metldata.builtin_transformations.infer_references import (
-    reference_inference_transformation,
+    REFERENCE_INFERENCE_TRANSFORMATION,
 )
 from metldata.transform.base import WorkflowDefinition, WorkflowStep
 from tests.fixtures.workflows import EXAMPLE_WORKFLOW_DEFINITION
@@ -36,12 +36,12 @@ def test_workflow_definition_invalid_step_refs():
             steps={
                 "infer_references": WorkflowStep(
                     description="A step for inferring references.",
-                    transformation_definition=reference_inference_transformation,
+                    transformation_definition=REFERENCE_INFERENCE_TRANSFORMATION,
                     input=None,
                 ),
                 "delete_slots": WorkflowStep(
                     description="A step for deleting slots.",
-                    transformation_definition=slot_deletion_transformation,
+                    transformation_definition=SLOT_DELETION_TRANSFORMATION,
                     input="non_existing_step",
                 ),
             },
@@ -60,12 +60,12 @@ def test_workflow_definition_invalid_multiple_first_steps():
             steps={
                 "infer_references": WorkflowStep(
                     description="A step for inferring references.",
-                    transformation_definition=reference_inference_transformation,
+                    transformation_definition=REFERENCE_INFERENCE_TRANSFORMATION,
                     input=None,
                 ),
                 "delete_slots": WorkflowStep(
                     description="A step for deleting slots.",
-                    transformation_definition=slot_deletion_transformation,
+                    transformation_definition=SLOT_DELETION_TRANSFORMATION,
                     input=None,
                 ),
             },
@@ -84,12 +84,12 @@ def test_workflow_definition_invalid_artifacts():
             steps={
                 "infer_references": WorkflowStep(
                     description="A step for inferring references.",
-                    transformation_definition=reference_inference_transformation,
+                    transformation_definition=REFERENCE_INFERENCE_TRANSFORMATION,
                     input=None,
                 ),
                 "delete_slots": WorkflowStep(
                     description="A step for deleting slots.",
-                    transformation_definition=slot_deletion_transformation,
+                    transformation_definition=SLOT_DELETION_TRANSFORMATION,
                     input=None,
                 ),
             },
@@ -110,10 +110,10 @@ def test_workflow_definition_config_cls():
     assert "delete_slots" in config_fields
     assert (
         config_fields["infer_references"].type_
-        == reference_inference_transformation.config_cls
+        == REFERENCE_INFERENCE_TRANSFORMATION.config_cls
     )
     assert (
-        config_fields["delete_slots"].type_ == slot_deletion_transformation.config_cls
+        config_fields["delete_slots"].type_ == SLOT_DELETION_TRANSFORMATION.config_cls
     )
 
 
@@ -125,22 +125,22 @@ def test_workflow_definition_step_order_happy():
         steps={
             "step3": WorkflowStep(
                 description="A test step.",
-                transformation_definition=slot_deletion_transformation,
+                transformation_definition=SLOT_DELETION_TRANSFORMATION,
                 input="step2",
             ),
             "step2": WorkflowStep(
                 description="A test step.",
-                transformation_definition=slot_deletion_transformation,
+                transformation_definition=SLOT_DELETION_TRANSFORMATION,
                 input="step1",
             ),
             "step1": WorkflowStep(
                 description="A test step.",
-                transformation_definition=slot_deletion_transformation,
+                transformation_definition=SLOT_DELETION_TRANSFORMATION,
                 input=None,
             ),
             "step4": WorkflowStep(
                 description="A test step.",
-                transformation_definition=slot_deletion_transformation,
+                transformation_definition=SLOT_DELETION_TRANSFORMATION,
                 input="step2",
             ),
         },
@@ -174,22 +174,22 @@ def test_workflow_definition_step_order_circular():
         steps={
             "step1": WorkflowStep(
                 description="A test step.",
-                transformation_definition=slot_deletion_transformation,
+                transformation_definition=SLOT_DELETION_TRANSFORMATION,
                 input=None,
             ),
             "step2": WorkflowStep(
                 description="A test step.",
-                transformation_definition=slot_deletion_transformation,
+                transformation_definition=SLOT_DELETION_TRANSFORMATION,
                 input="step4",
             ),
             "step3": WorkflowStep(
                 description="A test step.",
-                transformation_definition=slot_deletion_transformation,
+                transformation_definition=SLOT_DELETION_TRANSFORMATION,
                 input="step2",
             ),
             "step4": WorkflowStep(
                 description="A test step.",
-                transformation_definition=slot_deletion_transformation,
+                transformation_definition=SLOT_DELETION_TRANSFORMATION,
                 input="step3",
             ),
         },

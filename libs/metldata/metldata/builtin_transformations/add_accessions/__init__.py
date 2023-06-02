@@ -20,6 +20,6 @@
 # shortcuts:
 # pylint: disable=unused-import
 from metldata.builtin_transformations.add_accessions.main import (  # noqa: F401
+    ACCESSION_ADDITION_TRANSFORMATION,
     AccessionAdditionConfig,
-    accession_addition_transformation,
 )

@@ -30,18 +30,18 @@ def test_config():
 
     inferred_ref_map = {
         "class_a": {
-            "has_class_d": {
-                "path": "class_a(has_class_b)>class_b(has_class_d)>class_d",
+            "class_d": {
+                "path": "class_a(class_b)>class_b(class_d)>class_d",
                 "multivalued": False,
             },
-            "has_class_c": {
-                "path": "class_a(has_class_b)>class_b<(has_class_c)class_c",
+            "class_c": {
+                "path": "class_a(class_b)>class_b<(class_c)class_c",
                 "multivalued": True,
             },
         },
         "class_b": {
-            "has_class_c": {
-                "path": "class_b<(has_class_c)class_c",
+            "class_c": {
+                "path": "class_b<(class_c)class_c",
                 "multivalued": True,
             }
         },
@@ -50,26 +50,22 @@ def test_config():
         InferredReference(
             source="class_a",
             target="class_d",
-            path=ReferencePath(
-                path_str="class_a(has_class_b)>class_b(has_class_d)>class_d"
-            ),
-            new_slot="has_class_d",
+            path=ReferencePath(path_str="class_a(class_b)>class_b(class_d)>class_d"),
+            new_slot="class_d",
             multivalued=False,
         ),
         InferredReference(
             source="class_a",
             target="class_c",
-            path=ReferencePath(
-                path_str="class_a(has_class_b)>class_b<(has_class_c)class_c"
-            ),
-            new_slot="has_class_c",
+            path=ReferencePath(path_str="class_a(class_b)>class_b<(class_c)class_c"),
+            new_slot="class_c",
             multivalued=True,
         ),
         InferredReference(
             source="class_b",
             target="class_c",
-            path=ReferencePath(path_str="class_b<(has_class_c)class_c"),
-            new_slot="has_class_c",
+            path=ReferencePath(path_str="class_b<(class_c)class_c"),
+            new_slot="class_c",
             multivalued=True,
         ),
     ]

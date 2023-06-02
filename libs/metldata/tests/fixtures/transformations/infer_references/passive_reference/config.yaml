@@ -1,5 +1,5 @@
 inferred_ref_map:
   File:
-    has_dataset:
-      path: "File<(has_file)Dataset"
+    datasets:
+      path: "File<(files)Dataset"
       multivalued: true

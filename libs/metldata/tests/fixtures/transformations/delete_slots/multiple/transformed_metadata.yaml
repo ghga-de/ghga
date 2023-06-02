@@ -1,4 +1,4 @@
-has_file:
+files:
   - alias: test_sample_01_R1
     format: fastq
     size: 299943
@@ -11,25 +11,25 @@ has_file:
   - alias: test_sample_02_R2
     format: fastq
     size: 234243
-has_dataset:
+datasets:
   - alias: test_dataset_01
-    has_file:
+    files:
       - test_sample_01_R1
       - test_sample_01_R2
       - test_sample_02_R1
       - test_sample_02_R2
-has_sample:
+samples:
   - alias: test_sample_01
-    has_file:
+    files:
       - test_sample_01_R1
       - test_sample_01_R2
   - alias: test_sample_02
-    has_file:
+    files:
       - test_sample_02_R1
       - test_sample_02_R2
-has_experiment:
+experiments:
   - alias: test_experiment_01
     description: A test experiment.
-    has_sample:
+    samples:
       - test_sample_01
       - test_sample_02

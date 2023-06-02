@@ -96,7 +96,7 @@ class SlotMergingMetadataTransformer(MetadataTransformer[SlotMergingConfig]):
         )
 
 
-slot_merging_transformation = TransformationDefinition[SlotMergingConfig](
+SLOT_MERGING_TRANSFORMATION = TransformationDefinition[SlotMergingConfig](
     config_cls=SlotMergingConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,
