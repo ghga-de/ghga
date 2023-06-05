@@ -8,7 +8,7 @@ This epic implements mocks for all Metadata Repository Service and Metadata Sear
 ### Included/Required:
 The epic includes and requires:
 - the addition of data objects to be mocked based on the current metadata model and currently used metadata objects in the deployed version
-- that there is at least one data object for each edge case (e.g. at least one object with/without an EGA Accession ID (vs. a GHGA Accession ID), a DAC form, a linked study)
+- that there is at least one data object for each edge case (e.g. at least one object with/without an EGA Accession ID (vs. a GHGA Accession ID), a DAC form, a linked study), e.g. by modifying one template object
 
 ### Not included:
 This epic does not include:
