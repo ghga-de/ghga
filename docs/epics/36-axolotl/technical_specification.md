@@ -26,6 +26,8 @@ Browsing data:
 - The user filters datasets by keyword
 - The user filters datasets by filter facets
 
+Please note, filtering and specifying keywords will not change the displayed items since the response from the metadata repository service is mocked and static. This should also be documented in the readme.
+
 ## API Definitions:
 
 ### Metadata Search Service
