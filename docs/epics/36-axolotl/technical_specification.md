@@ -14,7 +14,7 @@ The epic includes and requires:
 This epic does not include:
 - the addition of 'realistic' data; the data will be used to test what is necessary to test the display of all features available on the data portal, thus additional fields that are not used will not be included.
 
-## User Journeys (optional)
+## User Journeys
 
 This epic covers the following user journeys:
 
