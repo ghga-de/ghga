@@ -40,7 +40,8 @@ from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: 
         ),
     ],
 )
-def test_download_content_range(
+@pytest.mark.asyncio
+async def test_download_content_range(
     start: int,
     end: int,
     file_size: int,
@@ -48,8 +49,8 @@ def test_download_content_range(
 ):
     """Test the `download_content_range` function."""
     # prepare state and the expected result:
-    big_object = get_big_s3_object(s3_fixture, object_size=file_size)
-    download_url = s3_fixture.storage.get_object_download_url(
+    big_object = await get_big_s3_object(s3_fixture, object_size=file_size)
+    download_url = await s3_fixture.storage.get_object_download_url(
         object_id=big_object.object_id, bucket_id=big_object.bucket_id
     )
     expected_bytes = big_object.content[start : end + 1]
@@ -69,17 +70,18 @@ def test_download_content_range(
     "part_size",
     [5 * 1024 * 1024, 3 * 1024 * 1024, 1 * 1024 * 1024],
 )
-def test_download_file_parts(
+@pytest.mark.asyncio
+async def test_download_file_parts(
     part_size: int,
     s3_fixture: S3Fixture,  # noqa: F811
 ):
     """Test the `download_file_parts` function."""
     # prepare state and the expected result:
-    big_object = get_big_s3_object(s3_fixture)
+    big_object = await get_big_s3_object(s3_fixture)
     total_file_size = len(big_object.content)
     expected_bytes = big_object.content
 
-    download_url = s3_fixture.storage.get_object_download_url(
+    download_url = await s3_fixture.storage.get_object_download_url(
         object_id=big_object.object_id, bucket_id=big_object.bucket_id
     )
 

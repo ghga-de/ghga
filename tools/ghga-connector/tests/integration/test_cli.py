@@ -27,7 +27,7 @@ from unittest.mock import Mock, patch
 
 import crypt4gh.keys
 import pytest
-from ghga_service_chassis_lib.utils import big_temp_file
+from ghga_service_commons.utils.temp_files import big_temp_file
 
 from ghga_connector.cli import download, upload
 from ghga_connector.core import exceptions
@@ -51,7 +51,8 @@ from tests.fixtures.utils import PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, mock_wps_tok
         (20 * 1024 * 1024, DEFAULT_PART_SIZE),
     ],
 )
-def test_multipart_download(
+@pytest.mark.asyncio
+async def test_multipart_download(
     file_size: int,
     part_size: int,
     s3_fixture: S3Fixture,  # noqa F811
@@ -59,7 +60,7 @@ def test_multipart_download(
     monkeypatch,
 ):
     """Test the multipart download of a file"""
-    big_object = get_big_s3_object(s3_fixture, object_size=file_size)
+    big_object = await get_big_s3_object(s3_fixture, object_size=file_size)
 
     # The download function will ask the user for input.
     monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
@@ -77,7 +78,7 @@ def test_multipart_download(
     file_size_ = len(big_object.content)
 
     # get s3 download url
-    download_url = s3_fixture.storage.get_object_download_url(
+    download_url = await s3_fixture.storage.get_object_download_url(
         bucket_id=big_object.bucket_id,
         object_id=big_object.object_id,
         expires_after=180,
@@ -137,7 +138,8 @@ def test_multipart_download(
         ),
     ],
 )
-def test_download(
+@pytest.mark.asyncio
+async def test_download(
     bad_url: bool,
     bad_outdir: bool,
     file_name: str,
@@ -164,7 +166,7 @@ def test_download(
     )
 
     if file.populate_storage:
-        download_url = s3_fixture.storage.get_object_download_url(
+        download_url = await s3_fixture.storage.get_object_download_url(
             bucket_id=file.grouping_label,
             object_id=file.file_id,
             expires_after=60,
@@ -256,14 +258,14 @@ def test_download(
         (False, "encrypted_file", exceptions.FileAlreadyEncryptedError),
     ],
 )
-def test_upload(
+@pytest.mark.asyncio
+async def test_upload(
     bad_url: bool,
     file_name: str,
     expected_exception: type[Optional[Exception]],
     s3_fixture: S3Fixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
-
     uploadable_file = state.FILES[file_name]
 
     if file_name == "encrypted_file":
@@ -277,12 +279,12 @@ def test_upload(
         encrypted_path = encryptor.encrypt_file(file_path=uploadable_file.file_path)
 
     # initiate upload
-    upload_id = s3_fixture.storage.init_multipart_upload(
+    upload_id = await s3_fixture.storage.init_multipart_upload(
         bucket_id=uploadable_file.grouping_label,
         object_id=uploadable_file.file_id,
     )
 
-    upload_url = s3_fixture.storage.get_part_upload_url(
+    upload_url = await s3_fixture.storage.get_part_upload_url(
         bucket_id=uploadable_file.grouping_label,
         object_id=uploadable_file.file_id,
         upload_id=upload_id,
@@ -311,13 +313,13 @@ def test_upload(
                         submitter_private_key_path=Path(PRIVATE_KEY_FILE),
                     )
 
-                s3_fixture.storage.complete_multipart_upload(
+                await s3_fixture.storage.complete_multipart_upload(
                     upload_id=upload_id,
                     bucket_id=uploadable_file.grouping_label,
                     object_id=uploadable_file.file_id,
                 )
 
-                assert s3_fixture.storage.does_object_exist(
+                assert await s3_fixture.storage.does_object_exist(
                     bucket_id=uploadable_file.grouping_label,
                     object_id=uploadable_file.file_id,
                 )
@@ -330,13 +332,13 @@ def test_upload(
         (20 * 1024 * 1024, 16),
     ],
 )
-def test_multipart_upload(
+@pytest.mark.asyncio
+async def test_multipart_upload(
     file_size: int,
     anticipated_part_size: int,
     s3_fixture: S3Fixture,  # noqa F811
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
-
     bucket_id = s3_fixture.existing_buckets[0]
     file_id = "uploadable-" + str(anticipated_part_size)
 
@@ -348,13 +350,13 @@ def test_multipart_upload(
         anticipated_part_quantity += 1
 
     # initiate upload
-    upload_id = s3_fixture.storage.init_multipart_upload(
+    upload_id = await s3_fixture.storage.init_multipart_upload(
         bucket_id=bucket_id,
         object_id=file_id,
     )
 
     # create presigned url for upload part 1
-    upload_url_1 = s3_fixture.storage.get_part_upload_url(
+    upload_url_1 = await s3_fixture.storage.get_part_upload_url(
         upload_id=upload_id,
         bucket_id=bucket_id,
         object_id=file_id,
@@ -362,7 +364,7 @@ def test_multipart_upload(
     )
 
     # create presigned url for upload part 2
-    upload_url_2 = s3_fixture.storage.get_part_upload_url(
+    upload_url_2 = await s3_fixture.storage.get_part_upload_url(
         upload_id=upload_id,
         bucket_id=bucket_id,
         object_id=file_id,
@@ -389,14 +391,14 @@ def test_multipart_upload(
                 )
 
         # confirm upload
-        s3_fixture.storage.complete_multipart_upload(
+        await s3_fixture.storage.complete_multipart_upload(
             upload_id=upload_id,
             bucket_id=bucket_id,
             object_id=file_id,
             anticipated_part_quantity=anticipated_part_quantity,
             anticipated_part_size=anticipated_part_size,
         )
-        assert s3_fixture.storage.does_object_exist(
+        assert await s3_fixture.storage.does_object_exist(
             bucket_id=bucket_id,
             object_id=file_id,
         )

@@ -24,7 +24,7 @@ from typing import Optional
 
 import crypt4gh.keys
 import pytest
-from ghga_service_chassis_lib.utils import big_temp_file
+from ghga_service_commons.utils.temp_files import big_temp_file
 
 from ghga_connector.core.file_operations import (
     Crypt4GHDecryptor,

@@ -16,7 +16,7 @@
 
 """Global Config Parameters"""
 
-from ghga_service_chassis_lib.config import config_from_yaml
+from hexkit.config import config_from_yaml
 from pydantic import BaseSettings, Field
 
 from ghga_connector.core.constants import DEFAULT_PART_SIZE, MAX_RETRIES, MAX_WAIT_TIME

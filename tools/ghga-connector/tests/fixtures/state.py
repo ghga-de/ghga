@@ -18,8 +18,7 @@
 from pathlib import Path
 from typing import Dict, List
 
-from ghga_service_chassis_lib.object_storage_dao_testing import ObjectFixture
-from ghga_service_chassis_lib.utils import TEST_FILE_PATHS
+from hexkit.providers.s3.testutils import TEST_FILE_PATHS, FileObject
 
 
 class FileState:
@@ -44,10 +43,10 @@ class FileState:
         self.file_path = file_path
         self.populate_storage = populate_storage
 
-        self.storage_objects: List[ObjectFixture] = []
+        self.storage_objects: List[FileObject] = []
         if self.populate_storage:
             self.storage_objects.append(
-                ObjectFixture(
+                FileObject(
                     file_path=self.file_path,
                     bucket_id=self.grouping_label,
                     object_id=self.file_id,
