@@ -33,7 +33,7 @@ Browsing data:
 Searching through our dataset of metadata objects:
 
 - `POST /rpc/search/?document_type={documentType}&return_facets=true&skip={skip}&limit={limit}`
-- `documentType`: the type of metadata objects we wish to search for [(see docs)](https://ghga-de.github.io/ghga-metadata-schema/docs/type/).
+- `documentType`: the type of metadata objects we wish to search for [(see docs)](https://ghga-de.github.io/ghga-metadata-schema/docs/type/), only need to support "Dataset"
 - `skip`: the offset from 0 from which we wish to start our search (and retrieve results). Used for pagination.
 - `limit`: the amount of search results we wish to be returned.
 - request body:
