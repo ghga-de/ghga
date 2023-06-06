@@ -125,12 +125,18 @@ class MetadataSubmissionUpserted(BaseModel):
 
 class FileUploadReceived(UploadDateModel):
     """
-    This event is triggered when an new file upload was received.
+    This event is triggered when a new file upload is received.
     """
 
     file_id: str = Field(
         ...,
         description="The public ID of the file as present in the metadata catalog.",
+    )
+    source_object_id: str = Field(
+        ..., description="The ID of the file in the specific S3 bucket."
+    )
+    source_bucket_id: str = Field(
+        ..., description="The ID/name of the S3 bucket used to store the file."
     )
     submitter_public_key: str = Field(
         ...,
@@ -156,11 +162,17 @@ class FileUploadReceived(UploadDateModel):
 
 class FileUploadValidationSuccess(UploadDateModel):
     """
-    This event is triggered when an uploaded file was successfully validated.
+    This event is triggered when an uploaded file is successfully validated.
     """
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
+    )
+    source_object_id: str = Field(
+        ..., description="The ID of the file in the specific S3 bucket."
+    )
+    source_bucket_id: str = Field(
+        ..., description="The ID/name of the S3 bucket used to store the file."
     )
     decrypted_size: int = Field(
         ...,
@@ -222,6 +234,13 @@ class FileUploadValidationFailure(UploadDateModel):
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
     )
+    source_object_id: str = Field(
+        ..., description="The ID of the file in the specific S3 bucket."
+    )
+    source_bucket_id: str = Field(
+        ...,
+        description="The ID/name of the S3 bucket used to store the file.",
+    )
     reason: str = Field(
         ...,
         description="The reason why the validation failed.",
@@ -272,12 +291,19 @@ class FileRegisteredForDownload(UploadDateModel):
 
 class NonStagedFileRequested(BaseModel):
     """
-    This event type is triggered when a user requested to download a file that is not
-    yet present in the outbox and need to be staged.
+    This event type is triggered when a user requests to download a file that is not
+    yet present in the outbox and needs to be staged.
     """
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
+    )
+    target_object_id: str = Field(
+        ..., description="The ID of the file in the specific S3 bucket."
+    )
+    target_bucket_id: str = Field(
+        ...,
+        description="The ID/name of the S3 bucket in which the object was expected.",
     )
     decrypted_sha256: str = Field(
         ...,
