@@ -2,4 +2,4 @@
 
 -r requirements-dev-common.txt
 
-hexkit==0.9.2
+hexkit==0.10.0
