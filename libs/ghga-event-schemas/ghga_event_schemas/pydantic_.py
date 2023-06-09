@@ -132,10 +132,10 @@ class FileUploadReceived(UploadDateModel):
         ...,
         description="The public ID of the file as present in the metadata catalog.",
     )
-    source_object_id: str = Field(
+    object_id: str = Field(
         ..., description="The ID of the file in the specific S3 bucket."
     )
-    source_bucket_id: str = Field(
+    bucket_id: str = Field(
         ..., description="The ID/name of the S3 bucket used to store the file."
     )
     submitter_public_key: str = Field(
@@ -168,10 +168,10 @@ class FileUploadValidationSuccess(UploadDateModel):
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
     )
-    source_object_id: str = Field(
+    object_id: str = Field(
         ..., description="The ID of the file in the specific S3 bucket."
     )
-    source_bucket_id: str = Field(
+    bucket_id: str = Field(
         ..., description="The ID/name of the S3 bucket used to store the file."
     )
     decrypted_size: int = Field(
@@ -234,10 +234,10 @@ class FileUploadValidationFailure(UploadDateModel):
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
     )
-    source_object_id: str = Field(
+    object_id: str = Field(
         ..., description="The ID of the file in the specific S3 bucket."
     )
-    source_bucket_id: str = Field(
+    bucket_id: str = Field(
         ...,
         description="The ID/name of the S3 bucket used to store the file.",
     )
@@ -257,7 +257,7 @@ class FileInternallyRegistered(FileUploadValidationSuccess):
     This event is triggered when an newly uploaded file is internally registered.
     """
 
-    # currently identical to the FileUploadValidationSuccess event model.
+    # currently identical to the FileUploadValidationSuccess event model
 
     class Config:
         """Additional Model Config."""
