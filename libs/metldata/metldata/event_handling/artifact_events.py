@@ -14,14 +14,12 @@
 # limitations under the License.
 #
 
-"""Manages submissions and acts as a source of truth for all derived transformations
-and artifacts."""
-
+"""Logic for handling artifact events."""
 
 from pydantic import BaseModel, Field, validator
 
 
-class ArtifactPublisherConfig(BaseModel):
+class ArtifactEventConfig(BaseModel):
     """Config parameters and their defaults."""
 
     artifact_topic_prefix: str = Field(

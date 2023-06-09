@@ -20,8 +20,8 @@ import pytest
 
 from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
-from metldata.config import SubmissionAndTransformationConfig
-from metldata.event_handling import FileSystemEventPublisher
+from metldata.config import SubmissionConfig
+from metldata.event_handling.event_handling import FileSystemEventPublisher
 from metldata.submission_registry import models
 from metldata.submission_registry.event_publisher import SourceEventPublisher
 from metldata.submission_registry.submission_registry import SubmissionRegistry
@@ -37,7 +37,7 @@ from tests.submission_registry.test_event_publisher import check_source_events
 
 
 def test_happy(
-    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test the happy path of using the submission registry."""
@@ -120,7 +120,7 @@ def test_happy(
 
 
 def test_failed_content_validation(
-    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test that invalid content cannot be upserted."""
@@ -160,7 +160,7 @@ def test_failed_content_validation(
 
 
 def test_update_after_completion(
-    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test no updates can be carried out after completion."""

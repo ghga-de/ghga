@@ -33,8 +33,9 @@ from metldata.builtin_transformations.infer_references import (
 )
 from metldata.builtin_transformations.merge_slots import SLOT_MERGING_TRANSFORMATION
 from metldata.custom_types import Json
+from metldata.event_handling.models import SubmissionAnnotation
 from metldata.model_utils.essentials import MetadataModel
-from metldata.transform.base import MetadataAnnotation, TransformationDefinition
+from metldata.transform.base import TransformationDefinition
 from tests.fixtures.utils import BASE_DIR, read_yaml
 
 Config = TypeVar("Config", bound=BaseModel)
@@ -50,7 +51,7 @@ class TransformationTestCase(Generic[Config]):
     config: Config
     original_model: MetadataModel
     original_metadata: Json
-    metadata_annotation: MetadataAnnotation
+    metadata_annotation: SubmissionAnnotation
     transformed_model: MetadataModel
     transformed_metadata: Json
 
@@ -82,9 +83,9 @@ def _read_test_case(
         original_model=MetadataModel.init_from_path(original_model_path),
         original_metadata=read_yaml(original_metadata_path),
         metadata_annotation=(
-            MetadataAnnotation(**read_yaml(metadata_annotation_path))
+            SubmissionAnnotation(**read_yaml(metadata_annotation_path))
             if metadata_annotation_path.exists()
-            else MetadataAnnotation(accession_map={})
+            else SubmissionAnnotation(accession_map={})
         ),
         transformed_model=MetadataModel.init_from_path(transformed_model_path),
         transformed_metadata=read_yaml(transformed_metadata_path),

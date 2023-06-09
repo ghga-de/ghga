@@ -26,15 +26,11 @@ from metldata.builtin_transformations.add_accessions.metadata_transform import (
 from metldata.builtin_transformations.add_accessions.model_transform import (
     add_accessions_to_model,
 )
+from metldata.event_handling.models import SubmissionAnnotation
 from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.assumptions import check_basic_model_assumption
 from metldata.model_utils.essentials import MetadataModel
-from metldata.transform.base import (
-    Json,
-    MetadataAnnotation,
-    MetadataTransformer,
-    TransformationDefinition,
-)
+from metldata.transform.base import Json, MetadataTransformer, TransformationDefinition
 
 
 class AccessionAdditionMetadataTransformer(
@@ -64,7 +60,7 @@ class AccessionAdditionMetadataTransformer(
             anchor_points_by_target=self._anchor_points_by_target,
         )
 
-    def transform(self, *, metadata: Json, annotation: MetadataAnnotation) -> Json:
+    def transform(self, *, metadata: Json, annotation: SubmissionAnnotation) -> Json:
         """Transforms metadata.
 
         Args:

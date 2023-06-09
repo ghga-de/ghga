@@ -19,11 +19,11 @@
 from pydantic import BaseModel
 
 from metldata.custom_types import Json
+from metldata.event_handling.models import SubmissionAnnotation
 from metldata.model_utils.essentials import MetadataModel
 from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.transform.base import (
     Config,
-    MetadataAnnotation,
     TransformationDefinition,
     WorkflowConfig,
     WorkflowDefinition,
@@ -91,7 +91,7 @@ class TransformationHandler:
         )
 
     def transform_metadata(
-        self, metadata: Json, *, annotation: MetadataAnnotation
+        self, metadata: Json, *, annotation: SubmissionAnnotation
     ) -> Json:
         """Transforms metadata using the transformation definition. Validates the
         original metadata against the original model and the transformed metadata
@@ -253,7 +253,9 @@ class WorkflowHandler:
             self._resolved_workflow
         )
 
-    def run(self, *, metadata: Json, annotation: MetadataAnnotation) -> dict[str, Json]:
+    def run(
+        self, *, metadata: Json, annotation: SubmissionAnnotation
+    ) -> dict[str, Json]:
         """Run the workflow definition on metadata and its annotation to generate
         artifacts."""
 

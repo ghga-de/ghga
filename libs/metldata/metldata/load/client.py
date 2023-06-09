@@ -18,7 +18,7 @@
 
 import httpx
 
-from metldata.event_handling import FileSystemEventCollector
+from metldata.event_handling.event_handling import FileSystemEventCollector
 from metldata.load.collect import collect_artifacts
 from metldata.load.config import ArtifactLoaderClientConfig
 

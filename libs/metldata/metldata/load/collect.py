@@ -18,23 +18,19 @@
 
 from collections import defaultdict
 
-from pydantic import BaseModel, Field, validator
+from pydantic import Field, validator
 
-from metldata.event_handling import FileSystemEventCollector
+from metldata.event_handling.artifact_events import (
+    ArtifactEventConfig,
+    get_artifact_topic,
+)
+from metldata.event_handling.event_handling import FileSystemEventCollector
 from metldata.load.models import ArtifactResourceDict
 
 
-class ArtifactCollectorConfig(BaseModel):
+class ArtifactCollectorConfig(ArtifactEventConfig):
     """Config parameters and their defaults."""
 
-    artifact_topic_prefix: str = Field(
-        ...,
-        description=(
-            "The prefix used for topics containing artifacts. The topic name is"
-            + " expected to be '{prefix}.{artifact_type}'. The prefix must not contain"
-            + " dots."
-        ),
-    )
     artifact_types: list[str] = Field(
         ...,
         description=(
@@ -43,16 +39,6 @@ class ArtifactCollectorConfig(BaseModel):
             + " contain dots."
         ),
     )
-
-    # pylint: disable=no-self-argument
-    @validator("artifact_topic_prefix")
-    def artifact_topic_prefix_must_not_contain_dots(cls, value: str):
-        """Validate that artifact topic prefix does not contain dots."""
-
-        if "." in value:
-            raise ValueError(f"Artifact topic prefix '{value}' must not contain dots.")
-
-        return value
 
     # pylint: disable=no-self-argument
     @validator("artifact_types")
@@ -66,21 +52,6 @@ class ArtifactCollectorConfig(BaseModel):
                 )
 
         return value
-
-
-def get_artifact_topic(*, artifact_topic_prefix: str, artifact_type: str) -> str:
-    """Get the topic name for the given artifact type.
-    Both the provided artifact_topic_prefix and the artifact_type must not contain dots.
-    """
-
-    if "." in artifact_topic_prefix:
-        raise ValueError(
-            f"Artifact topic prefix '{artifact_topic_prefix}' must not contain dots."
-        )
-    if "." in artifact_type:
-        raise ValueError(f"Artifact type '{artifact_type}' must not contain dots.")
-
-    return f"{artifact_topic_prefix}.{artifact_type}"
 
 
 def collect_artifacts(

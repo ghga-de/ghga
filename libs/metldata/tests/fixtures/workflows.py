@@ -27,8 +27,9 @@ from metldata.builtin_transformations.infer_references import (
 )
 from metldata.builtin_workflows.ghga_archive import GHGA_ARCHIVE_WORKFLOW
 from metldata.custom_types import Json
+from metldata.event_handling.models import SubmissionAnnotation
 from metldata.model_utils.essentials import MetadataModel
-from metldata.transform.base import MetadataAnnotation, WorkflowDefinition, WorkflowStep
+from metldata.transform.base import WorkflowDefinition, WorkflowStep
 from tests.fixtures.utils import BASE_DIR, read_yaml
 
 Config = TypeVar("Config", bound=BaseModel)
@@ -64,7 +65,7 @@ class WorkflowTestCase(Generic[Config]):
     config: Config
     original_model: MetadataModel
     original_metadata: Json
-    metadata_annotation: MetadataAnnotation
+    submission_annotation: SubmissionAnnotation
     artifact_models: dict[str, MetadataModel]
     artifact_metadata: dict[str, Json]
 
@@ -107,10 +108,10 @@ def _read_test_case(
         config=workflow_definition.config_cls(**read_yaml(config_path)),  # type: ignore
         original_model=MetadataModel.init_from_path(original_model_path),
         original_metadata=read_yaml(original_metadata_path),
-        metadata_annotation=(
-            MetadataAnnotation(**read_yaml(metadata_annotation_path))
+        submission_annotation=(
+            SubmissionAnnotation(**read_yaml(metadata_annotation_path))
             if metadata_annotation_path.exists()
-            else MetadataAnnotation(accession_map={})
+            else SubmissionAnnotation(accession_map={})
         ),
         artifact_models=artifact_models,
         artifact_metadata=artifact_metadata,
@@ -159,10 +160,10 @@ WORKFLOWS_BY_NAME: dict[str, WorkflowDefinition] = {
 
 WORKFLOW_TEST_CASES = _read_all_test_cases(workflows_by_name=WORKFLOWS_BY_NAME)
 
-EXAMPLE_WORKFLOW_TEST_CASES = [
+EXAMPLE_WORKFLOW_TEST_CASE = [
     test_case
     for test_case in WORKFLOW_TEST_CASES
     if test_case.workflow_name == "example_workflow"
-]
-EXAMPLE_ARTIFACT_MODELS = EXAMPLE_WORKFLOW_TEST_CASES[0].artifact_models
-EXAMPLE_ARTIFACTS = EXAMPLE_WORKFLOW_TEST_CASES[0].artifact_metadata
+][0]
+EXAMPLE_ARTIFACT_MODELS = EXAMPLE_WORKFLOW_TEST_CASE.artifact_models
+EXAMPLE_ARTIFACTS = EXAMPLE_WORKFLOW_TEST_CASE.artifact_metadata

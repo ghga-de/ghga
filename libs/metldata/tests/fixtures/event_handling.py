@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from metldata.event_handling import (
+from metldata.event_handling.event_handling import (
     Event,
     FileSystemEventCollector,
     FileSystemEventConfig,

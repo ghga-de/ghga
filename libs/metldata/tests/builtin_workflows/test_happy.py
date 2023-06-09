@@ -55,7 +55,7 @@ def test_metadata_transform(
         original_model=test_case.original_model,
     )
     artifact_metadata = handler.run(
-        metadata=test_case.original_metadata, annotation=test_case.metadata_annotation
+        metadata=test_case.original_metadata, annotation=test_case.submission_annotation
     )
 
     for artifact, expected_metadata in test_case.artifact_metadata.items():

@@ -25,15 +25,11 @@ from metldata.builtin_transformations.infer_references.metadata_transform import
 from metldata.builtin_transformations.infer_references.model_transform import (
     add_references_to_model,
 )
+from metldata.event_handling.models import SubmissionAnnotation
 from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.assumptions import check_basic_model_assumption
 from metldata.model_utils.essentials import MetadataModel
-from metldata.transform.base import (
-    Json,
-    MetadataAnnotation,
-    MetadataTransformer,
-    TransformationDefinition,
-)
+from metldata.transform.base import Json, MetadataTransformer, TransformationDefinition
 
 
 class ReferenceInferenceMetadataTransformer(
@@ -59,7 +55,7 @@ class ReferenceInferenceMetadataTransformer(
             model=self._original_model
         )
 
-    def transform(self, *, metadata: Json, annotation: MetadataAnnotation) -> Json:
+    def transform(self, *, metadata: Json, annotation: SubmissionAnnotation) -> Json:
         """Transforms metadata.
 
         Args:

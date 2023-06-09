@@ -16,12 +16,12 @@
 """Testing the accession handler."""
 
 from metldata.accession_registry.accession_store import AccessionStore
-from metldata.config import SubmissionAndTransformationConfig
+from metldata.config import SubmissionConfig
 from tests.fixtures.config import config_sub_fixture  # noqa: F401
 
 
 def test_accession_store_happy(
-    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Test accession store happy path."""
 
@@ -39,7 +39,7 @@ def test_accession_store_happy(
 
 
 def test_accession_store_unkown_accession(
-    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Test accession store happy path."""
 

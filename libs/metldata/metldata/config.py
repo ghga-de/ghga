@@ -26,14 +26,12 @@ from metldata.submission_registry.config import Config as SubmissionRegistryConf
 
 # pylint: disable=too-many-ancestors
 @config_from_yaml(prefix="metl_sub")
-class SubmissionAndTransformationConfig(
-    AccessionRegistryConfig, SubmissionRegistryConfig
-):
+class SubmissionConfig(AccessionRegistryConfig, SubmissionRegistryConfig):
     """Config parameters and their defaults."""
 
 
 # Alias for the main config:
-Config = SubmissionAndTransformationConfig  # noqa: N806
+Config = SubmissionConfig  # noqa: N806
 
 
 @config_from_yaml(prefix="metl_load")

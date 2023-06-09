@@ -12,18 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Config Parameter Modeling and Parsing"""
+"""Config parameters and their defaults."""
 
-from metldata.submission_registry.event_publisher import SourceEventPublisherConfig
-from metldata.submission_registry.submission_registry import SubmissionRegistryConfig
-from metldata.submission_registry.submission_store import SubmissionStoreConfig
+
+from metldata.event_handling.event_handling import FileSystemEventConfig
+from metldata.transform.artifact_publisher import ArtifactEventPublisherConfig
+from metldata.transform.source_event_subscriber import SourceEventSubscriberConfig
 
 
 # pylint: disable=too-many-ancestors
-class Config(
-    SubmissionStoreConfig,
-    SubmissionRegistryConfig,
-    SourceEventPublisherConfig,
+class TransformationEventHandlingConfig(
+    FileSystemEventConfig, ArtifactEventPublisherConfig, SourceEventSubscriberConfig
 ):
-    """Config parameters and their defaults."""
+    """Config parameters for consuming source events and publishing artifacts."""

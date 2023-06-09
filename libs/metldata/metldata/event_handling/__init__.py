@@ -12,18 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Config Parameter Modeling and Parsing"""
-
-from metldata.submission_registry.event_publisher import SourceEventPublisherConfig
-from metldata.submission_registry.submission_registry import SubmissionRegistryConfig
-from metldata.submission_registry.submission_store import SubmissionStoreConfig
-
-
-# pylint: disable=too-many-ancestors
-class Config(
-    SubmissionStoreConfig,
-    SubmissionRegistryConfig,
-    SourceEventPublisherConfig,
-):
-    """Config parameters and their defaults."""
+"""Event handling logic."""

@@ -20,21 +20,13 @@ import asyncio
 import json
 
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import BaseSettings, Field
 
+from metldata.event_handling.submission_events import SourceEventConfig
 from metldata.submission_registry import models
 
 
-class SourceEventPublisherConfig(BaseSettings):
+class SourceEventPublisherConfig(SourceEventConfig):
     """Config parameters and their defaults."""
-
-    source_event_topic: str = Field(
-        "source_events",
-        description="Name of the topic to which source events are published.",
-    )
-    source_event_type: str = Field(
-        "source_event", description="Name of the event type for source events."
-    )
 
 
 class SourceEventPublisher:

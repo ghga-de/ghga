@@ -18,7 +18,7 @@
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from metldata.config import SubmissionAndTransformationConfig
+from metldata.config import SubmissionConfig
 from metldata.submission_registry.models import (
     StatusChange,
     Submission,
@@ -42,7 +42,7 @@ EXAMPLE_SUBMISSION = Submission(
 )
 
 
-def test_happy(config_sub_fixture: SubmissionAndTransformationConfig):  # noqa: F811
+def test_happy(config_sub_fixture: SubmissionConfig):  # noqa: F811
     """Test the happy path of inserting, querying, and updating a submission using
     the submission store."""
 
@@ -75,7 +75,7 @@ def test_happy(config_sub_fixture: SubmissionAndTransformationConfig):  # noqa: 
 
 
 def test_query_non_existing(
-    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Test querying for a non-existing submission."""
 

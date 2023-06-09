@@ -21,7 +21,7 @@ from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
 from metldata.artifacts_rest.config import ArtifactsRestConfig
-from metldata.event_handling import FileSystemEventConfig
+from metldata.event_handling.event_handling import FileSystemEventConfig
 from metldata.load.collect import ArtifactCollectorConfig
 
 

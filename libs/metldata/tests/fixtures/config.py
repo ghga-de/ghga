@@ -19,7 +19,7 @@ from typing import Generator
 
 import pytest
 
-from metldata.config import SubmissionAndTransformationConfig
+from metldata.config import SubmissionConfig
 from tests.fixtures.metadata_models import VALID_MINIMAL_MODEL_EXAMPLE_PATH
 
 PREFIX_MAPPING = {
@@ -31,12 +31,12 @@ PREFIX_MAPPING = {
 
 
 @pytest.fixture
-def config_sub_fixture() -> Generator[SubmissionAndTransformationConfig, None, None]:
+def config_sub_fixture() -> Generator[SubmissionConfig, None, None]:
     """Generate a test config."""
 
     with TemporaryDirectory() as submission_store_dir:
         with NamedTemporaryFile() as accession_store_path:
-            yield SubmissionAndTransformationConfig(
+            yield SubmissionConfig(
                 metadata_model_path=VALID_MINIMAL_MODEL_EXAMPLE_PATH,
                 submission_store_dir=submission_store_dir,
                 accession_store_path=accession_store_path.name,

@@ -17,12 +17,12 @@
 
 from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
-from metldata.config import SubmissionAndTransformationConfig
+from metldata.config import SubmissionConfig
 from tests.fixtures.config import config_sub_fixture  # noqa: F401
 
 
 def test_get_accession_happy(
-    config_sub_fixture: SubmissionAndTransformationConfig,  # noqa: F811
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Test the happy path of getting 10 accession for each resource type."""
 
