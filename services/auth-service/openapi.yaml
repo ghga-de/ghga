@@ -6,7 +6,7 @@ info:
   license:
     name: Apache 2.0
   title: User Management API
-  version: 0.4.1
+  version: 0.4.2
 openapi: 3.0.2
 paths:
   /health:
