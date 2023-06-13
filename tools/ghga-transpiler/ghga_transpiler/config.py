@@ -13,15 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Config Parameter Modeling and Parsing"""
 
-from ghga_transpiler.cli import cli
-
-
-def run():
-    """Run the application."""
-    cli()
+import yaml
 
 
-if __name__ == "__main__":
-    run()
+def load_config(filename):
+    """Function to load config yaml"""
+    return yaml.safe_load(filename)

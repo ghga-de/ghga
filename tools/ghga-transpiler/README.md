@@ -4,7 +4,7 @@
 
 # Ghga Transpiler
 
-My-Microservice - a short description
+GHGA-Transpiler - a short description
 
 ## Description
 
