@@ -1,0 +1,70 @@
+ghga_metadata_version: 0.0.1
+default_settings:
+  start_row: 1
+  start_column: 1
+worksheets:
+  - sheet_name: StudyFiles
+    settings:
+      name: "study_files"
+      start_column: 2
+      end_column: 8
+  - sheet_name: Datasets
+    settings:
+      name: "datasets"
+      start_column: 2
+      end_column: 6
+  - sheet_name: Studies
+    settings:
+      name: "studies"
+      start_column: 2
+      end_column: 7
+  - sheet_name: Publications
+    settings:
+      name: "publications"
+      start_column: 2
+      end_column: 8
+  - sheet_name: SampleFiles
+    settings:
+      name: "samples"
+      start_column: 2
+      end_column: 8
+  - sheet_name: Samples
+    settings:
+      name: "samples"
+      start_column: 2
+      end_column: 16
+  - sheet_name: Conditions
+    settings:
+      name: "conditions"
+      start_column: 2
+      end_column: 4
+  - sheet_name: Biospecimens
+    settings:
+      name: "biospecimens"
+      start_column: 2
+      end_column: 9
+  - sheet_name: Individuals
+    settings:
+      name: "individuals"
+      start_column: 2
+      end_column: 9
+  - sheet_name: SequencingProcessFiles
+    settings:
+      name: "sequencing_process_files"
+      start_column: 2
+      end_column: 8
+  - sheet_name: SequencingExperiments
+    settings:
+      name: "sequencing_experiments"
+  - sheet_name: SequencingProcesses
+    settings:
+      name: "sequencing_processes"
+  - sheet_name: SequencingProtocols
+    settings:
+      name: "sequencing_protocols"
+  - sheet_name: "LibraryPreparationProtocols"
+    settings:
+      name: "library_preparation_protocols"
+  - sheet_name: Enums
+    settings:
+      name: "enums"

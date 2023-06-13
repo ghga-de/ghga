@@ -12,12 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Config Parameter Modeling and Parsing"""
-
-import yaml
-
-
-def load_config(filename):
-    """Function to load config yaml"""
-    return yaml.safe_load(filename)
+"""Module to load workbook configurations and convert it to transpiler config """
+from .config import Config, load_config  # noqa
