@@ -65,9 +65,11 @@ def refresh_all_keys():
 def generate_test_keys():
     """Generate and print token signing keys for testing."""
     key = generate_internal_jwk()
-    print(f"AUTH_KEY='{key.export_private()}'")
+    print(f"AUTH_KEY_PRIV='{key.export_private()}'")
+    print(f"AUTH_KEY_PUB='{key.export_public()}'")
     key = generate_internal_jwk()
-    print(f"WPS_KEY='{key.export_private()}'")
+    print(f"WPS_KEY_PRIV='{key.export_private()}'")
+    print(f"WPS_KEY_PUB='{key.export_public()}'")
 
 
 if __name__ == "__main__":
