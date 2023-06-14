@@ -29,7 +29,7 @@ def refresh_wps_keys():
     key = generate_internal_jwk()
     store_private_wps_key(key.export_private())
     store_public_wps_key(key.export_public())
-    print("The workd package service key pair has been stored.")
+    print("The work package service key pair has been stored.")
 
 
 @app.command()
@@ -59,6 +59,15 @@ def refresh_all_keys():
     if first_error:
         print("Could not run all commands, raising the first error:")
         raise first_error
+
+
+@app.command()
+def generate_test_keys():
+    """Generate and print token signing keys for testing."""
+    key = generate_internal_jwk()
+    print(f"AUTH_KEY='{key.export_private()}'")
+    key = generate_internal_jwk()
+    print(f"WPS_KEY='{key.export_private()}'")
 
 
 if __name__ == "__main__":
