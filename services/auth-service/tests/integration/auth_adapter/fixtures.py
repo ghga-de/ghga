@@ -37,12 +37,11 @@ def fixture_client() -> Generator[TestClient, None, None]:
 def fixture_with_basic_auth() -> Generator[str, None, None]:
     """Run test with Basic authentication"""
     user, pwd = "testuser", "testpwd"
-    environ["AUTH_SERVICE_BASIC_AUTH_USER"] = user
-    environ["AUTH_SERVICE_BASIC_AUTH_PWD"] = pwd
+    credentials = f"{user}:{pwd}"
+    environ["AUTH_SERVICE_BASIC_AUTH_CREDENTIALS"] = credentials
     reload(config)
     reload(main)
-    yield f"{user}:{pwd}"
-    del environ["AUTH_SERVICE_BASIC_AUTH_USER"]
-    del environ["AUTH_SERVICE_BASIC_AUTH_PWD"]
+    yield credentials
+    del environ["AUTH_SERVICE_BASIC_AUTH_CREDENTIALS"]
     reload(config)
     reload(main)

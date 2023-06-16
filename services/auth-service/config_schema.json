@@ -224,17 +224,10 @@
         "type": "string"
       }
     },
-    "basic_auth_user": {
-      "title": "Basic Auth User",
+    "basic_auth_credentials": {
+      "title": "Basic Auth Credentials",
       "env_names": [
-        "auth_service_basic_auth_user"
-      ],
-      "type": "string"
-    },
-    "basic_auth_pwd": {
-      "title": "Basic Auth Pwd",
-      "env_names": [
-        "auth_service_basic_auth_pwd"
+        "auth_service_basic_auth_credentials"
       ],
       "type": "string"
     },
@@ -245,6 +238,20 @@
         "auth_service_basic_auth_realm"
       ],
       "type": "string"
+    },
+    "public_paths": {
+      "title": "Public Paths",
+      "default": [
+        "/.well-known/*",
+        "/service-logo.png"
+      ],
+      "env_names": [
+        "auth_service_public_paths"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "include_apis": {
       "title": "Include Apis",

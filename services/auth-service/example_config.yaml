@@ -15,9 +15,8 @@ auth_ext_keys: null
 auth_key: null
 auth_map_claims: {}
 auto_reload: true
-basic_auth_pwd: null
+basic_auth_credentials: null
 basic_auth_realm: GHGA Data Portal
-basic_auth_user: null
 claims_collection: claims
 cors_allow_credentials: null
 cors_allowed_headers: null
@@ -36,6 +35,9 @@ oidc_userinfo_endpoint: https://proxy.aai.lifescience-ri.eu/OIDC/userinfo
 openapi_url: /openapi.json
 organization_url: https://ghga.de
 port: 8080
+public_paths:
+- /.well-known/*
+- /service-logo.png
 run_auth_adapter: false
 service_name: auth_service
 users_collection: users

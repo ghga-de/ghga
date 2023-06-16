@@ -18,7 +18,6 @@ Basic HTTP authentication
 """
 
 import secrets
-from typing import cast
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -32,37 +31,21 @@ __all__ = ["basic_auth"]
 def get_allowed_credentials(config: Config) -> list[HTTPBasicCredentials]:
     """Get list of allowed credentials from the config.
 
-    Multiple users and passwords can be specified separated with commas.
-    Passwords can be specified in the user setting separated with colons.
+    User names and passwords must be separated with colons.
+    Multiple credentials must be separated by whitespace.
     """
-    user, password = config.basic_auth_user, config.basic_auth_pwd
-    try:
-        if user:
-            users = user.split(",")
-            if password:
-                passwords = password.split(",")
-                if len(passwords) != len(users):
-                    raise ValueError(
-                        "Different numbers of Basic Auth users and passwords."
-                    )
-                user_passwords = cast(list[list[str]], zip(users, passwords))
-            else:
-                user_passwords = [user.split(":", 1) for user in users]
-            allowed_credentials = [
-                HTTPBasicCredentials(username=user.strip(), password=password.strip())
-                for (user, password) in user_passwords
-            ]
-            if not all(
-                credentials.username and credentials.password
-                for credentials in allowed_credentials
-            ):
-                raise ValueError("Empty Basic Auth user or password.")
-        elif password:
-            raise ValueError("Basic Auth password with no user.")
-        else:
-            allowed_credentials = []
-    except ValueError as error:
-        raise ValueError("Invalid Basic Auth credentials configuration.") from error
+    credentials = config.basic_auth_credentials or ""
+    allowed_credentials: list[HTTPBasicCredentials] = []
+    for user_and_password in credentials.split():
+        try:
+            username, password = user_and_password.split(":", 1)
+        except ValueError as error:
+            raise ValueError(
+                "Basic auth credentials must be passed as username:password"
+            ) from error
+        allowed_credentials.append(
+            HTTPBasicCredentials(username=username, password=password)
+        )
     return allowed_credentials
 
 

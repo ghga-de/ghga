@@ -86,12 +86,12 @@ class Config(ApiConfigBase, AuthConfig):
     auth_ext_keys: Optional[str] = None
     # allowed algorithms for signing external tokens
     auth_ext_algs: list[str] = ["RS256", "ES256"]
-    # user(s) and password(s) for basic authentication
-    basic_auth_user: Optional[str] = None
-    # password(s) for basic authentication if not specified above
-    basic_auth_pwd: Optional[str] = None
+    # credentials for basic authentication, separated by whitespace
+    basic_auth_credentials: Optional[str] = None
     # realm for basic authentication
     basic_auth_realm: str = "GHGA Data Portal"
+    # paths that are always publicly visible without authentication
+    public_paths: list[str] = ["/.well-known/*", "/service-logo.png"]
 
     # if not run as auth adapter, which APIs should be provided
     include_apis: list[Literal["users", "claims"]] = ["users"]

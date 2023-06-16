@@ -55,16 +55,23 @@ if API_EXT_PATH:
     API_EXT_PATH += "/"
 
 
-@app.api_route("/.well-known/{path:path}", methods=READ_METHODS)
-async def ext_auth_well_known() -> dict:
-    """Unprotected route for the .well-known URLs."""
-    return {}
+def add_public_routes():
+    """Add all public (unprotected) routes."""
+
+    for route in CONFIG.public_paths:
+        if route.endswith("/*"):
+            route = route[:-1] + "{path:path}"
+        elif "*" in route:
+            route = route.replace("*", "{variable}")
+
+        # pylint:disable=cell-var-from-loop
+        @app.api_route(route, methods=READ_METHODS)
+        async def public_route() -> dict:
+            """Unprotected route."""
+            return {}
 
 
-@app.api_route("/service-logo.png", methods=READ_METHODS)
-async def ext_auth_service_logo() -> dict:
-    """Unprotected route for the service logo."""
-    return {}
+add_public_routes()
 
 
 @app.api_route("/{path:path}", methods=ALL_METHODS)

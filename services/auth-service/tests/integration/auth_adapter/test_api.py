@@ -180,8 +180,14 @@ def test_basic_auth_service_logo(with_basic_auth, client):
     response = client.get("/service-logo.png")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.head("/.well-known/some/thing")
+    response = client.head("/service-logo.png")
     assert response.status_code == status.HTTP_200_OK
+
+    response = client.get("/some-other-image.png")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    response = client.head("/some-other-image.png")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_does_not_authorize_invalid_users(client):

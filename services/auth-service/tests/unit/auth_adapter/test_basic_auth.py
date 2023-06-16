@@ -25,124 +25,30 @@ from auth_service.config import Config
 
 def test_default_no_allowed_credentials():
     """Test that by default, no Basic auth credentials are set"""
-    assert get_allowed_credentials(Config()) == []
+    config = Config()  # pyright: ignore
+    assert not get_allowed_credentials(config)
 
 
-def test_single_credentials_separately():
-    """Test that a single user name and password can be set separately."""
-    assert get_allowed_credentials(
-        Config(basic_auth_user="foo", basic_auth_pwd="bar")
-    ) == [HTTPBasicCredentials(username="foo", password="bar")]
-
-
-def test_single_credentials_combined():
-    """Test that a single user name and password can be set combined."""
-    assert get_allowed_credentials(Config(basic_auth_user="foo:bar")) == [
-        HTTPBasicCredentials(username="foo", password="bar")
-    ]
-
-
-def test_three_credentials_separately():
-    """Test that three user names and passwords can be set separately."""
-    assert get_allowed_credentials(
-        Config(basic_auth_user="foo,bar,baz", basic_auth_pwd="oof,rab,zab")
-    ) == [
+def test_set_credentials():
+    """Test that three user names and passwords can be set."""
+    config = Config(basic_auth_credentials="foo:oof bar:rab baz:zab")  # pyright: ignore
+    assert get_allowed_credentials(config) == [
         HTTPBasicCredentials(username="foo", password="oof"),
         HTTPBasicCredentials(username="bar", password="rab"),
         HTTPBasicCredentials(username="baz", password="zab"),
     ]
 
 
-def test_three_credentials_combined():
-    """Test that three user names and passwords can be set combined."""
-    assert get_allowed_credentials(
-        Config(basic_auth_user="foo:oof,bar:rab,baz:zab")
-    ) == [
-        HTTPBasicCredentials(username="foo", password="oof"),
-        HTTPBasicCredentials(username="bar", password="rab"),
-        HTTPBasicCredentials(username="baz", password="zab"),
+def test_invalid_credentials():
+    """Test that invalid credentials are detected."""
+    config = Config(basic_auth_credentials="foo:oof rhubarb baz:zab")  # pyright: ignore
+    with raises(ValueError, match="must be passed as username:password"):
+        get_allowed_credentials(config)
+
+
+def test_password_contains_a_colon():
+    """Test that passwords with a colon are treated properly."""
+    config = Config(basic_auth_credentials="foo:bar:baz")  # pyright: ignore
+    assert get_allowed_credentials(config) == [
+        HTTPBasicCredentials(username="foo", password="bar:baz"),
     ]
-
-
-def test_user_without_password():
-    """Test that two separate users with three passwords raise a ValueError."""
-    with raises(ValueError):
-        assert get_allowed_credentials(Config(basic_auth_user="foo"))
-    with raises(ValueError):
-        assert get_allowed_credentials(Config(basic_auth_user="foo:"))
-    with raises(ValueError):
-        assert get_allowed_credentials(Config(basic_auth_user="foo", basic_auth_pwd=""))
-
-
-def test_password_without_user():
-    """Test that two separate users with three passwords raise a ValueError."""
-    with raises(ValueError):
-        assert get_allowed_credentials(Config(basic_auth_pwd="foo"))
-    with raises(ValueError):
-        assert get_allowed_credentials(Config(basic_auth_user=":foo"))
-    with raises(ValueError):
-        assert get_allowed_credentials(Config(basic_auth_user="", basic_auth_pwd="foo"))
-
-
-def test_two_users_but_three_passwords_separately():
-    """Test that two separate users with three passwords raise a ValueError."""
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="foo,bar", basic_auth_pwd="oof,rab,zab")
-        )
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="foo,bar,", basic_auth_pwd="oof,rab,zab")
-        )
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="foo,,baz", basic_auth_pwd="oof,rab,zab")
-        )
-
-
-def test_three_users_but_two_passwords_separately():
-    """Test that three separate users with two passwords raise a ValueError."""
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="foo,bar,baz", basic_auth_pwd="oof,rab")
-        )
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="foo,bar,baz", basic_auth_pwd="oof,rab,")
-        )
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="foo,bar,baz", basic_auth_pwd="oof,,zab")
-        )
-
-
-def test_whitespace_is_trimmed():
-    """Test that whitespace around usernames and passwords is ignored."""
-    assert get_allowed_credentials(
-        Config(basic_auth_user="  foo  ", basic_auth_pwd="  bar  ")
-    ) == [HTTPBasicCredentials(username="foo", password="bar")]
-    assert get_allowed_credentials(Config(basic_auth_user="  foo  :  bar  ")) == [
-        HTTPBasicCredentials(username="foo", password="bar")
-    ]
-    assert get_allowed_credentials(
-        Config(
-            basic_auth_user="  foo  ,  bar  ,  baz  ",
-            basic_auth_pwd="  oof  ,  rab  ,  zab ",
-        )
-    ) == [
-        HTTPBasicCredentials(username="foo", password="oof"),
-        HTTPBasicCredentials(username="bar", password="rab"),
-        HTTPBasicCredentials(username="baz", password="zab"),
-    ]
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="  ", basic_auth_pwd="foo")
-        )
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="foo", basic_auth_pwd="  ")
-        )
-    with raises(ValueError):
-        assert get_allowed_credentials(
-            Config(basic_auth_user="foo,bar,baz", basic_auth_pwd="oof,  ,zab")
-        )

@@ -30,13 +30,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:0.4.2
+docker pull ghga/auth-service:0.5.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:0.4.2 .
+docker build -t ghga/auth-service:0.5.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -44,7 +44,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:0.4.2 --help
+docker run -p 8080:8080 ghga/auth-service:0.5.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -114,11 +114,13 @@ The service requires the following configuration parameters:
 
   - **Items** *(string)*
 
-- **`basic_auth_user`** *(string)*
-
-- **`basic_auth_pwd`** *(string)*
+- **`basic_auth_credentials`** *(string)*
 
 - **`basic_auth_realm`** *(string)*: Default: `GHGA Data Portal`.
+
+- **`public_paths`** *(array)*: Default: `['/.well-known/*', '/service-logo.png']`.
+
+  - **Items** *(string)*
 
 - **`include_apis`** *(array)*: Default: `['users']`.
 
