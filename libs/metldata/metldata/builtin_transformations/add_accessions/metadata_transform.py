@@ -22,7 +22,7 @@ from pydantic import Json
 from typing_extensions import TypeAlias
 
 from metldata.metadata_utils import lookup_self_id
-from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.anchors import AnchorPoint, lookup_anchor_point
 from metldata.model_utils.essentials import MetadataModel
 from metldata.submission_registry.models import AccessionMap
 from metldata.transform.base import MetadataTransformationError
@@ -52,12 +52,18 @@ def get_references(
 
 
 def lookup_accession(
-    *, target_class: str, old_identifier: str, accession_map: AccessionMap
+    *,
+    target_class: str,
+    old_identifier: str,
+    accession_map: AccessionMap,
+    anchor_points_by_target: dict[str, AnchorPoint],
 ) -> str:
     """Lookup the accession for the a resource with the given identifier of the given
     class."""
-
-    accession = accession_map.get(target_class, {}).get(old_identifier)
+    anchor_point = lookup_anchor_point(
+        class_name=target_class, anchor_points_by_target=anchor_points_by_target
+    )
+    accession = accession_map.get(anchor_point.root_slot, {}).get(old_identifier)
     if not accession:
         raise MetadataTransformationError(
             f"Could not find accession for '{old_identifier}' of class"
@@ -74,6 +80,7 @@ def add_accession_to_resource(
     accession_slot_name: str,
     accession_map: AccessionMap,
     references: dict[str, str],
+    anchor_points_by_target: dict[str, AnchorPoint],
 ) -> Json:
     """Add an accession to a resource.
 
@@ -103,6 +110,7 @@ def add_accession_to_resource(
         target_class=class_name,
         old_identifier=old_identifier,
         accession_map=accession_map,
+        anchor_points_by_target=anchor_points_by_target,
     )
 
     new_resource: Json = {accession_slot_name: new_identifier}
@@ -116,6 +124,7 @@ def add_accession_to_resource(
                         target_class=referenced_class,
                         old_identifier=reference_old_identifier,
                         accession_map=accession_map,
+                        anchor_points_by_target=anchor_points_by_target,
                     )
                     for reference_old_identifier in slot_value
                 ]
@@ -124,6 +133,7 @@ def add_accession_to_resource(
                     target_class=referenced_class,
                     old_identifier=slot_value,
                     accession_map=accession_map,
+                    anchor_points_by_target=anchor_points_by_target,
                 )
         else:
             new_resource[slot_name] = slot_value
@@ -150,7 +160,7 @@ def add_accessions_to_metadata(
 
     for target_class_name, anchor_point in anchor_points_by_target.items():
         target_resources = []
-        target_accession_map = accession_map.get(target_class_name)
+        target_accession_map = accession_map.get(anchor_point.root_slot)
         if target_accession_map is None:
             raise MetadataTransformationError(
                 "Could not find accession mapping for target class"
@@ -165,6 +175,7 @@ def add_accessions_to_metadata(
                 accession_slot_name=accession_slot_name,
                 accession_map=accession_map,
                 references=references[target_class_name],
+                anchor_points_by_target=anchor_points_by_target,
             )
             target_resources.append(new_resource)
 

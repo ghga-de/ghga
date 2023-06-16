@@ -21,6 +21,7 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from metldata.config import SubmissionConfig
 from metldata.event_handling.event_handling import FileSystemEventPublisher
+from metldata.event_handling.models import SubmissionAnnotation, SubmissionEventPayload
 from metldata.submission_registry import models
 from metldata.submission_registry.event_publisher import SourceEventPublisher
 from tests.fixtures.config import config_sub_fixture  # noqa: F401
@@ -47,7 +48,15 @@ def check_source_events(
             topic=source_event_topic,
             type_=source_event_type,
             key=expected_submission.id,
-            payload=json.loads(expected_submission.json()),
+            payload=json.loads(
+                SubmissionEventPayload(
+                    submission_id=expected_submission.id,
+                    content=expected_submission.content,
+                    annotation=SubmissionAnnotation(
+                        accession_map=expected_submission.accession_map
+                    ),
+                ).json()
+            ),
         )
         for expected_submission in expected_submissions
     ]

@@ -21,6 +21,7 @@ import json
 
 from hexkit.protocols.eventpub import EventPublisherProtocol
 
+from metldata.event_handling.models import SubmissionAnnotation, SubmissionEventPayload
 from metldata.event_handling.submission_events import SourceEventConfig
 from metldata.submission_registry import models
 
@@ -46,12 +47,17 @@ class SourceEventPublisher:
         if submission.content is None:
             raise ValueError("Submission content must be defined.")
 
-        payload = json.loads(submission.json())
+        payload = SubmissionEventPayload(
+            submission_id=submission.id,
+            content=submission.content,
+            annotation=SubmissionAnnotation(accession_map=submission.accession_map),
+        )
+
         asyncio.run(
             self._provider.publish(
                 topic=self._config.source_event_topic,
                 type_=self._config.source_event_type,
                 key=submission.id,
-                payload=payload,
+                payload=json.loads(payload.json()),
             )
         )
