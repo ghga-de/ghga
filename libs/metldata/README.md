@@ -62,13 +62,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/metldata):
 ```bash
-docker pull ghga/metldata:0.2.3
+docker pull ghga/metldata:0.3.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/metldata:0.2.3 .
+docker build -t ghga/metldata:0.3.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -76,7 +76,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/metldata:0.2.3 --help
+docker run -p 8080:8080 ghga/metldata:0.3.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -92,21 +92,80 @@ metldata --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`source_event_topic`** *(string)*: Name of the topic to which source events are published. Default: `source_events`.
+- **`artifact_infos`** *(array)*: Information for artifacts to be queryable via the Artifacts REST API.
 
-- **`source_event_type`** *(string)*: Name of the event type for source events. Default: `source_event`.
+  - **Items**: Refer to *#/definitions/ArtifactInfo*.
 
-- **`metadata_model_path`** *(string)*: The path to the metadata model defined in LinkML.
+- **`db_connection_str`** *(string)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
-- **`submission_store_dir`** *(string)*: The directory where the submission JSONs will be stored.
+- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
 
-- **`accession_store_path`** *(string)*: A file for storing the already registered accessions.
+- **`host`** *(string)*: IP of the host. Default: `127.0.0.1`.
 
-- **`prefix_mapping`** *(object)*: Specifies the ID prefix (values) per resource type (keys). Can contain additional properties.
+- **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 
-  - **Additional Properties** *(string)*
+- **`log_level`** *(string)*: Controls the verbosity of the log. Must be one of: `['critical', 'error', 'warning', 'info', 'debug', 'trace']`. Default: `info`.
 
-- **`suffix_length`** *(integer)*: Length of the numeric ID suffix. Default: `8`.
+- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `False`.
+
+- **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+
+- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `/`.
+
+- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `/openapi.json`.
+
+- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `/docs`.
+
+- **`cors_allowed_origins`** *(array)*: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.
+
+  - **Items** *(string)*
+
+- **`cors_allow_credentials`** *(boolean)*: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.
+
+- **`cors_allowed_methods`** *(array)*: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.
+
+  - **Items** *(string)*
+
+- **`cors_allowed_headers`** *(array)*: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.
+
+  - **Items** *(string)*
+
+- **`loader_token_hashes`** *(array)*: Hashes of tokens used to authenticate for loading artifact.
+
+  - **Items** *(string)*
+
+## Definitions
+
+
+- **`AnchorPoint`** *(object)*: A model for describing an anchor point for the specified target class.
+
+  - **`target_class`** *(string)*: The name of the class to be targeted.
+
+  - **`identifier_slot`** *(string)*: The name of the slot in the target class that is used as identifier.
+
+  - **`root_slot`** *(string)*: The name of the slot in the root class used to link to the target class.
+
+- **`ArtifactResourceClass`** *(object)*: Model to describe a resource class of an artifact.
+
+  - **`name`** *(string)*: The name of the metadata class.
+
+  - **`description`** *(string)*: A description of the metadata class.
+
+  - **`anchor_point`**: The anchor point for this metadata class.
+
+  - **`json_schema`** *(object)*: The JSON schema for this metadata class.
+
+- **`ArtifactInfo`** *(object)*: Model to describe general information on an artifact.
+Please note, it does not contain actual artifact instances derived from specific
+metadata.
+
+  - **`name`** *(string)*: The name of the artifact.
+
+  - **`description`** *(string)*: A description of the artifact.
+
+  - **`resource_classes`** *(object)*: A dictionary of resource classes for this artifact. The keys are the names of the classes. The values are the corresponding class models. Can contain additional properties.
+
+    - **Additional Properties**: Refer to *#/definitions/ArtifactResourceClass*.
 
 
 ### Usage:

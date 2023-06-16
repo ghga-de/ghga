@@ -1,11 +1,17 @@
-accession_store_path: /path/to/accession_store.txt
-metadata_model_path: /workspace/tests/fixtures/example_models/advanced_model.yaml
-prefix_mapping:
-  dataset: GHGAD
-  experiment: GHGAE
-  file: GHGAF
-  sample: GHGAS
-source_event_topic: source_events
-source_event_type: source_event
-submission_store_dir: /path/to/submission/store/dir
-suffix_length: 8
+api_root_path: /
+artifact_infos: []
+auto_reload: false
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+db_connection_str: '**********'
+db_name: dev_db
+docs_url: /docs
+host: 127.0.0.1
+loader_token_hashes:
+- test_token_hash
+log_level: info
+openapi_url: /openapi.json
+port: 8080
+workers: 1

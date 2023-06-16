@@ -3,83 +3,282 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
-    "source_event_topic": {
-      "title": "Source Event Topic",
-      "description": "Name of the topic to which source events are published.",
-      "default": "source_events",
+    "artifact_infos": {
+      "title": "Artifact Infos",
+      "description": "Information for artifacts to be queryable via the Artifacts REST API.",
       "env_names": [
-        "metl_sub_source_event_topic"
+        "metldata_artifact_infos"
+      ],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ArtifactInfo"
+      }
+    },
+    "db_connection_str": {
+      "title": "Db Connection Str",
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "example": "mongodb://localhost:27017",
+      "env_names": [
+        "metldata_db_connection_str"
+      ],
+      "type": "string",
+      "writeOnly": true,
+      "format": "password"
+    },
+    "db_name": {
+      "title": "Db Name",
+      "description": "Name of the database located on the MongoDB server.",
+      "example": "my-database",
+      "env_names": [
+        "metldata_db_name"
       ],
       "type": "string"
     },
-    "source_event_type": {
-      "title": "Source Event Type",
-      "description": "Name of the event type for source events.",
-      "default": "source_event",
+    "host": {
+      "title": "Host",
+      "description": "IP of the host.",
+      "default": "127.0.0.1",
       "env_names": [
-        "metl_sub_source_event_type"
+        "metldata_host"
       ],
       "type": "string"
     },
-    "metadata_model_path": {
-      "title": "Metadata Model Path",
-      "description": "The path to the metadata model defined in LinkML.",
+    "port": {
+      "title": "Port",
+      "description": "Port to expose the server on the specified host",
+      "default": 8080,
       "env_names": [
-        "metl_sub_metadata_model_path"
+        "metldata_port"
       ],
-      "type": "string",
-      "format": "path"
+      "type": "integer"
     },
-    "submission_store_dir": {
-      "title": "Submission Store Dir",
-      "description": "The directory where the submission JSONs will be stored.",
+    "log_level": {
+      "title": "Log Level",
+      "description": "Controls the verbosity of the log.",
+      "default": "info",
       "env_names": [
-        "metl_sub_submission_store_dir"
+        "metldata_log_level"
       ],
-      "type": "string",
-      "format": "path"
+      "enum": [
+        "critical",
+        "error",
+        "warning",
+        "info",
+        "debug",
+        "trace"
+      ],
+      "type": "string"
     },
-    "accession_store_path": {
-      "title": "Accession Store Path",
-      "description": "A file for storing the already registered accessions.",
+    "auto_reload": {
+      "title": "Auto Reload",
+      "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
+      "default": false,
       "env_names": [
-        "metl_sub_accession_store_path"
+        "metldata_auto_reload"
       ],
-      "type": "string",
-      "format": "path"
+      "type": "boolean"
     },
-    "prefix_mapping": {
-      "title": "Prefix Mapping",
-      "description": "Specifies the ID prefix (values) per resource type (keys).",
-      "example": {
-        "file": "GHGAF",
-        "experiment": "GHGAE",
-        "sample": "GHGAS",
-        "dataset": "GHGAD"
-      },
+    "workers": {
+      "title": "Workers",
+      "description": "Number of workers processes to run.",
+      "default": 1,
       "env_names": [
-        "metl_sub_prefix_mapping"
+        "metldata_workers"
       ],
-      "type": "object",
-      "additionalProperties": {
+      "type": "integer"
+    },
+    "api_root_path": {
+      "title": "Api Root Path",
+      "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
+      "default": "/",
+      "env_names": [
+        "metldata_api_root_path"
+      ],
+      "type": "string"
+    },
+    "openapi_url": {
+      "title": "Openapi Url",
+      "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
+      "default": "/openapi.json",
+      "env_names": [
+        "metldata_openapi_url"
+      ],
+      "type": "string"
+    },
+    "docs_url": {
+      "title": "Docs Url",
+      "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
+      "default": "/docs",
+      "env_names": [
+        "metldata_docs_url"
+      ],
+      "type": "string"
+    },
+    "cors_allowed_origins": {
+      "title": "Cors Allowed Origins",
+      "description": "A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.",
+      "example": [
+        "https://example.org",
+        "https://www.example.org"
+      ],
+      "env_names": [
+        "metldata_cors_allowed_origins"
+      ],
+      "type": "array",
+      "items": {
         "type": "string"
       }
     },
-    "suffix_length": {
-      "title": "Suffix Length",
-      "description": "Length of the numeric ID suffix.",
-      "default": 8,
-      "env_names": [
-        "metl_sub_suffix_length"
+    "cors_allow_credentials": {
+      "title": "Cors Allow Credentials",
+      "description": "Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.",
+      "example": [
+        "https://example.org",
+        "https://www.example.org"
       ],
-      "type": "integer"
+      "env_names": [
+        "metldata_cors_allow_credentials"
+      ],
+      "type": "boolean"
+    },
+    "cors_allowed_methods": {
+      "title": "Cors Allowed Methods",
+      "description": "A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.",
+      "example": [
+        "*"
+      ],
+      "env_names": [
+        "metldata_cors_allowed_methods"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cors_allowed_headers": {
+      "title": "Cors Allowed Headers",
+      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
+      "example": [],
+      "env_names": [
+        "metldata_cors_allowed_headers"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "loader_token_hashes": {
+      "title": "Loader Token Hashes",
+      "description": "Hashes of tokens used to authenticate for loading artifact.",
+      "env_names": [
+        "metldata_loader_token_hashes"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
-    "metadata_model_path",
-    "submission_store_dir",
-    "accession_store_path",
-    "prefix_mapping"
+    "artifact_infos",
+    "db_connection_str",
+    "db_name",
+    "loader_token_hashes"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "AnchorPoint": {
+      "title": "AnchorPoint",
+      "description": "A model for describing an anchor point for the specified target class.",
+      "type": "object",
+      "properties": {
+        "target_class": {
+          "title": "Target Class",
+          "description": "The name of the class to be targeted.",
+          "type": "string"
+        },
+        "identifier_slot": {
+          "title": "Identifier Slot",
+          "description": "The name of the slot in the target class that is used as identifier.",
+          "type": "string"
+        },
+        "root_slot": {
+          "title": "Root Slot",
+          "description": "The name of the slot in the root class used to link to the target class.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_class",
+        "identifier_slot",
+        "root_slot"
+      ]
+    },
+    "ArtifactResourceClass": {
+      "title": "ArtifactResourceClass",
+      "description": "Model to describe a resource class of an artifact.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "The name of the metadata class.",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "description": "A description of the metadata class.",
+          "type": "string"
+        },
+        "anchor_point": {
+          "title": "Anchor Point",
+          "description": "The anchor point for this metadata class.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/AnchorPoint"
+            }
+          ]
+        },
+        "json_schema": {
+          "title": "Json Schema",
+          "description": "The JSON schema for this metadata class.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "anchor_point",
+        "json_schema"
+      ]
+    },
+    "ArtifactInfo": {
+      "title": "ArtifactInfo",
+      "description": "Model to describe general information on an artifact.\nPlease note, it does not contain actual artifact instances derived from specific\nmetadata.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "The name of the artifact.",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "description": "A description of the artifact.",
+          "type": "string"
+        },
+        "resource_classes": {
+          "title": "Resource Classes",
+          "description": "A dictionary of resource classes for this artifact. The keys are the names of the classes. The values are the corresponding class models.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ArtifactResourceClass"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "resource_classes"
+      ]
+    }
+  }
 }

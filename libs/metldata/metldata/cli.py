@@ -18,15 +18,12 @@
 
 import asyncio
 import functools
-from pathlib import Path
 
 import typer
-import yaml
 from ghga_service_commons.api import run_server
 
-from metldata.config import ArtifactLoaderAPIConfig, ArtifactLoaderClientConfig
-from metldata.load.client import upload_artifacts_via_http_api
-from metldata.load.main import get_app
+from metldata.combined import get_app
+from metldata.config import Config
 
 cli = typer.Typer()
 
@@ -43,30 +40,9 @@ def run_sync(coroutine):
 
 @cli.command()
 @run_sync
-async def run_loader_api() -> None:
-    """Run the loader API."""
+async def run_api() -> None:
+    """Run the combined loader and query API."""
 
-    config = ArtifactLoaderAPIConfig()
+    config = Config()
     app = await get_app(config=config)
     await run_server(app=app, config=config)
-
-
-@cli.command()
-def upload_artifact(*, config: Path) -> None:
-    """Upload an artifact to the loader API.
-
-    Args:
-        config: The path to the config file.
-    """
-
-    with open(config, "r", encoding="utf-8") as config_file:
-        config_dict = yaml.safe_load(config_file)
-    config_obj = ArtifactLoaderClientConfig(**config_dict)
-
-    token = input(
-        "Please paste the token used to authenticate against the loader API: "
-    )
-
-    upload_artifacts_via_http_api(config=config_obj, token=token.strip())
-
-    typer.echo("Done.")
