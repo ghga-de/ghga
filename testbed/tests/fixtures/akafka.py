@@ -25,7 +25,7 @@ from pytest_asyncio import fixture as async_fixture
 
 from src.config import Config
 
-__all__ = ["kafka_fixture"]
+__all__ = ["kafka_fixture", "KafkaFixture"]
 
 
 def delete_topics(kafka_servers: list[str], topics_to_be_deleted: list[str]):

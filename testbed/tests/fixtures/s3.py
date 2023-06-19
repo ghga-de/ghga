@@ -25,7 +25,7 @@ from pytest import fixture
 
 from src.config import Config
 
-__all__ = ["s3_fixture"]
+__all__ = ["s3_fixture", "S3Fixture"]
 
 
 async def empty_storage_bucket(storage: S3ObjectStorage, bucket_id: str):

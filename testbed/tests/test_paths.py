@@ -16,12 +16,15 @@
 """A test dummy just to make the CI pass."""
 
 import time
+from datetime import timedelta
 from pathlib import Path
 
+import httpx
 import pytest
 from ghga_connector.cli import config as connector_config
 from ghga_connector.core.api_calls import get_file_metadata, get_upload_info
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import ExpectedEvent, check_recorded_events
 
 from src.config import Config
@@ -29,12 +32,50 @@ from src.download_path import decrypt_file, download_file
 from src.upload_path import delegate_paths
 from tests.fixtures import (  # noqa: F401 # pylint: disable=unused-import
     JointFixture,
+    auth_fixture,
     config_fixture,
     joint_fixture,
     kafka_fixture,
     mongodb_fixture,
     s3_fixture,
 )
+
+
+@pytest.mark.asyncio
+async def test_ars(fixtures: JointFixture):
+    """Standalone test for the access request service.
+
+    Checks that an access request can be made and notifications are sent out.
+    """
+    headers = fixtures.auth.generate_headers(
+        id_="user-id-doe", name="John Doe", email="doe@home.org", title="Dr."
+    )
+    date_now = now_as_utc()
+    data = {
+        "user_id": "user-id-doe",
+        "dataset_id": "some-dataset",
+        "email": "john@doe.org",
+        "request_text": "Can I access some dataset?",
+        "access_starts": date_now.isoformat(),
+        "access_ends": (date_now + timedelta(days=365)).isoformat(),
+    }
+    url = "http://ars:8080/access-requests"
+
+    response = httpx.post(url, data=data)
+    assert response.status_code == 403
+
+    async with fixtures.kafka.record_events(in_topic="notifications") as event_recorder:
+        response = httpx.post(url, headers=headers, json=data)
+        assert response.status_code == 201
+
+    assert (
+        sum(
+            1
+            for event in event_recorder.recorded_events
+            if event.type_ == "notification"
+        )
+        == 2
+    )
 
 
 @pytest.mark.asyncio

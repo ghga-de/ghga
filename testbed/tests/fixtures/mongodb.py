@@ -27,7 +27,7 @@ from pytest import fixture
 
 from src.config import Config
 
-__all__ = ["mongodb_fixture"]
+__all__ = ["mongodb_fixture", "MongoDbFixture"]
 
 
 def drop_mongo_collections(db_connection_str: SecretStr, db_name: str):

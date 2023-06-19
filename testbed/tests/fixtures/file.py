@@ -23,10 +23,10 @@ from pytest import fixture
 
 from src.config import Config
 
-__all__ = ["file_fixture"]
+__all__ = ["file_fixture", "FileObject"]
 
 
-@fixture(name="file_fixture")
+@fixture
 def file_fixture(config: Config) -> Generator[FileObject, None, None]:
     """File fixture that provides a temporary file."""
 
