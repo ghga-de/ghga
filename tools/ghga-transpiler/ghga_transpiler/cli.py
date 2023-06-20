@@ -29,7 +29,7 @@ cli = typer.Typer()
 
 
 @cli.command()
-def cli_main(
+def transpile(
     spread_sheet: Path = typer.Argument(
         ...,
         exists=True,
