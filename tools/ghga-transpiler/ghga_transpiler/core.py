@@ -17,7 +17,7 @@
 """This module contains functionalities for processing excel sheets into json object."""
 import re
 from importlib import resources
-from typing import Union
+from typing import Callable, Optional, Union
 
 from openpyxl import Workbook
 
@@ -79,10 +79,33 @@ def get_header(
     )
 
 
-def convert_rows(header, rows: list) -> list[dict]:
+def convert_rows(header, rows) -> list[dict]:
     """Function to return list of dictionaries, rows as worksheet row values and
     column names as keys"""
-    return [dict(zip(header, row)) for row in rows]
+    return [
+        {
+            key: value
+            for key, value in zip(header, row)
+            if value is not None and value != ""
+        }
+        for row in rows
+    ]
+
+
+def transform_rows(
+    rows: list[dict], transformations: Optional[dict[str, Callable]]
+) -> list[dict]:
+    """Transforms row values if it is applicable with a given function"""
+    transformed = []
+    for row in rows:
+        transformed_row = {}
+        for key, value in row.items():
+            if transformations and key in transformations:
+                transformed_row[key] = transformations[key](value)
+            else:
+                transformed_row[key] = value
+        transformed.append(transformed_row)
+    return transformed
 
 
 def convert_workbook(ghga_workbook: GHGAWorkbook) -> dict:
@@ -105,9 +128,14 @@ def convert_workbook(ghga_workbook: GHGAWorkbook) -> dict:
                     sheet.settings.start_column,
                     sheet.settings.end_column,
                 )
-                converted_workbook[sheet.settings.name] = convert_rows(header, rows)
+                converted_rows = convert_rows(header, rows)
+                transformed_rows = transform_rows(
+                    converted_rows, sheet.settings.transformations
+                )
+                converted_workbook[sheet.settings.name] = transformed_rows
             else:
                 converted_workbook[sheet.settings.name] = []
+
         else:
             raise ValueError(f"{sheet.settings} will never be None")
     return converted_workbook

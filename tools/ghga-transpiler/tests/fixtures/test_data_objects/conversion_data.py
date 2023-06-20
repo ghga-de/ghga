@@ -30,7 +30,14 @@ EXPECTED_CONVERSION = {
         },
     ],
     "publisher": [
-        {"isbn": "9780679720218", "publisher_name": "Hamish Hamilton"},
-        {"isbn": "9783548234106", "publisher_name": "Secker and Warburg"},
+        {
+            "isbn": "9780679720218",
+            "publisher_names": ["Hamish Hamilton", "Stephen King"],
+            "attributes": [
+                {"key": "page", "value": "100"},
+                {"key": "cover", "value": "paperback"},
+            ],
+        },
+        {"isbn": "9783548234106", "publisher_names": ["Secker and Warburg"]},
     ],
 }

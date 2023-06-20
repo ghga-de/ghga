@@ -18,7 +18,7 @@
 
 from collections import Counter
 from importlib import resources
-from typing import Optional
+from typing import Callable, Optional
 
 import yaml
 from pydantic import BaseModel, root_validator
@@ -33,6 +33,7 @@ class DefaultSettings(BaseModel):
     start_row: int = 0
     start_column: int = 0
     end_column: int = 0
+    transformations: dict[str, Callable] = {}
 
 
 class WorksheetSettings(BaseModel):
@@ -43,6 +44,7 @@ class WorksheetSettings(BaseModel):
     start_row: Optional[int]
     start_column: Optional[int]
     end_column: Optional[int]
+    transformations: Optional[dict[str, Callable]]
 
 
 class Worksheet(BaseModel):
@@ -99,4 +101,4 @@ def load_config(version: str, package: resources.Package) -> Config:
     except FileNotFoundError:
         # pylint: disable=raise-missing-from
         raise UnknownVersionError(f"Unknown metadata version: {version}")
-    return Config.parse_obj(yaml.full_load(config_str))
+    return Config.parse_obj(yaml.load(config_str, yaml.Loader))  # nosec

@@ -3,12 +3,15 @@ default_settings:
   header_row: 1
   start_row: 2
   start_column: 1
-  end_column: 2
+  end_column: 3
+
 worksheets:
   - sheet_name: books
     settings:
       name: books
-      end_column: 3
   - sheet_name: publisher
     settings:
       name: publisher
+      transformations:
+        publisher_names: !!python/object/apply:ghga_transpiler.transformations.to_list []
+        attributes: !!python/object/apply:ghga_transpiler.transformations.to_attributes []
