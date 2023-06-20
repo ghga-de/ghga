@@ -4,6 +4,3 @@
 
 # additional requirements can be listed here
 testcontainers[kafka,mongo]==3.4.1
-
-linkml == 1.5.0
-linkml-validator==0.4.5
