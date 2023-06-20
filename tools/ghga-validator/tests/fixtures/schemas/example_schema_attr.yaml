@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-id: https://w3id.org/Example-Schema
-name: Example-Schema
+id: https://w3id.org/Example
+name: Example
 description: >-
   An Example Schema
 version: 0.0.0
@@ -28,34 +28,57 @@ prefixes:
 default_prefix: example
 
 classes:
-  Organism:
-    slots:
-      - id
-      - name
-      - has_subtypes
-    slot_usage:
+  Letter:
+    attributes:
       id:
         identifier: true
-      name:
-        range: string
-      has_subtypes:
-        range: Organism
+      type:
+      str:
+
+  Word:
+    attributes:
+      id:
+        identifier: true
+      type:
+      str:
+      letters:
+        range: Letter
         multivalued: true
         inlined: false
 
-  OrganismList:
-    slots:
-      - organisms
-    slot_usage:
-      organisms:
-        range: Organism
+  Phrase:
+    attributes:
+      id:
+        identifier: true
+      type:
+      str:
+      words:
+        range: Word
+        multivalued: true
+        inlined: false
+
+  Text:
+    attributes:
+      id:
+      str:
+      words:
+        range: Word
         multivalued: true
         inlined: true
         inlined_as_list: true
-        required: true
+      phrases:
+        range: Phrase
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
 
-slots:
-  id:
-  name:
-  has_subtypes:
-  organisms:
+  TextAnalysis:
+    attributes:
+      text:
+        range: Text
+        inlined: true
+      letters:
+        range: Letter
+        multivalued: true
+        inlined: true
+        inlined_as_list: true

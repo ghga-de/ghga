@@ -20,9 +20,9 @@ from ghga_validator.cli import validate_json
 from .fixtures.utils import BASE_DIR
 
 
-def test_validate_slots():
-    """Test data validation (using all validation plugins)"""
-    schema = BASE_DIR / "schemas" / "example_schema.yaml"
+def test_validate_attribute():
+    """Test data validation when slots in linkml schema are defined with attributes"""
+    schema = BASE_DIR / "schemas" / "example_schema_attr.yaml"
     file = BASE_DIR / "data" / "example_data.json"
     report = BASE_DIR / "tmp.json"
     target_class = "TextAnalysis"

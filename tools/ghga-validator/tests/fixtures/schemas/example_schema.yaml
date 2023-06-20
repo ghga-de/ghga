@@ -1,0 +1,104 @@
+# Copyright 2023 Universität Tübingen, DKFZ and EMBL
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+id: https://w3id.org/Example
+name: Example
+description: >-
+  An Example Schema
+version: 0.0.0
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  example: https://w3id.org/example/
+
+default_prefix: example
+
+classes:
+  Letter:
+    slots:
+      - id
+      - type
+      - str
+    slot_usage:
+      id:
+        identifier: true
+  Word:
+    slots:
+      - id
+      - type
+      - str
+      - letters
+    slot_usage:
+      id:
+        identifier: true
+      letters:
+        range: Letter
+        multivalued: true
+        inlined: false
+  Phrase:
+    slots:
+      - id
+      - type
+      - str
+      - words
+    slot_usage:
+      id:
+        identifier: true
+      words:
+        range: Word
+        multivalued: true
+        inlined: false
+  Text:
+    slots:
+      - id
+      - str
+      - words
+      - phrases
+    slot_usage:
+      words:
+        range: Word
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+      phrases:
+        range: Phrase
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+
+  TextAnalysis:
+    slots:
+      - text
+      - letters
+    slot_usage:
+      text:
+        range: Text
+        inlined: true
+      letters:
+        range: Letter
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+
+slots:
+  id:
+  type:
+  str:
+  words:
+  phrases:
+  letters:
+  text:

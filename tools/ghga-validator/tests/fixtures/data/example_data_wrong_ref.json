@@ -1,0 +1,44 @@
+{
+  "letters": [
+    {
+      "id": "0054",
+      "str": "T"
+    },
+    {
+      "id": "006F",
+      "str": "o"
+    }
+  ],
+  "text": {
+    "id": "2734",
+    "phrases": [
+      {
+        "id": "7463",
+        "str": "sunny day",
+        "words": [
+          "1235",
+          "1236a"
+        ]
+      }
+    ],
+    "str": "Today is a sunny day",
+    "words": [
+      {
+        "id": "1234",
+        "letters": [
+          "0054",
+          "006F"
+        ],
+        "str": "Today"
+      },
+      {
+        "id": "1235",
+        "str": "sunny"
+      },
+      {
+        "id": "1236",
+        "str": "day"
+      }
+    ]
+  }
+}
