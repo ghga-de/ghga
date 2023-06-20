@@ -10,3 +10,4 @@ scripts/update_readme.py
 
 .mypy.ini
 .pre-commit-config.yaml
+.readme_template.md
