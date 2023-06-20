@@ -23,8 +23,6 @@ from openpyxl import Workbook
 
 from ghga_transpiler import config
 
-from .config.exceptions import MissingWorkbookContent
-
 # pylint: disable=line-too-long
 SEMVER_REGEX = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
 
@@ -92,7 +90,7 @@ def convert_workbook(ghga_workbook: GHGAWorkbook) -> dict:
     converted_workbook = {}
     for sheet in ghga_workbook.config.worksheets:
         if sheet.settings is not None:
-            try:
+            if sheet.sheet_name in ghga_workbook.workbook:
                 rows = get_worksheet_rows(
                     ghga_workbook.workbook[sheet.sheet_name],
                     sheet.settings.start_row,
@@ -100,17 +98,16 @@ def convert_workbook(ghga_workbook: GHGAWorkbook) -> dict:
                     sheet.settings.start_column,
                     sheet.settings.end_column,
                 )
-            except KeyError as exc:
-                raise MissingWorkbookContent(
-                    f"Workbook does not contain {sheet.sheet_name} worksheet."
-                ) from exc
+
+                header = get_header(
+                    ghga_workbook.workbook[sheet.sheet_name],
+                    sheet.settings.header_row,
+                    sheet.settings.start_column,
+                    sheet.settings.end_column,
+                )
+                converted_workbook[sheet.settings.name] = convert_rows(header, rows)
+            else:
+                converted_workbook[sheet.settings.name] = []
         else:
             raise ValueError(f"{sheet.settings} will never be None")
-        header = get_header(
-            ghga_workbook.workbook[sheet.sheet_name],
-            sheet.settings.header_row,
-            sheet.settings.start_column,
-            sheet.settings.end_column,
-        )
-        converted_workbook[sheet.sheet_name] = convert_rows(header, rows)
     return converted_workbook

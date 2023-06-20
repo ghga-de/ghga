@@ -48,7 +48,7 @@ class WorksheetSettings(BaseModel):
 class Worksheet(BaseModel):
     """A data model for worksheets in the transpiler config"""
 
-    sheet_name: Optional[str]
+    sheet_name: str
     settings: Optional[WorksheetSettings]
 
 
