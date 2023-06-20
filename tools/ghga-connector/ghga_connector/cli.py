@@ -17,6 +17,7 @@
 """ CLI-specific wrappers around core functions."""
 
 import os
+from distutils.util import strtobool
 from pathlib import Path
 
 import crypt4gh.keys
@@ -57,7 +58,6 @@ class CLIMessageDisplay(core.AbstractMessageDisplay):
 cli = typer.Typer()
 
 
-@cli.command()
 def upload(  # noqa C901
     *,
     file_id: str = typer.Option(..., help="The id if the file to upload"),
@@ -87,6 +87,10 @@ def upload(  # noqa C901
         submitter_pubkey_path=submitter_pubkey_path,
         submitter_private_key_path=submitter_private_key_path,
     )
+
+
+if strtobool(os.getenv("UPLOAD_ENABLED") or "false"):
+    cli.command()(upload)
 
 
 @cli.command()
