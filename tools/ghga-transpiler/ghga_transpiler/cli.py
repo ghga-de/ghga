@@ -14,26 +14,18 @@
 # limitations under the License.
 #
 """ CLI-specific wrappers around core functions."""
-import json
+import sys
 from pathlib import Path
 from typing import Optional
 
 import typer
 
-HERE = Path(__file__).parent.resolve()
-DEFAULT_OUTPUT_FILE = HERE / "transpiled_metadata.yaml"
+from ghga_transpiler import io
+
+from .config.exceptions import MissingWorkbookContent, UnknownVersionError
+from .core import convert_workbook
 
 cli = typer.Typer()
-
-
-def convert_workbook(filename):
-    """Function to run steps for conversion
-
-    This is a place holder
-
-    """
-
-    return filename
 
 
 @cli.command()
@@ -45,20 +37,25 @@ def cli_main(
         dir_okay=False,
         readable=True,
     ),
-    output_file: Optional[Path] = typer.Argument(None, help="The path to output file."),
+    output_file: Optional[Path] = typer.Argument(
+        None, help="The path to output file.", dir_okay=False
+    ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Override output file if it exists."
     ),
 ):
-    """Function to convert excel spread sheet to JSON"""
+    """Function to get options and channel those to the convert workbook functionality"""
+    try:
+        ghga_workbook = io.read_workbook(spread_sheet)
+    except (SyntaxError, UnknownVersionError) as exc:
+        sys.exit(f"Unable to parse input file '{spread_sheet}': {exc}")
 
-    if output_file is None:
-        print(convert_workbook(spread_sheet))
-    elif output_file.exists() and not force:
-        print(f"{output_file} exits.")
-        raise typer.Abort()
-    else:
-        with open(output_file, "w", encoding="utf-8") as file:
-            json.dump(
-                convert_workbook(spread_sheet), file, ensure_ascii=False, indent=4
-            )
+    try:
+        converted = convert_workbook(ghga_workbook)
+    except MissingWorkbookContent as exc:
+        sys.exit(f"Unable to convert the input file '{spread_sheet}': {exc}")
+
+    try:
+        io.write_json(data=converted, path=output_file, force=force)
+    except FileExistsError as exc:
+        sys.exit(f"ERROR: {exc}")

@@ -12,8 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""
-This sub-package contains the main business functionality of this service.
-It should not contain any service API-related code.
-"""
+"""Data that are used in unit tests"""
+
+EXPECTED_CONVERSION = {
+    "books": [
+        {
+            "writer_name": "Albert Camus",
+            "book_name": "The Plague",
+            "isbn": "9780679720218",
+        },
+        {
+            "writer_name": "George Orwell",
+            "book_name": "1984",
+            "isbn": "9783548234106",
+        },
+    ],
+    "publisher": [
+        {"isbn": "9780679720218", "publisher_name": "Hamish Hamilton"},
+        {"isbn": "9783548234106", "publisher_name": "Secker and Warburg"},
+    ],
+}

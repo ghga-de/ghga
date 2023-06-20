@@ -4,3 +4,4 @@
 
 # additional requirements can be listed here
 testcontainers[kafka,mongo]==3.4.1
+openpyxl==3.1.2

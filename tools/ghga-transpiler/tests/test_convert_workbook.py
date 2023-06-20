@@ -12,10 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+from ghga_transpiler import io
+from ghga_transpiler.core import convert_workbook
 
-"""Test dummy."""
+from .fixtures.test_data_objects.conversion_data import EXPECTED_CONVERSION
+from .fixtures.utils import get_project_root
 
 
-def test_dummy():
-    """Just makes the CI pass."""
-    assert True
+def test_convert_workbook() -> None:
+    """Function to test workbook to json conversion"""
+
+    workbook_path = (
+        get_project_root() / "tests" / "fixtures" / "workbooks" / "a_workbook.xlsx"
+    )
+    ghga_workbook = io.read_workbook(workbook_path, "tests.fixtures.configs")
+
+    assert convert_workbook(ghga_workbook=ghga_workbook) == EXPECTED_CONVERSION

@@ -23,12 +23,13 @@ from typing import Optional
 import yaml
 from pydantic import BaseModel, root_validator
 
-from .exceptions import DuplicatedName
+from .exceptions import DuplicatedName, UnknownVersionError
 
 
 class DefaultSettings(BaseModel):
     """A data model for the defaults of the per-worksheet settings of a transpiler config"""
 
+    header_row: int = 0
     start_row: int = 0
     start_column: int = 0
     end_column: int = 0
@@ -38,6 +39,7 @@ class WorksheetSettings(BaseModel):
     """A data model for the per-worksheet settings of a transpiler config"""
 
     name: str
+    header_row: Optional[int]
     start_row: Optional[int]
     start_column: Optional[int]
     end_column: Optional[int]
@@ -53,7 +55,7 @@ class Worksheet(BaseModel):
 class Config(BaseModel):
     """A data model for the transpiler config"""
 
-    ghga_version: Optional[str]
+    ghga_metadata_version: str
     default_settings: DefaultSettings
     worksheets: list[Worksheet]
 
@@ -88,11 +90,13 @@ class Config(BaseModel):
         return values
 
 
-def load_config(version: str) -> Config:
+def load_config(version: str, package: resources.Package) -> Config:
     """Reads configuration yaml file from default location and creates a Config object"""
 
-    config_resource = resources.files("ghga_transpiler.configs").joinpath(
-        f"{version}.yaml"
-    )
-    config_str = config_resource.read_text(encoding="utf8")
+    config_resource = resources.files(package).joinpath(f"{version}.yaml")
+    try:
+        config_str = config_resource.read_text(encoding="utf8")
+    except FileNotFoundError:
+        # pylint: disable=raise-missing-from
+        raise UnknownVersionError(f"Unknown metadata version: {version}")
     return Config.parse_obj(yaml.full_load(config_str))
