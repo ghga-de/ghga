@@ -22,6 +22,7 @@ from typing import Optional, cast
 
 from linkml_runtime.linkml_model.meta import ClassDefinition, SlotDefinition
 
+from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.essentials import ExportableSchemaView, MetadataModel
 from metldata.model_utils.identifiers import get_class_identifiers
 from metldata.model_utils.manipulate import upsert_class
@@ -132,7 +133,12 @@ def add_accessions_to_model(
     identifier.
     """
 
-    class_identifiers = get_class_identifiers(model=model)
+    anchor_points_by_target = get_anchors_points_by_target(model=model)
+    class_identifiers = {
+        class_name: identifier
+        for class_name, identifier in get_class_identifiers(model=model).items()
+        if class_name in anchor_points_by_target
+    }
     schema_view = model.schema_view
 
     modified_schema_view = add_global_accession_slot(
