@@ -192,66 +192,70 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
         class-range slot of the current root class that has not been iterated
         yet."""
         for next_slot_name, next_slot_def in self._recursion_slots:
-            # If the slot is not multivalued, a single-value list is returned
-            # with an IdentifiedObjectIterator for the value of the slot
-            if not next_slot_def.multivalued:
-                yield ObjectIterator(
-                    self._schema,
-                    self._data[next_slot_name],
-                    next_slot_def.range,
-                    enumerate_non_identifiable=self._enumerate_non_identifiable,
-                    inline_non_identifiable=self._inline_non_identifiable,
-                    path=self._path + [next_slot_name],
-                )
-            # If the slot is multivalued and encoded in list format, a list with
-            # one IdentifiedObjectIterator per element is returned
-            elif (
-                next_slot_def.inlined_as_list or next_slot_def.inlined_as_list is None
-            ) and isinstance(self._data[next_slot_name], list):
-                for idx, elem in enumerate(self._data[next_slot_name]):
+            if next_slot_name in self._data.keys():
+                # If the slot is not multivalued, a single-value list is returned
+                # with an IdentifiedObjectIterator for the value of the slot
+                if not next_slot_def.multivalued:
                     yield ObjectIterator(
                         self._schema,
-                        elem,
+                        self._data[next_slot_name],
                         next_slot_def.range,
                         enumerate_non_identifiable=self._enumerate_non_identifiable,
                         inline_non_identifiable=self._inline_non_identifiable,
-                        path=self._path + [next_slot_name] + [idx],
+                        path=self._path + [next_slot_name],
                     )
-            # If the slot is multivalued and encoded in dictionary format, a list with
-            # one IdentifiedObjectIterator per element is returned. Since the
-            # identifier slot is optional in the dictionary format, the
-            # identifier is set based on the dictionary keys before the data is
-            # used.
-            elif (
-                next_slot_def.inlined_as_list is False
-                or next_slot_def.inlined_as_list is None
-            ) and isinstance(self._data[next_slot_name], dict):
-                identifier_slot = self._schema.get_identifier_slot(next_slot_def.range)
-                if identifier_slot is None:
+                # If the slot is multivalued and encoded in list format, a list with
+                # one IdentifiedObjectIterator per element is returned
+                elif (
+                    next_slot_def.inlined_as_list
+                    or next_slot_def.inlined_as_list is None
+                ) and isinstance(self._data[next_slot_name], list):
+                    for idx, elem in enumerate(self._data[next_slot_name]):
+                        yield ObjectIterator(
+                            self._schema,
+                            elem,
+                            next_slot_def.range,
+                            enumerate_non_identifiable=self._enumerate_non_identifiable,
+                            inline_non_identifiable=self._inline_non_identifiable,
+                            path=self._path + [next_slot_name] + [idx],
+                        )
+                # If the slot is multivalued and encoded in dictionary format, a list with
+                # one IdentifiedObjectIterator per element is returned. Since the
+                # identifier slot is optional in the dictionary format, the
+                # identifier is set based on the dictionary keys before the data is
+                # used.
+                elif (
+                    next_slot_def.inlined_as_list is False
+                    or next_slot_def.inlined_as_list is None
+                ) and isinstance(self._data[next_slot_name], dict):
+                    identifier_slot = self._schema.get_identifier_slot(
+                        next_slot_def.range
+                    )
+                    if identifier_slot is None:
+                        raise RuntimeError(
+                            f"Expected identifier slot for {next_slot_def.range}"
+                        )
+                    modified_data = deepcopy(self._data[next_slot_name])
+                    for key, value in modified_data.items():
+                        value[identifier_slot.name] = key
+                    for key, elem in modified_data.items():
+                        yield ObjectIterator(
+                            self._schema,
+                            elem,
+                            next_slot_def.range,
+                            enumerate_non_identifiable=self._enumerate_non_identifiable,
+                            inline_non_identifiable=self._inline_non_identifiable,
+                            path=self._path + [next_slot_name] + [key],
+                        )
+                # If none of the previous conditions were met, we have encountered a
+                # data format that is incompatible with the multivalued, inlined and
+                # inlined_as_list configurations.
+                else:
                     raise RuntimeError(
-                        f"Expected identifier slot for {next_slot_def.range}"
+                        "Invalid data. Slot is configured as"
+                        f" inlined_as_list={next_slot_def.inlined_as_list} but data is"
+                        f" of type {type(self._data[next_slot_name]).__name__}"
                     )
-                modified_data = deepcopy(self._data[next_slot_name])
-                for key, value in modified_data.items():
-                    value[identifier_slot.name] = key
-                for key, elem in modified_data.items():
-                    yield ObjectIterator(
-                        self._schema,
-                        elem,
-                        next_slot_def.range,
-                        enumerate_non_identifiable=self._enumerate_non_identifiable,
-                        inline_non_identifiable=self._inline_non_identifiable,
-                        path=self._path + [next_slot_name] + [key],
-                    )
-            # If none of the previous conditions were met, we have encountered a
-            # data format that is incompatible with the multivalued, inlined and
-            # inlined_as_list configurations.
-            else:
-                raise RuntimeError(
-                    "Invalid data. Slot is configured as"
-                    f" inlined_as_list={next_slot_def.inlined_as_list} but data is"
-                    f" of type {type(self._data[next_slot_name]).__name__}"
-                )
 
     def __next__(
         self,
