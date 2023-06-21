@@ -2,13 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: {{ .Chart.Name }}
-  name: {{ .Chart.Name }}
+    app: {{ .Release.Name }}
+  name: {{ .Release.Name }}
 spec:
   revisionHistoryLimit: 1
   selector:
     matchLabels:
-      app: {{ .Chart.Name }}
+      app: {{ .Release.Name }}
   template:
     metadata:
       annotations:
@@ -16,63 +16,54 @@ spec:
         {{- toYaml .Values.podAnnotations | nindent 8 }}
         {{- end }}
       labels:
-        app: {{ .Chart.Name }}
+        app: {{ .Release.Name }}
         version: staging
         sidecar.istio.io/inject: "true"
     spec:
-      serviceAccountName: {{ .Chart.Name }}
+      serviceAccountName: {{ .Release.Name }}
       containers:
-        - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
-          {{- include "ghga-common.command" (list "auth-service")  | nindent 8 }}
-          name: {{ .Chart.Name }}
-          env:
-            - name: AUTH_SERVICE_RUN_AUTH_ADAPTER
-              value: "true"
-            - name: AUTH_SERVICE_HOST
-              value: "0.0.0.0"
-            - name: AUTH_SERVICE_PORT
-              value: "{{ .Values.port }}"
-            - name: AUTH_SERVICE_BASIC_AUTH_USER
-              value: "{{ .Values.authService.basicAuth.username }}"
-            - name: AUTH_SERVICE_BASIC_AUTH_PWD
-              value: "{{ .Values.authService.basicAuth.password }}"
-            - name: AUTH_SERVICE_DB_URL
-              value: "{{ .Values.authService.database.url }}"
-            - name: AUTH_SERVICE_DB_NAME
-              value: "{{ .Values.authService.database.name }}"
-            - name: AUTH_SERVICE_OIDC_CLIENT_ID
-              value: "{{ .Values.authService.oidcClientId }}"
-            - name: AUTH_SERVICE_AUTH_KEY
-              value: "{{ .Values.authService.authKey }}"
-            - name: AUTH_SERVICE_AUTH_EXT_KEYS
-              value: "{{ .Values.authService.authExtKeys }}"
-          securityContext:
-            runAsUser: 1000
-            capabilities:
-              drop:
-                - ALL
-            seccompProfile:
-              type: "RuntimeDefault"
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-          ports:
-            - containerPort: {{ .Values.port }}
-          resources:
-            limits:
-              cpu: 500m
-              memory: 256M
-            requests:
-              cpu: 100m
-              memory: 64M
-          readinessProbe:
-            tcpSocket:
-              port: {{ .Values.port }}
-            initialDelaySeconds: 10
-            periodSeconds: 15
-          livenessProbe:
-            tcpSocket:
-              port: {{ .Values.port }}
-            initialDelaySeconds: 10
-            periodSeconds: 15
+      - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        {{- include "ghga-common.command-args" (list "auth-service")  | nindent 8 }}
+        name: {{ .Release.Name }}
+        securityContext:
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: "RuntimeDefault"
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: {{ .Values.port }}
+        resources:
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+        readinessProbe:
+          tcpSocket:
+            port: {{ .Values.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        livenessProbe:
+          tcpSocket:
+            port: {{ .Values.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        volumeMounts:
+        - name: config
+          mountPath: "/home/appuser/.{{ .Values.config_prefix }}.yaml"
+          subPath: .{{ .Values.config_prefix }}.yaml
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ .Release.Name }}
+          items:
+          - key: parameters
+            path: .{{ .Values.config_prefix }}.yaml
       restartPolicy: Always

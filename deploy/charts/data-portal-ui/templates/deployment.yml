@@ -2,13 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: data-portal-ui
-  name: data-portal-ui
+    app: {{ .Release.Name }}
+  name: {{ .Release.Name }}
 spec:
   revisionHistoryLimit: 1
   selector:
     matchLabels:
-      app: data-portal-ui
+      app: {{ .Release.Name }}
   template:
     metadata:
       annotations:
@@ -16,26 +16,15 @@ spec:
         {{- toYaml .Values.podAnnotations | nindent 8 }}
         {{- end }}
       labels:
-        app: data-portal-ui
+        app: {{ .Release.Name }}
         sidecar.istio.io/inject: "true"
         version: staging
     spec:
-      serviceAccountName: data-portal-ui
+      serviceAccountName: {{ .Release.Name }}
       containers:
-      - env:
-        - name: DATA_PORTAL_UI_HOST
-          value: "0.0.0.0"
-        - name: DATA_PORTAL_UI_PORT
-          value: {{ .Values.port }}
-        - name: DATA_PORTAL_UI_SVC_REPOSITORY_URL
-          value: {{ .Values.svcRepositoryUrl }}
-        - name: DATA_PORTAL_UI_SVC_SEARCH_URL
-          value: {{ .Values.svcSearchUrl }}
-        - name: REACT_APP_CLIENT_URL
-          value: {{ .Values.clientUrl }}
-        image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
-        {{- include "ghga-common.command" (list "python /service/configure_build_serve/run.py")  | nindent 8 }}
-        name: data-portal-ui
+      - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        {{- include "ghga-common.command-args" (list "python /service/configure_build_serve/run.py")  | nindent 8 }}
+        name: {{ .Release.Name }}
         securityContext:
           runAsUser: 1000
           capabilities:
@@ -48,6 +37,13 @@ spec:
             type: "RuntimeDefault"
         ports:
         - containerPort: {{ .Values.port }}
+        resources:
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
         readinessProbe:
           tcpSocket:
             port: {{ .Values.port }}
@@ -58,12 +54,16 @@ spec:
             port: {{ .Values.port }}
           initialDelaySeconds: 240
           periodSeconds: 15
-        resources:
-          limits:
-            cpu: {{ .Values.resources.limits.cpu }}
-            memory: {{ .Values.resources.limits.memory }}
-          requests:
-            cpu: {{ .Values.resources.requests.cpu }}
-            memory: {{ .Values.resources.requests.memory }}
+        volumeMounts:
+        - name: config
+          mountPath: "/home/node/.{{ .Values.config_prefix }}.yaml"
+          subPath: .{{ .Values.config_prefix }}.yaml
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ .Release.Name }}
+          items:
+          - key: parameters
+            path: .{{ .Values.config_prefix }}.yaml
       restartPolicy: Always
-      volumes: null

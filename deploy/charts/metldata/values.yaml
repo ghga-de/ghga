@@ -1,0 +1,43 @@
+args: []
+command: []
+horizontalPodAutoscaler:
+  enabled: false
+  averageCpuUtilization: 75
+  averageMemoryUtilization: 75
+image:
+  name: "ghga/metldata"
+  tag: "0.3.1"
+podAnnotations: {}
+port: "8080"
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256M"
+  requests:
+    cpu: "100m"
+    memory: "64M"
+
+config_prefix: metldata
+
+mapping:
+  enabled: false
+  hostname: ""
+  prefix: /
+
+parameters:
+  api_root_path: /
+  artifact_infos: []
+  auto_reload: false
+  cors_allow_credentials: false
+  cors_allowed_headers: []
+  cors_allowed_methods: []
+  cors_allowed_origins: []
+  db_connection_str: "**********"
+  db_name: metadata_artifacts
+  docs_url: /docs
+  host: 0.0.0.0
+  loader_token_hashes: "**********" # <Please fill - The tokens must be the loader token generated using the data steward kit.>
+  log_level: info
+  openapi_url: /openapi.json
+  port: 8080
+  workers: 1

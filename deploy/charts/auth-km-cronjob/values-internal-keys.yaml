@@ -1,3 +1,0 @@
-cronSchedule: '0 2 12 12 *'
-service:
-  keyType: "internal"

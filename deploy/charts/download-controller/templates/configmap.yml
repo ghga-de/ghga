@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}
+data:
+  parameters-rest: |
+    {{- merge .Values.parameters.rest .Values.parameters.default | toYaml | nindent 4 }}
+  parameters-consumer: |
+    {{- merge .Values.parameters.consumer .Values.parameters.default | toYaml | nindent 4 }}

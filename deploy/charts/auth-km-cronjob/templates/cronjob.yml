@@ -20,7 +20,7 @@ spec:
             {{- toYaml .Values.podAnnotations | nindent 12 }}
             {{- end }}
         spec:
-          serviceAccountName: auth-km-job
+          serviceAccountName: {{ .Values.serviceAccount.name }}
           containers:
           - env:
             - name: VAULT_TOKEN
@@ -31,9 +31,11 @@ spec:
               value: {{ .Values.vault.namespace }}
             image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
             {{- if eq .Values.service.keyType "internal" }}
-            {{- include "ghga-common.command" (list .Values.service.runCommands.internal )  | nindent 12 }}
+            {{- include "ghga-common.command-args" (list .Values.service.runCommands.internal )  | nindent 12 }}
             {{- else if eq .Values.service.keyType "external" }}
-            {{- include "ghga-common.command" (list .Values.service.runCommands.external )  | nindent 12 }}
+            {{- include "ghga-common.command-args" (list .Values.service.runCommands.external )  | nindent 12 }}
+            {{- else if eq .Values.service.keyType "wps" }}
+            {{- include "ghga-common.command-args" (list .Values.service.runCommands.wps )  | nindent 12 }}
             {{- else }}
             {{- fail "value for .Values.service.keyType must be `internal` or `external`" }}
             {{- end }}

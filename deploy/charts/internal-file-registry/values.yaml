@@ -1,0 +1,51 @@
+args: []
+command: []
+horizontalPodAutoscaler:
+  enabled: false
+  averageCpuUtilization: 75
+  averageMemoryUtilization: 75
+image:
+  name: "ghga/internal-file-registry-service"
+  tag: "0.4.0"
+podAnnotations: {}
+port: "8080"
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256M"
+  requests:
+    cpu: "100m"
+    memory: "64M"
+
+config_prefix: ifrs
+
+mapping:
+  enabled: false
+  hostname: ""
+  prefix: /
+  rewrite: null
+
+parameters:
+  aws_config_ini: null
+  db_connection_str: "**********"
+  db_name: ifrs
+  file_deleted_event_topic: internal_registrations
+  file_deleted_event_type: internal_file_deleted
+  file_registered_event_topic: internal_registrations
+  file_registered_event_type: internal_file_registered
+  file_staged_event_topic: internal_registrations
+  file_staged_event_type: internal_file_staged
+  files_to_delete_topic: purges
+  files_to_delete_type: files_to_delete
+  files_to_register_topic: interrogations
+  files_to_register_type: validation_success
+  files_to_stage_topic: downloads
+  files_to_stage_type: unstaged_drs_object_requested
+  kafka_servers: []
+  permanent_bucket: permanent
+  s3_access_key_id: "**********"
+  s3_endpoint_url: "**********"
+  s3_secret_access_key: "**********"
+  s3_session_token: "**********"
+  service_instance_id: "ifrs_1"
+  service_name: internal_file_registry

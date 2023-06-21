@@ -3,14 +3,19 @@ command: []
 args: []
 image:
   name: "ghga/auth-km-jobs"
-  tag: "0.0.0-26-8e5cb6a-main"
+  tag: "0.0.0-30-7c9efa7-main"
 cronSchedule: ""
 vault:
   token: ""
   address: "https://hashicorp-vault.vault:8200"
   namespace: "vault"
+serviceAccount:
+  enabled: true
+  name: auth-km-job
+
 service:
   keyType: ""
   runCommands:
    internal: run refresh-int-keys
    external: run refresh-ext-keys
+   wps: run refresh-wps-keys

@@ -1,14 +1,14 @@
-podAnnotations: {}
-command: []
 args: []
+command: []
+horizontalPodAutoscaler:
+  enabled: false
+  averageCpuUtilization: 75
+  averageMemoryUtilization: 75
 image:
   name: "ghga/data-portal-ui"
-  tag: "0.0.0-193-6587ec5-main"
+  tag: "0.1.1"
+podAnnotations: {}
 port: "8080"
-serviceTargetPort: "8080"
-svcRepositoryUrl: "/api/repository"
-svcSearchUrl: "/api/search"
-clientUrl: "https://data.ghga-dev.de/"
 resources:
   limits:
     cpu: "1500m"
@@ -16,3 +16,16 @@ resources:
   requests:
     cpu: "1000m"
     memory: "1024M"
+
+config_prefix: data_portal_ui
+
+mapping:
+  enabled: false
+  hostname: ""
+  prefix: /
+
+parameters:
+  host: "0.0.0.0"
+  port: 8080
+  svc_repository_url: "/api/repository"
+  svc_search_url: "/api/search"

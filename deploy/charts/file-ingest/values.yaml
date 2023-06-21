@@ -1,0 +1,53 @@
+args: []
+command: []
+horizontalPodAutoscaler:
+  enabled: false
+  averageCpuUtilization: 75
+  averageMemoryUtilization: 75
+image:
+  name: "ghga/file-ingest-service"
+  tag: "0.1.2"
+podAnnotations: {}
+port: "8080"
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256M"
+  requests:
+    cpu: "100m"
+    memory: "64M"
+
+config_prefix: fis
+
+mapping:
+  enabled: false
+  hostname: ""
+  prefix: /
+  rewrite: null
+
+parameters:
+  api_root_path: /
+  auto_reload: false
+  cors_allow_credentials: false
+  cors_allowed_headers: []
+  cors_allowed_methods: []
+  cors_allowed_origins: []
+  debug_vault: false
+  docs_url: /docs
+  host: 0.0.0.0
+  kafka_servers: []
+  log_level: info
+  openapi_url: /openapi.json
+  port: 8080
+  private_key: ""
+  publisher_topic: interrogations
+  publisher_type: validation_success
+  service_instance_id: "fis_1"
+  service_name: fis
+  source_bucket_id: staging
+  token_hashes: []
+  vault_host: http://vault
+  vault_port: 8200
+  vault_role_id: '**********'
+  vault_secret_id: '**********'
+  workers: 1
