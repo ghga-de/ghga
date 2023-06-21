@@ -1,5 +1,197 @@
 api_root_path: /
-artifact_infos: []
+artifact_infos:
+- description: embedded_restricted
+  name: embedded_restricted
+  resource_classes:
+    Dataset:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: datasets
+        target_class: Dataset
+      description: A Dataset is a collection of Files.
+      json_schema: {}
+      name: Dataset
+    EmbeddedDataset:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: embedded_dataset
+        target_class: EmbeddedDataset
+      description: A Dataset is a collection of Files.
+      json_schema: {}
+      name: EmbeddedDataset
+    Experiment:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: experiments
+        target_class: Experiment
+      description: An experiment containing one or multiple samples.
+      json_schema: {}
+      name: Experiment
+    ExperimentFile:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: experiment_files
+        target_class: ExperimentFile
+      description: null
+      json_schema: {}
+      name: ExperimentFile
+    Sample:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: samples
+        target_class: Sample
+      description: A sample that was used to generate Files containing experiment
+        data.
+      json_schema: {}
+      name: Sample
+    SampleFile:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: sample_files
+        target_class: SampleFile
+      description: null
+      json_schema: {}
+      name: SampleFile
+- description: resolved_restricted
+  name: resolved_restricted
+  resource_classes:
+    Dataset:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: datasets
+        target_class: Dataset
+      description: A Dataset is a collection of Files.
+      json_schema: {}
+      name: Dataset
+    Experiment:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: experiments
+        target_class: Experiment
+      description: An experiment containing one or multiple samples.
+      json_schema: {}
+      name: Experiment
+    ExperimentFile:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: experiment_files
+        target_class: ExperimentFile
+      description: null
+      json_schema: {}
+      name: ExperimentFile
+    Sample:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: samples
+        target_class: Sample
+      description: A sample that was used to generate Files containing experiment
+        data.
+      json_schema: {}
+      name: Sample
+    SampleFile:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: sample_files
+        target_class: SampleFile
+      description: null
+      json_schema: {}
+      name: SampleFile
+- description: resolved_public
+  name: resolved_public
+  resource_classes:
+    Dataset:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: datasets
+        target_class: Dataset
+      description: A Dataset is a collection of Files.
+      json_schema: {}
+      name: Dataset
+    Experiment:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: experiments
+        target_class: Experiment
+      description: An experiment containing one or multiple samples.
+      json_schema: {}
+      name: Experiment
+    ExperimentFile:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: experiment_files
+        target_class: ExperimentFile
+      description: null
+      json_schema: {}
+      name: ExperimentFile
+    Sample:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: samples
+        target_class: Sample
+      description: A sample that was used to generate Files containing experiment
+        data.
+      json_schema: {}
+      name: Sample
+    SampleFile:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: sample_files
+        target_class: SampleFile
+      description: null
+      json_schema: {}
+      name: SampleFile
+- description: embedded_public
+  name: embedded_public
+  resource_classes:
+    Dataset:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: datasets
+        target_class: Dataset
+      description: A Dataset is a collection of Files.
+      json_schema: {}
+      name: Dataset
+    EmbeddedDataset:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: embedded_dataset
+        target_class: EmbeddedDataset
+      description: A Dataset is a collection of Files.
+      json_schema: {}
+      name: EmbeddedDataset
+    Experiment:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: experiments
+        target_class: Experiment
+      description: An experiment containing one or multiple samples.
+      json_schema: {}
+      name: Experiment
+    ExperimentFile:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: experiment_files
+        target_class: ExperimentFile
+      description: null
+      json_schema: {}
+      name: ExperimentFile
+    Sample:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: samples
+        target_class: Sample
+      description: A sample that was used to generate Files containing experiment
+        data.
+      json_schema: {}
+      name: Sample
+    SampleFile:
+      anchor_point:
+        identifier_slot: accession
+        root_slot: sample_files
+        target_class: SampleFile
+      description: null
+      json_schema: {}
+      name: SampleFile
 auto_reload: false
 cors_allow_credentials: null
 cors_allowed_headers: null
@@ -10,8 +202,8 @@ db_name: dev_db
 docs_url: /docs
 host: 127.0.0.1
 loader_token_hashes:
-- test_token_hash
-log_level: info
+- 09e5724dab34b50fe2db5ebae7ac5eac4ef2904d105f8f2b3d5a4cb2c7f43da4
+log_level: trace
 openapi_url: /openapi.json
 port: 8080
 workers: 1
