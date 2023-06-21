@@ -60,7 +60,7 @@ async def test_upload_artifacts_via_http_api(
             ),
             type_=artifact_type,
             key=str(uuid4()),  # will later be the submission id
-            payload=artifact_content,
+            payload={"content": artifact_content},
         )
         for artifact_type, artifact_contents in EXAMPLE_ARTIFACTS.items()
         for artifact_content in artifact_contents

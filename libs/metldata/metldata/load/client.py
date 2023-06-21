@@ -44,7 +44,9 @@ def upload_artifacts_via_http_api(
         response = client.post(
             f"{config.loader_api_root}/rpc/load-artifacts",
             json=artifacts,
-            headers={"Authorization": f"Bearer {token}"},
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
             timeout=60,
         )
 

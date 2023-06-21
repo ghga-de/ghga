@@ -20,8 +20,8 @@ import json
 
 import pytest
 
+from metldata.event_handling.artifact_events import get_artifact_topic
 from metldata.event_handling.models import SubmissionEventPayload
-from metldata.submission_registry import get_artifact_topic
 from metldata.transform.main import (
     TransformationEventHandlingConfig,
     run_workflow_on_all_source_events,

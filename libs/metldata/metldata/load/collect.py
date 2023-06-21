@@ -66,6 +66,9 @@ def collect_artifacts(
             artifact_type=artifact_type,
         )
         for event in event_collector.collect_events(topic=topic):
-            artifact_resources[artifact_type].append(event.payload)
+            content = event.payload.get("content")
+            if not content:
+                raise RuntimeError("Artifact does not contain 'content' field.")
+            artifact_resources[artifact_type].append(content)
 
     return artifact_resources
