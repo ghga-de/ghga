@@ -16,15 +16,12 @@
 
 """Tests for API Calls"""
 
-import json
-import re
 from contextlib import nullcontext
-from typing import Any, Mapping, Optional, Union
-from unittest.mock import Mock, patch
+from typing import Optional
+from unittest.mock import Mock
 
 import pytest
-import requests
-from requests.models import Response
+from pytest_httpx import HTTPXMock
 
 from ghga_connector.core.api_calls import (
     UploadStatus,
@@ -34,9 +31,9 @@ from ghga_connector.core.api_calls import (
 )
 from ghga_connector.core.exceptions import (
     CantChangeUploadStatusError,
+    ConnectionFailedError,
     InvalidWPSResponseError,
     MaxPartNoExceededError,
-    MaxRetriesReachedError,
     NoWorkPackageAccessError,
     UploadNotRegisteredError,
 )
@@ -52,7 +49,7 @@ from tests.fixtures.utils import mock_wps_token
         (False, "pending", UploadStatus.CANCELLED, CantChangeUploadStatusError),
         (False, "uploadable", UploadStatus.UPLOADED, CantChangeUploadStatusError),
         (False, "not_uploadable", UploadStatus.UPLOADED, UploadNotRegisteredError),
-        (True, "uploaded", UploadStatus.UPLOADED, MaxRetriesReachedError),
+        (True, "uploaded", UploadStatus.UPLOADED, ConnectionFailedError),
     ],
 )
 def test_patch_multipart_upload(
@@ -128,52 +125,26 @@ def test_get_part_upload_urls(
                 break
 
 
-class MockResponse:
-    """Mock response"""
-
-    def __init__(self, *, content: Any, status_code: int):
-        self.status_code = status_code
-        self.content = json.dumps(content)
-
-    def json(self):
-        """Mock serialization"""
-        return json.loads(self.content)
-
-
-class MockSession(requests.Session):
-    """Session object mocking specific calls with provided response"""
-
-    def __init__(self, response: MockResponse):
-        self.response = response
-        super().__init__()
-
-    def get(  # pylint: disable=arguments-differ
-        self,
-        url: str,
-        *,
-        headers: Union[  # pylint: disable=unused-argument
-            Mapping[str, Union[str, bytes, None]], None
-        ],
-        timeout: Union[  # pylint: disable=unused-argument
-            Union[float, tuple[float, float], tuple[float, None]], None
-        ] = 5,
-    ) -> Response:
-        if re.match(".+/work-packages/.+", url):
-            return self.response
-        raise ValueError("Unsupported")
-
-
-def test_get_wps_file_info():
+def test_get_wps_file_info(httpx_mock: HTTPXMock):
     """Test response handling with some mock - just make sure code paths work"""
 
     files = {"file_1": ".tar.gz"}
+    httpx_mock.add_response(json={"files": files}, status_code=200)
 
-    patched_response = MockResponse(content={"files": files}, status_code=200)
+    wp_id, wp_token = mock_wps_token(1, None)
+    work_package_accessor = WorkPackageAccessor(
+        access_token=wp_token,
+        api_url="http://127.0.0.1",
+        dcs_api_url="",
+        package_id=wp_id,
+        submitter_private_key="",
+    )
+    response = work_package_accessor.get_package_files()
+    assert response == files
 
-    with patch(
-        "ghga_connector.core.session.RequestsSession.session",
-        MockSession(response=patched_response),
-    ):
+    httpx_mock.add_response(json={"files": files}, status_code=403)
+
+    with pytest.raises(NoWorkPackageAccessError):
         wp_id, wp_token = mock_wps_token(1, None)
         work_package_accessor = WorkPackageAccessor(
             access_token=wp_token,
@@ -183,38 +154,16 @@ def test_get_wps_file_info():
             submitter_private_key="",
         )
         response = work_package_accessor.get_package_files()
-        assert response == files
 
-    patched_response = MockResponse(content={"files": files}, status_code=403)
+    httpx_mock.add_response(json={"files": files}, status_code=500)
 
-    with patch(
-        "ghga_connector.core.session.RequestsSession.session",
-        MockSession(response=patched_response),
-    ):
-        with pytest.raises(NoWorkPackageAccessError):
-            wp_id, wp_token = mock_wps_token(1, None)
-            work_package_accessor = WorkPackageAccessor(
-                access_token=wp_token,
-                api_url="http://127.0.0.1",
-                dcs_api_url="",
-                package_id=wp_id,
-                submitter_private_key="",
-            )
-            response = work_package_accessor.get_package_files()
-
-    patched_response = MockResponse(content=None, status_code=500)
-
-    with patch(
-        "ghga_connector.core.session.RequestsSession.session",
-        MockSession(response=patched_response),
-    ):
-        with pytest.raises(InvalidWPSResponseError):
-            wp_id, wp_token = mock_wps_token(1, None)
-            work_package_accessor = WorkPackageAccessor(
-                access_token=wp_token,
-                api_url="http://127.0.0.1",
-                dcs_api_url="",
-                package_id=wp_id,
-                submitter_private_key="",
-            )
-            response = work_package_accessor.get_package_files()
+    with pytest.raises(InvalidWPSResponseError):
+        wp_id, wp_token = mock_wps_token(1, None)
+        work_package_accessor = WorkPackageAccessor(
+            access_token=wp_token,
+            api_url="http://127.0.0.1",
+            dcs_api_url="",
+            package_id=wp_id,
+            submitter_private_key="",
+        )
+        response = work_package_accessor.get_package_files()

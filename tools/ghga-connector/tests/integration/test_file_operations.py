@@ -16,7 +16,7 @@
 
 """Test file operations"""
 
-from queue import Queue
+from queue import Empty, Queue
 from typing import Any, Iterator, Tuple, Union
 
 import pytest
@@ -110,7 +110,10 @@ async def test_download_file_parts(
 
     obtained = 0
     while obtained < len(expected_bytes):
-        start, obtained_bytes = queue.get()
+        try:
+            start, obtained_bytes = queue.get(block=False)
+        except Empty:
+            continue
         obtained += len(obtained_bytes)
         queue.task_done()
         assert expected_bytes[start : start + part_size] == obtained_bytes

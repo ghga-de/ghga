@@ -76,7 +76,7 @@ def upload(  # noqa C901
     """
     Command to upload a file
     """
-    core.RequestsSession.configure(CONFIG.max_retries)
+    core.HttpxClientState.configure(CONFIG.max_retries)
 
     core.upload(
         api_url=CONFIG.upload_api,
@@ -113,7 +113,7 @@ def download(  # pylint: disable=too-many-arguments
     """
     Command to download files
     """
-    core.RequestsSession.configure(CONFIG.max_retries)
+    core.HttpxClientState.configure(CONFIG.max_retries)
     message_display = CLIMessageDisplay()
 
     if not submitter_pubkey_path.is_file():

@@ -24,12 +24,12 @@ from pathlib import Path
 from typing import Dict, Iterator, Tuple
 
 import crypt4gh.keys
-import requests
+import httpx
 
 from ghga_connector.core import exceptions
+from ghga_connector.core.client import httpx_client
 from ghga_connector.core.constants import MAX_PART_NUMBER, TIMEOUT
 from ghga_connector.core.http_translation import ResponseExceptionTranslator
-from ghga_connector.core.session import RequestsSession
 
 # Constants for clarity of return values
 NO_DOWNLOAD_URL = None
@@ -71,11 +71,12 @@ def initiate_multipart_upload(
 
     # Make function call to get upload url
     try:
-        response = RequestsSession.post(
-            url=url, headers=headers, data=serialized_data, timeout=TIMEOUT
-        )
-    except requests.exceptions.RequestException as request_error:
-        exceptions.raise_if_max_retries(request_error=request_error, url=url)
+        with httpx_client() as client:
+            response = client.post(
+                url=url, headers=headers, content=serialized_data, timeout=TIMEOUT
+            )
+    except httpx.RequestError as request_error:
+        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
         raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
@@ -114,9 +115,10 @@ def get_part_upload_url(*, api_url: str, upload_id: str, part_no: int):
 
     # Make function call to get upload url
     try:
-        response = RequestsSession.post(url=url, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.RequestException as request_error:
-        exceptions.raise_if_max_retries(request_error=request_error, url=url)
+        with httpx_client() as client:
+            response = client.post(url=url, headers=headers, timeout=TIMEOUT)
+    except httpx.RequestError as request_error:
+        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
         raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
@@ -185,11 +187,12 @@ def patch_multipart_upload(
     serialized_data = json.dumps(post_data)
 
     try:
-        response = RequestsSession.patch(
-            url=url, headers=headers, data=serialized_data, timeout=TIMEOUT
-        )
-    except requests.exceptions.RequestException as request_error:
-        exceptions.raise_if_max_retries(request_error=request_error, url=url)
+        with httpx_client() as client:
+            response = client.patch(
+                url=url, headers=headers, content=serialized_data, timeout=TIMEOUT
+            )
+    except httpx.RequestError as request_error:
+        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
         raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
@@ -232,9 +235,10 @@ def get_upload_info(
     headers = {"Accept": "*/*", "Content-Type": "application/json"}
 
     try:
-        response = RequestsSession.get(url=url, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.RequestException as request_error:
-        exceptions.raise_if_max_retries(request_error=request_error, url=url)
+        with httpx_client() as client:
+            response = client.get(url=url, headers=headers, timeout=TIMEOUT)
+    except httpx.RequestError as request_error:
+        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
         raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
@@ -267,9 +271,10 @@ def get_file_metadata(*, api_url: str, file_id: str) -> Dict:
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
     try:
-        response = RequestsSession.get(url=url, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.RequestException as request_error:
-        exceptions.raise_if_max_retries(request_error=request_error, url=url)
+        with httpx_client() as client:
+            response = client.get(url=url, headers=headers, timeout=TIMEOUT)
+    except httpx.RequestError as request_error:
+        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
         raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code

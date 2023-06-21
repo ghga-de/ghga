@@ -18,11 +18,11 @@ This file contains all api calls related to obtaining work package and work orde
 
 from dataclasses import dataclass
 
-import requests
+import httpx
 from ghga_service_commons.utils.crypt import decrypt
 
 from ghga_connector.core import exceptions
-from ghga_connector.core.session import RequestsSession
+from ghga_connector.core.client import httpx_client
 
 
 @dataclass
@@ -46,8 +46,9 @@ class WorkPackageAccessor:
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         try:
-            response = RequestsSession.get(url=url, headers=headers)
-        except requests.exceptions.RequestException as request_error:
+            with httpx_client() as client:
+                response = client.get(url=url, headers=headers)
+        except httpx.RequestError as request_error:
             raise exceptions.RequestFailedError(url=url) from request_error
 
         status_code = response.status_code
@@ -73,8 +74,9 @@ class WorkPackageAccessor:
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         try:
-            response = RequestsSession.post(url=url, headers=headers)
-        except requests.exceptions.RequestException as request_error:
+            with httpx_client() as client:
+                response = client.post(url=url, headers=headers)
+        except httpx.RequestError as request_error:
             raise exceptions.RequestFailedError(url=url) from request_error
 
         status_code = response.status_code

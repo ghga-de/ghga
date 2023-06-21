@@ -12,26 +12,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+"""Handling session initialization for requests"""
 
-"""
-Adds wrapper classes to translate httpyexpect errors and check against
-provided exception specs for all API endpoints
-"""
-
-from typing import Dict
+from contextlib import contextmanager
 
 import httpx
-from httpyexpect.client import ExceptionMapping, ResponseTranslator
 
 
-class ResponseExceptionTranslator:
-    """Base class providing behaviour and injection point for spec"""
+class HttpxClientState:
+    """Helper class to make max_retries user configurable"""
 
-    def __init__(self, *, spec: Dict[int, object]) -> None:
-        self._exception_map = ExceptionMapping(spec)
+    max_retries: int
 
-    def handle(self, response: httpx.Response):
-        """Translate and raise error, if defined by spec"""
-        translator = ResponseTranslator(response, exception_map=self._exception_map)
-        translator.raise_for_error()
+    @classmethod
+    def configure(cls, max_retries: int):
+        """Configure client with exponential backoff retry (using httpx's 0.5 default)"""
+
+        # can't be negative - should we log this?
+        cls.max_retries = max(0, max_retries)
+
+
+@contextmanager
+def httpx_client():
+    """Yields a context manager httpx client and closes it afterward"""
+
+    transport = httpx.HTTPTransport(retries=HttpxClientState.max_retries)
+
+    with httpx.Client(transport=transport) as client:
+        yield client

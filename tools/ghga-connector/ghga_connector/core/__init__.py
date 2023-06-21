@@ -21,6 +21,7 @@ It should not contain any service API-related code.
 from . import exceptions  # noqa: F401
 from .api_calls import WorkPackageAccessor  # noqa: F401
 from .batch_processing import CliIoHandler, FileStager, StagingParameters  # noqa: F401
+from .client import HttpxClientState, httpx_client  # noqa: F401
 from .constants import (  # noqa: F401
     DEFAULT_PART_SIZE,
     MAX_PART_NUMBER,
@@ -29,4 +30,3 @@ from .constants import (  # noqa: F401
 )
 from .main import decrypt_file, download, upload  # noqa: F401
 from .message_display import AbstractMessageDisplay, MessageColors  # noqa: F401
-from .session import RequestsSession  # noqa: F401

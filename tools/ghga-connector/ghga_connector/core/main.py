@@ -18,7 +18,7 @@
 
 import os
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 from typing import List
 
 from ghga_connector.core import exceptions
@@ -135,7 +135,7 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
             part_size=part_size,
             file_path=Path(encrypted_file_path),
         )
-    except exceptions.MaxRetriesReachedError as error:
+    except exceptions.ConnectionFailedError as error:
         message_display.failure(
             "The upload has failed too many times. The upload was aborted."
         )
@@ -251,7 +251,7 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
             file_size=download_url_tuple[1],
             work_package_accessor=work_package_accessor,
         )
-    except exceptions.MaxRetriesReachedError as error:
+    except exceptions.ConnectionFailedError as error:
         # Remove file, if the download failed.
         output_file_ongoing.unlink()
         raise error
@@ -317,7 +317,10 @@ def download_parts(
         downloaded_size = len(envelope)
         file.write(envelope)
         while downloaded_size < file_size:
-            start, part = queue.get()
+            try:
+                start, part = queue.get(block=False)
+            except Empty:
+                continue
             file.seek(start + len(envelope))
             file.write(part)
             downloaded_size += len(part)

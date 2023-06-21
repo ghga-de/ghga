@@ -21,16 +21,16 @@ import base64
 from time import sleep
 from typing import Iterator, Tuple, Union
 
-import requests
+import httpx
 from ghga_service_commons.utils.crypt import encode_key
 from requests.structures import CaseInsensitiveDict
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls.work_package import WorkPackageAccessor
+from ghga_connector.core.client import httpx_client
 from ghga_connector.core.constants import TIMEOUT
 from ghga_connector.core.http_translation import ResponseExceptionTranslator
 from ghga_connector.core.message_display import AbstractMessageDisplay
-from ghga_connector.core.session import RequestsSession
 
 # Constants for clarity of return values
 NO_DOWNLOAD_URL = None
@@ -38,7 +38,7 @@ NO_FILE_SIZE = None
 NO_RETRY_TIME = None
 
 
-def get_download_url(  # noqa: C901
+def get_download_url(  # noqa: C901 pylint: disable=too-many-locals
     *, file_id: str, work_package_accessor: WorkPackageAccessor
 ) -> Union[Tuple[None, None, int], Tuple[str, int, None]]:
     """
@@ -68,9 +68,10 @@ def get_download_url(  # noqa: C901
 
     # Make function call to get download url
     try:
-        response = RequestsSession.get(url=url, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.RequestException as request_error:
-        exceptions.raise_if_max_retries(request_error=request_error, url=url)
+        with httpx_client() as client:
+            response = client.get(url=url, headers=headers, timeout=TIMEOUT)
+    except httpx.RequestError as request_error:
+        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
         raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
@@ -194,8 +195,9 @@ def get_file_header_envelope(
 
     # Make function call to get download url
     try:
-        response = RequestsSession.get(url=url, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.RequestException as request_error:
+        with httpx_client() as client:
+            response = client.get(url=url, headers=headers, timeout=TIMEOUT)
+    except httpx.RequestError as request_error:
         raise exceptions.RequestFailedError(url=url) from request_error
 
     status_code = response.status_code
