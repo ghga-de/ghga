@@ -86,16 +86,33 @@ def validate_json(file: Path, schema: Path, report: Path, target_class: str) -> 
 @cli.command()
 def main(
     schema: Path = typer.Option(
-        ..., help="Path to metadata schema (modelled using LinkML)"
+        ..., "--schema", "-s", help="Path to metadata schema (modelled using LinkML)"
     ),
-    inputfile: Path = typer.Option(
-        ..., help="Path to submission file in JSON format to be validated"
+    input_file: Path = typer.Option(
+        ...,
+        "--input",
+        "-i",
+        file_okay=True,
+        dir_okay=False,
+        help="Path to submission file in JSON format to be validated",
     ),
-    report: Path = typer.Option(..., help="Path to resulting validation report"),
+    report: Path = typer.Option(
+        ...,
+        "--report",
+        "-r",
+        file_okay=True,
+        dir_okay=False,
+        writable=True,
+        help="Path to resulting validation report",
+    ),
     target_class: Optional[str] = typer.Option(None, help="The root class name"),
 ):
     """
     GHGA Validator
+
+    ghga-validator is a command line utility to validate metadata w.r.t. its
+    compliance to the GHGA Metadata Model. It takes metadata encoded in JSON of
+    YAML format and produces a validation report in JSON format.
     """
     typer.echo("Start validating...")
     if not target_class:
@@ -105,9 +122,9 @@ def main(
             "Target class cannot be inferred,"
             + "please specify the 'target_class' argument"
         )
-    if validate_json(inputfile, schema, report, target_class):
-        typer.echo(f"<{inputfile}> is valid!")
+    if validate_json(input_file, schema, report, target_class):
+        typer.echo(f"<{input_file}> is valid!")
     else:
         typer.echo(
-            f"<{inputfile}> is invalid! Look at <{report}> for validation report"
+            f"<{input_file}> is invalid! Look at <{report}> for validation report"
         )

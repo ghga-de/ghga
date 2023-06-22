@@ -10,82 +10,43 @@ GHGA Validator
 
 <!-- Please provide a short overview of the features of this service.-->
 
-CLI Tool for validation of the GHGA metadata.
+ghga-validator is a Python library and command line utility to validate metadata
+w.r.t. its compliance to the [GHGA Metadata
+Model](github.com/ghga-de/ghga-metadata-schema). It takes metadata encoded in JSON of YAML format and produces a validation report in JSON format.
 
 
 ## Installation
-We recommend using the provided Docker container.
-
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-validator):
-```bash
-docker pull ghga/ghga-validator:1.0.0
+We recommend installing the latest version of ghga-validator using pip:
+```
+pip install -U ghga-validator
 ```
 
-Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
-```bash
-# Execute in the repo's root dir:
-docker build -t ghga/ghga-validator:1.0.0 .
+## Usage
+
 ```
+Usage: ghga-validator [OPTIONS]
 
-For production-ready deployment, we recommend using Kubernetes, however,
-for simple use cases, you could execute the service using docker
-on a single server:
-```bash
-# The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/ghga-validator:1.0.0 --help
+  GHGA Validator
+
+  ghga-validator is a command line utility to validate metadata w.r.t. its
+  compliance to the GHGA Metadata Model. It takes metadata encoded in JSON of
+  YAML format and produces a validation report in JSON format.
+
+Options:
+  -s, --schema PATH               Path to metadata schema (modelled using
+                                  LinkML)  [required]
+  -i, --input FILE                Path to submission file in JSON format to be
+                                  validated  [required]
+  -r, --report FILE               Path to resulting validation report
+                                  [required]
+  --target-class TEXT             The root class name
+  --install-completion [bash|zsh|fish|powershell|pwsh]
+                                  Install completion for the specified shell.
+  --show-completion [bash|zsh|fish|powershell|pwsh]
+                                  Show completion for the specified shell, to
+                                  copy it or customize the installation.
+  --help                          Show this message and exit.
 ```
-
-If you prefer not to use containers, you may install the service from source:
-```bash
-# Execute in the repo's root dir:
-pip install .
-
-# To run the service:
-ghga_validator --help
-```
-
-## Configuration
-### Parameters
-
-The service requires the following configuration parameters:
-
-
-### Usage:
-
-A template YAML for configurating the service can be found at
-[`./example-config.yaml`](./example-config.yaml).
-Please adapt it, rename it to `.ghga_validator.yaml`, and place it into one of the following locations:
-- in the current working directory were you are execute the service (on unix: `./.ghga_validator.yaml`)
-- in your home directory (on unix: `~/.ghga_validator.yaml`)
-
-The config yaml will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
-could also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `ghga_validator_`,
-e.g. for the `host` set an environment variable named `ghga_validator_host`
-(you may use both upper or lower cases, however, it is standard to define all env
-variables in upper cases).
-
-To using file secrets please refer to the
-[corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support)
-of the pydantic documentation.
-
-## HTTP API
-An OpenAPI specification for this service can be found [here](./openapi.yaml).
-
-## Architecture and Design:
-<!-- Please provide an overview of the architecture and design of the code base.
-Mention anything that deviates from the standard triple hexagonal architecture and
-the corresponding structure. -->
-
-This is a Python-based service following the Triple Hexagonal Architecture pattern.
-It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
-
 
 ## Development
 For setting up the development environment, we rely on the
