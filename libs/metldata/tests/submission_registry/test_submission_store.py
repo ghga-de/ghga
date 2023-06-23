@@ -73,6 +73,15 @@ def test_happy(config_sub_fixture: SubmissionConfig):  # noqa: F811
     )
     assert submission_updated_queried == submission_updated
 
+    # test getting all existing submission IDs
+    submission_2 = EXAMPLE_SUBMISSION.copy(update={"id": "testsubmission002"})
+    submission_store.insert_new(submission=submission_2)
+
+    assert submission_store.get_all_submission_ids() == [
+        "testsubmission001",
+        "testsubmission002",
+    ]
+
 
 def test_query_non_existing(
     config_sub_fixture: SubmissionConfig,  # noqa: F811

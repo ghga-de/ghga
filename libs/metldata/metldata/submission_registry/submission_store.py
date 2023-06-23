@@ -97,6 +97,16 @@ class SubmissionStore:
         if self.exists(submission_id=submission_id):
             raise self.SubmissionAlreadyExistError(submission_id=submission_id)
 
+    def get_all_submission_ids(self) -> list[str]:
+        """Get all submission IDs from existing submissions"""
+        return sorted(
+            [
+                submission_path.stem
+                for submission_path in self._config.submission_store_dir.iterdir()
+                if submission_path.suffix == ".json"
+            ]
+        )
+
     def get_by_id(self, submission_id: str) -> models.Submission:
         """Get an existing submission by its ID.
         Raises:
