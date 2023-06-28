@@ -381,7 +381,7 @@ def test_check_download_access(client_with_db):
         "/download-access/users/john@ghga.de/datasets/some-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == "true"
+    assert response.json() is True
 
     # check access when permission exists but is not valid any more
 
@@ -389,7 +389,7 @@ def test_check_download_access(client_with_db):
         "/download-access/users/john@ghga.de/datasets/former-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == "false"
+    assert response.json() is False
 
     # check access when dataset and permission does not exist
 
@@ -397,7 +397,7 @@ def test_check_download_access(client_with_db):
         "/download-access/users/john@ghga.de/datasets/another-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == "false"
+    assert response.json() is False
 
 
 def test_get_datasets_with_download_access(client_with_db):

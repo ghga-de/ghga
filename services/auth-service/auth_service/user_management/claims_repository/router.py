@@ -42,18 +42,11 @@ from .models.dto import (
     VisaType,
 )
 
-try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
-    from typing_extensions import Literal
-except ImportError:
-    from typing import Literal  # type: ignore
-
 __all__ = ["router"]
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
-
-BooleanAsString = Literal["false", "true"]
 
 
 user_not_found_error = HTTPException(status_code=404, detail="The user was not found.")
@@ -311,7 +304,7 @@ async def check_download_access(
     user_dao: UserDao = Depends(get_user_dao),
     claim_dao: ClaimDao = Depends(get_claim_dao),
     # internal service, authorization without token via service mesh
-) -> BooleanAsString:
+) -> bool:
     """Check download access permission for a given dataset by a given user"""
     if not await user_exists(user_id, user_dao):
         raise user_not_found_error
@@ -325,9 +318,9 @@ async def check_download_access(
     ):
         # check whether the claim is valid and for the right source
         if is_valid_claim(claim) and has_download_access_for_dataset(claim, dataset_id):
-            return "true"
+            return True
 
-    return "false"
+    return False
 
 
 @router.get(
