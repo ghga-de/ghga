@@ -15,15 +15,23 @@
 
 """Contains pydantic BaseModel-based versions of the schemas.
 
-Please note, these pydantic-based schemas are the source of thruth for all other
+Please note, these pydantic-based schemas are the source of truth for all other
 schema representations such as json-schema.
 """
 
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, validator
 
 from ghga_event_schemas.validation import validated_upload_date
+
+
+class MetadataDatasetStage(str, Enum):
+    """The current stage that a metadata dataset is in."""
+
+    DOWNLOAD = "download"
+    UPLOAD = "upload"
 
 
 class MetadataDatasetFile(BaseModel):
@@ -53,6 +61,9 @@ class MetadataDatasetOverview(BaseModel):
 
     accession: str = Field(..., description="The dataset accession.")
     title: str = Field(..., description="The title of the dataset.")
+    stage: MetadataDatasetStage = Field(
+        ..., description="The current stage of this dataset."
+    )
     description: Optional[str] = Field(
         ..., description="The description of the dataset."
     )
@@ -70,7 +81,7 @@ class MetadataDatasetOverview(BaseModel):
 class UploadDateModel(BaseModel):
     """
     Custom base model for common datetime validation.
-    Models containing stringified upload_date datetimes should be dervied from this.
+    Models containing stringified upload_date datetimes should be derived from this.
     """
 
     upload_date: str = Field(
@@ -181,7 +192,7 @@ class FileUploadValidationSuccess(UploadDateModel):
     decryption_secret_id: str = Field(
         ...,
         description=(
-            "The ID of the symmetic file encryption/decryption secret."
+            "The ID of the symmetric file encryption/decryption secret."
             + " Please note, this is not the secret itself."
         ),
     )
@@ -398,7 +409,7 @@ class FileDeletionRequested(BaseModel):
 class FileDeletionSuccess(FileDeletionRequested):
     """
     This event is emitted when a service has deleted a file from its database as well
-    as the S3 buckets it controlls.
+    as the S3 buckets it controls.
     """
 
     # currently identical to the FileDeletionRequested event model.
