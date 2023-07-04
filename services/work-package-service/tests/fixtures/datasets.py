@@ -16,9 +16,13 @@
 
 """Sample datasets for testing."""
 
-from ghga_event_schemas.pydantic_ import MetadataDatasetFile, MetadataDatasetOverview
+from ghga_event_schemas.pydantic_ import (
+    MetadataDatasetFile,
+    MetadataDatasetOverview,
+    MetadataDatasetStage,
+)
 
-from wps.core.models import Dataset, DatasetFile
+from wps.core.models import Dataset, DatasetFile, WorkType
 
 __all__ = ["DATASET", "DATASET_OVERVIEW_EVENT"]
 
@@ -26,6 +30,7 @@ __all__ = ["DATASET", "DATASET_OVERVIEW_EVENT"]
 DATASET = Dataset(
     id="some-dataset-id",
     title="Test dataset 1",
+    stage=WorkType.DOWNLOAD,
     description="The first test dataset",
     files=[
         DatasetFile(id="file-id-1", extension=".json"),
@@ -37,6 +42,7 @@ DATASET = Dataset(
 
 DATASET_OVERVIEW_EVENT = MetadataDatasetOverview(
     accession="some-dataset-id",
+    stage=MetadataDatasetStage.DOWNLOAD,
     title="Test dataset 1",
     description="The first test dataset",
     files=[

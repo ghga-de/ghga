@@ -22,7 +22,7 @@ from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import BaseSettings, Field
 
-from wps.core.models import Dataset, DatasetFile
+from wps.core.models import Dataset, DatasetFile, WorkType
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
 __all__ = ["EventSubTranslatorConfig", "EventSubTranslator"]
@@ -77,6 +77,11 @@ class EventSubTranslator(EventSubscriberProtocol):
             payload=payload,
             schema=event_schemas.MetadataDatasetOverview,
         )
+        try:
+            stage = WorkType[validated_payload.stage.name]
+        except KeyError:
+            # stage does not correspond to a work type, ignore event
+            return
 
         files = [
             DatasetFile(
@@ -89,6 +94,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         dataset = Dataset(
             id=validated_payload.accession,
             title=validated_payload.title,
+            stage=stage,
             description=validated_payload.description,
             files=files,
         )

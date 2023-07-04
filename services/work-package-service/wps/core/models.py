@@ -42,6 +42,13 @@ class BaseDto(BaseModel):
         frozen = True
 
 
+class WorkType(str, Enum):
+    """The type of work that a work package describes."""
+
+    DOWNLOAD = "download"
+    UPLOAD = "upload"
+
+
 class DatasetFile(BaseDto):
     """A file as that is part of a dataset."""
 
@@ -53,18 +60,12 @@ class Dataset(BaseDto):
     """A model describing a dataset."""
 
     id: str = Field(default=..., description="ID of the dataset")
+    stage: WorkType = Field(default=..., description="Current stage of this dataset.")
     title: str = Field(default=..., description="The title of the dataset.")
     description: Optional[str] = Field(
         ..., description="The description of the dataset."
     )
     files: list[DatasetFile] = Field(..., description="Files contained in the dataset.")
-
-
-class WorkType(str, Enum):
-    """The type of work that a work package describes."""
-
-    DOWNLOAD = "download"
-    UPLOAD = "upload"
 
 
 class WorkOrderToken(BaseDto):

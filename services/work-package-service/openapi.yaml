@@ -18,12 +18,17 @@ components:
           description: ID of the dataset
           title: Id
           type: string
+        stage:
+          allOf:
+          - $ref: '#/components/schemas/WorkType'
+          description: Current stage of this dataset.
         title:
           description: The title of the dataset.
           title: Title
           type: string
       required:
       - id
+      - stage
       - title
       - description
       - files
@@ -133,7 +138,7 @@ components:
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
-  version: 0.1.2
+  version: 0.1.3
 openapi: 3.0.2
 paths:
   /health:

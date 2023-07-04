@@ -237,16 +237,13 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
     async def register_dataset(self, dataset: Dataset) -> None:
         """Register a dataset with all of its files."""
-        # write the dataset to the database
-        await self._dataset_dao.insert(dataset)
-        # await self._dataset_dao.upsert(dataset)
+        await self._dataset_dao.upsert(dataset)
 
     async def get_dataset(self, dataset_id: str) -> Dataset:
         """Get a registered dataset using the given ID.
 
         If the dataset does not exist, a DatasetNotFoundError will be raised.
         """
-        # get the dataset from the database
         try:
             return await self._dataset_dao.get_by_id(dataset_id)
         except ResourceNotFoundError as error:
