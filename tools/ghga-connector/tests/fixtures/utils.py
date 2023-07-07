@@ -15,7 +15,6 @@
 
 """Utils for Fixture handling"""
 
-
 from pathlib import Path
 from typing import Any
 

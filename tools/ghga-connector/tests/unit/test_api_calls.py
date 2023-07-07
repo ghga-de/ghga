@@ -37,7 +37,6 @@ from ghga_connector.core.exceptions import (
     NoWorkPackageAccessError,
     UploadNotRegisteredError,
 )
-from tests.fixtures.mock_api.testcontainer import MockAPIContainer
 from tests.fixtures.utils import mock_wps_token
 
 
@@ -53,6 +52,7 @@ from tests.fixtures.utils import mock_wps_token
     ],
 )
 def test_patch_multipart_upload(
+    httpx_mock: HTTPXMock,
     bad_url: bool,
     upload_id: str,
     upload_status: UploadStatus,
@@ -61,17 +61,39 @@ def test_patch_multipart_upload(
     """
     Test the patch_multipart_upload function
     """
-    with MockAPIContainer() as api:
-        api_url = "http://bad_url" if bad_url else api.get_connection_url()
 
-        with pytest.raises(  # type: ignore
-            expected_exception
-        ) if expected_exception else nullcontext():
-            patch_multipart_upload(
-                api_url=api_url,
-                upload_id=upload_id,
-                upload_status=upload_status,
+    api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
+    if bad_url:
+        httpx_mock.add_exception(
+            exception=ConnectionFailedError(
+                url=f"{api_url}/uploads/{upload_id}", reason="Testing"
             )
+        )
+    elif expected_exception == CantChangeUploadStatusError:
+        httpx_mock.add_response(
+            status_code=400,
+            json={
+                "data": "",
+                "description": "",
+                "exception_id": "uploadNotPending",
+            },
+        )
+    elif expected_exception == UploadNotRegisteredError:
+        httpx_mock.add_response(
+            status_code=404,
+            json={"data": "", "description": "", "exception_id": "noSuchUpload"},
+        )
+    elif expected_exception is None:
+        httpx_mock.add_response(status_code=204)
+
+    with pytest.raises(  # type: ignore
+        expected_exception
+    ) if expected_exception else nullcontext():
+        patch_multipart_upload(
+            api_url=api_url,
+            upload_id=upload_id,
+            upload_status=upload_status,
+        )
 
 
 @pytest.mark.parametrize(

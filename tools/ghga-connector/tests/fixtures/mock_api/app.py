@@ -22,8 +22,10 @@ All other file_ids will fail
 """
 
 import base64
+import json
+import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from typing import List
 
@@ -32,12 +34,15 @@ try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
 except ImportError:
     from typing import Literal  # type: ignore
 
-
-from fastapi import FastAPI, Header, HTTPException, Request, status
-from fastapi.responses import JSONResponse, Response
+import httpx
+from fastapi import HTTPException, status
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from pydantic import BaseModel
 
-DEFAULT_PART_SIZE = 16 * 1024 * 1024
+from tests.fixtures.endpoints_handler import EndpointsHandler
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 class UploadStatus(str, Enum):
@@ -138,7 +143,7 @@ class DrsObjectServe(BaseModel):
     access_methods: List[AccessMethod]
 
 
-class HttpEnvelopeResponse(JSONResponse):
+class HttpEnvelopeResponse(httpx.Response):
     """Return base64 encoded envelope bytes"""
 
     response_id = "envelope"
@@ -162,35 +167,37 @@ class HttpyException(Exception):
         super().__init__(description)
 
 
-app = FastAPI()
-
-
-@app.exception_handler(HttpyException)
-async def httpy_exception_handler(request: Request, exc: HttpyException):
+def httpy_exception_handler(exc: HttpyException):
     """Transform HttpException data into a proper response object"""
-    return JSONResponse(
+
+    return httpx.Response(
         status_code=exc.status_code,
-        content={
-            "exception_id": exc.exception_id,
-            "description": exc.description,
-            "data": exc.data,
-        },
+        content=json.dumps(
+            {
+                "exception_id": exc.exception_id,
+                "description": exc.description,
+                "data": exc.data,
+            }
+        ).encode("utf-8"),
     )
 
 
-@app.get("/ready", summary="readiness_probe")
-async def ready():
+@EndpointsHandler.get("/")
+def ready():
     """
     Readyness probe.
     """
-    return JSONResponse(None, status_code=status.HTTP_204_NO_CONTENT)
+    return httpx.Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.get("/objects/{file_id}", summary="drs3_mock")
-async def drs3_objects(file_id: str, authorization=Header()):
+@EndpointsHandler.get("/objects/{file_id}")
+def drs3_objects(file_id: str, request: httpx.Request):
     """
     Mock for the drs3 /objects/{file_id} call
     """
+
+    # get authorization header
+    authorization = request.headers["authorization"]
 
     # simulate token authorization error
     if authorization == "Bearer authfail_normal":
@@ -208,23 +215,27 @@ async def drs3_objects(file_id: str, authorization=Header()):
         )
 
     if file_id == "retry":
-        return Response(
+        return httpx.Response(
             status_code=status.HTTP_202_ACCEPTED, headers={"Retry-After": "10"}
         )
 
     if file_id in ("downloadable", "big-downloadable", "envelope-missing"):
-        return DrsObjectServe(
-            file_id=file_id,
-            self_uri=f"drs://localhost:8080//{file_id}",
-            size=int(os.environ["S3_DOWNLOAD_FIELD_SIZE"]),
-            created_time=datetime.now(timezone.utc).isoformat(),
-            updated_time=datetime.now(timezone.utc).isoformat(),
-            checksums=[Checksum(checksum="1", type="md5")],
-            access_methods=[
-                AccessMethod(
-                    access_url=AccessURL(url=os.environ["S3_DOWNLOAD_URL"]), type="s3"
-                )
-            ],
+        return httpx.Response(
+            status_code=200,
+            content=DrsObjectServe(
+                file_id=file_id,
+                self_uri=f"drs://localhost:8080//{file_id}",
+                size=int(os.environ["S3_DOWNLOAD_FIELD_SIZE"]),
+                created_time=now_as_utc().isoformat(),
+                updated_time=now_as_utc().isoformat(),
+                checksums=[Checksum(checksum="1", type="md5")],
+                access_methods=[
+                    AccessMethod(
+                        access_url=AccessURL(url=os.environ["S3_DOWNLOAD_URL"]),
+                        type="s3",
+                    )
+                ],
+            ).json(),
         )
 
     raise HTTPException(
@@ -233,14 +244,14 @@ async def drs3_objects(file_id: str, authorization=Header()):
     )
 
 
-@app.get("/objects/{file_id}/envelopes/{public_key}", summary="drs3_envelope_mock")
-async def drs3_objects_envelopes(file_id: str, public_key: str, authorization=Header()):
+@EndpointsHandler.get("/objects/{file_id}/envelopes/{public_key}")
+def drs3_objects_envelopes(file_id: str, public_key: str):
     """
     Mock for the dcs /objects/{file_id}/envelopes/{public_key} call
     """
 
     if file_id in ("downloadable", "big-downloadable"):
-        response_str = str.encode(os.environ["FAKE_HEADER_ENVELOPE"])
+        response_str = str.encode(os.environ["FAKE_ENVELOPE"])
         envelope = base64.b64encode(response_str).decode("utf-8")
         return HttpEnvelopeResponse(envelope=envelope)
 
@@ -252,8 +263,8 @@ async def drs3_objects_envelopes(file_id: str, public_key: str, authorization=He
     )
 
 
-@app.get("/files/{file_id}", summary="ulc_get_files_mock", status_code=200)
-async def ulc_get_files(file_id: str):
+@EndpointsHandler.get("/files/{file_id}")
+def ulc_get_files(file_id: str):
     """
     Mock for the ulc GET /files/{file_id} call.
     """
@@ -265,8 +276,8 @@ async def ulc_get_files(file_id: str):
             md5_checksum="",
             size=0,
             grouping_label="inbox",
-            creation_date=datetime.utcnow(),
-            update_date=datetime.utcnow(),
+            creation_date=now_as_utc().isoformat(),
+            update_date=now_as_utc().isoformat(),
             format="",
             current_upload_id="pending",
         )
@@ -279,16 +290,19 @@ async def ulc_get_files(file_id: str):
     )
 
 
-@app.get("/uploads/{upload_id}", summary="ulc_get_uploads_mock", status_code=200)
-async def ulc_get_uploads(upload_id: str):
+@EndpointsHandler.get("/uploads/{upload_id}")
+def ulc_get_uploads(upload_id: str):
     """
     Mock for the ulc GET /uploads/{upload_id} call.
     """
     if upload_id == "pending":
-        return UploadProperties(
-            upload_id="pending",
-            file_id="pending",
-            part_size=DEFAULT_PART_SIZE,
+        return httpx.Response(
+            status_code=200,
+            content=UploadProperties(
+                upload_id="pending",
+                file_id="pending",
+                part_size=int(os.environ["DEFAULT_PART_SIZE"]),
+            ).json(),
         )
 
     raise HttpyException(
@@ -299,32 +313,43 @@ async def ulc_get_uploads(upload_id: str):
     )
 
 
-@app.post("/uploads", summary="ulc_post_uploads_mock", status_code=200)
-async def ulc_post_files_uploads(state: StatePost):
+@EndpointsHandler.post("/uploads")
+def ulc_post_files_uploads(request: httpx.Request):
     """
     Mock for the ulc POST /uploads call.
     """
+    content = json.loads(request.content)
+    state: StatePost = StatePost(**content)
 
     file_id = state.file_id
 
     if file_id == "uploadable":
-        return UploadProperties(
-            upload_id="pending",
-            file_id=file_id,
-            part_size=DEFAULT_PART_SIZE,
+        return httpx.Response(
+            status_code=200,
+            content=UploadProperties(
+                upload_id="pending",
+                file_id=file_id,
+                part_size=int(os.environ["DEFAULT_PART_SIZE"]),
+            ).json(),
         )
     if file_id == "uploadable-16":
-        return UploadProperties(
-            upload_id="pending",
-            file_id=file_id,
-            part_size=16 * 1024 * 1024,
+        return httpx.Response(
+            status_code=200,
+            content=UploadProperties(
+                upload_id="pending",
+                file_id=file_id,
+                part_size=16 * 1024 * 1024,
+            ).json(),
         )
 
     if file_id == "uploadable-8":
-        return UploadProperties(
-            upload_id="pending",
-            file_id=file_id,
-            part_size=8 * 1024 * 1024,
+        return httpx.Response(
+            status_code=200,
+            content=UploadProperties(
+                upload_id="pending",
+                file_id=file_id,
+                part_size=8 * 1024 * 1024,
+            ).json(),
         )
     if file_id == "pending":
         raise HttpyException(
@@ -342,23 +367,18 @@ async def ulc_post_files_uploads(state: StatePost):
     )
 
 
-@app.post(
-    "/uploads/{upload_id}/parts/{part_no}/signed_urls",
-    summary="ulc_post_uploads_parts_files_signed_urls_mock",
-    status_code=200,
-)
-async def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
+@EndpointsHandler.post("/uploads/{upload_id}/parts/{part_no}/signed_urls")
+def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
     """
     Mock for the ulc POST /uploads/{upload_id}/parts/{part_no}/signed_urls call.
     """
 
     if upload_id == "pending":
-        if part_no == 1:
-            url = os.environ["S3_UPLOAD_URL_1"]
-            return {"url": url}
-        if part_no == 2:
-            url = os.environ["S3_UPLOAD_URL_2"]
-            return {"url": url}
+        if part_no in (1, 2):
+            urls = (os.environ["S3_UPLOAD_URL_1"], os.environ["S3_UPLOAD_URL_2"])
+            return httpx.Response(
+                status_code=200, text=json.dumps({"url": urls[part_no - 1]})
+            )
 
     raise HttpyException(
         status_code=404,
@@ -368,16 +388,18 @@ async def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int
     )
 
 
-@app.patch("/uploads/{upload_id}", summary="ulc_patch_uploads_mock", status_code=204)
-async def ulc_patch_uploads(upload_id: str, state: StatePatch):
+@EndpointsHandler.patch("/uploads/{upload_id}")
+def ulc_patch_uploads(upload_id: str, request: httpx.Request):
     """
     Mock for the ulc PATCH /uploads/{upload_id} call
     """
+    content = json.loads(request.content)
+    state: StatePatch = StatePatch(**content)
     upload_status = state.status
 
     if upload_id == "uploaded":
         if upload_status == UploadStatus.CANCELLED:
-            return JSONResponse(None, status_code=status.HTTP_204_NO_CONTENT)
+            return httpx.Response(status_code=status.HTTP_204_NO_CONTENT)
 
         raise HttpyException(
             status_code=400,
@@ -388,7 +410,7 @@ async def ulc_patch_uploads(upload_id: str, state: StatePatch):
 
     if upload_id == "pending":
         if upload_status == UploadStatus.UPLOADED:
-            return JSONResponse(None, status_code=status.HTTP_204_NO_CONTENT)
+            return httpx.Response(status_code=status.HTTP_204_NO_CONTENT)
 
         raise HttpyException(
             status_code=400,
@@ -413,13 +435,27 @@ async def ulc_patch_uploads(upload_id: str, state: StatePatch):
     )
 
 
-@app.post(
-    "/work-packages/{package_id}/files/{file_id}/work-order-tokens", status_code=201
-)
-async def create_work_order_token(
-    package_id: str, file_id: str, authorization=Header()
-):
+@EndpointsHandler.post("/work-packages/{package_id}/files/{file_id}/work-order-tokens")
+def create_work_order_token(package_id: str, file_id: str):
     """Mock Work Order Token endpoint"""
 
     # has to be at least 48 chars long
-    return base64.b64encode(b"1234567890" * 5).decode()
+    return httpx.Response(
+        status_code=201, content=base64.b64encode(b"1234567890" * 5).decode()
+    )
+
+
+def handle_request(request: httpx.Request):
+    """
+    This is used as the callback function for the httpx_mock fixture in test_cli.py.
+    """
+    url = str(request.url)
+    logger.info("Received request for url: %s", url)
+    try:
+        endpoint_function = EndpointsHandler.build_loaded_endpoint_function(request)
+        return endpoint_function()
+    except HttpyException as exc:
+        return httpy_exception_handler(exc=exc)
+    except HTTPException as exc:
+        text = json.dumps({"detail": exc.detail})
+        return httpx.Response(status_code=exc.status_code, text=text)
