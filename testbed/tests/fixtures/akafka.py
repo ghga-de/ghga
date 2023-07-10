@@ -31,7 +31,10 @@ __all__ = ["kafka_fixture", "KafkaFixture"]
 def delete_topics(kafka_servers: list[str], topics_to_be_deleted: list[str]):
     """Delete given topic from Kafka broker"""
     admin_client = KafkaAdminClient(bootstrap_servers=kafka_servers)
-    admin_client.delete_topics(topics_to_be_deleted)
+    existing_topics = admin_client.list_topics()
+    for topic in topics_to_be_deleted:
+        if topic in existing_topics:
+            admin_client.delete_topics([topic])
 
 
 @async_fixture

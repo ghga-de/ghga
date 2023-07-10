@@ -51,13 +51,14 @@ class Config(
         "mongodb://testbed_user:testbed_key@mongo_db"
     )
     db_name: str = "test-db"
-    service_db_names: list[str] = ["ucs", "dcs", "ifrs"]
+    service_db_names: list[str] = ["wps", "ars", "dcs", "ifrs"]
     service_kafka_topics: list[str] = [
-        "file_downloads",
-        "file_interrogation",
-        "file_uploads",
-        "internal_file_registry",
-        "metadata",
+        "downloads",
+        "internal_registrations",
+        "interrogations",
+        "artifacts.embedded_public",
+        "purges",
+        "notifications",
     ]
 
     # S3 config
@@ -76,3 +77,7 @@ class Config(
     permanent_bucket: str = "permanent"
 
     object_id: str = "testbed-event-object"
+
+    # file ingest
+    file_ingest_url: str = "http://fis:8080/ingest"
+    file_ingest_pubkey: str

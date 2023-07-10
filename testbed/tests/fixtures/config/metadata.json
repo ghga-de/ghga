@@ -1,0 +1,94 @@
+{
+  "analyses": [],
+  "analysis_process_output_files": [],
+  "analysis_processes": [],
+  "biospecimens": [],
+  "conditions": [],
+  "data_access_committees": [
+    {
+      "alias": "DAC_1",
+      "email": "dac@dac.dac",
+      "institute": "The DAC institute"
+    }
+  ],
+  "data_access_policies": [
+    {
+      "alias": "DAP_1",
+      "data_access_committee": "DAC_1",
+      "data_use_modifiers": [
+        "clinical care use"
+      ],
+      "data_use_permission": "disease specific research",
+      "description": "A Data Access Policy 1",
+      "name": "DAP 1",
+      "policy_text": "This is a very permissible DAP",
+      "policy_url": "http://some/policy"
+    }
+  ],
+  "datasets": [
+    {
+      "alias": "DS_1",
+      "data_access_policy": "DAP_1",
+      "description": "An interesting dataset A",
+      "title": "The A dataset",
+      "types": [
+        "A Type",
+        "Another Type"
+      ]
+    }
+  ],
+  "individuals": [],
+  "library_preparation_protocols": [],
+  "publications": [],
+  "sample_files": [],
+  "samples": [],
+  "sequencing_experiments": [],
+  "sequencing_process_files": [],
+  "sequencing_processes": [],
+  "sequencing_protocols": [],
+  "studies": [
+    {
+      "affiliations": [
+        "Some Institute",
+        "Some other Institute"
+      ],
+      "alias": "STUDY_A",
+      "attributes": [
+        {
+          "key": "budget",
+          "value": "3.5M"
+        },
+        {
+          "key": "funding",
+          "value": "EU"
+        }
+      ],
+      "description": "A study that is the A study",
+      "title": "The A Study",
+      "type": "SYNTHETIC_GENOMICS"
+    }
+  ],
+  "study_files": [
+    {
+      "alias": "SEQ_FILE_A_R1",
+      "checksum": "07611c4987b9e5be1304a992dbc25242824acf808c829819732a8f5f6c40e731",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "name": "SEQ_FILE_A_R1.fastq.gz",
+      "size": 92161,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "SEQ_FILE_A_R2",
+      "checksum": "ba7f0fa2da3c1bd473b01985c2fd25175d55f1edb27e530d735ff85ed187c122",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "name": "SEQ_FILE_A_R2.fastq.gz",
+      "size": 92161,
+      "study": "STUDY_A"
+    }
+  ],
+  "trios": []
+}

@@ -66,8 +66,16 @@ class TokenGenerator:
         """Read the signing key from a local env file."""
         with open(KEY_FILE, encoding="ascii") as key_file:
             for line in key_file:
-                if line.startswith("AUTH_KEY_PRIV="):
+                if line.startswith("JWK_1_PRIV="):
                     return jwk.JWK.from_json(line.split("=", 1)[1].rstrip().strip("'"))
+        raise RuntimeError("Cannot read signing key for authentication")
+
+    def read_token(self) -> str:
+        """Read the simple token from a local env file."""
+        with open(KEY_FILE, encoding="ascii") as key_file:
+            for line in key_file:
+                if line.startswith("TOKEN="):
+                    return line.split("=", 1)[1].rstrip()
         raise RuntimeError("Cannot read signing key for authentication")
 
 

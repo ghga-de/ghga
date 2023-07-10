@@ -16,17 +16,36 @@
 
 """Fixture for testing code that uses the FileObject provider."""
 
+import json
+import os
+import tempfile
+from pathlib import Path
 from typing import Generator
 
 from hexkit.providers.s3.testutils import FileObject, temp_file_object
 from pytest import fixture
 
 from src.config import Config
+from tests.fixtures.metadata import SubmissionConfig
 
-__all__ = ["file_fixture", "FileObject"]
+__all__ = ["file_fixture", "FileObject", "batch_create_file_fixture"]
 
 
-@fixture
+def create_named_file(target_dir: str, config: Config, name: str) -> FileObject:
+    """Create a file with given parameters"""
+    file_path = os.path.join(target_dir, name)
+    with open(file_path, "w", encoding="utf-8") as file:
+        file.write(" " * config.file_size)
+
+    file_object = FileObject(
+        file_path=Path(file_path),
+        bucket_id=config.staging_bucket,
+        object_id=name.split(".")[0],
+    )
+    return file_object
+
+
+@fixture(name="temp_file_fixture")
 def file_fixture(config: Config) -> Generator[FileObject, None, None]:
     """File fixture that provides a temporary file."""
 
@@ -36,3 +55,29 @@ def file_fixture(config: Config) -> Generator[FileObject, None, None]:
         size=config.file_size,
     ) as temp_file:
         yield temp_file
+
+
+@fixture(name="batch_file_fixture")
+def batch_create_file_fixture(
+    config: Config, submission_config: SubmissionConfig
+) -> Generator[list, None, None]:
+    """Batch file fixture that provides temporary files according to metadata."""
+
+    temp_dir = tempfile.gettempdir()
+    metadata = json.loads(submission_config.metadata_path.read_text())
+
+    created_files = []
+    for file_field in submission_config.metadata_file_fields:
+        files = metadata[file_field]
+
+        for _file in files:
+            file_object = create_named_file(
+                target_dir=temp_dir, config=config, name=_file["name"]
+            )
+
+            created_files.append(file_object)
+
+    yield created_files
+
+    for file_object in created_files:
+        os.remove(file_object.file_path)

@@ -25,12 +25,12 @@ from ghga_connector.cli import download
 from src.config import Config
 
 
-def download_file(file_id: str, output_dir: Path, config: Config):
+def download_file(output_dir: Path, config: Config):
     """Download a file"""
     download(
-        file_id=file_id,
         output_dir=output_dir,
-        pubkey_path=config.data_dir / "key.pub",
+        submitter_private_key_path=config.data_dir / "key.sec",
+        submitter_pubkey_path=config.data_dir / "key.pub",
     )
 
 

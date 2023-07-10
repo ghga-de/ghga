@@ -16,7 +16,7 @@
 
 """Fixture for testing code that uses the MongoDbDaoFactory provider."""
 
-from typing import Generator
+from typing import Any, Generator
 
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -51,6 +51,28 @@ def drop_mongo_collections(db_connection_str: SecretStr, db_name: str):
 
     finally:
         # Close the MongoDB client
+        client.close()
+
+
+def retrieve_document_from_service_db(
+    db_connection_str: SecretStr,
+    db_name: str,
+    collection_name: str,
+    query: dict[str, Any],
+):
+    """Retrieve document from service database"""
+    client = MongoClient(str(db_connection_str.get_secret_value()))  # type: MongoClient
+
+    try:
+        db = client[db_name]
+        return db[collection_name].find_one(query)
+
+    except (ExecutionTimeout, OperationFailure) as error:
+        print(
+            f"An error occurred while retrieving document from mongo db {db_name}: {str(error)}"
+        )
+
+    finally:
         client.close()
 
 
