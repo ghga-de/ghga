@@ -49,7 +49,7 @@ async def publish_dataset(fixtures: JointFixture):
 
 @given("no work packages have been created yet")
 def wps_database_is_empty(mongo: MongoFixture):
-    mongo.empty_database(WPS_DB_NAME)
+    mongo.empty_databases(WPS_DB_NAME)
 
 
 @given("the test dataset has been announced")

@@ -17,10 +17,10 @@
 """Fixture for testing code that uses the MongoDbDaoFactory provider."""
 
 from time import sleep
-from typing import Any, Generator, Mapping, Optional
+from typing import Any, Generator, Mapping, Optional, Union
 
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
-from hexkit.providers.mongodb.testutils import MongoDbConfig, MongoDbFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pymongo import MongoClient
 from pymongo.errors import ExecutionTimeout, OperationFailure
 from pytest import fixture
@@ -37,26 +37,47 @@ __all__ = [
 class MongoFixture:
     """An augmented Mongo DB fixture containing a MongoClient"""
 
-    config: MongoDbConfig
+    config: Config
     client: MongoClient
     dao_factory: MongoDbDaoFactory
 
     def __init__(
-        self, config: MongoDbConfig, client: MongoClient, dao_factory: MongoDbDaoFactory
+        self, config: Config, client: MongoClient, dao_factory: MongoDbDaoFactory
     ):
         self.config = config
         self.client = client
         self.dao_factory = dao_factory
 
-    def empty_database(self, db_name: str):
-        """Drop all mongodb collections in a given database"""
-        try:
-            db = self.client[db_name]
-            collection_names = db.list_collection_names()
-            for collection_name in collection_names:
-                db.drop_collection(collection_name)
-        except (ExecutionTimeout, OperationFailure) as error:
-            print(f"Could not drop collection of mongo db {db_name}: {error}")
+    def empty_databases(
+        self,
+        db_names: Optional[Union[str, list[str]]] = None,
+        exclude_collections: Optional[Union[str, list[str]]] = None,
+    ):
+        """Drop all mongodb collections in the given database(s).
+
+        You can also specify collection(s) that should be excluded
+        from the operation, i.e. collections that should be kept.
+        """
+        if db_names is None:
+            db_names = self.config.service_db_names
+        elif isinstance(db_names, str):
+            db_names = [db_names]
+        if exclude_collections is None:
+            exclude_collections = []
+        if isinstance(exclude_collections, str):
+            exclude_collections = [exclude_collections]
+        excluded_collections = set(exclude_collections)
+        for db_name in db_names:
+            try:
+                db = self.client[db_name]
+                collection_names = db.list_collection_names()
+                for collection_name in collection_names:
+                    if collection_name not in excluded_collections:
+                        db.drop_collection(collection_name)
+            except (ExecutionTimeout, OperationFailure) as error:
+                raise RuntimeError(
+                    f"Could not drop collection(s) of Mongo database {db_name}"
+                ) from error
 
     def find_document(
         self, db_name: str, collection_name: str, mapping: Mapping[str, Any]

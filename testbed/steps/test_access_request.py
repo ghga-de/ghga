@@ -59,12 +59,12 @@ async def recorded_events(event_recorder: EventRecorder) -> Sequence[RecordedEve
 
 @given("no access requests have been made yet")
 def ars_database_is_empty(mongo: MongoFixture):
-    mongo.empty_database(ARS_DB_NAME)
+    mongo.empty_databases(ARS_DB_NAME)
 
 
 @given("the claims repository is empty")
 def claims_repository_is_empty(mongo: MongoFixture):
-    mongo.empty_database(db_name=AUTH_DB_NAME)
+    mongo.empty_databases(AUTH_DB_NAME)
 
 
 @when("I request access to the test dataset", target_fixture="response")

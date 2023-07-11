@@ -16,12 +16,12 @@
 
 """Fixture for testing code that uses the Kafka-based provider."""
 
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional, Union
 
 from hexkit.providers.akafka.provider import KafkaEventPublisher
-from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.akafka.testutils import KafkaFixture as BaseKafkaFixture
 from kafka import KafkaAdminClient
-from kafka.errors import UnknownTopicOrPartitionError
+from kafka.errors import KafkaError
 from pytest_asyncio import fixture as async_fixture
 
 from src.config import Config
@@ -29,13 +29,34 @@ from src.config import Config
 __all__ = ["kafka_fixture", "KafkaFixture"]
 
 
-def delete_topics(kafka_servers: list[str], topics_to_be_deleted: list[str]):
-    """Delete given topic from Kafka broker"""
-    admin_client = KafkaAdminClient(bootstrap_servers=kafka_servers)
-    existing_topics = admin_client.list_topics()
-    for topic in topics_to_be_deleted:
-        if topic in existing_topics:
-            admin_client.delete_topics([topic])
+class KafkaFixture(BaseKafkaFixture):
+    """An augmented Kafka fixture"""
+
+    config: Config
+
+    def delete_topics(self, topics: Optional[Union[str, list[str]]] = None):
+        """Delete given topic(s) from Kafka broker.
+
+        This process deletes the contained messages as the topics will be recreated
+        by the default config.
+        """
+        if topics is None:
+            topics = self.config.service_kafka_topics
+        elif isinstance(topics, str):
+            topics = [topics]
+        admin_client = KafkaAdminClient(bootstrap_servers=self.kafka_servers)
+        try:
+            existing_topics = set(admin_client.list_topics())
+            for topic in topics:
+                if topic in existing_topics:
+                    try:
+                        admin_client.delete_topics([topic])
+                    except KafkaError as error:
+                        raise RuntimeError(
+                            f"Could not delete topic {topic} from Kafka"
+                        ) from error
+        finally:
+            admin_client.close()
 
 
 @async_fixture(name="kafka")
@@ -46,13 +67,3 @@ async def kafka_fixture(config: Config) -> AsyncGenerator[KafkaFixture, None]:
         yield KafkaFixture(
             config=config, kafka_servers=config.kafka_servers, publisher=publisher
         )
-
-    # Delete all topics used by services. This process deletes the messages as
-    # the topics will be recreated by the default config.
-    try:
-        delete_topics(
-            kafka_servers=config.kafka_servers,
-            topics_to_be_deleted=config.service_kafka_topics,
-        )
-    except UnknownTopicOrPartitionError:
-        pass

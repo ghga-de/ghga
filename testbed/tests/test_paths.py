@@ -43,6 +43,7 @@ from tests.fixtures.metadata import SubmissionConfig
 def test_upload_submission(
     submission_workdir: Path,
     submission_config: SubmissionConfig,
+    fixtures: JointFixture,
 ):
     """Test submission via DSKit with configured file object,
        expected to run through without errors
@@ -50,6 +51,10 @@ def test_upload_submission(
     This test case is not async at the moment because in submit workflow
     asyncio.run() is called by metldata dependency.
     """
+
+    # start on a clean slate
+    fixtures.kafka.delete_topics()
+    fixtures.mongo.empty_databases()
 
     completed_submit = subprocess.run(  # nosec B607, B603
         [
