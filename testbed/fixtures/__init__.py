@@ -23,14 +23,14 @@ from typing import NamedTuple
 from pyparsing import Generator
 from pytest import fixture
 
-from src.config import Config
-from tests.fixtures.auth import TokenGenerator, auth_fixture
-from tests.fixtures.c4gh import C4GHKeyPair, c4gh_fixture
-from tests.fixtures.file import batch_create_file_fixture, file_fixture
-from tests.fixtures.kafka import KafkaFixture, kafka_fixture
-from tests.fixtures.metadata import SubmissionConfig, submission_config_fixture
-from tests.fixtures.mongo import MongoFixture, mongo_fixture
-from tests.fixtures.s3 import S3Fixture, s3_fixture
+from fixtures.auth import TokenGenerator, auth_fixture
+from fixtures.c4gh import C4GHKeyPair, c4gh_fixture
+from fixtures.config import Config
+from fixtures.file import batch_create_file_fixture, file_fixture
+from fixtures.kafka import KafkaFixture, kafka_fixture
+from fixtures.metadata import SubmissionConfig, submission_config_fixture
+from fixtures.mongo import MongoFixture, mongo_fixture
+from fixtures.s3 import S3Fixture, s3_fixture
 
 __all__ = [
     "auth_fixture",

@@ -24,7 +24,7 @@ from kafka import KafkaAdminClient
 from kafka.errors import KafkaError
 from pytest_asyncio import fixture as async_fixture
 
-from src.config import Config
+from fixtures.config import Config
 
 __all__ = ["kafka_fixture", "KafkaFixture"]
 

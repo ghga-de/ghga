@@ -15,8 +15,10 @@
 
 """ Utilities for tests """
 
+import os
 import subprocess  # nosec B404
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 import yaml
@@ -24,11 +26,48 @@ from ghga_datasteward_kit.file_ingest import IngestConfig, alias_to_accession
 from hexkit.providers.s3.testutils import FileObject
 from metldata.submission_registry.submission_store import SubmissionStore
 
-from src.config import Config
-from tests.fixtures.mongo import MongoFixture
+from fixtures.config import Config
+from fixtures.mongo import MongoFixture
+
+FIS_TOKEN_PATH = Path.home() / ".ghga_data_steward_token.txt"  # path required by DSKit
 
 
-def upload_config_path_fixture(config: Config, file_metadata_dir: Path):
+@contextmanager
+def temporary_file(file_path, content):
+    """Yield the temporary file with required content"""
+    try:
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(content)
+        yield file_path
+    finally:
+        os.remove(file_path)
+
+
+def write_data_to_yaml(data: dict[str, str], file_path=None):
+    if not file_path:
+        _, file_path = tempfile.mkstemp()  # pylint: disable=consider-using-with
+
+    with open(file_path, "w", encoding="utf-8") as _file:
+        yaml.dump(data, _file)
+
+    return file_path
+
+
+def ingest_config_as_file(config: IngestConfig):
+    """Create upload config file for data steward s3_upload"""
+
+    ingest_config = {
+        "file_ingest_url": config.file_ingest_url,
+        "file_ingest_pubkey": config.file_ingest_pubkey,
+        "submission_store_dir": str(config.submission_store_dir),
+        "input_dir": str(config.input_dir),
+        "map_files_fields": config.map_files_fields,
+    }
+
+    return write_data_to_yaml(data=ingest_config)
+
+
+def upload_config_as_file(config: Config, file_metadata_dir: Path):
     """Create upload config file for data steward s3_upload"""
 
     upload_config = {
@@ -36,15 +75,11 @@ def upload_config_path_fixture(config: Config, file_metadata_dir: Path):
         "s3_access_key_id": config.s3_access_key_id,
         "s3_secret_access_key": config.s3_secret_access_key.get_secret_value(),
         "bucket_id": config.staging_bucket,
-        "part_size": 1024,
+        "part_size": str(1024),
         "output_dir": str(file_metadata_dir),
     }
 
-    _, temp_file_path = tempfile.mkstemp()  # pylint: disable=consider-using-with
-    with open(temp_file_path, "w", encoding="utf-8") as _file:
-        yaml.dump(upload_config, _file)
-
-    return temp_file_path
+    return write_data_to_yaml(data=upload_config)
 
 
 def data_steward_upload_file(
@@ -52,7 +87,7 @@ def data_steward_upload_file(
 ):
     """Call DSKit s3_upload command to upload temp_file to configured bucket"""
 
-    upload_config_path = upload_config_path_fixture(
+    upload_config_path = upload_config_as_file(
         config=config, file_metadata_dir=file_metadata_dir
     )
 
@@ -100,3 +135,25 @@ def get_file_metadata_from_service(
         collection_name=collection_name,
         mapping={"_id": accession},
     )
+
+
+def file_ingest(config: IngestConfig, token):
+    """Call DSKit file_ingest command to ingest file"""
+
+    ingest_config_path = ingest_config_as_file(config=config)
+
+    with temporary_file(FIS_TOKEN_PATH, token) as _:
+        completed_submit = subprocess.run(  # nosec B607, B603
+            [
+                "ghga-datasteward-kit",
+                "files",
+                "ingest-upload-metadata",
+                "--config-path",
+                ingest_config_path,
+            ],
+            capture_output=True,
+            check=True,
+            timeout=10 * 60,
+        )
+
+        return completed_submit

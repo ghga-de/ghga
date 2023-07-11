@@ -14,21 +14,26 @@
 # limitations under the License.
 #
 
+""" Metadata related  fixture """
 
 from pathlib import Path
 
 from pydantic import BaseSettings
 from pytest import fixture
 
-BASE_DIR = Path(__file__).parent.resolve()
+BASE_DIR = Path(__file__).parent.parent
 
 
 class SubmissionConfig(BaseSettings):
     """Config for metadata and related submissions"""
 
-    metadata_config_path: Path = BASE_DIR / "config" / "metadata_config.yaml"
-    metadata_model_path: Path = BASE_DIR / "config" / "metadata_model.yaml"
-    metadata_path: Path = BASE_DIR / "config" / "metadata.json"
+    metadata_config_path: Path = (
+        BASE_DIR / "example_data" / "metadata" / "metadata_config.yaml"
+    )
+    metadata_model_path: Path = (
+        BASE_DIR / "example_data" / "metadata" / "metadata_model.yaml"
+    )
+    metadata_path: Path = BASE_DIR / "example_data" / "metadata" / "metadata.json"
     event_store: str = "event_store"
     submission_store: str = "submission_store"
     accession_store: str = "accession_store"

@@ -5,100 +5,36 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""A test dummy just to make the CI pass."""
+
+""" Step definitions for file ingest tests """
 
 import subprocess  # nosec B404
 import time
-from pathlib import Path
 
 import pytest
-from ghga_datasteward_kit.file_ingest import IngestConfig, file_ingest
+from ghga_datasteward_kit.file_ingest import IngestConfig
 
-from src.utils import data_steward_upload_file, get_file_metadata_from_service
-from tests.fixtures import (  # noqa: F401 # pylint: disable=unused-import
-    JointFixture,
-    auth_fixture,
-    batch_create_file_fixture,
-    c4gh_fixture,
-    config_fixture,
-    file_fixture,
-    joint_fixture,
-    kafka_fixture,
-    mongo_fixture,
-    s3_fixture,
-    submission_config_fixture,
-    submission_workdir_fixture,
+from fixtures.metadata import SubmissionConfig
+from steps.utils import (
+    data_steward_upload_file,
+    file_ingest,
+    get_file_metadata_from_service,
 )
-from tests.fixtures.metadata import SubmissionConfig
 
-
-def test_upload_submission(
-    submission_workdir: Path,
-    submission_config: SubmissionConfig,
-    fixtures: JointFixture,
-):
-    """Test submission via DSKit with configured file object,
-       expected to run through without errors
-
-    This test case is not async at the moment because in submit workflow
-    asyncio.run() is called by metldata dependency.
-    """
-
-    # start on a clean slate
-    fixtures.kafka.delete_topics()
-    fixtures.mongo.empty_databases()
-
-    completed_submit = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "metadata",
-            "submit",
-            "--submission-title",
-            "Test Submission",
-            "--submission-description",
-            "Test Submission Description",
-            "--metadata-path",
-            submission_config.metadata_path,
-            "--config-path",
-            submission_config.metadata_config_path,
-        ],
-        capture_output=True,
-        check=True,
-        timeout=10 * 60,
-    )
-
-    assert not completed_submit.stdout
-    assert b"ERROR" not in completed_submit.stderr
-
-    assert (submission_workdir / submission_config.submission_store).exists()
-
-    completed_transform = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "metadata",
-            "transform",
-            "--config-path",
-            submission_config.metadata_config_path,
-        ],
-        capture_output=True,
-        check=True,
-        timeout=15 * 60,
-    )
-
-    assert not completed_transform.stdout
-    assert b"ERROR" not in completed_transform.stderr
+from .conftest import JointFixture
 
 
 @pytest.mark.asyncio
-async def test_upload_file_ingest(
+async def test_file_ingest(
     submission_workdir,
     fixtures: JointFixture,
     batch_file_fixture,
@@ -155,11 +91,13 @@ async def test_upload_file_ingest(
         metadata_file_path = file_metadata_dir / f"{file_object.object_id}.json"
         assert metadata_file_path.exists()
 
-        file_ingest(
-            in_path=metadata_file_path,
+        completed_ingest = file_ingest(
             token=fixtures.auth.read_simple_token(),
             config=ingest_config,
         )
+
+        assert not completed_ingest.returncode
+        assert b"ERROR" not in completed_ingest.stderr
 
         # Wait for file copy and check IFRS database for metadata
         # also object storage for file

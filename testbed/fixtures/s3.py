@@ -23,7 +23,7 @@ from hexkit.providers.s3.provider import S3ObjectStorage
 from hexkit.providers.s3.testutils import S3Fixture
 from pytest import fixture
 
-from src.config import Config
+from fixtures.config import Config
 
 __all__ = ["s3_fixture", "S3Fixture"]
 

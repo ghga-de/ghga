@@ -25,8 +25,8 @@ from typing import Generator
 from hexkit.providers.s3.testutils import FileObject, temp_file_object
 from pytest import fixture
 
-from src.config import Config
-from tests.fixtures.metadata import SubmissionConfig
+from fixtures.config import Config
+from fixtures.metadata import SubmissionConfig
 
 __all__ = ["file_fixture", "FileObject", "batch_create_file_fixture"]
 

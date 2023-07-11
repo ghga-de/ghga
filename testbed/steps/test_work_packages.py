@@ -53,7 +53,9 @@ def wps_database_is_empty(mongo: MongoFixture):
 
 
 @given("the test dataset has been announced")
-def announce_dataset(publish_dataset, fixtures: JointFixture):
+def announce_dataset(
+    publish_dataset, fixtures: JointFixture
+):  # pylint: disable=unused-argument
     # TBD: Should happen during upload
     assert fixtures.mongo.wait_document(
         WPS_DB_NAME, "datasets", {"_id": DATASET_OVERVIEW_EVENT.accession}
@@ -76,11 +78,11 @@ def check_dataset_in_list(response: httpx.Response):
         {
             "id": dataset.accession,
             "description": dataset.description,
-            "stage": dataset.stage.value,
+            "stage": dataset.stage.value,  # pylint: disable=no-member
             "title": dataset.title,
             "files": [
                 {"id": file.accession, "extension": file.file_extension}
-                for file in files
+                for file in files  # pylint: disable=not-an-iterable
             ],
         }
     ]

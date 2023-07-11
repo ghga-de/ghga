@@ -24,7 +24,7 @@ from pytest import fixture
 __all__ = ["c4gh_fixture", "C4GHKeyPair"]
 
 
-KEY_FILE = Path(__file__).parent.parent.parent / ".devcontainer/keys.env"
+KEY_FILE = Path(__file__).parent.parent / ".devcontainer/keys.env"
 
 
 class C4GHKeyPair(NamedTuple):

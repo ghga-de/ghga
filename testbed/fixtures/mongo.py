@@ -25,7 +25,7 @@ from pymongo import MongoClient
 from pymongo.errors import ExecutionTimeout, OperationFailure
 from pytest import fixture
 
-from src.config import Config
+from fixtures.config import Config
 
 __all__ = [
     "mongo_fixture",

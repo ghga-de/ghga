@@ -51,6 +51,7 @@ EXCLUDE = [
     ".git",
     ".github",
     ".flake8",
+    ".bandit",
     ".gitignore",
     ".pylintrc",
     "example_config.yaml",
