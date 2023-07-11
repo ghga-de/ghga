@@ -39,7 +39,7 @@ async def empty_storage_bucket(storage: S3ObjectStorage, bucket_id: str):
         await storage.delete_object(bucket_id=bucket_id, object_id=object_id)
 
 
-@fixture
+@fixture(name="s3")
 def s3_fixture(config: Config) -> Generator[S3Fixture, None, None]:
     """Pytest fixture for tests depending on the S3ObjectStorage."""
 

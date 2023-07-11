@@ -73,6 +73,7 @@ EXCLUDE = [
 
 # exclude file by file ending from license header check:
 EXCLUDE_ENDINGS = [
+    "feature",
     "html",
     "ini",
     "jinja",
@@ -326,7 +327,7 @@ def check_copyright_notice(
     author (str, optional):
         The author that shall be included in the license header.
         It will replace any appearance of "{author}" in the license
-        header. This defaults to an auther info for GHGA.
+        header. This defaults to an author info for GHGA.
 
     """
     # If the global_copyright is already set, check if the current copyright is

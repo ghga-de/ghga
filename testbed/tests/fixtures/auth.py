@@ -17,7 +17,7 @@
 """Fixture for testing APIs that use the internal auth token."""
 
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Optional
 
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto import jwk
@@ -28,7 +28,7 @@ __all__ = ["auth_fixture"]
 DEFAULT_VALID_SECONDS = 60 * 10  # 10 mins
 DEFAULT_USER_STATUS = "active"
 
-KEY_FILE = Path(__file__).parent.parent.parent / ".devcontainer/jwk.env"
+KEY_FILE = Path(__file__).parent.parent.parent / ".devcontainer/auth.env"
 
 
 class TokenGenerator:
@@ -66,21 +66,21 @@ class TokenGenerator:
         """Read the signing key from a local env file."""
         with open(KEY_FILE, encoding="ascii") as key_file:
             for line in key_file:
-                if line.startswith("JWK_1_PRIV="):
+                if line.startswith("AUTH_KEY="):
                     return jwk.JWK.from_json(line.split("=", 1)[1].rstrip().strip("'"))
         raise RuntimeError("Cannot read signing key for authentication")
 
-    def read_token(self) -> str:
+    def read_simple_token(self) -> str:
         """Read the simple token from a local env file."""
         with open(KEY_FILE, encoding="ascii") as key_file:
             for line in key_file:
-                if line.startswith("TOKEN="):
-                    return line.split("=", 1)[1].rstrip()
-        raise RuntimeError("Cannot read signing key for authentication")
+                if line.startswith("SIMPLE_TOKEN="):
+                    return line.split("=", 1)[1].rstrip().strip('"')
+        raise RuntimeError("Cannot read simple token for authentication")
 
 
-@fixture
-def auth_fixture() -> Generator[TokenGenerator, None, None]:
+@fixture(name="auth")
+def auth_fixture() -> TokenGenerator:
     """Fixture that provides an internal auth token generator."""
 
-    yield TokenGenerator()
+    return TokenGenerator()

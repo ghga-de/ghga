@@ -48,10 +48,11 @@ class Config(
 
     # MongoDb config
     db_connection_str: SecretStr = SecretStr(
-        "mongodb://testbed_user:testbed_key@mongo_db"
+        "mongodb://testbed_user:testbed_key@mongodb"
     )
     db_name: str = "test-db"
-    service_db_names: list[str] = ["wps", "ars", "dcs", "ifrs"]
+    # databases that shall be dropped after running the tests
+    service_db_names: list[str] = ["ars", "auth", "dcs", "ifrs", "ucs", "wps"]
     service_kafka_topics: list[str] = [
         "downloads",
         "internal_registrations",

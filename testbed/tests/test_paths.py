@@ -17,70 +17,31 @@
 
 import subprocess  # nosec B404
 import time
-from datetime import timedelta
+from pathlib import Path
 
-import httpx
 import pytest
 from ghga_datasteward_kit.file_ingest import IngestConfig, file_ingest
-from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from src.utils import data_steward_upload_file, get_file_metadata_from_service
 from tests.fixtures import (  # noqa: F401 # pylint: disable=unused-import
     JointFixture,
     auth_fixture,
     batch_create_file_fixture,
+    c4gh_fixture,
     config_fixture,
     file_fixture,
     joint_fixture,
     kafka_fixture,
-    mongodb_fixture,
+    mongo_fixture,
     s3_fixture,
     submission_config_fixture,
-    submission_workdir,
+    submission_workdir_fixture,
 )
 from tests.fixtures.metadata import SubmissionConfig
 
 
-@pytest.mark.asyncio
-async def test_ars(fixtures: JointFixture):
-    """Standalone test for the access request service.
-
-    Checks that an access request can be made and notifications are sent out.
-    """
-    headers = fixtures.auth.generate_headers(
-        id_="user-id-doe", name="John Doe", email="doe@home.org", title="Dr."
-    )
-    date_now = now_as_utc()
-    data = {
-        "user_id": "user-id-doe",
-        "dataset_id": "some-dataset",
-        "email": "john@doe.org",
-        "request_text": "Can I access some dataset?",
-        "access_starts": date_now.isoformat(),
-        "access_ends": (date_now + timedelta(days=365)).isoformat(),
-    }
-    url = "http://ars:8080/access-requests"
-
-    response = httpx.post(url, data=data)
-    assert response.status_code == 403
-
-    async with fixtures.kafka.record_events(in_topic="notifications") as event_recorder:
-        response = httpx.post(url, headers=headers, json=data)
-        assert response.status_code == 201
-
-    assert (
-        sum(
-            1
-            for event in event_recorder.recorded_events
-            if event.type_ == "notification"
-        )
-        == 2
-    )
-
-
-@pytest.mark.asyncio
 def test_upload_submission(
-    workdir,
+    submission_workdir: Path,
     submission_config: SubmissionConfig,
 ):
     """Test submission via DSKit with configured file object,
@@ -112,7 +73,7 @@ def test_upload_submission(
     assert not completed_submit.stdout
     assert b"ERROR" not in completed_submit.stderr
 
-    assert (workdir / submission_config.submission_store).exists()
+    assert (submission_workdir / submission_config.submission_store).exists()
 
     completed_transform = subprocess.run(  # nosec B607, B603
         [
@@ -133,7 +94,7 @@ def test_upload_submission(
 
 @pytest.mark.asyncio
 async def test_upload_file_ingest(
-    workdir,
+    submission_workdir,
     fixtures: JointFixture,
     batch_file_fixture,
     submission_config: SubmissionConfig,
@@ -141,7 +102,7 @@ async def test_upload_file_ingest(
     """Test DSkit DSKit file upload workflow"""
 
     file_objects = batch_file_fixture
-    file_metadata_dir = workdir / "file_metadata"
+    file_metadata_dir = submission_workdir / "file_metadata"
     file_metadata_dir.mkdir()
 
     completed_submit = subprocess.run(  # nosec B607, B603
@@ -166,13 +127,13 @@ async def test_upload_file_ingest(
     assert not completed_submit.stdout
     assert b"ERROR" not in completed_submit.stderr
 
-    assert (workdir / submission_config.submission_store).exists()
+    assert (submission_workdir / submission_config.submission_store).exists()
 
     ingest_config = IngestConfig(
         file_ingest_url=fixtures.config.file_ingest_url,
         file_ingest_pubkey=fixtures.config.file_ingest_pubkey,
         input_dir=file_metadata_dir,
-        submission_store_dir=workdir / submission_config.submission_store,
+        submission_store_dir=submission_workdir / submission_config.submission_store,
         map_files_fields=submission_config.metadata_file_fields,
     )
 
@@ -191,7 +152,7 @@ async def test_upload_file_ingest(
 
         file_ingest(
             in_path=metadata_file_path,
-            token=fixtures.auth.read_token(),
+            token=fixtures.auth.read_simple_token(),
             config=ingest_config,
         )
 
@@ -200,10 +161,10 @@ async def test_upload_file_ingest(
         time.sleep(10)
         db_metadata = get_file_metadata_from_service(
             ingest_config=ingest_config,
-            db_connection_str=fixtures.config.db_connection_str,
             file_object=file_object,
             db_name="ifrs",
             collection_name="file_metadata",
+            mongo=fixtures.mongo,
         )
 
         assert db_metadata

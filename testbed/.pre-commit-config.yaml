@@ -55,7 +55,7 @@ repos:
     hooks:
       - id: pylint
         args: [--disable=E0401]
-        exclude: tests|.devcontainer
+        exclude: tests|steps|.devcontainer
   - repo: https://github.com/PyCQA/flake8
     rev: 6.0.0
     hooks:
@@ -65,4 +65,4 @@ repos:
     rev: 1.7.4
     hooks:
       - id: bandit
-        exclude: tests|.devcontainer|scripts
+        exclude: tests|steps|.devcontainer|scripts

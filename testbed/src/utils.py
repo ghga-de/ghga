@@ -23,10 +23,9 @@ import yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig, alias_to_accession
 from hexkit.providers.s3.testutils import FileObject
 from metldata.submission_registry.submission_store import SubmissionStore
-from pydantic import SecretStr
 
 from src.config import Config
-from tests.fixtures.mongodb import retrieve_document_from_service_db
+from tests.fixtures.mongo import MongoFixture
 
 
 def upload_config_path_fixture(config: Config, file_metadata_dir: Path):
@@ -80,9 +79,9 @@ def data_steward_upload_file(
 def get_file_metadata_from_service(
     file_object: FileObject,
     ingest_config: IngestConfig,
-    db_connection_str: SecretStr,
     db_name: str,
     collection_name: str,
+    mongo: MongoFixture,
 ):
     """
     - First get file accession from submission_store
@@ -96,9 +95,8 @@ def get_file_metadata_from_service(
         map_fields=ingest_config.map_files_fields,
         submission_store=submission_store,
     )
-    return retrieve_document_from_service_db(
-        db_connection_str=db_connection_str,
+    return mongo.find_document(
         db_name=db_name,
         collection_name=collection_name,
-        query={"_id": accession},
+        mapping={"_id": accession},
     )
