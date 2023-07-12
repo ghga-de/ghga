@@ -12,10 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+"""Dependency-Injection container for config"""
+from hexkit.inject import ContainerBase, get_configurator
 
-"""Test dummy."""
+from wkvs.config import Config
 
 
-def test_dummy():
-    """Just makes the CI pass."""
-    assert True
+class Container(ContainerBase):
+    """Dependency-Injection Container"""
+
+    config = get_configurator(Config)

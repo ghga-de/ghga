@@ -12,12 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+"""Test config"""
 
-"""FastAPI dependencies (used with the `Depends` feature)"""
+from pathlib import Path
 
-from ..config import CONFIG
+from tests.fixtures.utils import BASE_DIR
+from wkvs.config import Config
+
+TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 
 
-def get_config():
-    """Get runtime configuration."""
-    return CONFIG
+def get_config(
+    default_config_yaml: Path = TEST_CONFIG_YAML,
+) -> Config:
+    """Load test config"""
+    return Config(config_yaml=default_config_yaml)

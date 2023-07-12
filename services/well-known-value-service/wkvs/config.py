@@ -13,21 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
-
-import asyncio
-
-from ghga_service_commons.api import run_server
-
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
+"""Config Parameter Modeling and Parsing"""
+from ghga_service_commons.api import ApiConfigBase
+from hexkit.config import config_from_yaml
+from pydantic import BaseSettings, Field
 
 
-def run(config: Config = CONFIG):
-    """Run the service"""
-    # Please adapt to package name
-    asyncio.run(run_server(app="my_microservice.__main__:app", config=config))
+class WellKnownConfig(BaseSettings):
+    """Contains the configured values for the service"""
+
+    crypt4gh_public_key: str = Field(..., description="The GHGA crypt4gh public key")
 
 
-if __name__ == "__main__":
-    run()
+@config_from_yaml(prefix="wkvs")
+class Config(ApiConfigBase, WellKnownConfig):
+    """Config parameters and their defaults."""
+
+    service_name: str = "wkvs"
