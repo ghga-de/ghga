@@ -19,6 +19,7 @@
 from typing import Any, NamedTuple
 
 import httpx
+from pytest_asyncio import fixture as async_fixture
 from pytest_bdd import (  # noqa: F401; pylint: disable=unused-import
     given,
     parsers,
@@ -102,8 +103,15 @@ def check_status_code(code: int, response: httpx.Response):
 # Global test bed state memory
 
 
+@async_fixture
+async def reset_buckets(fixtures: JointFixture):
+    await fixtures.s3.empty_buckets()
+
+
 @given("we start on a clean slate", target_fixture="state")
-def reset_state(fixtures: JointFixture):
+def reset_state(
+    fixtures: JointFixture, reset_buckets
+):  # pylint: disable=unused-argument
     fixtures.kafka.delete_topics()
     fixtures.mongo.empty_databases("tb")  # state database
     fixtures.mongo.empty_databases()  # service databases

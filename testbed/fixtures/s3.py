@@ -16,11 +16,9 @@
 
 """Fixture for testing code that uses the S3ObjectStorage provider."""
 
-import asyncio
-from typing import Generator
+from typing import Generator, Optional
 
 from hexkit.providers.s3.provider import S3ObjectStorage
-from hexkit.providers.s3.testutils import S3Fixture
 from pytest import fixture
 
 from fixtures.config import Config
@@ -28,15 +26,33 @@ from fixtures.config import Config
 __all__ = ["s3_fixture", "S3Fixture"]
 
 
-async def empty_storage_bucket(storage: S3ObjectStorage, bucket_id: str):
-    """Clean the test artifacts or files from given bucket"""
+class S3Fixture:
+    """Yielded by the `s3_fixture` function"""
 
-    # Get list of all object in bucket
-    object_ids = await storage.list_all_object_ids(bucket_id=bucket_id)
+    def __init__(self, config: Config, storage: S3ObjectStorage):
+        """Initialize with config."""
+        self.config = config
+        self.storage = storage
 
-    # Delete all objects
-    for object_id in object_ids:
-        await storage.delete_object(bucket_id=bucket_id, object_id=object_id)
+    async def empty_buckets(self, bucket_id: Optional[str] = None):
+        """Clean the test artifacts or files from given bucket"""
+        if bucket_id is None:
+            bucket_ids = [
+                self.config.inbox_bucket,
+                self.config.outbox_bucket,
+                self.config.staging_bucket,
+                self.config.permanent_bucket,
+            ]
+        else:
+            bucket_ids = [bucket_id]
+
+        for bucket in bucket_ids:
+            # Get list of all objects in the bucket
+            object_ids = await self.storage.list_all_object_ids(bucket_id=bucket)
+
+            # Delete all objects
+            for object_id in object_ids:
+                await self.storage.delete_object(bucket_id=bucket, object_id=object_id)
 
 
 @fixture(name="s3")
@@ -45,12 +61,3 @@ def s3_fixture(config: Config) -> Generator[S3Fixture, None, None]:
 
     storage = S3ObjectStorage(config=config)
     yield S3Fixture(config=config, storage=storage)
-
-    # Empty all storage buckets
-    for bucket_id in [
-        config.inbox_bucket,
-        config.outbox_bucket,
-        config.staging_bucket,
-        config.permanent_bucket,
-    ]:
-        asyncio.run(empty_storage_bucket(storage, bucket_id))
