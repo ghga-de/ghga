@@ -19,6 +19,7 @@
 from typing import Generator, Optional
 
 from hexkit.providers.s3.provider import S3ObjectStorage
+from hexkit.providers.s3.testutils import S3Fixture as BaseS3Fixture
 from pytest import fixture
 
 from fixtures.config import Config
@@ -26,13 +27,10 @@ from fixtures.config import Config
 __all__ = ["s3_fixture", "S3Fixture"]
 
 
-class S3Fixture:
-    """Yielded by the `s3_fixture` function"""
+class S3Fixture(BaseS3Fixture):
+    """An augmented S3 fixture"""
 
-    def __init__(self, config: Config, storage: S3ObjectStorage):
-        """Initialize with config."""
-        self.config = config
-        self.storage = storage
+    config: Config
 
     async def empty_buckets(self, bucket_id: Optional[str] = None):
         """Clean the test artifacts or files from given bucket"""
