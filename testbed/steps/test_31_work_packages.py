@@ -41,6 +41,15 @@ scenarios("../features/31_work_packages.feature")
 
 @async_fixture
 async def publish_dataset(fixtures: JointFixture):
+    # replace file accessions in dataset overview event
+    files = fixtures.mongo.find_documents("ifrs", "file_metadata", {})
+    accessions = [file["_id"] for file in files]
+    payload = DATASET_OVERVIEW_EVENT.dict()
+    payload_files = payload["files"]
+    assert len(accessions) == len(payload_files)
+    for i, accession in enumerate(accessions):
+        payload_files[i]["accession"] = accession
+    # publish dataset overview event
     await fixtures.kafka.publisher.publish(
         payload=DATASET_OVERVIEW_EVENT.dict(),
         type_="metadata_dataset_overview",

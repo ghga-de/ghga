@@ -105,6 +105,14 @@ class MongoFixture:
             slept += interval
         return None
 
+    def find_documents(
+        self, db_name: str, collection_name: str, mapping: Mapping[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Return all documents from the given collection matching the given filter."""
+        db = self.client[db_name]
+        collection = db.get_collection(collection_name)
+        return list(collection.find(mapping))
+
     def replace_document(
         self, db_name: str, collection_name: str, document: Mapping[str, Any]
     ):

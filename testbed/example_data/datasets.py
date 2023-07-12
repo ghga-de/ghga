@@ -21,26 +21,25 @@ from ghga_event_schemas.pydantic_ import (
     MetadataDatasetStage,
 )
 
+# We simulate the emission of the dataset overview event
+# since it is currently not yet implemented.
+# After this has been implemented, this file should be removed.
+
 DATASET_OVERVIEW_EVENT = MetadataDatasetOverview(
-    accession="test-dataset-1",
+    accession="dataset-1",
     stage=MetadataDatasetStage.DOWNLOAD,
-    title="Test Dataset 1",
-    description="The first test dataset",
+    title="The A dataset",
+    description="An interesting dataset A",
     files=[
         MetadataDatasetFile(
-            accession="file-id-1",
-            description="The first file",
-            file_extension=".json",
+            accession="will-be-replaced",
+            description="The first study file",
+            file_extension=".fastq.gz",
         ),
         MetadataDatasetFile(
-            accession="file-id-2",
-            description="The second file",
-            file_extension=".csv",
-        ),
-        MetadataDatasetFile(
-            accession="file-id-3",
-            description="The third file",
-            file_extension=".bam",
+            accession="will-be-replaced",
+            description="The second study file",
+            file_extension=".fastq.gz",
         ),
     ],
 )  # pyright: ignore

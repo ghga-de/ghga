@@ -77,7 +77,7 @@ def request_access_for_dataset(login: LoginFixture, event_recorder):
     user, headers = login
     data = {
         "user_id": user["_id"],
-        "dataset_id": "test-dataset-1",
+        "dataset_id": "dataset-1",
         "email": user["email"],
         "request_text": "Can I access the test dataset?",
         "access_starts": date_now.isoformat(),
@@ -109,8 +109,7 @@ def there_is_one_request(name: str, response: httpx.Response):
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == "test-dataset-1"
-        and request["full_user_name"] == name
+        if request["dataset_id"] == "dataset-1" and request["full_user_name"] == name
     ]
     assert len(requests) == 1
 
@@ -121,7 +120,7 @@ def allow_pending_request(name: str, login: LoginFixture, response: httpx.Respon
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == "test-dataset-1"
+        if request["dataset_id"] == "dataset-1"
         and request["status"] == "pending"
         and request["full_user_name"] == name
     ]
@@ -140,8 +139,7 @@ def there_are_access_requests(name: str, status: str, response: httpx.Response):
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == "test-dataset-1"
-        and request["full_user_name"] == name
+        if request["dataset_id"] == "dataset-1" and request["full_user_name"] == name
     ]
     assert len(requests) == 1
     request = requests[0]
