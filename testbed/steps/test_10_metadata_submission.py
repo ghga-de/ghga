@@ -34,10 +34,6 @@ def test_upload_submission(
     asyncio.run() is called by metldata dependency.
     """
 
-    # start on a clean slate
-    # fixtures.kafka.delete_topics()
-    # fixtures.mongo.empty_databases()
-
     completed_submit = subprocess.run(  # nosec B607, B603
         [
             "ghga-datasteward-kit",

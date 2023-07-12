@@ -5,7 +5,8 @@ Feature: 31 Work Packages
 
   Scenario: Creating a download token
 
-    Given no work packages have been created yet
+    Given we have the state "John Doe is allowed to download the test dataset"
+    And no work packages have been created yet
     And the test dataset has been announced
     And I am logged in as "Dr. John Doe"
 

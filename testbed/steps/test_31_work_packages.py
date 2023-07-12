@@ -30,11 +30,13 @@ from .conftest import (
     given,
     parse,
     scenarios,
+    set_state,
     then,
+    unset_state,
     when,
 )
 
-scenarios("../features/work_packages.feature")
+scenarios("../features/31_work_packages.feature")
 
 
 @async_fixture
@@ -50,6 +52,7 @@ async def publish_dataset(fixtures: JointFixture):
 @given("no work packages have been created yet")
 def wps_database_is_empty(mongo: MongoFixture):
     mongo.empty_databases(WPS_DB_NAME)
+    unset_state("we have a work package access token", mongo)
 
 
 @given("the test dataset has been announced")
@@ -57,7 +60,7 @@ def announce_dataset(
     publish_dataset, fixtures: JointFixture
 ):  # pylint: disable=unused-argument
     # TBD: Should happen during upload
-    assert fixtures.mongo.wait_document(
+    assert fixtures.mongo.wait_for_document(
         WPS_DB_NAME, "datasets", {"_id": DATASET_OVERVIEW_EVENT.accession}
     )
 
@@ -108,8 +111,4 @@ def check_work_package_access_token(fixtures: JointFixture, response: httpx.Resp
     id_, token = data["id"], data["token"]
     assert 20 <= len(id_) < 40 and 80 < len(token) < 120
     id_and_token = f"{id_}:{token}"
-    # store the download token in the database
-    # (this simulates the user storing the token by copying it to the clipboard)
-    fixtures.mongo.replace_document(
-        "tb", "values", {"_id": "download-token", "value": id_and_token}
-    )
+    set_state("we have a work package access token", id_and_token, fixtures.mongo)

@@ -87,30 +87,39 @@ class MongoFixture:
         collection = db.get_collection(collection_name)
         return collection.find_one(mapping)
 
-    def wait_document(
+    def wait_for_document(
         self,
         db_name: str,
         collection_name: str,
         mapping: Mapping[str, Any],
         timeout=10,
-    ) -> bool:
+    ) -> Any:
         """Wait for one document from the given collection matching the given filter."""
         slept = 0.0
         interval = 0.1
         while slept < timeout:
-            if self.find_document(db_name, collection_name, mapping):
-                return True
+            document = self.find_document(db_name, collection_name, mapping)
+            if document is not None:
+                return document
             sleep(interval)
             slept += interval
-        return False
+        return None
 
     def replace_document(
         self, db_name: str, collection_name: str, document: Mapping[str, Any]
     ):
-        """Replace one document in the given collection with the given document."""
+        """Replace one document in the given collection."""
         db = self.client[db_name]
         collection = db.get_collection(collection_name)
         collection.replace_one({"_id": document["_id"]}, document, upsert=True)
+
+    def remove_document(
+        self, db_name: str, collection_name: str, document: Mapping[str, Any]
+    ):
+        """Remove one document in the given collection with the given document."""
+        db = self.client[db_name]
+        collection = db.get_collection(collection_name)
+        collection.delete_many(document)
 
 
 @fixture(name="mongo")
@@ -122,7 +131,7 @@ def mongo_fixture(config: Config) -> Generator[MongoFixture, None, None]:
     client: MongoClient = MongoClient(db_connection_str)
     mongo_db = MongoDbFixture(config=config, dao_factory=dao_factory)
     mongo = MongoFixture(
-        config=mongo_db.config,
+        config=mongo_db.config,  # pyright: ignore
         client=client,
         dao_factory=mongo_db.dao_factory,
     )

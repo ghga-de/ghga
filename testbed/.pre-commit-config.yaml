@@ -54,7 +54,7 @@ repos:
     rev: v2.17.4
     hooks:
       - id: pylint
-        args: [--disable=E0401]
+        args: [--disable=import-error]
         exclude: .devcontainer
   - repo: https://github.com/PyCQA/flake8
     rev: 6.0.0

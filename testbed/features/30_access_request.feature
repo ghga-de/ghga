@@ -6,7 +6,7 @@ Feature: 30 Access Request
 
     Given the claims repository is empty
     And no access requests have been made yet
-    Given I am logged in as "Dr. John Doe"
+    And I am logged in as "Dr. John Doe"
 
     When I request access to the test dataset
     Then the response status code is "201"
@@ -25,3 +25,4 @@ Feature: 30 Access Request
 
     When I fetch the list of access requests
     Then the status of the request from "Dr. John Doe" is "allowed"
+    And set the state to "John Doe is allowed to download the test dataset"

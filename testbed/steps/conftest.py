@@ -62,6 +62,9 @@ class LoginFixture(NamedTuple):
     headers: dict[str, str]
 
 
+# shared step functions
+
+
 @given(parse('I am logged in as "{name}"'), target_fixture="login")
 def access_as_user(name: str, fixtures: JointFixture) -> LoginFixture:
     # Create user dictionary
@@ -94,3 +97,38 @@ def access_as_user(name: str, fixtures: JointFixture) -> LoginFixture:
 @then(parse('the response status code is "{code:d}"'))
 def check_status_code(code: int, response: httpx.Response):
     assert response.status_code == code
+
+
+# Global test bed state memory
+
+
+@given("we start on a clean slate", target_fixture="state")
+def reset_state(fixtures: JointFixture):
+    fixtures.kafka.delete_topics()
+    fixtures.mongo.empty_databases("tb")  # state database
+    fixtures.mongo.empty_databases()  # service databases
+
+
+@given(parse('we have the state "{name}"'), target_fixture="state")
+def assume_state_clause(name: str, mongo: MongoFixture):
+    value = get_state(name, mongo)
+    assert value, f'The expected state "{name}" has not yet been set.'
+    return value
+
+
+@then(parse('set the state to "{name}"'))
+def set_state_clause(name: str, mongo: MongoFixture):
+    set_state(name, True, mongo)
+
+
+def get_state(state_name: str, mongo: MongoFixture) -> Any:
+    state = mongo.find_document("tb", "state", {"_id": state_name})
+    return (state or {}).get("value")
+
+
+def set_state(state_name: str, value: Any, mongo: MongoFixture):
+    mongo.replace_document("tb", "state", {"_id": state_name, "value": value})
+
+
+def unset_state(state_regex: str, mongo: MongoFixture):
+    mongo.remove_document("tb", "state", {"_id": {"$regex": state_regex}})

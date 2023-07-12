@@ -35,10 +35,11 @@ from .conftest import (
     parse,
     scenarios,
     then,
+    unset_state,
     when,
 )
 
-scenarios("../features/access_request.feature")
+scenarios("../features/30_access_request.feature")
 
 
 @async_fixture
@@ -60,6 +61,7 @@ async def recorded_events(event_recorder: EventRecorder) -> Sequence[RecordedEve
 @given("no access requests have been made yet")
 def ars_database_is_empty(mongo: MongoFixture):
     mongo.empty_databases(ARS_DB_NAME)
+    unset_state("is allowed to download", mongo)
 
 
 @given("the claims repository is empty")
