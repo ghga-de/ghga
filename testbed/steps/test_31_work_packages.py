@@ -106,7 +106,7 @@ def create_work_package(login: LoginFixture, fixtures: JointFixture):
         "dataset_id": DATASET_OVERVIEW_EVENT.accession,
         "type": "download",
         "file_ids": None,
-        "user_public_crypt4gh_key": fixtures.c4gh.public,
+        "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
     }
     url = f"{WPS_URL}/work-packages"
     response = httpx.post(url, headers=login.headers, json=data, timeout=TIMEOUT)

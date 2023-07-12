@@ -82,3 +82,7 @@ class Config(
     # file ingest
     file_ingest_url: str = "http://fis:8080/ingest"
     file_ingest_pubkey: str
+
+    # connector
+    user_private_crypt4gh_key: str
+    user_public_crypt4gh_key: str

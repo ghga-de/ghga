@@ -24,7 +24,6 @@ from pyparsing import Generator
 from pytest import fixture
 
 from fixtures.auth import TokenGenerator, auth_fixture
-from fixtures.c4gh import C4GHKeyPair, c4gh_fixture
 from fixtures.config import Config
 from fixtures.file import batch_create_file_fixture, file_fixture
 from fixtures.kafka import KafkaFixture, kafka_fixture
@@ -35,7 +34,6 @@ from fixtures.s3 import S3Fixture, s3_fixture
 __all__ = [
     "auth_fixture",
     "config_fixture",
-    "c4gh_fixture",
     "kafka_fixture",
     "mongo_fixture",
     "s3_fixture",
@@ -51,7 +49,6 @@ class JointFixture(NamedTuple):
     """Collection of fixtures returned by `joint_fixture`."""
 
     config: Config
-    c4gh: C4GHKeyPair
     kafka: KafkaFixture
     mongo: MongoFixture
     s3: S3Fixture
@@ -68,7 +65,6 @@ def config_fixture() -> Config:
 @fixture(name="fixtures")
 def joint_fixture(  # pylint: disable=too-many-arguments
     config: Config,
-    c4gh: C4GHKeyPair,
     kafka: KafkaFixture,
     mongo: MongoFixture,
     s3: S3Fixture,
@@ -76,7 +72,7 @@ def joint_fixture(  # pylint: disable=too-many-arguments
 ) -> JointFixture:
     """A fixture that collects all fixtures for integration testing."""
 
-    return JointFixture(config, c4gh, kafka, mongo, s3, auth)
+    return JointFixture(config, kafka, mongo, s3, auth)
 
 
 @fixture(name="submission_workdir")

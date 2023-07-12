@@ -34,7 +34,6 @@ from fixtures import (  # noqa: F401; pylint: disable=unused-import
     MongoFixture,
     auth_fixture,
     batch_create_file_fixture,
-    c4gh_fixture,
     config_fixture,
     joint_fixture,
     kafka_fixture,
