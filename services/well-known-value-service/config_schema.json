@@ -5,9 +5,33 @@
   "properties": {
     "crypt4gh_public_key": {
       "title": "Crypt4Gh Public Key",
-      "description": "The GHGA crypt4gh public key",
+      "description": "The GHGA crypt4gh public key.",
       "env_names": [
         "wkvs_crypt4gh_public_key"
+      ],
+      "type": "string"
+    },
+    "dcs_api_url": {
+      "title": "Dcs Api Url",
+      "description": "URL to the root of the DRS-compatible DCS API.",
+      "env_names": [
+        "wkvs_dcs_api_url"
+      ],
+      "type": "string"
+    },
+    "ucs_api_url": {
+      "title": "Ucs Api Url",
+      "description": "URL to the root of the upload controller API.",
+      "env_names": [
+        "wkvs_ucs_api_url"
+      ],
+      "type": "string"
+    },
+    "wps_api_url": {
+      "title": "Wps Api Url",
+      "description": "URL to the root of the WPS API.",
+      "env_names": [
+        "wkvs_wps_api_url"
       ],
       "type": "string"
     },
@@ -154,7 +178,10 @@
     }
   },
   "required": [
-    "crypt4gh_public_key"
+    "crypt4gh_public_key",
+    "dcs_api_url",
+    "ucs_api_url",
+    "wps_api_url"
   ],
   "additionalProperties": false
 }

@@ -5,10 +5,13 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
+dcs_api_url: http://127.0.0.1/download
 docs_url: /docs
 host: 127.0.0.1
 log_level: info
 openapi_url: /openapi.json
 port: 8080
 service_name: wkvs
+ucs_api_url: http://127.0.0.1/upload
 workers: 1
+wps_api_url: http://127.0.0.1
