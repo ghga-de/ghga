@@ -23,6 +23,7 @@ from unittest.mock import Mock
 import pytest
 from pytest_httpx import HTTPXMock
 
+from ghga_connector.core import WKVSCaller
 from ghga_connector.core.api_calls import (
     UploadStatus,
     WorkPackageAccessor,
@@ -36,6 +37,7 @@ from ghga_connector.core.exceptions import (
     MaxPartNoExceededError,
     NoWorkPackageAccessError,
     UploadNotRegisteredError,
+    WellKnownValueNotFound,
 )
 from tests.fixtures.utils import mock_wps_token
 
@@ -189,3 +191,30 @@ def test_get_wps_file_info(httpx_mock: HTTPXMock):
             submitter_private_key="",
         )
         response = work_package_accessor.get_package_files()
+
+
+@pytest.mark.asyncio
+async def test_wkvs_calls(httpx_mock: HTTPXMock):
+    """Test handling of responses for WKVS api calls"""
+
+    wkvs_url = "https://127.0.0.1"
+    wkvs_caller = WKVSCaller(wkvs_url)
+
+    with pytest.raises(WellKnownValueNotFound):
+        httpx_mock.add_response(status_code=404)
+        wkvs_caller.get_server_pubkey()
+
+    with pytest.raises(KeyError):
+        httpx_mock.add_response(status_code=200, json={})
+        wkvs_caller.get_server_pubkey()
+
+    # test each call to CYA
+    for func, value_name in [
+        (wkvs_caller.get_dcs_api_url, "dcs_api_url"),
+        (wkvs_caller.get_server_pubkey, "crypt4gh_public_key"),
+        (wkvs_caller.get_ucs_api_url, "ucs_api_url"),
+        (wkvs_caller.get_wps_api_url, "wps_api_url"),
+    ]:
+        httpx_mock.add_response(json={value_name: "dummy-value"})
+        value = func()
+        assert value == "dummy-value"

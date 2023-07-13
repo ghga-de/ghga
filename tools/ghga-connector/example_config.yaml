@@ -1,7 +1,4 @@
-download_api: https://hd-dev.ghga-dev.de/drs3/ga4gh/drs/v1
 max_retries: 2
 max_wait_time: 3600
 part_size: 16777216
-server_pubkey: dummy-pubkey
-upload_api: https://hd-dev.ghga-dev.de/ucs
-wps_api_url: http://127.0.0.1
+wkvs_api_url: https://127.0.0.1

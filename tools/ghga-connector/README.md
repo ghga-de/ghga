@@ -28,13 +28,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
 ```bash
-docker pull ghga/ghga-connector:0.3.6
+docker pull ghga/ghga-connector:0.3.7
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-connector:0.3.6 .
+docker build -t ghga/ghga-connector:0.3.7 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -42,7 +42,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/ghga-connector:0.3.6 --help
+docker run -p 8080:8080 ghga/ghga-connector:0.3.7 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -58,19 +58,13 @@ ghga_connector --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`upload_api`** *(string)*: URL to the root of the upload controller API. Default: `https://hd-dev.ghga-dev.de/ucs`.
-
-- **`download_api`** *(string)*: URL to the root of the DRS-compatible API used for download. Default: `https://hd-dev.ghga-dev.de/drs3/ga4gh/drs/v1`.
-
 - **`max_retries`** *(integer)*: Number of times to retry failed API calls. Default: `5`.
 
 - **`max_wait_time`** *(integer)*: Maximal time in seconds to wait before quitting without a download. Default: `3600`.
 
 - **`part_size`** *(integer)*: The part size to use for download. Default: `16777216`.
 
-- **`server_pubkey`** *(string)*: Base64 encoded current GHGA public key for Crypt4GH encryption.
-
-- **`wps_api_url`** *(string)*: URL to the root of the WPS API.
+- **`wkvs_api_url`** *(string)*: URL to the root of the WKVS API. Should start with https://.
 
 
 ### Usage:

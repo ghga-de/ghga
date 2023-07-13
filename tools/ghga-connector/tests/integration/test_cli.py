@@ -42,7 +42,7 @@ from tests.fixtures.mock_api.app import handle_request
 from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
 from tests.fixtures.utils import PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, mock_wps_token
 
-URL_PATTERN = re.compile(r"^http://127\.0\.0\.1.*")
+URL_PATTERN = re.compile(r"^https?://127\.0\.0\.1.*")
 
 ENVIRON_DEFAULTS = {
     "DEFAULT_PART_SIZE": str(16 * 1024 * 1024),
@@ -223,9 +223,14 @@ async def test_download(
 
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
 
+    for wkvs_method in ["get_wps_api_url", "get_dcs_api_url"]:
+        monkeypatch.setattr(
+            f"ghga_connector.core.api_calls.well_knowns.WKVSCaller.{wkvs_method}",
+            lambda x: api_url,
+        )
     with patch(
         "ghga_connector.cli.CONFIG",
-        get_test_config(download_api=api_url, wps_api_url=api_url),
+        get_test_config(),
     ):
         # needed to mock user input
         with patch(
@@ -341,8 +346,12 @@ async def test_upload(
     monkeypatch.setenv("S3_UPLOAD_URL_1", upload_url)
 
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
+    monkeypatch.setattr(
+        "ghga_connector.core.api_calls.well_knowns.WKVSCaller.get_ucs_api_url",
+        lambda x: api_url,
+    )
 
-    with patch("ghga_connector.cli.CONFIG", get_test_config(upload_api=api_url)):
+    with patch("ghga_connector.cli.CONFIG", get_test_config()):
         with pytest.raises(  # type: ignore
             expected_exception
         ) if expected_exception else nullcontext():
@@ -434,10 +443,14 @@ async def test_multipart_upload(
     api_url = "http://127.0.0.1"
 
     # create big temp file
+    monkeypatch.setattr(
+        "ghga_connector.core.api_calls.well_knowns.WKVSCaller.get_ucs_api_url",
+        lambda x: api_url,
+    )
     with big_temp_file(file_size) as file:
         with patch(
             "ghga_connector.cli.CONFIG",
-            get_test_config(upload_api=api_url),
+            get_test_config(),
         ):
             upload(
                 file_id=file_id,

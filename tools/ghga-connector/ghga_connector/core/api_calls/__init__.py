@@ -34,4 +34,5 @@ from .upload import (  # noqa: F401
     start_multipart_upload,
 )
 from .utils import check_url  # noqa: F401
+from .well_knowns import WKVSCaller  # noqa: F401
 from .work_package import WorkPackageAccessor  # noqa: F401

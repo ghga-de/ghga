@@ -84,7 +84,7 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
         raise exceptions.FileAlreadyEncryptedError(file_path=file_path)
 
     if not check_url(api_url):
-        message_display.failure(f"The url {api_url} is currently not reachable.")
+        message_display.failure(f"The url {api_url} is not currently reachable.")
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
     try:
@@ -107,11 +107,11 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
         )
         raise error
     except exceptions.FileNotRegisteredError as error:
-        message_display.failure(f"The file with the id {file_id} is not registered.")
+        message_display.failure(f"The file with the id '{file_id}' is not registered.")
         raise error
     except exceptions.BadResponseCodeError as error:
         message_display.failure(
-            "The request was invalid and returnd a wrong HTTP status code."
+            "The request was invalid and returned a bad HTTP status code."
         )
         raise error
     except exceptions.CantChangeUploadStatusError as error:
@@ -136,9 +136,7 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
             file_path=Path(encrypted_file_path),
         )
     except exceptions.ConnectionFailedError as error:
-        message_display.failure(
-            "The upload has failed too many times. The upload was aborted."
-        )
+        message_display.failure("The upload failed too many times and was aborted.")
         raise error
     finally:
         # remove temporary encrypted file
@@ -152,11 +150,11 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
         )
     except exceptions.BadResponseCodeError as error:
         message_display.failure(
-            f"The request to confirm the upload with id {upload_id} was invalid."
+            f"The request to confirm the upload with id '{upload_id}' was invalid."
         )
         raise error
     except exceptions.RequestFailedError as error:
-        message_display.failure(f"Confirming the upload with id {upload_id} failed.")
+        message_display.failure(f"Confirming the upload with id '{upload_id}' failed.")
         raise error
     message_display.success(f"File with id '{file_id}' has been successfully uploaded.")
 
@@ -197,7 +195,7 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     """
 
     if not check_url(api_url):
-        message_display.failure(f"The url {api_url} is currently not reachable.")
+        message_display.failure(f"The url {api_url} is not currently reachable.")
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
     # construct file name with suffix, if given
@@ -237,7 +235,7 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
         exceptions.ExternalApiError,
     ) as error:
         message_display.failure(
-            f"The request to get an envelope for file {file_id} failed."
+            f"The request to get an envelope for file '{file_id}' failed."
         )
         raise error
 
@@ -257,8 +255,8 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
         raise error
     except exceptions.NoS3AccessMethodError as error:
         message_display.failure(
-            f"The request to return information for file {file_id}"
-            + " did not return an S3 access method."
+            f"The request to return information for file '{file_id}' "
+            + "did not return an S3 access method."
         )
         output_file_ongoing.unlink()
         raise error
@@ -340,7 +338,8 @@ def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> Li
         work_package_parts = work_package_string.split(":")
         if len(work_package_parts) != 2:
             message_display.display(
-                "Invalid input. Please enter the work package string you got from the UI unaltered."
+                "Invalid input. Please enter the work package string you got from the "
+                + "UI unaltered."
             )
             continue
         return work_package_parts

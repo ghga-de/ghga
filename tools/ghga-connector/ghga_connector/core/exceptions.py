@@ -43,7 +43,7 @@ class FileAlreadyExistsError(RuntimeError):
     """Thrown, when the specified file already exists."""
 
     def __init__(self, *, output_file: str):
-        message = f"The file {output_file} does already exist."
+        message = f"The file {output_file} already exists."
         super().__init__(message)
 
 
@@ -78,7 +78,9 @@ class PubkeyMismatchError(RuntimeError):
     """
 
     def __init__(self):
-        message = "Provided user public key does not match announced user public key."
+        message = (
+            "Provided user public key does not match the announced user public key."
+        )
         super().__init__(message)
 
 
@@ -130,7 +132,7 @@ class FileNotRegisteredError(RuntimeError):
 
     def __init__(self, *, file_id: str):
         message = (
-            f"The request for the file {file_id} failed, "
+            f"The request for the file '{file_id}' failed, "
             "because this file id does not exist."
         )
         super().__init__(message)
@@ -161,9 +163,9 @@ class NoUploadPossibleError(RuntimeError):
 
     def __init__(self, *, file_id: str):
         message = (
-            "It is not possible to start a multipart upload for file with id"
-            + f" '{file_id}', because this download is already pending or has been"
-            + " accepted."
+            "It is not possible to start a multipart upload for file with id "
+            + f"'{file_id}', because this download is already pending or has been "
+            + "accepted."
         )
         super().__init__(message)
 
@@ -191,7 +193,7 @@ class UserHasNoUploadAccessError(RuntimeError):
 
     def __init__(self, *, upload_id: str):
         message = (
-            "This user is not registered as data submitter "
+            "This user is not registered as the data submitter "
             f"for the file corresponding to the upload_id '{upload_id}'."
         )
         super().__init__(message)
@@ -205,7 +207,7 @@ class UserHasNoFileAccessError(RuntimeError):
 
     def __init__(self, *, file_id: str):
         message = (
-            "This user is not registered as data submitter "
+            "This user is not registered as the data submitter "
             f"for the file with the id '{file_id}'."
         )
         super().__init__(message)
@@ -235,7 +237,7 @@ class ConnectionFailedError(RuntimeError):
     """Thrown, when a ConnectError or ConnectTimeout error is raised by httpx"""
 
     def __init__(self, *, url: str, reason: str):
-        message = f"Request to '{url}' failed to connect. Reason: {reason}"
+        message = f"Request to {url} failed to connect. Reason: {reason}"
         super().__init__(message)
 
 
@@ -264,7 +266,9 @@ class EnvelopeNotFoundError(RuntimeError):
     """Thrown, when the envelope requested for a file could not be retrieved"""
 
     def __init__(self, *, file_id: str):
-        message = f"The request for an envelope for the file with ID {file_id} failed."
+        message = (
+            f"The request for an envelope for the file with ID '{file_id}' failed."
+        )
         super().__init__(message)
 
 
@@ -307,8 +311,8 @@ class InvalidWPSResponseError(RuntimeError):
     def __init__(self, *, url: str, response_code: int):
         self.response_code = response_code
         message = (
-            f"The request to the WPS at {url} failed with an unexpected response code"
-            + f" of {response_code}."
+            f"The request to the WPS at {url} failed with an unexpected response code "
+            + f"of {response_code}."
         )
         super().__init__(message)
 
@@ -320,4 +324,17 @@ class UnauthorizedAPICallError(RuntimeError):
 
     def __init__(self, *, url: str, cause: str):
         message = f"Could not authorize call to {url}: {cause}"
+        super().__init__(message)
+
+
+class WellKnownValueNotFound(RuntimeError):
+    """
+    Thrown when a 404 is returned from a call to the well-known-value-service for a
+    specific value name.
+    """
+
+    def __init__(self, *, value_name):
+        message = (
+            f"Unable to retrieve value of '{value_name}' from well-known-value-service"
+        )
         super().__init__(message)

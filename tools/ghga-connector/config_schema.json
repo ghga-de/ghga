@@ -3,24 +3,6 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
-    "upload_api": {
-      "title": "Upload Api",
-      "description": "URL to the root of the upload controller API.",
-      "default": "https://hd-dev.ghga-dev.de/ucs",
-      "env_names": [
-        "ghga_connector_upload_api"
-      ],
-      "type": "string"
-    },
-    "download_api": {
-      "title": "Download Api",
-      "description": "URL to the root of the DRS-compatible API used for download.",
-      "default": "https://hd-dev.ghga-dev.de/drs3/ga4gh/drs/v1",
-      "env_names": [
-        "ghga_connector_download_api"
-      ],
-      "type": "string"
-    },
     "max_retries": {
       "title": "Max Retries",
       "description": "Number of times to retry failed API calls.",
@@ -48,26 +30,17 @@
       ],
       "type": "integer"
     },
-    "server_pubkey": {
-      "title": "Server Pubkey",
-      "description": "Base64 encoded current GHGA public key for Crypt4GH encryption.",
+    "wkvs_api_url": {
+      "title": "Wkvs Api Url",
+      "description": "URL to the root of the WKVS API. Should start with https://",
       "env_names": [
-        "ghga_connector_server_pubkey"
-      ],
-      "type": "string"
-    },
-    "wps_api_url": {
-      "title": "Wps Api Url",
-      "description": "URL to the root of the WPS API.",
-      "env_names": [
-        "ghga_connector_wps_api_url"
+        "ghga_connector_wkvs_api_url"
       ],
       "type": "string"
     }
   },
   "required": [
-    "server_pubkey",
-    "wps_api_url"
+    "wkvs_api_url"
   ],
   "additionalProperties": false
 }

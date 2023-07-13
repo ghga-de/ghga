@@ -17,6 +17,7 @@
 """ CLI-specific wrappers around core functions."""
 
 import os
+import sys
 from distutils.util import strtobool
 from pathlib import Path
 
@@ -55,12 +56,12 @@ class CLIMessageDisplay(core.AbstractMessageDisplay):
         typer.secho(message, fg=core.MessageColors.FAILURE, err=True)
 
 
-cli = typer.Typer()
+cli = typer.Typer(no_args_is_help=True)
 
 
 def upload(  # noqa C901
     *,
-    file_id: str = typer.Option(..., help="The id if the file to upload"),
+    file_id: str = typer.Option(..., help="The id of the file to upload"),
     file_path: Path = typer.Option(..., help="The path to the file to upload"),
     submitter_pubkey_path: Path = typer.Argument(
         "./key.pub",
@@ -70,20 +71,30 @@ def upload(  # noqa C901
     submitter_private_key_path: Path = typer.Argument(
         "./key.sec",
         help="The path to a private key from the key pair that will be used to encrypt the "
-        + "crypt4gh envelope. Defaults to key in the current folder.",
+        + "crypt4gh envelope. Defaults to key.sec in the current folder.",
+    ),
+    debug: bool = typer.Option(
+        False, help="Set this option in order to view traceback for errors."
     ),
 ):
     """
     Command to upload a file
     """
+    if not debug:
+        sys.excepthook = lambda x, y, z: None
+
     core.HttpxClientState.configure(CONFIG.max_retries)
 
+    wkvs_caller = core.WKVSCaller(CONFIG.wkvs_api_url)
+    server_pubkey = wkvs_caller.get_server_pubkey()
+    ucs_api_url = wkvs_caller.get_ucs_api_url()
+
     core.upload(
-        api_url=CONFIG.upload_api,
+        api_url=ucs_api_url,
         file_id=file_id,
         file_path=file_path,
         message_display=CLIMessageDisplay(),
-        server_pubkey=CONFIG.server_pubkey,
+        server_pubkey=server_pubkey,
         submitter_pubkey_path=submitter_pubkey_path,
         submitter_private_key_path=submitter_private_key_path,
     )
@@ -94,7 +105,7 @@ if strtobool(os.getenv("UPLOAD_ENABLED") or "false"):
 
 
 @cli.command()
-def download(  # pylint: disable=too-many-arguments
+def download(  # pylint: disable=too-many-arguments,too-many-locals
     *,
     output_dir: Path = typer.Option(
         ..., help="The directory to put the downloaded files into."
@@ -106,24 +117,31 @@ def download(  # pylint: disable=too-many-arguments
     ),
     submitter_private_key_path: Path = typer.Argument(
         "./key.sec",
-        help="The path to a private key from the key pair that will be used to decrypt the"
-        + "work package access and work order tokens. Defaults to key in the current folder.",
+        help="The path to a private key from the key pair that will be used to decrypt "
+        + "the work package access token and work order token. Defaults to key.sec in "
+        + "the current folder.",
+    ),
+    debug: bool = typer.Option(
+        False, help="Set this option in order to view traceback for errors."
     ),
 ):
     """
     Command to download files
     """
+    if not debug:
+        sys.excepthook = lambda x, y, z: None
+
     core.HttpxClientState.configure(CONFIG.max_retries)
     message_display = CLIMessageDisplay()
 
     if not submitter_pubkey_path.is_file():
-        message_display.failure(f"The file {submitter_pubkey_path} does not exist.")
+        message_display.failure(f"The file '{submitter_pubkey_path}' does not exist.")
         raise core.exceptions.PubKeyFileDoesNotExistError(
             pubkey_path=submitter_pubkey_path
         )
 
     if not output_dir.is_dir():
-        message_display.failure(f"The directory {output_dir} does not exist.")
+        message_display.failure(f"The directory '{output_dir}' does not exist.")
         raise core.exceptions.DirectoryDoesNotExistError(output_dir=output_dir)
 
     submitter_public_key = crypt4gh.keys.get_public_key(filepath=submitter_pubkey_path)
@@ -137,10 +155,14 @@ def download(  # pylint: disable=too-many-arguments
     )
     decrypted_token = crypt.decrypt(data=work_package_token, key=submitter_private_key)
 
+    wkvs_caller = core.WKVSCaller(CONFIG.wkvs_api_url)
+    wps_api_url = wkvs_caller.get_wps_api_url()
+    dcs_api_url = wkvs_caller.get_dcs_api_url()
+
     work_package_accessor = core.WorkPackageAccessor(
         access_token=decrypted_token,
-        api_url=CONFIG.wps_api_url,
-        dcs_api_url=CONFIG.download_api,
+        api_url=wps_api_url,
+        dcs_api_url=dcs_api_url,
         package_id=work_package_id,
         submitter_private_key=submitter_private_key,
     )
@@ -148,7 +170,7 @@ def download(  # pylint: disable=too-many-arguments
 
     io_handler = core.CliIoHandler()
     staging_parameters = core.StagingParameters(
-        api_url=CONFIG.download_api,
+        api_url=dcs_api_url,
         file_ids_with_extension=file_ids_with_extension,
         max_wait_time=CONFIG.max_wait_time,
     )
@@ -164,7 +186,7 @@ def download(  # pylint: disable=too-many-arguments
     while file_stager.file_ids_remain():
         for file_id in file_stager.get_staged():
             core.download(
-                api_url=CONFIG.download_api,
+                api_url=dcs_api_url,
                 file_id=file_id,
                 file_extension=file_ids_with_extension[file_id],
                 output_dir=output_dir,
@@ -178,7 +200,7 @@ def download(  # pylint: disable=too-many-arguments
 
 
 @cli.command()
-def decrypt(  # noqa: C901
+def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
     *,
     input_dir: Path = typer.Option(
         ...,
@@ -187,21 +209,27 @@ def decrypt(  # noqa: C901
     ),
     output_dir: Path = typer.Option(
         None,
-        help="Optional path to a directory the decrypted file should be written to. "
+        help="Optional path to a directory that the decrypted file should be written to. "
         + "Defaults to current working directory.",
     ),
     decryption_private_key_path: Path = typer.Option(
         ...,
         help="Path to the private key that should be used to decrypt the file.",
     ),
+    debug: bool = typer.Option(
+        False, help="Set this option in order to view traceback for errors."
+    ),
 ):
     """Command to decrypt a downloaded file"""
+
+    if not debug:
+        sys.excepthook = lambda x, y, z: None
 
     message_display = CLIMessageDisplay()
 
     if not input_dir.is_dir():
         message_display.failure(
-            f"Input directory {input_dir} does not exist or is not a directory."
+            f"Input directory '{input_dir}' does not exist or is not a directory."
         )
 
     if not output_dir:
@@ -209,7 +237,7 @@ def decrypt(  # noqa: C901
 
     if output_dir.exists() and not output_dir.is_dir():
         message_display.failure(
-            f"Output directory location {input_dir} exists, but is not a directory."
+            f"Output directory location '{input_dir}' exists, but is not a directory."
         )
 
     if not output_dir.exists():
@@ -228,7 +256,7 @@ def decrypt(  # noqa: C901
         if output_file.exists():
             errors[
                 str(input_file)
-            ] = f"File already exists at {output_file}, will not overwrite."
+            ] = f"File already exists at '{output_file}', will not overwrite."
             continue
 
         try:
@@ -244,12 +272,12 @@ def decrypt(  # noqa: C901
             continue
 
         message_display.success(
-            f"Successfully decrypted file {input_file} to location {output_dir}."
+            f"Successfully decrypted file '{input_file}' to location '{output_dir}'."
         )
 
     if skipped_files:
         message_display.display(
-            "The following files were skipped as they are not .c4gh files"
+            "The following files were skipped as they are not .c4gh files:"
         )
         for file in skipped_files:
             message_display.display(f"- {file}")

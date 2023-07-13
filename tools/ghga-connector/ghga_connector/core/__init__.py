@@ -19,7 +19,7 @@ It should not contain any service API-related code.
 """
 
 from . import exceptions  # noqa: F401
-from .api_calls import WorkPackageAccessor  # noqa: F401
+from .api_calls import WKVSCaller, WorkPackageAccessor  # noqa: F401
 from .batch_processing import CliIoHandler, FileStager, StagingParameters  # noqa: F401
 from .client import HttpxClientState, httpx_client  # noqa: F401
 from .constants import (  # noqa: F401

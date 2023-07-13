@@ -26,14 +26,6 @@ from ghga_connector.core.constants import DEFAULT_PART_SIZE, MAX_RETRIES, MAX_WA
 class Config(BaseSettings):
     "Global Config Parameters"
 
-    upload_api: str = Field(
-        "https://hd-dev.ghga-dev.de/ucs",
-        description="URL to the root of the upload controller API.",
-    )
-    download_api: str = Field(
-        "https://hd-dev.ghga-dev.de/drs3/ga4gh/drs/v1",
-        description="URL to the root of the DRS-compatible API used for download.",
-    )
     max_retries: int = Field(
         MAX_RETRIES, description="Number of times to retry failed API calls."
     )
@@ -44,8 +36,6 @@ class Config(BaseSettings):
     part_size: int = Field(
         DEFAULT_PART_SIZE, description="The part size to use for download."
     )
-    server_pubkey: str = Field(
-        ...,
-        description="Base64 encoded current GHGA public key for Crypt4GH encryption.",
+    wkvs_api_url: str = Field(
+        ..., description="URL to the root of the WKVS API. Should start with https://"
     )
-    wps_api_url: str = Field(..., description="URL to the root of the WPS API.")

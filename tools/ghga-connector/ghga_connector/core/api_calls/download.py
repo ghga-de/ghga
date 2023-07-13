@@ -145,11 +145,11 @@ def await_download_url(
             )
         except exceptions.BadResponseCodeError as error:
             message_display.failure(
-                "The request was invalid and returnd a wrong HTTP status code."
+                "The request was invalid and returned a bad HTTP status code."
             )
             raise error
         except exceptions.RequestFailedError as error:
-            message_display.failure("The request has failed.")
+            message_display.failure("The request failed.")
             raise error
 
         if response_body[0] is not None:
