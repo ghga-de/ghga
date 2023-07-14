@@ -106,17 +106,14 @@ def check_file_accessions_exist(ingest_config, fixtures: JointFixture):
 
 @then(parse("file metadata exist in the service"), target_fixture="object_ids")
 def check_metadata_documents(accessions: list[str], fixtures: JointFixture):
-    object_ids = []  # Object IDs for storage object mapping
-    for accession in accessions:
-        metadata = fixtures.mongo.wait_for_document(
-            db_name=IFRS_DB_NAME,
-            collection_name=IFRS_METADATA_COLLECTION,
-            mapping={"_id": accession},
-        )
-        assert metadata
-        object_ids.append(metadata["object_id"])
-
-    return object_ids
+    documents = fixtures.mongo.wait_for_documents(
+        db_name=IFRS_DB_NAME,
+        collection_name=IFRS_METADATA_COLLECTION,
+        mapping={"_id": {"$in": accessions}},
+        number=2,
+    )
+    assert documents
+    return [d["object_id"] for d in documents]
 
 
 @then("files exist in permanent bucket")
