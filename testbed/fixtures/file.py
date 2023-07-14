@@ -27,6 +27,7 @@ from pytest import fixture
 
 from fixtures.config import Config
 from fixtures.submission import SubmissionFixture
+from steps.utils import get_ext_char
 
 __all__ = ["FileObject", "batch_file_fixture"]
 
@@ -45,7 +46,8 @@ def create_named_file(
     alias = name.split(".")[0] if not alias else alias
 
     with open(file_path, "w", encoding="utf-8") as file:
-        file.write(" " * file_size)
+        content_char = get_ext_char(Path(file_path))
+        file.write(content_char * file_size)
 
     file_object = FileObject(
         file_path=Path(file_path),

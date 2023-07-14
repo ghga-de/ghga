@@ -70,22 +70,22 @@
   ],
   "study_files": [
     {
-      "alias": "SEQ_FILE_A_R1",
+      "alias": "SEQUENCE_FILE",
       "checksum": "07611c4987b9e5be1304a992dbc25242824acf808c829819732a8f5f6c40e731",
       "checksum_type": "SHA256",
       "dataset": "DS_1",
       "format": "FASTQ",
-      "name": "SEQ_FILE_A_R1.fastq.gz",
-      "size": 92161,
+      "name": "SEQUENCE_FILE.fastq.gz",
+      "size": 512,
       "study": "STUDY_A"
     },
     {
-      "alias": "SEQ_FILE_A_R2",
+      "alias": "ALIGNMENT_FILE",
       "checksum": "ba7f0fa2da3c1bd473b01985c2fd25175d55f1edb27e530d735ff85ed187c122",
       "checksum_type": "SHA256",
       "dataset": "DS_1",
-      "format": "FASTQ",
-      "name": "SEQ_FILE_A_R2.fastq.gz",
+      "format": "BAM",
+      "name": "ALIGNMENT_FILE.bam",
       "size": 92161,
       "study": "STUDY_A"
     }

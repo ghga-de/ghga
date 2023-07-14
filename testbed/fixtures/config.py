@@ -39,7 +39,8 @@ class Config(
     test_dir = base_dir / "test_data"
 
     # constants used in testing
-    file_size: int = 20 * 1024**2
+    part_size = 1024
+    file_size: int = 20 * part_size**2
 
     # Kafka config
     service_name: str = "testbed_kafka"
