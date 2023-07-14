@@ -33,6 +33,9 @@ __all__ = [
     "MongoDbFixture",
 ]
 
+TIMEOUT = 10  # timeout for database operations in seconds
+INTERVAL = 0.1  # interval for retrying database operations in seconds
+
 
 class MongoFixture:
     """An augmented Mongo DB fixture containing a MongoClient"""
@@ -87,24 +90,6 @@ class MongoFixture:
         collection = db.get_collection(collection_name)
         return collection.find_one(mapping)
 
-    def wait_for_document(
-        self,
-        db_name: str,
-        collection_name: str,
-        mapping: Mapping[str, Any],
-        timeout=10,
-    ) -> Any:
-        """Wait for one document from the given collection matching the given filter."""
-        slept = 0.0
-        interval = 0.1
-        while slept < timeout:
-            document = self.find_document(db_name, collection_name, mapping)
-            if document is not None:
-                return document
-            sleep(interval)
-            slept += interval
-        return None
-
     def find_documents(
         self, db_name: str, collection_name: str, mapping: Mapping[str, Any]
     ) -> list[dict[str, Any]]:
@@ -112,6 +97,54 @@ class MongoFixture:
         db = self.client[db_name]
         collection = db.get_collection(collection_name)
         return list(collection.find(mapping))
+
+    def wait_for_document(
+        self,
+        db_name: str,
+        collection_name: str,
+        mapping: Mapping[str, Any],
+        timeout: float = TIMEOUT,
+    ) -> Optional[dict[str, Any]]:
+        """Wait for a document.
+
+        Waits for at least one document from the given collection matching the given
+        filter to appear in the database. If it does not appear in the given timeout
+        (in seconds), then a value of None is returned. Otherwise, the document itself
+        will be returned (the first document found if there are multiple).
+        """
+        documents = self.wait_for_documents(
+            db_name=db_name,
+            collection_name=collection_name,
+            mapping=mapping,
+            number=1,
+            timeout=timeout,
+        )
+        return None if documents is None else documents[0]
+
+    def wait_for_documents(
+        self,
+        db_name: str,
+        collection_name: str,
+        mapping: Mapping[str, Any],
+        number: int = 1,
+        timeout: float = TIMEOUT,
+        interval: float = INTERVAL,
+    ) -> Optional[list[dict[str, Any]]]:
+        """Wait for a number of documents.
+
+        Waits for the given number of documents from the given collection matching
+        the given filter to appear in the database. If they do not appear in the
+        given timeout (in seconds), then a value of None is returned. Otherwise, the
+        list of these documents will be returned (can be also larger than requested).
+        """
+        slept: float = 0
+        while slept < timeout:
+            documents = self.find_documents(db_name, collection_name, mapping)
+            if len(documents) >= number:
+                return documents
+            sleep(interval)
+            slept += interval
+        return None
 
     def replace_document(
         self, db_name: str, collection_name: str, document: Mapping[str, Any]
