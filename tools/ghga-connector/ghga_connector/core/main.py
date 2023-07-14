@@ -333,13 +333,18 @@ def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> Li
     """
     for _ in range(max_tries):
         work_package_string = input(
-            "Paste the complete work package string you got from the UI: "
+            "Please paste the complete download token "
+            + "that you copied from the GHGA data portal: "
         )
         work_package_parts = work_package_string.split(":")
-        if len(work_package_parts) != 2:
+        if not (
+            len(work_package_parts) == 2
+            and 20 <= len(work_package_parts[0]) < 40
+            and 80 <= len(work_package_parts[1]) < 120
+        ):
             message_display.display(
-                "Invalid input. Please enter the work package string you got from the "
-                + "UI unaltered."
+                "Invalid input. Please enter the download token "
+                + "you got from the GHGA data portal unaltered."
             )
             continue
         return work_package_parts
