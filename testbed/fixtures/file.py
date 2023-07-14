@@ -20,59 +20,61 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Generator
+from typing import Generator, Optional
 
-from hexkit.providers.s3.testutils import FileObject, temp_file_object
+from hexkit.providers.s3.testutils import FileObject
 from pytest import fixture
 
 from fixtures.config import Config
-from fixtures.metadata import SubmissionConfig
+from fixtures.submission import SubmissionFixture
 
-__all__ = ["file_fixture", "FileObject", "batch_create_file_fixture"]
+__all__ = ["FileObject", "batch_file_fixture"]
 
 
-def create_named_file(target_dir: str, config: Config, name: str) -> FileObject:
+def create_named_file(
+    target_dir: str,
+    config: Config,
+    name: str,
+    file_size: Optional[int] = None,
+    alias: Optional[str] = None,
+) -> FileObject:
     """Create a file with given parameters"""
     file_path = os.path.join(target_dir, name)
+
+    file_size = config.file_size if not file_size else file_size
+    alias = name.split(".")[0] if not alias else alias
+
     with open(file_path, "w", encoding="utf-8") as file:
-        file.write(" " * config.file_size)
+        file.write(" " * file_size)
 
     file_object = FileObject(
         file_path=Path(file_path),
         bucket_id=config.staging_bucket,
-        object_id=name.split(".")[0],
+        object_id=alias,
     )
     return file_object
 
 
-@fixture(name="temp_file_fixture")
-def file_fixture(config: Config) -> Generator[FileObject, None, None]:
-    """File fixture that provides a temporary file."""
-
-    with temp_file_object(
-        bucket_id=config.staging_bucket,
-        object_id=config.object_id,
-        size=config.file_size,
-    ) as temp_file:
-        yield temp_file
-
-
 @fixture(name="batch_file_fixture")
-def batch_create_file_fixture(
-    config: Config, submission_config: SubmissionConfig
+def batch_file_fixture(
+    config: Config, submission: SubmissionFixture
 ) -> Generator[list, None, None]:
     """Batch file fixture that provides temporary files according to metadata."""
 
     temp_dir = tempfile.gettempdir()
-    metadata = json.loads(submission_config.metadata_path.read_text())
+    metadata = json.loads(submission.config.metadata_path.read_text())
 
     created_files = []
-    for file_field in submission_config.metadata_file_fields:
+    for file_field in submission.config.metadata_file_fields:
         files = metadata[file_field]
 
         for _file in files:
             file_object = create_named_file(
-                target_dir=temp_dir, config=config, name=_file["name"]
+                target_dir=temp_dir,
+                config=config,
+                name=_file["name"],
+                file_size=_file["size"],
+                alias=_file["alias"],
             )
 
             created_files.append(file_object)

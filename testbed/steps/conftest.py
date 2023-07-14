@@ -16,6 +16,7 @@
 
 """Shared steps and fixtures"""
 
+from pathlib import Path
 from typing import Any, NamedTuple
 
 import httpx
@@ -33,14 +34,13 @@ from fixtures import (  # noqa: F401; pylint: disable=unused-import
     JointFixture,
     MongoFixture,
     auth_fixture,
-    batch_create_file_fixture,
+    batch_file_fixture,
     config_fixture,
     joint_fixture,
     kafka_fixture,
     mongo_fixture,
     s3_fixture,
-    submission_config_fixture,
-    submission_workdir_fixture,
+    submission_fixture,
 )
 
 ARS_DB_NAME = "ars"
@@ -49,6 +49,9 @@ AUTH_DB_NAME = "auth"
 AUTH_USERS_COLLECTION = "users"
 WPS_DB_NAME = "wps"
 WPS_URL = "http://wps:8080"
+FIS_TOKEN_PATH = Path.home() / ".ghga_data_steward_token.txt"  # path required by DSKit
+IFRS_DB_NAME = "ifrs"
+IFRS_METADATA_COLLECTION = "file_metadata"
 
 TIMEOUT = 10
 
@@ -114,6 +117,7 @@ def reset_state(
     fixtures.kafka.delete_topics()
     fixtures.mongo.empty_databases("tb")  # state database
     fixtures.mongo.empty_databases()  # service databases
+    fixtures.submission.reset_workdir()  # reset local submission registry
 
 
 @given(parse('we have the state "{name}"'), target_fixture="state")

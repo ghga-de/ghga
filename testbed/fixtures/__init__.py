@@ -15,21 +15,17 @@
 
 """Fixtures for the inter service integration tests"""
 
-import os
-import shutil
-from pathlib import Path
 from typing import NamedTuple
 
-from pyparsing import Generator
 from pytest import fixture
 
 from fixtures.auth import TokenGenerator, auth_fixture
 from fixtures.config import Config
-from fixtures.file import batch_create_file_fixture, file_fixture
+from fixtures.file import batch_file_fixture
 from fixtures.kafka import KafkaFixture, kafka_fixture
-from fixtures.metadata import SubmissionConfig, submission_config_fixture
 from fixtures.mongo import MongoFixture, mongo_fixture
 from fixtures.s3 import S3Fixture, s3_fixture
+from fixtures.submission import SubmissionFixture, submission_fixture
 
 __all__ = [
     "auth_fixture",
@@ -38,10 +34,8 @@ __all__ = [
     "mongo_fixture",
     "s3_fixture",
     "joint_fixture",
-    "submission_workdir_fixture",
-    "batch_create_file_fixture",
-    "file_fixture",
-    "submission_config_fixture",
+    "batch_file_fixture",
+    "submission_fixture",
 ]
 
 
@@ -53,6 +47,7 @@ class JointFixture(NamedTuple):
     mongo: MongoFixture
     s3: S3Fixture
     auth: TokenGenerator
+    submission: SubmissionFixture
 
 
 @fixture(name="config")  # pyright: ignore
@@ -69,25 +64,8 @@ def joint_fixture(  # pylint: disable=too-many-arguments
     mongo: MongoFixture,
     s3: S3Fixture,
     auth: TokenGenerator,
+    submission: SubmissionFixture,
 ) -> JointFixture:
     """A fixture that collects all fixtures for integration testing."""
 
-    return JointFixture(config, kafka, mongo, s3, auth)
-
-
-@fixture(name="submission_workdir")
-def submission_workdir_fixture(
-    tmp_path: Path, submission_config: SubmissionConfig
-) -> Generator[Path, None, None]:
-    """Prepare a work directory for"""
-    tmp_path.joinpath(submission_config.event_store).mkdir()
-    tmp_path.joinpath(submission_config.submission_store).mkdir()
-    tmp_path.joinpath(submission_config.accession_store).touch()
-    shutil.copyfile(
-        submission_config.metadata_model_path,
-        tmp_path / submission_config.metadata_model_filename,
-    )
-    cwd = os.getcwd()
-    os.chdir(tmp_path)
-    yield tmp_path
-    os.chdir(cwd)
+    return JointFixture(config, kafka, mongo, s3, auth, submission)

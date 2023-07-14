@@ -16,20 +16,14 @@
 """ Utilities for tests """
 
 import os
-import subprocess  # nosec B404
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
 import yaml
-from ghga_datasteward_kit.file_ingest import IngestConfig, alias_to_accession
-from hexkit.providers.s3.testutils import FileObject
-from metldata.submission_registry.submission_store import SubmissionStore
+from ghga_datasteward_kit.file_ingest import IngestConfig
 
 from fixtures.config import Config
-from fixtures.mongo import MongoFixture
-
-FIS_TOKEN_PATH = Path.home() / ".ghga_data_steward_token.txt"  # path required by DSKit
 
 
 @contextmanager
@@ -80,80 +74,3 @@ def upload_config_as_file(config: Config, file_metadata_dir: Path):
     }
 
     return write_data_to_yaml(data=upload_config)
-
-
-def data_steward_upload_file(
-    file_object: FileObject, config: Config, file_metadata_dir: Path
-):
-    """Call DSKit s3_upload command to upload temp_file to configured bucket"""
-
-    upload_config_path = upload_config_as_file(
-        config=config, file_metadata_dir=file_metadata_dir
-    )
-
-    completed_upload = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "files",
-            "upload",
-            "--alias",
-            file_object.object_id,
-            "--input-path",
-            str(file_object.file_path),
-            "--config-path",
-            upload_config_path,
-        ],
-        capture_output=True,
-        check=True,
-        timeout=10 * 60,
-    )
-
-    return completed_upload
-
-
-def get_file_metadata_from_service(
-    file_object: FileObject,
-    ingest_config: IngestConfig,
-    db_name: str,
-    collection_name: str,
-    mongo: MongoFixture,
-):
-    """
-    - First get file accession from submission_store
-    - Then get file metadata from service database using accession
-    - Finally check object storage if file exists
-    """
-    submission_store = SubmissionStore(config=ingest_config)
-
-    accession = alias_to_accession(
-        alias=file_object.object_id,
-        map_fields=ingest_config.map_files_fields,
-        submission_store=submission_store,
-    )
-    return mongo.find_document(
-        db_name=db_name,
-        collection_name=collection_name,
-        mapping={"_id": accession},
-    )
-
-
-def file_ingest(config: IngestConfig, token):
-    """Call DSKit file_ingest command to ingest file"""
-
-    ingest_config_path = ingest_config_as_file(config=config)
-
-    with temporary_file(FIS_TOKEN_PATH, token) as _:
-        completed_submit = subprocess.run(  # nosec B607, B603
-            [
-                "ghga-datasteward-kit",
-                "files",
-                "ingest-upload-metadata",
-                "--config-path",
-                ingest_config_path,
-            ],
-            capture_output=True,
-            check=True,
-            timeout=10 * 60,
-        )
-
-        return completed_submit
