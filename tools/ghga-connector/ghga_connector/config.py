@@ -37,5 +37,6 @@ class Config(BaseSettings):
         DEFAULT_PART_SIZE, description="The part size to use for download."
     )
     wkvs_api_url: str = Field(
-        ..., description="URL to the root of the WKVS API. Should start with https://"
+        "https://data.ghga.de/.well-known",
+        description="URL to the root of the WKVS API. Should start with https://",
     )

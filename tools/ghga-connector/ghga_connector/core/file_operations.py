@@ -42,16 +42,16 @@ class Crypt4GHEncryptor:
     def __init__(
         self,
         server_pubkey: str,
-        submitter_private_key_path: Path,
+        my_private_key_path: Path,
     ) -> None:
         self.server_public = base64.b64decode(server_pubkey)
-        self.submitter_private = crypt4gh.keys.get_private_key(
-            submitter_private_key_path, callback=None
+        self.my_private_key = crypt4gh.keys.get_private_key(
+            my_private_key_path, callback=None
         )
 
     def encrypt_file(self, *, file_path: Path) -> Path:
         """Encrypt provided file using Crypt4GH lib"""
-        keys = [(0, self.submitter_private, self.server_public)]
+        keys = [(0, self.my_private_key, self.server_public)]
         with file_path.open("rb") as infile:
             # NamedTemporaryFile cannot be opened a second time on Windows, manually
             # deal with setup + teardown instead

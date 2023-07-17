@@ -161,7 +161,7 @@ def test_get_wps_file_info(httpx_mock: HTTPXMock):
         api_url="http://127.0.0.1",
         dcs_api_url="",
         package_id=wp_id,
-        submitter_private_key="",
+        my_private_key="",
     )
     response = work_package_accessor.get_package_files()
     assert response == files
@@ -175,7 +175,7 @@ def test_get_wps_file_info(httpx_mock: HTTPXMock):
             api_url="http://127.0.0.1",
             dcs_api_url="",
             package_id=wp_id,
-            submitter_private_key="",
+            my_private_key="",
         )
         response = work_package_accessor.get_package_files()
 
@@ -188,7 +188,7 @@ def test_get_wps_file_info(httpx_mock: HTTPXMock):
             api_url="http://127.0.0.1",
             dcs_api_url="",
             package_id=wp_id,
-            submitter_private_key="",
+            my_private_key="",
         )
         response = work_package_accessor.get_package_files()
 

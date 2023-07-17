@@ -33,14 +33,12 @@
     "wkvs_api_url": {
       "title": "Wkvs Api Url",
       "description": "URL to the root of the WKVS API. Should start with https://",
+      "default": "https://data.ghga.de/.well-known",
       "env_names": [
         "ghga_connector_wkvs_api_url"
       ],
       "type": "string"
     }
   },
-  "required": [
-    "wkvs_api_url"
-  ],
   "additionalProperties": false
 }

@@ -137,8 +137,8 @@ async def test_multipart_download(
     ):
         download(
             output_dir=tmp_path,
-            submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-            submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+            my_public_key_path=Path(PUBLIC_KEY_FILE),
+            my_private_key_path=Path(PRIVATE_KEY_FILE),
         )
 
     with open(tmp_path / f"{big_object.object_id}.c4gh", "rb") as file:
@@ -249,8 +249,8 @@ async def test_download(
                     ):
                         download(
                             output_dir=output_dir,
-                            submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-                            submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                            my_public_key_path=Path(PUBLIC_KEY_FILE),
+                            my_private_key_path=Path(PRIVATE_KEY_FILE),
                         )
                 with patch(
                     "ghga_connector.core.api_calls.work_package._decrypt",
@@ -262,8 +262,8 @@ async def test_download(
                     ):
                         download(
                             output_dir=output_dir,
-                            submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-                            submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                            my_public_key_path=Path(PUBLIC_KEY_FILE),
+                            my_private_key_path=Path(PRIVATE_KEY_FILE),
                         )
             else:
                 with pytest.raises(  # type: ignore
@@ -271,8 +271,8 @@ async def test_download(
                 ) if expected_exception else nullcontext():
                     download(
                         output_dir=output_dir,
-                        submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-                        submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                        my_public_key_path=Path(PUBLIC_KEY_FILE),
+                        my_private_key_path=Path(PRIVATE_KEY_FILE),
                     )
 
         # BadResponseCode is no longer propagated and file at path does not exist
@@ -325,7 +325,7 @@ async def test_upload(
             crypt4gh.keys.get_public_key(PUBLIC_KEY_FILE)
         ).decode("utf-8")
         encryptor = Crypt4GHEncryptor(
-            server_pubkey=server_pubkey, submitter_private_key_path=PRIVATE_KEY_FILE
+            server_pubkey=server_pubkey, my_private_key_path=PRIVATE_KEY_FILE
         )
         encrypted_path = encryptor.encrypt_file(file_path=uploadable_file.file_path)
 
@@ -359,15 +359,15 @@ async def test_upload(
                 upload(
                     file_id=uploadable_file.file_id,
                     file_path=Path(encrypted_path).resolve(),
-                    submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-                    submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                    my_public_key_path=Path(PUBLIC_KEY_FILE),
+                    my_private_key_path=Path(PRIVATE_KEY_FILE),
                 )
             else:
                 upload(
                     file_id=uploadable_file.file_id,
                     file_path=uploadable_file.file_path.resolve(),
-                    submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-                    submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                    my_public_key_path=Path(PUBLIC_KEY_FILE),
+                    my_private_key_path=Path(PRIVATE_KEY_FILE),
                 )
 
             await s3_fixture.storage.complete_multipart_upload(
@@ -455,8 +455,8 @@ async def test_multipart_upload(
             upload(
                 file_id=file_id,
                 file_path=Path(file.name),
-                submitter_pubkey_path=Path(PUBLIC_KEY_FILE),
-                submitter_private_key_path=Path(PRIVATE_KEY_FILE),
+                my_public_key_path=Path(PUBLIC_KEY_FILE),
+                my_private_key_path=Path(PRIVATE_KEY_FILE),
             )
 
     # confirm upload

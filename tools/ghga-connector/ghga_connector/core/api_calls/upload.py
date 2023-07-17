@@ -66,7 +66,7 @@ def initiate_multipart_upload(
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     public_key = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode()
 
-    post_data = {"file_id": file_id, "submitter_public_key": public_key}
+    post_data = {"file_id": file_id, "my_public_key": public_key}
     serialized_data = json.dumps(post_data)
 
     # Make function call to get upload url

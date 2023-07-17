@@ -78,7 +78,7 @@ def test_encryption_decryption():
 
             # produce encrypted file
             encryptor = Crypt4GHEncryptor(
-                server_pubkey=pubkey, submitter_private_key_path=private_key_path
+                server_pubkey=pubkey, my_private_key_path=private_key_path
             )
             encrypted_file_loc = encryptor.encrypt_file(file_path=Path(in_file.name))
 
