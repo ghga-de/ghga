@@ -87,7 +87,9 @@ class WorkPackageAccessor:
                 )
             raise exceptions.InvalidWPSResponseError(url=url, response_code=status_code)
 
-        encrypted_token = response.content
+        encrypted_token = response.json()
+        if not encrypted_token or not isinstance(encrypted_token, str):
+            raise exceptions.InvalidWPSResponseError(url=url, response_code=status_code)
         return _decrypt(data=encrypted_token, key=self.submitter_private_key)
 
 

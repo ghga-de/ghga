@@ -273,7 +273,7 @@ class FileStager:  # pylint: disable=too-many-instance-attributes
     def _handle_unknown(self, unknown_ids: list[str]):
         """Process user interaction for unknown file IDs"""
         message = (
-            f"No download exists for the following file IDs: {' ,'.join(unknown_ids)}"
+            f"No download exists for the following file IDs: {', '.join(unknown_ids)}"
         )
         self.message_display.failure(message)
 

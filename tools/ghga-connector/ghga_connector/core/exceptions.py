@@ -71,7 +71,7 @@ class PubKeyFileDoesNotExistError(RuntimeError):
         super().__init__(message)
 
 
-class PubkeyMismatchError(RuntimeError):
+class PubKeyMismatchError(RuntimeError):
     """
     Thrown when the user public key announced in the submission metadata retrieved from
     the work package service does not match the user public key provided to the connector
@@ -305,7 +305,7 @@ class NoWorkPackageAccessError(RuntimeError):
 class InvalidWPSResponseError(RuntimeError):
     """
     Thrown when communication with the Work Package Service returns an unexpected response.
-    This should be used instead of BadResponseError when handling WPS results to differntiate
+    This should be used instead of BadResponseError when handling WPS results to differentiate.
     """
 
     def __init__(self, *, url: str, response_code: int):
