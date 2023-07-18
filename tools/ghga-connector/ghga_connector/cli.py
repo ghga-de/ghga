@@ -19,7 +19,10 @@
 import os
 import sys
 from distutils.util import strtobool
+from functools import partial
 from pathlib import Path
+from types import TracebackType
+from typing import Union
 
 import crypt4gh.keys
 import typer
@@ -56,6 +59,25 @@ class CLIMessageDisplay(core.AbstractMessageDisplay):
         typer.secho(message, fg=core.MessageColors.FAILURE, err=True)
 
 
+def exception_hook(
+    type_: BaseException,  # pylint: disable=unused-argument
+    value: BaseException,
+    traceback: Union[TracebackType, None],  # pylint: disable=unused-argument
+    message_display: CLIMessageDisplay,
+):
+    """When debug mode is NOT enabled, gets called to perform final error handling
+    before program exits"""
+    message = (
+        "An error occurred. Rerun command"
+        + " with --debug at the end to see more information."
+    )
+
+    if value.args:
+        message = value.args[0]
+
+    message_display.failure(message)
+
+
 cli = typer.Typer(no_args_is_help=True)
 
 
@@ -80,8 +102,10 @@ def upload(  # noqa C901
     """
     Command to upload a file
     """
+    message_display = CLIMessageDisplay()
+
     if not debug:
-        sys.excepthook = lambda x, y, z: None
+        sys.excepthook = partial(exception_hook, message_display=message_display)
 
     core.HttpxClientState.configure(CONFIG.max_retries)
 
@@ -128,21 +152,20 @@ def download(  # pylint: disable=too-many-arguments,too-many-locals
     """
     Command to download files
     """
-    if not debug:
-        sys.excepthook = lambda x, y, z: None
 
     core.HttpxClientState.configure(CONFIG.max_retries)
     message_display = CLIMessageDisplay()
 
+    if not debug:
+        sys.excepthook = partial(exception_hook, message_display=message_display)
+
     if not my_public_key_path.is_file():
-        message_display.failure(f"The file '{my_public_key_path}' does not exist.")
         raise core.exceptions.PubKeyFileDoesNotExistError(
             pubkey_path=my_public_key_path
         )
 
     if not output_dir.is_dir():
-        message_display.failure(f"The directory '{output_dir}' does not exist.")
-        raise core.exceptions.DirectoryDoesNotExistError(output_dir=output_dir)
+        raise core.exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
     my_public_key = crypt4gh.keys.get_public_key(filepath=my_public_key_path)
     my_private_key = crypt4gh.keys.get_private_key(
@@ -155,6 +178,7 @@ def download(  # pylint: disable=too-many-arguments,too-many-locals
     )
     decrypted_token = crypt.decrypt(data=work_package_token, key=my_private_key)
 
+    message_display.display("Retrieving API configuration information...")
     wkvs_caller = core.WKVSCaller(CONFIG.wkvs_api_url)
     wps_api_url = wkvs_caller.get_wps_api_url()
     dcs_api_url = wkvs_caller.get_dcs_api_url()
@@ -185,6 +209,7 @@ def download(  # pylint: disable=too-many-arguments,too-many-locals
 
     while file_stager.file_ids_remain():
         for file_id in file_stager.get_staged():
+            message_display.display(f"Downloading file with id '{file_id}'...")
             core.download(
                 api_url=dcs_api_url,
                 file_id=file_id,
@@ -222,33 +247,33 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
 ):
     """Command to decrypt a downloaded file"""
 
-    if not debug:
-        sys.excepthook = lambda x, y, z: None
-
     message_display = CLIMessageDisplay()
 
+    if not debug:
+        sys.excepthook = partial(exception_hook, message_display=message_display)
+
     if not input_dir.is_dir():
-        message_display.failure(
-            f"Input directory '{input_dir}' does not exist or is not a directory."
-        )
+        raise core.exceptions.DirectoryDoesNotExistError(directory=input_dir)
 
     if not output_dir:
         output_dir = Path(os.getcwd())
 
     if output_dir.exists() and not output_dir.is_dir():
-        message_display.failure(
-            f"Output directory location '{input_dir}' exists, but is not a directory."
-        )
+        raise core.exceptions.OutputPathIsNotDirectory(directory=output_dir)
 
     if not output_dir.exists():
+        message_display.display(f"Creating output directory '{output_dir}'")
         output_dir.mkdir(parents=True)
 
     errors = {}
     skipped_files = []
+    file_count = 0
     for input_file in input_dir.iterdir():
         if not input_file.is_file() or not input_file.suffix == ".c4gh":
             skipped_files.append((str(input_file)))
             continue
+
+        file_count += 1
 
         # strip the .c4gh extension for the output file
         output_file = output_dir / input_file.with_suffix("")
@@ -260,6 +285,7 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
             continue
 
         try:
+            message_display.display(f"Decrypting file with id '{input_file}'...")
             core.decrypt_file(
                 input_file=input_file,
                 output_file=output_file,
@@ -273,6 +299,11 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
 
         message_display.success(
             f"Successfully decrypted file '{input_file}' to location '{output_dir}'."
+        )
+    if file_count == 0:
+        message_display.display(
+            f"No files were processed because the directory '{input_dir}' contains no "
+            + "applicable files."
         )
 
     if skipped_files:

@@ -60,29 +60,20 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
     """
 
     if not my_public_key_path.is_file():
-        message_display.failure(f"The file {my_public_key_path} does not exist.")
         raise exceptions.PubKeyFileDoesNotExistError(pubkey_path=my_public_key_path)
 
     if not my_private_key_path.is_file():
-        message_display.failure(f"The file {my_private_key_path} does not exist.")
         raise exceptions.PrivateKeyFileDoesNotExistError(
             private_key_path=my_private_key_path
         )
 
     if not file_path.is_file():
-        message_display.failure(f"The file {file_path} does not exist.")
         raise exceptions.FileDoesNotExistError(file_path=file_path)
 
     if is_file_encrypted(file_path):
-        message_display.failure(
-            f"The file {file_path} is already Crypt4GH encrypted."
-            + "\nThis is currently not supported."
-            + " Please provide your data without Crypt4GH encryption."
-        )
         raise exceptions.FileAlreadyEncryptedError(file_path=file_path)
 
     if not check_url(api_url):
-        message_display.failure(f"The url {api_url} is not currently reachable.")
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
     try:
@@ -90,27 +81,14 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
             api_url=api_url, file_id=file_id, pubkey_path=my_public_key_path
         )
     except exceptions.NoUploadPossibleError as error:
-        message_display.failure(
-            f"This user can't start a multipart upload for the file_id '{file_id}'"
-        )
         raise error
     except exceptions.UploadNotRegisteredError as error:
-        message_display.failure(
-            f"The pending upload for file '{file_id}' does not exist."
-        )
         raise error
     except exceptions.UserHasNoUploadAccessError as error:
-        message_display.failure(
-            f"The user is not registered as a Data Submitter for the file with id '{file_id}'."
-        )
         raise error
     except exceptions.FileNotRegisteredError as error:
-        message_display.failure(f"The file with the id '{file_id}' is not registered.")
         raise error
     except exceptions.BadResponseCodeError as error:
-        message_display.failure(
-            "The request was invalid and returned a bad HTTP status code."
-        )
         raise error
     except exceptions.CantChangeUploadStatusError as error:
         message_display.failure(f"The file with id '{file_id}' was already uploaded.")
@@ -193,7 +171,6 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     """
 
     if not check_url(api_url):
-        message_display.failure(f"The url {api_url} is not currently reachable.")
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
     # construct file name with suffix, if given
@@ -204,7 +181,6 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     # check output file
     output_file = output_dir / f"{file_name}.c4gh"
     if output_file.exists():
-        message_display.failure(f"The file {output_file} already exists.")
         raise exceptions.FileAlreadyExistsError(output_file=str(output_file))
 
     # with_suffix() might overwrite existing suffixes, do this instead
@@ -252,10 +228,6 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
         output_file_ongoing.unlink()
         raise error
     except exceptions.NoS3AccessMethodError as error:
-        message_display.failure(
-            f"The request to return information for file '{file_id}' "
-            + "did not return an S3 access method."
-        )
         output_file_ongoing.unlink()
         raise error
 
@@ -346,9 +318,6 @@ def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> Li
             )
             continue
         return work_package_parts
-    message_display.failure(
-        f"Tried {max_tries} times to parse the work package string and failed."
-    )
     raise exceptions.InvalidWorkPackageToken(tries=max_tries)
 
 
