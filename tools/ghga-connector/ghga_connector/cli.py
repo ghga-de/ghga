@@ -189,6 +189,7 @@ def download(  # pylint: disable=too-many-arguments,too-many-locals
         dcs_api_url=dcs_api_url,
         package_id=work_package_id,
         my_private_key=my_private_key,
+        my_public_key=my_public_key,
     )
     file_ids_with_extension = work_package_accessor.get_package_files()
 
@@ -218,7 +219,6 @@ def download(  # pylint: disable=too-many-arguments,too-many-locals
                 max_wait_time=CONFIG.max_wait_time,
                 part_size=CONFIG.part_size,
                 message_display=message_display,
-                my_public_key=my_public_key,
                 work_package_accessor=work_package_accessor,
             )
         file_stager.update_staged_files()

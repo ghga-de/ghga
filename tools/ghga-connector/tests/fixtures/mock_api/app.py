@@ -244,10 +244,10 @@ def drs3_objects(file_id: str, request: httpx.Request):
     )
 
 
-@EndpointsHandler.get("/objects/{file_id}/envelopes/{public_key}")
-def drs3_objects_envelopes(file_id: str, public_key: str):
+@EndpointsHandler.get("/objects/{file_id}/envelopes")
+def drs3_objects_envelopes(file_id: str):
     """
-    Mock for the dcs /objects/{file_id}/envelopes/{public_key} call
+    Mock for the dcs /objects/{file_id}/envelopes call
     """
 
     if file_id in ("downloadable", "big-downloadable"):

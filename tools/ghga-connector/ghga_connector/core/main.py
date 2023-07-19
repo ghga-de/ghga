@@ -161,7 +161,6 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     part_size: int,
     message_display: AbstractMessageDisplay,
     max_wait_time: int,
-    my_public_key: bytes,
     work_package_accessor: WorkPackageAccessor,
     file_id: str,
     file_extension: str = "",
@@ -200,7 +199,6 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     try:
         envelope = get_file_header_envelope(
             file_id=file_id,
-            public_key=my_public_key,
             work_package_accessor=work_package_accessor,
         )
     except (

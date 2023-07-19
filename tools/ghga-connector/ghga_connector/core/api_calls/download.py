@@ -22,7 +22,6 @@ from time import sleep
 from typing import Iterator, Tuple, Union
 
 import httpx
-from ghga_service_commons.utils.crypt import encode_key
 from requests.structures import CaseInsensitiveDict
 
 from ghga_connector.core import exceptions
@@ -169,7 +168,7 @@ def await_download_url(
 
 
 def get_file_header_envelope(
-    file_id: str, public_key: bytes, work_package_accessor: WorkPackageAccessor
+    file_id: str, work_package_accessor: WorkPackageAccessor
 ) -> bytes:
     """
     Perform a RESTful API call to retrieve a file header envelope.
@@ -179,11 +178,8 @@ def get_file_header_envelope(
     # fetch a work order token
     decrypted_token = work_package_accessor.get_work_order_token(file_id=file_id)
 
-    # encode public key in base64 (url-safe)
-    public_key_encoded = encode_key(public_key)
-
     # build url and headers
-    url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}/envelopes/{public_key_encoded}"
+    url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}/envelopes"
 
     headers = CaseInsensitiveDict(
         {

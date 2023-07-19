@@ -16,6 +16,8 @@
 This file contains all api calls related to obtaining work package and work order tokens
 """
 
+import base64
+import json
 from dataclasses import dataclass
 
 import httpx
@@ -33,7 +35,8 @@ class WorkPackageAccessor:
     api_url: str
     dcs_api_url: str
     package_id: str
-    my_private_key: str
+    my_private_key: bytes
+    my_public_key: bytes
 
     def get_package_files(self) -> dict[str, str]:
         """
@@ -59,9 +62,8 @@ class WorkPackageAccessor:
                 )
             raise exceptions.InvalidWPSResponseError(url=url, response_code=status_code)
 
-        response_body = response.json()
-
-        return response_body["files"]
+        work_package = response.json()
+        return work_package["files"]
 
     def get_work_order_token(self, *, file_id: str) -> str:
         """
@@ -90,9 +92,30 @@ class WorkPackageAccessor:
         encrypted_token = response.json()
         if not encrypted_token or not isinstance(encrypted_token, str):
             raise exceptions.InvalidWPSResponseError(url=url, response_code=status_code)
-        return _decrypt(data=encrypted_token, key=self.my_private_key)
+        decrypted_token = _decrypt(data=encrypted_token, key=self.my_private_key)
+        self._check_public_key(decrypted_token)
+        return decrypted_token
+
+    def _check_public_key(self, token: str):
+        """Check that the public key inside the token matches the expectation.
+
+        If the public key cannot be retrieved from the token, ignore this error,
+        an authorization error will then be raised later in the process.
+        """
+        try:
+            mismatch = json.loads(
+                base64.b64decode(token.split(".", 2)[1]).decode("utf-8")
+            )["user_public_crypt4gh_key"] != base64.b64encode(
+                self.my_public_key
+            ).decode(
+                "ascii"
+            )
+        except Exception:  # pylint: disable=broad-exception-caught
+            mismatch = False
+        if mismatch:
+            raise exceptions.PubKeyMismatchError()
 
 
-def _decrypt(*, data: str, key: str):
+def _decrypt(*, data: str, key: bytes):
     """Factored out decryption so this can be mocked."""
     return decrypt(data=data, key=key)
