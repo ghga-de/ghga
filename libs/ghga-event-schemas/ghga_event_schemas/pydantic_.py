@@ -20,7 +20,7 @@ schema representations such as json-schema.
 """
 
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, EmailStr, Field, validator
 
@@ -53,13 +53,30 @@ class MetadataDatasetFile(BaseModel):
         extra = "allow"
 
 
-class MetadataDatasetOverview(BaseModel):
+class MetadataDatasetID(BaseModel):
+    """Simplified model to pass artifact/dataset ID to claims repository for deletion"""
+
+    accession: str = Field(..., description="The dataset accession.")
+
+
+class MetadataDataset(MetadataDatasetID):
+    """Model to populate MASS from metldata artifacts"""
+
+    class_name: str = Field(
+        ...,
+        description="The name of the class this dataset/artifact resource corresponds to.",
+    )
+    content: dict[str, Any] = Field(
+        ..., description="The metadata content of this dataset/artifact resource."
+    )
+
+
+class MetadataDatasetOverview(MetadataDatasetID):
     """
     Overview of files contained in a dataset.
     Only fields relevant to the WPS are included for now. May be extended.
     """
 
-    accession: str = Field(..., description="The dataset accession.")
     title: str = Field(..., description="The title of the dataset.")
     stage: MetadataDatasetStage = Field(
         ..., description="The current stage of this dataset."
