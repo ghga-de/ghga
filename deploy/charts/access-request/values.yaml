@@ -45,13 +45,13 @@ parameters:
   db_connection_str: "**********"
   db_name: ars
   docs_url: /docs
-  download_access_url: http://claims-repository-svc:8080/download_access
+  download_access_url: http://claims-repository-svc:8080/download-access
   host: "0.0.0.0"
   kafka_servers:
   - kafka-kafka-bootstrap:9092
   log_level: info
   openapi_url: /openapi.json
   port: 8080
-  service_instance_id: '1'
+  service_instance_id: 'ars_1'
   service_name: ars
   workers: 1

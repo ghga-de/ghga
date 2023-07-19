@@ -47,7 +47,7 @@ parameters:
     db_connection_str: "**********"
     db_name: wps
     docs_url: /docs
-    download_access_url: http://claims-repository-svc:8080/download_access
+    download_access_url: http://claims-repository-svc:8080/download-access
     host: "0.0.0.0"
     kafka_servers: []
     log_level: info
