@@ -1,0 +1,144 @@
+id: https://w3id.org/TEST_MODEL
+name: TEST_MODEL
+version: 0.0.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+imports:
+  - linkml:types
+
+default_range: string
+
+classes:
+  Submission:
+    tree_root: true
+    slots:
+      - biospecimens
+      - conditions
+      - datasets
+      - sample_files
+      - samples
+      - studies
+      - study_files
+    slot_usage:
+      biospecimens:
+        range: Biospecimen
+        inlined: true
+        inlined_as_list: true
+        required: true
+      conditions:
+        range: Condition
+        inlined: true
+        inlined_as_list: true
+        required: true
+      datasets:
+        range: Dataset
+        inlined: true
+        inlined_as_list: true
+        required: true
+      sample_files:
+        range: SampleFile
+        inlined: true
+        inlined_as_list: true
+        required: true
+      samples:
+        range: Sample
+        inlined: true
+        inlined_as_list: true
+        required: true
+      studies:
+        range: Study
+        inlined: true
+        inlined_as_list: true
+        required: true
+      study_files:
+        range: StudyFile
+        inlined: true
+        inlined_as_list: true
+        required: true
+  Condition:
+    slots:
+      - id
+      - name
+      - study
+      - samples
+  Study:
+    slots:
+      - id
+      - name
+      - conditions
+  Sample:
+    slots:
+      - id
+      - name
+      - condition
+      - biospecimen
+  Biospecimen:
+    slots:
+      - id
+      - name
+      - tissue
+  SampleFile:
+    slots:
+      - id
+      - name
+      - sample
+  StudyFile:
+    slots:
+      - id
+      - name
+      - study
+  Dataset:
+    slots:
+      - id
+      - name
+      - study_files
+      - sample_files
+
+slots:
+  id:
+    identifier: true
+    range: string
+  name:
+    range: string
+  condition:
+    range: Condition
+    inlined: false
+  conditions:
+    range: Condition
+    multivalued: true
+    inlined: false
+  study:
+    range: Study
+    inlined: false
+  studies:
+    range: Study
+    multivalued: true
+    inlined: false
+  sample:
+    range: Sample
+    inlined: false
+  samples:
+    range: Sample
+    multivalued: true
+    inlined: false
+  sample_files:
+    range: SampleFile
+    multivalued: true
+    inlined: false
+  study_files:
+    range: StudyFile
+    multivalued: true
+    inlined: false
+  biospecimen:
+    range: Biospecimen
+    inlined: false
+  biospecimens:
+    range: Biospecimen
+    multivalued: true
+    inlined: false
+  datasets:
+    range: Dataset
+    multivalued: true
+    inlined: false
+  tissue:
+    range: string
