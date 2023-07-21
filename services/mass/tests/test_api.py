@@ -13,19 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+"""Tests to assess API functionality"""
+
 from typing import Optional
 
 import pytest
 from hexkit.custom_types import JsonObject
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    MongoDbFixture,
-    mongodb_fixture,
-)
 
 from mass.core import models
 from tests.fixtures.config import get_config
-from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
-from tests.fixtures.mongo import populated_mongodb_fixture  # noqa: F401
+from tests.fixtures.joint import JointFixture
 
 
 def compare(
@@ -53,25 +51,20 @@ def compare(
         assert results.hits == hits
 
 
-async def call_search(
-    search_parameters: JsonObject, fixture: JointFixture
-) -> models.QueryResults:
-    """Convenience function to call the /rpc/search endpoint"""
-    response = await fixture.rest_client.post(url="/rpc/search", json=search_parameters)
-    results = models.QueryResults(**response.json())
-    return results
-
-
 @pytest.mark.asyncio
-async def test_search_options(joint_fixture: JointFixture):  # noqa: F811
+async def test_search_options(joint_fixture: JointFixture):
     """Verify that we can request the configured resource class information correctly"""
+
     response = await joint_fixture.rest_client.get(url="/rpc/search-options")
     assert response.json() == joint_fixture.config.searchable_classes
 
 
 @pytest.mark.asyncio
-async def test_malformed_document(joint_fixture: JointFixture):  # noqa: F811
+async def test_malformed_document(joint_fixture: JointFixture):
     """Test behavior from API perspective upon querying when bad doc exists"""
+
+    joint_fixture.remove_db_data()
+
     query_handler = await joint_fixture.container.query_handler()
 
     # define and load a new resource without all the required facets
@@ -99,7 +92,7 @@ async def test_malformed_document(joint_fixture: JointFixture):  # noqa: F811
 
 
 @pytest.mark.asyncio
-async def test_search(joint_fixture: JointFixture):  # noqa: F811
+async def test_search(joint_fixture: JointFixture):
     """Basic query to pull back all documents for class name"""
     search_parameters: JsonObject = {
         "class_name": "DatasetEmbedded",
@@ -108,12 +101,12 @@ async def test_search(joint_fixture: JointFixture):  # noqa: F811
         "skip": 0,
     }
 
-    results = await call_search(search_parameters, joint_fixture)
+    results = await joint_fixture.call_search_endpoint(search_parameters)
     compare(results=results, count=3, hit_length=3)
 
 
 @pytest.mark.asyncio
-async def test_search_with_limit(joint_fixture: JointFixture):  # noqa: F811
+async def test_search_with_limit(joint_fixture: JointFixture):
     """Make sure we get a count of 3 but only 1 hit"""
     search_parameters: JsonObject = {
         "class_name": "DatasetEmbedded",
@@ -123,7 +116,7 @@ async def test_search_with_limit(joint_fixture: JointFixture):  # noqa: F811
         "limit": 1,
     }
 
-    results = await call_search(search_parameters, joint_fixture)
+    results = await joint_fixture.call_search_endpoint(search_parameters)
     hit = {
         "id_": "1HotelAlpha-id",
         "content": {
@@ -142,7 +135,7 @@ async def test_search_with_limit(joint_fixture: JointFixture):  # noqa: F811
 
 
 @pytest.mark.asyncio
-async def test_search_keywords(joint_fixture: JointFixture):  # noqa: F811
+async def test_search_keywords(joint_fixture: JointFixture):
     """Make sure the query string is passed through intact"""
     search_parameters: JsonObject = {
         "class_name": "DatasetEmbedded",
@@ -151,12 +144,12 @@ async def test_search_keywords(joint_fixture: JointFixture):  # noqa: F811
         "skip": 0,
     }
 
-    results = await call_search(search_parameters, joint_fixture)
+    results = await joint_fixture.call_search_endpoint(search_parameters)
     compare(results=results, count=2, hit_length=2)
 
 
 @pytest.mark.asyncio
-async def test_search_filters(joint_fixture: JointFixture):  # noqa: F811
+async def test_search_filters(joint_fixture: JointFixture):
     """Make sure filters work"""
     search_parameters: JsonObject = {
         "class_name": "DatasetEmbedded",
@@ -165,12 +158,12 @@ async def test_search_filters(joint_fixture: JointFixture):  # noqa: F811
         "skip": 0,
     }
 
-    results = await call_search(search_parameters, joint_fixture)
+    results = await joint_fixture.call_search_endpoint(search_parameters)
     compare(results=results, count=1, hit_length=1)
 
 
 @pytest.mark.asyncio
-async def test_search_invalid_class(joint_fixture: JointFixture):  # noqa: F811
+async def test_search_invalid_class(joint_fixture: JointFixture):
     """Verify that searching with a bad class name results in a 422"""
     search_parameters: JsonObject = {
         "class_name": "InvalidClassName",

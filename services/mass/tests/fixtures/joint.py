@@ -17,21 +17,27 @@
 """Provides multiple fixtures in one spot, with a mongodb fixture that comes pre-populated"""
 # pylint: disable=unused-import, redefined-outer-name
 
+import glob
+import re
 from dataclasses import dataclass
 from typing import AsyncGenerator
 
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
+from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.testutils import (  # noqa: F401
     MongoDbFixture,
-    mongodb_fixture,
+    get_mongodb_fixture,
 )
+from pymongo import TEXT
+from pytest_asyncio.plugin import _ScopeName
 
 from mass.config import Config
 from mass.container import Container
+from mass.core import models
 from mass.main import get_configured_container, get_rest_api
 from tests.fixtures.config import get_config
-from tests.fixtures.mongo import populated_mongodb_fixture  # noqa: F401
+from tests.fixtures.utils import get_resources_from_file
 
 
 @dataclass
@@ -43,26 +49,60 @@ class JointFixture:
     mongodb: MongoDbFixture
     rest_client: AsyncTestClient
 
+    def remove_db_data(self) -> None:
+        """Delete everything in the database to start from a clean slate"""
+        self.mongodb.empty_collections()
 
-@pytest_asyncio.fixture
-async def joint_fixture(
-    populated_mongodb_fixture: MongoDbFixture,  # noqa: F811
+    def load_test_data(self) -> None:
+        """Populate a collection for each file in test_data"""
+        filename_pattern = re.compile(r"/(\w+)\.json")
+        for filename in glob.glob("tests/fixtures/test_data/*.json"):
+            match_obj = re.search(filename_pattern, filename)
+            if match_obj:
+                collection_name = match_obj.group(1)
+                resources = get_resources_from_file(filename)
+                self.mongodb.client[self.config.db_name][collection_name].insert_many(
+                    resources
+                )
+                self.mongodb.client[self.config.db_name][collection_name].create_index(
+                    keys=[("$**", TEXT)]
+                )
+
+    async def call_search_endpoint(
+        self, search_parameters: JsonObject
+    ) -> models.QueryResults:
+        """Convenience function to call the /rpc/search endpoint"""
+        response = await self.rest_client.post(
+            url="/rpc/search", json=search_parameters
+        )
+        results = models.QueryResults(**response.json())
+        return results
+
+
+async def joint_fixture_function(
+    mongodb_fixture: MongoDbFixture,  # noqa: F811
 ) -> AsyncGenerator[JointFixture, None]:
-    """A fixture that embeds all other fixtures for API-level integration testing"""
+    """A fixture that embeds all other fixtures for API-level integration testing
+
+    **Do not call directly** Instead, use get_joint_fixture().
+    """
 
     # merge configs from different sources with the default one:
-    config = get_config(sources=[populated_mongodb_fixture.config])
+    config = get_config(sources=[mongodb_fixture.config])
 
     # create a DI container instance:translators
     async with get_configured_container(config=config) as container:
-        container.wire(modules=["mass.adapters.inbound.fastapi_.routes"])
-
         # setup an API test client:
         api = get_rest_api(config=config)
         async with AsyncTestClient(app=api) as rest_client:
             yield JointFixture(
                 config=config,
                 container=container,
-                mongodb=populated_mongodb_fixture,
+                mongodb=mongodb_fixture,
                 rest_client=rest_client,
             )
+
+
+def get_joint_fixture(scope: _ScopeName = "function"):
+    """Produce a joint fixture with desired scope"""
+    return pytest_asyncio.fixture(joint_fixture_function, scope=scope)

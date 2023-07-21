@@ -27,6 +27,7 @@ def get_configured_container(*, config: Config) -> Container:
 
     container = Container()
     container.config.load_config(config)
+    container.wire(modules=["mass.adapters.inbound.fastapi_.routes"])
 
     return container
 
@@ -48,7 +49,6 @@ async def run_rest():
     """Run the server"""
     config = Config()
 
-    async with get_configured_container(config=config) as container:
-        container.wire(modules=["mass.adapters.inbound.fastapi_.routes"])
+    async with get_configured_container(config=config):
         api = get_rest_api(config=config)
         await run_server(app=api, config=config)
