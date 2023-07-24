@@ -38,8 +38,29 @@ class SearchError(RuntimeError):
         )
 
 
+class DeletionFailedError(RuntimeError):
+    """Raised when a deletion attempt fails because the ID can't be found"""
+
+    def __init__(self, resource_id: str):
+        super().__init__(
+            f"Failed to delete resource with ID '{resource_id}' because no match was "
+            + "found in the database."
+        )
+
+
 class QueryHandlerPort(ABC):
     """Port for the query handler"""
+
+    @abstractmethod
+    async def delete_resource(self, *, resource_id: str, class_name: str):
+        """Delete resource with given ID and class name from the database
+
+        Raises:
+            ClassNotConfiguredError - when the class_name parameter does not
+                match any configured class
+            DeletionFailedError - when the provided ID doesn't match any resource
+                found in the database.
+        """
 
     @abstractmethod
     async def handle_query(
@@ -52,6 +73,7 @@ class QueryHandlerPort(ABC):
         limit: Optional[int] = None,
     ):
         """Processes a query
+
         Raises:
             ClassNotConfiguredError - when the class_name parameter does not
                 match any configured class

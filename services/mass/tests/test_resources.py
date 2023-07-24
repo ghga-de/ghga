@@ -19,7 +19,11 @@
 import pytest
 
 from mass.core import models
-from mass.ports.inbound.query_handler import ClassNotConfiguredError, SearchError
+from mass.ports.inbound.query_handler import (
+    ClassNotConfiguredError,
+    DeletionFailedError,
+    SearchError,
+)
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture
 
@@ -217,4 +221,68 @@ async def test_absent_resource(joint_fixture: JointFixture):
     with pytest.raises(ClassNotConfiguredError):
         await query_handler.handle_query(
             class_name="does_not_exist", query="", filters=[]
+        )
+
+
+@pytest.mark.asyncio
+async def test_resource_deletion(joint_fixture: JointFixture):
+    """Make sure we can delete a resource.
+
+    Verify that the targeted resource is deleted and nothing else.
+    """
+
+    query_handler = await joint_fixture.container.query_handler()
+    all_resources = await query_handler.handle_query(
+        class_name="DatasetEmbedded", query="", filters=[]
+    )
+
+    assert all_resources.count > 1
+    await query_handler.delete_resource(
+        resource_id="1HotelAlpha-id", class_name="DatasetEmbedded"
+    )
+
+    # see if deletion occurred, and make sure only one item was deleted
+    results_after_deletion = await query_handler.handle_query(
+        class_name="DatasetEmbedded", query="", filters=[]
+    )
+    assert all_resources.count - results_after_deletion.count == 1
+
+    # make extra sure the resource that got deleted was the correct one
+    for resource in results_after_deletion.hits:
+        assert resource.id_ != "1HotelAlpha-id"
+
+
+@pytest.mark.asyncio
+async def test_resource_deletion_failure(joint_fixture: JointFixture):
+    """Test for correct errors when failing to delete a resource"""
+
+    query_handler = await joint_fixture.container.query_handler()
+    all_resources = await query_handler.handle_query(
+        class_name="DatasetEmbedded", query="", filters=[]
+    )
+
+    assert all_resources.count > 0
+
+    # try to delete a resource that doesn't exist
+    with pytest.raises(DeletionFailedError):
+        await query_handler.delete_resource(
+            resource_id="not-here", class_name="DatasetEmbedded"
+        )
+
+    # verify that nothing was actually deleted
+    all_resources_again = await query_handler.handle_query(
+        class_name="DatasetEmbedded", query="", filters=[]
+    )
+
+    assert all_resources_again.count == all_resources.count
+
+
+@pytest.mark.asyncio
+async def test_resource_deletion_not_configured(joint_fixture: JointFixture):
+    """Test for correct error when trying to delete a non-configured resource"""
+    query_handler = await joint_fixture.container.query_handler()
+
+    with pytest.raises(ClassNotConfiguredError):
+        await query_handler.delete_resource(
+            resource_id="1HotelAlpha-id", class_name="Not-Configured"
         )

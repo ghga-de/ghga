@@ -17,11 +17,13 @@
 from typing import Optional
 
 from hexkit.custom_types import JsonObject
+from hexkit.providers.mongodb.provider import ResourceNotFoundError
 
 from mass.config import SearchableClassesConfig
 from mass.core import models
 from mass.ports.inbound.query_handler import (
     ClassNotConfiguredError,
+    DeletionFailedError,
     QueryHandlerPort,
     SearchError,
 )
@@ -48,6 +50,17 @@ class QueryHandler(QueryHandlerPort):
         """Helper function to load resources into the database"""
         dao = self._dao_collection.get_dao(class_name=class_name)
         await dao.upsert(resource)
+
+    async def delete_resource(self, *, resource_id: str, class_name: str):
+        if class_name not in self._config.searchable_classes:
+            raise ClassNotConfiguredError(class_name=class_name)
+
+        dao = self._dao_collection.get_dao(class_name=class_name)
+
+        try:
+            await dao.delete(id_=resource_id)
+        except ResourceNotFoundError as err:
+            raise DeletionFailedError(resource_id) from err
 
     async def handle_query(
         self,
