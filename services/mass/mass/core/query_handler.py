@@ -47,8 +47,11 @@ class QueryHandler(QueryHandlerPort):
         self._dao_collection = dao_collection
 
     async def load_resource(self, *, resource: models.Resource, class_name: str):
-        """Helper function to load resources into the database"""
+        if class_name not in self._config.searchable_classes:
+            raise ClassNotConfiguredError(class_name=class_name)
+
         dao = self._dao_collection.get_dao(class_name=class_name)
+
         await dao.upsert(resource)
 
     async def delete_resource(self, *, resource_id: str, class_name: str):

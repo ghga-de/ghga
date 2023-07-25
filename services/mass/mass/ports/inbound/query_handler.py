@@ -80,3 +80,17 @@ class QueryHandlerPort(ABC):
             SearchError - when the search operation fails
         """
         ...
+
+    @abstractmethod
+    async def load_resource(
+        self,
+        *,
+        resource: models.Resource,
+        class_name: str,
+    ):
+        """Load a resource into the database.
+
+        Raises:
+            ClassNotConfiguredError - when the class_name parameter does not match
+                any configured class.
+        """

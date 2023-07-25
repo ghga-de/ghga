@@ -192,6 +192,24 @@ async def test_resource_load(joint_fixture: JointFixture):
 
 
 @pytest.mark.asyncio
+async def test_loading_non_configured_resource(joint_fixture: JointFixture):
+    """Test that we get the right error for loading a non-configured class_name"""
+    query_handler = await joint_fixture.container.query_handler()
+
+    # define and load a new resource
+    resource = models.Resource(
+        id_="added-resource",
+        content={
+            "has_object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
+            "field1": "something",
+            "category": "test object",
+        },
+    )
+    with pytest.raises(ClassNotConfiguredError):
+        await query_handler.load_resource(resource=resource, class_name="ThisWillBreak")
+
+
+@pytest.mark.asyncio
 async def test_error_from_malformed_resource(joint_fixture: JointFixture):
     """Make sure we get an error when the DB has malformed content, since that has to be fixed"""
     query_handler = await joint_fixture.container.query_handler()
