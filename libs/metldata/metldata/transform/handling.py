@@ -32,7 +32,7 @@ from metldata.transform.base import (
 )
 
 
-class WorkflowConfigMissmatchError(RuntimeError):
+class WorkflowConfigMismatchError(RuntimeError):
     """Raised when the provided workflow config does not match the config class of the
     workflow definition.
     """
@@ -140,11 +140,11 @@ def check_workflow_config(
     definition.
 
     Raises:
-        WorkflowConfigMissmatchError:
+        WorkflowConfigMismatchError:
     """
 
     if workflow_config.schema_json() == workflow_definition.schema_json():
-        raise WorkflowConfigMissmatchError(
+        raise WorkflowConfigMismatchError(
             workflow_definition=workflow_definition, workflow_config=workflow_config
         )
 

@@ -19,8 +19,6 @@
 import pytest
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.protocols.dao import ResourceNotFoundError
-from hexkit.providers.mongodb.testutils import mongodb_fixture  # noqa: F401
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.models import ArtifactInfo
@@ -28,6 +26,10 @@ from metldata.load.auth import generate_token, generate_token_and_hash
 from metldata.load.config import ArtifactLoaderAPIConfig
 from metldata.load.main import get_app
 from tests.fixtures.artifact_info import EXAMPLE_ARTIFACT_INFOS
+from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
+    MongoDbFixture,
+    mongodb_fixture,
+)
 from tests.fixtures.workflows import EXAMPLE_ARTIFACTS
 
 
@@ -81,7 +83,8 @@ async def test_load_artifacts_endpoint_happy(
     }
 
     dao_collection = await ArtifactDaoCollection.construct(
-        dao_factory=mongodb_fixture.dao_factory, artifact_infos=EXAMPLE_ARTIFACT_INFOS
+        dao_factory=mongodb_fixture.dao_factory,
+        artifact_infos=EXAMPLE_ARTIFACT_INFOS,
     )
     dao = await dao_collection.get_dao(
         artifact_name=expected_artifact_name, class_name=expected_resource_class

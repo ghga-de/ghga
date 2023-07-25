@@ -12,7 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Short description of package"""  # Please adapt to package
+""""Shared fixtures"""
 
-__version__ = "0.3.7"
+from hexkit.providers.mongodb.testutils import get_mongodb_fixture
+from hexkit.providers.testing.utils import get_event_loop
+
+event_loop = get_event_loop(scope="session")
+
+mongodb_session = get_mongodb_fixture(scope="session")
