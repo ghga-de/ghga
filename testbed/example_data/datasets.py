@@ -32,12 +32,12 @@ DATASET_OVERVIEW_EVENT = MetadataDatasetOverview(
     description="An interesting dataset A",
     files=[
         MetadataDatasetFile(
-            accession="will-be-replaced",
+            accession="SEQUENCE_FILE",
             description="The first study file",
             file_extension=".fastq.gz",
         ),
         MetadataDatasetFile(
-            accession="will-be-replaced",
+            accession="ALIGNMENT_FILE",
             description="The second study file",
             file_extension=".bam",
         ),

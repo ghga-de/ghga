@@ -25,7 +25,7 @@ from metldata.submission_registry.submission_store import SubmissionStore
 from steps.utils import ingest_config_as_file, temporary_file
 
 from .conftest import (
-    FIS_TOKEN_PATH,
+    DSK_TOKEN_PATH,
     IFRS_DB_NAME,
     IFRS_METADATA_COLLECTION,
     JointFixture,
@@ -43,7 +43,7 @@ scenarios("../features/13_ingest_file_metadata.feature")
 def call_data_steward_kit_ingest(ingest_config_path: str, token):
     """Call DSKit file_ingest command to ingest file"""
 
-    with temporary_file(FIS_TOKEN_PATH, token) as _:
+    with temporary_file(DSK_TOKEN_PATH, token) as _:
         completed_ingest = subprocess.run(  # nosec B607, B603
             [
                 "ghga-datasteward-kit",

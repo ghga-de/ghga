@@ -55,9 +55,10 @@ AUTH_DB_NAME = "auth"
 AUTH_USERS_COLLECTION = "users"
 WPS_DB_NAME = "wps"
 WPS_URL = "http://wps:8080"
-FIS_TOKEN_PATH = Path.home() / ".ghga_data_steward_token.txt"  # path required by DSKit
+DSK_TOKEN_PATH = Path.home() / ".ghga_data_steward_token.txt"  # path required by DSKit
 IFRS_DB_NAME = "ifrs"
 IFRS_METADATA_COLLECTION = "file_metadata"
+METLDATA_DB_NAME = "metldata"
 
 TIMEOUT = 10
 

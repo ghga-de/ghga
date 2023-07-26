@@ -23,6 +23,7 @@ from typing import Optional
 
 import yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig
+from ghga_datasteward_kit.loading import LoadConfig
 
 from fixtures.config import Config
 
@@ -49,7 +50,7 @@ def write_data_to_yaml(data: dict[str, str], file_path=None):
 
 
 def ingest_config_as_file(config: IngestConfig):
-    """Create upload config file for data steward s3_upload"""
+    """Create upload config file for data steward kit files ingest-upload-metadata"""
 
     ingest_config = {
         "file_ingest_url": config.file_ingest_url,
@@ -62,8 +63,21 @@ def ingest_config_as_file(config: IngestConfig):
     return write_data_to_yaml(data=ingest_config)
 
 
+def load_config_as_file(config: LoadConfig):
+    """Create upload config file for data steward kit files load"""
+
+    load_config = {
+        "event_store_path": str(config.event_store_path),
+        "artifact_topic_prefix": config.artifact_topic_prefix,
+        "artifact_types": config.artifact_types,
+        "loader_api_root": config.loader_api_root,
+    }
+
+    return write_data_to_yaml(data=load_config)
+
+
 def upload_config_as_file(config: Config, file_metadata_dir: Path):
-    """Create upload config file for data steward s3_upload"""
+    """Create upload config file for data steward kit files upload"""
 
     upload_config = {
         "s3_endpoint_url": config.s3_endpoint_url,

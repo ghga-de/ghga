@@ -72,7 +72,7 @@ def run_the_download_command(fixtures: JointFixture):
         check=True,
         encoding="utf-8",
         text=True,
-        timeout=10 * 60,
+        timeout=60,
     )
 
     assert "Please paste the complete download token" in completed_download.stdout
@@ -117,7 +117,7 @@ def run_the_decrypt_command(fixtures: JointFixture):
         check=True,
         encoding="utf-8",
         text=True,
-        timeout=10 * 60,
+        timeout=60,
     )
 
     assert "Successfully decrypted file" in completed_download.stdout

@@ -55,7 +55,7 @@ def call_data_steward_kit_upload(
         check=True,
         encoding="utf-8",
         text=True,
-        timeout=10 * 60,
+        timeout=60,
     )
 
     assert not completed_upload.stdout

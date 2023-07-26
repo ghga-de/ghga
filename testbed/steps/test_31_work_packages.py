@@ -15,13 +15,12 @@
 
 """Step definitions for work package tests"""
 
-from operator import itemgetter
-
 import httpx
 
 from example_data.datasets import DATASET_OVERVIEW_EVENT
 
 from .conftest import (
+    METLDATA_DB_NAME,
     TIMEOUT,
     WPS_DB_NAME,
     WPS_URL,
@@ -52,15 +51,20 @@ def wps_database_is_empty(mongo: MongoFixture):
 async def announce_dataset(fixtures: JointFixture):
     # TBD: Should actually happen during upload, not here
 
-    files = fixtures.mongo.find_documents("ifrs", "file_metadata", {})
-    accessions = [
-        file["_id"] for file in sorted(files, key=itemgetter("decrypted_size"))
-    ]
+    # Add accessions using the metldata database
+    study_files = fixtures.mongo.find_documents(
+        METLDATA_DB_NAME, "art_embedded_public_class_StudyFile", {}
+    )
+    assert len(study_files) == 2
+    study_files = [study_file["content"] for study_file in study_files]
+    alias_to_accession = {
+        study_file["alias"]: study_file["accession"] for study_file in study_files
+    }
     payload = DATASET_OVERVIEW_EVENT.dict()
     payload_files = payload["files"]
-    assert len(accessions) == len(payload_files)
-    for i, accession in enumerate(accessions):
-        payload_files[i]["accession"] = accession
+    for payload_file in payload_files:
+        payload_file["accession"] = alias_to_accession[payload_file["accession"]]
+
     # publish dataset overview event
     await fixtures.kafka.publisher.publish(
         payload=payload,
