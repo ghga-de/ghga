@@ -27,6 +27,8 @@ class AggregationOperation(BaseModel):
 
     paths: list[str]
     visit_only_once: Optional[list[str]] = None
+    target_slot_path: str
+    operation: str
 
 
 class AggregateConfig(BaseSettings):
