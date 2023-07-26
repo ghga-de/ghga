@@ -16,12 +16,10 @@
 
 """Fixture for testing code that uses the Kafka-based provider."""
 
-from typing import AsyncGenerator, Optional, Union
+from typing import AsyncGenerator
 
 from hexkit.providers.akafka.provider import KafkaEventPublisher
-from hexkit.providers.akafka.testutils import KafkaFixture as BaseKafkaFixture
-from kafka import KafkaAdminClient
-from kafka.errors import KafkaError
+from hexkit.providers.akafka.testutils import KafkaFixture
 from pytest_asyncio import fixture as async_fixture
 
 from fixtures.config import Config
@@ -29,37 +27,7 @@ from fixtures.config import Config
 __all__ = ["kafka_fixture", "KafkaFixture"]
 
 
-class KafkaFixture(BaseKafkaFixture):
-    """An augmented Kafka fixture"""
-
-    config: Config
-
-    def delete_topics(self, topics: Optional[Union[str, list[str]]] = None):
-        """Delete given topic(s) from Kafka broker.
-
-        This process deletes the contained messages as the topics will be recreated
-        by the default config.
-        """
-        if topics is None:
-            topics = self.config.service_kafka_topics
-        elif isinstance(topics, str):
-            topics = [topics]
-        admin_client = KafkaAdminClient(bootstrap_servers=self.kafka_servers)
-        try:
-            existing_topics = set(admin_client.list_topics())
-            for topic in topics:
-                if topic in existing_topics:
-                    try:
-                        admin_client.delete_topics([topic])
-                    except KafkaError as error:
-                        raise RuntimeError(
-                            f"Could not delete topic {topic} from Kafka"
-                        ) from error
-        finally:
-            admin_client.close()
-
-
-@async_fixture(name="kafka")
+@async_fixture(name="kafka", scope="session")
 async def kafka_fixture(config: Config) -> AsyncGenerator[KafkaFixture, None]:
     """Pytest fixture for tests depending on the Kafka-based provider."""
 

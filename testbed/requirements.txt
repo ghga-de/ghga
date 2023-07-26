@@ -1,10 +1,10 @@
 # All your requirements go here. Please adapt as needed:
 
-ghga-service-commons[auth,crypt]==0.4.2
+ghga-service-commons[auth,crypt]==0.4.3
 ghga-event-schemas==0.13.3
 ghga-connector==0.3.11
-ghga-datasteward-kit==0.4.5
-hexkit[test-all]==0.10.0
+ghga-datasteward-kit==0.4.6
+hexkit[test-all]==0.10.2
 
 crypt4gh==1.6
 

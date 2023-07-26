@@ -52,15 +52,15 @@ class Config(
         "mongodb://testbed_user:testbed_key@mongodb"
     )
     db_name: str = "test-db"
-    # databases that shall be dropped after running the tests
-    service_db_names: list[str] = ["ars", "auth", "dcs", "ifrs", "ucs", "wps"]
-    service_kafka_topics: list[str] = [
-        "downloads",
-        "internal_registrations",
-        "interrogations",
-        "artifacts.embedded_public",
-        "purges",
-        "notifications",
+    # databases that shall be dropped when running from scratch
+    service_db_names: list[str] = [
+        "ars",
+        "auth",
+        "dcs",
+        "ifrs",
+        "metldata",
+        "ucs",
+        "wps",
     ]
 
     # S3 config

@@ -88,7 +88,7 @@ class ConnectorFixture:
         write_keyfile(self.config.user_private_key_path, private_key, "private")
 
 
-@fixture(name="connector")
+@fixture(name="connector", scope="session")
 def connector_fixture() -> Generator[ConnectorFixture, None, None]:
     """Pytest fixture for tests using the GHGA Connector."""
     config = ConnectorConfig()

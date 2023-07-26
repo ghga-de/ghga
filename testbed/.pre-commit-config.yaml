@@ -37,7 +37,7 @@ repos:
       - id: debug-statements
       - id: debug-statements
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.7.0
     hooks:
       - id: black
   - repo: https://github.com/pycqa/isort
@@ -46,12 +46,12 @@ repos:
       - id: isort
         args: [--profile, black]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.3.0
+    rev: v1.4.1
     hooks:
       - id: mypy
         args: [--no-warn-unused-ignores]
   - repo: https://github.com/PyCQA/pylint
-    rev: v2.17.4
+    rev: v2.17.5
     hooks:
       - id: pylint
         args: [--disable=import-error]
@@ -62,7 +62,7 @@ repos:
       - id: flake8
         args: [--config, .flake8]
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.4
+    rev: 1.7.5
     hooks:
       - id: bandit
         args: ["-r", "."]

@@ -16,7 +16,7 @@
 
 """Fixture for testing code that uses the S3ObjectStorage provider."""
 
-from typing import Generator, Optional, Union
+from typing import Generator, Union
 
 from hexkit.providers.s3.provider import S3ObjectStorage
 from hexkit.providers.s3.testutils import S3Fixture as BaseS3Fixture
@@ -32,28 +32,26 @@ class S3Fixture(BaseS3Fixture):
 
     config: Config
 
-    async def empty_buckets(self, bucket_ids: Optional[Union[str, list[str]]] = None):
-        """Clean the test artifacts or files from given bucket"""
-        if bucket_ids is None:
-            bucket_ids = [
-                self.config.inbox_bucket,
-                self.config.outbox_bucket,
-                self.config.staging_bucket,
-                self.config.permanent_bucket,
-            ]
-        elif isinstance(bucket_ids, str):
-            bucket_ids = [bucket_ids]
+    @property
+    def all_buckets(self) -> list[str]:
+        config = self.config
+        return [
+            config.inbox_bucket,
+            config.outbox_bucket,
+            config.staging_bucket,
+            config.permanent_bucket,
+        ]
 
-        for bucket in bucket_ids:
-            # Get list of all objects in the bucket
-            object_ids = await self.storage.list_all_object_ids(bucket_id=bucket)
-
-            # Delete all objects
-            for object_id in object_ids:
-                await self.storage.delete_object(bucket_id=bucket, object_id=object_id)
+    async def empty_given_buckets(self, buckets: Union[str, list[str]]):
+        """Empty only the specified bucket(s)."""
+        if isinstance(buckets, str):
+            buckets = [buckets]
+        bucket_set = set(buckets)
+        exclude = [bucket for bucket in self.all_buckets if bucket not in bucket_set]
+        await self.empty_buckets(buckets_to_exclude=exclude)
 
 
-@fixture(name="s3")
+@fixture(name="s3", scope="session")
 def s3_fixture(config: Config) -> Generator[S3Fixture, None, None]:
     """Pytest fixture for tests depending on the S3ObjectStorage."""
 

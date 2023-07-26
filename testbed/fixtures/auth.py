@@ -79,7 +79,7 @@ class TokenGenerator:
         raise RuntimeError("Cannot read simple token for authentication")
 
 
-@fixture(name="auth")
+@fixture(name="auth", scope="session")
 def auth_fixture() -> TokenGenerator:
     """Fixture that provides an internal auth token generator."""
 

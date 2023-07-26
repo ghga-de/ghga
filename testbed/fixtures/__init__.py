@@ -17,6 +17,7 @@
 
 from typing import NamedTuple
 
+from hexkit.providers.testing.utils import get_event_loop
 from pytest import fixture
 
 from fixtures.auth import TokenGenerator, auth_fixture
@@ -40,6 +41,8 @@ __all__ = [
     "connector_fixture",
 ]
 
+event_loop = get_event_loop(scope="session")
+
 
 class JointFixture(NamedTuple):
     """Collection of fixtures returned by `joint_fixture`."""
@@ -53,14 +56,14 @@ class JointFixture(NamedTuple):
     connector: ConnectorFixture
 
 
-@fixture(name="config")  # pyright: ignore
+@fixture(name="config", scope="session")  # pyright: ignore
 def config_fixture() -> Config:
     """Get the testbed configuration."""
     return Config()  # pyright: ignore
 
 
 # pylint: disable=redefined-outer-name
-@fixture(name="fixtures")
+@fixture(name="fixtures", scope="session")
 def joint_fixture(
     config: Config,
     kafka: KafkaFixture,

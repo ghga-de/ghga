@@ -20,7 +20,7 @@ from time import sleep
 from typing import Any, Generator, Mapping, Optional, Union
 
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
-from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture as BaseMongoFixture
 from pymongo import MongoClient
 from pymongo.errors import ExecutionTimeout, OperationFailure
 from pytest import fixture
@@ -30,26 +30,21 @@ from fixtures.config import Config
 __all__ = [
     "mongo_fixture",
     "MongoClient",
-    "MongoDbFixture",
+    "MongoFixture",
 ]
 
 TIMEOUT = 10  # timeout for database operations in seconds
 INTERVAL = 0.1  # interval for retrying database operations in seconds
 
 
-class MongoFixture:
+class MongoFixture(BaseMongoFixture):
     """An augmented Mongo DB fixture containing a MongoClient"""
 
     config: Config
-    client: MongoClient
-    dao_factory: MongoDbDaoFactory
 
-    def __init__(
-        self, config: Config, client: MongoClient, dao_factory: MongoDbDaoFactory
-    ):
-        self.config = config
-        self.client = client
-        self.dao_factory = dao_factory
+    @property
+    def service_db_names(self) -> list[str]:
+        return self.config.service_db_names  # pylint: disable=no-member
 
     def empty_databases(
         self,
@@ -62,7 +57,7 @@ class MongoFixture:
         from the operation, i.e. collections that should be kept.
         """
         if db_names is None:
-            db_names = self.config.service_db_names
+            db_names = self.service_db_names
         elif isinstance(db_names, str):
             db_names = [db_names]
         if exclude_collections is None:
@@ -163,18 +158,13 @@ class MongoFixture:
         collection.delete_many(document)
 
 
-@fixture(name="mongo")
+@fixture(name="mongo", scope="session")
 def mongo_fixture(config: Config) -> Generator[MongoFixture, None, None]:
     """Pytest fixture for tests depending on the Mongo database."""
 
     dao_factory = MongoDbDaoFactory(config=config)
     db_connection_str = str(config.db_connection_str.get_secret_value())
     client: MongoClient = MongoClient(db_connection_str)
-    mongo_db = MongoDbFixture(config=config, dao_factory=dao_factory)
-    mongo = MongoFixture(
-        config=mongo_db.config,  # pyright: ignore
-        client=client,
-        dao_factory=mongo_db.dao_factory,
-    )
+    mongo = MongoFixture(client=client, config=config, dao_factory=dao_factory)
     yield mongo
     client.close()

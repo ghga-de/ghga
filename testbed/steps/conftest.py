@@ -43,6 +43,7 @@ from fixtures import (  # noqa: F401; pylint: disable=unused-import
     config_fixture,
     connector_fixture,
     dsk_fixture,
+    event_loop,
     joint_fixture,
     kafka_fixture,
     mongo_fixture,
@@ -88,7 +89,7 @@ def async_step(step):
     return run_step
 
 
-# Shared fixtures
+# Shared step functions
 
 
 class LoginFixture(NamedTuple):
@@ -96,9 +97,6 @@ class LoginFixture(NamedTuple):
 
     user: dict[str, Any]
     headers: dict[str, str]
-
-
-# Shared step functions
 
 
 @given(parse('I am logged in as "{name}"'), target_fixture="login")
