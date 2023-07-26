@@ -66,4 +66,4 @@ repos:
     hooks:
       - id: bandit
         args: ["-r", "."]
-        exclude: .devcontainer|scripts
+        exclude: .devcontainer|.vscode|scripts

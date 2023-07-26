@@ -17,4 +17,4 @@ Feature: 31 Work Packages
 
     When a work package for the test dataset is created
     Then the response status code is "201"
-    And the response contains a work package access token
+    And the response contains a download token for the test dataset

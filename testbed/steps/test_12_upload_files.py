@@ -17,7 +17,7 @@
 
 """ Step definitions for file upload """
 
-import subprocess  # nosec B404
+import subprocess
 from pathlib import Path
 
 from hexkit.providers.s3.testutils import FileObject
@@ -53,16 +53,18 @@ def call_data_steward_kit_upload(
         ],
         capture_output=True,
         check=True,
+        encoding="utf-8",
+        text=True,
         timeout=10 * 60,
     )
 
     assert not completed_upload.stdout
-    assert b"ERROR" not in completed_upload.stderr
+    assert "ERROR" not in completed_upload.stderr
 
 
 @when("files are uploaded", target_fixture="file_objects")
 def upload_files(fixtures: JointFixture, batch_file_fixture):
-    file_metadata_dir = fixtures.submission.config.file_metadata_dir
+    file_metadata_dir = fixtures.dsk.config.file_metadata_dir
     file_metadata_dir.mkdir(exist_ok=True)
 
     file_objects = batch_file_fixture
@@ -77,7 +79,7 @@ def upload_files(fixtures: JointFixture, batch_file_fixture):
 
 @then("metadata for each file exist")
 def metadata_files_exist(fixtures: JointFixture, file_objects: list[FileObject]):
-    file_metadata_dir = fixtures.submission.config.file_metadata_dir
+    file_metadata_dir = fixtures.dsk.config.file_metadata_dir
     file_aliases = []
     for file_object in file_objects:
         metadata_file_path = file_metadata_dir / f"{file_object.object_id}.json"

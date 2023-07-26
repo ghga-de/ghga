@@ -18,7 +18,7 @@
 
 import glob
 import os
-import subprocess  # nosec B404
+import subprocess
 from pathlib import Path
 
 from .conftest import TIMEOUT, JointFixture, given, scenarios, then, when
@@ -52,38 +52,40 @@ def call_data_steward_kit_submit(
         ],
         capture_output=True,
         check=True,
+        encoding="utf-8",
+        text=True,
         timeout=timeout * 60,
     )
 
     assert not completed_submit.stdout
-    assert b"ERROR" not in completed_submit.stderr
+    assert "ERROR" not in completed_submit.stderr
 
 
 @given("we have a valid research metadata JSON file")
 def metadata_json_exist(fixtures: JointFixture):
-    assert fixtures.submission.config.metadata_path.exists()
+    assert fixtures.dsk.config.metadata_path.exists()
 
 
 @given("we have a valid metadata config YAML file")
 def metadata_config_exist(fixtures: JointFixture):
-    assert fixtures.submission.config.metadata_config_path.exists()
+    assert fixtures.dsk.config.metadata_config_path.exists()
 
 
 @when("metadata is submitted to the submission registry")
 def submit_metadata(fixtures: JointFixture):
-    workdir = fixtures.submission.config.submission_registry
+    workdir = fixtures.dsk.config.submission_registry
     cwd = os.getcwd()
     os.chdir(workdir)
     call_data_steward_kit_submit(
-        metadata_path=fixtures.submission.config.metadata_path,
-        metadata_config_path=fixtures.submission.config.metadata_config_path,
+        metadata_path=fixtures.dsk.config.metadata_path,
+        metadata_config_path=fixtures.dsk.config.metadata_config_path,
     )
     os.chdir(cwd)
 
 
 @then("a submission JSON exists in the local submission registry")
 def submission_registry_exists(fixtures: JointFixture):
-    submission_store = fixtures.submission.config.submission_store
+    submission_store = fixtures.dsk.config.submission_store
     assert submission_store.exists()
 
     json_files = glob.glob(os.path.join(submission_store, "*.json"))

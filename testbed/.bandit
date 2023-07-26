@@ -14,5 +14,5 @@
 ; limitations under the License.
 
 [bandit]
-exclude = .devcontainer,scripts
-skips = B101
+exclude = ./.devcontainer,./.git,./.vscode,./scripts
+skips = B101,B404

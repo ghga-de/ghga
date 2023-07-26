@@ -4,10 +4,11 @@ Feature: 13 Ingest File Metadata
 
   Scenario: Ingesting file metadata
 
-    Given we have the state "Files uploaded successfully"
+    Given we have the state "files have been uploaded"
 
     When file metadata is ingested
     Then we have the file accessions
     And file metadata exist in the service
     And files exist in permanent bucket
-    And set the state to "File metadata ingested successfully"
+
+    Then set the state to "file metadata has been ingested"

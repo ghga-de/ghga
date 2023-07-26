@@ -10,4 +10,5 @@ Feature: 10 Submit Metadata
 
     When metadata is submitted to the submission registry
     Then a submission JSON exists in the local submission registry
-    And set the state to "Metadata submission is completed"
+
+    Then set the state to "metadata submission is completed"

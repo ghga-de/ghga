@@ -39,7 +39,7 @@ DATASET_OVERVIEW_EVENT = MetadataDatasetOverview(
         MetadataDatasetFile(
             accession="will-be-replaced",
             description="The second study file",
-            file_extension=".fastq.gz",
+            file_extension=".bam",
         ),
     ],
 )  # pyright: ignore

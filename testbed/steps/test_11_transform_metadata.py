@@ -17,7 +17,7 @@
 """ Step definitions for metadata transformation """
 
 import os
-import subprocess  # nosec B404
+import subprocess
 from pathlib import Path
 
 from .conftest import TIMEOUT, JointFixture, scenarios, then, when
@@ -42,20 +42,22 @@ def call_data_steward_kit_transform(
         ],
         capture_output=True,
         check=True,
+        encoding="utf-8",
+        text=True,
         timeout=timeout * 60,
     )
 
     assert not completed_submit.stdout
-    assert b"ERROR" not in completed_submit.stderr
+    assert "ERROR" not in completed_submit.stderr
 
 
 @when("submitted metadata is transformed")
 def transform_metadata(fixtures: JointFixture):
-    workdir = fixtures.submission.config.submission_registry
+    workdir = fixtures.dsk.config.submission_registry
     cwd = os.getcwd()
     os.chdir(workdir)
     call_data_steward_kit_transform(
-        metadata_config_path=fixtures.submission.config.metadata_config_path,
+        metadata_config_path=fixtures.dsk.config.metadata_config_path,
         timeout=15,  # This command may take >10min
     )
     os.chdir(cwd)
@@ -63,4 +65,4 @@ def transform_metadata(fixtures: JointFixture):
 
 @then("the embedded_public event exists")
 def embedded_public_event_exists(fixtures: JointFixture):
-    assert fixtures.submission.config.embedded_public_event.exists()
+    assert fixtures.dsk.config.embedded_public_event.exists()

@@ -16,11 +16,12 @@
 
 """Shared steps and fixtures"""
 
+import inspect
+from functools import wraps
 from pathlib import Path
 from typing import Any, NamedTuple
 
 import httpx
-from pytest_asyncio import fixture as async_fixture
 from pytest_bdd import (  # noqa: F401; pylint: disable=unused-import
     given,
     parsers,
@@ -31,16 +32,21 @@ from pytest_bdd import (  # noqa: F401; pylint: disable=unused-import
 
 from fixtures import (  # noqa: F401; pylint: disable=unused-import
     Config,
+    ConnectorFixture,
+    DskFixture,
     JointFixture,
+    KafkaFixture,
     MongoFixture,
+    S3Fixture,
     auth_fixture,
     batch_file_fixture,
     config_fixture,
+    connector_fixture,
+    dsk_fixture,
     joint_fixture,
     kafka_fixture,
     mongo_fixture,
     s3_fixture,
-    submission_fixture,
 )
 
 ARS_DB_NAME = "ars"
@@ -58,6 +64,32 @@ TIMEOUT = 10
 parse = parsers.parse  # pylint: disable=invalid-name
 
 
+# Helpers for async step functions
+
+
+def async_step(step):
+    """Decorator that converts an async step function to a normal one."""
+
+    signature = inspect.signature(step)
+    parameters = list(signature.parameters.values())
+    has_event_loop = any(parameter.name == "event_loop" for parameter in parameters)
+    if not has_event_loop:
+        parameters.append(
+            inspect.Parameter("event_loop", inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        )
+        step.__signature__ = signature.replace(parameters=parameters)
+
+    @wraps(step)
+    def run_step(*args, **kwargs):
+        loop = kwargs["event_loop"] if has_event_loop else kwargs.pop("event_loop")
+        return loop.run_until_complete(step(*args, **kwargs))
+
+    return run_step
+
+
+# Shared fixtures
+
+
 class LoginFixture(NamedTuple):
     """A fixture to hold the users and their access tokens."""
 
@@ -65,7 +97,7 @@ class LoginFixture(NamedTuple):
     headers: dict[str, str]
 
 
-# shared step functions
+# Shared step functions
 
 
 @given(parse('I am logged in as "{name}"'), target_fixture="login")
@@ -105,19 +137,14 @@ def check_status_code(code: int, response: httpx.Response):
 # Global test bed state memory
 
 
-@async_fixture
-async def reset_buckets(fixtures: JointFixture):
-    await fixtures.s3.empty_buckets()
-
-
 @given("we start on a clean slate", target_fixture="state")
-def reset_state(
-    fixtures: JointFixture, reset_buckets
-):  # pylint: disable=unused-argument
-    fixtures.kafka.delete_topics()
-    fixtures.mongo.empty_databases("tb")  # state database
-    fixtures.mongo.empty_databases()  # service databases
-    fixtures.submission.reset_workdir()  # reset local submission registry
+@async_step
+async def reset_state(fixtures: JointFixture):
+    await fixtures.s3.empty_buckets()  # empty object storage
+    fixtures.kafka.delete_topics()  # empty event queues
+    fixtures.mongo.empty_databases("tb")  # emtpy state database
+    fixtures.mongo.empty_databases()  # empty service databases
+    fixtures.dsk.reset_work_dir()  # reset local submission registry
 
 
 @given(parse('we have the state "{name}"'), target_fixture="state")

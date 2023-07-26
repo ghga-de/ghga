@@ -15,8 +15,9 @@
 
 """Step definitions for work package tests"""
 
+from operator import itemgetter
+
 import httpx
-from pytest_asyncio import fixture as async_fixture
 
 from example_data.datasets import DATASET_OVERVIEW_EVENT
 
@@ -27,6 +28,7 @@ from .conftest import (
     JointFixture,
     LoginFixture,
     MongoFixture,
+    async_step,
     given,
     parse,
     scenarios,
@@ -39,11 +41,21 @@ from .conftest import (
 scenarios("../features/31_work_packages.feature")
 
 
-@async_fixture
-async def publish_dataset(fixtures: JointFixture):
-    # replace file accessions in dataset overview event
+@given("no work packages have been created yet")
+def wps_database_is_empty(mongo: MongoFixture):
+    mongo.empty_databases(WPS_DB_NAME)
+    unset_state("a download token has been created", mongo)
+
+
+@given("the test dataset has been announced")
+@async_step
+async def announce_dataset(fixtures: JointFixture):
+    # TBD: Should actually happen during upload, not here
+
     files = fixtures.mongo.find_documents("ifrs", "file_metadata", {})
-    accessions = [file["_id"] for file in files]
+    accessions = [
+        file["_id"] for file in sorted(files, key=itemgetter("decrypted_size"))
+    ]
     payload = DATASET_OVERVIEW_EVENT.dict()
     payload_files = payload["files"]
     assert len(accessions) == len(payload_files)
@@ -51,26 +63,14 @@ async def publish_dataset(fixtures: JointFixture):
         payload_files[i]["accession"] = accession
     # publish dataset overview event
     await fixtures.kafka.publisher.publish(
-        payload=DATASET_OVERVIEW_EVENT.dict(),
+        payload=payload,
         type_="metadata_dataset_overview",
         key="metadata-1",
         topic="metadata",
     )
-
-
-@given("no work packages have been created yet")
-def wps_database_is_empty(mongo: MongoFixture):
-    mongo.empty_databases(WPS_DB_NAME)
-    unset_state("we have a work package access token", mongo)
-
-
-@given("the test dataset has been announced")
-def announce_dataset(
-    publish_dataset, fixtures: JointFixture
-):  # pylint: disable=unused-argument
-    # TBD: Should happen during upload
+    # wait until the event has been processed
     assert fixtures.mongo.wait_for_document(
-        WPS_DB_NAME, "datasets", {"_id": DATASET_OVERVIEW_EVENT.accession}
+        WPS_DB_NAME, "datasets", {"_id": payload["accession"]}
     )
 
 
@@ -86,6 +86,8 @@ def check_dataset_in_list(response: httpx.Response):
     data = response.json()
     dataset = DATASET_OVERVIEW_EVENT
     files = DATASET_OVERVIEW_EVENT.files
+    for file in (data[0] if data else {}).get("files", []):
+        file.pop("id", None)
     assert data == [
         {
             "id": dataset.accession,
@@ -93,7 +95,7 @@ def check_dataset_in_list(response: httpx.Response):
             "stage": dataset.stage.value,  # pylint: disable=no-member
             "title": dataset.title,
             "files": [
-                {"id": file.accession, "extension": file.file_extension}
+                {"extension": file.file_extension}
                 for file in files  # pylint: disable=not-an-iterable
             ],
         }
@@ -113,11 +115,17 @@ def create_work_package(login: LoginFixture, fixtures: JointFixture):
     return response
 
 
-@then("the response contains a work package access token")
-def check_work_package_access_token(fixtures: JointFixture, response: httpx.Response):
+@then("the response contains a download token for the test dataset")
+def check_download_token(fixtures: JointFixture, response: httpx.Response):
     data = response.json()
     assert set(data) == {"id", "token"}
     id_, token = data["id"], data["token"]
     assert 20 <= len(id_) < 40 and 80 < len(token) < 120
     id_and_token = f"{id_}:{token}"
-    set_state("we have a work package access token", id_and_token, fixtures.mongo)
+    work_package = fixtures.mongo.find_document(
+        WPS_DB_NAME, "workPackages", {"_id": id_}
+    )
+    assert work_package
+    assert work_package["type"] == "download"
+    assert work_package["dataset_id"] == DATASET_OVERVIEW_EVENT.accession
+    set_state("a download token has been created", id_and_token, fixtures.mongo)

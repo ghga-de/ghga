@@ -19,6 +19,7 @@ import os
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Optional
 
 import yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig
@@ -41,8 +42,8 @@ def write_data_to_yaml(data: dict[str, str], file_path=None):
     if not file_path:
         _, file_path = tempfile.mkstemp()  # pylint: disable=consider-using-with
 
-    with open(file_path, "w", encoding="utf-8") as _file:
-        yaml.dump(data, _file)
+    with open(file_path, "w", encoding="utf-8") as file_:
+        yaml.dump(data, file_)
 
     return file_path
 
@@ -82,3 +83,37 @@ def get_ext_char(file_path: Path):
     if file_path.suffixes:
         first_char = file_path.suffixes[0].strip(".")[0]
     return first_char
+
+
+def verify_named_file(
+    target_dir: Path,
+    config: Config,
+    name: str,
+    file_size: Optional[int] = None,
+    encrypted=False,
+) -> None:
+    """Verify a file with given parameters"""
+
+    # TBD: this can be improved when we can request accessions
+
+    file_path = target_dir
+    file_ext = os.path.splitext(name)[1]
+    if encrypted:
+        file_ext += ".c4gh"
+    file_size = config.file_size if not file_size else file_size
+
+    matching = [path for path in file_path.iterdir() if path.name.endswith(file_ext)]
+
+    if not matching:
+        assert False, f"File similar to {name} was not found"
+    if len(matching) > 1:
+        assert False, f"Multiple files similar to {name} were found"
+
+    if not encrypted:
+        file_path = matching[0]
+        content_char = get_ext_char(file_path)
+
+        with open(file_path, "r", encoding="utf-8") as file:
+            file_content = file.read()
+
+        assert file_content == content_char * file_size

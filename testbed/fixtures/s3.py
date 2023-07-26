@@ -16,7 +16,7 @@
 
 """Fixture for testing code that uses the S3ObjectStorage provider."""
 
-from typing import Generator, Optional
+from typing import Generator, Optional, Union
 
 from hexkit.providers.s3.provider import S3ObjectStorage
 from hexkit.providers.s3.testutils import S3Fixture as BaseS3Fixture
@@ -32,17 +32,17 @@ class S3Fixture(BaseS3Fixture):
 
     config: Config
 
-    async def empty_buckets(self, bucket_id: Optional[str] = None):
+    async def empty_buckets(self, bucket_ids: Optional[Union[str, list[str]]] = None):
         """Clean the test artifacts or files from given bucket"""
-        if bucket_id is None:
+        if bucket_ids is None:
             bucket_ids = [
                 self.config.inbox_bucket,
                 self.config.outbox_bucket,
                 self.config.staging_bucket,
                 self.config.permanent_bucket,
             ]
-        else:
-            bucket_ids = [bucket_id]
+        elif isinstance(bucket_ids, str):
+            bucket_ids = [bucket_ids]
 
         for bucket in bucket_ids:
             # Get list of all objects in the bucket

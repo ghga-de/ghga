@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-""" Metadata related  fixture """
+"""Fixture for using the GHGA connector"""
 
 import os
 import shutil
@@ -29,7 +29,7 @@ BASE_DIR = Path(__file__).parent.parent
 TMP_DIR = Path(tempfile.gettempdir())
 
 
-class SubmissionConfig(BaseSettings):
+class DskConfig(BaseSettings):
     """Config for metadata and related submissions"""
 
     submission_registry: Path = TMP_DIR / "submission"
@@ -56,15 +56,15 @@ class SubmissionConfig(BaseSettings):
     file_metadata_dir: Path = submission_registry / "file_metadata"
 
 
-class SubmissionFixture:
-    """Submission fixture"""
+class DskFixture:
+    """Data Steward Kit fixture"""
 
-    config: SubmissionConfig
+    config: DskConfig
 
-    def __init__(self, config: SubmissionConfig):
+    def __init__(self, config: DskConfig):
         self.config = config
 
-    def reset_workdir(self):
+    def reset_work_dir(self):
         submission_registry_path = self.config.submission_registry
 
         if os.path.exists(submission_registry_path):
@@ -81,8 +81,8 @@ class SubmissionFixture:
         )
 
 
-@fixture(name="submission")
-def submission_fixture() -> Generator[SubmissionFixture, None, None]:
-    """Pytest fixture for tests depending on the S3ObjectStorage."""
-    config = SubmissionConfig()
-    yield SubmissionFixture(config=config)
+@fixture(name="dsk")
+def dsk_fixture() -> Generator[DskFixture, None, None]:
+    """Pytest fixture for tests using the Data Steward Kit."""
+    config = DskConfig()
+    yield DskFixture(config=config)

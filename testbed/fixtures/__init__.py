@@ -21,11 +21,12 @@ from pytest import fixture
 
 from fixtures.auth import TokenGenerator, auth_fixture
 from fixtures.config import Config
+from fixtures.connector import ConnectorFixture, connector_fixture
+from fixtures.dsk import DskFixture, dsk_fixture
 from fixtures.file import batch_file_fixture
 from fixtures.kafka import KafkaFixture, kafka_fixture
 from fixtures.mongo import MongoFixture, mongo_fixture
 from fixtures.s3 import S3Fixture, s3_fixture
-from fixtures.submission import SubmissionFixture, submission_fixture
 
 __all__ = [
     "auth_fixture",
@@ -35,7 +36,8 @@ __all__ = [
     "s3_fixture",
     "joint_fixture",
     "batch_file_fixture",
-    "submission_fixture",
+    "dsk_fixture",
+    "connector_fixture",
 ]
 
 
@@ -47,7 +49,8 @@ class JointFixture(NamedTuple):
     mongo: MongoFixture
     s3: S3Fixture
     auth: TokenGenerator
-    submission: SubmissionFixture
+    dsk: DskFixture
+    connector: ConnectorFixture
 
 
 @fixture(name="config")  # pyright: ignore
@@ -64,8 +67,9 @@ def joint_fixture(
     mongo: MongoFixture,
     s3: S3Fixture,
     auth: TokenGenerator,
-    submission: SubmissionFixture,
+    dsk: DskFixture,
+    connector: ConnectorFixture,
 ) -> JointFixture:
     """A fixture that collects all fixtures for integration testing."""
 
-    return JointFixture(config, kafka, mongo, s3, auth, submission)
+    return JointFixture(config, kafka, mongo, s3, auth, dsk, connector)
