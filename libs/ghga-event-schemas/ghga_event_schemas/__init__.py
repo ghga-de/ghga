@@ -15,4 +15,4 @@
 
 """A package that collects schemas used for events exchanges between GHGA service."""
 
-__version__ = "0.13.3"
+__version__ = "0.13.4"

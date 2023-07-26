@@ -54,20 +54,26 @@ class MetadataDatasetFile(BaseModel):
 
 
 class MetadataDatasetID(BaseModel):
-    """Simplified model to pass artifact/dataset ID to claims repository for deletion"""
+    """Simplified model to pass dataset ID to claims repository for deletion"""
 
     accession: str = Field(..., description="The dataset accession.")
 
 
-class MetadataDataset(MetadataDatasetID):
-    """Model to populate MASS from metldata artifacts"""
+class SearchableResourceInfo(BaseModel):
+    """Model containing only identifying information about an artifact's resource"""
 
+    accession: str = Field(..., description="The resource accession.")
     class_name: str = Field(
         ...,
-        description="The name of the class this dataset/artifact resource corresponds to.",
+        description="The name of the class this artifact resource corresponds to.",
     )
+
+
+class SearchableResource(SearchableResourceInfo):
+    """Model containing resource content in addition to the accession and class name"""
+
     content: dict[str, Any] = Field(
-        ..., description="The metadata content of this dataset/artifact resource."
+        ..., description="The metadata content of this artifact resource."
     )
 
 
@@ -439,6 +445,7 @@ class FileDeletionSuccess(FileDeletionRequested):
 
 # Lists event schemas (values) by event types (key):
 schema_registry: dict[str, type[BaseModel]] = {
+    "metadata_dataset_deleted": MetadataDatasetID,
     "metadata_dataset_overview": MetadataDatasetOverview,
     "metadata_submission_upserted": MetadataSubmissionUpserted,
     "file_upload_received": FileUploadReceived,
@@ -450,4 +457,6 @@ schema_registry: dict[str, type[BaseModel]] = {
     "file_staged_for_download": FileStagedForDownload,
     "file_download_served": FileDownloadServed,
     "notification": Notification,
+    "searchable_resource_deleted": SearchableResourceInfo,
+    "searchable_resource_upserted": SearchableResource,
 }
