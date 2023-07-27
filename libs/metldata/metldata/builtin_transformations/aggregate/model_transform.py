@@ -18,34 +18,22 @@
 
 from collections import defaultdict
 from copy import deepcopy
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from itertools import combinations
-from typing import Iterable, Optional
+from typing import Iterable, Optional, cast
 
 from linkml_runtime.linkml_model import ClassDefinition, SlotDefinition
 
+from metldata.builtin_transformations.aggregate.config import AggregateConfig
+from metldata.builtin_transformations.aggregate.models import (
+    MinimalClass,
+    MinimalNamedSlot,
+    MinimalSlot,
+)
 from metldata.model_utils.essentials import MetadataModel
+from metldata.transform.base import MetadataModelTransformationError
 
 Path = tuple[Optional[str], ...]
-
-
-@dataclass(frozen=True)
-class MinimalSlot:
-    """A minimal representation of a LinkML slot without a name"""
-
-    range: str
-    multivalued: bool
-
-
-@dataclass(frozen=True)
-class MinimalNamedSlot(MinimalSlot):
-    """A minimal representation of a LinkML slot with a name."""
-
-    slot_name: str
-
-
-class MinimalClass(frozenset[MinimalNamedSlot]):
-    """A minimal representation of a LinkML class"""
 
 
 class PathMatrix:
@@ -68,11 +56,11 @@ class PathMatrix:
         checking for identical paths.
 
         Raises:
-            RuntimeError: If one path is a prefix of another."""
+            MetadataModelTransformationError: If one path is a prefix of another."""
         for path_a, path_b in combinations(self.__paths, r=2):
             min_len = min(len(path_a), len(path_b))
             if path_a[:min_len] == path_b[:min_len]:
-                raise RuntimeError(
+                raise MetadataModelTransformationError(
                     "Incompatible output paths:"
                     f" '{'.'.join(str(elem) for elem in path_a)}"
                     f" and {'.'.join(str(elem) for elem in path_b)}."
@@ -108,7 +96,9 @@ class PathMatrix:
         """Add a path"""
         for existing_path in self.__paths:
             if path == existing_path[: len(path)]:
-                raise RuntimeError(f"Cannot add conflicting path {path}.")
+                raise MetadataModelTransformationError(
+                    f"Cannot add conflicting path {path}."
+                )
         self.__paths.append(path)
         self.leaf_slots.append(leaf_slot)
         self.normalize_path_matrix()
@@ -156,23 +146,32 @@ def update_metadata_model(
     slot_names = {slot.slot_name for cls in class_names for slot in cls}
     for slot_name in slot_names:
         model.schema_view.add_slot(slot=SlotDefinition(name=slot_name))
+    new_class_defs: dict[str, ClassDefinition] = {}
+
     for cls, cls_name in class_names.items():
-        model.schema_view.add_class(
-            cls=ClassDefinition(
-                name=cls_name,
-                slots=[slot.slot_name for slot in cls],
-                tree_root=cls_name == "Root",
-                slot_usage={
-                    slot.slot_name: {
-                        "range": slot.range,
-                        "multivalued": slot.multivalued,
-                        "inlined": True,
-                        "inlined_as_list": True,
-                    }
-                    for slot in cls
-                },
-            )
+        new_class_defs[cls_name] = ClassDefinition(
+            name=cls_name,
+            slots=[slot.slot_name for slot in cls],
+            tree_root=cls_name == "Root",
+            slot_usage={
+                slot.slot_name: {
+                    "range": slot.range,
+                    "multivalued": slot.multivalued,
+                }
+                for slot in cls
+            },
         )
+    all_classes = model.schema_view.all_classes()
+    for cls_name, cls_def in new_class_defs.items():
+        for slot_name, slot_config in cast(dict[str, dict], cls_def.slot_usage).items():
+            slot_range = slot_config["range"]
+            if slot_range in all_classes or slot_range in new_class_defs:
+                slot_config["inlined"] = True
+                if slot_config["multivalued"]:
+                    slot_config["inlined_as_list"] = True
+
+    for cls_def in new_class_defs.values():
+        model.schema_view.add_class(cls_def)
 
 
 def build_classes(
@@ -206,7 +205,7 @@ def build_classes(
                 slot_range = f"Class{len(class_names)}" if path_prefix else "Root"
                 class_names[cls] = slot_range
             # Add the prefix as a new path with the identified class as range
-            if path_prefix[-1]:
+            if path_prefix and path_prefix[-1]:
                 path_matrix.add_path(
                     path_prefix,
                     MinimalNamedSlot(
@@ -229,18 +228,42 @@ def bare_bone_model_from_other(model: MetadataModel) -> MetadataModel:
     return MetadataModel(**model_dict)
 
 
-def create_aggregate_model(
-    model: MetadataModel,
-    path_strings: list[str],
-    leaf_ranges: list[str],
-    leaf_multivalued: list[bool],
+def build_aggregation_model(
+    model: MetadataModel, config: AggregateConfig
 ) -> MetadataModel:
-    """Create data model resulting from aggregations described in the provided config"""
+    """Create a data model for the result of an aggregation transformation as
+    described in an AggregateConfig
+
+    Args:
+        model (MetadataModel): The LinkML model to transform
+        config (AggregateConfig): The config
+
+    Returns:
+        MetadataModel: A new, modified MetadataModel
+    """
+    # Reduce model to a bare bone model
     new_model = bare_bone_model_from_other(model)
-    class_names = build_classes(
-        path_strings=path_strings,
-        leaf_ranges=leaf_ranges,
-        leaf_multivalued=leaf_multivalued,
+
+    # Generate the LinkML classes for the inner data graph nodes
+    transformations = [agg.operation for agg in config.aggregations]
+    intermediate_classes = build_classes(
+        path_strings=[agg.output_path for agg in config.aggregations],
+        leaf_ranges=[Trans.result_range()[0] for Trans in transformations],
+        leaf_multivalued=[Trans.result_multivalued() for Trans in transformations],
     )
-    update_metadata_model(new_model, class_names)
+
+    # Extract the LinkML classes for the leaf nodes from the config
+    output_classes = cast(
+        dict[MinimalClass, str],
+        {
+            Trans.result_range()[1]: Trans.result_range()[0]
+            for Trans in transformations
+            if Trans.result_range()[1] is not None
+        },
+    )
+
+    # Add slots and classes to the bare bone metadata model
+    update_metadata_model(new_model, output_classes)
+    update_metadata_model(new_model, intermediate_classes)
+
     return new_model

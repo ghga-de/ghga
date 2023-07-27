@@ -17,6 +17,9 @@
 """Core functionality for aggregate transformations."""
 
 from metldata.builtin_transformations.aggregate.config import AggregateConfig
+from metldata.builtin_transformations.aggregate.model_transform import (
+    build_aggregation_model,
+)
 from metldata.custom_types import Json
 from metldata.event_handling.models import SubmissionAnnotation
 from metldata.model_utils.assumptions import check_root_class_existence
@@ -54,7 +57,6 @@ def check_model_assumptions(
     check_root_class_existence(model=model)
 
 
-# pylint: disable=unused-argument
 def transform_model(model: MetadataModel, config: AggregateConfig) -> MetadataModel:
     """Transform the metadata model.
 
@@ -62,8 +64,7 @@ def transform_model(model: MetadataModel, config: AggregateConfig) -> MetadataMo
         MetadataModelTransformationError:
             if the transformation fails.
     """
-
-    return model
+    return build_aggregation_model(model=model, config=config)
 
 
 AGGREGATE_TRANSFOMATION = TransformationDefinition[AggregateConfig](

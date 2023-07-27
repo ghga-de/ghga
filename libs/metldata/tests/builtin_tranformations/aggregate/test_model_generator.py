@@ -14,49 +14,14 @@
 # limitations under the License.
 #
 
-import pytest
-from pytest import fixture
+from pytest import fixture, raises
 
+from metldata.builtin_transformations.aggregate.config import AggregateConfig
 from metldata.builtin_transformations.aggregate.model_transform import (
-    create_aggregate_model,
+    build_aggregation_model,
 )
 from metldata.model_utils.essentials import MetadataModel
-
-
-@fixture
-def leaf_ranges() -> list[str]:
-    return ["string", "integer", "KeyValue", "KeyValue", "integer", "string"]
-
-
-@fixture
-def leaf_multivalued() -> list[bool]:
-    return [False, False, True, True, False, False]
-
-
-@fixture
-def invalid_path_strings() -> list[str]:
-    """Example input data for the ModelGenerator class."""
-    return [
-        "id",
-        "sample_summary.count",
-        "sample_summary.count.tissues",
-        "sample_summary.stats.phenotypes",
-        "study_summary.count",
-        "study_summary.stats.title",
-    ]
-
-
-@fixture
-def path_strings() -> list[str]:
-    """Example path strings"""
-    return [
-        "id",
-        "sample_summary.count",
-        "sample_summary.stats.tissues",
-        "sample_summary.stats.phenotypes",
-        "study_summary.count",
-        "study_summary.stats.title",
-    ]
+from metldata.transform.base import MetadataModelTransformationError
 
 
 @fixture
@@ -65,25 +30,44 @@ def empty_model() -> MetadataModel:
     return MetadataModel(id="test", name="test")
 
 
-def test_model_generator_invalid(
-    empty_model, invalid_path_strings, leaf_ranges, leaf_multivalued
-):
-    """Test that the model generation raises an error if the provided paths are
-    incompatible with eachother."""
-    with pytest.raises(RuntimeError):
-        create_aggregate_model(
-            model=empty_model,
-            path_strings=invalid_path_strings,
-            leaf_ranges=leaf_ranges,
-            leaf_multivalued=leaf_multivalued,
-        )
+@fixture
+def valid_config():
+    aggregations = [
+        {
+            "input_paths": ["some.input.path"],
+            "output_path": "dataset.stats.phenotypes.count",
+            "operation": "Count",
+        },
+        {
+            "input_paths": ["some.other.input.path"],
+            "output_path": "dataset.stats.phenotypes.counts",
+            "operation": "IntegerElementCount",
+        },
+    ]
+    return AggregateConfig.parse_obj({"aggregations": aggregations})
 
 
-def test_model_generator(empty_model, path_strings, leaf_ranges, leaf_multivalued):
-    """Test the happy case for model generation."""
-    create_aggregate_model(
-        model=empty_model,
-        path_strings=path_strings,
-        leaf_ranges=leaf_ranges,
-        leaf_multivalued=leaf_multivalued,
-    )
+@fixture
+def invalid_config():
+    aggregations = [
+        {
+            "input_paths": ["some.input.path"],
+            "output_path": "dataset.stats.phenotypes.count",
+            "operation": "Count",
+        },
+        {
+            "input_paths": ["some.other.input.path"],
+            "output_path": "dataset.stats.phenotypes",
+            "operation": "IntegerElementCount",
+        },
+    ]
+    return AggregateConfig.parse_obj({"aggregations": aggregations})
+
+
+def test_valid_config(empty_model, valid_config):
+    build_aggregation_model(model=empty_model, config=valid_config)
+
+
+def test_invalid_config(empty_model, invalid_config):
+    with raises(MetadataModelTransformationError):
+        build_aggregation_model(model=empty_model, config=invalid_config)

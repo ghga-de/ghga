@@ -18,17 +18,32 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, BaseSettings
+from pydantic import BaseModel, BaseSettings, root_validator
+
+from metldata.builtin_transformations.aggregate.func import (
+    AggregationFunction,
+    transformation_by_name,
+)
 
 
 class AggregationOperation(BaseModel):
     """A model for a single aggregation operation executed on one or multiple
     branches in the data described by a path in the model."""
 
-    paths: list[str]
+    input_paths: list[str]
+    output_path: str
     visit_only_once: Optional[list[str]] = None
-    target_slot_path: str
-    operation: str
+    operation: type[AggregationFunction]
+
+    # pylint: disable=no-self-argument
+    @root_validator(pre=True)
+    def lookup_operation(cls, values: dict) -> dict:
+        """Replaces operation strings with operation types."""
+        if "operation" in values:
+            values["operation"] = transformation_by_name(values["operation"])
+        # not raising an error otherwise as pydantic will do that in following
+        # validation
+        return values
 
 
 class AggregateConfig(BaseSettings):
