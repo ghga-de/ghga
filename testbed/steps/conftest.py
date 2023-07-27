@@ -60,6 +60,7 @@ DSK_TOKEN_PATH = Path.home() / ".ghga_data_steward_token.txt"  # path required b
 IFRS_DB_NAME = "ifrs"
 IFRS_METADATA_COLLECTION = "file_metadata"
 METLDATA_DB_NAME = "metldata"
+METLDATA_URL = "http://metldata:8080"
 
 TIMEOUT = 10
 

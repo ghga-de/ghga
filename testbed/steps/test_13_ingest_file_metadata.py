@@ -31,7 +31,6 @@ from .conftest import (
     JointFixture,
     async_step,
     get_state,
-    parse,
     scenarios,
     then,
     when,
@@ -98,7 +97,7 @@ def check_file_accessions_exist(ingest_config, fixtures: JointFixture):
     return file_accessions
 
 
-@then(parse("file metadata exist in the service"), target_fixture="object_ids")
+@then("file metadata exist in the service", target_fixture="object_ids")
 def check_metadata_documents(accessions: list[str], fixtures: JointFixture):
     documents = fixtures.mongo.wait_for_documents(
         db_name=IFRS_DB_NAME,

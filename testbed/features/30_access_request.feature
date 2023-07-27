@@ -4,7 +4,8 @@ Feature: 30 Access Request
 
   Scenario: Requesting access to a dataset
 
-    Given the claims repository is empty
+    Given we have the state "metadata has been loaded into the system"
+    And the claims repository is empty
     And no access requests have been made yet
     And I am logged in as "Dr. John Doe"
 

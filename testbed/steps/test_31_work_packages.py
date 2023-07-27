@@ -29,7 +29,6 @@ from .conftest import (
     MongoFixture,
     async_step,
     given,
-    parse,
     scenarios,
     set_state,
     then,
@@ -85,7 +84,7 @@ def query_datasets(login: LoginFixture):
     return httpx.get(url, headers=login.headers, timeout=TIMEOUT)
 
 
-@then(parse("the test dataset is in the response list"))
+@then("the test dataset is in the response list")
 def check_dataset_in_list(response: httpx.Response):
     data = response.json()
     dataset = DATASET_OVERVIEW_EVENT
