@@ -31,23 +31,24 @@ class SmtpClientConfig(BaseSettings):
     smtp_port: int = Field(..., description="The port for the mail server connection")
     login_user: str = Field(..., description="The login username or email")
     login_password: str = Field(..., description="The login password")
+    use_starttls: bool = Field(
+        default=True, description="Boolean flag indicating the use of STARTTLS"
+    )
 
 
 class SmtpClient(SmtpClientPort):
     """Concrete implementation of an SmtpClientPort"""
 
-    def __init__(self, config: SmtpClientConfig, debugging: bool = False):
+    def __init__(self, config: SmtpClientConfig):
         """Assign config, which should contain all needed info"""
         self._config = config
-        self._debugging = debugging
 
     def send_email_message(self, message: EmailMessage):
-        # create ssl security context per Python's Security considerations
-        context = ssl.create_default_context()
-
         try:
             with smtplib.SMTP(self._config.smtp_host, self._config.smtp_port) as server:
-                if not self._debugging:
+                if self._config.use_starttls:
+                    # create ssl security context per Python's Security considerations
+                    context = ssl.create_default_context()
                     server.starttls(context=context)
                 try:
                     server.login(self._config.login_user, self._config.login_password)

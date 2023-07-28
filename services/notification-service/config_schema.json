@@ -60,6 +60,15 @@
       ],
       "type": "string"
     },
+    "use_starttls": {
+      "title": "Use Starttls",
+      "description": "Boolean flag indicating the use of STARTTLS",
+      "default": true,
+      "env_names": [
+        "ns_use_starttls"
+      ],
+      "type": "boolean"
+    },
     "notification_event_topic": {
       "title": "Notification Event Topic",
       "description": "Name of the event topic used to track notification events",

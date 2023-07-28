@@ -22,3 +22,4 @@ service_instance_id: '1'
 service_name: ns
 smtp_host: 127.0.0.1
 smtp_port: 587
+use_starttls: false

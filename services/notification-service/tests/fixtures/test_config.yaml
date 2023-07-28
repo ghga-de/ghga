@@ -24,4 +24,5 @@ smtp_host: 127.0.0.1
 smtp_port: 587
 login_user: "test@test.com"
 login_password: test
+use_starttls: false
 from_address: "test@test.com"

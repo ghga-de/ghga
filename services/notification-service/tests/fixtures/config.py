@@ -47,4 +47,5 @@ SMTP_TEST_CONFIG = SmtpClientConfig(
     smtp_port=get_free_port(),
     login_user="test@example.com",
     login_password="test123",
+    use_starttls=False,
 )

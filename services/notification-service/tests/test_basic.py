@@ -79,7 +79,7 @@ async def test_transmission(notification_details):
     config = get_config([SMTP_TEST_CONFIG])
     notification = make_notification(notification_details)
 
-    smtp_client = SmtpClient(config=config, debugging=True)
+    smtp_client = SmtpClient(config=config)
     server = DummyServer(config=config)
 
     notifier = Notifier(config=config, smtp_client=smtp_client)
@@ -103,7 +103,7 @@ async def test_failed_authentication():
     server.login = "bob@bobswebsite.com"
     server.password = "notCorrect"
     notification = make_notification(sample_notification)
-    smtp_client = SmtpClient(config=config, debugging=True)
+    smtp_client = SmtpClient(config=config)
     notifier = Notifier(config=config, smtp_client=smtp_client)
     expected_email = notifier._construct_email(
         notification=notification
