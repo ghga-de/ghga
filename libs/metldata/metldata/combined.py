@@ -16,8 +16,6 @@
 
 """A combined service for artifact loading and browsing."""
 
-from functools import partial
-
 from fastapi import FastAPI
 from ghga_service_commons.api import configure_app
 from hexkit.providers.mongodb import MongoDbDaoFactory
@@ -27,7 +25,6 @@ from metldata.artifacts_rest.api_factory import (
 )
 from metldata.config import Config
 from metldata.load.api import rest_api_factory as load_rest_api_factory
-from metldata.load.main import clear_database
 
 
 async def get_app(config: Config) -> FastAPI:
@@ -44,7 +41,6 @@ async def get_app(config: Config) -> FastAPI:
         artifact_infos=config.artifact_infos,
         dao_factory=dao_factory,
         token_hashes=config.loader_token_hashes,
-        clear_database=partial(clear_database, config=config),
     )
 
     query_router = await query_rest_api_factory(

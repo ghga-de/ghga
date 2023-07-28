@@ -16,7 +16,7 @@
 
 """API for loading artifacts into running services."""
 
-from typing import Callable, Coroutine, Optional
+from typing import Optional
 
 from fastapi import Depends, HTTPException, Response, Security
 from fastapi.routing import APIRouter
@@ -72,7 +72,6 @@ async def rest_api_factory(
     artifact_infos: list[ArtifactInfo],
     dao_factory: DaoFactoryProtocol,
     token_hashes: list[str],
-    clear_database: Callable[[], Coroutine[None, None, None]]
 ) -> APIRouter:
     """Return a router for an API for loading artifacts."""
 
@@ -109,8 +108,6 @@ async def rest_api_factory(
             )
         except ArtifactResourcesInvalid as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
-
-        await clear_database()
 
         await load_artifacts_using_dao(
             artifact_resources=artifact_resources,
