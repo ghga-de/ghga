@@ -16,7 +16,7 @@ Feature: 20 Browse Metadata
     Then the response status code is "200"
     And I get the expected info on the "embedded_public" artifact
 
-  Scenario: Examining a non existing artifact type
+  Scenario: Examining a non-existing artifact type
     When I request info on the "non_existing" artifact
     Then the response status code is "404"
 
@@ -24,3 +24,7 @@ Feature: 20 Browse Metadata
     When I request the test dataset resource
     Then the response status code is "200"
     And the test dataset resource is returned
+
+  Scenario: Viewing a non-existing dataset
+    When I request a non-existing dataset resource
+    Then the response status code is "404"
