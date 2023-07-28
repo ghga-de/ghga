@@ -19,18 +19,26 @@
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import asdict
-from itertools import combinations
-from typing import Iterable, Optional, cast
+from itertools import chain, combinations
+from typing import Iterable, Optional
 
 from linkml_runtime.linkml_model import ClassDefinition, SlotDefinition
+from stringcase import snakecase
 
-from metldata.builtin_transformations.aggregate.config import AggregateConfig
+from metldata.builtin_transformations.aggregate.config import (
+    AggregateConfig,
+    Aggregation,
+)
 from metldata.builtin_transformations.aggregate.models import (
     MinimalClass,
+    MinimalLinkMLModel,
     MinimalNamedSlot,
     MinimalSlot,
 )
-from metldata.model_utils.essentials import MetadataModel
+from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.essentials import ROOT_CLASS, MetadataModel
+from metldata.model_utils.identifiers import get_class_identifier
+from metldata.model_utils.manipulate import add_anchor_point, upsert_class_slot
 from metldata.transform.base import MetadataModelTransformationError
 
 Path = tuple[Optional[str], ...]
@@ -129,9 +137,7 @@ class PathMatrix:
         self.load_leaf_slots(leaf_slots)
 
 
-def update_metadata_model(
-    model: MetadataModel, class_names: dict[MinimalClass, str]
-) -> None:
+def update_metadata_model(model: MetadataModel, min_model: MinimalLinkMLModel) -> None:
     """Update a MetadataModel based on the provided minimal class representations.
 
     Bare bone slots will be added based on all slot names that are found in the
@@ -143,27 +149,32 @@ def update_metadata_model(
         class_names (dict[MinimalClass, str]): A dictionary of MinimalClasses
         with associated class names.
     """
-    slot_names = {slot.slot_name for cls in class_names for slot in cls}
+    # Enumerate all unique slot names and add the slots to the model
+    all_min_classes = chain(
+        min_model.anonymous_classes, min_model.named_classes.values()
+    )
+    slot_names = {slot.slot_name for cls in all_min_classes for slot in cls}
+
     for slot_name in slot_names:
         model.schema_view.add_slot(slot=SlotDefinition(name=slot_name))
     new_class_defs: dict[str, ClassDefinition] = {}
 
-    for cls, cls_name in class_names.items():
+    for cls_name, min_cls_def in min_model.all_classes():
         new_class_defs[cls_name] = ClassDefinition(
             name=cls_name,
-            slots=[slot.slot_name for slot in cls],
-            tree_root=cls_name == "Root",
+            slots=[slot.slot_name for slot in min_cls_def],
             slot_usage={
                 slot.slot_name: {
                     "range": slot.range,
                     "multivalued": slot.multivalued,
                 }
-                for slot in cls
+                for slot in min_cls_def
             },
         )
+
     all_classes = model.schema_view.all_classes()
     for cls_name, cls_def in new_class_defs.items():
-        for slot_name, slot_config in cast(dict[str, dict], cls_def.slot_usage).items():
+        for slot_name, slot_config in cls_def.slot_usage.items():
             slot_range = slot_config["range"]
             if slot_range in all_classes or slot_range in new_class_defs:
                 slot_config["inlined"] = True
@@ -174,10 +185,17 @@ def update_metadata_model(
         model.schema_view.add_class(cls_def)
 
 
-def build_classes(
-    path_strings: list[str], leaf_ranges: list[str], leaf_multivalued: list[bool]
-) -> dict[MinimalClass, str]:
-    """Build the LinkML Model"""
+def add_aggregation(min_model: MinimalLinkMLModel, aggregation: Aggregation) -> None:
+    """Adds the required slots and classes defined by the provided aggregation
+    to the provided minimal model."""
+
+    root_name = aggregation.output
+    path_strings = [operation.output_path for operation in aggregation.operations]
+    leaf_ranges = [op.function.result_range_name() for op in aggregation.operations]
+    leaf_multivalued = [
+        op.function.result_multivalued() for op in aggregation.operations
+    ]
+
     path_matrix = PathMatrix(
         path_strings=path_strings,
         leaf_slots=[
@@ -186,7 +204,6 @@ def build_classes(
         ],
     )
 
-    class_names: dict[MinimalClass, str] = {}
     for _ in reversed(range(0, path_matrix.max_depth)):
         classes: dict[Path, set[MinimalNamedSlot]] = defaultdict(set[MinimalNamedSlot])
         for idx, path_prefix in enumerate(path_matrix.paths):
@@ -199,11 +216,19 @@ def build_classes(
             # Construct a class for this prefix and check if a matching
             # class already exists.
             cls = MinimalClass(cls_set)
-            if cls in class_names:
-                slot_range = class_names[cls]
+
+            if not path_prefix:
+                # We have reached the root of the output path model
+                min_model.named_classes[root_name] = cls
+                slot_range = root_name
             else:
-                slot_range = f"Class{len(class_names)}" if path_prefix else "Root"
-                class_names[cls] = slot_range
+                # We are at an intermediate model an will use generic class
+                # names and potentially re-use the classes as they fit
+                if cls in min_model.anonymous_classes:
+                    slot_range = min_model.anonymous_classes[cls]
+                else:
+                    slot_range = f"Class{len(min_model.anonymous_classes)}"
+                    min_model.anonymous_classes[cls] = slot_range
             # Add the prefix as a new path with the identified class as range
             if path_prefix and path_prefix[-1]:
                 path_matrix.add_path(
@@ -214,7 +239,6 @@ def build_classes(
                         range=slot_range,
                     ),
                 )
-    return class_names
 
 
 def bare_bone_model_from_other(model: MetadataModel) -> MetadataModel:
@@ -225,7 +249,66 @@ def bare_bone_model_from_other(model: MetadataModel) -> MetadataModel:
     del model_dict["enums"]
     del model_dict["slots"]
     del model_dict["subsets"]
+    model_dict["classes"][ROOT_CLASS] = ClassDefinition(name=ROOT_CLASS, tree_root=True)
     return MetadataModel(**model_dict)
+
+
+def get_identifier_slot_names(
+    input_model: MetadataModel, origin_map: dict[str, str]
+) -> dict[str, str]:
+    """Associate the correct identifier slot name with every output class.
+
+    Args:
+        input_model (MetadataModel): The input original metadata model
+        origin_map (dict[str,str]): A dictionary mapping input class names to output class names
+
+    Returns:
+        dict[str,str]: A dictionary mapping output class names to identifier slot names
+    """
+    id_slot_map: dict[str, str] = {}
+    for in_cls_name, out_cls_name in origin_map.items():
+        slot_name = get_class_identifier(input_model, in_cls_name)
+        if not slot_name:
+            raise MetadataModelTransformationError(
+                f"No identifier slot for class {in_cls_name}."
+            )
+        id_slot_map[out_cls_name] = slot_name
+    return id_slot_map
+
+
+def add_identifier_slots(
+    input_model: MetadataModel,
+    output_model: MetadataModel,
+    origin_map: dict[str, str],
+    id_slot_map: dict[str, str],
+) -> MetadataModel:
+    """Adds identifier slots to the high level output model classes. The slot
+    name and range is inferred from the original input classes.
+
+    Args:
+        input_model (MetadataModel): _description_
+        output_model (MetadataModel): _description_
+        class_map (list[tuple[str, str]]): _description_
+
+    Raises:
+        MetadataModelTransformationError: _description_
+
+    Returns:
+        MetadataModel: _description_
+    """
+    output_schema_view = output_model.schema_view
+    for in_class_name, out_class_name in origin_map.items():
+        slot_name = id_slot_map[out_class_name]
+        input_slot = input_model.schema_view.induced_slot(slot_name, in_class_name)
+        output_schema_view = upsert_class_slot(
+            schema_view=output_schema_view,
+            class_name=out_class_name,
+            new_slot=SlotDefinition(
+                name=slot_name, range=input_slot.range, identifier=True
+            ),
+        )
+
+    return output_schema_view.export_model()
 
 
 def build_aggregation_model(
@@ -242,28 +325,46 @@ def build_aggregation_model(
         MetadataModel: A new, modified MetadataModel
     """
     # Reduce model to a bare bone model
-    new_model = bare_bone_model_from_other(model)
 
-    # Generate the LinkML classes for the inner data graph nodes
-    transformations = [agg.operation for agg in config.aggregations]
-    intermediate_classes = build_classes(
-        path_strings=[agg.output_path for agg in config.aggregations],
-        leaf_ranges=[Trans.result_range()[0] for Trans in transformations],
-        leaf_multivalued=[Trans.result_multivalued() for Trans in transformations],
-    )
+    min_output_model = MinimalLinkMLModel()
 
-    # Extract the LinkML classes for the leaf nodes from the config
-    output_classes = cast(
-        dict[MinimalClass, str],
-        {
-            Trans.result_range()[1]: Trans.result_range()[0]
-            for Trans in transformations
-            if Trans.result_range()[1] is not None
-        },
-    )
+    # Add function output classes
+    for agg_func in (
+        op.function for agg in config.aggregations for op in agg.operations
+    ):
+        cls_def = agg_func.result_range_cls_def()
+        cls_name = agg_func.result_range_name()
+        if cls_def:
+            min_output_model.add_named_class(cls_def=cls_def, cls_name=cls_name)
 
+    # Add upstream classes
+    for aggregation in config.aggregations:
+        add_aggregation(min_model=min_output_model, aggregation=aggregation)
+
+    output_model = bare_bone_model_from_other(model)
     # Add slots and classes to the bare bone metadata model
-    update_metadata_model(new_model, output_classes)
-    update_metadata_model(new_model, intermediate_classes)
+    update_metadata_model(output_model, min_output_model)
 
-    return new_model
+    # Add identifier slots to classes
+    origin_map = {agg.input: agg.output for agg in config.aggregations}
+    id_slot_map = get_identifier_slot_names(input_model=model, origin_map=origin_map)
+    output_model = add_identifier_slots(
+        input_model=model,
+        output_model=output_model,
+        origin_map=origin_map,
+        id_slot_map=id_slot_map,
+    )
+
+    # Anchor the output classes
+    schema_view = output_model.schema_view
+    for aggregation in config.aggregations:
+        add_anchor_point(
+            schema_view=schema_view,
+            anchor_point=AnchorPoint(
+                target_class=aggregation.output,
+                identifier_slot=id_slot_map[aggregation.output],
+                root_slot=snakecase(aggregation.output) + "s",
+            ),
+        )
+
+    return output_model

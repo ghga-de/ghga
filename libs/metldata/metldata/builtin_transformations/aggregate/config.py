@@ -33,20 +33,28 @@ class AggregationOperation(BaseModel):
     input_paths: list[str]
     output_path: str
     visit_only_once: Optional[list[str]] = None
-    operation: type[AggregationFunction]
+    function: type[AggregationFunction]
 
     # pylint: disable=no-self-argument
     @root_validator(pre=True)
     def lookup_operation(cls, values: dict) -> dict:
         """Replaces operation strings with operation types."""
-        if "operation" in values:
-            values["operation"] = transformation_by_name(values["operation"])
+        if "function" in values:
+            values["function"] = transformation_by_name(values["function"])
         # not raising an error otherwise as pydantic will do that in following
         # validation
         return values
 
 
+class Aggregation(BaseModel):
+    """Model for an aggregation."""
+
+    input: str
+    output: str
+    operations: list[AggregationOperation]
+
+
 class AggregateConfig(BaseSettings):
     """A model for the configuration of the aggregate transformation."""
 
-    aggregations: list[AggregationOperation]
+    aggregations: list[Aggregation]

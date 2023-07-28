@@ -36,8 +36,14 @@ class AggregationFunction(ABC):
 
     @classmethod
     @abstractmethod
-    def result_range(cls) -> tuple[str, Optional[MinimalClass]]:
-        """Returns the range of the data produced by func."""
+    def result_range_name(cls) -> str:
+        """Returns the name of the range of the data produced by func."""
+
+    @classmethod
+    @abstractmethod
+    def result_range_cls_def(cls) -> Optional[MinimalClass]:
+        """Returns the class definition of the data produced by func. None if
+        the function result range is a type rather than a class."""
 
     @classmethod
     @abstractmethod
@@ -55,8 +61,12 @@ class CountAggregation(AggregationFunction):
         return len(data)
 
     @classmethod
-    def result_range(cls) -> tuple[str, Optional[MinimalClass]]:
-        return "integer", None
+    def result_range_name(cls) -> str:
+        return "integer"
+
+    @classmethod
+    def result_range_cls_def(cls) -> Optional[MinimalClass]:
+        return None
 
     @classmethod
     def result_multivalued(cls) -> bool:
@@ -83,8 +93,12 @@ class StringElementCountAggregation(ElementCountAggregation):
         ]
 
     @classmethod
-    def result_range(cls) -> tuple[str, Optional[MinimalClass]]:
-        return "StringValueCount", MinimalClass(
+    def result_range_name(cls) -> str:
+        return "StringValueCount"
+
+    @classmethod
+    def result_range_cls_def(cls) -> MinimalClass:
+        return MinimalClass(
             {
                 MinimalNamedSlot(range="string", multivalued=False, slot_name="value"),
                 MinimalNamedSlot(range="integer", multivalued=False, slot_name="count"),
@@ -104,8 +118,12 @@ class IntegerElementCountAggregation(ElementCountAggregation):
         ]
 
     @classmethod
-    def result_range(cls) -> tuple[str, Optional[MinimalClass]]:
-        return "IntegerValueCount", MinimalClass(
+    def result_range_name(cls) -> str:
+        return "IntegerValueCount"
+
+    @classmethod
+    def result_range_cls_def(cls) -> Optional[MinimalClass]:
+        return MinimalClass(
             {
                 MinimalNamedSlot(range="integer", multivalued=False, slot_name="value"),
                 MinimalNamedSlot(range="integer", multivalued=False, slot_name="count"),
