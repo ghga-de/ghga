@@ -44,6 +44,7 @@ from fixtures import (  # noqa: F401; pylint: disable=unused-import
     connector_fixture,
     dsk_fixture,
     event_loop,
+    file_fixture,
     joint_fixture,
     kafka_fixture,
     mongo_fixture,
