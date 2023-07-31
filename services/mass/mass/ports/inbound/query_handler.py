@@ -21,35 +21,32 @@ from typing import Optional
 from mass.core import models
 
 
-class ClassNotConfiguredError(RuntimeError):
-    """Raised when searching for class_name that isn't configured"""
-
-    def __init__(self, class_name: str):
-        message = f"Class with name '{class_name}' not configured."
-        super().__init__(message)
-
-
-class SearchError(RuntimeError):
-    """Raised when there is a problem searching with the query parameters."""
-
-    def __init__(self):
-        super().__init__(
-            "Error executing search. Possibly a problem with the supplied parameters."
-        )
-
-
-class DeletionFailedError(RuntimeError):
-    """Raised when a deletion attempt fails because the ID can't be found"""
-
-    def __init__(self, resource_id: str):
-        super().__init__(
-            f"Failed to delete resource with ID '{resource_id}' because no match was "
-            + "found in the database."
-        )
-
-
 class QueryHandlerPort(ABC):
     """Port for the query handler"""
+
+    class ClassNotConfiguredError(RuntimeError):
+        """Raised when searching for class_name that isn't configured"""
+
+        def __init__(self, class_name: str):
+            message = f"Class with name '{class_name}' not configured."
+            super().__init__(message)
+
+    class SearchError(RuntimeError):
+        """Raised when there is a problem searching with the query parameters."""
+
+        def __init__(self):
+            super().__init__(
+                "Error executing search. Possibly a problem with the supplied parameters."
+            )
+
+    class ResourceNotFoundError(RuntimeError):
+        """Raised when a matching resource ID can't be found in the database"""
+
+        def __init__(self, resource_id: str):
+            super().__init__(
+                f"Failed to delete resource with ID '{resource_id}' because no match was "
+                + "found in the database."
+            )
 
     @abstractmethod
     async def delete_resource(self, *, resource_id: str, class_name: str):
@@ -58,7 +55,7 @@ class QueryHandlerPort(ABC):
         Raises:
             ClassNotConfiguredError - when the class_name parameter does not
                 match any configured class
-            DeletionFailedError - when the provided ID doesn't match any resource
+            ResourceNotFoundError - when the provided ID doesn't match any resource
                 found in the database.
         """
 

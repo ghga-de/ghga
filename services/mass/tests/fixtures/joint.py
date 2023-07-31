@@ -25,10 +25,8 @@ from typing import AsyncGenerator
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.custom_types import JsonObject
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    MongoDbFixture,
-    get_mongodb_fixture,
-)
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture  # noqa: F401
 from pymongo import TEXT
 from pytest_asyncio.plugin import _ScopeName
 
@@ -46,6 +44,7 @@ class JointFixture:
 
     config: Config
     container: Container
+    kafka: KafkaFixture
     mongodb: MongoDbFixture
     rest_client: AsyncTestClient
 
@@ -80,7 +79,7 @@ class JointFixture:
 
 
 async def joint_fixture_function(
-    mongodb_fixture: MongoDbFixture,  # noqa: F811
+    mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture  # noqa: F811
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing
 
@@ -88,7 +87,7 @@ async def joint_fixture_function(
     """
 
     # merge configs from different sources with the default one:
-    config = get_config(sources=[mongodb_fixture.config])
+    config = get_config(sources=[mongodb_fixture.config, kafka_fixture.config])
 
     # create a DI container instance:translators
     async with get_configured_container(config=config) as container:
@@ -98,6 +97,7 @@ async def joint_fixture_function(
             yield JointFixture(
                 config=config,
                 container=container,
+                kafka=kafka_fixture,
                 mongodb=mongodb_fixture,
                 rest_client=rest_client,
             )

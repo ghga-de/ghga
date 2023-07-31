@@ -15,8 +15,10 @@
 #
 """Dependency-Injection container"""
 from hexkit.inject import ContainerBase, get_configurator, get_constructor
+from hexkit.providers.akafka.provider import KafkaEventSubscriber
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 
+from mass.adapters.inbound.event_sub import EventSubTranslator
 from mass.adapters.outbound.aggregator import AggregatorCollection, AggregatorFactory
 from mass.adapters.outbound.dao import DaoCollection
 from mass.config import Config
@@ -27,13 +29,13 @@ class Container(ContainerBase):
     """Dependency-Injection Container"""
 
     config = get_configurator(Config)
-    dao_factory = get_constructor(MongoDbDaoFactory, config=config)
-    aggregator_factory = get_constructor(AggregatorFactory, config=config)
 
+    dao_factory = get_constructor(MongoDbDaoFactory, config=config)
     dao_collection = get_constructor(
         DaoCollection, dao_factory=dao_factory, config=config
     )
 
+    aggregator_factory = get_constructor(AggregatorFactory, config=config)
     aggregator_collection = get_constructor(
         AggregatorCollection, aggregator_factory=aggregator_factory, config=config
     )
@@ -43,4 +45,12 @@ class Container(ContainerBase):
         config=config,
         dao_collection=dao_collection,
         aggregator_collection=aggregator_collection,
+    )
+
+    event_sub_translator = get_constructor(
+        EventSubTranslator, config=config, query_handler=query_handler
+    )
+
+    event_subscriber = get_constructor(
+        KafkaEventSubscriber, config=config, translator=event_sub_translator
     )

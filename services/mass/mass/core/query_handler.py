@@ -21,12 +21,7 @@ from hexkit.providers.mongodb.provider import ResourceNotFoundError
 
 from mass.config import SearchableClassesConfig
 from mass.core import models
-from mass.ports.inbound.query_handler import (
-    ClassNotConfiguredError,
-    DeletionFailedError,
-    QueryHandlerPort,
-    SearchError,
-)
+from mass.ports.inbound.query_handler import QueryHandlerPort
 from mass.ports.outbound.aggregator import AggregationError, AggregatorCollectionPort
 from mass.ports.outbound.dao import DaoCollectionPort
 
@@ -48,22 +43,21 @@ class QueryHandler(QueryHandlerPort):
 
     async def load_resource(self, *, resource: models.Resource, class_name: str):
         if class_name not in self._config.searchable_classes:
-            raise ClassNotConfiguredError(class_name=class_name)
+            raise self.ClassNotConfiguredError(class_name=class_name)
 
         dao = self._dao_collection.get_dao(class_name=class_name)
-
         await dao.upsert(resource)
 
     async def delete_resource(self, *, resource_id: str, class_name: str):
         if class_name not in self._config.searchable_classes:
-            raise ClassNotConfiguredError(class_name=class_name)
+            raise self.ClassNotConfiguredError(class_name=class_name)
 
         dao = self._dao_collection.get_dao(class_name=class_name)
 
         try:
             await dao.delete(id_=resource_id)
         except ResourceNotFoundError as err:
-            raise DeletionFailedError(resource_id) from err
+            raise self.ResourceNotFoundError(resource_id=resource_id) from err
 
     async def handle_query(
         self,
@@ -80,7 +74,7 @@ class QueryHandler(QueryHandlerPort):
                 class_name
             ].facetable_properties
         except KeyError as err:
-            raise ClassNotConfiguredError(class_name=class_name) from err
+            raise self.ClassNotConfiguredError(class_name=class_name) from err
 
         # run the aggregation. Results will have {facets, count, hits} format
         aggregator = self._aggregator_collection.get_aggregator(class_name=class_name)
@@ -93,7 +87,7 @@ class QueryHandler(QueryHandlerPort):
                 limit=limit,
             )
         except AggregationError as exc:
-            raise SearchError() from exc
+            raise self.SearchError() from exc
 
         query_results = models.QueryResults(**aggregator_results)
 

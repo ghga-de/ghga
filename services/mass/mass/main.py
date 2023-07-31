@@ -52,3 +52,13 @@ async def run_rest():
     async with get_configured_container(config=config):
         api = get_rest_api(config=config)
         await run_server(app=api, config=config)
+
+
+async def consume_events(run_forever: bool = True):
+    """Run the event consumer"""
+
+    config = Config()
+
+    async with get_configured_container(config=config) as container:
+        event_subscriber = await container.event_subscriber()
+        await event_subscriber.run(forever=run_forever)

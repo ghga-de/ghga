@@ -32,13 +32,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/mass):
 ```bash
-docker pull ghga/mass:0.1.1
+docker pull ghga/mass:0.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/mass:0.1.1 .
+docker build -t ghga/mass:0.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -46,7 +46,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/mass:0.1.1 --help
+docker run -p 8080:8080 ghga/mass:0.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -65,6 +65,20 @@ The service requires the following configuration parameters:
 - **`searchable_classes`** *(object)*: A collection of searchable_classes with facetable properties. Can contain additional properties.
 
   - **Additional Properties**: Refer to *#/definitions/SearchableClass*.
+
+- **`resource_change_event_topic`** *(string)*: Name of the event topic used to track resource deletion and upsertion events.
+
+- **`resource_deletion_event_type`** *(string)*: The type to use for events with deletion instructions.
+
+- **`resource_upsertion_event_type`** *(string)*: The type to use for events with upsert instructions.
+
+- **`service_name`** *(string)*: Default: `mass`.
+
+- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+
+- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+
+  - **Items** *(string)*
 
 - **`db_connection_str`** *(string)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
@@ -99,8 +113,6 @@ The service requires the following configuration parameters:
 - **`cors_allowed_headers`** *(array)*: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.
 
   - **Items** *(string)*
-
-- **`service_name`** *(string)*: Default: `mass`.
 
 ## Definitions
 

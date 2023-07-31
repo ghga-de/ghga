@@ -20,6 +20,7 @@ Since we're using session-scoped fixtures, declare everything in here.
 """
 
 import pytest
+from hexkit.providers.akafka.testutils import get_kafka_fixture
 from hexkit.providers.mongodb.testutils import get_mongodb_fixture
 from hexkit.providers.testing.utils import get_event_loop
 
@@ -38,6 +39,6 @@ def reset_state(joint_fixture: JointFixture):  # noqa: F811
 
 event_loop = get_event_loop("session")
 
-
+kafka_fixture = get_kafka_fixture("session")
 mongodb_fixture = get_mongodb_fixture("session")
 joint_fixture = get_joint_fixture("session")

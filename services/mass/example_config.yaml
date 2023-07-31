@@ -8,9 +8,14 @@ db_connection_str: '**********'
 db_name: metadata-store
 docs_url: /docs
 host: 127.0.0.1
+kafka_servers:
+- kafka:9092
 log_level: info
 openapi_url: /openapi.json
 port: 8080
+resource_change_event_topic: searchable_resources
+resource_deletion_event_type: searchable_resource_deleted
+resource_upsertion_event_type: searchable_resource_upserted
 searchable_classes:
   Dataset:
     description: Dataset grouping files under controlled access.
@@ -21,5 +26,6 @@ searchable_classes:
       name: Study Type
     - key: study.project.alias
       name: Project Alias
+service_instance_id: '1'
 service_name: mass
 workers: 1
