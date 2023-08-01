@@ -1,0 +1,39 @@
+aggregations:
+  - input: Study
+    output: StudyStats
+    operations:
+      - output_path: stats.sex
+        input_paths:
+          - study_files.study.conditions.samples.biospecimen.individual.sex
+          - sample_files.sample.biospecimen.individual.sex
+          - sequencing_process_file.sequencing_process.sample.biospecimen.individual.sex
+        function: StringElementCount
+        visit_only_once:
+          - Individual
+      - output_path: stats.tissues
+        input_paths:
+          - study_files.study.conditions.samples.biospecimen.tissue
+          - sample_files.sample.biospecimen.tissue
+          - sequencing_process_file.sequencing_process.sample.biospecimen.tissue
+        function: StringElementCount
+        visit_only_once:
+          - Biospecimen
+  - input: Dataset
+    output: DatasetStats
+    operations:
+      - output_path: stats.sex
+        input_paths:
+          - study_files.study.conditions.samples.biospecimen.individual.sex
+          - sample_files.sample.biospecimen.individual.sex
+          - sequencing_process_file.sequencing_process.sample.biospecimen.individual.sex
+        function: StringElementCount
+        visit_only_once:
+          - Individual
+      - output_path: stats.tissues
+        input_paths:
+          - study_files.study.conditions.samples.biospecimen.tissue
+          - sample_files.sample.biospecimen.tissue
+          - sequencing_process_file.sequencing_process.sample.biospecimen.tissue
+        function: StringElementCount
+        visit_only_once:
+          - Biospecimen

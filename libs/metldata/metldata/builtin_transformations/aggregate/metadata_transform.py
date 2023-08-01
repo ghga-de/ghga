@@ -13,84 +13,72 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 """Metadata transformation functionality for the aggregate transformation."""
 
 
-from collections import defaultdict
-from typing import Any
-
-from metldata.builtin_transformations.aggregate.config import AggregationOperation
+from metldata.builtin_transformations.aggregate.config import Aggregation
+from metldata.builtin_transformations.aggregate.data_subgraph import DataSubgraph
+from metldata.builtin_transformations.aggregate.expanding_dict import ExpandingDict
 from metldata.custom_types import Json
-
-
-class ExpandingDict(defaultdict):
-    """Rudimentary implementation of a default dict with no error checking"""
-
-    def __init__(self):
-        """Create a new ExpandingDict"""
-        defaultdict.__init__(self, self.__class__)
-
-    def __resolve_path(self, path: str) -> tuple:
-        """Resolves the given string representation of a path by dot-splitting
-        the path. Returns the terminal key and the pre-terminal dictionary.
-
-        Args:
-            path (str): A string representation of path. Example: foo.bar.baz
-
-        Returns:
-            tuple: (dict, key) the pre-terminal dictionary and the terminal key
-        """
-        cur = self
-        nodes = path.split(".")
-        for node in nodes[:-1]:
-            cur = cur[node]
-        return cur, nodes[-1]
-
-    def set_path_value(self, path: str, value: Any) -> None:
-        """Set a value in the expanding dict based on a string representation of
-        the key path.
-
-        Warning: Does not perform type checking of intermediate data structures.
-
-        Args:
-            path (str): A key path. Example: foo.bar.baz
-            value (Any): A value to set
-        """
-        holder, key = self.__resolve_path(path)
-        holder[key] = value
-
-    def get_path_value(self, path: str) -> Any:
-        """Get a value in the expanding dict based on a string representation of
-        the key path.
-
-        Warning: Does not perform type checking of intermediate data structures.
-
-        Args:
-            path (str): A key path. Example: foo.bar.baz
-
-        Returns:
-            Any: The value.
-        """
-        holder, key = self.__resolve_path(path)
-        return holder[key]
+from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.essentials import MetadataModel
 
 
 # pylint: disable=unused-argument
-def execute_aggregation(*, metadata: Json, operation: AggregationOperation) -> Json:
+def execute_aggregation(
+    *,
+    original_model: MetadataModel,
+    original_data: Json,
+    aggregation: Aggregation,
+    original_anchors_points: dict[str, AnchorPoint],
+) -> list[Json]:
     """Transforms the metadata according to the specified aggregation operation."""
-    return metadata
+    anchor_point = original_anchors_points[aggregation.input]
+    id_slot = anchor_point.identifier_slot
+    input_anchor_data = original_data[anchor_point.root_slot]
+    subgraphs = [
+        DataSubgraph(
+            model=original_model,
+            submission_data=original_data,
+            origin=aggregation.input,
+            path_strings=operation.input_paths,
+        )
+        for operation in aggregation.operations
+    ]
+    output_data: list[Json] = []
+    for input_element in input_anchor_data:
+        result = ExpandingDict()
+        for operation, subgraph in zip(aggregation.operations, subgraphs):
+            aggregated = operation.function.func(
+                subgraph.terminal_nodes(data=input_element)
+            )
+            result.set_path_value(operation.output_path, aggregated)
+        result[id_slot] = input_element[id_slot]
+        output_data.append(dict(result))
+
+    return output_data
 
 
 def execute_aggregations(
-    *, metadata: Json, aggregations: list[AggregationOperation]
+    *,
+    original_model: MetadataModel,
+    original_anchors_points: dict[str, AnchorPoint],
+    transformed_anchors_points: dict[str, AnchorPoint],
+    metadata: Json,
+    aggregations: list[Aggregation],
 ) -> Json:
     """Transforms the metadata according to the specified list of aggregation
     operations."""
-    output_metadata = ExpandingDict()
-    results = [
-        execute_aggregation(metadata=metadata, operation=operation)
-        for operation in aggregations
-    ]
-    for aggregation, result in zip(aggregations, results):
-        output_metadata[aggregation.output_path] = result
-    return output_metadata
+    transformed_data = {}
+    for aggregation in aggregations:
+        output_data = execute_aggregation(
+            original_model=original_model,
+            original_data=metadata,
+            aggregation=aggregation,
+            original_anchors_points=original_anchors_points,
+        )
+        transformed_data[
+            transformed_anchors_points[aggregation.output].root_slot
+        ] = output_data
+    return transformed_data

@@ -245,11 +245,12 @@ def bare_bone_model_from_other(model: MetadataModel) -> MetadataModel:
     """Create a new MetadataModel with no classes, enums, slots and subsets. All
     other SchemaDefinition attributes are kept."""
     model_dict = model.as_dict(essential=False)
-    del model_dict["classes"]
     del model_dict["enums"]
     del model_dict["slots"]
     del model_dict["subsets"]
-    model_dict["classes"][ROOT_CLASS] = ClassDefinition(name=ROOT_CLASS, tree_root=True)
+    model_dict["classes"] = {
+        ROOT_CLASS: ClassDefinition(name=ROOT_CLASS, tree_root=True)
+    }
     return MetadataModel(**model_dict)
 
 
@@ -358,7 +359,7 @@ def build_aggregation_model(
     # Anchor the output classes
     schema_view = output_model.schema_view
     for aggregation in config.aggregations:
-        add_anchor_point(
+        schema_view = add_anchor_point(
             schema_view=schema_view,
             anchor_point=AnchorPoint(
                 target_class=aggregation.output,
@@ -367,4 +368,4 @@ def build_aggregation_model(
             ),
         )
 
-    return output_model
+    return schema_view.export_model()

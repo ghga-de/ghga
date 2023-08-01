@@ -139,7 +139,7 @@ class DataSubgraph:
         do_not_revisit: set[tuple[str, Any]] = set()
         # The stack that guides the traversal
         for path in self._paths:
-            stack = [(0, data)]
+            stack: list[tuple[int, Json]] = [(0, data)]
             while stack:
                 depth, node = stack.pop()
                 # Yield if we're at the end of the path

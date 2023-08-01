@@ -17,18 +17,43 @@
 """Core functionality for aggregate transformations."""
 
 from metldata.builtin_transformations.aggregate.config import AggregateConfig
+from metldata.builtin_transformations.aggregate.metadata_transform import (
+    execute_aggregations,
+)
 from metldata.builtin_transformations.aggregate.model_transform import (
     build_aggregation_model,
 )
 from metldata.custom_types import Json
 from metldata.event_handling.models import SubmissionAnnotation
-from metldata.model_utils.assumptions import check_root_class_existence
+from metldata.model_utils.anchors import get_anchors_points_by_target
+from metldata.model_utils.assumptions import check_basic_model_assumption
 from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import MetadataTransformer, TransformationDefinition
 
 
 class AggregateTransformer(MetadataTransformer[AggregateConfig]):
     """Transformer to create summary statistics from metadata."""
+
+    def __init__(
+        self,
+        config: AggregateConfig,
+        original_model: MetadataModel,
+        transformed_model: MetadataModel,
+    ):
+        """Initialize the transformer."""
+
+        super().__init__(
+            config=config,
+            original_model=original_model,
+            transformed_model=transformed_model,
+        )
+
+        self._original_anchor_points = get_anchors_points_by_target(
+            model=self._original_model
+        )
+        self._transformed_anchor_points = get_anchors_points_by_target(
+            model=self._transformed_model
+        )
 
     def transform(self, *, metadata: Json, annotation: SubmissionAnnotation) -> Json:
         """Transforms metadata.
@@ -41,7 +66,13 @@ class AggregateTransformer(MetadataTransformer[AggregateConfig]):
             MetadataTransformationError:
                 if the transformation fails.
         """
-        return {}
+        return execute_aggregations(
+            original_model=self._original_model,
+            original_anchors_points=self._original_anchor_points,
+            transformed_anchors_points=self._transformed_anchor_points,
+            metadata=metadata,
+            aggregations=self._config.aggregations,
+        )
 
 
 def check_model_assumptions(
@@ -54,7 +85,7 @@ def check_model_assumptions(
         MetadataModelAssumptionError:
             if the model does not fulfill the assumptions.
     """
-    check_root_class_existence(model=model)
+    check_basic_model_assumption(model=model)
 
 
 def transform_model(model: MetadataModel, config: AggregateConfig) -> MetadataModel:
