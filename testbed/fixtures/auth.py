@@ -16,7 +16,6 @@
 
 """Fixture for testing APIs that use the internal auth token."""
 
-from pathlib import Path
 from typing import Optional
 
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
@@ -28,15 +27,14 @@ __all__ = ["auth_fixture"]
 DEFAULT_VALID_SECONDS = 60 * 10  # 10 mins
 DEFAULT_USER_STATUS = "active"
 
-KEY_FILE = Path(__file__).parent.parent / ".devcontainer/auth.env"
-
 
 class TokenGenerator:
     """Generator for internal auth tokens"""
 
     key: jwk.JWK
 
-    def __init__(self):
+    def __init__(self, key_file):
+        self.key_file = key_file
         self.key = self.read_key()
 
     def generate_headers(
@@ -64,7 +62,7 @@ class TokenGenerator:
 
     def read_key(self) -> jwk.JWK:
         """Read the signing key from a local env file."""
-        with open(KEY_FILE, encoding="ascii") as key_file:
+        with open(self.key_file, encoding="ascii") as key_file:
             for line in key_file:
                 if line.startswith("AUTH_KEY="):
                     return jwk.JWK.from_json(line.split("=", 1)[1].rstrip().strip("'"))
@@ -72,7 +70,7 @@ class TokenGenerator:
 
     def read_simple_token(self) -> str:
         """Read the simple token from a local env file."""
-        with open(KEY_FILE, encoding="ascii") as key_file:
+        with open(self.key_file, encoding="ascii") as key_file:
             for line in key_file:
                 if line.startswith("SIMPLE_TOKEN="):
                     return line.split("=", 1)[1].rstrip().strip('"')
@@ -80,7 +78,7 @@ class TokenGenerator:
 
 
 @fixture(name="auth", scope="session")
-def auth_fixture() -> TokenGenerator:
+def auth_fixture(config) -> TokenGenerator:
     """Fixture that provides an internal auth token generator."""
 
-    return TokenGenerator()
+    return TokenGenerator(key_file=config.auth_key_file)

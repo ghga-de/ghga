@@ -20,10 +20,8 @@ import httpx
 from example_data.datasets import DATASET_OVERVIEW_EVENT
 
 from .conftest import (
-    METLDATA_DB_NAME,
     TIMEOUT,
-    WPS_DB_NAME,
-    WPS_URL,
+    Config,
     JointFixture,
     LoginFixture,
     MongoFixture,
@@ -40,19 +38,19 @@ scenarios("../features/31_work_packages.feature")
 
 
 @given("no work packages have been created yet")
-def wps_database_is_empty(mongo: MongoFixture):
-    mongo.empty_databases(WPS_DB_NAME)
+def wps_database_is_empty(config: Config, mongo: MongoFixture):
+    mongo.empty_databases(config.wps_db_name)
     unset_state("a download token has been created", mongo)
 
 
 @given("the test dataset has been announced")
 @async_step
-async def announce_dataset(fixtures: JointFixture):
+async def announce_dataset(config: Config, fixtures: JointFixture):
     # TBD: Should actually happen during upload, not here
 
     # Add accessions using the metldata database
     study_files = fixtures.mongo.find_documents(
-        METLDATA_DB_NAME, "art_embedded_public_class_StudyFile", {}
+        config.metldata_db_name, "art_embedded_public_class_StudyFile", {}
     )
     assert len(study_files) == 2
     study_files = [study_file["content"] for study_file in study_files]
@@ -73,14 +71,14 @@ async def announce_dataset(fixtures: JointFixture):
     )
     # wait until the event has been processed
     assert fixtures.mongo.wait_for_document(
-        WPS_DB_NAME, "datasets", {"_id": payload["accession"]}
+        config.wps_db_name, "datasets", {"_id": payload["accession"]}
     )
 
 
 @when("the list of datasets is queried", target_fixture="response")
-def query_datasets(login: LoginFixture):
+def query_datasets(config: Config, login: LoginFixture):
     user_id = login.user["_id"]
-    url = f"{WPS_URL}/users/{user_id}/datasets"
+    url = f"{config.wps_url}/users/{user_id}/datasets"
     return httpx.get(url, headers=login.headers, timeout=TIMEOUT)
 
 
@@ -113,7 +111,7 @@ def create_work_package(login: LoginFixture, fixtures: JointFixture):
         "file_ids": None,
         "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
     }
-    url = f"{WPS_URL}/work-packages"
+    url = f"{fixtures.config.wps_url}/work-packages"
     response = httpx.post(url, headers=login.headers, json=data, timeout=TIMEOUT)
     return response
 
@@ -126,7 +124,7 @@ def check_download_token(fixtures: JointFixture, response: httpx.Response):
     assert 20 <= len(id_) < 40 and 80 < len(token) < 120
     id_and_token = f"{id_}:{token}"
     work_package = fixtures.mongo.find_document(
-        WPS_DB_NAME, "workPackages", {"_id": id_}
+        fixtures.config.wps_db_name, "workPackages", {"_id": id_}
     )
     assert work_package
     assert work_package["type"] == "download"

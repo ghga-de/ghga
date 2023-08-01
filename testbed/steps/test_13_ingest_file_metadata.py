@@ -18,31 +18,22 @@
 """ Step definitions for file ingest """
 
 import subprocess
+from pathlib import Path
 
 from ghga_datasteward_kit.file_ingest import IngestConfig, alias_to_accession
 from metldata.submission_registry.submission_store import SubmissionStore
 
 from steps.utils import ingest_config_as_file, temporary_file
 
-from .conftest import (
-    DSK_TOKEN_PATH,
-    IFRS_DB_NAME,
-    IFRS_METADATA_COLLECTION,
-    JointFixture,
-    async_step,
-    get_state,
-    scenarios,
-    then,
-    when,
-)
+from .conftest import JointFixture, async_step, get_state, scenarios, then, when
 
 scenarios("../features/13_ingest_file_metadata.feature")
 
 
-def call_data_steward_kit_ingest(ingest_config_path: str, token):
+def call_data_steward_kit_ingest(ingest_config_path: str, dsk_token_path: Path, token):
     """Call DSKit file_ingest command to ingest file"""
 
-    with temporary_file(DSK_TOKEN_PATH, token) as _:
+    with temporary_file(dsk_token_path, token) as _:
         completed_ingest = subprocess.run(  # nosec B607, B603
             [
                 "ghga-datasteward-kit",
@@ -75,6 +66,7 @@ def ingest_file_metadata(fixtures: JointFixture):
     ingest_config_path = ingest_config_as_file(config=ingest_config)
 
     call_data_steward_kit_ingest(
+        dsk_token_path=fixtures.config.dsk_token_path,
         ingest_config_path=ingest_config_path,
         token=fixtures.auth.read_simple_token(),
     )
@@ -100,8 +92,8 @@ def check_file_accessions_exist(ingest_config, fixtures: JointFixture):
 @then("file metadata exist in the service", target_fixture="object_ids")
 def check_metadata_documents(accessions: list[str], fixtures: JointFixture):
     documents = fixtures.mongo.wait_for_documents(
-        db_name=IFRS_DB_NAME,
-        collection_name=IFRS_METADATA_COLLECTION,
+        db_name=fixtures.config.ifrs_db_name,
+        collection_name=fixtures.config.ifrs_metadata_collection,
         mapping={"_id": {"$in": accessions}},
         number=2,
     )

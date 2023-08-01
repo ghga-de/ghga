@@ -24,10 +24,8 @@ from hexkit.providers.akafka.testutils import EventRecorder, RecordedEvent
 from pytest_asyncio import fixture as async_fixture
 
 from .conftest import (
-    ARS_DB_NAME,
-    ARS_URL,
-    AUTH_DB_NAME,
     TIMEOUT,
+    Config,
     JointFixture,
     LoginFixture,
     MongoFixture,
@@ -59,20 +57,20 @@ async def recorded_events(event_recorder: EventRecorder) -> Sequence[RecordedEve
 
 
 @given("no access requests have been made yet")
-def ars_database_is_empty(mongo: MongoFixture):
-    mongo.empty_databases(ARS_DB_NAME)
+def ars_database_is_empty(config: Config, mongo: MongoFixture):
+    mongo.empty_databases(config.ars_db_name)
     unset_state("is allowed to download", mongo)
 
 
 @given("the claims repository is empty")
-def claims_repository_is_empty(mongo: MongoFixture):
-    mongo.empty_databases(AUTH_DB_NAME)
+def claims_repository_is_empty(config: Config, mongo: MongoFixture):
+    mongo.empty_databases(config.auth_db_name)
 
 
 @when("I request access to the test dataset", target_fixture="response")
-def request_access_for_dataset(login: LoginFixture, event_recorder):
+def request_access_for_dataset(config: Config, login: LoginFixture, event_recorder):
     assert event_recorder
-    url = f"{ARS_URL}/access-requests"
+    url = f"{config.ars_url}/access-requests"
     date_now = now_as_utc()
     user, headers = login
     data = {
@@ -97,8 +95,8 @@ def check_email_sent_to(email: str, recorded_events: Sequence[RecordedEvent]):
 
 
 @when("I fetch the list of access requests", target_fixture="response")
-def fetch_list_of_access_requests(login: LoginFixture):
-    url = f"{ARS_URL}/access-requests"
+def fetch_list_of_access_requests(config: Config, login: LoginFixture):
+    url = f"{config.ars_url}/access-requests"
     response = httpx.get(url, headers=login.headers, timeout=TIMEOUT)
     return response
 
@@ -115,7 +113,9 @@ def there_is_one_request(name: str, response: httpx.Response):
 
 
 @when(parse('I allow the pending request from "{name}"'), target_fixture="response")
-def allow_pending_request(name: str, login: LoginFixture, response: httpx.Response):
+def allow_pending_request(
+    config: Config, name: str, login: LoginFixture, response: httpx.Response
+):
     requests = response.json()
     requests = [
         request
@@ -127,7 +127,7 @@ def allow_pending_request(name: str, login: LoginFixture, response: httpx.Respon
     assert len(requests) == 1
     request = requests[0]
     request_id = request["id"]
-    url = f"{ARS_URL}/access-requests/{request_id}"
+    url = f"{config.ars_url}/access-requests/{request_id}"
     data = {"status": "allowed"}
     response = httpx.patch(url, headers=login.headers, json=data)
     return response

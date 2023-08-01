@@ -23,14 +23,7 @@ from ghga_datasteward_kit.loading import LoadConfig
 
 from steps.utils import load_config_as_file
 
-from .conftest import (
-    METLDATA_DB_NAME,
-    JointFixture,
-    MongoFixture,
-    scenarios,
-    then,
-    when,
-)
+from .conftest import Config, JointFixture, MongoFixture, scenarios, then, when
 
 scenarios("../features/14_upload_metadata.feature")
 
@@ -71,9 +64,9 @@ def run_the_load_command(fixtures: JointFixture):
 
 
 @then("the test dataset exists as embedded dataset in the database")
-def check_metldata_database(mongo: MongoFixture):
+def check_metldata_database(config: Config, mongo: MongoFixture):
     datasets = mongo.wait_for_documents(
-        METLDATA_DB_NAME, "art_embedded_public_class_EmbeddedDataset", {}
+        config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
     )
     assert datasets and len(datasets) == 1
     dataset = datasets[0]

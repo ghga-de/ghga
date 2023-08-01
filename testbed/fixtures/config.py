@@ -85,8 +85,29 @@ class Config(
     file_ingest_pubkey: str
 
     # metldata
+    metldata_db_name: str = "metldata"
     metldata_url: str = "http://metldata:8080"
 
     # connector
     user_private_crypt4gh_key: str
     user_public_crypt4gh_key: str
+
+    # ars
+    ars_db_name: str = "ars"
+    ars_url: str = "http://ars:8080"
+
+    # auth
+    auth_db_name: str = "auth"
+    auth_users_collection: str = "users"
+    auth_key_file = Path(__file__).parent.parent / ".devcontainer/auth.env"
+
+    # wps
+    wps_db_name: str = "wps"
+    wps_url: str = "http://wps:8080"
+
+    # ifrs
+    ifrs_db_name: str = "ifrs"
+    ifrs_metadata_collection: str = "file_metadata"
+
+    # dskit
+    dsk_token_path: Path = Path.home() / ".ghga_data_steward_token.txt"
