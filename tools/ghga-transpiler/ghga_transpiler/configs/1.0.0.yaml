@@ -1,0 +1,109 @@
+ghga_metadata_version: 1.0.0
+default_settings:
+  header_row: 1
+  start_row: 7
+  start_column: 1
+  transformations:
+    attributes: !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+worksheets:
+  - settings:
+      end_column: 6
+      name: analyses
+    sheet_name: Analysis
+  - settings:
+      end_column: 9
+      name: analysis_process_output_files
+    sheet_name: AnalysisProcessOutputFile
+  - settings:
+      end_column: 5
+      name: analysis_processes
+      transformations:
+        study_input_files: !!python/object/apply:ghga_transpiler.transformations.to_list []
+        sample_input_files: !!python/object/apply:ghga_transpiler.transformations.to_list []
+        sequencing_process_input_files: !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: AnalysisProcess
+  - settings:
+      end_column: 10
+      name: biospecimens
+    sheet_name: Biospecimen
+  - settings:
+      end_column: 9
+      name: conditions
+    sheet_name: Condition
+  - settings:
+      end_column: 3
+      name: data_access_committees
+    sheet_name: DataAccessCommittee
+  - settings:
+      end_column: 8
+      name: data_access_policies
+      transformations:
+        data_use_modifiers: !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: DataAccessPolicy
+  - settings:
+      end_column: 5
+      name: datasets
+      transformations:
+        types: !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: Dataset
+  - settings:
+      end_column: 6
+      name: individuals
+      transformations:
+        ancestries: !!python/object/apply:ghga_transpiler.transformations.to_list []
+        phenotypic_features: !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: Individual
+  - settings:
+      end_column: 14
+      name: library_preparation_protocols
+      transformations:
+        target_regions: !!python/object/apply:ghga_transpiler.transformations.to_list []
+        attributes: !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+    sheet_name: LibraryPreparationProtocol
+  - settings:
+      end_column: 9
+      name: publications
+      transformations:
+        xref: !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: Publication
+  - settings:
+      end_column: 9
+      name: sample_files
+    sheet_name: SampleFile
+  - settings:
+      end_column: 10
+      name: samples
+      transformations:
+        xref: !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: Sample
+  - settings:
+      end_column: 7
+      name: sequencing_experiments
+    sheet_name: SequencingExperiment
+  - settings:
+      end_column: 9
+      name: sequencing_process_files
+    sheet_name: SequencingProcessFile
+  - settings:
+      end_column: 12
+      name: sequencing_processes
+    sheet_name: SequencingProcess
+  - settings:
+      end_column: 17
+      name: sequencing_protocols
+    sheet_name: SequencingProtocol
+  - settings:
+      end_column: 6
+      name: studies
+      transformations:
+        affiliations: !!python/object/apply:ghga_transpiler.transformations.to_list []
+        attributes: !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+    sheet_name: Study
+  - settings:
+      end_column: 9
+      name: study_files
+    sheet_name: StudyFile
+  - settings:
+      end_column: 4
+      name: trios
+    sheet_name: Trio
