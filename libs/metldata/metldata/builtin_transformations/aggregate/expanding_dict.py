@@ -71,3 +71,10 @@ class ExpandingDict(defaultdict):
         """
         holder, key = self.__resolve_path(path)
         return holder[key]
+
+    def to_dict(self) -> dict:
+        """Recursively convert the expanding dict to a regular dictionary"""
+        return {
+            key: value.to_dict() if isinstance(value, ExpandingDict) else value
+            for key, value in self.items()
+        }
