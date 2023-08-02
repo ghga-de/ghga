@@ -132,9 +132,10 @@ def check_status_code(code: int, response: httpx.Response):
 async def reset_state(fixtures: JointFixture):
     await fixtures.s3.empty_buckets()  # empty object storage
     fixtures.kafka.delete_topics()  # empty event queues
-    fixtures.mongo.empty_databases("tb")  # emtpy state database
+    fixtures.mongo.empty_databases("tb")  # empty state database
     fixtures.mongo.empty_databases()  # empty service databases
     fixtures.dsk.reset_work_dir()  # reset local submission registry
+    empty_mail_server(fixtures.config)  # reset mail server
 
 
 @given(parse('we have the state "{name}"'), target_fixture="state")
@@ -160,3 +161,8 @@ def set_state(state_name: str, value: Any, mongo: MongoFixture):
 
 def unset_state(state_regex: str, mongo: MongoFixture):
     mongo.remove_document("tb", "state", {"_id": {"$regex": state_regex}})
+
+
+def empty_mail_server(config: Config):
+    """Delete all e-mails from mail server"""
+    httpx.delete(f"{config.mailhog_url}/api/v1/messages", timeout=TIMEOUT)

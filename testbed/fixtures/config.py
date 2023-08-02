@@ -111,3 +111,6 @@ class Config(
 
     # dskit
     dsk_token_path: Path = Path.home() / ".ghga_data_steward_token.txt"
+
+    # notifications
+    mailhog_url: str = "http://mailhog:8025"

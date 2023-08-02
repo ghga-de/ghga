@@ -16,17 +16,16 @@
 """Step definitions for access request tests"""
 
 from datetime import timedelta
-from typing import Sequence
+from time import sleep
 
 import httpx
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.providers.akafka.testutils import EventRecorder, RecordedEvent
-from pytest_asyncio import fixture as async_fixture
+
+from fixtures.mongo import INTERVAL
 
 from .conftest import (
     TIMEOUT,
     Config,
-    JointFixture,
     LoginFixture,
     MongoFixture,
     given,
@@ -38,22 +37,6 @@ from .conftest import (
 )
 
 scenarios("../features/30_access_request.feature")
-
-
-@async_fixture
-async def event_recorder(fixtures: JointFixture) -> EventRecorder:
-    event_recorder = fixtures.kafka.record_events(in_topic="notifications")
-    await event_recorder.start_recording()
-    return event_recorder
-
-
-@async_fixture
-async def recorded_events(event_recorder: EventRecorder) -> Sequence[RecordedEvent]:
-    try:
-        await event_recorder.stop_recording()
-    except event_recorder.stop_recording:
-        pass
-    return event_recorder.recorded_events
 
 
 @given("no access requests have been made yet")
@@ -68,8 +51,7 @@ def claims_repository_is_empty(config: Config, mongo: MongoFixture):
 
 
 @when("I request access to the test dataset", target_fixture="response")
-def request_access_for_dataset(config: Config, login: LoginFixture, event_recorder):
-    assert event_recorder
+def request_access_for_dataset(config: Config, login: LoginFixture):
     url = f"{config.ars_url}/access-requests"
     date_now = now_as_utc()
     user, headers = login
@@ -86,12 +68,30 @@ def request_access_for_dataset(config: Config, login: LoginFixture, event_record
 
 
 @then(parse('an email has been sent to "{email}"'))
-def check_email_sent_to(email: str, recorded_events: Sequence[RecordedEvent]):
-    assert any(
-        event.payload["recipient_email"] == email
-        for event in recorded_events
-        if event.type_ == "notification"
-    )
+def check_email_sent_to(
+    config: Config, email: str, timeout: float = TIMEOUT, interval: float = INTERVAL
+):
+    """Validate e-mail notification.
+
+    Wait for an e-mail to be received by the mail server. If it does not appear
+    within the given timeout (in seconds), an AssertionError is raised.
+    """
+
+    url = f"{config.mailhog_url}/api/v2/search"
+    slept: float = 0
+    while slept < timeout:
+        response = httpx.get(
+            url,
+            headers={"accept": "application/json"},
+            params={"kind": "to", "query": email},
+            timeout=TIMEOUT,
+        )
+        assert response.status_code == 200
+        if response.json()["count"] > 0:
+            return
+        sleep(interval)
+        slept += interval
+    assert False, f"An email notification was not received by {email}."
 
 
 @when("I fetch the list of access requests", target_fixture="response")
