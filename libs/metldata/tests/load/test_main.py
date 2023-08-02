@@ -20,13 +20,16 @@ from copy import deepcopy
 
 import pytest
 from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
-from metldata.artifacts_rest.models import ArtifactInfo
+from metldata.artifacts_rest.models import ArtifactInfo, GlobalStats
 from metldata.load.auth import generate_token, generate_token_and_hash
 from metldata.load.config import ArtifactLoaderAPIConfig
 from metldata.load.main import get_app
+from metldata.load.summary import STATS_COLLECTION_NAME
 from tests.fixtures.artifact_info import EXAMPLE_ARTIFACT_INFOS
 from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
     MongoDbFixture,
@@ -119,6 +122,22 @@ async def test_load_artifacts_endpoint_happy(
     observed_resource = await dao.get_by_id(expected_resource_id)
     assert observed_resource.content == expected_resource_content
 
+    # check that the summary statistics has been created:
+    expected_resource_stats = {
+        "Dataset": {"count": 1},
+        "Sample": {"count": 2},
+        "File": {"count": 4, "stats": {"format": {"fastq": 4}}},
+        "Experiment": {"count": 1},
+    }
+    dao_factory = MongoDbDaoFactory(config=mongodb_fixture.config)
+    stats_dao = await dao_factory.get_dao(
+        name=STATS_COLLECTION_NAME, dto_model=GlobalStats, id_field="id"
+    )
+    async for stats in stats_dao.find_all(mapping={}):
+        assert stats.id == "global"
+        assert abs((now_as_utc() - stats.created).seconds) < 5
+        assert stats.resource_stats == expected_resource_stats
+
     # submit an empty request:
     response = await client.post(
         "/rpc/load-artifacts",
@@ -144,7 +163,7 @@ async def test_load_artifacts_endpoint_invalid_resources(
 
     # load example artifacts resources:
     unknown_artifact_resources = {
-        "unkown_artifact": [list(EXAMPLE_ARTIFACTS.values())[0]]
+        "unknown_artifact": [list(EXAMPLE_ARTIFACTS.values())[0]]
     }
     response = await client.post(
         "/rpc/load-artifacts",

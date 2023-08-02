@@ -16,12 +16,18 @@
 
 """Data models."""
 
-from typing import Optional
+from typing import Optional, TypedDict
 
+from ghga_service_commons.utils.utc_dates import DateTimeUTC
 from pydantic import BaseModel, Field, validator
 
 from metldata.custom_types import Json
 from metldata.model_utils.anchors import AnchorPoint
+
+try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
+    from typing_extensions import Literal
+except ImportError:
+    from typing import Literal  # type: ignore
 
 
 class ArtifactResource(BaseModel):
@@ -62,8 +68,8 @@ class ArtifactInfo(BaseModel):
         ...,
         description=(
             "A dictionary of resource classes for this artifact."
-            + " The keys are the names of the classes. The values are the"
-            + " corresponding class models."
+            + " The keys are the names of the classes."
+            + " The values are the corresponding class models."
         ),
     )
 
@@ -85,3 +91,31 @@ class ArtifactInfo(BaseModel):
                 )
 
         return value
+
+
+class ResourceCount(TypedDict):
+    """Number of instances of a resource."""
+
+    count: int
+
+
+class ResourceStats(ResourceCount, total=False):
+    """Summary statistics for a resource."""
+
+    stats: dict[str, dict[str, int]]
+
+
+class GlobalStats(BaseModel):
+    """Model to describe statistical information on all resources."""
+
+    id: Literal["global"]
+    created: DateTimeUTC = Field(..., description="When these stats were created.")
+
+    resource_stats: dict[str, ResourceStats] = Field(
+        ...,
+        description=(
+            "A dictionary of global resource stats."
+            + " The keys are the names of the classes."
+            + " The values are the corresponding summary statistics."
+        ),
+    )

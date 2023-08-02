@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
 from metldata.artifacts_rest.models import ArtifactInfo
+from metldata.load.aggregator import DbAggregator
 from metldata.load.auth import check_token
 from metldata.load.load import (
     ArtifactResourcesInvalid,
@@ -36,6 +37,7 @@ from metldata.load.load import (
     load_artifacts_using_dao,
 )
 from metldata.load.models import ArtifactResourceDict
+from metldata.load.summary import create_summary_using_aggregator
 
 
 class LoaderTokenAuthContext(BaseModel):
@@ -71,6 +73,7 @@ async def rest_api_factory(
     *,
     artifact_infos: list[ArtifactInfo],
     dao_factory: DaoFactoryProtocol,
+    db_aggregator: DbAggregator,
     token_hashes: list[str],
 ) -> APIRouter:
     """Return a router for an API for loading artifacts."""
@@ -113,6 +116,10 @@ async def rest_api_factory(
             artifact_resources=artifact_resources,
             artifact_info_dict=artifact_info_dict,
             dao_collection=dao_collection,
+        )
+
+        await create_summary_using_aggregator(
+            artifact_infos=artifact_info_dict, db_aggregator=db_aggregator
         )
 
         return Response(status_code=204)
