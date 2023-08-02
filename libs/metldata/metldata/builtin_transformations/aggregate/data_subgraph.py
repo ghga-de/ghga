@@ -18,7 +18,7 @@
 LinkML-based JSON data graph."""
 
 from collections import defaultdict
-from typing import Any, Generator, Optional
+from typing import Any, Iterator, Optional
 
 from linkml_runtime.linkml_model import SlotDefinition
 
@@ -123,7 +123,7 @@ class DataSubgraph:
                 f"Unable to resolve ID '{error.args[0]}' for class '{class_name}'"
             ) from error
 
-    def terminal_nodes(self, data: Json) -> Generator[Any, None, None]:
+    def terminal_nodes(self, data: Json) -> Iterator[Any]:  # noqa: C901
         """Returns a generator for all data nodes corresponding to the model
         path leaves.
 
@@ -131,7 +131,7 @@ class DataSubgraph:
             data (Json): The data
 
         Yields:
-            Generator[Any, None, None]: The generator.
+            Iterator[Any]: The generator.
         """
         # Inner nodes that are blocked from being revisited. Nodes are
         # represented as (class, id) tuples. Non-identifiable classes cannot be
@@ -148,10 +148,15 @@ class DataSubgraph:
                     continue
                 # Otherwise, add intermediate nodes to the stack unless they are None
                 slot_def = path[depth]
-                if slot_def.multivalued:
-                    next_nodes = node[slot_def.name]
-                else:
-                    next_nodes = [node[slot_def.name]]
+                try:
+                    if slot_def.multivalued:
+                        next_nodes = node[slot_def.name]
+                    else:
+                        next_nodes = [node[slot_def.name]]
+                except KeyError:
+                    if not slot_def.required:
+                        continue
+                    raise
                 # Resolve non-inlined nodes
                 if slot_def.range in self._all_classes and not slot_def.inlined:
                     next_nodes = self._resolve_non_inlined(
