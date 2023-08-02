@@ -1,31 +1,33 @@
 aggregations:
-  - input: Study
-    output: StudyStats
-    operations:
-      - output_path: stats.sex
-        input_paths:
-          - study_files.study.conditions.samples.biospecimen.individual.sex
-          - sample_files.sample.biospecimen.individual.sex
-          - sequencing_process_file.sequencing_process.sample.biospecimen.individual.sex
-        function: StringElementCount
-        visit_only_once:
-          - Individual
-      - output_path: stats.tissues
-        input_paths:
-          - study_files.study.conditions.samples.biospecimen.tissue
-          - sample_files.sample.biospecimen.tissue
-          - sequencing_process_file.sequencing_process.sample.biospecimen.tissue
-        function: StringElementCount
-        visit_only_once:
-          - Biospecimen
   - input: Dataset
     output: DatasetStats
     operations:
+      - output_path: title
+        input_paths:
+          - title
+        function: StringCopy
+      - output_path: types
+        input_paths: ["types"]
+        function: StringListCopy
+      - output_path: dac_email
+        input_paths: ["data_access_policy.data_access_committee.email"]
+        function: StringCopy
+      - output_path: sample_summary.count
+        input_paths:
+          - study_files.study.conditions.samples
+          - sample_files.sample
+          - sequencing_process_files.sequencing_process.sample
+          - analysis_process_output_files.analysis_process.study_input_files.study.conditions.samples
+          - analysis_process_output_files.analysis_process.sample_input_files.sample
+          - analysis_process_output_files.analysis_process.sequencing_process_input_files.sequencing_process.sample
+        function: Count
+        visit_only_once:
+          - Sample
       - output_path: stats.sex
         input_paths:
           - study_files.study.conditions.samples.biospecimen.individual.sex
           - sample_files.sample.biospecimen.individual.sex
-          - sequencing_process_file.sequencing_process.sample.biospecimen.individual.sex
+          - sequencing_process_files.sequencing_process.sample.biospecimen.individual.sex
         function: StringElementCount
         visit_only_once:
           - Individual
@@ -33,7 +35,7 @@ aggregations:
         input_paths:
           - study_files.study.conditions.samples.biospecimen.tissue
           - sample_files.sample.biospecimen.tissue
-          - sequencing_process_file.sequencing_process.sample.biospecimen.tissue
+          - sequencing_process_files.sequencing_process.sample.biospecimen.tissue
         function: StringElementCount
         visit_only_once:
           - Biospecimen

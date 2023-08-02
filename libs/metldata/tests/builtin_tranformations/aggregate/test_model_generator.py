@@ -16,68 +16,19 @@
 
 # pylint: disable=redefined-outer-name
 
-from pathlib import Path
 
-import yaml
-from pytest import fixture, raises
+from pytest import raises
 
-from metldata.builtin_transformations.aggregate.config import AggregateConfig
 from metldata.builtin_transformations.aggregate.model_transform import (
     build_aggregation_model,
 )
-from metldata.custom_types import Json
-from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import MetadataModelTransformationError
-from tests.fixtures.metadata import _get_example_metadata
-from tests.fixtures.metadata_models import _get_example_model
-from tests.fixtures.utils import BASE_DIR
 
 
-def load_yaml(path: Path) -> Json:
-    """Loads yaml or json file from the specified sub-path of the tests/fixtures
-    directory and returns the contents as a dictionary."""
-    with open(BASE_DIR.joinpath(path), encoding="utf8") as in_stream:
-        return yaml.safe_load(in_stream)
-
-
-@fixture
-def empty_model() -> MetadataModel:
-    """An empty LinkML MetadataModel"""
-    return MetadataModel(id="test", name="test")
-
-
-@fixture
-def model_0_10_0() -> MetadataModel:
-    """The GHGA submission metadata model version 1.0.0"""
-    return _get_example_model("ghga_submission_1.0.0")
-
-
-@fixture
-def example_data_complete_1() -> Json:
-    """Official GHGA example data "complete_1" version 1.0.0+1"""
-    return _get_example_metadata("ghga_example_minimal_1_0.10.0+1")
-
-
-@fixture
-def config() -> AggregateConfig:
-    """A working config"""
-    return AggregateConfig.parse_obj(
-        load_yaml(Path("transformations/aggregate/config.yaml"))
-    )
-
-
-@fixture
-def invalid_config() -> AggregateConfig:
-    """An invalid config with conflicting output paths."""
-    return AggregateConfig.parse_obj(
-        load_yaml(Path("transformations/aggregate/config_invalid.yaml"))
-    )
-
-
-def test_valid_config(model_0_10_0, config):
+def test_valid_config(ghga_metadata_model, config):
     """Basic test for the construction of a valid output model."""
-    model = build_aggregation_model(model=model_0_10_0, config=config)
-    for cls_name in ("Submission", "StudyStats", "DatasetStats", "StringValueCount"):
+    model = build_aggregation_model(model=ghga_metadata_model, config=config)
+    for cls_name in ("DatasetStats",):
         assert cls_name in model.schema_view.all_classes()
     for cls_name in ("Study", "Dataset", "Sample"):
         assert cls_name not in model.schema_view.all_classes()

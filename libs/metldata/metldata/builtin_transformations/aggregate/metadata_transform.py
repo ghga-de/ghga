@@ -43,6 +43,7 @@ def execute_aggregation(
             submission_data=original_data,
             origin=aggregation.input,
             path_strings=operation.input_paths,
+            visit_once_classes=operation.visit_only_once,
         )
         for operation in aggregation.operations
     ]
@@ -55,7 +56,7 @@ def execute_aggregation(
             )
             result.set_path_value(operation.output_path, aggregated)
         result[id_slot] = input_element[id_slot]
-        output_data.append(dict(result))
+        output_data.append(result.to_dict())
 
     return output_data
 
