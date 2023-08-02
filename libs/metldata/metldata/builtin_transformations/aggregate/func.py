@@ -18,12 +18,13 @@
 
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import Any, Optional, Sequence
+from typing import Any, Iterable, Optional
 
 from metldata.builtin_transformations.aggregate.models import (
     MinimalClass,
     MinimalNamedSlot,
 )
+from metldata.transform.base import MetadataTransformationError
 
 
 class AggregationFunction(ABC):
@@ -31,7 +32,7 @@ class AggregationFunction(ABC):
 
     @classmethod
     @abstractmethod
-    def func(cls, data: Any) -> Any:
+    def func(cls, data: Iterable[Any]) -> Any:
         """Transforms input data."""
 
     @classmethod
@@ -52,13 +53,90 @@ class AggregationFunction(ABC):
         value or a list."""
 
 
+class CopyAggregation(AggregationFunction, ABC):
+    """An abstract base class for type-specific copy aggregation functions."""
+
+    @classmethod
+    def _extract_single_value(cls, data: Iterable[Any]) -> Any:
+        iterator = iter(data)
+        value = next(iterator)
+        try:
+            next(iterator)
+        except StopIteration:
+            return value
+        raise MetadataTransformationError(
+            "Multiple values passed to copy aggregation function where only a"
+            " single value was expected."
+        )
+
+
+class StringListCopyAggregation(CopyAggregation):
+    """Transformation that returns a single"""
+
+    @classmethod
+    def func(cls, data: Iterable[Any]) -> list[str]:
+        return list[str](data)
+
+    @classmethod
+    def result_range_name(cls) -> str:
+        return "string"
+
+    @classmethod
+    def result_range_cls_def(cls) -> Optional[MinimalClass]:
+        return None
+
+    @classmethod
+    def result_multivalued(cls) -> bool:
+        return True
+
+
+class StringCopyAggregation(CopyAggregation):
+    """Transformation that returns a single"""
+
+    @classmethod
+    def func(cls, data: Iterable[Any]) -> str:
+        return str(cls._extract_single_value(data=data))
+
+    @classmethod
+    def result_range_name(cls) -> str:
+        return "string"
+
+    @classmethod
+    def result_range_cls_def(cls) -> Optional[MinimalClass]:
+        return None
+
+    @classmethod
+    def result_multivalued(cls) -> bool:
+        return False
+
+
+class IntegerCopyAggregation(CopyAggregation):
+    """Transformation that returns a single"""
+
+    @classmethod
+    def func(cls, data: Iterable[Any]) -> int:
+        return int(cls._extract_single_value(data=data))
+
+    @classmethod
+    def result_range_name(cls) -> str:
+        return "integer"
+
+    @classmethod
+    def result_range_cls_def(cls) -> Optional[MinimalClass]:
+        return None
+
+    @classmethod
+    def result_multivalued(cls) -> bool:
+        return False
+
+
 class CountAggregation(AggregationFunction):
     """Transformation that returns the count of elements for a given sequence of
     values."""
 
     @classmethod
-    def func(cls, data: Sequence[Any]) -> int:
-        return len(data)
+    def func(cls, data: Iterable[Any]) -> int:
+        return len(list(data))
 
     @classmethod
     def result_range_name(cls) -> str:
@@ -86,7 +164,7 @@ class StringElementCountAggregation(ElementCountAggregation):
     given data."""
 
     @classmethod
-    def func(cls, data: Sequence[Any]) -> list[dict[str, Any]]:
+    def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:
         return [
             {"value": str(value), "count": count}
             for value, count in Counter(data).items()
@@ -111,7 +189,7 @@ class IntegerElementCountAggregation(ElementCountAggregation):
     given data."""
 
     @classmethod
-    def func(cls, data: Sequence[Any]) -> list[dict[str, Any]]:
+    def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:
         return [
             {"value": int(value), "count": count}
             for value, count in Counter(data).items()
