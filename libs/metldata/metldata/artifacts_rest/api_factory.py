@@ -18,16 +18,17 @@
 
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
-from hexkit.protocols.dao import DaoFactoryProtocol
+from hexkit.protocols.dao import DaoFactoryProtocol, ResourceNotFoundError
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
-from metldata.artifacts_rest.models import ArtifactInfo
+from metldata.artifacts_rest.models import ArtifactInfo, GlobalStats
 from metldata.artifacts_rest.query_resources import (
     ArtifactResourceNotFoundError,
     query_artifact_resource,
 )
 from metldata.custom_types import Json
+from metldata.load.stats import STATS_COLLECTION_NAME
 
 
 async def rest_api_factory(
@@ -46,6 +47,9 @@ async def rest_api_factory(
     artifact_info_dict = get_artifact_info_dict(artifact_infos=artifact_infos)
     dao_collection = await ArtifactDaoCollection.construct(
         dao_factory=dao_factory, artifact_infos=artifact_infos
+    )
+    stats_dao = await dao_factory.get_dao(
+        name=STATS_COLLECTION_NAME, dto_model=GlobalStats, id_field="id"
     )
 
     router = APIRouter()
@@ -86,5 +90,16 @@ async def rest_api_factory(
             raise HTTPException(status_code=404, detail=str(error)) from error
 
         return resource.content
+
+    @router.get("/stats")
+    async def get_stats() -> GlobalStats:
+        """Get the global summary statistics for all resources."""
+
+        try:
+            resource = await stats_dao.get_by_id("global")
+        except ResourceNotFoundError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
+        return resource
 
     return router

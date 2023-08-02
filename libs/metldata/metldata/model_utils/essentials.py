@@ -22,7 +22,6 @@ import dataclasses
 import json
 from contextlib import contextmanager
 from copy import copy, deepcopy
-from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Generator
@@ -36,15 +35,10 @@ from linkml_runtime.linkml_model import SchemaDefinition
 ROOT_CLASS = "Submission"
 
 
-@lru_cache
-def schema_view_from_model(model: MetadataModel) -> SchemaView:
-    """Get a schema view instance from the metadata model."""
-
-    return ExportableSchemaView(model)
-
-
 class MetadataModel(SchemaDefinition):
     """A dataclass for describing metadata models."""
+
+    _schema_view = None
 
     @classmethod
     def init_from_path(cls, model_path: Path) -> MetadataModel:
@@ -58,13 +52,19 @@ class MetadataModel(SchemaDefinition):
     @property
     def schema_view(self) -> ExportableSchemaView:
         """Get a schema view instance from the metadata model."""
+        schema_view = self._schema_view
+        if schema_view is None:
+            schema_view = ExportableSchemaView(self)
+            self._schema_view = schema_view
+        return schema_view
 
-        return schema_view_from_model(self)
-
-    def copy(self) -> MetadataModel:
-        """Copy the model."""
-
-        return deepcopy(self)
+    def __deepcopy__(self, memo: Any):
+        """Return a deep copy of the model."""
+        schema_view = self._schema_view
+        self._schema_view = None
+        copied_model = deepcopy(super())
+        self._schema_view = schema_view
+        return copied_model
 
     def __eq__(self, other: object):
         """For comparisons."""
@@ -140,11 +140,6 @@ class MetadataModel(SchemaDefinition):
             yaml.safe_dump(model_json, file)
             file.flush()
             yield Path(file.name)
-
-    def __hash__(self):
-        """Return a hash of the model."""
-
-        return hash(self.as_json())
 
 
 class ExportableSchemaView(SchemaView):

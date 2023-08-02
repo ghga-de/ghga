@@ -16,25 +16,13 @@
 
 """Compose the main app and resolve dependencies."""
 
-from functools import partial
-
 from fastapi import FastAPI
 from ghga_service_commons.api import configure_app
-from hexkit.providers.mongodb import MongoDbConfig, MongoDbDaoFactory
-from motor.motor_asyncio import AsyncIOMotorClient
+from hexkit.providers.mongodb import MongoDbDaoFactory
 
+from metldata.load.aggregator import MongoDbAggregator
 from metldata.load.api import rest_api_factory
 from metldata.load.config import ArtifactLoaderAPIConfig
-
-
-async def clear_database(config: MongoDbConfig):
-    """Clear a mongodb database."""
-
-    client = AsyncIOMotorClient(config.db_connection_str.get_secret_value())
-    db = client[config.db_name]
-
-    for collection_name in await db.list_collection_names():
-        await db.drop_collection(collection_name)
 
 
 async def get_app(config: ArtifactLoaderAPIConfig) -> FastAPI:
@@ -46,12 +34,13 @@ async def get_app(config: ArtifactLoaderAPIConfig) -> FastAPI:
     )
     configure_app(app=app, config=config)
     dao_factory = MongoDbDaoFactory(config=config)
+    db_aggregator = MongoDbAggregator(config=config)
 
     api_router = await rest_api_factory(
         artifact_infos=config.artifact_infos,
         dao_factory=dao_factory,
+        db_aggregator=db_aggregator,
         token_hashes=config.loader_token_hashes,
-        clear_database=partial(clear_database, config=config),
     )
 
     app.include_router(api_router)

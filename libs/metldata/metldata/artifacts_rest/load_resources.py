@@ -71,7 +71,7 @@ async def save_artifact_resource(
     *,
     resource: ArtifactResource,
     artifact_name: str,
-    dao_collection: ArtifactDaoCollection
+    dao_collection: ArtifactDaoCollection,
 ) -> None:
     """Save the given resource into the database using the given DAO collection."""
 
@@ -81,11 +81,26 @@ async def save_artifact_resource(
     await dao.upsert(resource)
 
 
+async def remove_artifact_resource(
+    *,
+    resource_id: str,
+    class_name: str,
+    artifact_name: str,
+    dao_collection: ArtifactDaoCollection,
+) -> None:
+    """Remove a given artifact resource from the database using the given DAO collection"""
+
+    dao = await dao_collection.get_dao(
+        artifact_name=artifact_name, class_name=class_name
+    )
+    await dao.delete(id_=resource_id)
+
+
 async def load_artifact_resources(
     *,
     artifact_content: Json,
     artifact_info: ArtifactInfo,
-    dao_collection: ArtifactDaoCollection
+    dao_collection: ArtifactDaoCollection,
 ) -> None:
     """Load the resources from the given artifacts into the database using the given
     DAO collection.
@@ -101,3 +116,41 @@ async def load_artifact_resources(
             artifact_name=artifact_info.name,
             dao_collection=dao_collection,
         )
+
+
+async def process_removed_resources(
+    resource_tags: set[tuple[str, str, str]], dao_collection: ArtifactDaoCollection
+):
+    """Delete no longer needed artifact resources from DB and send corresponding events"""
+
+    for resource_tag in resource_tags:
+        artifact_name, class_name, resource_id = resource_tag
+        # resource tag was obtained from querying the db, so resource with given ID
+        # should be present
+        await remove_artifact_resource(
+            artifact_name=artifact_name,
+            class_name=class_name,
+            resource_id=resource_id,
+            dao_collection=dao_collection,
+        )
+
+    # needs event publisher and corresponding outgoing models here
+
+
+async def process_new_or_changed_resources(
+    resources: dict[tuple[str, str, str], ArtifactResource],
+    dao_collection: ArtifactDaoCollection,
+):
+    """Insert newly received artifact resources into DB and send corresponding events"""
+
+    for resource_tag, resource in resources.items():
+        artifact_name = resource_tag[0]
+        # no resource tag was obtained from querying the db, so the resource with the
+        # given ID should not be present
+        await save_artifact_resource(
+            resource=resource,
+            artifact_name=artifact_name,
+            dao_collection=dao_collection,
+        )
+
+    # needs event publisher and corresponding outgoing models here

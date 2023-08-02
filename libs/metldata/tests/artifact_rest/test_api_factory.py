@@ -21,14 +21,19 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
 from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb.testutils import mongodb_fixture  # noqa: F401
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from metldata.artifacts_rest.api_factory import rest_api_factory
-from metldata.artifacts_rest.artifact_info import ArtifactInfo
+from metldata.artifacts_rest.artifact_info import ArtifactInfo, get_artifact_info_dict
+from metldata.load.aggregator import MongoDbAggregator
+from metldata.load.stats import create_stats_using_aggregator
 from tests.artifact_rest.test_load_artifacts import load_example_artifact_resources
 from tests.fixtures.artifact_info import EXAMPLE_ARTIFACT_INFOS, MINIMAL_ARTIFACT_INFO
+from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
+    MongoDbFixture,
+    mongodb_fixture,
+)
 
 
 @pytest.mark.asyncio
@@ -48,7 +53,9 @@ async def get_example_app_client(
 
 
 @pytest.mark.asyncio
-async def test_artifacts_info_endpoint(mongodb_fixture: MongoDbFixture):  # noqa: F811
+async def test_artifacts_info_endpoint(
+    mongodb_fixture: MongoDbFixture,  # noqa: F811
+):
     """Test happy path of using the artifacts info endpoint."""
 
     expected_infos = EXAMPLE_ARTIFACT_INFOS
@@ -99,7 +106,8 @@ async def test_get_artifact_resource_endpoint(
     class_name = "File"
     resource_id = "test_sample_01_R1"
     async with await get_example_app_client(
-        dao_factory=mongodb_fixture.dao_factory, artifact_infos=[MINIMAL_ARTIFACT_INFO]
+        dao_factory=mongodb_fixture.dao_factory,
+        artifact_infos=[MINIMAL_ARTIFACT_INFO],
     ) as client:
         response = await client.get(
             f"/artifacts/{artifact_name}/classes/{class_name}/resources/{resource_id}"
@@ -114,3 +122,43 @@ async def test_get_artifact_resource_endpoint(
     assert observed_resource["checksum"] == expected_checksum
     # check that the ID is included in the resource:
     assert observed_resource["alias"] == resource_id
+
+
+@pytest.mark.asyncio
+async def test_get_stats_endpoint(
+    mongodb_fixture: MongoDbFixture,  # noqa: F811
+):
+    """Test happy path of using the get stats endpoint."""
+
+    # load example resources and prepare client:
+    await load_example_artifact_resources(dao_factory=mongodb_fixture.dao_factory)
+
+    artifact_infos = [MINIMAL_ARTIFACT_INFO]
+
+    await create_stats_using_aggregator(
+        artifact_infos=get_artifact_info_dict(artifact_infos=artifact_infos),
+        db_aggregator=MongoDbAggregator(config=mongodb_fixture.config),
+    )
+
+    # Get the global summary statistics:
+    async with await get_example_app_client(
+        dao_factory=mongodb_fixture.dao_factory,
+        artifact_infos=artifact_infos,
+    ) as client:
+        response = await client.get("/stats")
+
+    assert response.status_code == 200
+    observed_stats = response.json()
+    assert isinstance(observed_stats, dict)
+
+    observed_created = DateTimeUTC.fromisoformat(observed_stats.pop("created"))
+    assert abs((now_as_utc() - observed_created).seconds) < 5
+
+    expected_stats = {
+        "id": "global",
+        "resource_stats": {
+            "Dataset": {"count": 2},
+            "File": {"count": 4, "stats": {"format": {"fastq": 4}}},
+        },
+    }
+    assert observed_stats == expected_stats

@@ -17,7 +17,9 @@
 """Models to describe transformations and workflows."""
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
+from graphlib import CycleError, TopologicalSorter
 from typing import Callable, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, Field, create_model, root_validator, validator
@@ -228,28 +230,18 @@ class WorkflowDefinition(BaseModel):
     def step_order(self) -> list[str]:
         """Get a list of step names in the order in which the steps should be executed."""
 
-        step_order = list(self.steps)
-        for _ in range(1000):
-            # try to come up with a seqeuence of steps that satisfies all dependencies:
-            for step_name in step_order:
-                dependency = self.steps[step_name].input
-                if dependency:
-                    # check if the dependency is before the current step in the
-                    # step order, if so, move the current step after the dependency:
-                    self_position = step_order.index(step_name)
-                    dependency_position = step_order.index(dependency)
-                    if dependency_position > self_position:
-                        step_order.remove(step_name)
-                        step_order.insert(dependency_position + 1, step_name)
-                        break
-            else:
-                # if we get here, we have found a valid step order and return it:
-                return step_order
+        # create graph from steps
+        graph: dict[str, set[str]] = defaultdict(set[str])
+        for step_name, step in self.steps.items():
+            if step.input:
+                graph[step_name].add(step.input)
 
-        raise RuntimeError(
-            "Exceeded number of tries to resolve the step order."
-            + " This is likely due to a circular dependency."
-        )
+        # sort with TopologicalSorter
+        topological_sorter = TopologicalSorter(graph)
+        try:
+            return list(topological_sorter.static_order())
+        except CycleError as exc:
+            raise RuntimeError("Step definitions imply a circular dependency.") from exc
 
     class Config:
         """Config for the workflow step."""

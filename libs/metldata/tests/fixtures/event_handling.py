@@ -29,7 +29,7 @@ from metldata.event_handling.event_handling import (
 )
 
 
-class EventExpectationMissmatch(RuntimeError):
+class EventExpectationMismatch(RuntimeError):
     """Raised when expected events where not found."""
 
     def __init__(self, expected_events: set[str], consumed_events: set[str]):
@@ -49,7 +49,7 @@ class FileSystemEventFixture:
         """Check if the events expected to be published can be consumed.
 
         Raises:
-            EventExpectationMissmatch: If the expected events are not consumed.
+            EventExpectationMismatch: If the expected events are not consumed.
         """
 
         topics = sorted({event.topic for event in expected_events})
@@ -66,7 +66,7 @@ class FileSystemEventFixture:
         expected_event_jsons = {event.json() for event in expected_events}
 
         if expected_event_jsons != observed_event_jsons:
-            raise EventExpectationMissmatch(
+            raise EventExpectationMismatch(
                 expected_events=observed_event_jsons,
                 consumed_events=expected_event_jsons,
             )

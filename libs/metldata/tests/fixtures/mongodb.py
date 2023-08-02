@@ -12,7 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Short description of package"""  # Please adapt to package
+"""Fixture for using the MongoDB."""
 
-__version__ = "0.3.7"
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from pytest import fixture
+
+
+@fixture
+def mongodb_fixture(  # pylint: disable=redefined-outer-name
+    mongodb_session: MongoDbFixture,
+) -> MongoDbFixture:
+    """Fixture that gets an empty MongoDB."""
+    mongodb_session.empty_collections()
+    return mongodb_session

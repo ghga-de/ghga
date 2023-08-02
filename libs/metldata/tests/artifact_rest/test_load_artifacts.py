@@ -18,14 +18,16 @@
 
 import pytest
 from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb.testutils import mongodb_fixture  # noqa: F401
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.load_resources import load_artifact_resources
 from metldata.artifacts_rest.models import ArtifactResource
 from tests.fixtures.artifact_info import MINIMAL_ARTIFACT_INFO
 from tests.fixtures.metadata import VALID_MINIMAL_METADATA_EXAMPLE
+from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
+    MongoDbFixture,
+    mongodb_fixture,
+)
 
 
 async def load_example_artifact_resources(
@@ -51,7 +53,9 @@ async def load_example_artifact_resources(
 
 
 @pytest.mark.asyncio
-async def test_load_artifact_resources(mongodb_fixture: MongoDbFixture):  # noqa: F811
+async def test_load_artifact_resources(
+    mongodb_fixture: MongoDbFixture,  # noqa: F811
+):
     """Test happy path of using load_artifact_resources function."""
 
     dao_collection = await load_example_artifact_resources(

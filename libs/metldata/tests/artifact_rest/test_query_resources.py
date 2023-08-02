@@ -17,16 +17,20 @@
 """Test the query_resource module."""
 
 import pytest
-from hexkit.providers.mongodb.testutils import mongodb_fixture  # noqa: F401
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from metldata.artifacts_rest.query_resources import query_artifact_resource
 from tests.artifact_rest.test_load_artifacts import load_example_artifact_resources
 from tests.fixtures.artifact_info import MINIMAL_ARTIFACT_INFO
+from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
+    MongoDbFixture,
+    mongodb_fixture,
+)
 
 
 @pytest.mark.asyncio
-async def test_query_artifact_resource(mongodb_fixture: MongoDbFixture):  # noqa: F811
+async def test_query_artifact_resource(
+    mongodb_fixture: MongoDbFixture,  # noqa: F811
+):
     """Test happy path of using the query_artifact_resource function."""
 
     # load example resources and prepare client:
