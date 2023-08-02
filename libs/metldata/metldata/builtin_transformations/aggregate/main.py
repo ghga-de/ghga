@@ -98,7 +98,7 @@ def transform_model(model: MetadataModel, config: AggregateConfig) -> MetadataMo
     return build_aggregation_model(model=model, config=config)
 
 
-AGGREGATE_TRANSFOMATION = TransformationDefinition[AggregateConfig](
+AGGREGATE_TRANSFORMATION = TransformationDefinition[AggregateConfig](
     config_cls=AggregateConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,
