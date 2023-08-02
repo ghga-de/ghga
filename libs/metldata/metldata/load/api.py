@@ -37,7 +37,7 @@ from metldata.load.load import (
     load_artifacts_using_dao,
 )
 from metldata.load.models import ArtifactResourceDict
-from metldata.load.summary import create_summary_using_aggregator
+from metldata.load.stats import create_stats_using_aggregator
 
 
 class LoaderTokenAuthContext(BaseModel):
@@ -118,7 +118,7 @@ async def rest_api_factory(
             dao_collection=dao_collection,
         )
 
-        await create_summary_using_aggregator(
+        await create_stats_using_aggregator(
             artifact_infos=artifact_info_dict, db_aggregator=db_aggregator
         )
 

@@ -37,7 +37,7 @@ def get_stat_slot(resource_class: str) -> Optional[str]:
     return None
 
 
-async def create_summary_using_aggregator(
+async def create_stats_using_aggregator(
     artifact_infos: dict[str, ArtifactInfo],
     db_aggregator: DbAggregator,
 ) -> None:
