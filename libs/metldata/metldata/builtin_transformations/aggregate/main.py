@@ -16,6 +16,7 @@
 
 """Core functionality for aggregate transformations."""
 
+from metldata.builtin_transformations.aggregate.cached_model import CachedMetadataModel
 from metldata.builtin_transformations.aggregate.config import AggregateConfig
 from metldata.builtin_transformations.aggregate.metadata_transform import (
     execute_aggregations,
@@ -25,7 +26,6 @@ from metldata.builtin_transformations.aggregate.model_transform import (
 )
 from metldata.custom_types import Json
 from metldata.event_handling.models import SubmissionAnnotation
-from metldata.model_utils.anchors import get_anchors_points_by_target
 from metldata.model_utils.assumptions import check_basic_model_assumption
 from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import MetadataTransformer, TransformationDefinition
@@ -48,10 +48,8 @@ class AggregateTransformer(MetadataTransformer[AggregateConfig]):
             transformed_model=transformed_model,
         )
 
-        self._original_anchor_points = get_anchors_points_by_target(
-            model=self._original_model
-        )
-        self._transformed_anchor_points = get_anchors_points_by_target(
+        self._original_cached_model = CachedMetadataModel(model=self._original_model)
+        self._transformed_cached_model = CachedMetadataModel(
             model=self._transformed_model
         )
 
@@ -67,9 +65,8 @@ class AggregateTransformer(MetadataTransformer[AggregateConfig]):
                 if the transformation fails.
         """
         return execute_aggregations(
-            original_model=self._original_model,
-            original_anchors_points=self._original_anchor_points,
-            transformed_anchors_points=self._transformed_anchor_points,
+            original_model=self._original_cached_model,
+            transformed_anchors_points=self._transformed_cached_model.anchors_points_by_target,
             metadata=metadata,
             aggregations=self._config.aggregations,
         )

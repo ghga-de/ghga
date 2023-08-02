@@ -23,7 +23,7 @@ aggregations:
         function: Count
         visit_only_once:
           - Sample
-      - output_path: stats.sex
+      - output_path: sample_summary.stats.sex
         input_paths:
           - study_files.study.conditions.samples.biospecimen.individual.sex
           - sample_files.sample.biospecimen.individual.sex
@@ -31,7 +31,7 @@ aggregations:
         function: StringElementCount
         visit_only_once:
           - Individual
-      - output_path: stats.tissues
+      - output_path: sample_summary.stats.tissues
         input_paths:
           - study_files.study.conditions.samples.biospecimen.tissue
           - sample_files.sample.biospecimen.tissue
@@ -39,3 +39,61 @@ aggregations:
         function: StringElementCount
         visit_only_once:
           - Biospecimen
+      - output_path: sample_summary.stats.phenotypes
+        input_paths:
+          - study_files.study.conditions.samples.biospecimen.individual.phenotypic_features
+          - sample_files.sample.biospecimen.individual.phenotypic_features
+          - sequencing_process_files.sequencing_process.sample.biospecimen.individual.phenotypic_features
+        function: StringElementCount
+        visit_only_once:
+          - Biospecimen
+      - output_path: study_summary.count
+        input_paths:
+          - study_files.study
+          - sample_files.sample.condition.study
+          - sequencing_process_files.sequencing_process.sample.condition.study
+        function: Count
+        visit_only_once:
+          - Study
+      - output_path: study_summary.stats.accession
+        input_paths:
+          - study_files.study.accession
+          - sample_files.sample.condition.study.accession
+          - sequencing_process_files.sequencing_process.sample.condition.study.accession
+        function: StringCopy
+        visit_only_once:
+          - Study
+      - output_path: study_summary.stats.title
+        input_paths:
+          - study_files.study.title
+          - sample_files.sample.condition.study.title
+          - sequencing_process_files.sequencing_process.sample.condition.study.title
+        function: StringCopy
+        visit_only_once:
+          - Study
+      - output_path: experiment_summary.count
+        input_paths:
+          - sequencing_process_files.sequencing_process.sequencing_experiment
+        function: Count
+        visit_only_once:
+          - SequencingExperiment
+      - output_path: experiment_summary.stats.protocol
+        input_paths:
+          - sequencing_process_files.sequencing_process.sequencing_experiment.sequencing_protocol.instrument_model
+        function: StringElementCount
+        visit_only_once:
+          - SequencingProtocol
+      - output_path: file_summary.count
+        input_paths:
+          - sequencing_process_files
+          - sample_files
+          - study_files
+          - analysis_process_output_files
+        function: Count
+      - output_path: file_summary.stats.format
+        input_paths:
+          - sequencing_process_files.format
+          - sample_files.format
+          - study_files.format
+          - analysis_process_output_files.format
+        function: StringElementCount

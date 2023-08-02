@@ -17,24 +17,23 @@
 """Metadata transformation functionality for the aggregate transformation."""
 
 
+from metldata.builtin_transformations.aggregate.cached_model import CachedMetadataModel
 from metldata.builtin_transformations.aggregate.config import Aggregation
 from metldata.builtin_transformations.aggregate.data_subgraph import DataSubgraph
 from metldata.builtin_transformations.aggregate.expanding_dict import ExpandingDict
 from metldata.custom_types import Json
 from metldata.model_utils.anchors import AnchorPoint
-from metldata.model_utils.essentials import MetadataModel
 
 
 # pylint: disable=unused-argument
 def execute_aggregation(
     *,
-    original_model: MetadataModel,
+    original_model: CachedMetadataModel,
     original_data: Json,
     aggregation: Aggregation,
-    original_anchors_points: dict[str, AnchorPoint],
 ) -> list[Json]:
     """Transforms the metadata according to the specified aggregation operation."""
-    anchor_point = original_anchors_points[aggregation.input]
+    anchor_point = original_model.anchors_points_by_target[aggregation.input]
     id_slot = anchor_point.identifier_slot
     input_anchor_data = original_data[anchor_point.root_slot]
     subgraphs = [
@@ -63,8 +62,7 @@ def execute_aggregation(
 
 def execute_aggregations(
     *,
-    original_model: MetadataModel,
-    original_anchors_points: dict[str, AnchorPoint],
+    original_model: CachedMetadataModel,
     transformed_anchors_points: dict[str, AnchorPoint],
     metadata: Json,
     aggregations: list[Aggregation],
@@ -77,7 +75,6 @@ def execute_aggregations(
             original_model=original_model,
             original_data=metadata,
             aggregation=aggregation,
-            original_anchors_points=original_anchors_points,
         )
         transformed_data[
             transformed_anchors_points[aggregation.output].root_slot

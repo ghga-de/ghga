@@ -22,11 +22,11 @@ from typing import Any, Iterator, Optional
 
 from linkml_runtime.linkml_model import SlotDefinition
 
+from metldata.builtin_transformations.aggregate.cached_model import CachedMetadataModel
 from metldata.custom_types import Json
 from metldata.metadata_utils import get_resource_dict_of_class
-from metldata.model_utils.anchors import AnchorPoint, get_anchors_points_by_target
+from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.essentials import MetadataModel
-from metldata.model_utils.identifiers import get_class_identifiers
 
 
 class DataTraversalError(RuntimeError):
@@ -220,7 +220,7 @@ class DataSubgraph:
     def __init__(
         self,
         *,
-        model: MetadataModel,
+        model: CachedMetadataModel,
         submission_data: Json,
         origin: str,
         path_strings: list[str],
@@ -236,13 +236,13 @@ class DataSubgraph:
             visit_once_classes (Optional[list[str]], optional): List of classes
             for which objects shall be traversed only once. Defaults to None.
         """
-        self._model = model
+        self._model = model.model
+        self._anchor_points = model.anchors_points_by_target
         self._visit_once_classes = visit_once_classes if visit_once_classes else []
         self._all_classes = list(self._model.schema_view.all_classes().keys())
-        self._anchor_points = get_anchors_points_by_target(model=self._model)
         self._paths = [
             _resolve_path(
-                model=model,
+                model=self._model,
                 origin=origin,
                 slot_names=path_string.split("."),
                 all_classes=self._all_classes,
@@ -250,4 +250,6 @@ class DataSubgraph:
             for path_string in path_strings
         ]
         self._resources_by_id = self._map_resources_by_id(submission_data)
-        self._class_identifiers = get_class_identifiers(model)
+        self._class_identifiers = {
+            cls_name: ap.identifier_slot for cls_name, ap in self._anchor_points.items()
+        }
