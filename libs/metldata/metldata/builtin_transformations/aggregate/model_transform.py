@@ -219,7 +219,7 @@ def add_aggregation(min_model: MinimalLinkMLModel, aggregation: Aggregation) -> 
 
             if not path_prefix:
                 # We have reached the root of the output path model
-                min_model.named_classes[root_name] = cls
+                min_model.add_named_class(cls_def=cls, cls_name=root_name)
                 slot_range = root_name
             else:
                 # We are at an intermediate model an will use generic class
@@ -227,8 +227,7 @@ def add_aggregation(min_model: MinimalLinkMLModel, aggregation: Aggregation) -> 
                 if cls in min_model.anonymous_classes:
                     slot_range = min_model.anonymous_classes[cls]
                 else:
-                    slot_range = f"Class{len(min_model.anonymous_classes)}"
-                    min_model.anonymous_classes[cls] = slot_range
+                    slot_range = min_model.add_anonymous_class(cls)
             # Add the prefix as a new path with the identified class as range
             if path_prefix and path_prefix[-1]:
                 path_matrix.add_path(
