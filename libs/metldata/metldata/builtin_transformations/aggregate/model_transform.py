@@ -16,10 +16,10 @@
 
 """Model transformation for aggregate transformations."""
 
+import itertools
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import asdict
-from itertools import chain, combinations
 from typing import Iterable, Optional
 
 from linkml_runtime.linkml_model import ClassDefinition, SlotDefinition
@@ -65,7 +65,7 @@ class PathMatrix:
 
         Raises:
             MetadataModelTransformationError: If one path is a prefix of another."""
-        for path_a, path_b in combinations(self.__paths, r=2):
+        for path_a, path_b in itertools.combinations(self.__paths, r=2):
             min_len = min(len(path_a), len(path_b))
             if path_a[:min_len] == path_b[:min_len]:
                 raise MetadataModelTransformationError(
@@ -150,10 +150,10 @@ def update_metadata_model(model: MetadataModel, min_model: MinimalLinkMLModel) -
         with associated class names.
     """
     # Enumerate all unique slot names and add the slots to the model
-    all_min_classes = chain(
+    all_min_classes = itertools.chain(
         min_model.anonymous_classes, min_model.named_classes.values()
     )
-    slot_names = {slot.slot_name for cls in all_min_classes for slot in cls}
+    slot_names = sorted({slot.slot_name for cls in all_min_classes for slot in cls})
 
     for slot_name in slot_names:
         model.schema_view.add_slot(slot=SlotDefinition(name=slot_name))
@@ -162,13 +162,13 @@ def update_metadata_model(model: MetadataModel, min_model: MinimalLinkMLModel) -
     for cls_name, min_cls_def in min_model.all_classes():
         new_class_defs[cls_name] = ClassDefinition(
             name=cls_name,
-            slots=[slot.slot_name for slot in min_cls_def],
+            slots=sorted(slot.slot_name for slot in min_cls_def),
             slot_usage={
                 slot.slot_name: {
                     "range": slot.range,
                     "multivalued": slot.multivalued,
                 }
-                for slot in min_cls_def
+                for slot in sorted(min_cls_def)  # type: ignore
             },
         )
 

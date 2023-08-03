@@ -34,6 +34,13 @@ class MinimalNamedSlot(MinimalSlot):
 
     slot_name: str
 
+    def __lt__(self, other):
+        return (
+            self.slot_name < other.slot_name
+            and self.multivalued < other.multivalued
+            and self.range < other.range
+        )
+
 
 class MinimalClass(frozenset[MinimalNamedSlot]):
     """A minimal representation of a LinkML class"""
