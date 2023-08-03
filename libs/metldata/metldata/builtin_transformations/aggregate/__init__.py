@@ -13,3 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+"""Aggregate transformation for metadata."""
+
+# shortcuts:
+# pylint: disable=unused-import
+from metldata.builtin_transformations.aggregate.config import (  # noqa: F401
+    AggregateConfig,
+)
+from metldata.builtin_transformations.aggregate.main import (  # noqa: F401
+    AGGREGATE_TRANSFORMATION,
+)

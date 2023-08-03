@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from metldata.builtin_transformations.add_accessions import (
     ACCESSION_ADDITION_TRANSFORMATION,
 )
-from metldata.builtin_transformations.aggregate.main import AGGREGATE_TRANSFORMATION
+from metldata.builtin_transformations.aggregate import AGGREGATE_TRANSFORMATION
 from metldata.builtin_transformations.custom_embeddings import (
     CUSTOM_EMBEDDING_TRANSFORMATION,
 )

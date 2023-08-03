@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 from pytest import fixture
 
-from metldata.builtin_transformations.aggregate.config import AggregateConfig
+from metldata.builtin_transformations.aggregate import AggregateConfig
 from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.metadata import _get_example_metadata
