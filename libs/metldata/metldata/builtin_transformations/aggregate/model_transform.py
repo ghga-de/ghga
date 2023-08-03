@@ -168,7 +168,7 @@ def update_metadata_model(model: MetadataModel, min_model: MinimalLinkMLModel) -
                     "range": slot.range,
                     "multivalued": slot.multivalued,
                 }
-                for slot in sorted(min_cls_def)  # type: ignore
+                for slot in sorted(min_cls_def)
             },
         )
 
