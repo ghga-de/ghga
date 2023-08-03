@@ -29,6 +29,12 @@ classes:
       alias:
         identifier: false
         name: alias
+      analysis_processes:
+        inlined: false
+        multivalued: true
+        name: analysis_processes
+        range: AnalysisProcess
+        required: true
       description:
         description:
           "Describing how an Analysis was carried out. (e.g.: computational
@@ -54,6 +60,7 @@ classes:
       - reference_genome
       - reference_chromosome
       - accession
+      - analysis_processes
   AnalysisProcess:
     mixins:
       - IdentifiedByAliasMixin
@@ -70,6 +77,12 @@ classes:
         description: The Analysis the AnalysisProcess was part of
         inlined: false
         name: analysis
+        required: true
+      analysis_process_output_files:
+        inlined: false
+        multivalued: true
+        name: analysis_process_output_files
+        range: AnalysisProcessOutputFile
         required: true
       sample_input_files:
         inlined: false
@@ -89,6 +102,7 @@ classes:
       - sample_input_files
       - sequencing_process_input_files
       - accession
+      - analysis_process_output_files
   AnalysisProcessOutputFile:
     description:
       A AnalysisProcessOutputFile is a File that is associated as an output
@@ -195,6 +209,12 @@ classes:
         name: name
         recommended: true
         required: false
+      samples:
+        inlined: false
+        multivalued: true
+        name: samples
+        range: Sample
+        required: true
       storage:
         name: storage
         recommended: true
@@ -222,6 +242,7 @@ classes:
       - vital_status_at_sampling
       - tissue
       - accession
+      - samples
   Condition:
     description: An condition that is linked to comparable samples.
     mixins:
@@ -251,6 +272,12 @@ classes:
       name:
         name: name
         required: true
+      samples:
+        inlined: false
+        multivalued: true
+        name: samples
+        range: Sample
+        required: true
       study:
         inlined: false
         name: study
@@ -264,6 +291,7 @@ classes:
       - mutant_or_wildtype
       - study
       - accession
+      - samples
   DataAccessCommittee:
     description:
       A group of members that are delegated to grant access to one or more
@@ -371,6 +399,12 @@ classes:
       alias:
         identifier: false
         name: alias
+      analysis_process_output_files:
+        inlined: false
+        multivalued: true
+        name: analysis_process_output_files
+        range: AnalysisProcessOutputFile
+        required: true
       data_access_policy:
         description: The Data Access Policy that applies to this Dataset.
         inlined: false
@@ -402,6 +436,12 @@ classes:
         name: samples
         range: Sample
         required: true
+      sequencing_process_files:
+        inlined: false
+        multivalued: true
+        name: sequencing_process_files
+        range: SequencingProcessFile
+        required: true
       studies:
         inlined: false
         multivalued: true
@@ -428,6 +468,8 @@ classes:
       - types
       - data_access_policy
       - accession
+      - analysis_process_output_files
+      - sequencing_process_files
       - study_files
       - studies
       - sample_files
@@ -501,6 +543,12 @@ classes:
       ancestries:
         name: ancestries
         required: false
+      biospecimens:
+        inlined: false
+        multivalued: true
+        name: biospecimens
+        range: Biospecimen
+        required: true
       geographical_region:
         name: geographical_region
         required: false
@@ -525,6 +573,7 @@ classes:
       - ancestries
       - phenotypic_features
       - accession
+      - biospecimens
   LibraryPreparationProtocol:
     description: Information about the library_preparation of an sequencing experiment.
     mixins:
@@ -585,6 +634,12 @@ classes:
         name: rnaseq_strandedness
         recommended: true
         required: false
+      sequencing_experiments:
+        inlined: false
+        multivalued: true
+        name: sequencing_experiments
+        range: SequencingExperiment
+        required: true
       target_regions:
         name: target_regions
         required: false
@@ -602,6 +657,7 @@ classes:
       - target_regions
       - rnaseq_strandedness
       - accession
+      - sequencing_experiments
   Publication:
     description:
       The Publication entity represents a publication. While a publication
@@ -703,6 +759,18 @@ classes:
         description: Name of the sample (eg:GHGAS_Blood_Sample1 or GHGAS_PBMC_RNAseq_S1).
         name: name
         required: true
+      sample_files:
+        inlined: false
+        multivalued: true
+        name: sample_files
+        range: SampleFile
+        required: true
+      sequencing_processes:
+        inlined: false
+        multivalued: true
+        name: sequencing_processes
+        range: SequencingProcess
+        required: true
       storage:
         name: storage
         recommended: true
@@ -730,6 +798,8 @@ classes:
       - condition
       - xref
       - accession
+      - sample_files
+      - sequencing_processes
   SampleFile:
     description: A SampleFile is a File that is associated with a Sample.
     is_a: File
@@ -776,6 +846,12 @@ classes:
         inlined: false
         name: library_preparation_protocol
         required: true
+      sequencing_processes:
+        inlined: false
+        multivalued: true
+        name: sequencing_processes
+        range: SequencingProcess
+        required: true
       sequencing_protocol:
         inlined: false
         name: sequencing_protocol
@@ -794,6 +870,7 @@ classes:
       - sequencing_protocol
       - library_preparation_protocol
       - accession
+      - sequencing_processes
   SequencingProcess:
     description: A sequencing process linking a sample to sequencing output.
     mixins:
@@ -838,6 +915,12 @@ classes:
         description: Identifier of the sequencing machine. Used for batch correction.
         name: sequencing_machine_id
         required: false
+      sequencing_process_files:
+        inlined: false
+        multivalued: true
+        name: sequencing_process_files
+        range: SequencingProcessFile
+        required: true
       sequencing_run_id:
         description: Identifier of the sequencing run. Used for batch correction.
         name: sequencing_run_id
@@ -854,6 +937,7 @@ classes:
       - lane_number
       - sample
       - accession
+      - sequencing_process_files
   SequencingProcessFile:
     description: A SequencingProcessFile is a File that is associated with a SequencingProcess.
     is_a: File
@@ -929,6 +1013,12 @@ classes:
         name: sequencing_center
         recommended: true
         required: false
+      sequencing_experiments:
+        inlined: false
+        multivalued: true
+        name: sequencing_experiments
+        range: SequencingExperiment
+        required: true
       sequencing_read_length:
         name: sequencing_read_length
         required: false
@@ -969,6 +1059,7 @@ classes:
       - cell_barcode_size
       - sample_barcode_read
       - accession
+      - sequencing_experiments
   Study:
     description:
       Studies are experimental investigations of a particular phenomenon.
@@ -994,11 +1085,29 @@ classes:
           "Custom key/value pairs that further characterizes the Study.
           (e.g.: approaches - single-cell,_bulk_etc)"
         name: attributes
+      conditions:
+        inlined: false
+        multivalued: true
+        name: conditions
+        range: Condition
+        required: true
       description:
         description:
           A detailed description (abstract) that describes the goals of
           this Study.
         name: description
+        required: true
+      publications:
+        inlined: false
+        multivalued: true
+        name: publications
+        range: Publication
+        required: true
+      study_files:
+        inlined: false
+        multivalued: true
+        name: study_files
+        range: StudyFile
         required: true
       title:
         description: A comprehensive title for the study.
@@ -1017,6 +1126,9 @@ classes:
       - type
       - affiliations
       - accession
+      - conditions
+      - study_files
+      - publications
   StudyFile:
     description: A StudyFile is a File that is associated with a Study.
     is_a: File

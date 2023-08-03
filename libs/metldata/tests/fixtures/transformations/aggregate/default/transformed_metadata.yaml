@@ -1,0 +1,74 @@
+dataset_statss:
+  - title: The A dataset
+    types:
+      - Another Type
+      - A Type
+    dac_email: dac_institute_a@dac.dac
+    sample_summary:
+      count: 1
+      stats:
+        sex:
+          - value: MALE_SEX_FOR_CLINICAL_USE
+            count: 1
+        tissues:
+          - value: blood
+            count: 1
+        phenotypes:
+          - value: Leukemia
+            count: 1
+    study_summary:
+      count: 1
+      stats:
+        accession: GHGAS01991766763834
+        title: The A Study
+    experiment_summary:
+      count: 1
+      stats:
+        protocol:
+          - value: ILLUMINA_NOVA_SEQ_6000
+            count: 1
+    file_summary:
+      count: 7
+      stats:
+        format:
+          - value: FASTQ
+            count: 4
+          - value: VCF
+            count: 3
+    accession: GHGAD03742971815534
+  - title: The B dataset
+    types:
+      - And another Type
+    dac_email: dac_institute_a@dac.dac
+    sample_summary:
+      count: 1
+      stats:
+        sex:
+          - value: MALE_SEX_FOR_CLINICAL_USE
+            count: 1
+        tissues:
+          - value: subcutaneous adipose tissue
+            count: 1
+        phenotypes:
+          - value: Leukemia
+            count: 1
+    study_summary:
+      count: 1
+      stats:
+        accession: GHGAS22381983000222
+        title: The B Study
+    experiment_summary:
+      count: 1
+      stats:
+        protocol:
+          - value: ILLUMINA_NOVA_SEQ_6000
+            count: 1
+    file_summary:
+      count: 12
+      stats:
+        format:
+          - value: FASTQ
+            count: 6
+          - value: VCF
+            count: 6
+    accession: GHGAD97673713575489

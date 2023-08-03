@@ -41,7 +41,6 @@ def test_model_transformations(
         original_model=test_case.original_model,
     )
     transformed_model = handler.transformed_model
-
     assert transformed_model == test_case.transformed_model
 
 

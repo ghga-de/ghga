@@ -40,22 +40,22 @@ def empty_model() -> MetadataModel:
 
 
 @fixture
-def ghga_metadata_model() -> MetadataModel:
+def model_resolved_public() -> MetadataModel:
     """The GHGA submission metadata model version 1.0.0"""
-    return _get_example_model("ghga_submission_1.1.0")
+    return _get_example_model("ghga_1.1.0_resolved_public")
 
 
 @fixture
-def example_data_complete_1() -> Json:
+def data_complete_1_resolved_public() -> Json:
     """Official GHGA example data "complete_1" version 1.0.0+1"""
-    return _get_example_metadata("ghga_example_complete_1_1.1.0+1")
+    return _get_example_metadata("complete_1_1.1.0+1.resolved_public")
 
 
 @fixture
 def config() -> AggregateConfig:
     """A working config"""
     return AggregateConfig.parse_obj(
-        load_yaml(Path("transformations/aggregate/config.yaml"))
+        load_yaml(Path("transformations/aggregate/default/config.yaml"))
     )
 
 

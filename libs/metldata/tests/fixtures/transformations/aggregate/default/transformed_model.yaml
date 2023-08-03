@@ -1,0 +1,546 @@
+name: GHGA-Submission-Metadata-Schema
+description:
+  The submission centric metadata schema for the German Human Genome-Phenome
+  Archive (GHGA).
+id: https://w3id.org/GHGA-Submission-Metadata-Schema
+version: 1.1.0
+prefixes:
+  COB:
+    prefix_prefix: COB
+    prefix_reference: http://purl.obolibrary.org/obo/COB_
+  DUO:
+    prefix_prefix: DUO
+    prefix_reference: http://purl.obolibrary.org/obo/duo/releases/2021-02-23/duo.owl
+  EFO:
+    prefix_prefix: EFO
+    prefix_reference: http://www.ebi.ac.uk/efo/EFO_
+  GHGA:
+    prefix_prefix: GHGA
+    prefix_reference: https://w3id.org/GHGA/
+  GSSO:
+    prefix_prefix: GSSO
+    prefix_reference: http://purl.obolibrary.org/obo/gsso/releases/2.0.5/gsso.owl
+  HANCESTRO:
+    prefix_prefix: HANCESTRO
+    prefix_reference: http://purl.obolibrary.org/obo/HANCESTRO_
+  SIO:
+    prefix_prefix: SIO
+    prefix_reference: http://semanticscience.org/resource/SIO_
+  biolink:
+    prefix_prefix: biolink
+    prefix_reference: https://w3id.org/biolink/vocab/
+  linkml:
+    prefix_prefix: linkml
+    prefix_reference: https://w3id.org/linkml/
+  shex:
+    prefix_prefix: shex
+    prefix_reference: http://www.w3.org/ns/shex#
+  xsd:
+    prefix_prefix: xsd
+    prefix_reference: http://www.w3.org/2001/XMLSchema#
+default_curi_maps:
+  - obo_context
+  - idot_context
+  - semweb_context
+default_prefix: GHGA
+default_range: string
+types:
+  boolean:
+    name: boolean
+    description: A binary (true or false) value
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    exact_mappings:
+      - schema:Boolean
+    base: Bool
+    uri: xsd:boolean
+    repr: bool
+  curie:
+    name: curie
+    conforms_to: https://www.w3.org/TR/curie/
+    description: a compact URI
+    comments:
+      - in RDF serializations this MUST be expanded to a URI
+      - in non-RDF serializations MAY be serialized as the compact representation
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    base: Curie
+    uri: xsd:string
+    repr: str
+  date:
+    name: date
+    description: a date (year, month and day) in an idealized calendar
+    notes:
+      - URI is dateTime because OWL reasoners don't work with straight date or time
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    exact_mappings:
+      - schema:Date
+    base: XSDDate
+    uri: xsd:date
+    repr: str
+  date_or_datetime:
+    name: date_or_datetime
+    description: Either a date or a datetime
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    base: str
+    uri: linkml:DateOrDatetime
+    repr: str
+  datetime:
+    name: datetime
+    description: The combination of a date and time
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    exact_mappings:
+      - schema:DateTime
+    base: XSDDateTime
+    uri: xsd:dateTime
+    repr: str
+  decimal:
+    name: decimal
+    description:
+      A real number with arbitrary precision that conforms to the xsd:decimal
+      specification
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    broad_mappings:
+      - schema:Number
+    base: Decimal
+    uri: xsd:decimal
+  double:
+    name: double
+    description: A real number that conforms to the xsd:double specification
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    close_mappings:
+      - schema:Float
+    base: float
+    uri: xsd:double
+  float:
+    name: float
+    description: A real number that conforms to the xsd:float specification
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    exact_mappings:
+      - schema:Float
+    base: float
+    uri: xsd:float
+  integer:
+    name: integer
+    description: An integer
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    exact_mappings:
+      - schema:Integer
+    base: int
+    uri: xsd:integer
+  ncname:
+    name: ncname
+    description: Prefix part of CURIE
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    base: NCName
+    uri: xsd:string
+    repr: str
+  nodeidentifier:
+    name: nodeidentifier
+    description: A URI, CURIE or BNODE that represents a node in a model.
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    base: NodeIdentifier
+    uri: shex:nonLiteral
+    repr: str
+  objectidentifier:
+    name: objectidentifier
+    description: A URI or CURIE that represents an object in the model.
+    comments:
+      - Used for inheritence and type checking
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    base: ElementIdentifier
+    uri: shex:iri
+    repr: str
+  string:
+    name: string
+    description: A character string
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    exact_mappings:
+      - schema:Text
+    base: str
+    uri: xsd:string
+  time:
+    name: time
+    description:
+      A time object represents a (local) time of day, independent of any
+      particular day
+    notes:
+      - URI is dateTime because OWL reasoners do not work with straight date or time
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    exact_mappings:
+      - schema:Time
+    base: XSDTime
+    uri: xsd:dateTime
+    repr: str
+  uri:
+    name: uri
+    conforms_to: https://www.ietf.org/rfc/rfc3987.txt
+    description: a complete URI
+    comments:
+      - in RDF serializations a slot with range of uri is treated as a literal or type
+        xsd:anyURI unless it is an identifier or a reference to an identifier, in which
+        case it is translated directly to a node
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    close_mappings:
+      - schema:URL
+    base: URI
+    uri: xsd:anyURI
+    repr: str
+  uriorcurie:
+    name: uriorcurie
+    description: a URI or a CURIE
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    base: URIorCURIE
+    uri: xsd:anyURI
+    repr: str
+slots:
+  accession:
+    name: accession
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  count:
+    name: count
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  dac_email:
+    name: dac_email
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  experiment_summary:
+    name: experiment_summary
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  file_summary:
+    name: file_summary
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  format:
+    name: format
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  phenotypes:
+    name: phenotypes
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  protocol:
+    name: protocol
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  sample_summary:
+    name: sample_summary
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  sex:
+    name: sex
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  stats:
+    name: stats
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  study_summary:
+    name: study_summary
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  tissues:
+    name: tissues
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  title:
+    name: title
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  types:
+    name: types
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  value:
+    name: value
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+  dataset_statss:
+    name: dataset_statss
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    multivalued: true
+    range: DatasetStats
+    required: true
+    inlined: true
+    inlined_as_list: true
+classes:
+  Submission:
+    name: Submission
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - dataset_statss
+    slot_usage:
+      dataset_statss:
+        name: dataset_statss
+        multivalued: true
+        domain_of:
+          - Submission
+        range: DatasetStats
+        required: true
+        inlined: true
+        inlined_as_list: true
+    tree_root: true
+  StringValueCount:
+    name: StringValueCount
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - count
+      - value
+    slot_usage:
+      count:
+        name: count
+        multivalued: false
+        domain_of:
+          - StringValueCount
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: integer
+      value:
+        name: value
+        multivalued: false
+        domain_of:
+          - StringValueCount
+        range: string
+  DatasetStats:
+    name: DatasetStats
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - dac_email
+      - experiment_summary
+      - file_summary
+      - sample_summary
+      - study_summary
+      - title
+      - types
+      - accession
+    slot_usage:
+      file_summary:
+        name: file_summary
+        multivalued: false
+        domain_of:
+          - DatasetStats
+        range: Class7
+        inlined: true
+      experiment_summary:
+        name: experiment_summary
+        multivalued: false
+        domain_of:
+          - DatasetStats
+        range: Class6
+        inlined: true
+      study_summary:
+        name: study_summary
+        multivalued: false
+        domain_of:
+          - DatasetStats
+        range: Class5
+        inlined: true
+      title:
+        name: title
+        multivalued: false
+        domain_of:
+          - DatasetStats
+          - Class1
+        range: string
+      types:
+        name: types
+        multivalued: true
+        domain_of:
+          - DatasetStats
+        range: string
+      dac_email:
+        name: dac_email
+        multivalued: false
+        domain_of:
+          - DatasetStats
+        range: string
+      sample_summary:
+        name: sample_summary
+        multivalued: false
+        domain_of:
+          - DatasetStats
+        range: Class4
+        inlined: true
+      accession:
+        name: accession
+        identifier: true
+        domain_of:
+          - DatasetStats
+          - Class1
+        range: string
+  Class0:
+    name: Class0
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - phenotypes
+      - sex
+      - tissues
+    slot_usage:
+      tissues:
+        name: tissues
+        multivalued: true
+        domain_of:
+          - Class0
+        range: StringValueCount
+        inlined: true
+        inlined_as_list: true
+      sex:
+        name: sex
+        multivalued: true
+        domain_of:
+          - Class0
+        range: StringValueCount
+        inlined: true
+        inlined_as_list: true
+      phenotypes:
+        name: phenotypes
+        multivalued: true
+        domain_of:
+          - Class0
+        range: StringValueCount
+        inlined: true
+        inlined_as_list: true
+  Class1:
+    name: Class1
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - accession
+      - title
+    slot_usage:
+      title:
+        name: title
+        multivalued: false
+        domain_of:
+          - DatasetStats
+          - Class1
+        range: string
+      accession:
+        name: accession
+        multivalued: false
+        domain_of:
+          - DatasetStats
+          - Class1
+        range: string
+  Class2:
+    name: Class2
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - protocol
+    slot_usage:
+      protocol:
+        name: protocol
+        multivalued: true
+        domain_of:
+          - Class2
+        range: StringValueCount
+        inlined: true
+        inlined_as_list: true
+  Class3:
+    name: Class3
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - format
+    slot_usage:
+      format:
+        name: format
+        multivalued: true
+        domain_of:
+          - Class3
+        range: StringValueCount
+        inlined: true
+        inlined_as_list: true
+  Class4:
+    name: Class4
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - count
+      - stats
+    slot_usage:
+      count:
+        name: count
+        multivalued: false
+        domain_of:
+          - StringValueCount
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: integer
+      stats:
+        name: stats
+        multivalued: false
+        domain_of:
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: Class0
+        inlined: true
+  Class5:
+    name: Class5
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - count
+      - stats
+    slot_usage:
+      count:
+        name: count
+        multivalued: false
+        domain_of:
+          - StringValueCount
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: integer
+      stats:
+        name: stats
+        multivalued: false
+        domain_of:
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: Class1
+        inlined: true
+  Class6:
+    name: Class6
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - count
+      - stats
+    slot_usage:
+      count:
+        name: count
+        multivalued: false
+        domain_of:
+          - StringValueCount
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: integer
+      stats:
+        name: stats
+        multivalued: false
+        domain_of:
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: Class2
+        inlined: true
+  Class7:
+    name: Class7
+    from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+    slots:
+      - count
+      - stats
+    slot_usage:
+      count:
+        name: count
+        multivalued: false
+        domain_of:
+          - StringValueCount
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: integer
+      stats:
+        name: stats
+        multivalued: false
+        domain_of:
+          - Class4
+          - Class5
+          - Class6
+          - Class7
+        range: Class3
+        inlined: true

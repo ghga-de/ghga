@@ -25,9 +25,9 @@ from metldata.builtin_transformations.aggregate.model_transform import (
 from metldata.transform.base import MetadataModelTransformationError
 
 
-def test_valid_config(ghga_metadata_model, config):
+def test_valid_config(model_resolved_public, config):
     """Basic test for the construction of a valid output model."""
-    model = build_aggregation_model(model=ghga_metadata_model, config=config)
+    model = build_aggregation_model(model=model_resolved_public, config=config)
     for cls_name in ("DatasetStats",):
         assert cls_name in model.schema_view.all_classes()
     for cls_name in ("Study", "Dataset", "Sample"):

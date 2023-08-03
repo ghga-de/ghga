@@ -14,66 +14,24 @@
 # limitations under the License.
 #
 
-import yaml
-from pytest import fixture
-
+from metldata.builtin_transformations.aggregate.cached_model import CachedMetadataModel
 from metldata.builtin_transformations.aggregate.data_subgraph import DataSubgraph
-from metldata.custom_types import Json
-from metldata.model_utils.essentials import ExportableSchemaView, MetadataModel
-from tests.fixtures.utils import BASE_DIR
 
 
-@fixture
-def original_model() -> MetadataModel:
-    """The test metadata model"""
-    schema_view = ExportableSchemaView(
-        str(
-            BASE_DIR.joinpath("transformations")
-            .joinpath("aggregate")
-            .joinpath("original_model.yaml")
-        )
-    )
-    return schema_view.export_model()
-
-
-@fixture
-def original_data() -> Json:
-    """The original data"""
-    with open(
-        BASE_DIR.joinpath("transformations")
-        .joinpath("aggregate")
-        .joinpath("original_metadata.yaml"),
-        encoding="utf8",
-    ) as file:
-        return yaml.safe_load(file)
-
-
-def test_data_subgraph_sample_name(original_model, original_data):
+def test_data_subgraph_sample_name(
+    model_resolved_public, data_complete_1_resolved_public
+):
     """The aggregate test"""
     data_branch = DataSubgraph(
-        model=original_model,
-        submission_data=original_data,
+        model=CachedMetadataModel(model=model_resolved_public),
+        submission_data=data_complete_1_resolved_public,
         origin="Dataset",
         path_strings=[
-            "sample_files.sample.name",
+            "sequencing_process_files.sequencing_process.sample.name",
         ],
         visit_once_classes=["Sample"],
     )
-    results = set(data_branch.terminal_nodes(original_data["datasets"][0]))
-    assert results == {"sample 1", "sample 2"}
+    dataset = data_complete_1_resolved_public["datasets"][1]
+    results = set(data_branch.terminal_nodes(data=dataset))
 
-
-def test_data_subgraph_condition_name(original_model, original_data):
-    """The aggregate test"""
-    data_branch = DataSubgraph(
-        model=original_model,
-        submission_data=original_data,
-        origin="Dataset",
-        # Looping back to conditions from samples yields an additional sample
-        # which is otherwise disconnected
-        path_strings=[
-            "sample_files.sample.condition.samples.name",
-        ],
-    )
-    results = set(data_branch.terminal_nodes(original_data["datasets"][0]))
-    assert results == {"sample 1", "sample 2", "sample 3"}
+    assert results == {"GHGAS_tissue_sample1"}

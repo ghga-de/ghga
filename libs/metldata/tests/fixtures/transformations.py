@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from metldata.builtin_transformations.add_accessions import (
     ACCESSION_ADDITION_TRANSFORMATION,
 )
+from metldata.builtin_transformations.aggregate.main import AGGREGATE_TRANSFORMATION
 from metldata.builtin_transformations.custom_embeddings import (
     CUSTOM_EMBEDDING_TRANSFORMATION,
 )
@@ -133,6 +134,7 @@ TRANSFORMATIONS_BY_NAME: dict[str, TransformationDefinition] = {
     "delete_slots": SLOT_DELETION_TRANSFORMATION,
     "custom_embedding": CUSTOM_EMBEDDING_TRANSFORMATION,
     "merge_slots": SLOT_MERGING_TRANSFORMATION,
+    "aggregate": AGGREGATE_TRANSFORMATION,
 }
 
 
