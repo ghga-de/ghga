@@ -26,6 +26,8 @@ from metldata.builtin_transformations.aggregate.models import (
 )
 from metldata.transform.base import MetadataTransformationError
 
+_FUNCTION_REGISTRY = {}
+
 
 class AggregationFunction(ABC):
     """An abstract class for aggregation transformation functions"""
@@ -53,6 +55,12 @@ class AggregationFunction(ABC):
         value or a list."""
 
 
+def register_function(func: type[AggregationFunction]) -> type[AggregationFunction]:
+    """Registers a function in the aggregation function registry."""
+    _FUNCTION_REGISTRY[func.__name__] = func
+    return func
+
+
 class CopyAggregation(AggregationFunction, ABC):
     """An abstract base class for type-specific copy aggregation functions."""
 
@@ -70,6 +78,7 @@ class CopyAggregation(AggregationFunction, ABC):
         )
 
 
+@register_function
 class StringListCopyAggregation(CopyAggregation):
     """Transformation that returns a single"""
 
@@ -90,6 +99,7 @@ class StringListCopyAggregation(CopyAggregation):
         return True
 
 
+@register_function
 class StringCopyAggregation(CopyAggregation):
     """Transformation that returns a single"""
 
@@ -110,6 +120,7 @@ class StringCopyAggregation(CopyAggregation):
         return False
 
 
+@register_function
 class IntegerCopyAggregation(CopyAggregation):
     """Transformation that returns a single"""
 
@@ -130,6 +141,7 @@ class IntegerCopyAggregation(CopyAggregation):
         return False
 
 
+@register_function
 class CountAggregation(AggregationFunction):
     """Transformation that returns the count of elements for a given sequence of
     values."""
@@ -159,6 +171,7 @@ class ElementCountAggregation(AggregationFunction, ABC):
         return True
 
 
+@register_function
 class StringElementCountAggregation(ElementCountAggregation):
     """Aggregation that returns the counts of unique string elements in the
     given data."""
@@ -184,6 +197,7 @@ class StringElementCountAggregation(ElementCountAggregation):
         )
 
 
+@register_function
 class IntegerElementCountAggregation(ElementCountAggregation):
     """Aggregation that returns the counts of unique integer elements in the
     given data."""
@@ -209,7 +223,7 @@ class IntegerElementCountAggregation(ElementCountAggregation):
         )
 
 
-def transformation_by_name(name: str) -> type:
+def transformation_by_name(name: str) -> type[AggregationFunction]:
     """Returns a transformation class type based on the transformation class name.
 
     Args:
@@ -221,7 +235,4 @@ def transformation_by_name(name: str) -> type:
     Returns:
         type: The transformation class type
     """
-    trans_type = globals()[name + "Aggregation"]
-    if not issubclass(trans_type, AggregationFunction):
-        raise KeyError(name)
-    return trans_type
+    return _FUNCTION_REGISTRY[name + "Aggregation"]
