@@ -75,8 +75,9 @@
       "checksum_type": "SHA256",
       "dataset": "DS_1",
       "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
       "name": "SEQUENCE_FILE.fastq.gz",
-      "size": 512,
+      "size": 92161,
       "study": "STUDY_A"
     },
     {
@@ -84,7 +85,8 @@
       "checksum": "ba7f0fa2da3c1bd473b01985c2fd25175d55f1edb27e530d735ff85ed187c122",
       "checksum_type": "SHA256",
       "dataset": "DS_1",
-      "format": "BAM",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
       "name": "ALIGNMENT_FILE.bam",
       "size": 92161,
       "study": "STUDY_A"

@@ -21,7 +21,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from .conftest import TIMEOUT, JointFixture, given, scenarios, then, when
+from .conftest import TIMEOUT, JointFixture, given, parse, scenarios, then, when
 
 scenarios("../features/10_submit_metadata.feature")
 
@@ -61,9 +61,10 @@ def call_data_steward_kit_submit(
     assert "ERROR" not in completed_submit.stderr
 
 
-@given("we have a valid research metadata JSON file")
-def metadata_json_exist(fixtures: JointFixture):
-    assert fixtures.dsk.config.metadata_path.exists()
+@given(parse('we have a valid "{name}" research metadata JSON files'))
+def metadata_json_exist(name: str, fixtures: JointFixture):
+    metadata_json_path = fixtures.dsk.config.metadata_dir / f"{name}_metadata.json"
+    assert metadata_json_path.exists()
 
 
 @given("we have a valid metadata config YAML file")
@@ -71,13 +72,14 @@ def metadata_config_exist(fixtures: JointFixture):
     assert fixtures.dsk.config.metadata_config_path.exists()
 
 
-@when("metadata is submitted to the submission registry")
-def submit_metadata(fixtures: JointFixture):
+@when(parse('"{name}" metadata is submitted to the submission registry'))
+def submit_metadata(name: str, fixtures: JointFixture):
     workdir = fixtures.dsk.config.submission_registry
+    metadata_json_path = fixtures.dsk.config.metadata_dir / f"{name}_metadata.json"
     cwd = os.getcwd()
     os.chdir(workdir)
     call_data_steward_kit_submit(
-        metadata_path=fixtures.dsk.config.metadata_path,
+        metadata_path=metadata_json_path,
         metadata_config_path=fixtures.dsk.config.metadata_config_path,
     )
     os.chdir(cwd)

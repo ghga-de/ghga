@@ -52,7 +52,7 @@ async def announce_dataset(config: Config, fixtures: JointFixture):
     study_files = fixtures.mongo.find_documents(
         config.metldata_db_name, "art_embedded_public_class_StudyFile", {}
     )
-    assert len(study_files) == 2
+    assert len(study_files) == 1
     study_files = [study_file["content"] for study_file in study_files]
     alias_to_accession = {
         study_file["alias"]: study_file["accession"] for study_file in study_files

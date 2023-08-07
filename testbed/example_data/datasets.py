@@ -26,20 +26,15 @@ from ghga_event_schemas.pydantic_ import (
 # After this has been implemented, this file should be removed.
 
 DATASET_OVERVIEW_EVENT = MetadataDatasetOverview(
-    accession="dataset-1",
+    accession="DS_1",
     stage=MetadataDatasetStage.DOWNLOAD,
     title="The A dataset",
     description="An interesting dataset A",
     files=[
         MetadataDatasetFile(
-            accession="SEQUENCE_FILE",
+            accession="STUDY_FILE_1",
             description="The first study file",
             file_extension=".fastq.gz",
-        ),
-        MetadataDatasetFile(
-            accession="ALIGNMENT_FILE",
-            description="The second study file",
-            file_extension=".bam",
-        ),
+        )
     ],
 )  # pyright: ignore

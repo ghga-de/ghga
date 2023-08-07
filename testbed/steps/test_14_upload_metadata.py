@@ -68,15 +68,15 @@ def check_metldata_database(config: Config, mongo: MongoFixture):
     datasets = mongo.wait_for_documents(
         config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
     )
-    assert datasets and len(datasets) == 1
+    assert datasets and len(datasets) == 2
     dataset = datasets[0]
     content = dataset.get("content")
     assert content
     assert content.get("title") == "The A dataset"
     study_files = content.get("study_files")
-    assert study_files and len(study_files) == 2
+    assert study_files and len(study_files) == 1
     study_filenames = sorted(study_file.get("name") for study_file in study_files)
-    assert study_filenames == ["ALIGNMENT_FILE.bam", "SEQUENCE_FILE.fastq.gz"]
+    assert study_filenames == ["STUDY_1_SPECIMEN_1_FILE_1.fastq.gz"]
     file_accessions = {study_file.get("accession") for study_file in study_files}
-    assert len(file_accessions) == 2
+    assert len(file_accessions) == 1
     assert all(accession.startswith("GHGAF") for accession in file_accessions)

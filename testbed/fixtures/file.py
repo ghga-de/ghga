@@ -85,7 +85,7 @@ def batch_file_fixture(
     """Batch file fixture that provides temporary files according to metadata."""
 
     temp_dir = Path(tempfile.gettempdir())
-    metadata = json.loads(dsk.config.metadata_path.read_text())
+    metadata = json.loads(dsk.config.complete_metadata_path.read_text())
 
     created_files = []
     with open(dsk.config.files_to_upload_tsv, "w", encoding="utf-8") as tsv_file:

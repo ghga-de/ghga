@@ -21,6 +21,7 @@ from time import sleep
 import httpx
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
+from example_data.datasets import DATASET_OVERVIEW_EVENT
 from fixtures.mongo import INTERVAL
 
 from .conftest import (
@@ -57,7 +58,7 @@ def request_access_for_dataset(config: Config, login: LoginFixture):
     user, headers = login
     data = {
         "user_id": user["_id"],
-        "dataset_id": "dataset-1",
+        "dataset_id": DATASET_OVERVIEW_EVENT.accession,
         "email": user["email"],
         "request_text": "Can I access the test dataset?",
         "access_starts": date_now.isoformat(),
@@ -107,7 +108,8 @@ def there_is_one_request(name: str, response: httpx.Response):
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == "dataset-1" and request["full_user_name"] == name
+        if request["dataset_id"] == DATASET_OVERVIEW_EVENT.accession
+        and request["full_user_name"] == name
     ]
     assert len(requests) == 1
 
@@ -120,7 +122,7 @@ def allow_pending_request(
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == "dataset-1"
+        if request["dataset_id"] == DATASET_OVERVIEW_EVENT.accession
         and request["status"] == "pending"
         and request["full_user_name"] == name
     ]
@@ -139,7 +141,8 @@ def there_are_access_requests(name: str, status: str, response: httpx.Response):
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == "dataset-1" and request["full_user_name"] == name
+        if request["dataset_id"] == DATASET_OVERVIEW_EVENT.accession
+        and request["full_user_name"] == name
     ]
     assert len(requests) == 1
     request = requests[0]

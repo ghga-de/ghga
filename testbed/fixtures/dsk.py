@@ -38,13 +38,12 @@ class DskConfig(BaseSettings):
     accession_store: Path = submission_registry / "accession_store"
     embedded_public_event: Path = event_store / "artifact.embedded_public"
 
-    metadata_config_path: Path = (
-        BASE_DIR / "example_data" / "metadata" / "metadata_config.yaml"
-    )
-    metadata_model_path: Path = (
-        BASE_DIR / "example_data" / "metadata" / "metadata_model.yaml"
-    )
-    metadata_path: Path = BASE_DIR / "example_data" / "metadata" / "metadata.json"
+    metadata_dir: Path = BASE_DIR / "example_data" / "metadata"
+    metadata_config_path: Path = metadata_dir / "metadata_config.yaml"
+    metadata_model_path: Path = metadata_dir / "metadata_model.yaml"
+    minimal_metadata_path: Path = metadata_dir / "minimal_metadata.json"
+    complete_metadata_path: Path = metadata_dir / "complete_metadata.json"
+
     metadata_model_file: str = "metadata_model.yaml"
     metadata_file_fields: list = [
         "analysis_process_output_files",

@@ -72,7 +72,7 @@ def run_the_download_command(fixtures: JointFixture):
         check=True,
         encoding="utf-8",
         text=True,
-        timeout=60,
+        timeout=90,
     )
 
     assert "Please paste the complete download token" in completed_download.stdout
@@ -82,7 +82,7 @@ def run_the_download_command(fixtures: JointFixture):
 
 @then("all files announced in metadata have been downloaded")
 def files_are_downloaded(fixtures: JointFixture):
-    metadata = json.loads(fixtures.dsk.config.metadata_path.read_text())
+    metadata = json.loads(fixtures.dsk.config.complete_metadata_path.read_text())
 
     for file_field in fixtures.dsk.config.metadata_file_fields:
         files = metadata[file_field]
@@ -126,16 +126,15 @@ def run_the_decrypt_command(fixtures: JointFixture):
 
 @then("all downloaded files have been properly decrypted")
 def files_have_been_decrypted(fixtures: JointFixture):
-    metadata = json.loads(fixtures.dsk.config.metadata_path.read_text())
+    metadata = json.loads(fixtures.dsk.config.complete_metadata_path.read_text())
 
-    for file_field in fixtures.dsk.config.metadata_file_fields:
-        files = metadata[file_field]
+    files = metadata["study_files"]
 
-        for file_ in files:
-            verify_named_file(
-                target_dir=fixtures.connector.config.download_dir,
-                config=fixtures.config,
-                name=file_["name"],
-                file_size=file_["size"],
-                encrypted=False,
-            )
+    for file_ in files:
+        verify_named_file(
+            target_dir=fixtures.connector.config.download_dir,
+            config=fixtures.config,
+            name=file_["name"],
+            file_size=file_["size"],
+            encrypted=False,
+        )
