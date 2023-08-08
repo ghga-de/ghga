@@ -136,14 +136,15 @@ def download(  # pylint: disable=too-many-arguments,too-many-locals
     ),
     my_public_key_path: Path = typer.Option(
         "./key.pub",
-        help="The path to a public key from the key pair that was announced when the "
-        + "download token was created. Defaults to key.pub in the current folder.",
+        help="The path to a public key from the Crypt4GH key pair "
+        + "that was announced when the download token was created. "
+        + "Defaults to key.pub in the current folder.",
     ),
     my_private_key_path: Path = typer.Option(
         "./key.sec",
-        help="The path to a private key from the key pair that will be used to decrypt "
-        + "the work package access token and work order token. Defaults to key.sec in "
-        + "the current folder.",
+        help="The path to a private key from the Crypt4GH key pair "
+        + "that was announced when the download token was created. "
+        + "Defaults to key.sec in the current folder.",
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
@@ -235,11 +236,13 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
     output_dir: Path = typer.Option(
         None,
         help="Optional path to a directory that the decrypted file should be written to. "
-        + "Defaults to current working directory.",
+        + "Defaults to input dir.",
     ),
-    decryption_private_key_path: Path = typer.Option(
-        ...,
-        help="Path to the private key that should be used to decrypt the file.",
+    my_private_key_path: Path = typer.Option(
+        "./key.sec",
+        help="The path to a private key from the Crypt4GH key pair "
+        + "that was announced when the download token was created. "
+        + "Defaults to key.sec in the current folder.",
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
@@ -256,7 +259,7 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
         raise core.exceptions.DirectoryDoesNotExistError(directory=input_dir)
 
     if not output_dir:
-        output_dir = Path(os.getcwd())
+        output_dir = input_dir
 
     if output_dir.exists() and not output_dir.is_dir():
         raise core.exceptions.OutputPathIsNotDirectory(directory=output_dir)
@@ -276,7 +279,7 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
         file_count += 1
 
         # strip the .c4gh extension for the output file
-        output_file = output_dir / input_file.with_suffix("")
+        output_file = output_dir / input_file.with_suffix("").name
 
         if output_file.exists():
             errors[
@@ -289,7 +292,7 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
             core.decrypt_file(
                 input_file=input_file,
                 output_file=output_file,
-                decryption_private_key_path=decryption_private_key_path,
+                decryption_private_key_path=my_private_key_path,
             )
         except ValueError as error:
             errors[
