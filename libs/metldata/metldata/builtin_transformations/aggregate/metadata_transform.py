@@ -36,20 +36,17 @@ def execute_aggregation(
     anchor_point = original_model.anchors_points_by_target[aggregation.input]
     id_slot = anchor_point.identifier_slot
     input_anchor_data = original_data[anchor_point.root_slot]
-    subgraphs = [
-        DataSubgraph(
-            model=original_model,
-            submission_data=original_data,
-            origin=aggregation.input,
-            path_strings=operation.input_paths,
-            visit_once_classes=operation.visit_only_once,
-        )
-        for operation in aggregation.operations
-    ]
     output_data: list[Json] = []
     for input_element in input_anchor_data:
         result = ExpandingDict()
-        for operation, subgraph in zip(aggregation.operations, subgraphs):
+        for operation in aggregation.operations:
+            subgraph = DataSubgraph(
+                model=original_model,
+                submission_data=original_data,
+                origin=aggregation.input,
+                path_strings=operation.input_paths,
+                visit_once_classes=operation.visit_only_once,
+            )
             aggregated = operation.function.func(
                 subgraph.terminal_nodes(data=input_element)
             )
