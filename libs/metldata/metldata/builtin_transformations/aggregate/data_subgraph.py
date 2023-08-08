@@ -74,9 +74,6 @@ class DataSubgraph:
     _all_classes: list[str]
     _anchor_points: dict[str, AnchorPoint]
 
-    def _slot_cls(self, slot_def: SlotDefinition) -> Optional[str]:
-        return slot_def.range if slot_def.range in self._all_classes else None
-
     def _get_class_identifier(self, class_name: str) -> str:
         """Returns the identifier slot name for the given class name.
 
