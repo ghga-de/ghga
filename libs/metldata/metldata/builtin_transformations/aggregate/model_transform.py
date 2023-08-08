@@ -89,6 +89,7 @@ class PathMatrix:
     @property
     def max_depth(self):
         """The maximum depth among all paths"""
+        # All path lengths are equal after normalization
         return len(self.__paths[0]) if self.__paths else 0
 
     def normalize_path_matrix(self) -> None:
