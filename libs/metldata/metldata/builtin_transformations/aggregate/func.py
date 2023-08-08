@@ -80,7 +80,7 @@ class CopyAggregation(AggregationFunction, ABC):
 
 @register_function
 class StringListCopyAggregation(CopyAggregation):
-    """Transformation that returns a single"""
+    """Transformation that returns a list of strings."""
 
     @classmethod
     def func(cls, data: Iterable[Any]) -> list[str]:
@@ -101,7 +101,7 @@ class StringListCopyAggregation(CopyAggregation):
 
 @register_function
 class StringCopyAggregation(CopyAggregation):
-    """Transformation that returns a single"""
+    """Transformation that returns a single string."""
 
     @classmethod
     def func(cls, data: Iterable[Any]) -> str:
@@ -122,7 +122,7 @@ class StringCopyAggregation(CopyAggregation):
 
 @register_function
 class IntegerCopyAggregation(CopyAggregation):
-    """Transformation that returns a single"""
+    """Transformation that returns a single integer value."""
 
     @classmethod
     def func(cls, data: Iterable[Any]) -> int:
@@ -148,7 +148,7 @@ class CountAggregation(AggregationFunction):
 
     @classmethod
     def func(cls, data: Iterable[Any]) -> int:
-        return len(list(data))
+        return sum(1 for _ in data)
 
     @classmethod
     def result_range_name(cls) -> str:

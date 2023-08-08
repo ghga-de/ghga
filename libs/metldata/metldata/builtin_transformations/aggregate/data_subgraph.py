@@ -88,7 +88,7 @@ class DataSubgraph:
             identifier slot
 
         Returns:
-            str: The name of the identifer slot.
+            str: The name of the identifier slot.
         """
         slot_name = self._class_identifiers[class_name]
         if slot_name is None:
@@ -149,14 +149,13 @@ class DataSubgraph:
                 # Otherwise, add intermediate nodes to the stack unless they are None
                 slot_def = path[depth]
                 try:
-                    if slot_def.multivalued:
-                        next_nodes = node[slot_def.name]
-                    else:
-                        next_nodes = [node[slot_def.name]]
+                    next_nodes = node[slot_def.name]
                 except KeyError:
                     if not slot_def.required:
                         continue
                     raise
+                if not slot_def.multivalued:
+                    next_nodes = [next_nodes]
                 # Resolve non-inlined nodes
                 if slot_def.range in self._all_classes and not slot_def.inlined:
                     next_nodes = self._resolve_non_inlined(
@@ -170,9 +169,9 @@ class DataSubgraph:
                             next_range,
                             next_node[self._get_class_identifier(next_range)],
                         )
-                        if not next_hash in do_not_revisit:
+                        if next_hash not in do_not_revisit:
                             stack.append((depth + 1, next_node))
-                        do_not_revisit.add(next_hash)
+                            do_not_revisit.add(next_hash)
                 else:
                     stack.extend((depth + 1, next_node) for next_node in next_nodes)
 
@@ -239,7 +238,7 @@ class DataSubgraph:
         self._model = model.model
         self._anchor_points = model.anchors_points_by_target
         self._visit_once_classes = visit_once_classes if visit_once_classes else []
-        self._all_classes = list(self._model.schema_view.all_classes().keys())
+        self._all_classes = list(self._model.schema_view.all_classes())
         self._paths = [
             _resolve_path(
                 model=self._model,

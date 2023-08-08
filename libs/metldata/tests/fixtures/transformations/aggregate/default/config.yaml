@@ -7,10 +7,12 @@ aggregations:
           - title
         function: StringCopy
       - output_path: types
-        input_paths: ["types"]
+        input_paths:
+          - types
         function: StringListCopy
       - output_path: dac_email
-        input_paths: ["data_access_policy.data_access_committee.email"]
+        input_paths:
+          - data_access_policy.data_access_committee.email
         function: StringCopy
       - output_path: sample_summary.count
         input_paths:

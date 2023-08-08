@@ -204,7 +204,7 @@ def add_aggregation(min_model: MinimalLinkMLModel, aggregation: Aggregation) -> 
         ],
     )
 
-    for _ in reversed(range(0, path_matrix.max_depth)):
+    for _ in range(path_matrix.max_depth):
         classes: dict[Path, set[MinimalNamedSlot]] = defaultdict(set[MinimalNamedSlot])
         for idx, path_prefix in enumerate(path_matrix.paths):
             if path_prefix[-1]:
@@ -222,7 +222,7 @@ def add_aggregation(min_model: MinimalLinkMLModel, aggregation: Aggregation) -> 
                 min_model.add_named_class(cls_def=cls, cls_name=root_name)
                 slot_range = root_name
             else:
-                # We are at an intermediate model an will use generic class
+                # We are at an intermediate model and will use generic class
                 # names and potentially re-use the classes as they fit
                 if cls in min_model.anonymous_classes:
                     slot_range = min_model.anonymous_classes[cls]
