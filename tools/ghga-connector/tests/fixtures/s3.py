@@ -16,6 +16,7 @@
 """Fixtures for testing the storage DAO"""
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import AsyncGenerator, List
 
 import pytest_asyncio
@@ -158,8 +159,9 @@ async def get_big_s3_object(
     the provided s3 storage.
     """
     with big_temp_file(object_size) as big_file:
+        file_path = Path(big_file.name)
         object_fixture = FileObject(
-            file_path=big_file.name,
+            file_path=file_path,
             bucket_id=s3.existing_buckets[0],
             object_id="big-downloadable",
         )
@@ -174,7 +176,7 @@ async def get_big_s3_object(
         )
         upload_file(
             presigned_url=presigned_url,
-            file_path=big_file.name,
+            file_path=file_path,
             file_md5=object_fixture.md5,
         )
 

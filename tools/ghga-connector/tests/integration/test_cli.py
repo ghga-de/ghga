@@ -58,18 +58,30 @@ unintercepted_hosts: list[str] = []
 
 @pytest.fixture
 def non_mocked_hosts() -> list:
-    # Let requests go out to localstack/S3
+    """Hosts that shall not be mocked by httpx."""
+    # Let requests go out to localstack/S3.
     return unintercepted_hosts
 
 
 @pytest.fixture
 def assert_all_responses_were_requested() -> bool:
+    """Whether httpx checks that all registered responses are sent back."""
+    # Not all responses must be request here.
     return False
 
 
 @pytest.mark.parametrize(
-    "file_size,part_size",
+    "file_size, part_size",
     [
+        # first test with some very small files size
+        (8, 1024),
+        (32, 1024),
+        (128, 1024),
+        (512, 1024),
+        (1024, 1024),
+        (2048, 1024),
+        (20 * 1024, 1024),
+        # then test with larger files sizes
         (6 * 1024 * 1024, 5 * 1024 * 1024),
         (12 * 1024 * 1024, 5 * 1024 * 1024),
         (20 * 1024 * 1024, 1 * 1024 * 1024),
@@ -107,7 +119,7 @@ async def test_multipart_download(
 
     # right now the desired file size is only
     # approximately met by the provided big file:
-    file_size_ = len(big_object.content)
+    actual_file_size = len(big_object.content)
 
     # get s3 download url
     download_url = await s3_fixture.storage.get_object_download_url(
@@ -120,7 +132,7 @@ async def test_multipart_download(
     fake_envelope = "Thisisafakeenvelope"
 
     monkeypatch.setenv("S3_DOWNLOAD_URL", download_url)
-    monkeypatch.setenv("S3_DOWNLOAD_FIELD_SIZE", str(file_size_))
+    monkeypatch.setenv("S3_DOWNLOAD_FIELD_SIZE", str(actual_file_size))
     monkeypatch.setenv("FAKE_ENVELOPE", fake_envelope)
 
     big_file_content = str.encode(fake_envelope)
@@ -144,6 +156,7 @@ async def test_multipart_download(
     with open(tmp_path / f"{big_object.object_id}.c4gh", "rb") as file:
         observed_content = file.read()
 
+    assert len(observed_content) == len(big_file_content)
     assert observed_content == big_file_content
 
 
@@ -258,7 +271,8 @@ async def test_download(
                 ):
                     with pytest.raises(
                         exceptions.UnauthorizedAPICallError,
-                        match="Endpoint file ID did not match file ID announced in work order token.",
+                        match="Endpoint file ID did not match file ID"
+                        " announced in work order token",
                     ):
                         download(
                             output_dir=output_dir,
@@ -327,7 +341,11 @@ async def test_upload(
         encryptor = Crypt4GHEncryptor(
             server_pubkey=server_pubkey, my_private_key_path=PRIVATE_KEY_FILE
         )
-        encrypted_path = encryptor.encrypt_file(file_path=uploadable_file.file_path)
+        file_path = Path(encryptor.encrypt_file(file_path=uploadable_file.file_path))
+    else:
+        file_path = uploadable_file.file_path
+
+    file_path = file_path.resolve()
 
     # initiate upload
     upload_id = await s3_fixture.storage.init_multipart_upload(
@@ -355,20 +373,12 @@ async def test_upload(
         with pytest.raises(  # type: ignore
             expected_exception
         ) if expected_exception else nullcontext():
-            if file_name == "encrypted_file":
-                upload(
-                    file_id=uploadable_file.file_id,
-                    file_path=Path(encrypted_path).resolve(),
-                    my_public_key_path=Path(PUBLIC_KEY_FILE),
-                    my_private_key_path=Path(PRIVATE_KEY_FILE),
-                )
-            else:
-                upload(
-                    file_id=uploadable_file.file_id,
-                    file_path=uploadable_file.file_path.resolve(),
-                    my_public_key_path=Path(PUBLIC_KEY_FILE),
-                    my_private_key_path=Path(PRIVATE_KEY_FILE),
-                )
+            upload(
+                file_id=uploadable_file.file_id,
+                file_path=file_path,
+                my_public_key_path=Path(PUBLIC_KEY_FILE),
+                my_private_key_path=Path(PRIVATE_KEY_FILE),
+            )
 
             await s3_fixture.storage.complete_multipart_upload(
                 upload_id=upload_id,

@@ -42,7 +42,7 @@ class AbstractMessageDisplay(ABC):
 
 class MessageColors(str, enum.Enum):
     """
-    Define commmonly used colors for logging
+    Define commonly used colors for logging
     For a selection of valid colors see click.termui._ansi_colors:
     https://github.com/pallets/click/blob/c96545f6f4ba0eab99de6ec8b4ceb77c9bdb2528/src/click/termui.py#L30
     """

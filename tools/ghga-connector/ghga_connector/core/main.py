@@ -239,7 +239,7 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     )
 
 
-def download_parts(
+def download_parts(  # pylint: disable=too-many-locals
     *,
     max_concurrent_downloads: int = 5,
     max_queue_size: int = 10,
@@ -280,14 +280,15 @@ def download_parts(
     # Write the downloaded parts to a file
     with open(output_file, "wb") as file:
         # put envelope in file
-        downloaded_size = len(envelope)
         file.write(envelope)
+        offset = len(envelope)
+        downloaded_size = 0
         while downloaded_size < file_size:
             try:
                 start, part = queue.get(block=False)
             except Empty:
                 continue
-            file.seek(start + len(envelope))
+            file.seek(offset + start)
             file.write(part)
             downloaded_size += len(part)
             queue.task_done()
@@ -296,7 +297,7 @@ def download_parts(
 def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> List[str]:
     """
     Expect the work package id and access token as a colon separated string
-    The user will have to input this manually to avoid it becomming part of the
+    The user will have to input this manually to avoid it becoming part of the
     command line history.
     """
     for _ in range(max_tries):

@@ -57,7 +57,7 @@ async def test_download_content_range(
 
     queue: Queue = Queue(maxsize=10)
 
-    # donwload content range with dedicated function:
+    # download content range with dedicated function:
     download_content_range(download_url=download_url, start=start, end=end, queue=queue)
 
     obtained_start, obtained_bytes = queue.get()
@@ -105,7 +105,7 @@ async def test_download_file_parts(
         "max_concurrent_downloads": 5,
     }
 
-    # donwload file parts with dedicated function:
+    # download file parts with dedicated function:
     download_file_parts(**kwargs)
 
     obtained = 0
