@@ -18,7 +18,6 @@
 
 import itertools
 from collections import defaultdict
-from copy import deepcopy
 from dataclasses import asdict
 from typing import Iterable, Optional
 
@@ -191,10 +190,8 @@ def add_aggregation(min_model: MinimalLinkMLModel, aggregation: Aggregation) -> 
 
     root_name = aggregation.output
     path_strings = [operation.output_path for operation in aggregation.operations]
-    leaf_ranges = [op.function.result_range_name() for op in aggregation.operations]
-    leaf_multivalued = [
-        op.function.result_multivalued() for op in aggregation.operations
-    ]
+    leaf_ranges = [op.function.result_range_name for op in aggregation.operations]
+    leaf_multivalued = [op.function.result_multivalued for op in aggregation.operations]
 
     path_matrix = PathMatrix(
         path_strings=path_strings,
@@ -332,8 +329,8 @@ def build_aggregation_model(
     for agg_func in (
         op.function for agg in config.aggregations for op in agg.operations
     ):
-        cls_def = agg_func.result_range_cls_def()
-        cls_name = agg_func.result_range_name()
+        cls_def = agg_func.result_range_cls_def
+        cls_name = agg_func.result_range_name
         if cls_def:
             min_output_model.add_named_class(cls_def=cls_def, cls_name=cls_name)
 

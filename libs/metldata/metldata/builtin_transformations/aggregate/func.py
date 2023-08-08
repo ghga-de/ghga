@@ -32,27 +32,21 @@ _FUNCTION_REGISTRY = {}
 class AggregationFunction(ABC):
     """An abstract class for aggregation transformation functions"""
 
+    result_range_name: str
+    """The name of the range of the data produced by func."""
+
+    result_range_cls_def: Optional[MinimalClass]
+    """The class definition of the data produced by func. None if the function
+    result range is a type rather than a class."""
+
+    result_multivalued: bool
+    """Whether or not the transformation function produces a single value or a
+    list."""
+
     @classmethod
     @abstractmethod
     def func(cls, data: Iterable[Any]) -> Any:
         """Transforms input data."""
-
-    @classmethod
-    @abstractmethod
-    def result_range_name(cls) -> str:
-        """Returns the name of the range of the data produced by func."""
-
-    @classmethod
-    @abstractmethod
-    def result_range_cls_def(cls) -> Optional[MinimalClass]:
-        """Returns the class definition of the data produced by func. None if
-        the function result range is a type rather than a class."""
-
-    @classmethod
-    @abstractmethod
-    def result_multivalued(cls) -> bool:
-        """Returns whether or not the transformation function produces a single
-        value or a list."""
 
 
 def register_function(func: type[AggregationFunction]) -> type[AggregationFunction]:
@@ -82,63 +76,39 @@ class CopyAggregation(AggregationFunction, ABC):
 class StringListCopyAggregation(CopyAggregation):
     """Transformation that returns a list of strings."""
 
+    result_range_name = "string"
+    result_range_cls_def = None
+    result_multivalued = True
+
     @classmethod
     def func(cls, data: Iterable[Any]) -> list[str]:
         return list[str](data)
-
-    @classmethod
-    def result_range_name(cls) -> str:
-        return "string"
-
-    @classmethod
-    def result_range_cls_def(cls) -> Optional[MinimalClass]:
-        return None
-
-    @classmethod
-    def result_multivalued(cls) -> bool:
-        return True
 
 
 @register_function
 class StringCopyAggregation(CopyAggregation):
     """Transformation that returns a single string."""
 
+    result_range_name = "string"
+    result_range_cls_def = None
+    result_multivalued = False
+
     @classmethod
     def func(cls, data: Iterable[Any]) -> str:
         return str(cls._extract_single_value(data=data))
-
-    @classmethod
-    def result_range_name(cls) -> str:
-        return "string"
-
-    @classmethod
-    def result_range_cls_def(cls) -> Optional[MinimalClass]:
-        return None
-
-    @classmethod
-    def result_multivalued(cls) -> bool:
-        return False
 
 
 @register_function
 class IntegerCopyAggregation(CopyAggregation):
     """Transformation that returns a single integer value."""
 
+    result_range_name = "integer"
+    result_range_cls_def = None
+    result_multivalued = False
+
     @classmethod
     def func(cls, data: Iterable[Any]) -> int:
         return int(cls._extract_single_value(data=data))
-
-    @classmethod
-    def result_range_name(cls) -> str:
-        return "integer"
-
-    @classmethod
-    def result_range_cls_def(cls) -> Optional[MinimalClass]:
-        return None
-
-    @classmethod
-    def result_multivalued(cls) -> bool:
-        return False
 
 
 @register_function
@@ -146,35 +116,33 @@ class CountAggregation(AggregationFunction):
     """Transformation that returns the count of elements for a given sequence of
     values."""
 
+    result_range_name = "integer"
+    result_range_cls_def = None
+    result_multivalued = False
+
     @classmethod
     def func(cls, data: Iterable[Any]) -> int:
         return sum(1 for _ in data)
-
-    @classmethod
-    def result_range_name(cls) -> str:
-        return "integer"
-
-    @classmethod
-    def result_range_cls_def(cls) -> Optional[MinimalClass]:
-        return None
-
-    @classmethod
-    def result_multivalued(cls) -> bool:
-        return False
 
 
 class ElementCountAggregation(AggregationFunction, ABC):
     """Aggregation that returns the counts of unique elements in the given data."""
 
-    @classmethod
-    def result_multivalued(cls) -> bool:
-        return True
+    result_multivalued = True
 
 
 @register_function
 class StringElementCountAggregation(ElementCountAggregation):
     """Aggregation that returns the counts of unique string elements in the
     given data."""
+
+    result_range_name = "StringValueCount"
+    result_range_cls_def = MinimalClass(
+        {
+            MinimalNamedSlot(range="string", multivalued=False, slot_name="value"),
+            MinimalNamedSlot(range="integer", multivalued=False, slot_name="count"),
+        }
+    )
 
     @classmethod
     def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:
@@ -183,24 +151,19 @@ class StringElementCountAggregation(ElementCountAggregation):
             for value, count in Counter(data).items()
         ]
 
-    @classmethod
-    def result_range_name(cls) -> str:
-        return "StringValueCount"
-
-    @classmethod
-    def result_range_cls_def(cls) -> MinimalClass:
-        return MinimalClass(
-            {
-                MinimalNamedSlot(range="string", multivalued=False, slot_name="value"),
-                MinimalNamedSlot(range="integer", multivalued=False, slot_name="count"),
-            }
-        )
-
 
 @register_function
 class IntegerElementCountAggregation(ElementCountAggregation):
     """Aggregation that returns the counts of unique integer elements in the
     given data."""
+
+    result_range_name = "IntegerValueCount"
+    result_range_cls_def = MinimalClass(
+        {
+            MinimalNamedSlot(range="integer", multivalued=False, slot_name="value"),
+            MinimalNamedSlot(range="integer", multivalued=False, slot_name="count"),
+        }
+    )
 
     @classmethod
     def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:
@@ -208,19 +171,6 @@ class IntegerElementCountAggregation(ElementCountAggregation):
             {"value": int(value), "count": count}
             for value, count in Counter(data).items()
         ]
-
-    @classmethod
-    def result_range_name(cls) -> str:
-        return "IntegerValueCount"
-
-    @classmethod
-    def result_range_cls_def(cls) -> Optional[MinimalClass]:
-        return MinimalClass(
-            {
-                MinimalNamedSlot(range="integer", multivalued=False, slot_name="value"),
-                MinimalNamedSlot(range="integer", multivalued=False, slot_name="count"),
-            }
-        )
 
 
 def transformation_by_name(name: str) -> type[AggregationFunction]:
