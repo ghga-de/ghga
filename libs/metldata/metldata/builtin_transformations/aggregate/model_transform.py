@@ -85,7 +85,7 @@ class PathMatrix:
     @property
     def paths(self):
         """Returns a copy of the paths."""
-        return deepcopy(self.__paths)
+        return self.__paths[:]
 
     @property
     def max_depth(self):
