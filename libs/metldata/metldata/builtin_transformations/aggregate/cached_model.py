@@ -30,4 +30,4 @@ class CachedMetadataModel:
     def __init__(self, model: MetadataModel):
         self.model = model
         self.anchors_points_by_target = get_anchors_points_by_target(model=model)
-        self.all_classes = list(model.schema_view.all_classes().keys())
+        self.all_classes = list(model.schema_view.all_classes())
