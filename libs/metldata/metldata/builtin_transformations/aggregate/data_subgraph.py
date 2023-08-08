@@ -101,14 +101,14 @@ class DataSubgraph:
         the provided class name.
 
         Args:
-            nodes (list[Any]): _description_
-            slot_def (SlotDefinition): _description_
+            identifiers (list[Any]): A list of identifiers
+            class_name (str): The name of the corresponding class
 
         Raises:
-            DataTraversalError: _description_
+            DataTraversalError: Raised when an identifier cannot be resolved.
 
         Returns:
-            list[Json]: _description_
+            list[Json]: A list of objects corresponding to the identifiers.
         """
         try:
             return [
