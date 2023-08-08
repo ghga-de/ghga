@@ -1,4 +1,4 @@
-name: auth-adapter
+name: auth-service
 description: The auth_adapter subpackage contains the authentication service used by the API gateway via the ExtAuth protocol.
 type: application
 
