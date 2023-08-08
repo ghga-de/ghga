@@ -356,12 +356,14 @@ def build_aggregation_model(
     # Anchor the output classes
     schema_view = output_model.schema_view
     for aggregation in config.aggregations:
+        root_slot = snakecase(aggregation.output)
+        root_slot = root_slot + "s" if not root_slot.endswith("s") else root_slot
         schema_view = add_anchor_point(
             schema_view=schema_view,
             anchor_point=AnchorPoint(
                 target_class=aggregation.output,
                 identifier_slot=id_slot_map[aggregation.output],
-                root_slot=snakecase(aggregation.output) + "s",
+                root_slot=root_slot,
             ),
         )
 
