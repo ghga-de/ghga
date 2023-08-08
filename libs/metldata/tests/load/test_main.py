@@ -125,7 +125,7 @@ async def test_load_artifacts_endpoint_happy(
     expected_resource_stats = {
         "Dataset": {"count": 1},
         "Sample": {"count": 2},
-        "File": {"count": 4, "stats": {"format": {"fastq": 4}}},
+        "File": {"count": 4, "stats": {"format": [{"value": "fastq", "count": 4}]}},
         "Experiment": {"count": 1},
     }
     stats_dao = await mongodb_fixture.dao_factory.get_dao(

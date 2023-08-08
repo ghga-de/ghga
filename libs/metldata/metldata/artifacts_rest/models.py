@@ -99,10 +99,16 @@ class ResourceCount(TypedDict):
     count: int
 
 
+class ValueCount(ResourceCount):
+    """Number of instances of a certain value."""
+
+    value: str
+
+
 class ResourceStats(ResourceCount, total=False):
     """Summary statistics for a resource."""
 
-    stats: dict[str, dict[str, int]]
+    stats: dict[str, list[ValueCount]]
 
 
 class GlobalStats(BaseModel):

@@ -158,7 +158,7 @@ async def test_get_stats_endpoint(
         "id": "global",
         "resource_stats": {
             "Dataset": {"count": 2},
-            "File": {"count": 4, "stats": {"format": {"fastq": 4}}},
+            "File": {"count": 4, "stats": {"format": [{"value": "fastq", "count": 4}]}},
         },
     }
     assert observed_stats == expected_stats
