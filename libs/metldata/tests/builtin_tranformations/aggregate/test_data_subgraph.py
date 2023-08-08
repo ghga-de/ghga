@@ -25,13 +25,13 @@ def test_data_subgraph_sample_name(
     data_branch = DataSubgraph(
         model=CachedMetadataModel(model=model_resolved_public),
         submission_data=data_complete_1_resolved_public,
-        origin="Dataset",
+        origin="SequencingProtocol",
         path_strings=[
-            "sequencing_process_files.sequencing_process.sample.name",
+            "sequencing_experiments.sequencing_processes.sample.name",
         ],
         visit_once_classes=["Sample"],
     )
-    dataset = data_complete_1_resolved_public["datasets"][1]
+    dataset = data_complete_1_resolved_public["sequencing_protocols"][0]
     results = set(data_branch.terminal_nodes(data=dataset))
 
-    assert results == {"GHGAS_tissue_sample1"}
+    assert results == {"GHGAS_tissue_sample1", "GHGAS_blood_sample1"}
