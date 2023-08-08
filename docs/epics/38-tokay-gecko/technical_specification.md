@@ -10,7 +10,9 @@ This epic aims to fill in the missing parts in inter-service communication along
 #### Metldata Service:
 
 - Implement publisher for deletion and population events
-- Needs to clear and repopulate own DB to track current datasets
+- Needs to track current artifact resources in own DB and compute change sets for incoming artifacts
+- Needs to upsert new/changed artifact resources
+- Transforms embedded dataset resource information into form accepted by WPS for outgoing event
 
 #### MASS:
 
@@ -41,25 +43,25 @@ sequenceDiagram
   participant WPS
 
   Kit ->> API: Load artifacts from all submissions
-  API ->> API: Query for currently existing datasets in internal DB
+  API ->> API: Query DB for existing artifact resources
+  API ->> API: Compute the set of new, changed and unchanged artifact resources
 
-  loop Each deleted dataset
-  API -->> MASS: Send deletion event for dataset
+  loop Each deleted embedded dataset resource
+  API -->> MASS: Send deletion event for resource
   end
 
-  loop Each deleted dataset
-  API -->> claims: Send deletion event for dataset
+  loop Each deleted embedded dataset resource
+  API -->> claims: Send deletion event for resource
   end
 
-  API ->> API: Clear internal DB
-  API ->> API: Repopulate DB from submission artifacts
+  API ->> API: Upsert new and changed resources, delete deleted resources
 
-  loop Each dataset
-  API -->> MASS: Inform about new dataset
+  loop Each new/changed embedded dataset resource
+  API -->> MASS: Inform about resource upsert
   end
 
-  loop Each dataset
-  API -->> WPS: Inform about new dataset
+  loop Each new/changed embedded dataset resource
+  API -->> WPS: Inform about resource upsert
   end
 ```
 
