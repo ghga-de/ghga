@@ -240,8 +240,8 @@ slots:
   value:
     name: value
     from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
-  dataset_statss:
-    name: dataset_statss
+  dataset_stats:
+    name: dataset_stats
     from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
     multivalued: true
     range: DatasetStats
@@ -253,10 +253,10 @@ classes:
     name: Submission
     from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
     slots:
-      - dataset_statss
+      - dataset_stats
     slot_usage:
-      dataset_statss:
-        name: dataset_statss
+      dataset_stats:
+        name: dataset_stats
         multivalued: true
         domain_of:
           - Submission
