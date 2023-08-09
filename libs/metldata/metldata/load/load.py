@@ -23,6 +23,7 @@ from metldata.artifacts_rest.load_resources import (
     process_removed_resources,
 )
 from metldata.artifacts_rest.models import ArtifactInfo, ArtifactResource
+from metldata.load.event_publisher import EventPublisherPort
 from metldata.load.models import ArtifactResourceDict
 
 
@@ -47,6 +48,7 @@ def check_artifact_resources(
 async def load_artifacts_using_dao(
     artifact_resources: ArtifactResourceDict,
     artifact_info_dict: dict[str, ArtifactInfo],
+    event_publisher: EventPublisherPort,
     dao_collection: ArtifactDaoCollection,
 ) -> None:
     """Load artifact resources from multiple submissions using the given dao collection."""
@@ -62,15 +64,23 @@ async def load_artifacts_using_dao(
     )
 
     await process_removed_resources(
-        resource_tags=removed_resource_tags, dao_collection=dao_collection
+        event_publisher=event_publisher,
+        resource_tags=removed_resource_tags,
+        dao_collection=dao_collection,
     )
 
     await process_new_or_changed_resources(
-        resources=new_resources, dao_collection=dao_collection
+        artifact_info_dict=artifact_info_dict,
+        event_publisher=event_publisher,
+        resources=new_resources,
+        dao_collection=dao_collection,
     )
 
     await process_new_or_changed_resources(
-        resources=changed_resources, dao_collection=dao_collection
+        artifact_info_dict=artifact_info_dict,
+        event_publisher=event_publisher,
+        resources=changed_resources,
+        dao_collection=dao_collection,
     )
 
 

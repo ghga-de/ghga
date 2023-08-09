@@ -6,3 +6,5 @@ scripts/update_openapi_docs.py
 
 .github/workflows/check_openapi_spec.yaml
 .github/workflows/cd.yaml
+
+.pre-commit-config.yaml

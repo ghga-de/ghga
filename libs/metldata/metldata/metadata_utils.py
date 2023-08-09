@@ -17,7 +17,7 @@
 """Utilities for handling metadata."""
 
 from copy import deepcopy
-from typing import cast
+from typing import Union, cast
 
 from metldata.custom_types import Json
 from metldata.model_utils.anchors import AnchorPoint, lookup_anchor_point
@@ -288,7 +288,9 @@ def upsert_resources_in_metadata(
     return {**global_metadata_copy, anchor_point.root_slot: resources}
 
 
-def lookup_slot_in_resource(*, resource: Json, slot_name: str) -> Json:
+def lookup_slot_in_resource(
+    *, resource: Json, slot_name: str
+) -> Union[Json, list[Json]]:
     """Lookup a slot in a resource. Raises an error if the slot does not exist."""
 
     content = resource.get(slot_name)

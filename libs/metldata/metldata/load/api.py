@@ -24,6 +24,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
 from hexkit.protocols.dao import DaoFactoryProtocol
+from hexkit.providers.akafka import KafkaEventPublisher
 from pydantic import BaseModel, Field
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
@@ -31,6 +32,8 @@ from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
 from metldata.artifacts_rest.models import ArtifactInfo
 from metldata.load.aggregator import DbAggregator
 from metldata.load.auth import check_token
+from metldata.load.config import ArtifactLoaderAPIConfig
+from metldata.load.event_publisher import EventPubTranslator
 from metldata.load.load import (
     ArtifactResourcesInvalid,
     check_artifact_resources,
@@ -72,6 +75,7 @@ class LoaderTokenAuthProvider(AuthContextProtocol[LoaderTokenAuthContext]):
 async def rest_api_factory(
     *,
     artifact_infos: list[ArtifactInfo],
+    config: ArtifactLoaderAPIConfig,
     dao_factory: DaoFactoryProtocol,
     db_aggregator: DbAggregator,
     token_hashes: list[str],
@@ -107,21 +111,27 @@ async def rest_api_factory(
 
         try:
             check_artifact_resources(
-                artifact_resources=artifact_resources, artifact_infos=artifact_info_dict
+                artifact_resources=artifact_resources,
+                artifact_infos=artifact_info_dict,
             )
         except ArtifactResourcesInvalid as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
-        await load_artifacts_using_dao(
-            artifact_resources=artifact_resources,
-            artifact_info_dict=artifact_info_dict,
-            dao_collection=dao_collection,
-        )
+        async with KafkaEventPublisher.construct(config=config) as event_pub_provider:
+            event_publisher = EventPubTranslator(
+                config=config, provider=event_pub_provider
+            )
+            await load_artifacts_using_dao(
+                artifact_resources=artifact_resources,
+                artifact_info_dict=artifact_info_dict,
+                event_publisher=event_publisher,
+                dao_collection=dao_collection,
+            )
 
-        await create_stats_using_aggregator(
-            artifact_infos=artifact_info_dict, db_aggregator=db_aggregator
-        )
+            await create_stats_using_aggregator(
+                artifact_infos=artifact_info_dict, db_aggregator=db_aggregator
+            )
 
-        return Response(status_code=204)
+            return Response(status_code=204)
 
     return router

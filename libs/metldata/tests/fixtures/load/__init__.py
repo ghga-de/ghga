@@ -13,6 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Short description of package"""  # Please adapt to package
-
-__version__ = "0.4.0"
+"""Fixtures that are used in loader API tests"""

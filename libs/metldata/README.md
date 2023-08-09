@@ -62,13 +62,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/metldata):
 ```bash
-docker pull ghga/metldata:0.3.7
+docker pull ghga/metldata:0.4.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/metldata:0.3.7 .
+docker build -t ghga/metldata:0.4.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -76,7 +76,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/metldata:0.3.7 --help
+docker run -p 8080:8080 ghga/metldata:0.4.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -99,6 +99,30 @@ The service requires the following configuration parameters:
 - **`db_connection_str`** *(string)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 - **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+
+- **`service_name`** *(string)*: The name of the (micro-)service from which messages are published.
+
+- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+
+- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+
+  - **Items** *(string)*
+
+- **`primary_artifact_name`** *(string)*: Name of the artifact from which the information for outgoing change events is derived.
+
+- **`primary_dataset_name`** *(string)*: Name of the resource class corresponding to the embedded_dataset slot.
+
+- **`resource_change_event_topic`** *(string)*: Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.
+
+- **`resource_deletion_event_type`** *(string)*: Type used for events indicating the deletion of a previously existing resource.
+
+- **`resource_upsertion_type`** *(string)*: Type used for events indicating the upsert of a resource.
+
+- **`dataset_change_event_topic`** *(string)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
+
+- **`dataset_deletion_type`** *(string)*: Type used for events announcing a new dataset overview.
+
+- **`dataset_upsertion_type`** *(string)*: Type used for events announcing a new dataset overview.
 
 - **`host`** *(string)*: IP of the host. Default: `127.0.0.1`.
 

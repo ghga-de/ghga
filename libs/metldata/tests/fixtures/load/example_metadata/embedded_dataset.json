@@ -1,0 +1,189 @@
+{
+  "embedded_dataset": [
+    {
+      "accession": "DATASET_1",
+      "alias": "DS_1",
+      "data_access_policy": {
+        "accession": "ACCESS_POLICY_1",
+        "alias": "DAP_1",
+        "data_access_committee": {
+          "accession": "DAC_1",
+          "alias": "DAC_1",
+          "email": "dac@dac.dac",
+          "institute": "The DAC institute"
+        },
+        "data_use_modifiers": [
+          "clinical care use"
+        ],
+        "data_use_permission": "disease specific research",
+        "description": "A Data Access Policy 1",
+        "name": "DAP 1",
+        "policy_text": "This is a very permissible DAP",
+        "policy_url": "http://some/policy"
+      },
+      "description": "An interesting dataset A",
+      "files": [
+        "STUDY_FILE_1",
+        "STUDY_FILE_2",
+        "STUDY_FILE_3",
+        "STUDY_FILE_4"
+      ],
+      "sample_files": [],
+      "samples": [],
+      "studies": [
+        {
+          "accession": "STUDY_1",
+          "affiliations": [
+            "Some Institute",
+            "Some other Institute"
+          ],
+          "alias": "STUDY_A",
+          "attributes": [
+            {
+              "key": "budget",
+              "value": "3.5M"
+            },
+            {
+              "key": "funding",
+              "value": "EU"
+            }
+          ],
+          "description": "A study that is The Test Study",
+          "title": "The Test Study",
+          "type": "SYNTHETIC_GENOMICS"
+        }
+      ],
+      "study_files": [
+        {
+          "accession": "STUDY_FILE_1",
+          "alias": "FILE_1",
+          "checksum": "299585554663327257bd92a624760a3cbb009804a910ba03fc977d297d62ec7f",
+          "checksum_type": "SHA256",
+          "dataset": "DATASET_1",
+          "format": "FASTQ",
+          "name": "STUDY_FILE_1.fastq.gz",
+          "size": 92161,
+          "study": {
+            "accession": "STUDY_1",
+            "affiliations": [
+              "Some Institute",
+              "Some other Institute"
+            ],
+            "alias": "STUDY_A",
+            "attributes": [
+              {
+                "key": "budget",
+                "value": "3.5M"
+              },
+              {
+                "key": "funding",
+                "value": "EU"
+              }
+            ],
+            "description": "A study that is The Test Study",
+            "title": "The Test Study",
+            "type": "SYNTHETIC_GENOMICS"
+          }
+        },
+        {
+          "accession": "STUDY_FILE_2",
+          "alias": "FILE_2",
+          "checksum": "cd230d8cf3bcdd10292a54cccc5c168dfec1d51b416ddc5102cbea259f3562bd",
+          "checksum_type": "SHA256",
+          "dataset": "DATASET_1",
+          "format": "FASTQ",
+          "name": "STUDY_FILE_2.fastq",
+          "size": 92161,
+          "study": {
+            "accession": "STUDY_1",
+            "affiliations": [
+              "Some Institute",
+              "Some other Institute"
+            ],
+            "alias": "STUDY_A",
+            "attributes": [
+              {
+                "key": "budget",
+                "value": "3.5M"
+              },
+              {
+                "key": "funding",
+                "value": "EU"
+              }
+            ],
+            "description": "A study that is The Test Study",
+            "title": "The Test Study",
+            "type": "SYNTHETIC_GENOMICS"
+          }
+        },
+        {
+          "accession": "STUDY_FILE_3",
+          "alias": "FILE_3",
+          "checksum": "cd230d8cf3bcdd10292a54cccc5c168dfec1d51b416ddc5102cbea259f3562bd",
+          "checksum_type": "SHA256",
+          "dataset": "DATASET_1",
+          "format": "FASTQ",
+          "name": "STUDY_FILE_3.gz",
+          "size": 92161,
+          "study": {
+            "accession": "STUDY_1",
+            "affiliations": [
+              "Some Institute",
+              "Some other Institute"
+            ],
+            "alias": "STUDY_A",
+            "attributes": [
+              {
+                "key": "budget",
+                "value": "3.5M"
+              },
+              {
+                "key": "funding",
+                "value": "EU"
+              }
+            ],
+            "description": "A study that is The Test Study",
+            "title": "The Test Study",
+            "type": "SYNTHETIC_GENOMICS"
+          }
+        },
+        {
+          "accession": "STUDY_FILE_4",
+          "alias": "FILE_4",
+          "checksum": "cd230d8cf3bcdd10292a54cccc5c168dfec1d51b416ddc5102cbea259f3562bd",
+          "checksum_type": "SHA256",
+          "dataset": "DATASET_1",
+          "format": "FASTQ",
+          "name": "STUDY_FILE_4",
+          "size": 92161,
+          "study": {
+            "accession": "STUDY_1",
+            "affiliations": [
+              "Some Institute",
+              "Some other Institute"
+            ],
+            "alias": "STUDY_A",
+            "attributes": [
+              {
+                "key": "budget",
+                "value": "3.5M"
+              },
+              {
+                "key": "funding",
+                "value": "EU"
+              }
+            ],
+            "description": "A study that is The Test Study",
+            "title": "The Test Study",
+            "type": "SYNTHETIC_GENOMICS"
+          }
+        }
+      ],
+      "title": "The A dataset",
+      "types": [
+        "A Type",
+        "Another Type"
+      ]
+    }
+  ]
+}
