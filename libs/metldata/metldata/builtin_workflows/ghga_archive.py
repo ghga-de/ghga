@@ -19,6 +19,7 @@
 from metldata.builtin_transformations.add_accessions import (
     ACCESSION_ADDITION_TRANSFORMATION,
 )
+from metldata.builtin_transformations.aggregate import AGGREGATE_TRANSFORMATION
 from metldata.builtin_transformations.custom_embeddings import (
     CUSTOM_EMBEDDING_TRANSFORMATION,
 )
@@ -27,15 +28,23 @@ from metldata.builtin_transformations.infer_references import (
     REFERENCE_INFERENCE_TRANSFORMATION,
 )
 from metldata.builtin_transformations.merge_slots import SLOT_MERGING_TRANSFORMATION
+from metldata.builtin_transformations.normalize_model import (
+    NORMALIZATION_TRANSFORMATION,
+)
 from metldata.transform.base import WorkflowDefinition, WorkflowStep
 
 GHGA_ARCHIVE_WORKFLOW = WorkflowDefinition(
     description=("A GHGA Archive-specific workflow"),
     steps={
+        "normalize_model": WorkflowStep(
+            description=("Transform the model to a canonical form."),
+            transformation_definition=NORMALIZATION_TRANSFORMATION,
+            input=None,
+        ),
         "add_accessions": WorkflowStep(
             description="Add accessions that replace aliases as identifiers.",
             transformation_definition=ACCESSION_ADDITION_TRANSFORMATION,
-            input=None,
+            input="normalize_model",
         ),
         "embed_restricted": WorkflowStep(
             description=(
@@ -71,6 +80,11 @@ GHGA_ARCHIVE_WORKFLOW = WorkflowDefinition(
             transformation_definition=SLOT_DELETION_TRANSFORMATION,
             input="merge_dataset_file_lists",
         ),
+        "aggregate_stats": WorkflowStep(
+            description="Compute aggregate statistics.",
+            transformation_definition=AGGREGATE_TRANSFORMATION,
+            input="remove_restricted_metadata",
+        ),
         "embed_public": WorkflowStep(
             description=(
                 "A step to generate a fully embedded metadata resources for use in the"
@@ -85,5 +99,6 @@ GHGA_ARCHIVE_WORKFLOW = WorkflowDefinition(
         "resolved_restricted": "merge_dataset_file_lists",
         "resolved_public": "remove_restricted_metadata",
         "embedded_public": "embed_public",
+        "stats_public": "aggregate_stats",
     },
 )

@@ -1,3 +1,19 @@
+normalize_model: {}
+aggregate_stats:
+  aggregations:
+    - input: Dataset
+      output: DatasetStats
+      operations:
+        - output_path: accession
+          input_paths:
+            - accession
+          function: StringCopy
+        - output_path: file_formats.stats
+          input_paths:
+            - sample_files.format
+          function: StringElementCount
+          visit_only_once:
+            - SampleFile
 add_accessions:
   accession_slot_name: accession
   accession_slot_description: The accession for an entity.
