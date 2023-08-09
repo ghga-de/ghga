@@ -33,13 +33,13 @@ def check_model_assumptions(model: MetadataModel, config: NormalizationConfig):
 
 # pylint: disable=unused-argument
 def transform_model(model: MetadataModel, config: NormalizationConfig) -> MetadataModel:
-    """Delete slots from classes in the model."""
+    """Normalize the model."""
 
     return normalize_model(model)
 
 
-class SlotDeletionMetadataTransformer(MetadataTransformer[NormalizationConfig]):
-    """Transformer for deleting slots from classes in a metadata model."""
+class NormalizationTransformer(MetadataTransformer[NormalizationConfig]):
+    """Transformer for normalizing the metadata model."""
 
     def transform(self, *, metadata: Json, annotation: SubmissionAnnotation) -> Json:
         """Transforms metadata.
@@ -60,5 +60,5 @@ NORMALIZATION_TRANSFORMATION = TransformationDefinition[NormalizationConfig](
     config_cls=NormalizationConfig,
     check_model_assumptions=check_model_assumptions,
     transform_model=transform_model,
-    metadata_transformer_factory=SlotDeletionMetadataTransformer,
+    metadata_transformer_factory=NormalizationTransformer,
 )
