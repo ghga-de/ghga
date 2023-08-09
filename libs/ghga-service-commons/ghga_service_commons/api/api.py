@@ -21,8 +21,11 @@ from typing import Dict, Optional, Sequence, Union
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from httpyexpect.server.handlers.fastapi_ import configure_exception_handler
 from pydantic import BaseSettings, Field
+
+from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
+    configure_exception_handler,
+)
 
 try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
     from typing_extensions import Literal

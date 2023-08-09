@@ -12,7 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""A library that contains the common functionality used in services of GHGA"""
+"""A sub-package for translating server-side HTTP exceptions into client-side python
+exceptions.
+"""
 
-__version__ = "0.5.0"
+
+# shortcuts:
+from ghga_service_commons.httpyexpect.client.custom_types import Response  # noqa: F401
+from ghga_service_commons.httpyexpect.client.mapping import (  # noqa: F401
+    ExceptionMapping,
+)
+from ghga_service_commons.httpyexpect.client.translator import (  # noqa: F401
+    ResponseTranslator,
+)

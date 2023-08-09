@@ -12,7 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""A library that contains the common functionality used in services of GHGA"""
+"""A sub-package for creating and managing HTTP errors with a specific schema on the
+server side.
+"""
 
-__version__ = "0.5.0"
+# shortcuts:
+from ghga_service_commons.httpyexpect.server.exceptions import (  # noqa: F401
+    HttpCustomExceptionBase,
+    HttpException,
+)

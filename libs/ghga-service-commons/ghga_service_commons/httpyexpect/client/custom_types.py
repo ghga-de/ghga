@@ -12,7 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""A library that contains the common functionality used in services of GHGA"""
+"""Custom types and type aliases."""
 
-__version__ = "0.5.0"
+from typing import Any, Callable, Literal, Mapping, Protocol
+
+ExceptionFactoryParam = Literal["status_code", "exception_id", "description", "data"]
+StatusCode = int
+ExceptionId = str
+ExceptionFactory = Callable[..., Exception]
+ExceptionMappingSpec = Mapping[StatusCode, object]
+
+
+class Response(Protocol):
+    """Any Response that is compatible with httpx and requests."""
+
+    status_code: int
+    """Status code of the Response"""
+
+    def json(self, **kwargs: Any) -> Any:
+        """JSON representation of the Response"""
+        ...

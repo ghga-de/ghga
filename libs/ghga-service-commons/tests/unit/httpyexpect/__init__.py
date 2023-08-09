@@ -13,6 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A library that contains the common functionality used in services of GHGA"""
-
-__version__ = "0.5.0"
+"""Package containing unit tests"""

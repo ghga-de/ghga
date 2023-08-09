@@ -12,7 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""A library that contains the common functionality used in services of GHGA"""
+"""Contains a base exception that all other exceptions in this library inherit from."""
 
-__version__ = "0.5.0"
+
+class HttpyExpectError(Exception):
+    """A base exception that all other exceptions in this library inherit from.
+    Therefore, by catching this exception type, you can catch all exceptions thrown by
+    this library.
+    """

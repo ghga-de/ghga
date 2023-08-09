@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""A library that contains the common functionality used in services of GHGA"""
-
-__version__ = "0.5.0"
+"""Logic for handling httpyexpect exceptions with different backend frameworks.
+"""

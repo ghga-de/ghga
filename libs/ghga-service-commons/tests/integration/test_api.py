@@ -21,11 +21,16 @@ import time
 
 import httpx
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from ghga_service_commons.api import ApiConfigBase, run_server
-
-from .fixtures.hello_world_test_app import GREETING, app
-from .fixtures.utils import find_free_port
+from ghga_service_commons.httpyexpect.server import HttpException
+from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
+    configure_exception_handler,
+)
+from tests.integration.fixtures.hello_world_test_app import GREETING, app
+from tests.integration.fixtures.utils import find_free_port
 
 
 @pytest.mark.asyncio
@@ -51,3 +56,39 @@ async def test_run_server():
         process.kill()
     assert response.status_code == 200
     assert response.json() == GREETING
+
+
+def test_configure_exception_handler():
+    """Test the exception handler configuration of a FastAPI app."""
+
+    # example params for an http exception
+    status_code = 400
+    exception_id = "testException"
+    description = "This is a test exception."
+    data = {"test": "test"}
+
+    # create a new FastAPI app and configure its exception handler:
+    app = FastAPI()
+    configure_exception_handler(app)
+
+    # add a route function that raises an httpyexpect error:
+    @app.get("/test")
+    def test_route():
+        """A test route function raising an httpyexpect error"""
+        raise HttpException(
+            status_code=status_code,
+            exception_id=exception_id,
+            description=description,
+            data=data,
+        )
+
+    # send a request using a test client:
+    client = TestClient(app)
+    response = client.get("/test")
+
+    # check if the response matches the expectation:
+    assert response.status_code == status_code
+    body = response.json()
+    assert body["exception_id"] == exception_id
+    assert body["description"] == description
+    assert body["data"] == data
