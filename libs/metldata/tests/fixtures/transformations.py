@@ -33,6 +33,9 @@ from metldata.builtin_transformations.infer_references import (
     REFERENCE_INFERENCE_TRANSFORMATION,
 )
 from metldata.builtin_transformations.merge_slots import SLOT_MERGING_TRANSFORMATION
+from metldata.builtin_transformations.normalize_model import (
+    NORMALIZATION_TRANSFORMATION,
+)
 from metldata.custom_types import Json
 from metldata.event_handling.models import SubmissionAnnotation
 from metldata.model_utils.essentials import MetadataModel
@@ -135,6 +138,7 @@ TRANSFORMATIONS_BY_NAME: dict[str, TransformationDefinition] = {
     "custom_embedding": CUSTOM_EMBEDDING_TRANSFORMATION,
     "merge_slots": SLOT_MERGING_TRANSFORMATION,
     "aggregate": AGGREGATE_TRANSFORMATION,
+    "normalize": NORMALIZATION_TRANSFORMATION,
 }
 
 
