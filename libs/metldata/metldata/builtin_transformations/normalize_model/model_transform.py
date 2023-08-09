@@ -66,7 +66,7 @@ def embed_types(output_model: dict, input_schema_view: SchemaView) -> None:
 
 
 def normalize_model(model: MetadataModel) -> MetadataModel:
-    """Normalized model to canonical form with all slots being globally defined
+    """Normalize model to canonical form with all slots being globally defined
     only as empty stubs and all slot definitions being defined in the slot_usage
     of the respective class."""
 
