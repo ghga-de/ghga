@@ -1,0 +1,3552 @@
+classes:
+  AliasMixin:
+    description:
+      Mixin for entities that can be assigned an alias at the time of metadata
+      submission.
+    mixin: true
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: AliasMixin
+        range: string
+        required: true
+    slots:
+      - alias
+  Analysis:
+    aliases:
+      - data analysis
+    description:
+      An Analysis is a data transformation that transforms input data to
+      output data. The workflow used to achieve this transformation and the individual
+      steps are also captured.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Analysis
+        range: string
+        required: true
+      description:
+        alias: description
+        description:
+          "Describing how an Analysis was carried out. (e.g.: computational
+          tools, settings, etc.)."
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Analysis
+        range: string
+        required: false
+      reference_chromosome:
+        alias: reference_chromosome
+        description: The reference chromosome used for this Analysis.
+        domain_of:
+          - Analysis
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Analysis
+        range: string
+        required: true
+      reference_genome:
+        alias: reference_genome
+        description:
+          "A published genetic sequence that is used as a reference sequence
+          against which other sequences are compared. Reference genome(s) or annotation(s)
+          used for prior analyses (eg: GRCh38.p13)."
+        domain_of:
+          - Analysis
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Analysis
+        range: string
+        required: true
+      title:
+        alias: title
+        description: The title that describes an entity.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - SequencingProcess
+          - Analysis
+          - Dataset
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Analysis
+        range: string
+      type:
+        alias: type
+        description:
+          The type of the Analysis. Either Reference Alignment (BAM) or
+          Sequence Variation (VCF)
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - SequencingProtocol
+          - Biospecimen
+          - Sample
+          - Analysis
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Analysis
+        range: string
+        required: false
+    slots:
+      - title
+      - description
+      - type
+      - reference_genome
+      - reference_chromosome
+      - alias
+  AnalysisProcess:
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: AnalysisProcess
+        range: string
+        required: true
+      analysis:
+        alias: analysis
+        description: The Analysis the AnalysisProcess was part of
+        domain_of:
+          - AnalysisProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: AnalysisProcess
+        range: Analysis
+        required: true
+      sample_input_files:
+        alias: sample_input_files
+        description: The SampleFile associated used as an input for an entity.
+        domain_of:
+          - AnalysisProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        multivalued: true
+        owner: AnalysisProcess
+        range: SampleFile
+        required: false
+      sequencing_process_input_files:
+        alias: sequencing_process_input_files
+        description:
+          The SequencingProcessFile associated used as an input for an
+          entity.
+        domain_of:
+          - AnalysisProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        multivalued: true
+        owner: AnalysisProcess
+        range: SequencingProcessFile
+        required: false
+      study_input_files:
+        alias: study_input_files
+        description: The StudyFile associated used as an input for an entity.
+        domain_of:
+          - AnalysisProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        multivalued: true
+        owner: AnalysisProcess
+        range: StudyFile
+        required: false
+    slots:
+      - analysis
+      - study_input_files
+      - sample_input_files
+      - sequencing_process_input_files
+      - alias
+  AnalysisProcessOutputFile:
+    description:
+      A AnalysisProcessOutputFile is a File that is associated as an output
+      file with an AnalysisProcess.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: AnalysisProcessOutputFile
+        range: string
+        required: true
+      analysis_process:
+        alias: analysis_process
+        description: The AnalysisProcess associated with an entity.
+        domain_of:
+          - AnalysisProcessOutputFile
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: AnalysisProcessOutputFile
+        range: AnalysisProcess
+        required: true
+      checksum:
+        alias: checksum
+        description:
+          A computed value which depends on the contents of a block of
+          data and which is transmitted or stored along with the data in order to
+          detect corruption of the data. The receiving system recomputes the checksum
+          based upon the received data and compares this value with the one sent with
+          the data. If the two values are the same, the receiver has some confidence
+          that the data was received correctly.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: AnalysisProcessOutputFile
+        range: string
+        required: true
+      checksum_type:
+        alias: checksum_type
+        description: The type of algorithm used to generate the checksum of a file.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: AnalysisProcessOutputFile
+        range: string
+        required: true
+      dataset:
+        alias: dataset
+        description: The Dataset associated with an entity.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: AnalysisProcessOutputFile
+        range: Dataset
+        required: true
+      format:
+        alias: format
+        description: "The format of the file: BAM, SAM, CRAM, BAI, etc."
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: AnalysisProcessOutputFile
+        range: FileFormatEnum
+        required: true
+      forward_or_reverse:
+        alias: forward_or_reverse
+        description:
+          Denotes whether a submitted FASTQ file contains forward (R1)
+          or reverse (R2) reads for paired-end sequencing. The number that identifies
+          each read direction in a paired-end nucleotide sequencing reaction.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: AnalysisProcessOutputFile
+        range: ForwardOrReverseEnum
+        recommended: true
+        required: false
+      name:
+        alias: name
+        description: The given filename.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: AnalysisProcessOutputFile
+        range: string
+        required: true
+      size:
+        alias: size
+        description: The size of a file in bytes.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: AnalysisProcessOutputFile
+        range: integer
+        required: true
+    slots:
+      - analysis_process
+      - name
+      - format
+      - size
+      - checksum
+      - forward_or_reverse
+      - checksum_type
+      - dataset
+      - alias
+  Attribute:
+    description: A key/value pair that further characterizes an entity.
+    exact_mappings:
+      - SIO:000614
+    slot_usage:
+      key:
+        alias: key
+        description: The key for an attribute.
+        domain_of:
+          - Attribute
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Attribute
+        range: string
+        required: true
+      key_type:
+        alias: key_type
+        description:
+          A semantic type that characterizes the attribute key. Usually
+          this is a term from an ontology. For example, 'MAXO:0000616' indicates that
+          the attribute is a measurement of oxygen saturation in the blood.
+        domain_of:
+          - Attribute
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Attribute
+        range: string
+        required: false
+      value:
+        alias: value
+        description:
+          The value for an attribute. Usually this is a numerical value
+          (without the units).
+        domain_of:
+          - Attribute
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Attribute
+        range: string
+        required: true
+      value_type:
+        alias: value_type
+        description:
+          The value_type that characterizes the attribute value. Usually
+          this is a term from an ontology that describes how to interpret the value.
+          For example, 'SIO:001413' indicates that the value is to be interpreted
+          as a percentage.
+        domain_of:
+          - Attribute
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Attribute
+        range: string
+        required: false
+    slots:
+      - key
+      - key_type
+      - value
+      - value_type
+  AttributeMixin:
+    description: Mixin for entities that can have one or more attributes.
+    mixin: true
+    slot_usage:
+      attributes:
+        alias: attributes
+        description: Key/value pairs corresponding to an entity.
+        domain_of:
+          - AttributeMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: AttributeMixin
+        range: Attribute
+        required: false
+    slots:
+      - attributes
+  Biospecimen:
+    description:
+      A Biospecimen is any natural material taken from a biological entity
+      (usually a human) for testing, diagnostics, treatment, or research purposes.
+      The Biospecimen is linked to the Individual from which the Biospecimen is derived.
+    exact_mappings:
+      - OBI:0100051
+    slot_usage:
+      age_at_sampling:
+        alias: age_at_sampling
+        description: Age of an individual.
+        domain_of:
+          - Biospecimen
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Biospecimen
+        range: AgeRangeEnum
+        required: true
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Biospecimen
+        range: string
+        required: true
+      description:
+        alias: description
+        description: Description of an entity.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Biospecimen
+        range: string
+        required: false
+      individual:
+        alias: individual
+        description: The Individual entity from which this Biospecimen was derived.
+        domain_of:
+          - Biospecimen
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Biospecimen
+        range: Individual
+        required: true
+      isolation:
+        alias: isolation
+        description:
+          Method or device employed for collecting/isolating a biospecimen
+          or a sample.
+        domain_of:
+          - Biospecimen
+          - Sample
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Biospecimen
+        range: string
+        recommended: true
+        required: false
+      name:
+        alias: name
+        description: The name for an entity.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Biospecimen
+        range: string
+        recommended: true
+        required: false
+      storage:
+        alias: storage
+        description:
+          Methods by which a biospecimen or a sample is stored (e.g. frozen
+          in liquid nitrogen).
+        domain_of:
+          - Biospecimen
+          - Sample
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Biospecimen
+        range: string
+        recommended: true
+        required: false
+      tissue:
+        alias: tissue
+        domain_of:
+          - Biospecimen
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Biospecimen
+        range: string
+        required: true
+      type:
+        alias: type
+        description: The type of Biospecimen.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - SequencingProtocol
+          - Biospecimen
+          - Sample
+          - Analysis
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Biospecimen
+        range: string
+        recommended: true
+        required: false
+      vital_status_at_sampling:
+        alias: vital_status_at_sampling
+        description:
+          Vital Status of an Individual at the point of sampling (eg:'Alive',
+          'Deceased').
+        domain_of:
+          - Biospecimen
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Biospecimen
+        range: VitalStatusEnum
+        recommended: true
+        required: false
+    slots:
+      - name
+      - type
+      - description
+      - isolation
+      - storage
+      - individual
+      - age_at_sampling
+      - vital_status_at_sampling
+      - tissue
+      - alias
+  Condition:
+    description: An condition that is linked to comparable samples.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Condition
+        range: string
+        required: true
+      attributes:
+        alias: attributes
+        description: Key/value pairs corresponding to an entity.
+        domain_of:
+          - AttributeMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Condition
+        range: Attribute
+        required: false
+      case_control_status:
+        alias: case_control_status
+        description: Whether a condition corresponds to a treatment or a control.
+        domain_of:
+          - Condition
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Condition
+        range: CaseControlStatusEnum
+        required: true
+      description:
+        alias: description
+        description: Description of an entity.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Condition
+        range: string
+        required: true
+      disease_or_healthy:
+        alias: disease_or_healthy
+        description: Whether a condition corresponds to a disease or a healthy state.
+        domain_of:
+          - Condition
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Condition
+        range: DiseaseOrHealthyEnum
+        required: true
+      mutant_or_wildtype:
+        alias: mutant_or_wildtype
+        description: Whether a condition corresponds to a mutant or a wildtype.
+        domain_of:
+          - Condition
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Condition
+        range: MutantOrWildtypeEnum
+        required: true
+      name:
+        alias: name
+        description: The name for an entity.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Condition
+        range: string
+        required: true
+      study:
+        alias: study
+        description: The study associated with an entity.
+        domain_of:
+          - Condition
+          - StudyFile
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Condition
+        range: Study
+        required: true
+      title:
+        alias: title
+        description: The title that describes an entity.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - SequencingProcess
+          - Analysis
+          - Dataset
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Condition
+        range: string
+    slots:
+      - title
+      - description
+      - name
+      - disease_or_healthy
+      - case_control_status
+      - mutant_or_wildtype
+      - study
+      - attributes
+      - alias
+  DataAccessCommittee:
+    description:
+      A group of members that are delegated to grant access to one or more
+      datasets after ensuring the minimum criteria for data sharing has been met,
+      and request for data use does not raise ethical and/or legal concerns.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: DataAccessCommittee
+        range: string
+        required: true
+      email:
+        alias: email
+        description: Email of a person.
+        domain_of:
+          - DataAccessCommittee
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: DataAccessCommittee
+        range: string
+        required: true
+      institute:
+        alias: institute
+        description: The institute a person is affiliated with.
+        domain_of:
+          - DataAccessCommittee
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: DataAccessCommittee
+        range: string
+        required: true
+    slots:
+      - email
+      - institute
+      - alias
+  DataAccessPolicy:
+    description:
+      A Data Access Policy specifies under which circumstances, legal or
+      otherwise, a user can have access to one or more Datasets belonging to one or
+      more Studies.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: DataAccessPolicy
+        range: string
+        required: true
+      data_access_committee:
+        alias: data_access_committee
+        description: The Data Access Committee linked to this policy.
+        domain_of:
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: DataAccessPolicy
+        range: DataAccessCommittee
+        required: true
+      data_use_modifiers:
+        alias: data_use_modifiers
+        description:
+          Modifier for Data use permission associated with a policy. Should
+          be descendants of 'DUO:0000017 data use modifier'
+        domain_of:
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        multivalued: true
+        owner: DataAccessPolicy
+        range: DataUseModifierEnum
+        recommended: true
+        required: false
+      data_use_permission:
+        alias: data_use_permission
+        description:
+          Data use permission associated with a policy. Typically one or
+          more terms from DUO and should be descendants of 'DUO:0000001 data use permission'.
+        domain_of:
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: DataAccessPolicy
+        range: DataUsePermissionEnum
+        required: true
+      description:
+        alias: description
+        description: A short description for the Data Access Policy.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: DataAccessPolicy
+        range: string
+        required: true
+      name:
+        alias: name
+        description: A name for the Data Access Policy.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: DataAccessPolicy
+        range: string
+        required: true
+      policy_text:
+        alias: policy_text
+        description:
+          The terms of data use and policy verbiage should be captured
+          here.
+        domain_of:
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: DataAccessPolicy
+        range: string
+        required: true
+      policy_url:
+        alias: policy_url
+        description:
+          URL for the policy, if available. This is useful if the terms
+          of the policy is made available online at a resolvable URL.
+        domain_of:
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: DataAccessPolicy
+        range: string
+        recommended: true
+        required: false
+    slots:
+      - name
+      - description
+      - policy_text
+      - policy_url
+      - data_access_committee
+      - data_use_permission
+      - data_use_modifiers
+      - alias
+  Dataset:
+    description:
+      A Dataset is a collection of Files that is prepared for distribution
+      and is tied to a Data Access Policy.
+    exact_mappings:
+      - SIO:000089
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Dataset
+        range: string
+        required: true
+      data_access_policy:
+        alias: data_access_policy
+        description: The Data Access Policy that applies to this Dataset.
+        domain_of:
+          - Dataset
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Dataset
+        range: DataAccessPolicy
+        required: true
+      description:
+        alias: description
+        description: Description of an entity.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Dataset
+        range: string
+        required: true
+      title:
+        alias: title
+        description: A title for the submitted Dataset.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - SequencingProcess
+          - Analysis
+          - Dataset
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Dataset
+        range: string
+        required: true
+      types:
+        alias: types
+        description: The type of a dataset.
+        domain_of:
+          - Dataset
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        multivalued: true
+        owner: Dataset
+        range: string
+        required: true
+    slots:
+      - title
+      - description
+      - types
+      - data_access_policy
+      - alias
+  File:
+    description:
+      A file is an object that contains information generated from a process,
+      either an Experiment or an Analysis.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: File
+        range: string
+        required: true
+      checksum:
+        alias: checksum
+        description:
+          A computed value which depends on the contents of a block of
+          data and which is transmitted or stored along with the data in order to
+          detect corruption of the data. The receiving system recomputes the checksum
+          based upon the received data and compares this value with the one sent with
+          the data. If the two values are the same, the receiver has some confidence
+          that the data was received correctly.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: File
+        range: string
+        required: true
+      checksum_type:
+        alias: checksum_type
+        description: The type of algorithm used to generate the checksum of a file.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: File
+        range: string
+        required: true
+      dataset:
+        alias: dataset
+        description: The Dataset associated with an entity.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: File
+        range: Dataset
+        required: true
+      format:
+        alias: format
+        description: "The format of the file: BAM, SAM, CRAM, BAI, etc."
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: File
+        range: FileFormatEnum
+        required: true
+      forward_or_reverse:
+        alias: forward_or_reverse
+        description:
+          Denotes whether a submitted FASTQ file contains forward (R1)
+          or reverse (R2) reads for paired-end sequencing. The number that identifies
+          each read direction in a paired-end nucleotide sequencing reaction.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: File
+        range: ForwardOrReverseEnum
+        recommended: true
+        required: false
+      name:
+        alias: name
+        description: The given filename.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: File
+        range: string
+        required: true
+      size:
+        alias: size
+        description: The size of a file in bytes.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: File
+        range: integer
+        required: true
+    slots:
+      - name
+      - format
+      - size
+      - checksum
+      - forward_or_reverse
+      - checksum_type
+      - dataset
+      - alias
+  IdentifiedByAliasMixin:
+    abstract: true
+    mixin: true
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: IdentifiedByAliasMixin
+        range: string
+        required: true
+    slots:
+      - alias
+  Individual:
+    aliases:
+      - subject
+      - patient
+    description: An Individual is a Person who is participating in a Study.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Individual
+        range: string
+        required: true
+      ancestries:
+        alias: ancestries
+        description: A person's descent or lineage, from a person or from a population.
+        domain_of:
+          - Individual
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        multivalued: true
+        owner: Individual
+        range: string
+        required: false
+      geographical_region:
+        alias: geographical_region
+        description:
+          The geographical region where the Individual is located. Any
+          demarcated area of the Earth; may be determined by both natural and human
+          boundaries.
+        domain_of:
+          - Individual
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Individual
+        range: string
+        required: false
+      karyotype:
+        alias: karyotype
+        description: The karyotype of an individual if defined.
+        domain_of:
+          - Individual
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Individual
+        range: KaryotypeEnum
+        required: false
+      phenotypic_features:
+        alias: phenotypic_features
+        description:
+          The Phenotypic Feature entity that is associated with this Biospecimen
+          at the time of retrieval from the organism. Typically, a concept from Human
+          Phenotype Ontology. For example, 'HP:0100244' indicates that the Individual
+          - from_which_the_Biospecimen was extracted from - exhibits_'Fibrosarcoma'_as_one_of_its_phenotype.
+        domain_of:
+          - Individual
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        multivalued: true
+        owner: Individual
+        range: string
+        required: false
+      sex:
+        alias: sex
+        description:
+          The assemblage of physical properties or qualities by which male
+          is distinguished from female; the physical difference between male and female;
+          the distinguishing peculiarity of male or female.
+        domain_of:
+          - Individual
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Individual
+        range: IndividualSexEnum
+        required: true
+    slots:
+      - sex
+      - karyotype
+      - geographical_region
+      - ancestries
+      - phenotypic_features
+      - alias
+  LibraryPreparationProtocol:
+    description: Information about the library_preparation of an sequencing experiment.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: LibraryPreparationProtocol
+        range: string
+        required: true
+      attributes:
+        alias: attributes
+        description:
+          One or more attributes that further characterizes this library_preparation
+          Protocol.
+        domain_of:
+          - AttributeMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: LibraryPreparationProtocol
+        range: Attribute
+        required: false
+      description:
+        alias: description
+        description:
+          "Description about how a sequencing library was prepared (eg:
+          Library construction method)."
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: string
+        required: true
+      end_bias:
+        alias: end_bias
+        description:
+          The end of the cDNA molecule that is preferentially sequenced,
+          e.g. 3/5 prime tag or end, or the full-length transcript.
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: EndBiasEnum
+        recommended: true
+        required: false
+      library_layout:
+        alias: library_layout
+        description:
+          Describe whether the library was sequenced in single-end (forward
+          or reverse) or paired-end mode
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: LibraryPreparationLibraryLayoutEnum
+        required: true
+      library_name:
+        alias: library_name
+        description:
+          A short name identifying the library to potential users. The
+          same name may refer to multiple versions of the same continually updated
+          library.
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: string
+        required: true
+      library_preparation:
+        alias: library_preparation
+        description:
+          The general method for sequencing library_preparation (e.g. KAPA
+          PCR-free).
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: string
+        required: true
+      library_preparation_kit_manufacturer:
+        alias: library_preparation_kit_manufacturer
+        description: Manufacturer of library_preparation kit
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: string
+        recommended: true
+        required: false
+      library_preparation_kit_retail_name:
+        alias: library_preparation_kit_retail_name
+        description:
+          A unique identifier for the kit used to construct a genomic library.
+          This may include the vendor name, kit name and kit version (e.g. Agilent
+          sure select Human Exome V8, Twist RefSeq Exome, etc.)
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: LibraryPreparationKitRetailNameEnum
+        recommended: true
+        required: false
+      library_selection:
+        alias: library_selection
+        description:
+          Whether any method was used to select for or against, enrich,
+          or screen the material being sequenced. library_selection method (e.g. random,
+          PCA, cDNA, etc )
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: LibraryPreparationLibrarySelectionEnum
+        required: true
+      library_type:
+        alias: library_type
+        description:
+          "Describe the level of omics analysis (eg: Metagenome, transcriptome,
+          etc)"
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: LibraryPreparationLibraryTypeEnum
+        required: true
+      primer:
+        alias: primer
+        description:
+          The type of primer used for reverse transcription, e.g. 'oligo-dT'
+          or 'random' primer. This allows users to identify content of the cDNA library
+          input e.g. enriched for mRNA.
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: PrimerEnum
+        recommended: true
+        required: false
+      rnaseq_strandedness:
+        alias: rnaseq_strandedness
+        description:
+          The strandedness of the library, whether reads come from both
+          strands of the cDNA or only from the first (antisense) or the second (sense)
+          strand.
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: LibraryPreparationProtocol
+        range: LibraryPreparationRNASeqStrandednessEnum
+        recommended: true
+        required: false
+      target_regions:
+        alias: target_regions
+        description:
+          Subset of genes or specific regions of the genome, which are
+          most likely to be involved in the phenotype under study.
+        domain_of:
+          - LibraryPreparationProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        multivalued: true
+        owner: LibraryPreparationProtocol
+        range: string
+        required: false
+    slots:
+      - description
+      - library_name
+      - library_layout
+      - library_type
+      - library_selection
+      - library_preparation
+      - library_preparation_kit_retail_name
+      - library_preparation_kit_manufacturer
+      - primer
+      - end_bias
+      - target_regions
+      - rnaseq_strandedness
+      - attributes
+      - alias
+  Publication:
+    description:
+      The Publication entity represents a publication. While a publication
+      can be any article that is published, the minimum expectation is that the publication
+      has a valid DOI.
+    slot_usage:
+      abstract:
+        alias: abstract
+        description:
+          The study abstract that describes the goals. Can also hold abstract
+          from a publication related to this study.
+        domain_of:
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Publication
+        range: string
+        required: false
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Publication
+        range: string
+        required: true
+      author:
+        alias: author
+        description:
+          The individual who is responsible for the content of a document
+          version.
+        domain_of:
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Publication
+        range: string
+        required: false
+      doi:
+        alias: doi
+        description: DOI identifier of the Publication.
+        domain_of:
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Publication
+        range: string
+        required: true
+      journal:
+        alias: journal
+        description: Name of the journal.
+        domain_of:
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Publication
+        range: string
+        required: false
+      study:
+        alias: study
+        description: The Study entity associated with this Publication.
+        domain_of:
+          - Condition
+          - StudyFile
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Publication
+        range: Study
+        required: true
+      title:
+        alias: title
+        description: The title for the Publication.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - SequencingProcess
+          - Analysis
+          - Dataset
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Publication
+        range: string
+        required: false
+      xref:
+        alias: xref
+        description: One or more cross-references for this Publication.
+        domain_of:
+          - Sample
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        multivalued: true
+        owner: Publication
+        range: string
+        required: false
+      year:
+        alias: year
+        description: Year in which the paper was published.
+        domain_of:
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Publication
+        range: integer
+        required: false
+    slots:
+      - title
+      - abstract
+      - author
+      - year
+      - journal
+      - doi
+      - study
+      - xref
+      - alias
+  Sample:
+    description:
+      A sample is a limited quantity of something to be used for testing,
+      analysis, inspection, investigation, demonstration, or trial use. A sample is
+      prepared from a Biospecimen (isolate or tissue).
+    exact_mappings:
+      - SIO:001050
+      - biolink:MaterialSample
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Sample
+        range: string
+        required: true
+      attributes:
+        alias: attributes
+        description: Key/value pairs corresponding to an entity.
+        domain_of:
+          - AttributeMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Sample
+        range: Attribute
+        required: false
+      biospecimen:
+        alias: biospecimen
+        description: The Biospecimen from which this Sample was prepared from.
+        domain_of:
+          - Sample
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Sample
+        range: Biospecimen
+        required: false
+      condition:
+        alias: condition
+        description: The condition associated with an entity.
+        domain_of:
+          - Sample
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Sample
+        range: Condition
+        required: true
+      description:
+        alias: description
+        description:
+          Short textual description of the sample (How the sample was collected,
+          sample source, Protocol followed for processing the sample etc).
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Sample
+        range: string
+        required: true
+      isolation:
+        alias: isolation
+        description:
+          Method or device employed for collecting/isolating a biospecimen
+          or a sample.
+        domain_of:
+          - Biospecimen
+          - Sample
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Sample
+        range: string
+        recommended: true
+        required: false
+      name:
+        alias: name
+        description: Name of the sample (eg:GHGAS_Blood_Sample1 or GHGAS_PBMC_RNAseq_S1).
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Sample
+        range: string
+        required: true
+      storage:
+        alias: storage
+        description:
+          Methods by which a biospecimen or a sample is stored (e.g. frozen
+          in liquid nitrogen).
+        domain_of:
+          - Biospecimen
+          - Sample
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Sample
+        range: string
+        recommended: true
+        required: false
+      type:
+        alias: type
+        description: The type of sample.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - SequencingProtocol
+          - Biospecimen
+          - Sample
+          - Analysis
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        in_subset:
+          - ontology
+        owner: Sample
+        range: SampleTypeEnum
+        required: false
+      xref:
+        alias: xref
+        description:
+          One or more cross-references for this Sample. For example, this
+          Sample may have an EBI BioSamples accession or an EGA Sample accession.
+        domain_of:
+          - Sample
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        multivalued: true
+        owner: Sample
+        range: string
+        required: false
+    slots:
+      - name
+      - type
+      - description
+      - isolation
+      - storage
+      - biospecimen
+      - condition
+      - xref
+      - attributes
+      - alias
+  SampleFile:
+    description: A SampleFile is a File that is associated with a Sample.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: SampleFile
+        range: string
+        required: true
+      checksum:
+        alias: checksum
+        description:
+          A computed value which depends on the contents of a block of
+          data and which is transmitted or stored along with the data in order to
+          detect corruption of the data. The receiving system recomputes the checksum
+          based upon the received data and compares this value with the one sent with
+          the data. If the two values are the same, the receiver has some confidence
+          that the data was received correctly.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SampleFile
+        range: string
+        required: true
+      checksum_type:
+        alias: checksum_type
+        description: The type of algorithm used to generate the checksum of a file.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SampleFile
+        range: string
+        required: true
+      dataset:
+        alias: dataset
+        description: The Dataset associated with an entity.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: SampleFile
+        range: Dataset
+        required: true
+      format:
+        alias: format
+        description: "The format of the file: BAM, SAM, CRAM, BAI, etc."
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SampleFile
+        range: FileFormatEnum
+        required: true
+      forward_or_reverse:
+        alias: forward_or_reverse
+        description:
+          Denotes whether a submitted FASTQ file contains forward (R1)
+          or reverse (R2) reads for paired-end sequencing. The number that identifies
+          each read direction in a paired-end nucleotide sequencing reaction.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SampleFile
+        range: ForwardOrReverseEnum
+        recommended: true
+        required: false
+      name:
+        alias: name
+        description: The given filename.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SampleFile
+        range: string
+        required: true
+      sample:
+        alias: sample
+        description: The sample associated with an entity.
+        domain_of:
+          - SequencingProcess
+          - SampleFile
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: SampleFile
+        range: Sample
+        required: true
+      size:
+        alias: size
+        description: The size of a file in bytes.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SampleFile
+        range: integer
+        required: true
+    slots:
+      - sample
+      - name
+      - format
+      - size
+      - checksum
+      - forward_or_reverse
+      - checksum_type
+      - dataset
+      - alias
+  SequencingExperiment:
+    description:
+      An sequencing experiment is an investigation that consists of a coordinated
+      set of actions and observations designed to generate data with the goal of verifying,
+      falsifying, or establishing the validity of a hypothesis.
+    exact_mappings:
+      - SIO:000994
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: SequencingExperiment
+        range: string
+        required: true
+      attributes:
+        alias: attributes
+        description: Key/value pairs corresponding to an entity.
+        domain_of:
+          - AttributeMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: SequencingExperiment
+        range: Attribute
+        required: false
+      description:
+        alias: description
+        description: A detailed description of the Experiment.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingExperiment
+        range: string
+        required: true
+      library_preparation_protocol:
+        alias: library_preparation_protocol
+        description: The library_preparation Protocol associated with an entity.
+        domain_of:
+          - SequencingExperiment
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: SequencingExperiment
+        range: LibraryPreparationProtocol
+        required: true
+      sequencing_protocol:
+        alias: sequencing_protocol
+        description: The sequencing protocol associated with an entity.
+        domain_of:
+          - SequencingExperiment
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: SequencingExperiment
+        range: SequencingProtocol
+        required: true
+      title:
+        alias: title
+        description: "Name for the experiment (eg: GHGAE_PBMC_RNAseq)."
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - SequencingProcess
+          - Analysis
+          - Dataset
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingExperiment
+        range: string
+      type:
+        alias: type
+        description: The type of sequencing experiment.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - SequencingProtocol
+          - Biospecimen
+          - Sample
+          - Analysis
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingExperiment
+        range: string
+        required: false
+    slots:
+      - title
+      - description
+      - type
+      - sequencing_protocol
+      - library_preparation_protocol
+      - attributes
+      - alias
+  SequencingProcess:
+    description: A sequencing process linking a sample to sequencing output.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: SequencingProcess
+        range: string
+        required: true
+      attributes:
+        alias: attributes
+        description: Key/value pairs corresponding to an entity.
+        domain_of:
+          - AttributeMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: SequencingProcess
+        range: Attribute
+        required: false
+      description:
+        alias: description
+        description: Description of an entity.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcess
+        range: string
+        required: true
+      index_sequence:
+        alias: index_sequence
+        description:
+          A unique nucleotide sequence that is added to a sample during
+          library_preparation to serve as a unique identifier for the sample.
+        domain_of:
+          - SequencingProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcess
+        range: string
+        recommended: true
+        required: false
+      lane_number:
+        alias: lane_number
+        description:
+          The numerical identifier for the lane or machine unit where a
+          sample was located during nucleotide sequencing.
+        domain_of:
+          - SequencingProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcess
+        range: string
+        recommended: true
+        required: false
+      name:
+        alias: name
+        description: The name for an entity.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcess
+        range: string
+        required: true
+      sample:
+        alias: sample
+        description: The sample associated with an entity.
+        domain_of:
+          - SequencingProcess
+          - SampleFile
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: SequencingProcess
+        range: Sample
+        required: true
+      sequencing_experiment:
+        alias: sequencing_experiment
+        description: The sequencing experiment associated with an entity.
+        domain_of:
+          - SequencingProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: SequencingProcess
+        range: SequencingExperiment
+        required: true
+      sequencing_lane_id:
+        alias: sequencing_lane_id
+        description: Identifier of the sequencing lane. Used for batch correction.
+        domain_of:
+          - SequencingProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcess
+        range: string
+        required: false
+      sequencing_machine_id:
+        alias: sequencing_machine_id
+        description: Identifier of the sequencing machine. Used for batch correction.
+        domain_of:
+          - SequencingProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcess
+        range: string
+        required: false
+      sequencing_run_id:
+        alias: sequencing_run_id
+        description: Identifier of the sequencing run. Used for batch correction.
+        domain_of:
+          - SequencingProcess
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcess
+        range: string
+        required: false
+      title:
+        alias: title
+        description: The title that describes an entity.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - SequencingProcess
+          - Analysis
+          - Dataset
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcess
+        range: string
+    slots:
+      - title
+      - description
+      - name
+      - sequencing_run_id
+      - sequencing_lane_id
+      - sequencing_machine_id
+      - sequencing_experiment
+      - index_sequence
+      - lane_number
+      - sample
+      - attributes
+      - alias
+  SequencingProcessFile:
+    description: A SequencingProcessFile is a File that is associated with a SequencingProcess.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: SequencingProcessFile
+        range: string
+        required: true
+      checksum:
+        alias: checksum
+        description:
+          A computed value which depends on the contents of a block of
+          data and which is transmitted or stored along with the data in order to
+          detect corruption of the data. The receiving system recomputes the checksum
+          based upon the received data and compares this value with the one sent with
+          the data. If the two values are the same, the receiver has some confidence
+          that the data was received correctly.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcessFile
+        range: string
+        required: true
+      checksum_type:
+        alias: checksum_type
+        description: The type of algorithm used to generate the checksum of a file.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcessFile
+        range: string
+        required: true
+      dataset:
+        alias: dataset
+        description: The Dataset associated with an entity.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: SequencingProcessFile
+        range: Dataset
+        required: true
+      format:
+        alias: format
+        description: "The format of the file: BAM, SAM, CRAM, BAI, etc."
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcessFile
+        range: FileFormatEnum
+        required: true
+      forward_or_reverse:
+        alias: forward_or_reverse
+        description:
+          Denotes whether a submitted FASTQ file contains forward (R1)
+          or reverse (R2) reads for paired-end sequencing. The number that identifies
+          each read direction in a paired-end nucleotide sequencing reaction.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcessFile
+        range: ForwardOrReverseEnum
+        recommended: true
+        required: false
+      name:
+        alias: name
+        description: The given filename.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcessFile
+        range: string
+        required: true
+      sequencing_process:
+        alias: sequencing_process
+        description: The SequencingProcess associated with an entity.
+        domain_of:
+          - SequencingProcessFile
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: SequencingProcessFile
+        range: SequencingProcess
+        required: true
+      size:
+        alias: size
+        description: The size of a file in bytes.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProcessFile
+        range: integer
+        required: true
+    slots:
+      - sequencing_process
+      - name
+      - format
+      - size
+      - checksum
+      - forward_or_reverse
+      - checksum_type
+      - dataset
+      - alias
+  SequencingProtocol:
+    description: Information about the sequencing of a sample.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: SequencingProtocol
+        range: string
+        required: true
+      attributes:
+        alias: attributes
+        description:
+          One or more attributes that further characterizes this Sequencing
+          Protocol.
+        domain_of:
+          - AttributeMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: SequencingProtocol
+        range: Attribute
+        required: false
+      cell_barcode_offset:
+        alias: cell_barcode_offset
+        description:
+          The offset in sequence of the cell identifying barcode. (Eg.
+          '0').
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        recommended: true
+        required: false
+      cell_barcode_read:
+        alias: cell_barcode_read
+        description: "The type of read that contains the cell barcode (eg: index1/index2/read1/read2)."
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: IndexReadEnum
+        recommended: true
+        required: false
+      cell_barcode_size:
+        alias: cell_barcode_size
+        description: The size of the cell identifying barcode (E.g. '16').
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        recommended: true
+        required: false
+      description:
+        alias: description
+        description:
+          "Description about the sequencing Protocol (eg: mRNA-seq, Whole
+          exome long-read sequencing etc)."
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        required: true
+      flow_cell_id:
+        alias: flow_cell_id
+        description:
+          "Flow Cell ID (eg: Experiment ID_Cell 1_Lane_1). The barcode
+          assigned to a flow cell used in nucleotide sequencing."
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        recommended: true
+        required: false
+      flow_cell_type:
+        alias: flow_cell_type
+        description:
+          Type of flow cell used (e.g. S4, S2 for NovaSeq; PromethION,
+          Flongle for Nanopore). Aparatus in the fluidic subsystem where the sheath
+          and sample meet. Can be one of several types; jet-in-air, quartz cuvette,
+          or a hybrid of the two. The sample flows through the center of a fluid column
+          of sheath fluid in the flow cell.
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: FlowCellTypeEnum
+        recommended: true
+        required: false
+      instrument_model:
+        alias: instrument_model
+        description:
+          The name and model of the technology platform used to perform
+          sequencing.
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: InstrumentModelEnum
+        required: true
+      sample_barcode_read:
+        alias: sample_barcode_read
+        description: "The type of read that contains the sample barcode (eg: index1/index2/read1/read2)."
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: SampleBarcodeReadEnum
+        recommended: true
+        required: false
+      sequencing_center:
+        alias: sequencing_center
+        description: Center where sample was sequenced.
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        recommended: true
+        required: false
+      sequencing_read_length:
+        alias: sequencing_read_length
+        description:
+          "Length of sequencing reads (eg: Long or short or actual number
+          of the read length etc). The number of nucleotides successfully ordered
+          from each side of a nucleic acid fragment obtained after the completion
+          of a sequencing process"
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        required: false
+      target_coverage:
+        alias: target_coverage
+        description:
+          Mean coverage for whole genome sequencing, or mean target coverage
+          for whole exome and targeted sequencing. The number of times a particular
+          locus (site, nucleotide, amplicon, region) was sequenced.
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        required: false
+      type:
+        alias: type
+        description:
+          "Type of the sequencing Protocol (eg: mRNA-seq, Whole exome long-read
+          sequencing etc)."
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - SequencingProtocol
+          - Biospecimen
+          - Sample
+          - Analysis
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+      umi_barcode_offset:
+        alias: umi_barcode_offset
+        description:
+          The offset in sequence of the UMI identifying barcode. (E.g.
+          '16').
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        recommended: true
+        required: false
+      umi_barcode_read:
+        alias: umi_barcode_read
+        description: "The type of read that contains the UMI barcode (Eg: index1/index2/read1/read2)."
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: IndexReadEnum
+        recommended: true
+        required: false
+      umi_barcode_size:
+        alias: umi_barcode_size
+        description: The size of the UMI identifying barcode (Eg. '10').
+        domain_of:
+          - SequencingProtocol
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: SequencingProtocol
+        range: string
+        recommended: true
+        required: false
+    slots:
+      - description
+      - type
+      - instrument_model
+      - sequencing_center
+      - sequencing_read_length
+      - target_coverage
+      - flow_cell_id
+      - flow_cell_type
+      - umi_barcode_read
+      - umi_barcode_offset
+      - umi_barcode_size
+      - cell_barcode_read
+      - cell_barcode_offset
+      - cell_barcode_size
+      - sample_barcode_read
+      - attributes
+      - alias
+  Study:
+    description:
+      Studies are experimental investigations of a particular phenomenon.
+      It involves a detailed examination and analysis of a subject to learn more about
+      the phenomenon being studied.
+    slot_usage:
+      affiliations:
+        alias: affiliations
+        description: The Institution(s) associated with an entity.
+        domain_of:
+          - Study
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        multivalued: true
+        owner: Study
+        range: string
+        required: true
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Study
+        range: string
+        required: true
+      attributes:
+        alias: attributes
+        description:
+          "Custom key/value pairs that further characterizes the Study.
+          (e.g.: approaches - single-cell,_bulk_etc)"
+        domain_of:
+          - AttributeMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Study
+        range: Attribute
+        required: false
+      description:
+        alias: description
+        description:
+          A detailed description (abstract) that describes the goals of
+          this Study.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - LibraryPreparationProtocol
+          - SequencingProtocol
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - Analysis
+          - Dataset
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Study
+        range: string
+        required: true
+      title:
+        alias: title
+        description: A comprehensive title for the study.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - Condition
+          - SequencingProcess
+          - Analysis
+          - Dataset
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Study
+        range: string
+        required: true
+      type:
+        alias: type
+        description:
+          The type of Study. For example, 'Cancer Genomics', 'Epigenetics',
+          'Exome Sequencing'.
+        domain_of:
+          - Study
+          - SequencingExperiment
+          - SequencingProtocol
+          - Biospecimen
+          - Sample
+          - Analysis
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: Study
+        range: StudyTypeEnum
+        required: true
+    slots:
+      - title
+      - description
+      - type
+      - affiliations
+      - attributes
+      - alias
+  StudyFile:
+    description: A StudyFile is a File that is associated with a Study.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: StudyFile
+        range: string
+        required: true
+      checksum:
+        alias: checksum
+        description:
+          A computed value which depends on the contents of a block of
+          data and which is transmitted or stored along with the data in order to
+          detect corruption of the data. The receiving system recomputes the checksum
+          based upon the received data and compares this value with the one sent with
+          the data. If the two values are the same, the receiver has some confidence
+          that the data was received correctly.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: StudyFile
+        range: string
+        required: true
+      checksum_type:
+        alias: checksum_type
+        description: The type of algorithm used to generate the checksum of a file.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: StudyFile
+        range: string
+        required: true
+      dataset:
+        alias: dataset
+        description: The Dataset associated with an entity.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: StudyFile
+        range: Dataset
+        required: true
+      format:
+        alias: format
+        description: "The format of the file: BAM, SAM, CRAM, BAI, etc."
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: StudyFile
+        range: FileFormatEnum
+        required: true
+      forward_or_reverse:
+        alias: forward_or_reverse
+        description:
+          Denotes whether a submitted FASTQ file contains forward (R1)
+          or reverse (R2) reads for paired-end sequencing. The number that identifies
+          each read direction in a paired-end nucleotide sequencing reaction.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: StudyFile
+        range: ForwardOrReverseEnum
+        recommended: true
+        required: false
+      name:
+        alias: name
+        description: The given filename.
+        domain_of:
+          - Condition
+          - SequencingProcess
+          - Biospecimen
+          - Sample
+          - File
+          - DataAccessPolicy
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: StudyFile
+        range: string
+        required: true
+      size:
+        alias: size
+        description: The size of a file in bytes.
+        domain_of:
+          - File
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        owner: StudyFile
+        range: integer
+        required: true
+      study:
+        alias: study
+        description: The study associated with an entity.
+        domain_of:
+          - Condition
+          - StudyFile
+          - Publication
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: StudyFile
+        range: Study
+        required: true
+    slots:
+      - study
+      - name
+      - format
+      - size
+      - checksum
+      - forward_or_reverse
+      - checksum_type
+      - dataset
+      - alias
+  Submission:
+    description:
+      A grouping entity that represents information about one or more entities.
+      A submission can be considered as a set of inter-related (and inter-connected)
+      entities that represent a data submission to GHGA.
+    slot_usage:
+      analyses:
+        alias: analyses
+        description:
+          Information about one or more Analysis entities associated with
+          this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Analysis
+        required: true
+      analysis_process_output_files:
+        alias: analysis_process_output_files
+        description: The AnalysisProcessOutputFiles that are part of this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: AnalysisProcessOutputFile
+        required: true
+      analysis_processes:
+        alias: analysis_processes
+        description: The AnalysisProcesses that are part of this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: AnalysisProcess
+        required: true
+      biospecimens:
+        alias: biospecimens
+        description:
+          Information about one or more Biospecimen entities associated
+          with this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Biospecimen
+        required: true
+      conditions:
+        alias: conditions
+        description: The Conditions associated with this Submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Condition
+        required: true
+      data_access_committees:
+        alias: data_access_committees
+        description: The Data Access Committee that applies to Dataset in this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: DataAccessCommittee
+        required: true
+      data_access_policies:
+        alias: data_access_policies
+        description: The Data Access Policy that applies to Dataset in this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: DataAccessPolicy
+        required: true
+      datasets:
+        alias: datasets
+        description: One or more Dataset that are part of this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Dataset
+        required: true
+      individuals:
+        alias: individuals
+        description:
+          Information about one or more Individual entities associated
+          with this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Individual
+        required: true
+      library_preparation_protocols:
+        alias: library_preparation_protocols
+        description:
+          One or more library preparation protocol entities associated
+          with this Submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: LibraryPreparationProtocol
+        required: true
+      publications:
+        alias: publications
+        description: One or more Publication entities associated with this Submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Publication
+        required: true
+      sample_files:
+        alias: sample_files
+        description: The SampleFiles that are part of this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: SampleFile
+        required: true
+      samples:
+        alias: samples
+        description:
+          Information about one or more Sample entities associated with
+          this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Sample
+        required: true
+      sequencing_experiments:
+        alias: sequencing_experiments
+        description:
+          Information about one or more Experiment entities associated
+          with this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: SequencingExperiment
+        required: true
+      sequencing_process_files:
+        alias: sequencing_process_files
+        description: The SequencingProcessFiles that are part of this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: SequencingProcessFile
+        required: true
+      sequencing_processes:
+        alias: sequencing_processes
+        description: The SequencingProcesses that are part of this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: SequencingProcess
+        required: true
+      sequencing_protocols:
+        alias: sequencing_protocols
+        description:
+          One or more sequencing protocol entities associated with this
+          Submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: SequencingProtocol
+        required: true
+      studies:
+        alias: studies
+        description: Information about a Study entities associated with this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Study
+        required: true
+      study_files:
+        alias: study_files
+        description: The StudyFiles that are part of this submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: StudyFile
+        required: true
+      trios:
+        alias: trios
+        description: The Trios associated with this Submission.
+        domain_of:
+          - Submission
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        owner: Submission
+        range: Trio
+        required: true
+    slots:
+      - analyses
+      - analysis_process_output_files
+      - analysis_processes
+      - biospecimens
+      - conditions
+      - data_access_committees
+      - data_access_policies
+      - datasets
+      - individuals
+      - library_preparation_protocols
+      - publications
+      - sample_files
+      - samples
+      - sequencing_experiments
+      - sequencing_process_files
+      - sequencing_processes
+      - sequencing_protocols
+      - studies
+      - study_files
+      - trios
+    tree_root: true
+  Trio:
+    description:
+      A trio is defined by three individuals representing an individual
+      and their parents.
+    slot_usage:
+      alias:
+        alias: alias
+        description: The alias for an entity at the time of submission.
+        domain_of:
+          - AliasMixin
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        identifier: true
+        owner: Trio
+        range: string
+        required: true
+      child:
+        alias: child
+        description: The child of two individuals.
+        domain_of:
+          - Trio
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Trio
+        range: Individual
+        required: true
+      father:
+        alias: father
+        description: The father of an individual.
+        domain_of:
+          - Trio
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Trio
+        range: Individual
+        required: true
+      mother:
+        alias: mother
+        description: The mother of an individual.
+        domain_of:
+          - Trio
+        from_schema: https://w3id.org/GHGA-Submission-Metadata-Schema
+        inlined: false
+        owner: Trio
+        range: Individual
+        required: true
+    slots:
+      - mother
+      - father
+      - child
+      - alias
+default_curi_maps:
+  - obo_context
+  - idot_context
+  - semweb_context
+default_prefix: GHGA
+default_range: string
+description:
+  The submission centric metadata schema for the German Human Genome-Phenome
+  Archive (GHGA).
+enums:
+  AgeRangeEnum:
+    description: Enum to capture the age range that an Indiviudal belongs to.
+    permissible_values:
+      0_TO_5:
+        description: Age between 0 to 5.
+      11_TO_15:
+        description: Age between 11 to 15.
+      16_TO_20:
+        description: Age between 16 to 20.
+      21_TO_25:
+        description: Age between 21 to 25.
+      26_TO_30:
+        description: Age between 26 to 30.
+      31_TO_35:
+        description: Age between 31 to 35.
+      36_TO_40:
+        description: Age between 36 to 40.
+      41_TO_45:
+        description: Age between 41 to 45.
+      46_TO_50:
+        description: Age between 46 to 50.
+      51_TO_55:
+        description: Age between 51 to 55.
+      56_TO_60:
+        description: Age between 56 to 60.
+      61_TO_65:
+        description: Age between 61 to 65.
+      66_TO_70:
+        description: Age between 66 to 70.
+      6_TO_10:
+        description: Age between 6 to 10.
+      71_TO_75:
+        description: Age between 71 to 75.
+      76_TO_80:
+        description: Age between 76 to 80.
+      81_OR_OLDER:
+        description: Age above 80.
+      UNKNOWN:
+        description: Age range unknown.
+  AncestryEnum:
+    description: Permitted values for ancestry
+    reachable_from:
+      include_self: false
+      source_nodes:
+        - HANCESTRO:0004
+      source_ontology: http://purl.obolibrary.org/obo/hancestro/releases/2022-05-12/hancestro.owl
+  CaseControlStatusEnum:
+    description:
+      Enum to capture whether a condition corresponds to a case or a control
+      condition.
+    permissible_values:
+      NEITHER_CASE_OR_CONTROL_STATUS:
+        meaning: NCIT:C99273
+      PROBABLE_CASE_STATUS:
+        meaning: NCIT:C99271
+      PROBABLE_CONTROL_STATUS:
+        meaning: NCIT:C99272
+      TRUE_CASE_STATUS:
+        meaning: NCIT:C99269
+      TRUE_CONTROL_STATUS:
+        meaning: NCIT:C99270
+      UNABLE_TO_ASSESS_CASE_OR_CONTROL_STATUS:
+        meaning: NCIT:C99274
+    reachable_from:
+      include_self: false
+      source_nodes:
+        - NCIT:C99268
+      source_ontology: http://purl.obolibrary.org/obo/ncit/releases/2022-08-19/ncit.owl
+  DataUseModifierEnum:
+    description: Permitted values for data use modifier
+    permissible_values:
+      clinical care use:
+        meaning: DUO:0000043
+      collaboration required:
+        meaning: DUO:0000020
+      ethics approval required:
+        meaning: DUO:0000021
+      genetic studies only:
+        meaning: DUO:0000016
+      geographical restriction:
+        meaning: DUO:0000022
+      institution specific restriction:
+        meaning: DUO:0000028
+      no general methods research:
+        meaning: DUO:0000015
+      non-commercial use only:
+        meaning: DUO:0000046
+      not for profit organisation use only:
+        meaning: DUO:0000045
+      not for profit, non commercial use only:
+        meaning: DUO:0000018
+      population origins or ancestry research prohibited:
+        meaning: DUO:00000044
+      project specific restriction:
+        meaning: DUO:0000027
+      publication moratorium:
+        meaning: DUO:0000024
+      publication required:
+        meaning: DUO:0000019
+      research specific restrictions:
+        meaning: DUO:0000012
+      return to database or resource:
+        meaning: DUO:0000029
+      time limit on use:
+        meaning: DUO:0000025
+      user specific restriction:
+        meaning: DUO:0000026
+    reachable_from:
+      include_self: false
+      source_nodes:
+        - DUO:0000017
+      source_ontology: http://purl.obolibrary.org/obo/duo/releases/2021-02-23/duo.owl
+  DataUsePermissionEnum:
+    description: Permitted values for data use permission
+    permissible_values:
+      disease specific research:
+        meaning: DUO:0000007
+      general research use:
+        meaning: DUO:0000042
+      health or medical or biomedical research:
+        meaning: DUO:0000006
+      no restriction:
+        meaning: DUO:0000004
+      population origins or ancestry research only:
+        meaning: DUO:0000011
+    reachable_from:
+      include_self: false
+      source_nodes:
+        - DUO:0000001
+      source_ontology: http://purl.obolibrary.org/obo/duo/releases/2021-02-23/duo.owl
+  DiseaseOrHealthyEnum:
+    description:
+      Enum to capture whether a condition corresponds to a disease or a
+      healthy state.
+    permissible_values:
+      DISEASE:
+        description: Disease state.
+      HEALTHY:
+        description: Healthy state.
+      NOT_APPLICABLE:
+        description: The distinction is not applicaple.
+  EndBiasEnum:
+    description: Permitted values for end bias
+    permissible_values:
+      3_PRIME_END: {}
+      5_PRIME_END: {}
+      FULL_LENGTH: {}
+  FileFormatEnum:
+    description: Enum to capture file types.
+    permissible_values:
+      AGP: {}
+      BAI: {}
+      BAM: {}
+      BCF: {}
+      BED: {}
+      CRAI: {}
+      CRAM: {}
+      CSV: {}
+      FASTA: {}
+      FASTQ: {}
+      GFF: {}
+      HDF5: {}
+      INFO: {}
+      JSON: {}
+      MD: {}
+      OTHER: {}
+      PED: {}
+      SAM: {}
+      SFF: {}
+      SRF: {}
+      TAB: {}
+      TABIX: {}
+      TSV: {}
+      TXT: {}
+      VCF: {}
+      WIG: {}
+  FlowCellTypeEnum:
+    description: Permitted values for flow cell type
+    permissible_values:
+      FLONGLE: {}
+      GRID_ION: {}
+      ILLUMINA_NOVA_SEQ_S2: {}
+      ILLUMINA_NOVA_SEQ_S4: {}
+      MIN_ION: {}
+      OTHER: {}
+      PROMETH_ION: {}
+  ForwardOrReverseEnum:
+    description:
+      Enum to capture whether the reads from paired-end sequencing are
+      forward (R1) or reverse (R2).
+    permissible_values:
+      FORWARD:
+        description: The reads are forward (R1) reads
+      REVERSE:
+        description: The reads are reverse (R2) reads
+  GeographicalRegionEnum:
+    description: Permitted values for geographical region
+    reachable_from:
+      include_self: false
+      source_nodes:
+        - HANCESTRO:0002
+      source_ontology: http://purl.obolibrary.org/obo/hancestro/releases/2022-05-12/hancestro.owl
+  IndexReadEnum:
+    description:
+      Permitted Values to indicate the location of a sequence component
+      in a read or index
+    permissible_values:
+      INDEX1: {}
+      INDEX2: {}
+      READ1: {}
+      READ2: {}
+  IndividualSexEnum:
+    description:
+      The sex of an Individual as as defined in a specific medical and
+      clinical context.
+    permissible_values:
+      FEMALE_SEX_FOR_CLINICAL_USE:
+        meaning: GSSO:011317
+      IMAGING_SEX:
+        meaning: GSSO:009318
+      MALE_SEX_FOR_CLINICAL_USE:
+        meaning: GSSO:011318
+      SPECIFIED_SEX_FOR_CLINICAL_USE:
+        meaning: GSSO:011319
+      UNKNOWN_SEX_FOR_CLINICAL_USE:
+        meaning: GSSO:011320
+    reachable_from:
+      include_self: false
+      source_nodes:
+        - GSSO:009428
+      source_ontology: http://purl.obolibrary.org/obo/gsso/releases/2.0.5/gsso.owl
+  InstrumentModelEnum:
+    description: Permitted values for instrument model
+    permissible_values:
+      DNBSEQ_G400: {}
+      DNBSEQ_G400_FAST: {}
+      DNBSEQ_G50: {}
+      DNBSEQ_T7: {}
+      ILLUMINA_GENOME_ANALYZER: {}
+      ILLUMINA_GENOME_ANALYZER_II: {}
+      ILLUMINA_GENOME_ANALYZER_IIX: {}
+      ILLUMINA_HI_SCAN: {}
+      ILLUMINA_HI_SCAN_SQ: {}
+      ILLUMINA_HI_SEQ_1000: {}
+      ILLUMINA_HI_SEQ_1500: {}
+      ILLUMINA_HI_SEQ_2000: {}
+      ILLUMINA_HI_SEQ_2500: {}
+      ILLUMINA_HI_SEQ_3000: {}
+      ILLUMINA_HI_SEQ_4000: {}
+      ILLUMINA_HI_SEQ_X: {}
+      ILLUMINA_HI_SEQ_X_FIVE: {}
+      ILLUMINA_HI_SEQ_X_TEN: {}
+      ILLUMINA_I_SCAN: {}
+      ILLUMINA_I_SEQ_100: {}
+      ILLUMINA_MINI_SEQ: {}
+      ILLUMINA_MI_SEQ: {}
+      ILLUMINA_MI_SEQ_DX: {}
+      ILLUMINA_MI_SEQ_DX_RESEARCH_MODE: {}
+      ILLUMINA_NEXT_SEQ_1000: {}
+      ILLUMINA_NEXT_SEQ_2000: {}
+      ILLUMINA_NEXT_SEQ_500: {}
+      ILLUMINA_NEXT_SEQ_550: {}
+      ILLUMINA_NEXT_SEQ_550_DX: {}
+      ILLUMINA_NEXT_SEQ_550_DX_RESEARCH_MODE: {}
+      ILLUMINA_NOVA_SEQ_6000: {}
+      ONT_GRID_ION: {}
+      ONT_MIN_ION: {}
+      ONT_PROMETH_ION: {}
+      OTHER: {}
+      PAC_BIO_ONSO: {}
+      PAC_BIO_REVIO: {}
+      PAC_BIO_RS: {}
+      PAC_BIO_RS_II: {}
+      PAC_BIO_SEQUEL: {}
+      PAC_BIO_SEQUEL_II: {}
+      PAC_BIO_SEQUEL_IIE: {}
+      ULTIMA_UG_100: {}
+  IsolationEnum:
+    description: Describes how biomaterial was isolated.
+    reachable_from:
+      include_self: false
+      source_nodes:
+        - SNOMED:118292001
+      source_ontology: http://snomed.info/sct/900000000000207008/version/20200131
+  KaryotypeEnum:
+    description: Permitted values for karyotype
+    permissible_values:
+      46_XX: {}
+      46_XY: {}
+      OTHER: {}
+  LibraryPreparationKitRetailNameEnum:
+    description: Permitted values for library preparation kit retail name
+    permissible_values:
+      10X_GENOMICS_CHROMIUM_SINGLE_CELL_3_V2: {}
+      10X_GENOMICS_CHROMIUM_SINGLE_CELL_3_V3: {}
+      ACCEL_NGS_2_S_PLUS_DNA_LIBRARY_KIT: {}
+      ACCEL_NGS_METHYL_SEQ_DNA: {}
+      AGILENT_STRAND_SPECIFIC_RNA: {}
+      AGILENT_SURE_SELECT_CUSTOM_ENRICHMENT_KIT: {}
+      AGILENT_SURE_SELECT_V3: {}
+      AGILENT_SURE_SELECT_V4: {}
+      AGILENT_SURE_SELECT_V4_UT_RS: {}
+      AGILENT_SURE_SELECT_V5: {}
+      AGILENT_SURE_SELECT_V5_UT_RS: {}
+      AGILENT_SURE_SELECT_V6: {}
+      AGILENT_SURE_SELECT_V6_ONE: {}
+      AGILENT_SURE_SELECT_V6_UT_RS: {}
+      AGILENT_SURE_SELECT_V7: {}
+      AGILENT_SURE_SELECT_WGS: {}
+      AGILENT_SURE_SELECT_XT_HS_HUMAN_ALL_EXON_V7: {}
+      AGILENT_SURE_SELECT_XT_MOUSE_ALL_EXON: {}
+      AGILENT_XT_HS_SURE_SELECT_CLINICAL_RESEARCH_EXOME_V2: {}
+      AVENIO_CT_DNA_KIT: {}
+      IDT_X_GEN_EXOME_RESEARCH_PANEL: {}
+      ILLUMINA_DNA_PCR_FREE: {}
+      ILLUMINA_NEXTERA_DNA_FLEX: {}
+      ILLUMINA_NEXTERA_EXOME_ENRICHMENT_KIT: {}
+      ILLUMINA_STRANDED_M_RNA_PREP_LIGATION: {}
+      ILLUMINA_TRUSEQ_PCR_FREE_METHYL: {}
+      ILLUMINA_TRU_SEQ_CH_IP_SAMPLE_PREPARATION_KIT: {}
+      ILLUMINA_TRU_SEQ_CUSTOM_AMPLICON: {}
+      ILLUMINA_TRU_SEQ_DNA: {}
+      ILLUMINA_TRU_SEQ_NANO_DNA: {}
+      ILLUMINA_TRU_SEQ_NANO_DNA_HT: {}
+      ILLUMINA_TRU_SEQ_NANO_DNA_LT: {}
+      ILLUMINA_TRU_SEQ_NANO_FFPE_DNA: {}
+      ILLUMINA_TRU_SEQ_PCR_FREE: {}
+      ILLUMINA_TRU_SEQ_PCR_FREE_DNA: {}
+      ILLUMINA_TRU_SEQ_RNA: {}
+      ILLUMINA_TRU_SEQ_SMALL_RNA_KIT: {}
+      ILLUMINA_TRU_SEQ_STRANDED_TOTAL_RNA_KIT: {}
+      ILLUMINA_TRU_SEQ_STRANDED_TOTAL_RNA_LIBRARY_PREP_GLOBIN: {}
+      ILLUMINA_TRU_SEQ_STRANDED_TOTAL_RNA_RIBO_MINUS_GOLD: {}
+      ILLUMINA_VAHTS_TOTAL_RNA: {}
+      INFORM_ONCO_PANEL_HG19: {}
+      ION_AMPLI_SEQ_EXOME_KIT: {}
+      KAPA_HIFI_HOT_START_READYMIX: {}
+      KAPA_HYPER_PLUS_KIT: {}
+      KAPA_HYPER_PREP_KIT: {}
+      KAPA_M_RNA_HYPER_PREP_KIT: {}
+      MAGNETIC_METHYLATED_DNA_IMMUNOPRECIPITATION_DIAGNODE: {}
+      NEBNEXT_ULTRA_DIRECTIONAL_RNA: {}
+      NEB_NEXT_CH_IP_SEQ_LIBRARY_PREP_KIT_FOR_ILLUMINA: {}
+      NEB_NEXT_GLOBIN_R_RNA_DEPLETION_KIT_HUMAN_MOUSE_RAT_WITH_BEADS: {}
+      NEB_NEXT_POLY_A_M_RNA_MAGNETIC_ISOLATION_MODULE: {}
+      NEB_NEXT_RNA_ULTRA_II_STRANDED: {}
+      NEB_NEXT_ULTRA_DNA: {}
+      NEB_NEXT_ULTRA_DNA_LIBRARY_PREP_KIT_FOR_ILLUMINA: {}
+      NEB_NEXT_ULTRA_II_DIRECTIONAL_RNA: {}
+      NEB_NEXT_ULTRA_II_DNA_LIBRARY_PREP_KIT_FOR_ILLUMINA: {}
+      NEXTERA_XT_DNA: {}
+      OLIGO_D_T: {}
+      PICO_METHYL_SEQ: {}
+      SMART_SEQ_V4_ULTRA_LOW_INPUT_RNA_KIT: {}
+      SMAR_TER_STRANDED_TOTAL_RNA_SEQ_KIT: {}
+      SMAR_TER_ULTRA_LOW_INPUT_RNA_AND_NEB_NEXT_CH_IP_SEQ: {}
+      SMAR_TER_ULTRA_LOW_INPUT_RNA_V4_AND_NEB_NEXT_CH_IP_SEQ: {}
+      SMAR_TSEQ2_TAG: {}
+      SUPER_SCRIPT_II_RT_BULK: {}
+      SURE_CELL_ATAC_SEQ_LIBRARY_PREP_KIT: {}
+      SURE_SELECT_EUROFINS_ENRICHMENT_CUSTOM_01: {}
+      TAKARA_CLONTECH_SMAR_TER_STRANDED_TOTAL_RNA: {}
+      TAKARA_SMAR_TER_PREP_X_DNA_LIBRARY_KIT_ACTIVE_MOTIF_CUSTOM_INDICES_01: {}
+      TEMPLATE_SWITCHING_RT_ENZYME_MIX_BULK: {}
+      TWIST_HUMAN_CORE_EXOME_PLUS_KIT: {}
+      ULTRALOW_METHYL_SEQ_WITH_TRUE_METHYL_OX_BS_MODULE: {}
+  LibraryPreparationLibraryLayoutEnum:
+    description: Single-end vs paired-end library
+    permissible_values:
+      PE: {}
+      SE: {}
+  LibraryPreparationLibrarySelectionEnum:
+    description: Permitted vocabulary for library selections
+    permissible_values:
+      5_METHYLCYTIDINE_ANTIBODY_METHOD: {}
+      CAGE_METHOD: {}
+      CF_H_METHOD: {}
+      CF_M_METHOD: {}
+      CF_S_METHOD: {}
+      CF_T_METHOD: {}
+      CH_IP_SEQ_METHOD: {}
+      C_DNA_METHOD: {}
+      D_NASE_METHOD: {}
+      HMPR_METHOD: {}
+      HYBRID_SELECTION_METHOD: {}
+      INVERSE_R_RNA: {}
+      MBD2_PROTEIN_METHYL_CP_G_BINDING_DOMAIN_METHOD: {}
+      MDA: {}
+      MF_METHOD: {}
+      MSLL_METHOD: {}
+      M_NASE_METHOD: {}
+      OLIGO_D_T: {}
+      OTHER: {}
+      PADLOCK_PROBES_CAPTURE_METHOD: {}
+      PCR_METHOD: {}
+      POLY_A: {}
+      RACE_METHOD: {}
+      RANDOM_METHOD: {}
+      RANDOM_PCR_METHOD: {}
+      REDUCED_REPRESENTATION_METHOD: {}
+      REPEAT_FRACTIONATION: {}
+      RESTRICTION_DIGEST_METHOD: {}
+      RT_PCR_METHOD: {}
+      SIZE_FRACTIONATION_METHOD: {}
+      UNSPECIFIED: {}
+  LibraryPreparationLibraryTypeEnum:
+    description: The type of the library
+    permissible_values:
+      ATAC: {}
+      CHROMOSOME_CONFORMATION_CAPTURE: {}
+      METHYLATION: {}
+      MI_RNA: {}
+      M_RNA: {}
+      NC_RNA: {}
+      TOTAL_RNA: {}
+      WCS: {}
+      WGS: {}
+      WXS: {}
+  LibraryPreparationRNASeqStrandednessEnum:
+    description: Permitted values for library preparation RNASeq strandedness
+    permissible_values:
+      ANTISENSE: {}
+      BOTH: {}
+      SENSE: {}
+  MutantOrWildtypeEnum:
+    description:
+      Enum to capture whether a condition corresponds to a mutant or a
+      wildtype.
+    permissible_values:
+      MUTANT:
+        description: Mutant state.
+      NOT_APPLICABLE:
+        description: The distinction is not applicaple.
+      WILDTYPE:
+        description: Wildtype state.
+  PhenotypicFeaturesEnum:
+    description: An enum describing permissible phenotype descriptors
+    include:
+      - reachable_from:
+          include_self: false
+          source_ontology: http://www.ebi.ac.uk/efo/releases/v3.54.0/efo.owl
+      - reachable_from:
+          include_self: false
+          source_ontology: https://www.orphadata.com/data/ontologies/ordo/last_version/ORDO_en_4.2.owl
+      - reachable_from:
+          include_self: false
+          source_nodes:
+            - SNOMED:404684003
+          source_ontology: http://snomed.info/sct/900000000000207008/version/20200131
+      - reachable_from:
+          include_self: false
+          source_ontology: http://purl.obolibrary.org/obo/mondo/releases/2022-12-01/mondo.owl
+      - reachable_from:
+          include_self: false
+          source_ontology: http://purl.obolibrary.org/obo/hp/releases/2023-04-05/hp-international.owl
+  PrimerEnum:
+    description: Permitted values for primer
+    permissible_values:
+      GENE_SPECIFIC: {}
+      OLIGO_D_T: {}
+      OTHER: {}
+      RANDOM: {}
+  SampleBarcodeReadEnum:
+    description: Permitted values for sample barcode read
+    permissible_values:
+      INDEX1: {}
+      INDEX1_AND_INDEX2: {}
+      OTHER: {}
+  SampleTypeEnum:
+    description: The type of a sample
+    permissible_values:
+      CF_DNA: {}
+      DEPLETED_RNA: {}
+      DS_DNA_CH_IP: {}
+      FFPE_DNA: {}
+      FFPE_TOTAL_RNA: {}
+      GENOMIC_DNA: {}
+      PCR_PRODUCTS: {}
+      POLY_A_RNA: {}
+      SINGLE_CELL_DNA: {}
+      SINGLE_CELL_RNA: {}
+      SMALL_RNA: {}
+      TOTAL_RNA: {}
+  StudyTypeEnum:
+    description: Enum to capture the type of a study.
+    permissible_values:
+      CANCER_GENOMICS: {}
+      EPIGENETICS: {}
+      EXOME_SEQUENCING: {}
+      FORENSIC_GENETICS: {}
+      GENE_REGULATION_STUDY: {}
+      GWAS: {}
+      METAGENOMICS: {}
+      OTHER: {}
+      PALEO_GENOMICS: {}
+      POOLED_CLONE_SEQUENCING: {}
+      POPULATION_GENOMICS: {}
+      RESEQUENCING: {}
+      RNASEQ: {}
+      SYNTHETIC_GENOMICS: {}
+      TRANSCRIPTOME_ANALYSIS: {}
+      WHOLE_GENOME_SEQUENCING: {}
+  TissueEnum:
+    description: A tissue as described in the BRENDA ontology.
+    reachable_from:
+      source_ontology: http://purl.obolibrary.org/obo/bto/releases/2021-10-26/bto.owl
+  VitalStatusEnum:
+    description: Enum to capture the vital status of an individual.
+    permissible_values:
+      ALIVE:
+        description: Showing characteristics of life; displaying signs of life.
+      DECEASED:
+        description: The cessation of life.
+      UNKNOWN:
+        description: Vital status is unknown.
+id: https://w3id.org/GHGA-Submission-Metadata-Schema
+name: GHGA-Submission-Metadata-Schema
+prefixes:
+  COB: http://purl.obolibrary.org/obo/COB_
+  DUO: http://purl.obolibrary.org/obo/duo/releases/2021-02-23/duo.owl
+  EFO: http://www.ebi.ac.uk/efo/EFO_
+  GHGA: https://w3id.org/GHGA/
+  GSSO: http://purl.obolibrary.org/obo/gsso/releases/2.0.5/gsso.owl
+  HANCESTRO: http://purl.obolibrary.org/obo/HANCESTRO_
+  NCIT: http://purl.obolibrary.org/obo/ncit/releases/2022-08-19/ncit.owl
+  SIO: http://semanticscience.org/resource/SIO_
+  biolink: https://w3id.org/biolink/vocab/
+  linkml: https://w3id.org/linkml/
+  schema: http://schema.org/
+  shex: http://www.w3.org/ns/shex#
+  xsd: http://www.w3.org/2001/XMLSchema#
+slots:
+  abstract: {}
+  affiliations: {}
+  age_at_sampling: {}
+  alias: {}
+  analyses: {}
+  analysis: {}
+  analysis_process: {}
+  analysis_process_output_files: {}
+  analysis_processes: {}
+  ancestries: {}
+  attributes: {}
+  author: {}
+  biospecimen: {}
+  biospecimens: {}
+  case_control_status: {}
+  cell_barcode_offset: {}
+  cell_barcode_read: {}
+  cell_barcode_size: {}
+  checksum: {}
+  checksum_type: {}
+  child: {}
+  condition: {}
+  conditions: {}
+  data_access_committee: {}
+  data_access_committees: {}
+  data_access_policies: {}
+  data_access_policy: {}
+  data_use_modifiers: {}
+  data_use_permission: {}
+  dataset: {}
+  datasets: {}
+  description: {}
+  disease_or_healthy: {}
+  doi: {}
+  email: {}
+  end_bias: {}
+  father: {}
+  flow_cell_id: {}
+  flow_cell_type: {}
+  format: {}
+  forward_or_reverse: {}
+  geographical_region: {}
+  index_sequence: {}
+  individual: {}
+  individuals: {}
+  institute: {}
+  instrument_model: {}
+  isolation: {}
+  journal: {}
+  karyotype: {}
+  key: {}
+  key_type: {}
+  lane_number: {}
+  library_layout: {}
+  library_name: {}
+  library_preparation: {}
+  library_preparation_kit_manufacturer: {}
+  library_preparation_kit_retail_name: {}
+  library_preparation_protocol: {}
+  library_preparation_protocols: {}
+  library_selection: {}
+  library_type: {}
+  mother: {}
+  mutant_or_wildtype: {}
+  name: {}
+  phenotypic_features: {}
+  policy_text: {}
+  policy_url: {}
+  primer: {}
+  publications: {}
+  reference_chromosome: {}
+  reference_genome: {}
+  rnaseq_strandedness: {}
+  sample: {}
+  sample_barcode_read: {}
+  sample_files: {}
+  sample_input_files: {}
+  samples: {}
+  sequencing_center: {}
+  sequencing_experiment: {}
+  sequencing_experiments: {}
+  sequencing_lane_id: {}
+  sequencing_machine_id: {}
+  sequencing_process: {}
+  sequencing_process_files: {}
+  sequencing_process_input_files: {}
+  sequencing_processes: {}
+  sequencing_protocol: {}
+  sequencing_protocols: {}
+  sequencing_read_length: {}
+  sequencing_run_id: {}
+  sex: {}
+  size: {}
+  storage: {}
+  studies: {}
+  study: {}
+  study_files: {}
+  study_input_files: {}
+  target_coverage: {}
+  target_regions: {}
+  tissue: {}
+  title: {}
+  trios: {}
+  type: {}
+  types: {}
+  umi_barcode_offset: {}
+  umi_barcode_read: {}
+  umi_barcode_size: {}
+  value: {}
+  value_type: {}
+  vital_status_at_sampling: {}
+  xref: {}
+  year: {}
+subsets:
+  ontology:
+    description:
+      This slot is part of an ontology which is currently not otherwise
+      encoded in the schema.
+types:
+  boolean:
+    base: Bool
+    description: A binary (true or false) value
+    exact_mappings:
+      - schema:Boolean
+    repr: bool
+    uri: xsd:boolean
+  curie:
+    base: Curie
+    comments:
+      - in RDF serializations this MUST be expanded to a URI
+      - in non-RDF serializations MAY be serialized as the compact representation
+    conforms_to: https://www.w3.org/TR/curie/
+    description: a compact URI
+    repr: str
+    uri: xsd:string
+  date:
+    base: XSDDate
+    description: a date (year, month and day) in an idealized calendar
+    exact_mappings:
+      - schema:Date
+    notes:
+      - URI is dateTime because OWL reasoners don't work with straight date or time
+    repr: str
+    uri: xsd:date
+  date_or_datetime:
+    base: str
+    description: Either a date or a datetime
+    repr: str
+    uri: linkml:DateOrDatetime
+  datetime:
+    base: XSDDateTime
+    description: The combination of a date and time
+    exact_mappings:
+      - schema:DateTime
+    repr: str
+    uri: xsd:dateTime
+  decimal:
+    base: Decimal
+    broad_mappings:
+      - schema:Number
+    description:
+      A real number with arbitrary precision that conforms to the xsd:decimal
+      specification
+    uri: xsd:decimal
+  double:
+    base: float
+    close_mappings:
+      - schema:Float
+    description: A real number that conforms to the xsd:double specification
+    uri: xsd:double
+  float:
+    base: float
+    description: A real number that conforms to the xsd:float specification
+    exact_mappings:
+      - schema:Float
+    uri: xsd:float
+  integer:
+    base: int
+    description: An integer
+    exact_mappings:
+      - schema:Integer
+    uri: xsd:integer
+  ncname:
+    base: NCName
+    description: Prefix part of CURIE
+    repr: str
+    uri: xsd:string
+  nodeidentifier:
+    base: NodeIdentifier
+    description: A URI, CURIE or BNODE that represents a node in a model.
+    repr: str
+    uri: shex:nonLiteral
+  objectidentifier:
+    base: ElementIdentifier
+    comments:
+      - Used for inheritence and type checking
+    description: A URI or CURIE that represents an object in the model.
+    repr: str
+    uri: shex:iri
+  string:
+    base: str
+    description: A character string
+    exact_mappings:
+      - schema:Text
+    uri: xsd:string
+  time:
+    base: XSDTime
+    description:
+      A time object represents a (local) time of day, independent of any
+      particular day
+    exact_mappings:
+      - schema:Time
+    notes:
+      - URI is dateTime because OWL reasoners do not work with straight date or time
+    repr: str
+    uri: xsd:dateTime
+  uri:
+    base: URI
+    close_mappings:
+      - schema:URL
+    comments:
+      - in RDF serializations a slot with range of uri is treated as a literal or type
+        xsd:anyURI unless it is an identifier or a reference to an identifier, in which
+        case it is translated directly to a node
+    conforms_to: https://www.ietf.org/rfc/rfc3987.txt
+    description: a complete URI
+    repr: str
+    uri: xsd:anyURI
+  uriorcurie:
+    base: URIorCURIE
+    description: a URI or a CURIE
+    repr: str
+    uri: xsd:anyURI
+version: 1.1.0
