@@ -29,7 +29,7 @@ from hexkit.providers.akafka.testutils import (  # noqa: F401; pylint: disable=u
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.load_resources import (
-    FileInformationConverter,
+    convert_file_information,
     get_file_slots,
 )
 from metldata.artifacts_rest.models import ArtifactResource, GlobalStats
@@ -256,13 +256,11 @@ async def test_file_slot_transformation(
         )
         file_slots.extend(current_file_slots)
 
-    fic = FileInformationConverter(artifact_info=artifact_info, file_slots=file_slots)
-
     extension_mapping = {
         "STUDY_FILE_1": ".fastq.gz",
         "STUDY_FILE_2": ".fastq",
-        "STUDY_FILE_3": ".fastq.gz",
-        "STUDY_FILE_4": ".fastq",
+        "STUDY_FILE_3": ".gz",
+        "STUDY_FILE_4": "",
     }
-    for file_info in fic.extract_file_information():
+    for file_info in convert_file_information(file_slots=file_slots):
         assert extension_mapping[file_info.accession] == file_info.file_extension

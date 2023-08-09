@@ -16,7 +16,6 @@
 
 """Logic for loading artifacts."""
 
-from dataclasses import dataclass
 from typing import cast
 
 from ghga_event_schemas.pydantic_ import (
@@ -25,6 +24,7 @@ from ghga_event_schemas.pydantic_ import (
     MetadataDatasetStage,
     SearchableResource,
 )
+from ghga_service_commons.utils.files import get_file_extension
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.models import (
@@ -40,21 +40,6 @@ from metldata.metadata_utils import (
     lookup_self_id,
     lookup_slot_in_resource,
 )
-
-# Probably should be made configurable down the line
-ALLOWED_COMPRESSIONS: list[str] = [
-    ".tar.bz2",
-    ".tar.gz",
-    ".tar.lz",
-    ".tar.xz",
-    ".tar.zst",
-    ".tbz2",
-    ".tgz",
-    ".tlz",
-    ".txz",
-    ".gz",
-    ".zip",
-]
 
 
 def extract_class_resources_from_artifact(
@@ -218,11 +203,7 @@ async def process_resource_upsert(  # pylint: disable=too-many-locals
     artifact_info = artifact_info_dict[artifact_name]
     file_slots = get_file_slots(artifact_info=artifact_info, resource=resource)
 
-    file_information_converter = FileInformationConverter(
-        artifact_info=artifact_info,
-        file_slots=file_slots,
-    )
-    metadata_dataset_files = file_information_converter.extract_file_information()
+    metadata_dataset_files = convert_file_information(file_slots=file_slots)
 
     dataset_description = cast(
         str,
@@ -271,58 +252,19 @@ def get_file_slots(artifact_info: ArtifactInfo, resource: ArtifactResource):
     return file_slots
 
 
-@dataclass
-class FileInformationConverter:
-    """Helper class to extract file extension information and convert file slot data"""
+def convert_file_information(file_slots: list[list[Json]]) -> list[MetadataDatasetFile]:
+    """Convert file slot information into MetadataDatasetFiles"""
+    files = []
+    for file_slot in file_slots:
+        for file in file_slot:
+            extension = get_file_extension(filename=file["name"])
 
-    artifact_info: ArtifactInfo
-    file_slots: list[list[Json]]
-
-    def extract_file_information(self) -> list[MetadataDatasetFile]:
-        """Convert file slot information into MetadataDatasetFiles"""
-        files = []
-        for file_slot in self.file_slots:
-            for file in file_slot:
-                extension = self._get_file_extension(
-                    file_name=file["name"], file_format=file["format"]
+            files.append(
+                MetadataDatasetFile(
+                    accession=file["accession"],
+                    description=None,
+                    file_extension=extension,
                 )
+            )
 
-                files.append(
-                    MetadataDatasetFile(
-                        accession=file["accession"],
-                        description=None,
-                        file_extension=extension,
-                    )
-                )
-
-        return files
-
-    def _get_file_extension(
-        self,
-        *,
-        file_name: str,
-        file_format: str,
-    ) -> str:
-        """Extract file extension.
-
-        Uses the provided list of compression file extensions and file format information
-        """
-
-        potential_extension = file_name.partition(".")[2].lower()
-        file_format = file_format.lower()
-
-        # file extension is file format
-        if potential_extension == file_format:
-            return f".{file_format}"
-
-        if potential_extension.startswith(file_format):
-            # extension is file format + compression extension
-            extension = potential_extension.partition(file_format)[2]
-            if extension in ALLOWED_COMPRESSIONS:
-                return f".{potential_extension}"
-        elif f".{potential_extension}" in ALLOWED_COMPRESSIONS:
-            # extension is only compression extension, add file format
-            return f".{file_format}.{potential_extension}"
-
-        # cannot extract valid file extension, fall back to lowercase file format
-        return f".{file_format}"
+    return files
