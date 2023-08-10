@@ -106,11 +106,6 @@ def run_the_decrypt_command(fixtures: JointFixture):
             "decrypt",
             "--input-dir",
             str(connector.config.download_dir),
-            # TBD: in next version of connector, the remaining options are not needed
-            "--output-dir",
-            ".",
-            "--decryption-private-key-path",
-            "key.sec",
         ],
         cwd=connector.config.work_dir,
         capture_output=True,
