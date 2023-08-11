@@ -22,7 +22,7 @@ provided exception specs for all API endpoints
 from typing import Dict
 
 import httpx
-from httpyexpect.client import ExceptionMapping, ResponseTranslator
+from ghga_service_commons.httpyexpect.client import ExceptionMapping, ResponseTranslator
 
 
 class ResponseExceptionTranslator:
