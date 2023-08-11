@@ -52,13 +52,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/work-package-service):
 ```bash
-docker pull ghga/work-package-service:0.1.3
+docker pull ghga/work-package-service:0.1.4
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/work-package-service:0.1.3 .
+docker build -t ghga/work-package-service:0.1.4 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -66,7 +66,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/work-package-service:0.1.3 --help
+docker run -p 8080:8080 ghga/work-package-service:0.1.4 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -102,9 +102,11 @@ The service requires the following configuration parameters:
 
   - **Items** *(string)*
 
-- **`dataset_overview_event_topic`** *(string)*: Name of the topic for events that inform about datasets.
+- **`dataset_change_event_topic`** *(string)*: Name of the topic for events that inform about datasets.
 
-- **`dataset_overview_event_type`** *(string)*: The type to use for events that inform about datasets.
+- **`dataset_upsertion_event_type`** *(string)*: The type of events that inform about new and changed datasets.
+
+- **`dataset_deletion_event_type`** *(string)*: The type of events that inform about deleted datasets.
 
 - **`download_access_url`** *(string)*: URL pointing to the internal download access API.
 

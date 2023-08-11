@@ -239,6 +239,16 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         """Register a dataset with all of its files."""
         await self._dataset_dao.upsert(dataset)
 
+    async def delete_dataset(self, dataset_id: str) -> None:
+        """Delete a dataset with all of its files.
+
+        If the dataset does not exist, a DatasetNotFoundError will be raised.
+        """
+        try:
+            await self._dataset_dao.delete(id_=dataset_id)
+        except ResourceNotFoundError as error:
+            raise self.DatasetNotFoundError("Dataset not found") from error
+
     async def get_dataset(self, dataset_id: str) -> Dataset:
         """Get a registered dataset using the given ID.
 

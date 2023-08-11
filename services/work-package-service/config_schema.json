@@ -91,21 +91,30 @@
         "type": "string"
       }
     },
-    "dataset_overview_event_topic": {
-      "title": "Dataset Overview Event Topic",
+    "dataset_change_event_topic": {
+      "title": "Dataset Change Event Topic",
       "description": "Name of the topic for events that inform about datasets.",
-      "example": "metadata",
+      "example": "metadata_datasets",
       "env_names": [
-        "wps_dataset_overview_event_topic"
+        "wps_dataset_change_event_topic"
       ],
       "type": "string"
     },
-    "dataset_overview_event_type": {
-      "title": "Dataset Overview Event Type",
-      "description": "The type to use for events that inform about datasets.",
-      "example": "metadata_dataset_overview",
+    "dataset_upsertion_event_type": {
+      "title": "Dataset Upsertion Event Type",
+      "description": "The type of events that inform about new and changed datasets.",
+      "example": "dataset_created",
       "env_names": [
-        "wps_dataset_overview_event_type"
+        "wps_dataset_upsertion_event_type"
+      ],
+      "type": "string"
+    },
+    "dataset_deletion_event_type": {
+      "title": "Dataset Deletion Event Type",
+      "description": "The type of events that inform about deleted datasets.",
+      "example": "dataset_deleted",
+      "env_names": [
+        "wps_dataset_deletion_event_type"
       ],
       "type": "string"
     },
@@ -306,8 +315,9 @@
     "db_connection_str",
     "service_instance_id",
     "kafka_servers",
-    "dataset_overview_event_topic",
-    "dataset_overview_event_type",
+    "dataset_change_event_topic",
+    "dataset_upsertion_event_type",
+    "dataset_deletion_event_type",
     "download_access_url",
     "auth_key"
   ],

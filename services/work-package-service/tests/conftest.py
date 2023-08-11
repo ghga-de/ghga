@@ -12,7 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Work Package Service"""
+"""Shared fixtures"""
 
-__version__ = "0.1.4"
+import pytest
+from hexkit.providers.akafka.testutils import get_kafka_fixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture, get_mongodb_fixture
+from hexkit.providers.testing.utils import get_event_loop
+
+event_loop = get_event_loop("session")
+kafka_fixture = get_kafka_fixture("session")
+mongodb_fixture = get_mongodb_fixture("session")
+
+
+@pytest.fixture(autouse=True)
+def reset_db(mongodb_fixture: MongoDbFixture):  # noqa: F811
+    """Clear the database before tests."""
+    mongodb_fixture.empty_collections()

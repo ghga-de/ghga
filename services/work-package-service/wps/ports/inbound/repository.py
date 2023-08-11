@@ -90,6 +90,11 @@ class WorkPackageRepositoryPort(ABC):
         ...
 
     @abstractmethod
+    async def delete_dataset(self, dataset_id: str) -> None:
+        """Delete a dataset with all of its files."""
+        ...
+
+    @abstractmethod
     async def get_dataset(self, dataset_id: str) -> Dataset:
         """Get a registered dataset using the given ID.
 

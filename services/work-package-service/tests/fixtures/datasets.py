@@ -18,13 +18,14 @@
 
 from ghga_event_schemas.pydantic_ import (
     MetadataDatasetFile,
+    MetadataDatasetID,
     MetadataDatasetOverview,
     MetadataDatasetStage,
 )
 
 from wps.core.models import Dataset, DatasetFile, WorkType
 
-__all__ = ["DATASET", "DATASET_OVERVIEW_EVENT"]
+__all__ = ["DATASET", "DATASET_UPSERTION_EVENT", "DATASET_DELETION_EVENT"]
 
 
 DATASET = Dataset(
@@ -40,7 +41,7 @@ DATASET = Dataset(
 )
 
 
-DATASET_OVERVIEW_EVENT = MetadataDatasetOverview(
+DATASET_UPSERTION_EVENT = MetadataDatasetOverview(
     accession="some-dataset-id",
     stage=MetadataDatasetStage.DOWNLOAD,
     title="Test dataset 1",
@@ -62,4 +63,9 @@ DATASET_OVERVIEW_EVENT = MetadataDatasetOverview(
             file_extension=".bam",
         ),
     ],
+)
+
+
+DATASET_DELETION_EVENT = MetadataDatasetID(
+    accession="some-dataset-id",
 )

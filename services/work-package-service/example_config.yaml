@@ -13,8 +13,9 @@ cors_allow_credentials: false
 cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
-dataset_overview_event_topic: metadata
-dataset_overview_event_type: metadata_dataset_overview
+dataset_change_event_topic: metadata_datasets
+dataset_deletion_event_type: dataset_deleted
+dataset_upsertion_event_type: dataset_created
 datasets_collection: datasets
 db_connection_str: '**********'
 db_name: dev-db

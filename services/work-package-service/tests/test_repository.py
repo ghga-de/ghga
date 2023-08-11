@@ -18,10 +18,6 @@
 
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
-from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=unused-import
-    MongoDbFixture,
-    mongodb_fixture,
-)
 from pytest import mark, raises
 
 from wps.core.models import (
@@ -220,3 +216,21 @@ async def test_checking_accessible_datasets(
     assert await repository.get_dataset("some-dataset-id") == DATASET
 
     assert await repository.get_datasets(auth_context=auth_context) == [DATASET]
+
+
+@mark.asyncio
+async def test_deletion_of_datasets(
+    repository: WorkPackageRepository, auth_context: AuthContext
+):
+    """Test deletion of existing datasets"""
+
+    with raises(repository.DatasetNotFoundError):
+        await repository.delete_dataset(DATASET.id)
+
+    await repository.register_dataset(DATASET)
+    assert await repository.get_dataset(DATASET.id) == DATASET
+
+    await repository.delete_dataset(DATASET.id)
+
+    with raises(repository.DatasetNotFoundError):
+        await repository.delete_dataset(DATASET.id)

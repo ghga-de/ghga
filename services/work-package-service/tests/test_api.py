@@ -19,12 +19,6 @@
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
-from hexkit.providers.akafka.testutils import (  # noqa: F401 # pylint: disable=unused-import
-    kafka_fixture,
-)
-from hexkit.providers.mongodb.testutils import (  # noqa: F401 # pylint: disable=unused-import
-    mongodb_fixture,
-)
 from pytest import mark
 from pytest_httpx import HTTPXMock
 
@@ -47,12 +41,14 @@ CREATION_DATA = {
     "user_public_crypt4gh_key": user_public_crypt4gh_key,
 }
 
+TIMEOUT = 5
+
 
 @mark.asyncio
 async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
 
-    response = await client.get("/health")
+    response = await client.get("/health", timeout=TIMEOUT)
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"status": "OK"}

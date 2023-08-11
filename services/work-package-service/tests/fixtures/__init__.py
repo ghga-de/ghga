@@ -41,7 +41,7 @@ from wps.main import (  # pylint: disable=import-outside-toplevel
 )
 
 from .access import AccessCheckMock
-from .datasets import DATASET_OVERVIEW_EVENT
+from .datasets import DATASET_UPSERTION_EVENT
 
 __all__ = [
     "AUTH_CLAIMS",
@@ -139,15 +139,17 @@ async def fixture_container(
     # publish an event announcing a dataset
     async with get_container(config=config) as container:
         await kafka_fixture.publish_event(
-            payload=DATASET_OVERVIEW_EVENT.dict(),
-            type_="metadata_dataset_overview",
-            key="test_key",
-            topic="metadata",
+            payload=DATASET_UPSERTION_EVENT.dict(),
+            topic=config.dataset_change_event_topic,
+            type_=config.dataset_upsertion_event_type,
+            key="test-key-fixture",
         )
 
         # populate database with published dataset
         event_subscriber = await container.event_subscriber()
+        # wait for event to be submitted and processed
         await asyncio.wait_for(event_subscriber.run(forever=False), timeout=10)
+        await asyncio.sleep(0.25)
 
         # return the configured and wired container
         yield container
