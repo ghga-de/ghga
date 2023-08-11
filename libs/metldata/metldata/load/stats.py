@@ -73,7 +73,8 @@ async def create_stats_using_aggregator(
             continue
 
         stats: list[ValueCount] = [
-            {"value": group["_id"], "count": group["count"]} for group in result
+            {"value": group["_id"] or "unknown", "count": group["count"]}
+            for group in result
         ]
         resource_stats[resource_class]["stats"] = {stat_slot: stats}
 
