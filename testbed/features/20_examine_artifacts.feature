@@ -1,7 +1,7 @@
 
 @download @metadata
-Feature: 20 Browse Metadata
-  As a user, I can browse the public metadata
+Feature: 20 Examine Artifacts
+  As a user, I can examine the available artifacts
 
   Background:
     Given we have the state "metadata has been loaded into the system"

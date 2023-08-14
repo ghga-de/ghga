@@ -21,7 +21,7 @@ import subprocess
 
 from ghga_datasteward_kit.loading import LoadConfig
 
-from steps.utils import load_config_as_file
+from steps.utils import load_config_as_file, temporary_file
 
 from .conftest import Config, JointFixture, MongoFixture, scenarios, then, when
 
@@ -40,27 +40,23 @@ def run_the_load_command(fixtures: JointFixture):
     )
 
     loader_token = fixtures.auth.read_simple_token()
+    with temporary_file(fixtures.config.dsk_token_path, loader_token):
+        completed_upload = subprocess.run(  # nosec B607, B603
+            [
+                "ghga-datasteward-kit",
+                "load",
+                "--config-path",
+                load_config_path,
+            ],
+            capture_output=True,
+            check=True,
+            encoding="utf-8",
+            text=True,
+            timeout=10 * 60,
+        )
 
-    completed_upload = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "load",
-            "--config-path",
-            load_config_path,
-        ],
-        capture_output=True,
-        input=loader_token,
-        check=True,
-        encoding="utf-8",
-        text=True,
-        timeout=10 * 60,
-    )
-
-    assert (
-        "Please paste the token used to authenticate against the loader API:"
-        in completed_upload.stdout
-    )
-    assert not completed_upload.stderr
+        assert not completed_upload.stdout
+        assert not completed_upload.stderr
 
 
 @then("the test dataset exists as embedded dataset in the database")

@@ -22,7 +22,7 @@ from example_data.datasets import DATASET_OVERVIEW_EVENT
 
 from .conftest import TIMEOUT, Config, MongoFixture, parse, scenarios, then, when
 
-scenarios("../features/20_browse_metadata.feature")
+scenarios("../features/20_examine_artifacts.feature")
 
 
 @when("I request info on all available artifacts", target_fixture="response")
@@ -35,13 +35,14 @@ def request_info_on_artifacts(config: Config):
 def check_artifacts(response: httpx.Response):
     artifact_infos = response.json()
     assert isinstance(artifact_infos, list)
-    assert len(artifact_infos) == 4
+    assert len(artifact_infos) == 5
     artifacts = {artifact["name"]: artifact for artifact in artifact_infos}
     assert sorted(artifacts) == [
         "embedded_public",
         "embedded_restricted",
         "resolved_public",
         "resolved_restricted",
+        "stats_public",
     ]
     resolved_public_classes = artifacts["resolved_public"]["resource_classes"]
     assert "Dataset" in resolved_public_classes
@@ -50,6 +51,8 @@ def check_artifacts(response: httpx.Response):
     embedded_public_classes = artifacts["embedded_public"]["resource_classes"]
     assert set(resolved_public_classes).issubset(embedded_public_classes)
     assert "EmbeddedDataset" in embedded_public_classes
+    stats_public_classes = artifacts["stats_public"]["resource_classes"]
+    assert "DatasetStats" in stats_public_classes
 
 
 @when(
