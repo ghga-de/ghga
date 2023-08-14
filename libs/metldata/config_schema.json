@@ -36,8 +36,7 @@
     },
     "service_name": {
       "title": "Service Name",
-      "description": "The name of the (micro-)service from which messages are published.",
-      "example": "my-cool-special-service",
+      "default": "metldata",
       "env_names": [
         "metldata_service_name"
       ],
@@ -287,7 +286,6 @@
     "artifact_infos",
     "db_connection_str",
     "db_name",
-    "service_name",
     "service_instance_id",
     "kafka_servers",
     "primary_artifact_name",

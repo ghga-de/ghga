@@ -100,7 +100,7 @@ The service requires the following configuration parameters:
 
 - **`db_name`** *(string)*: Name of the database located on the MongoDB server.
 
-- **`service_name`** *(string)*: The name of the (micro-)service from which messages are published.
+- **`service_name`** *(string)*: Default: `metldata`.
 
 - **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 

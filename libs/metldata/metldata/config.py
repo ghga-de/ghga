@@ -35,3 +35,5 @@ class SubmissionConfig(AccessionRegistryConfig, SubmissionRegistryConfig):
 @config_from_yaml(prefix="metldata")
 class Config(ArtifactLoaderAPIConfig, ArtifactsRestConfig):
     """Config parameters and their defaults."""
+
+    service_name: str = "metldata"
