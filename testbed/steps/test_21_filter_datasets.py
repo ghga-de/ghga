@@ -30,7 +30,7 @@ def query_with_invalid_class(config: Config):
 
 @when("I filter dataset with alias", target_fixture="response")
 def filter_dataset_with_alias(config: Config):
-    filters = [{"key": "alias", "value": "DS_1"}]
+    filters = [{"key": "alias", "value": "DS_A"}]
     return search_dataset_rpc(config, filters)
 
 
@@ -39,7 +39,7 @@ def check_alias_filter(response: httpx.Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]
-    assert hits[0]["content"]["alias"] == "DS_1"
+    assert hits[0]["content"]["alias"] == "DS_A"
 
 
 @when(
@@ -62,4 +62,4 @@ def check_sequencing_file_filter(response: httpx.Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]
-    assert hits[0]["content"]["alias"] == "DS_2"
+    assert hits[0]["content"]["alias"] == "DS_B"

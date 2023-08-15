@@ -48,7 +48,9 @@ def get_accession_for_dataset(
     # in step2 where we are browsing the database
     # (at least in the black box testing mode)
     dataset = mongo.find_document(
-        config.wps_db_name, "datasets", {"title": f"The {dataset_char} dataset"}
+        config.wps_db_name,
+        "datasets",
+        {"title": f"The complete-{dataset_char} dataset"},
     )
     assert dataset
     accession = dataset.get("_id")

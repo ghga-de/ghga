@@ -46,7 +46,7 @@ def announce_dataset(config: Config, mongo: MongoFixture):
     datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=2)
     assert datasets and len(datasets) == 2
     titles = {dataset["title"] for dataset in datasets}
-    assert titles == {"The A dataset", "The B dataset"}
+    assert titles == {"The complete-A dataset", "The complete-B dataset"}
 
 
 @when("the list of datasets is queried", target_fixture="response")
@@ -65,7 +65,7 @@ def check_dataset_in_list(
     dataset = data[0]
     assert isinstance(dataset, dict)
     assert dataset.get("stage") == "download"
-    assert dataset.get("title") == f"The {dataset_char} dataset"
+    assert dataset.get("title") == f"The complete-{dataset_char} dataset"
     files = dataset.get("files")
     assert files and isinstance(files, list)
     set_state("files to be downloaded", files, fixtures.mongo)

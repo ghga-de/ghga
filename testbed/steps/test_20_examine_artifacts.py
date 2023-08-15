@@ -95,7 +95,7 @@ def request_test_dataset_resource(config: Config, mongo: MongoFixture):
 def check_test_dataset_resource(response: httpx.Response):
     dataset = response.json()
     assert isinstance(dataset, dict)
-    assert dataset["title"] == "The A dataset"
+    assert dataset["title"] == "The complete-A dataset"
     assert len(dataset["study_files"]) == 1
 
 

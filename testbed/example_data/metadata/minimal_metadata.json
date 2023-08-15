@@ -23,6 +23,18 @@
       "name": "DAP 1",
       "policy_text": "This is a very permissible DAP",
       "policy_url": "http://some/policy"
+    },
+    {
+      "alias": "DAP_2",
+      "data_access_committee": "DAC_1",
+      "data_use_modifiers": [
+        "user specific restriction"
+      ],
+      "data_use_permission": "no restriction",
+      "description": "A Data Access Policy 2",
+      "name": "DAP 2",
+      "policy_text": "This is a very strict DAP",
+      "policy_url": "http://some/other/policy"
     }
   ],
   "datasets": [
@@ -34,6 +46,34 @@
       "types": [
         "A Type",
         "Another Type"
+      ]
+    },
+    {
+      "alias": "DS_2",
+      "data_access_policy": "DAP_1",
+      "description": "An interesting dataset B",
+      "title": "The B dataset",
+      "types": [
+        "And another Type"
+      ]
+    },
+    {
+      "alias": "DS_3",
+      "data_access_policy": "DAP_1",
+      "description": "An interesting dataset C",
+      "title": "The C dataset",
+      "types": [
+        "And yet another Type",
+        "A Type"
+      ]
+    },
+    {
+      "alias": "DS_4",
+      "data_access_policy": "DAP_2",
+      "description": "An interesting dataset D",
+      "title": "The D dataset",
+      "types": [
+        "A Type"
       ]
     }
   ],
@@ -66,30 +106,589 @@
       "description": "A study that is the A study",
       "title": "The A Study",
       "type": "SYNTHETIC_GENOMICS"
+    },
+    {
+      "affiliations": [
+        "Some Institute"
+      ],
+      "alias": "STUDY_B",
+      "description": "A study that is the B study",
+      "title": "The B Study",
+      "type": "WHOLE_GENOME_SEQUENCING"
     }
   ],
   "study_files": [
     {
-      "alias": "SEQUENCE_FILE",
-      "checksum": "07611c4987b9e5be1304a992dbc25242824acf808c829819732a8f5f6c40e731",
+      "alias": "FILE_1",
+      "checksum": "6d893451b8ed4159c9c31693894fdf6bb4e37c40705b977f315e00d75190d71e",
       "checksum_type": "SHA256",
       "dataset": "DS_1",
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
-      "name": "SEQUENCE_FILE.fastq.gz",
-      "size": 92161,
+      "name": "SEQ_FILE_A_R1.fastq.gz",
+      "size": 2049,
       "study": "STUDY_A"
     },
     {
-      "alias": "ALIGNMENT_FILE",
-      "checksum": "ba7f0fa2da3c1bd473b01985c2fd25175d55f1edb27e530d735ff85ed187c122",
+      "alias": "FILE_2",
+      "checksum": "1c9579c11d7e9eda0fd83beeb0d113e1d83af53aeba6747e251ebffbba0857a1",
       "checksum_type": "SHA256",
       "dataset": "DS_1",
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
-      "name": "ALIGNMENT_FILE.bam",
-      "size": 92161,
+      "name": "SEQ_FILE_A_R2.fastq.gz",
+      "size": 6145,
       "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_3",
+      "checksum": "ac789d32d84025fd4f19f061d96279b719aaa8a92e7524aae00ec4d4a4d4c7b2",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_B_R1.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_4",
+      "checksum": "3451a704880381ece932362770fdfba9500970e3b61eac7e276cf832a696f6bc",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_B_R2.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_5",
+      "checksum": "2b5b7e057b3f29f65b81ce90e4d1f345989e82f0225dd0b688e3f7d17e188a5e",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_C_R1.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_6",
+      "checksum": "569792074549bd74dd021502bb8b93de93b2a020bebc36d85cb6860bd16523fd",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_C_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_7",
+      "checksum": "6372bfee698058d7768ca8e051bff9f336dd0c6f256fad2802b89125b24be858",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_D_R1.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_8",
+      "checksum": "e830c31e41e4f210071b695eeab0672102d7ce4842d8f71ca4ff556661e767a9",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_D_R2.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_9",
+      "checksum": "f755b270ad22758bee88580199bc1edd8e0b5a366e0a49afbfe332753c7c65ff",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_E_R1.fastq.gz",
+      "size": 2049,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_10",
+      "checksum": "98d69b3859d2ee3a6c047e64d75ff26081d1e01cc283dcffe7982034b5786c7c",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_E_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_11",
+      "checksum": "ca8b627793c09722a8a67df9a86ca992d9c611da67f9e09dd82fa5fbbdfc888f",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_F_R1.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_12",
+      "checksum": "74473a16db3d3f037921fcb637c709a859f435ebb92acc13026dae56e82ce871",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_F_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_13",
+      "checksum": "87915df7c6c014a380f9fded427b0650d15094b93b396e36f026ed8604ef29c2",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_G_R1.fastq.gz",
+      "size": 2049,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_14",
+      "checksum": "61ea1a00a870846b7eb5af23a7d1642a12e0ae89dc0d8184ce01bc86641ba9e1",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_G_R2.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_15",
+      "checksum": "421a7518062f8620a046175510c42c27425bd39ee527c69eabdfde5b8cca21a8",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_H_R1.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_16",
+      "checksum": "31be4a412b08df968bfab48754cc87cc14a71c4a241110ad881eeee2e692c560",
+      "checksum_type": "SHA256",
+      "dataset": "DS_1",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_H_R2.fastq.gz",
+      "size": 2049,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_17",
+      "checksum": "1aea8f7a679c57e09560176bd21e4b0c113f1975b8fe6452e312e23b780e7e04",
+      "checksum_type": "SHA256",
+      "dataset": "DS_2",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_I_R1.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_18",
+      "checksum": "acd38db5f1dd66f5360f09cf0b75917f840dd0cfae7c55de0ab5e78d254928ab",
+      "checksum_type": "SHA256",
+      "dataset": "DS_2",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_I_R2.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_19",
+      "checksum": "92a779a9456e487bcb6f64c37fe273d0d1e8ce63eaa04bffb1fe34e8f9ab1ca3",
+      "checksum_type": "SHA256",
+      "dataset": "DS_2",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_J_R1.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_20",
+      "checksum": "21168bff3d6d6427774100d1ebac454596d13e9ba8f9e532582ad61115d8dfb6",
+      "checksum_type": "SHA256",
+      "dataset": "DS_2",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_J_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_21",
+      "checksum": "cbddfe7c8cc7d86036a9a89427b923b420618947c5b7e52cfad4f10637285d10",
+      "checksum_type": "SHA256",
+      "dataset": "DS_2",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_K_R1.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_22",
+      "checksum": "1adf6fe8f39577ba9ee04ecd54f7993171a38c4adf29af9e80479125dc125c7d",
+      "checksum_type": "SHA256",
+      "dataset": "DS_2",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_K_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_23",
+      "checksum": "868f79790567d12c788da81e06fad6660dea7005a29d22113ece988cae6e3789",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_L_R1.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_24",
+      "checksum": "0aa199655fbcfd3210c6b1b6e448a5e6f550fab757020d00afab9da98d299f38",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_L_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_A"
+    },
+    {
+      "alias": "FILE_25",
+      "checksum": "387528dc9007900d4c325d5f30c698b4e245cdceaafd6ede749e888f2c2d8b01",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_M_R1.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_26",
+      "checksum": "a5a665c7c9ac7869feefa638bc0c36c1277bf3806a5ca0dab6612a231b110c47",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_M_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_27",
+      "checksum": "ff3407f770f6d8e3fd6deb58bea3812ebe7dc72a23530f83a9dc8b874b15678c",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_N_R1.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_28",
+      "checksum": "3bae81b1158274db6eb98914c45d35fa36dcd8a82436605fd036a371abf95d19",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_N_R2.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_29",
+      "checksum": "6d816fbfca7b79ce737b9ae2fc72ffb06b74fbcbf5fd1a572104eae2b1f87eea",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_O_R1.fastq.gz",
+      "size": 2049,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_30",
+      "checksum": "c92b678b296e13393d96755fc4130bf567cb0ec76fc0c830cd5010c91fccf896",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_O_R2.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_31",
+      "checksum": "c464ca6e3fddb03069685ee61a16c02de708e114f5ed8c705c7c6feb974bdbcd",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_P_R1.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_32",
+      "checksum": "8cb0040d4e84f4f2c4f27a48d41864eb49f69719c2bb7e012e54cbf62d273692",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_P_R2.fastq.gz",
+      "size": 2049,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_33",
+      "checksum": "9dea3f529fe2bf63657563630e9933a8883898ae449dd002b5eadf0031976909",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_Q_R1.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_34",
+      "checksum": "6efad42ae46e2d2f9298ba8d206ae9490556b4ab204cf205106f5a6a5104c961",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_Q_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_35",
+      "checksum": "17e1149486c22e92abae2ff6534d9e2e0657f528aa96e0ecf24ab0164f484000",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_R_R1.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_36",
+      "checksum": "14e5353efad785d079a84e667398c4e47dca7769de5a8b4824b93039c02cc386",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_R_R2.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_37",
+      "checksum": "a3955d3579dfdb98c78d7eadab1045f2af24c311a679969d48944c5a7360d6c2",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_S_R1.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_38",
+      "checksum": "1cbec623ac2eec0e460433ce1b9d7dfe82f704a61ed2154d091865a38cb7f396",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_S_R2.fastq.gz",
+      "size": 2049,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_39",
+      "checksum": "4024ee97fc733989e1f45a70c3afcbe14361f620a57af4f02c3e5f76befc2380",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_T_R1.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_40",
+      "checksum": "25b3ab9f971a12defb584e56f4e9bbe360c888f6025fc8b0fcbcf0075b522311",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_T_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_41",
+      "checksum": "97d7d476e24a2d824259eda9877e22e8a40acd80b89e1f40cfd82567d9bc0fb5",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_U_R1.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_42",
+      "checksum": "a9e3af6a3f682dbf7aa672b46d293ae64da87829e7583d88e158c662b01c5e8d",
+      "checksum_type": "SHA256",
+      "dataset": "DS_3",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_U_R2.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_43",
+      "checksum": "f02e10ccabd47e0d1408d1b730b86f033b803ab7a8a3b244eaad8b190365decd",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_V_R1.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_44",
+      "checksum": "e09a51143ae290f7a914e36a045ce0cc1d9c388ea32bc2e33ba69cece7b069a7",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_V_R2.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_45",
+      "checksum": "07ce01d6f7b8d142e2b686fac6afce142ca969c763de623eedbfdbb72745746d",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_W_R1.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_46",
+      "checksum": "ad9938d9a42e0ae81035842ba7450026b9aa81299ce5fa733cdbd3597b47c317",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_W_R2.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_47",
+      "checksum": "7ac08879fca2f038419db2cd1617a124051a1da42a67875cda64b8a6c9b84c9a",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_X_R1.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_48",
+      "checksum": "f07649e2d937b32157f739f0d59dfc930336fb101f2004495a7827c1bd538409",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_X_R2.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_49",
+      "checksum": "cbd192a0bfc7deec6a1f7abadbea391eda38d1002f0b90e1dfb71dc4c965e647",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_Y_R1.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_50",
+      "checksum": "9fa04196439164392c80761d8be02b6b3b5a573249fc0fcda42a795feb8e93f3",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_Y_R2.fastq.gz",
+      "size": 4097,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_51",
+      "checksum": "77d450e1497715383931c16df4180e8cc266678b30969884967cb938231cedc6",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "FORWARD",
+      "name": "SEQ_FILE_Z_R1.fastq.gz",
+      "size": 8193,
+      "study": "STUDY_B"
+    },
+    {
+      "alias": "FILE_52",
+      "checksum": "ba293f21da806db924a4d906641355dd6f6bb753dabbadd990fac7ec54150ceb",
+      "checksum_type": "SHA256",
+      "dataset": "DS_4",
+      "format": "FASTQ",
+      "forward_or_reverse": "REVERSE",
+      "name": "SEQ_FILE_Z_R2.fastq.gz",
+      "size": 6145,
+      "study": "STUDY_B"
     }
   ],
   "trios": []

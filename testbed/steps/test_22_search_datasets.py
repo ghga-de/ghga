@@ -57,4 +57,7 @@ def check_description_search_result(response: httpx.Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]
-    assert hits[0]["content"]["description"] == "An interesting dataset B"
+    assert (
+        hits[0]["content"]["description"]
+        == "An interesting dataset B of complete example set"
+    )

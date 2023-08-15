@@ -73,10 +73,11 @@ def check_metldata_database(config: Config, mongo: MongoFixture):
         accession = content.get("accession")
         assert isinstance(accession, str)
         assert accession.startswith("GHGAD")
-        assert content.get("alias") == f"DS_{num_dataset + 1}"
-        assert content.get("title") == f"The {num_dataset + 65:c} dataset"
+        assert content.get("alias") == f"DS_{num_dataset + 65:c}"
+        assert content.get("title") == f"The complete-{num_dataset + 65:c} dataset"
         assert (
-            content.get("description") == f"An interesting dataset {num_dataset + 65:c}"
+            content.get("description")
+            == f"An interesting dataset {num_dataset + 65:c} of complete example set"
         )
         analysis_files = content.get("analysis_process_output_files")
         assert isinstance(analysis_files, list)
@@ -96,13 +97,12 @@ def check_metldata_database(config: Config, mongo: MongoFixture):
             assert isinstance(study_file.pop("study"), dict)
             assert study_file == {
                 "alias": "STUDY_FILE_1",
-                "checksum": "7a586609dd8c7d6f53cbc2e82e1165de"
-                "2c7aab6769c6dde9882b45048b0fdaa9",
+                "checksum": "ff4b3612b3e2763f15530fb26fbb3e107fd3d9f05dea77e8978ff3e005585759",
                 "checksum_type": "SHA256",
                 "format": "FASTQ",
                 "forward_or_reverse": "REVERSE",
                 "name": "STUDY_1_SPECIMEN_1_FILE_1.fastq.gz",
-                "size": 106497,
+                "size": 40,
             }
             assert len(analysis_files) == 3
 
@@ -116,9 +116,10 @@ def check_wps_database(config: Config, mongo: MongoFixture):
         accession = dataset.get("_id")
         assert isinstance(accession, str)
         assert accession.startswith("GHGAD")
-        assert dataset.get("title") == f"The {num_dataset + 65:c} dataset"
+        assert dataset.get("title") == f"The complete-{num_dataset + 65:c} dataset"
         assert (
-            dataset.get("description") == f"An interesting dataset {num_dataset + 65:c}"
+            dataset.get("description")
+            == f"An interesting dataset {num_dataset + 65:c} of complete example set"
         )
         assert dataset.get("stage") == "download"
         files = dataset.get("files")
