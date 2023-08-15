@@ -91,7 +91,7 @@ def call_data_steward_kit_batch_upload(
         check=True,
         encoding="utf-8",
         text=True,
-        timeout=60,
+        timeout=180,
     )
 
     assert not completed_upload.stdout

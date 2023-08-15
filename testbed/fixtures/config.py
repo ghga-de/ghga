@@ -69,10 +69,6 @@ class Config(
     s3_access_key_id: str = "testbed-key"
     s3_secret_access_key: SecretStr = SecretStr("testbed-secret")
 
-    # file services
-    file_metadata_event_topic: str = "metadata"
-    file_metadata_event_type: str = "file_metadata_upserts"
-
     # bucket names
     inbox_bucket: str = "inbox"
     outbox_bucket: str = "outbox"

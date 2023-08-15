@@ -8,6 +8,7 @@ Feature: 14 Upload Metadata
     Given we have the state "metadata transformation is completed"
 
     When metadata is loaded into the system
-    Then the test dataset exists as embedded dataset in the database
+    Then the test datasets exist as embedded dataset in the database
+    And the test datasets are known to the work package service
 
     Then set the state to "metadata has been loaded into the system"

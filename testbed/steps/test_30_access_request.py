@@ -21,7 +21,6 @@ from time import sleep
 import httpx
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from example_data.datasets import DATASET_OVERVIEW_EVENT
 from fixtures.mongo import INTERVAL
 
 from .conftest import (
@@ -40,6 +39,23 @@ from .conftest import (
 scenarios("../features/30_access_request.feature")
 
 
+def get_accession_for_dataset(
+    dataset_char: str, config: Config, mongo: MongoFixture
+) -> str:
+    """Get the accession for the given dataset name"""
+    # Get accession for the dataset
+    # TBD: The accessions should actually be stored as state
+    # in step2 where we are browsing the database
+    # (at least in the black box testing mode)
+    dataset = mongo.find_document(
+        config.wps_db_name, "datasets", {"title": f"The {dataset_char} dataset"}
+    )
+    assert dataset
+    accession = dataset.get("_id")
+    assert isinstance(accession, str)
+    return accession
+
+
 @given("no access requests have been made yet")
 def ars_database_is_empty(config: Config, mongo: MongoFixture):
     mongo.empty_databases(config.ars_db_name)
@@ -51,14 +67,20 @@ def claims_repository_is_empty(config: Config, mongo: MongoFixture):
     mongo.empty_databases(config.auth_db_name)
 
 
-@when("I request access to the test dataset", target_fixture="response")
-def request_access_for_dataset(config: Config, login: LoginFixture):
+@when(
+    parse('I request access to the test dataset "{dataset_char}"'),
+    target_fixture="response",
+)
+def request_access_for_dataset(
+    dataset_char: str, config: Config, login: LoginFixture, mongo: MongoFixture
+):
+    accession = get_accession_for_dataset(dataset_char, config, mongo)
     url = f"{config.ars_url}/access-requests"
     date_now = now_as_utc()
     user, headers = login
     data = {
         "user_id": user["_id"],
-        "dataset_id": DATASET_OVERVIEW_EVENT.accession,
+        "dataset_id": accession,
         "email": user["email"],
         "request_text": "Can I access the test dataset?",
         "access_starts": date_now.isoformat(),
@@ -102,14 +124,20 @@ def fetch_list_of_access_requests(config: Config, login: LoginFixture):
     return response
 
 
-@then(parse('there is one request for the test dataset from "{name}"'))
-def there_is_one_request(name: str, response: httpx.Response):
+@then(parse('there is one request for test dataset "{dataset_char}" from "{name}"'))
+def there_is_one_request(
+    dataset_char: str,
+    name: str,
+    config: Config,
+    mongo: MongoFixture,
+    response: httpx.Response,
+):
+    accession = get_accession_for_dataset(dataset_char, config, mongo)
     requests = response.json()
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == DATASET_OVERVIEW_EVENT.accession
-        and request["full_user_name"] == name
+        if request["dataset_id"] == accession and request["full_user_name"] == name
     ]
     assert len(requests) == 1
 
@@ -122,9 +150,7 @@ def allow_pending_request(
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == DATASET_OVERVIEW_EVENT.accession
-        and request["status"] == "pending"
-        and request["full_user_name"] == name
+        if request["status"] == "pending" and request["full_user_name"] == name
     ]
     assert len(requests) == 1
     request = requests[0]
@@ -138,12 +164,7 @@ def allow_pending_request(
 @then(parse('the status of the request from "{name}" is "{status}"'))
 def there_are_access_requests(name: str, status: str, response: httpx.Response):
     requests = response.json()
-    requests = [
-        request
-        for request in requests
-        if request["dataset_id"] == DATASET_OVERVIEW_EVENT.accession
-        and request["full_user_name"] == name
-    ]
+    requests = [request for request in requests if request["full_user_name"] == name]
     assert len(requests) == 1
     request = requests[0]
     assert request["status"] == status

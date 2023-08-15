@@ -7,14 +7,14 @@ Feature: 31 Work Packages
 
     Given we have the state "John Doe is allowed to download the test dataset"
     And no work packages have been created yet
-    And the test dataset has been announced
+    And the test datasets have been announced
     And I am logged in as "Dr. John Doe"
 
     When the list of datasets is queried
 
     Then the response status code is "200"
-    And the test dataset is in the response list
+    And only the test dataset "A" is returned
 
     When a work package for the test dataset is created
     Then the response status code is "201"
-    And the response contains a download token for the test dataset
+    And the response contains a download token

@@ -18,6 +18,7 @@
 """Step definitions for metadata upload tests"""
 
 import subprocess
+from collections import Counter
 
 from ghga_datasteward_kit.loading import LoadConfig
 
@@ -59,20 +60,75 @@ def run_the_load_command(fixtures: JointFixture):
         assert not completed_upload.stderr
 
 
-@then("the test dataset exists as embedded dataset in the database")
+@then("the test datasets exist as embedded dataset in the database")
 def check_metldata_database(config: Config, mongo: MongoFixture):
     datasets = mongo.wait_for_documents(
         config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
     )
     assert datasets and len(datasets) == 2
-    dataset = datasets[0]
-    content = dataset.get("content")
-    assert content
-    assert content.get("title") == "The A dataset"
-    study_files = content.get("study_files")
-    assert study_files and len(study_files) == 1
-    study_filenames = sorted(study_file.get("name") for study_file in study_files)
-    assert study_filenames == ["STUDY_1_SPECIMEN_1_FILE_1.fastq.gz"]
-    file_accessions = {study_file.get("accession") for study_file in study_files}
-    assert len(file_accessions) == 1
-    assert all(accession.startswith("GHGAF") for accession in file_accessions)
+    datasets.sort(key=lambda x: x.get("content", {}).get("title", "None"))
+    for num_dataset, dataset in enumerate(datasets):
+        content = dataset.get("content")
+        assert isinstance(content, dict)
+        accession = content.get("accession")
+        assert isinstance(accession, str)
+        assert accession.startswith("GHGAD")
+        assert content.get("alias") == f"DS_{num_dataset + 1}"
+        assert content.get("title") == f"The {num_dataset + 65:c} dataset"
+        assert (
+            content.get("description") == f"An interesting dataset {num_dataset + 65:c}"
+        )
+        analysis_files = content.get("analysis_process_output_files")
+        assert isinstance(analysis_files, list)
+        sequencing_files = content.get("sequencing_process_files")
+        assert isinstance(sequencing_files, list)
+        study_files = content.get("study_files")
+        assert isinstance(study_files, list)
+        if num_dataset == 1:
+            assert not study_files
+            assert len(analysis_files) == 6
+            assert len(sequencing_files) == 6
+        else:
+            assert study_files and len(study_files) == 1
+            study_file = study_files[0]
+            assert study_file.pop("accession").startswith("GHGAF")
+            assert study_file.pop("dataset") == accession
+            assert isinstance(study_file.pop("study"), dict)
+            assert study_file == {
+                "alias": "STUDY_FILE_1",
+                "checksum": "7a586609dd8c7d6f53cbc2e82e1165de"
+                "2c7aab6769c6dde9882b45048b0fdaa9",
+                "checksum_type": "SHA256",
+                "format": "FASTQ",
+                "forward_or_reverse": "REVERSE",
+                "name": "STUDY_1_SPECIMEN_1_FILE_1.fastq.gz",
+                "size": 106497,
+            }
+            assert len(analysis_files) == 3
+
+
+@then("the test datasets are known to the work package service")
+def check_wps_database(config: Config, mongo: MongoFixture):
+    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {})
+    assert datasets and len(datasets) == 2
+    datasets.sort(key=lambda x: x.get("title", "None"))
+    for num_dataset, dataset in enumerate(datasets):
+        accession = dataset.get("_id")
+        assert isinstance(accession, str)
+        assert accession.startswith("GHGAD")
+        assert dataset.get("title") == f"The {num_dataset + 65:c} dataset"
+        assert (
+            dataset.get("description") == f"An interesting dataset {num_dataset + 65:c}"
+        )
+        assert dataset.get("stage") == "download"
+        files = dataset.get("files")
+        assert isinstance(files, list)
+        assert all(isinstance(file.get("id"), str) for file in files)
+        assert all(file["id"].startswith("GHGAF") for file in files)
+        found_extensions = Counter(file.get("extension") for file in files)
+        expected_extensions = (
+            {".fastq.gz": 6, ".vcf.gz": 6}
+            if num_dataset == 1
+            else {".fastq.gz": 4, ".vcf.gz": 3}
+        )
+        assert found_extensions == expected_extensions

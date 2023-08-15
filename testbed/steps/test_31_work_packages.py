@@ -17,16 +17,14 @@
 
 import httpx
 
-from example_data.datasets import DATASET_OVERVIEW_EVENT
-
 from .conftest import (
     TIMEOUT,
     Config,
     JointFixture,
     LoginFixture,
     MongoFixture,
-    async_step,
     given,
+    parse,
     scenarios,
     set_state,
     then,
@@ -39,40 +37,16 @@ scenarios("../features/31_work_packages.feature")
 
 @given("no work packages have been created yet")
 def wps_database_is_empty(config: Config, mongo: MongoFixture):
-    mongo.empty_databases(config.wps_db_name)
+    mongo.empty_databases(config.wps_db_name, exclude_collections="datasets")
     unset_state("a download token has been created", mongo)
 
 
-@given("the test dataset has been announced")
-@async_step
-async def announce_dataset(config: Config, fixtures: JointFixture):
-    # TBD: Should actually happen during upload, not here
-
-    # Add accessions using the metldata database
-    study_files = fixtures.mongo.find_documents(
-        config.metldata_db_name, "art_embedded_public_class_StudyFile", {}
-    )
-    assert len(study_files) == 1
-    study_files = [study_file["content"] for study_file in study_files]
-    alias_to_accession = {
-        study_file["alias"]: study_file["accession"] for study_file in study_files
-    }
-    payload = DATASET_OVERVIEW_EVENT.dict()
-    payload_files = payload["files"]
-    for payload_file in payload_files:
-        payload_file["accession"] = alias_to_accession[payload_file["accession"]]
-
-    # publish dataset overview event
-    await fixtures.kafka.publisher.publish(
-        payload=payload,
-        type_="metadata_dataset_overview",
-        key="metadata-1",
-        topic="metadata",
-    )
-    # wait until the event has been processed
-    assert fixtures.mongo.wait_for_document(
-        config.wps_db_name, "datasets", {"_id": payload["accession"]}
-    )
+@given("the test datasets have been announced")
+def announce_dataset(config: Config, mongo: MongoFixture):
+    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=2)
+    assert datasets and len(datasets) == 2
+    titles = {dataset["title"] for dataset in datasets}
+    assert titles == {"The A dataset", "The B dataset"}
 
 
 @when("the list of datasets is queried", target_fixture="response")
@@ -82,31 +56,33 @@ def query_datasets(config: Config, login: LoginFixture):
     return httpx.get(url, headers=login.headers, timeout=TIMEOUT)
 
 
-@then("the test dataset is in the response list")
-def check_dataset_in_list(response: httpx.Response):
+@then(parse('only the test dataset "{dataset_char}" is returned'))
+def check_dataset_in_list(
+    dataset_char: str, fixtures: JointFixture, response: httpx.Response
+):
     data = response.json()
-    dataset = DATASET_OVERVIEW_EVENT
-    files = DATASET_OVERVIEW_EVENT.files
-    for file in (data[0] if data else {}).get("files", []):
-        file.pop("id", None)
-    assert data == [
-        {
-            "id": dataset.accession,
-            "description": dataset.description,
-            "stage": dataset.stage.value,  # pylint: disable=no-member
-            "title": dataset.title,
-            "files": [
-                {"extension": file.file_extension}
-                for file in files  # pylint: disable=not-an-iterable
-            ],
-        }
-    ]
+    assert isinstance(data, list) and len(data) == 1
+    dataset = data[0]
+    assert isinstance(dataset, dict)
+    assert dataset.get("stage") == "download"
+    assert dataset.get("title") == f"The {dataset_char} dataset"
+    files = dataset.get("files")
+    assert files and isinstance(files, list)
+    set_state("files to be downloaded", files, fixtures.mongo)
 
 
 @when("a work package for the test dataset is created", target_fixture="response")
-def create_work_package(login: LoginFixture, fixtures: JointFixture):
+def create_work_package(
+    login: LoginFixture, fixtures: JointFixture, response: httpx.Response
+):
+    data = response.json()
+    assert isinstance(data, list) and len(data) == 1
+    dataset = data[0]
+    assert isinstance(dataset, dict)
+    dataset_id = dataset.get("id")
+    assert dataset_id
     data = {
-        "dataset_id": DATASET_OVERVIEW_EVENT.accession,
+        "dataset_id": dataset_id,
         "type": "download",
         "file_ids": None,
         "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
@@ -116,17 +92,11 @@ def create_work_package(login: LoginFixture, fixtures: JointFixture):
     return response
 
 
-@then("the response contains a download token for the test dataset")
+@then("the response contains a download token")
 def check_download_token(fixtures: JointFixture, response: httpx.Response):
     data = response.json()
     assert set(data) == {"id", "token"}
     id_, token = data["id"], data["token"]
     assert 20 <= len(id_) < 40 and 80 < len(token) < 120
     id_and_token = f"{id_}:{token}"
-    work_package = fixtures.mongo.find_document(
-        fixtures.config.wps_db_name, "workPackages", {"_id": id_}
-    )
-    assert work_package
-    assert work_package["type"] == "download"
-    assert work_package["dataset_id"] == DATASET_OVERVIEW_EVENT.accession
     set_state("a download token has been created", id_and_token, fixtures.mongo)

@@ -18,8 +18,6 @@
 
 import httpx
 
-from example_data.datasets import DATASET_OVERVIEW_EVENT
-
 from .conftest import TIMEOUT, Config, MongoFixture, parse, scenarios, then, when
 
 scenarios("../features/20_examine_artifacts.feature")
@@ -97,8 +95,7 @@ def request_test_dataset_resource(config: Config, mongo: MongoFixture):
 def check_test_dataset_resource(response: httpx.Response):
     dataset = response.json()
     assert isinstance(dataset, dict)
-    assert dataset["alias"] == DATASET_OVERVIEW_EVENT.accession
-    assert dataset["description"] == "An interesting dataset A"
+    assert dataset["title"] == "The A dataset"
     assert len(dataset["study_files"]) == 1
 
 

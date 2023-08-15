@@ -15,7 +15,6 @@
 
 """Step definitions for file download tests"""
 
-import json
 import subprocess
 
 from .conftest import (
@@ -82,19 +81,15 @@ def run_the_download_command(fixtures: JointFixture):
 
 @then("all files announced in metadata have been downloaded")
 def files_are_downloaded(fixtures: JointFixture):
-    metadata = json.loads(fixtures.dsk.config.complete_metadata_path.read_text())
+    files = get_state("files to be downloaded", fixtures.mongo)
 
-    for file_field in fixtures.dsk.config.metadata_file_fields:
-        files = metadata[file_field]
-
-        for file_ in files:
-            verify_named_file(
-                target_dir=fixtures.connector.config.download_dir,
-                config=fixtures.config,
-                name=file_["name"],
-                file_size=file_["size"],
-                encrypted=True,
-            )
+    for file_ in files:
+        verify_named_file(
+            target_dir=fixtures.connector.config.download_dir,
+            extension=file_["extension"],
+            name=file_["id"],
+            encrypted=True,
+        )
 
 
 @when("I run the decrypt command of the GHGA connector")
@@ -121,15 +116,12 @@ def run_the_decrypt_command(fixtures: JointFixture):
 
 @then("all downloaded files have been properly decrypted")
 def files_have_been_decrypted(fixtures: JointFixture):
-    metadata = json.loads(fixtures.dsk.config.complete_metadata_path.read_text())
-
-    files = metadata["study_files"]
+    files = get_state("files to be downloaded", fixtures.mongo)
 
     for file_ in files:
         verify_named_file(
             target_dir=fixtures.connector.config.download_dir,
-            config=fixtures.config,
-            name=file_["name"],
-            file_size=file_["size"],
+            extension=file_["extension"],
+            name=file_["id"],
             encrypted=False,
         )

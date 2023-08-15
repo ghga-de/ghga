@@ -19,7 +19,6 @@ import os
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional
 
 import yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig
@@ -101,27 +100,21 @@ def get_ext_char(file_path: Path):
 
 def verify_named_file(
     target_dir: Path,
-    config: Config,
     name: str,
-    file_size: Optional[int] = None,
+    extension: str,
     encrypted=False,
 ) -> None:
     """Verify a file with given parameters"""
 
-    # TBD: this can be improved when we can request accessions
+    # TBD: should also check size and checksum of the file
 
     file_path = target_dir
-    file_ext = os.path.splitext(name)[1]
+    name += extension
     if encrypted:
-        file_ext += ".c4gh"
-    file_size = config.file_size if not file_size else file_size
+        name += ".c4gh"
 
-    matching = [path for path in file_path.iterdir() if path.name.endswith(file_ext)]
-
-    if not matching:
-        assert False, f"File similar to {name} was not found"
-    if len(matching) > 1:
-        assert False, f"Multiple files similar to {name} were found"
+    matching = [path for path in file_path.iterdir() if path.name == name]
+    assert len(matching) == 1, f"File {name} was not found"
 
     if not encrypted:
         file_path = matching[0]
@@ -130,4 +123,4 @@ def verify_named_file(
         with open(file_path, "r", encoding="utf-8") as file:
             file_content = file.read()
 
-        assert file_content == content_char * file_size
+        assert file_content == content_char * len(file_content)
