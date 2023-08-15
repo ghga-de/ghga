@@ -13,45 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Step definitions for metadata browsing tests"""
-
-
-from typing import Dict
+"""Step definitions for metadata filtering tests"""
 
 import httpx
-from hexkit.custom_types import JsonObject
 
-from .conftest import TIMEOUT, Config, parse, scenarios, then, when
+from .conftest import Config, parse, scenarios, then, when
+from .utils import search_dataset_rpc
 
 scenarios("../features/21_filter_datasets.feature")
 
 
-def search_dataset_rpc(config: Config, filters: Dict[str, str], query: str = ""):
-    search_parameters: JsonObject = {
-        "class_name": "EmbeddedDataset",
-        "query": query,
-        "filters": [filters],
-        "skip": 0,
-    }
-    url = f"{config.mass_url}/rpc/search"
-    return httpx.post(url, json=search_parameters, timeout=TIMEOUT)
-
-
 @when("I query documents with invalid class name", target_fixture="response")
 def query_with_invalid_class(config: Config):
-    search_parameters: JsonObject = {
-        "class_name": "InvalidClass",
-        "query": "",
-        "filters": [],
-        "skip": 0,
-    }
-    url = f"{config.mass_url}/rpc/search"
-    return httpx.post(url, json=search_parameters, timeout=TIMEOUT)
+    return search_dataset_rpc(config, class_name="InvalidClass")
 
 
 @when("I filter dataset with alias", target_fixture="response")
 def filter_dataset_with_alias(config: Config):
-    filters = {"key": "alias", "value": "DS_1"}
+    filters = [{"key": "alias", "value": "DS_1"}]
     return search_dataset_rpc(config, filters)
 
 
@@ -68,19 +47,13 @@ def check_alias_filter(response: httpx.Response):
     target_fixture="response",
 )
 def filter_dataset_with_file_format(config: Config, file_format):
-    filters = {"key": "study_files.format", "value": file_format}
+    filters = [{"key": "study_files.format", "value": file_format}]
     return search_dataset_rpc(config, filters)
-
-
-@then(parse('the expected hit count is "{count:d}"'))
-def check_hit_count(count: int, response: httpx.Response):
-    results = response.json()
-    assert results["count"] == count
 
 
 @when("I filter dataset with sequencing file alias", target_fixture="response")
 def filter_dataset_for_sequencing_process_file(config: Config):
-    filters = {"key": "sequencing_process_files.alias", "value": "SEQ_FILE_6"}
+    filters = [{"key": "sequencing_process_files.alias", "value": "SEQ_FILE_6"}]
     return search_dataset_rpc(config, filters)
 
 

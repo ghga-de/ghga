@@ -19,12 +19,17 @@ import os
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Dict, List, Optional
 
+import httpx
 import yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig
 from ghga_datasteward_kit.loading import LoadConfig
+from hexkit.custom_types import JsonObject
 
 from fixtures.config import Config
+
+TIMEOUT = 10
 
 
 @contextmanager
@@ -124,3 +129,24 @@ def verify_named_file(
             file_content = file.read()
 
         assert file_content == content_char * len(file_content)
+
+
+def search_dataset_rpc(
+    config: Config,
+    filters: Optional[List[Dict[str, str]]] = None,
+    query: str = "",
+    class_name: str = "EmbeddedDataset",
+):
+    """Send a search request to the MASS"""
+
+    if filters is None:
+        filters = []
+
+    search_parameters: JsonObject = {
+        "class_name": class_name,
+        "query": query,
+        "filters": filters,
+        "skip": 0,
+    }
+    url = f"{config.mass_url}/rpc/search"
+    return httpx.post(url, json=search_parameters, timeout=TIMEOUT)

@@ -21,7 +21,7 @@ from typing import Any, Generator, Mapping, Optional, Union
 
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture as BaseMongoFixture
-from pymongo import MongoClient
+from pymongo import TEXT, MongoClient
 from pymongo.errors import ExecutionTimeout, OperationFailure
 from pytest import fixture
 
@@ -156,6 +156,14 @@ class MongoFixture(BaseMongoFixture):
         db = self.client[db_name]
         collection = db.get_collection(collection_name)
         collection.delete_many(document)
+
+    def index_collection(self, db_name: str, collection_name: str):
+        db = self.client[db_name]
+        indexes = db[collection_name].list_indexes()
+        for index in indexes:
+            if index["name"] == "$**_text":
+                return
+        db[collection_name].create_index(keys=[("$**", TEXT)])
 
 
 @fixture(name="mongo", scope="session")

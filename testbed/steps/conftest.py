@@ -166,3 +166,9 @@ def unset_state(state_regex: str, mongo: MongoFixture):
 def empty_mail_server(config: Config):
     """Delete all e-mails from mail server"""
     httpx.delete(f"{config.mailhog_url}/api/v1/messages", timeout=TIMEOUT)
+
+
+@then(parse('the expected hit count is "{count:d}"'))
+def check_hit_count(count: int, response: httpx.Response):
+    results = response.json()
+    assert results["count"] == count

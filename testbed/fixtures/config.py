@@ -114,3 +114,5 @@ class Config(
 
     # mass
     mass_url: str = "http://mass:8080"
+    mass_db_name: str = "mass"
+    mass_collection: str = "EmbeddedDataset"
