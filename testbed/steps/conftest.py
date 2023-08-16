@@ -172,3 +172,10 @@ def empty_mail_server(config: Config):
 def check_hit_count(count: int, response: httpx.Response):
     results = response.json()
     assert results["count"] == count
+
+
+@then(parse('I receive "{item_count:d}" item'))
+@then(parse('I receive "{item_count:d}" items'))
+def check_received_item_count(response: httpx.Response, item_count):
+    results = response.json()
+    assert len(results["hits"]) == item_count

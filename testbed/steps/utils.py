@@ -134,19 +134,25 @@ def verify_named_file(
 def search_dataset_rpc(
     config: Config,
     filters: Optional[List[Dict[str, str]]] = None,
-    query: str = "",
+    query: Optional[str] = None,
     class_name: str = "EmbeddedDataset",
+    limit: Optional[int] = None,
+    skip: Optional[int] = None,
 ):
     """Send a search request to the MASS"""
 
-    if filters is None:
-        filters = []
-
     search_parameters: JsonObject = {
         "class_name": class_name,
-        "query": query,
-        "filters": filters,
-        "skip": 0,
+        **{
+            key: value
+            for key, value in {
+                "limit": limit,
+                "query": query,
+                "skip": skip,
+                "filters": filters,
+            }.items()
+            if value is not None
+        },
     }
     url = f"{config.mass_url}/rpc/search"
     return httpx.post(url, json=search_parameters, timeout=TIMEOUT)

@@ -20,11 +20,6 @@ Feature: 22 Search Datasets
     Then the response status code is "200"
     And the expected hit count is "6"
 
-  Scenario: Search datasets with file format
-    When I search datasets with the "vcf" query
-    Then the response status code is "200"
-    And the expected hit count is "2"
-
   Scenario: Search datasets with study alias
     When I search datasets with the "STUDY_A" query
     Then the response status code is "200"

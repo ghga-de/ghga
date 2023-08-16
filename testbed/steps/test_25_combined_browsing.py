@@ -15,18 +15,35 @@
 
 """Step definitions for combination of searching, filtering and pagination"""
 
-from .conftest import scenarios, then, when
+from .conftest import Config, parse, scenarios, when
+from .utils import search_dataset_rpc
 
 scenarios("../features/25_combined_browsing.feature")
 
-# TBD: implement tests
+
+@when(
+    parse('I search "{query}" and request page "{page:d}" with page size "{size:d}"'),
+    target_fixture="response",
+)
+def search_items_with_pagination(config: Config, query: str, page: int, size: int):
+    limit = size
+    skip = (page - 1) * size
+    return search_dataset_rpc(config=config, query=query, limit=limit, skip=skip)
 
 
-@when("I combine features", target_fixture="response")
-def view_the_global_summary():
-    pass
+@when(
+    parse('I search "{query}" in datasets with type "{dataset_type}"'),
+    target_fixture="response",
+)
+def search_and_filter_dataset(config: Config, query: str, dataset_type: str):
+    filters = [{"key": "types", "value": dataset_type}]
+    return search_dataset_rpc(config=config, filters=filters, query=query)
 
 
-@then("it works")
-def it_works():
-    pass
+@when(
+    parse('I filter dataset with type "{dataset_type}"'),
+    target_fixture="response",
+)
+def search_dataset(config: Config, dataset_type):
+    filters = [{"key": "types", "value": dataset_type}]
+    return search_dataset_rpc(config, filters=filters)

@@ -15,18 +15,17 @@
 
 """Step definitions for pagination of datasets in the frontend"""
 
-from .conftest import scenarios, then, when
+from .conftest import Config, parse, scenarios, when
+from .utils import search_dataset_rpc
 
 scenarios("../features/24_paginate_datasets.feature")
 
-# TBD: implement tests
 
-
-@when("I paginate the datasets", target_fixture="response")
-def view_the_global_summary():
-    pass
-
-
-@then("it works")
-def it_works():
-    pass
+@when(
+    parse('I request page "{page_num:d}" with a page size of "{page_size:d}"'),
+    target_fixture="response",
+)
+def request_page_with_page_size(config: Config, page_num: int, page_size: int):
+    limit = page_size
+    skip = (page_num - 1) * page_size
+    return search_dataset_rpc(config=config, limit=limit, skip=skip)
