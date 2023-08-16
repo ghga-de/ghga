@@ -1,5 +1,4 @@
-
-@browse @metadata
+@browse @metadata @mass
 Feature: 22 Search Datasets
   As a user, I can filter the public datasets
 

@@ -17,9 +17,9 @@
 
 import httpx
 
-from .conftest import TIMEOUT, Config, MongoFixture, parse, scenarios, then, when
+from .conftest import TIMEOUT, Config, parse, scenarios, then, when
 
-scenarios("../features/20_examine_artifacts.feature")
+scenarios("../features/21_artifact_info.feature")
 
 
 @when("I request info on all available artifacts", target_fixture="response")
@@ -68,51 +68,3 @@ def check_artifact(artifact_name, response: httpx.Response):
     classes = artifact_info["resource_classes"]
     num_additional_classes = 1 if artifact_name.startswith("embedded") else 0
     assert len(classes) == 20 + num_additional_classes
-
-
-@when(
-    "I request the complete-A dataset resource",
-    target_fixture="response",
-)
-def request_test_dataset_resource(config: Config, mongo: MongoFixture):
-    # TBD: We fetch the dataset accession from the database, but this should
-    # eventually be fetched by browsing the metadata through the mass service
-    datasets = mongo.find_documents(
-        config.metldata_db_name, "art_embedded_public_class_Dataset", {}
-    )
-    assert len(datasets) == 6
-
-    for dataset in datasets:
-        if dataset["content"]["title"] == "The complete-A dataset":
-            accession = dataset["_id"]
-            break
-    else:
-        accession = None
-
-    assert accession, "dataset not found"
-
-    url = (
-        f"{config.metldata_url}/artifacts/"
-        + f"embedded_public/classes/Dataset/resources/{accession}"
-    )
-    return httpx.get(url, timeout=TIMEOUT)
-
-
-@then("the complete-A dataset resource is returned")
-def check_test_dataset_resource(response: httpx.Response):
-    dataset = response.json()
-    assert isinstance(dataset, dict)
-    assert dataset["title"] == "The complete-A dataset"
-    assert len(dataset["study_files"]) == 1
-
-
-@when(
-    "I request a non-existing dataset resource",
-    target_fixture="response",
-)
-def request_non_existing_dataset_resource(config: Config):
-    url = (
-        f"{config.metldata_url}/artifacts/"
-        + "embedded_public/classes/Dataset/resources/does-not-exist"
-    )
-    return httpx.get(url, timeout=TIMEOUT)

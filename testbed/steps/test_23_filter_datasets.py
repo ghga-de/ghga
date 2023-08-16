@@ -20,7 +20,7 @@ import httpx
 from .conftest import Config, parse, scenarios, then, when
 from .utils import search_dataset_rpc
 
-scenarios("../features/21_filter_datasets.feature")
+scenarios("../features/23_filter_datasets.feature")
 
 
 @when("I query documents with invalid class name", target_fixture="response")

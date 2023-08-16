@@ -1,6 +1,5 @@
-
-@browse @metadata
-Feature: 21 Filter Datasets
+@browse @metadata @mass
+Feature: 23 Filter Datasets
   As a user, I can filter the public datasets
 
   Background:
