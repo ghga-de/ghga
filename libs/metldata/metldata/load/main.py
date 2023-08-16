@@ -38,6 +38,7 @@ async def get_app(config: ArtifactLoaderAPIConfig) -> FastAPI:
 
     api_router = await rest_api_factory(
         artifact_infos=config.artifact_infos,
+        primary_artifact_name=config.primary_artifact_name,
         config=config,
         dao_factory=dao_factory,
         db_aggregator=db_aggregator,

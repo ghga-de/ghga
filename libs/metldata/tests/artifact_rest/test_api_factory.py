@@ -137,6 +137,7 @@ async def test_get_stats_endpoint(
 
     await create_stats_using_aggregator(
         artifact_infos=get_artifact_info_dict(artifact_infos=artifact_infos),
+        primary_artifact_name=artifact_infos[-1].name,
         db_aggregator=MongoDbAggregator(config=mongodb_fixture.config),
     )
 

@@ -16,11 +16,11 @@
 
 """Metadata transformation functionality for the aggregate transformation."""
 
-
 from metldata.builtin_transformations.aggregate.cached_model import CachedMetadataModel
 from metldata.builtin_transformations.aggregate.config import Aggregation
 from metldata.builtin_transformations.aggregate.data_subgraph import DataSubgraph
 from metldata.builtin_transformations.aggregate.expanding_dict import ExpandingDict
+from metldata.builtin_transformations.aggregate.func import MetadataTransformationError
 from metldata.custom_types import Json
 from metldata.model_utils.anchors import AnchorPoint
 
@@ -47,9 +47,15 @@ def execute_aggregation(
                 path_strings=operation.input_paths,
                 visit_once_classes=operation.visit_only_once,
             )
-            aggregated = operation.function.func(
-                subgraph.terminal_nodes(data=input_element)
-            )
+            try:
+                aggregated = operation.function.func(
+                    subgraph.terminal_nodes(data=input_element)
+                )
+            except Exception as error:
+                raise MetadataTransformationError(
+                    "Cannot execute operation:\n"
+                    f"{operation}\nwith input {input_element!r}:\n{error}"
+                ) from error
             result.set_path_value(operation.output_path, aggregated)
         result[id_slot] = input_element[id_slot]
         output_data.append(result.to_dict())

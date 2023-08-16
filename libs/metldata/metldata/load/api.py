@@ -75,6 +75,7 @@ class LoaderTokenAuthProvider(AuthContextProtocol[LoaderTokenAuthContext]):
 async def rest_api_factory(
     *,
     artifact_infos: list[ArtifactInfo],
+    primary_artifact_name: str,
     config: ArtifactLoaderAPIConfig,
     dao_factory: DaoFactoryProtocol,
     db_aggregator: DbAggregator,
@@ -129,7 +130,9 @@ async def rest_api_factory(
             )
 
             await create_stats_using_aggregator(
-                artifact_infos=artifact_info_dict, db_aggregator=db_aggregator
+                artifact_infos=artifact_info_dict,
+                primary_artifact_name=primary_artifact_name,
+                db_aggregator=db_aggregator,
             )
 
             return Response(status_code=204)

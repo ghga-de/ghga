@@ -44,14 +44,15 @@ def get_stat_slot(resource_class: str) -> Optional[str]:
 
 async def create_stats_using_aggregator(
     artifact_infos: dict[str, ArtifactInfo],
+    primary_artifact_name: str,
     db_aggregator: DbAggregator,
 ) -> None:
     """Create summary by running an aggregation pipeline on the database."""
     resource_stats: dict[str, ResourceStats] = {}
-    last_artifact_info = next(reversed(artifact_infos.values()))
-    last_artifact_name = last_artifact_info.name
-    for resource_class in last_artifact_info.resource_classes:
-        collection_name = f"art_{last_artifact_name}_class_{resource_class}"
+    artifact_name = primary_artifact_name
+    artifact_info = artifact_infos[artifact_name]
+    for resource_class in artifact_info.resource_classes:
+        collection_name = f"art_{artifact_name}_class_{resource_class}"
 
         pipeline: list[dict[str, Any]] = [{"$count": "count"}]
         result = await db_aggregator.aggregate(
