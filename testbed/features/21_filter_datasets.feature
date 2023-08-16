@@ -18,7 +18,7 @@ Feature: 21 Filter Datasets
   Scenario: Filter dataset by study file format
     When I filter dataset with "FASTQ" study file format
     Then the response status code is "200"
-    And the expected hit count is "1"
+    And the expected hit count is "5"
 
     When I filter dataset with "BAM" study file format
     Then the response status code is "200"

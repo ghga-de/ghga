@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Step definitions for work package tests"""
+"""Step definitions for creating work package tests in the frontend"""
 
 import httpx
 
@@ -44,9 +44,10 @@ def wps_database_is_empty(config: Config, mongo: MongoFixture):
 @given("the test datasets have been announced")
 def announce_dataset(config: Config, mongo: MongoFixture):
     datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=2)
-    assert datasets and len(datasets) == 2
-    titles = {dataset["title"] for dataset in datasets}
-    assert titles == {"The complete-A dataset", "The complete-B dataset"}
+    assert datasets
+    assert len(datasets) == 6
+    titles = {dataset["title"][4:-8] for dataset in datasets}
+    assert titles == {"A", "B", "C", "D", "complete-A", "complete-B"}
 
 
 @when("the list of datasets is queried", target_fixture="response")

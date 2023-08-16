@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-""" Step definitions for metadata transformation """
+"""Step definitions for transforming metadata via the data-steward-kit"""
 
 import os
 import subprocess
@@ -27,12 +27,12 @@ scenarios("../features/11_transform_metadata.feature")
 
 def call_data_steward_kit_transform(
     metadata_config_path: Path,
-    timeout: int = TIMEOUT,
+    timeout: int = 3 * TIMEOUT,
 ):
     """Call cli command 'ghga-datasteward-kit metadata transform'
-    to run transformation workflow on submitted metadata"""
+    to run the transformation workflow on submitted metadata"""
 
-    completed_submit = subprocess.run(  # nosec B607, B603
+    completed_transform = subprocess.run(  # nosec B607, B603
         [
             "ghga-datasteward-kit",
             "metadata",
@@ -47,8 +47,8 @@ def call_data_steward_kit_transform(
         timeout=timeout * 60,
     )
 
-    assert not completed_submit.stdout
-    assert "ERROR" not in completed_submit.stderr
+    assert not completed_transform.stdout
+    assert "ERROR" not in completed_transform.stderr
 
 
 @when("submitted metadata is transformed")
@@ -58,7 +58,7 @@ def transform_metadata(fixtures: JointFixture):
     os.chdir(workdir)
     call_data_steward_kit_transform(
         metadata_config_path=fixtures.dsk.config.metadata_config_path,
-        timeout=15,  # This command may take >10min
+        timeout=30,  # this command may take more than 15 min
     )
     os.chdir(cwd)
 

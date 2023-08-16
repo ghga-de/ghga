@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Step definitions for metadata searching tests"""
+"""Step definitions for searching metadata in the frontend"""
 
 import httpx
 
@@ -47,7 +47,7 @@ def search_dataset(config: Config, keyword):
 @then("I get the expected results from study search")
 def check_study_search_result(response: httpx.Response):
     results = response.json()
-    assert results["count"] == 1
+    assert results["count"] == 4
     hits = results["hits"]
     assert hits[0]["content"]["studies"][0]["alias"] == "STUDY_A"
 
@@ -57,7 +57,4 @@ def check_description_search_result(response: httpx.Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]
-    assert (
-        hits[0]["content"]["description"]
-        == "An interesting dataset B of complete example set"
-    )
+    assert hits[0]["content"]["description"] == "An interesting dataset C"

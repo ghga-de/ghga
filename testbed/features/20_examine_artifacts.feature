@@ -21,9 +21,9 @@ Feature: 20 Examine Artifacts
     Then the response status code is "404"
 
   Scenario: Viewing the details of a dataset
-    When I request the test dataset resource
+    When I request the complete-A dataset resource
     Then the response status code is "200"
-    And the test dataset resource is returned
+    And the complete-A dataset resource is returned
 
   Scenario: Viewing a non-existing dataset
     When I request a non-existing dataset resource

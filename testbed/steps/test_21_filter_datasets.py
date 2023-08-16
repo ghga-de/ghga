@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Step definitions for metadata filtering tests"""
+"""Step definitions for filtering metadata in the frontend"""
 
 import httpx
 

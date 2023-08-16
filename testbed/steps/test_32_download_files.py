@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Step definitions for file download tests"""
+"""Step definitions for downloading files with the GHGA connector"""
 
 import subprocess
 

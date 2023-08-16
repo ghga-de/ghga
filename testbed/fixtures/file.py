@@ -22,7 +22,7 @@ import tempfile
 from pathlib import Path
 from typing import Generator, List, Optional
 
-from hexkit.providers.s3.testutils import FileObject, temp_file_object
+from hexkit.providers.s3.testutils import FileObject
 from pydantic import BaseModel
 from pytest import fixture
 
@@ -30,7 +30,7 @@ from fixtures.config import Config
 from fixtures.dsk import DskFixture
 from steps.utils import get_ext_char
 
-__all__ = ["FileObject", "batch_file_fixture", "file_fixture"]
+__all__ = ["FileBatch", "FileObject", "batch_file_fixture", "file_fixture"]
 
 
 class FileBatch(BaseModel):
@@ -67,22 +67,39 @@ def create_named_file(
 
 
 @fixture(name="file_fixture")
-def file_fixture(config: Config) -> Generator[FileObject, None, None]:
-    """File fixture that provides a temporary file."""
+def file_fixture(
+    config: Config, dsk: DskFixture
+) -> Generator[List[FileObject], None, None]:
+    """File fixture that provides temporary files for the minimal metadata."""
 
-    with temp_file_object(
-        bucket_id=config.staging_bucket,
-        object_id=config.object_id,
-        size=config.file_size,
-    ) as temp_file:
-        yield temp_file
+    temp_dir = Path(tempfile.gettempdir())
+    metadata = json.loads(dsk.config.minimal_metadata_path.read_text())
+
+    created_files = []
+    for file_field in dsk.config.metadata_file_fields:
+        files = metadata[file_field]
+        for file_ in files:
+            file_object = create_named_file(
+                target_dir=temp_dir,
+                config=config,
+                name=file_["name"],
+                file_size=file_["size"],
+                alias=file_["alias"],
+            )
+
+            created_files.append(file_object)
+
+    yield created_files
+
+    for file_object in created_files:
+        os.remove(file_object.file_path)
 
 
 @fixture(name="batch_file_fixture")
 def batch_file_fixture(
     config: Config, dsk: DskFixture
 ) -> Generator[FileBatch, None, None]:
-    """Batch file fixture that provides temporary files according to metadata."""
+    """Batch file fixture that provides temporary files for the complete metadata."""
 
     temp_dir = Path(tempfile.gettempdir())
     metadata = json.loads(dsk.config.complete_metadata_path.read_text())

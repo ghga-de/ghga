@@ -1,6 +1,6 @@
 
 @metadata @upload
-Feature: 14 Upload Metadata
+Feature: 14 Load Metadata
   As a data steward, I can load metadata into the system
 
   Scenario: Loading metadata into the system

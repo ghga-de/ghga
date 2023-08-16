@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Step definitions for access request tests"""
+"""Step definitions for requesting access in the frontend"""
 
 from datetime import timedelta
 from time import sleep

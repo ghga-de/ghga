@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-""" Step definitions for metadata submission """
+"""Step definitions for submitting metadata with the datasteward-kit"""
 
 import glob
 import os
@@ -72,7 +72,7 @@ def metadata_config_exist(fixtures: JointFixture):
     assert fixtures.dsk.config.metadata_config_path.exists()
 
 
-@when(parse('"{name}" metadata is submitted to the submission registry'))
+@when(parse('"{name}" metadata is submitted to the submission store'))
 def submit_metadata(name: str, fixtures: JointFixture):
     workdir = fixtures.dsk.config.submission_registry
     metadata_json_path = fixtures.dsk.config.metadata_dir / f"{name}_metadata.json"
@@ -85,10 +85,18 @@ def submit_metadata(name: str, fixtures: JointFixture):
     os.chdir(cwd)
 
 
-@then("a submission JSON exists in the local submission registry")
-def submission_registry_exists(fixtures: JointFixture):
+@then(parse("{num} submission JSON file exists in the local submission store"))
+@then(parse("{num} submission JSON files exist in the local submission store"))
+def submission_registry_exists(num: str, fixtures: JointFixture):
+    try:
+        num_expected = {"no": 0, "one": 1, "two": 2}[num]
+    except KeyError:
+        num_expected = int(num)
     submission_store = fixtures.dsk.config.submission_store
     assert submission_store.exists()
 
     json_files = glob.glob(os.path.join(submission_store, "*.json"))
-    assert json_files, f"No submission JSON files found in '{submission_store}'"
+    num_found = len(json_files)
+    assert (
+        num_found == num_expected
+    ), f"{num_found} submission JSON files found in '{submission_store}'"

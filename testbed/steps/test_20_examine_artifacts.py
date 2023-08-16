@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Step definitions for metadata browsing tests"""
-
+"""Step definitions for examining metadata artifacts in the frontend"""
 
 import httpx
 
@@ -72,7 +71,7 @@ def check_artifact(artifact_name, response: httpx.Response):
 
 
 @when(
-    "I request the test dataset resource",
+    "I request the complete-A dataset resource",
     target_fixture="response",
 )
 def request_test_dataset_resource(config: Config, mongo: MongoFixture):
@@ -81,8 +80,16 @@ def request_test_dataset_resource(config: Config, mongo: MongoFixture):
     datasets = mongo.find_documents(
         config.metldata_db_name, "art_embedded_public_class_Dataset", {}
     )
-    assert len(datasets) == 2
-    accession = datasets[0]["_id"]
+    assert len(datasets) == 6
+
+    for dataset in datasets:
+        if dataset["content"]["title"] == "The complete-A dataset":
+            accession = dataset["_id"]
+            break
+    else:
+        accession = None
+
+    assert accession, "dataset not found"
 
     url = (
         f"{config.metldata_url}/artifacts/"
@@ -91,7 +98,7 @@ def request_test_dataset_resource(config: Config, mongo: MongoFixture):
     return httpx.get(url, timeout=TIMEOUT)
 
 
-@then("the test dataset resource is returned")
+@then("the complete-A dataset resource is returned")
 def check_test_dataset_resource(response: httpx.Response):
     dataset = response.json()
     assert isinstance(dataset, dict)

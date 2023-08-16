@@ -97,7 +97,7 @@ workflow_config:
               - study_files.study.accession
               - sample_files.sample.condition.study.accession
               - sequencing_process_files.sequencing_process.sample.condition.study.accession
-            function: StringCopy
+            function: StringListCopy
             visit_only_once:
               - Study
           - output_path: study_summary.stats.title
@@ -105,7 +105,7 @@ workflow_config:
               - study_files.study.title
               - sample_files.sample.condition.study.title
               - sequencing_process_files.sequencing_process.sample.condition.study.title
-            function: StringCopy
+            function: StringListCopy
             visit_only_once:
               - Study
           - output_path: experiment_summary.count
