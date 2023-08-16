@@ -15,18 +15,73 @@
 
 """Step definitions for viewing the global summary in the frontend"""
 
-from .conftest import scenarios, then, when
+from datetime import datetime, timezone
+
+import httpx
+
+from .conftest import TIMEOUT, Config, scenarios, then, when
 
 scenarios("../features/20_global_summary.feature")
 
-# TBD: implement tests
+
+@when("I get the global summary", target_fixture="response")
+def get_the_global_summary(config: Config) -> httpx.Response:
+    url = f"{config.metldata_url}/stats"
+    return httpx.get(url, timeout=TIMEOUT)
 
 
-@when("I view the global summary", target_fixture="response")
-def view_the_global_summary():
-    pass
-
-
-@then("it works")
-def it_works():
-    pass
+@then("the summary statistics is as expected")
+def check_summary_statistics(response: httpx.Response):
+    result = response.json()
+    assert isinstance(result, dict)
+    assert sorted(result) == ["created", "id", "resource_stats"]
+    date_created = datetime.fromisoformat(result["created"])
+    date_now = datetime.now(timezone.utc)
+    assert abs((date_created - date_now).seconds) < 24 * 60 * 60
+    assert result["id"] == "global"
+    resource_stats = result["resource_stats"]
+    assert resource_stats == {
+        "Analysis": {"count": 1},
+        "AnalysisProcess": {"count": 9},
+        "AnalysisProcessOutputFile": {
+            "count": 9,
+            "stats": {"format": [{"count": 9, "value": "VCF"}]},
+        },
+        "Biospecimen": {"count": 2},
+        "Condition": {"count": 2},
+        "DataAccessCommittee": {"count": 2},
+        "DataAccessPolicy": {"count": 4},
+        "Dataset": {"count": 6},
+        "EmbeddedDataset": {"count": 6},
+        "Individual": {
+            "count": 3,
+            "stats": {
+                "sex": [
+                    {"count": 1, "value": "FEMALE_SEX_FOR_CLINICAL_USE"},
+                    {"count": 2, "value": "MALE_SEX_FOR_CLINICAL_USE"},
+                ]
+            },
+        },
+        "LibraryPreparationProtocol": {
+            "count": 1,
+            "stats": {"type": [{"count": 1, "value": "unknown"}]},
+        },
+        "Publication": {"count": 2},
+        "Sample": {"count": 2},
+        "SequencingExperiment": {"count": 1},
+        "SequencingProcess": {"count": 9},
+        "SequencingProcessFile": {
+            "count": 9,
+            "stats": {"format": [{"count": 9, "value": "FASTQ"}]},
+        },
+        "SequencingProtocol": {
+            "count": 1,
+            "stats": {"type": [{"count": 1, "value": "DNA-seq"}]},
+        },
+        "Study": {"count": 4},
+        "StudyFile": {
+            "count": 53,
+            "stats": {"format": [{"count": 53, "value": "FASTQ"}]},
+        },
+        "Trio": {"count": 1},
+    }

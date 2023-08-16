@@ -49,7 +49,9 @@ def check_study_search_result(response: httpx.Response):
     results = response.json()
     assert results["count"] == 4
     hits = results["hits"]
-    assert hits[0]["content"]["studies"][0]["alias"] == "STUDY_A"
+    studies = hits[0]["content"]["studies"]
+    study_titles = {study["title"] for study in studies}
+    assert study_titles == {"The A Study", "The B Study"}
 
 
 @then("I get the expected results from description search")
