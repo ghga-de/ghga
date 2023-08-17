@@ -10,6 +10,11 @@ Feature: 22 Search Datasets
     When I search documents with invalid query format
     Then the response status code is "422"
 
+  Scenario: Search datasests without any keyword
+    When I search datasets without any keyword
+    Then the response status code is "200"
+    And I get all the existing datasets
+
   Scenario: Search datasets with a word not found in
     When I search datasets with the "hotel" query
     Then the response status code is "200"

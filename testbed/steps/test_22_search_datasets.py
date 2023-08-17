@@ -17,8 +17,17 @@
 
 import httpx
 
-from .conftest import Config, MongoFixture, given, parse, scenarios, then, when
-from .utils import search_dataset_rpc
+from .conftest import (
+    Config,
+    MongoFixture,
+    given,
+    parse,
+    scenarios,
+    set_state,
+    then,
+    when,
+)
+from .utils import get_dataset_overview, search_dataset_rpc
 
 scenarios("../features/22_search_datasets.feature")
 
@@ -37,6 +46,35 @@ def search_with_invalid_query(config: Config):
 
 
 @when(
+    parse("I search datasets without any keyword"),
+    target_fixture="response",
+)
+def search_items_without_keyword(config: Config):
+    return search_dataset_rpc(config=config)
+
+
+@then("I get all the existing datasets")
+def check_search_without_keyword_results(mongo: MongoFixture, response: httpx.Response):
+    results = response.json()
+    assert results["count"] == 6
+    # get an overview of all datasets
+    contents = [hit["content"] for hit in results["hits"]]
+    datasets = {content["alias"]: get_dataset_overview(content) for content in contents}
+    # check that datasets and their files are complete
+    num_files = {alias: len(dataset["files"]) for alias, dataset in datasets.items()}
+    assert num_files == {
+        "DS_1": 16,
+        "DS_2": 6,
+        "DS_3": 20,
+        "DS_4": 10,
+        "DS_A": 7,
+        "DS_B": 12,
+    }
+    # memorize the overview of all datasets
+    set_state("all available datasets", datasets, mongo)
+
+
+@when(
     parse('I search datasets with the "{keyword}" query'),
     target_fixture="response",
 )
@@ -48,10 +86,17 @@ def search_dataset(config: Config, keyword):
 def check_study_search_result(response: httpx.Response):
     results = response.json()
     assert results["count"] == 4
-    hits = results["hits"]
-    studies = hits[0]["content"]["studies"]
-    study_titles = {study["title"] for study in studies}
-    assert study_titles == {"The A Study", "The B Study"}
+    contents = [hit["content"] for hit in results["hits"]]
+    studies = {
+        content["alias"]: {study["title"] for study in content["studies"]}
+        for content in contents
+    }
+    assert studies == {
+        "DS_1": {"The A Study"},
+        "DS_2": {"The A Study"},
+        "DS_3": {"The A Study", "The B Study"},
+        "DS_A": {"The A Study"},
+    }
 
 
 @then("I get the expected results from description search")

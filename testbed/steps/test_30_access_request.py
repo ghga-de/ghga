@@ -28,6 +28,7 @@ from .conftest import (
     Config,
     LoginFixture,
     MongoFixture,
+    get_state,
     given,
     parse,
     scenarios,
@@ -37,25 +38,6 @@ from .conftest import (
 )
 
 scenarios("../features/30_access_request.feature")
-
-
-def get_accession_for_dataset(
-    dataset_char: str, config: Config, mongo: MongoFixture
-) -> str:
-    """Get the accession for the given dataset name"""
-    # Get accession for the dataset
-    # TBD: The accessions should actually be stored as state
-    # in step2 where we are browsing the database
-    # (at least in the black box testing mode)
-    dataset = mongo.find_document(
-        config.wps_db_name,
-        "datasets",
-        {"title": f"The complete-{dataset_char} dataset"},
-    )
-    assert dataset
-    accession = dataset.get("_id")
-    assert isinstance(accession, str)
-    return accession
 
 
 @given("no access requests have been made yet")
@@ -70,19 +52,21 @@ def claims_repository_is_empty(config: Config, mongo: MongoFixture):
 
 
 @when(
-    parse('I request access to the test dataset "{dataset_char}"'),
+    parse('I request access to the test dataset "{alias}"'),
     target_fixture="response",
 )
 def request_access_for_dataset(
-    dataset_char: str, config: Config, login: LoginFixture, mongo: MongoFixture
+    alias: str, config: Config, login: LoginFixture, mongo: MongoFixture
 ):
-    accession = get_accession_for_dataset(dataset_char, config, mongo)
+    datasets = get_state("all available datasets", mongo)
+    assert alias in datasets
+    dataset_id = datasets[alias]["accession"]
     url = f"{config.ars_url}/access-requests"
     date_now = now_as_utc()
     user, headers = login
     data = {
         "user_id": user["_id"],
-        "dataset_id": accession,
+        "dataset_id": dataset_id,
         "email": user["email"],
         "request_text": "Can I access the test dataset?",
         "access_starts": date_now.isoformat(),
@@ -126,20 +110,21 @@ def fetch_list_of_access_requests(config: Config, login: LoginFixture):
     return response
 
 
-@then(parse('there is one request for test dataset "{dataset_char}" from "{name}"'))
+@then(parse('there is one request for test dataset "{alias}" from "{name}"'))
 def there_is_one_request(
-    dataset_char: str,
+    alias: str,
     name: str,
-    config: Config,
     mongo: MongoFixture,
     response: httpx.Response,
 ):
-    accession = get_accession_for_dataset(dataset_char, config, mongo)
+    datasets = get_state("all available datasets", mongo)
+    assert alias in datasets
+    dataset_id = datasets[alias]["accession"]
     requests = response.json()
     requests = [
         request
         for request in requests
-        if request["dataset_id"] == accession and request["full_user_name"] == name
+        if request["dataset_id"] == dataset_id and request["full_user_name"] == name
     ]
     assert len(requests) == 1
 

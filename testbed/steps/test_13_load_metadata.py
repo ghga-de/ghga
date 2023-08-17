@@ -34,7 +34,7 @@ def run_the_load_command(fixtures: JointFixture):
         LoadConfig(
             event_store_path=fixtures.dsk.config.event_store,
             artifact_topic_prefix="artifact",
-            artifact_types=["embedded_public"],
+            artifact_types=["embedded_public", "stats_public"],
             loader_api_root=fixtures.config.metldata_url,
         )
     )
@@ -59,8 +59,49 @@ def run_the_load_command(fixtures: JointFixture):
         assert not completed_upload.stderr
 
 
+@then("the stats for the datasets exist in the database")
+def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
+    datasets = mongo.wait_for_documents(
+        config.metldata_db_name, "art_stats_public_class_DatasetStats", {}
+    )
+    assert datasets
+    assert len(datasets) == 6  # 4 from minimal and 2 from complete example
+    simplified_datasets = {}
+    for dataset in datasets:
+        accession = dataset["_id"]
+        assert accession.startswith("GHGAD")
+        content = dataset["content"]
+        assert content["accession"] == accession
+        simplified_dataset = {
+            "types": ", ".join(content["types"]),
+            "files": content["file_summary"]["count"],
+            "studies": content["study_summary"]["count"],
+        }
+        simplified_datasets[content["title"]] = simplified_dataset
+    assert simplified_datasets == {
+        "The A dataset": {"types": "Another Type, A Type", "files": 16, "studies": 1},
+        "The B dataset": {"types": "And another Type", "files": 6, "studies": 1},
+        "The C dataset": {
+            "types": "A Type, And yet another Type",
+            "files": 20,
+            "studies": 2,
+        },
+        "The D dataset": {"types": "A Type", "files": 10, "studies": 1},
+        "The complete-A dataset": {
+            "types": "Another Type, A Type",
+            "files": 7,
+            "studies": 1,
+        },
+        "The complete-B dataset": {
+            "types": "And another Type",
+            "files": 12,
+            "studies": 1,
+        },
+    }
+
+
 @then("the test datasets exist as embedded dataset in the database")
-def check_metldata_database(config: Config, mongo: MongoFixture):
+def check_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
     datasets = mongo.wait_for_documents(
         config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
     )
@@ -113,7 +154,7 @@ def check_metldata_database(config: Config, mongo: MongoFixture):
 
 
 @then("the test datasets are known to the work package service")
-def check_wps_database(config: Config, mongo: MongoFixture):
+def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
     datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {})
     assert datasets
     assert len(datasets) == 6

@@ -31,6 +31,16 @@ from fixtures.config import Config
 
 TIMEOUT = 10
 
+DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
+FILE_OVERVIEW_KEYS = {
+    "accession",
+    "checksum",
+    "checksum_type",
+    "format",
+    "name",
+    "size",
+}
+
 
 @contextmanager
 def temporary_file(file_path, content):
@@ -156,3 +166,22 @@ def search_dataset_rpc(
     }
     url = f"{config.mass_url}/rpc/search"
     return httpx.post(url, json=search_parameters, timeout=TIMEOUT)
+
+
+def get_dataset_overview(content: dict) -> dict:
+    """Condense a dataset content dict to a dataset overview dict."""
+    simplified = {}
+    files = {}
+    for key, value in content.items():
+        if key in DATASET_OVERVIEW_KEYS:
+            simplified[key] = value
+        elif key.endswith("_files"):
+            for file_ in value:
+                alias = file_.pop("alias")
+                files[alias] = {
+                    key: value
+                    for key, value in file_.items()
+                    if key in FILE_OVERVIEW_KEYS
+                }
+    simplified["files"] = files
+    return simplified

@@ -15,58 +15,82 @@
 
 """Step definitions for the dataset detail view in the frontend"""
 
+import re
+
 import httpx
 
-from .conftest import TIMEOUT, Config, MongoFixture, scenarios, then, when
+from .conftest import (
+    TIMEOUT,
+    Config,
+    MongoFixture,
+    get_state,
+    parse,
+    scenarios,
+    then,
+    when,
+)
+from .utils import get_dataset_overview
 
 scenarios("../features/27_dataset_details.feature")
 
-# TBD: Test more than one dataset, store file checksums etc.
 
-
-@when(
-    "I request the complete-A dataset resource",
-    target_fixture="response",
-)
-def request_test_dataset_resource(config: Config, mongo: MongoFixture):
-    # TBD: We fetch the dataset accession from the database, but this should
-    # eventually be fetched by browsing the metadata through the mass service
-    datasets = mongo.find_documents(
-        config.metldata_db_name, "art_embedded_public_class_Dataset", {}
-    )
-    assert len(datasets) == 6
-
-    for dataset in datasets:
-        if dataset["content"]["title"] == "The complete-A dataset":
-            accession = dataset["_id"]
-            break
+@when(parse('I request the details of "{alias}" dataset'), target_fixture="response")
+def request_dataset_details(
+    alias: str, config: Config, mongo: MongoFixture
+) -> httpx.Response:
+    datasets = get_state("all available datasets", mongo)
+    if alias == "non-existing":
+        resource_id = alias
     else:
-        accession = None
-
-    assert accession, "dataset not found"
-
+        assert alias in datasets
+        resource_id = datasets[alias]["accession"]
     url = (
         f"{config.metldata_url}/artifacts/"
-        + f"embedded_public/classes/Dataset/resources/{accession}"
+        f"embedded_public/classes/EmbeddedDataset/resources/{resource_id}"
     )
     return httpx.get(url, timeout=TIMEOUT)
 
 
-@then("the complete-A dataset resource is returned")
-def check_test_dataset_resource(response: httpx.Response):
-    dataset = response.json()
-    assert isinstance(dataset, dict)
-    assert dataset["title"] == "The complete-A dataset"
-    assert len(dataset["study_files"]) == 1
+@then(parse('I get the details of "{alias}" dataset'))
+def check_dataset_details(alias: str, response: httpx.Response, mongo: MongoFixture):
+    result = response.json()
+    assert result
+    assert alias == result.get("alias")
+    datasets = get_state("all available datasets", mongo)
+    assert alias in datasets
+    overview = get_dataset_overview(result)
+    assert overview == datasets[alias]
 
 
-@when(
-    "I request a non-existing dataset resource",
-    target_fixture="response",
-)
-def request_non_existing_dataset_resource(config: Config):
+@when(parse("I request an associated sample resource"), target_fixture="response")
+def request_one_associated_samples(
+    config: Config, response: httpx.Response
+) -> httpx.Response:
+    result = response.json()
+    match = re.search("'sample': '(GHGAN[0-9]+)'", repr(result))
+    assert match
+    resource_id = match.group(1)
     url = (
         f"{config.metldata_url}/artifacts/"
-        + "embedded_public/classes/Dataset/resources/does-not-exist"
+        f"embedded_public/classes/Sample/resources/{resource_id}"
     )
     return httpx.get(url, timeout=TIMEOUT)
+
+
+@then("I get a sample resource")
+def check_one_sample_resource(response: httpx.Response):
+    result = response.json()
+    assert isinstance(result, dict)
+    assert sorted(result) == [
+        "accession",
+        "alias",
+        "biospecimen",
+        "condition",
+        "description",
+        "isolation",
+        "name",
+        "sample_files",
+        "sequencing_processes",
+        "storage",
+        "type",
+    ]
