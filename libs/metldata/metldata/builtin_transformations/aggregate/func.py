@@ -18,6 +18,7 @@
 
 from abc import ABC, abstractmethod
 from collections import Counter
+from operator import itemgetter
 from typing import Any, Iterable, Optional
 
 from metldata.builtin_transformations.aggregate.models import (
@@ -146,10 +147,13 @@ class StringElementCountAggregation(ElementCountAggregation):
 
     @classmethod
     def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:
-        return [
-            {"value": str(value), "count": count}
-            for value, count in Counter(data).items()
-        ]
+        return sorted(
+            (
+                {"value": "unknown" if value is None else str(value), "count": count}
+                for value, count in Counter(data).items()
+            ),
+            key=itemgetter("value"),
+        )
 
 
 @register_function
@@ -167,10 +171,14 @@ class IntegerElementCountAggregation(ElementCountAggregation):
 
     @classmethod
     def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:
-        return [
-            {"value": int(value), "count": count}
-            for value, count in Counter(data).items()
-        ]
+        return sorted(
+            (
+                {"value": int(value), "count": count}
+                for value, count in Counter(data).items()
+                if value is not None
+            ),
+            key=itemgetter("value"),
+        )
 
 
 def transformation_by_name(name: str) -> type[AggregationFunction]:

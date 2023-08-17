@@ -16,6 +16,7 @@
 
 """Generate global summary statistics."""
 
+from operator import itemgetter
 from typing import Any, Optional, cast
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -73,10 +74,13 @@ async def create_stats_using_aggregator(
         if not result:
             continue
 
-        stats: list[ValueCount] = [
-            {"value": group["_id"] or "unknown", "count": group["count"]}
-            for group in result
-        ]
+        stats: list[ValueCount] = sorted(
+            (
+                {"value": group["_id"] or "unknown", "count": group["count"]}
+                for group in result
+            ),
+            key=itemgetter("value"),
+        )
         resource_stats[resource_class]["stats"] = {stat_slot: stats}
 
     if resource_stats:
