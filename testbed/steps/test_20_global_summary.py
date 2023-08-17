@@ -16,7 +16,6 @@
 """Step definitions for viewing the global summary in the frontend"""
 
 from datetime import datetime, timezone
-from operator import itemgetter
 
 import httpx
 
@@ -31,17 +30,6 @@ def get_the_global_summary(config: Config) -> httpx.Response:
     return httpx.get(url, timeout=TIMEOUT)
 
 
-def sort_stats(resource_stats):
-    """Sort all lists in the stats according to their values."""
-    # TBD: this is only necessary because the global stats in metldata
-    # does not return lists ordered by value - we should change that
-    for resource_stat in resource_stats.values():
-        stats = resource_stat.get("stats")
-        if stats:
-            for stat in stats.values():
-                stat.sort(key=itemgetter("value"))
-
-
 @then("the summary statistics is as expected")
 def check_summary_statistics(response: httpx.Response):
     result = response.json()
@@ -52,7 +40,6 @@ def check_summary_statistics(response: httpx.Response):
     assert abs((date_created - date_now).seconds) < 24 * 60 * 60
     assert result["id"] == "global"
     resource_stats = result["resource_stats"]
-    sort_stats(resource_stats)
     assert resource_stats == {
         "Analysis": {"count": 1},
         "AnalysisProcess": {"count": 9},
