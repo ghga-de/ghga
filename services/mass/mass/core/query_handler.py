@@ -45,7 +45,10 @@ class QueryHandler(QueryHandlerPort):
         if class_name not in self._config.searchable_classes:
             raise self.ClassNotConfiguredError(class_name=class_name)
 
+        self._dao_collection.create_collections_and_indexes_if_needed()
+
         dao = self._dao_collection.get_dao(class_name=class_name)
+
         await dao.upsert(resource)
 
     async def delete_resource(self, *, resource_id: str, class_name: str):

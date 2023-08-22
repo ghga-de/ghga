@@ -19,7 +19,7 @@
 Since we're using session-scoped fixtures, declare everything in here.
 """
 
-import pytest
+import pytest_asyncio
 from hexkit.providers.akafka.testutils import get_kafka_fixture
 from hexkit.providers.mongodb.testutils import get_mongodb_fixture
 from hexkit.providers.testing.utils import get_event_loop
@@ -27,14 +27,14 @@ from hexkit.providers.testing.utils import get_event_loop
 from tests.fixtures.joint import JointFixture, get_joint_fixture
 
 
-@pytest.fixture(autouse=True)
-def reset_state(joint_fixture: JointFixture):  # noqa: F811
+@pytest_asyncio.fixture(autouse=True)
+async def reset_state(joint_fixture: JointFixture):  # noqa: F811
     """Clear joint_fixture state before tests.
 
     This is a function-level fixture because it needs to run in each test.
     """
     joint_fixture.remove_db_data()
-    joint_fixture.load_test_data()
+    await joint_fixture.load_test_data()
 
 
 event_loop = get_event_loop("session")

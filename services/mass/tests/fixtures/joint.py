@@ -27,7 +27,6 @@ from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.custom_types import JsonObject
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture  # noqa: F401
-from pymongo import TEXT
 from pytest_asyncio.plugin import _ScopeName
 
 from mass.config import Config
@@ -52,20 +51,22 @@ class JointFixture:
         """Delete everything in the database to start from a clean slate"""
         self.mongodb.empty_collections()
 
-    def load_test_data(self) -> None:
+    async def load_test_data(self) -> None:
         """Populate a collection for each file in test_data"""
         filename_pattern = re.compile(r"/(\w+)\.json")
+        query_handler = await self.container.query_handler()
+        query_handler._dao_collection._indexes_created = (
+            False  # pylint: disable=protected-access
+        )
         for filename in glob.glob("tests/fixtures/test_data/*.json"):
             match_obj = re.search(filename_pattern, filename)
             if match_obj:
                 collection_name = match_obj.group(1)
                 resources = get_resources_from_file(filename)
-                self.mongodb.client[self.config.db_name][collection_name].insert_many(
-                    resources
-                )
-                self.mongodb.client[self.config.db_name][collection_name].create_index(
-                    keys=[("$**", TEXT)]
-                )
+                for resource in resources:
+                    await query_handler.load_resource(
+                        resource=resource, class_name=collection_name
+                    )
 
     async def call_search_endpoint(
         self, search_parameters: JsonObject

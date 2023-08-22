@@ -16,8 +16,9 @@
 
 """Contains the ResourceDaoCollection, which houses a DAO for each resource class"""
 from hexkit.protocols.dao import DaoFactoryProtocol
+from pymongo import TEXT, MongoClient
 
-from mass.config import SearchableClassesConfig
+from mass.config import Config
 from mass.core import models
 from mass.ports.outbound.dao import DaoCollectionPort, ResourceDao
 
@@ -36,7 +37,7 @@ class DaoCollection(DaoCollectionPort):
     async def construct(
         cls,
         dao_factory: DaoFactoryProtocol,
-        config: SearchableClassesConfig,
+        config: Config,
     ):
         """Initialize the DAO collection with one DAO for each resource class"""
         resource_daos: dict[str, ResourceDao] = {}
@@ -45,14 +46,17 @@ class DaoCollection(DaoCollectionPort):
                 name=name, dto_model=models.Resource, id_field="id_"
             )
 
-        return cls(resource_daos=resource_daos)
+        return cls(config=config, resource_daos=resource_daos)
 
     def __init__(
         self,
+        config: Config,
         resource_daos: dict[str, ResourceDao],
     ):
         """Initialize the collection of DAOs"""
+        self._config = config
         self._resource_daos = resource_daos
+        self._indexes_created = False
 
     def get_dao(self, *, class_name: str) -> ResourceDao:
         """returns a dao for the given resource class name
@@ -64,3 +68,34 @@ class DaoCollection(DaoCollectionPort):
             return self._resource_daos[class_name]
         except KeyError as err:
             raise DaoNotFoundError(class_name=class_name) from err
+
+    def create_collections_and_indexes_if_needed(self) -> None:
+        # This only needs to be done once, so exit if we've already created the indexes
+        if self._indexes_created:
+            return
+
+        # get client
+        client: MongoClient = MongoClient(
+            self._config.db_connection_str.get_secret_value()
+        )
+        db = client[self._config.db_name]
+
+        existing_collections = set(db.list_collection_names())
+
+        # loop through configured classes (i.e. the expected collection names)
+        for expected_collection_name in self._config.searchable_classes:
+            if expected_collection_name not in existing_collections:
+                db.create_collection(expected_collection_name)
+            collection = db[expected_collection_name]
+
+            # see if the wildcard text index exists and add it if not
+            wildcard_text_index_exists = any(
+                index["name"] == f"$**_{TEXT}" for index in collection.list_indexes()
+            )
+
+            if not wildcard_text_index_exists:
+                collection.create_index([("$**", TEXT)])
+
+        # close client and remember that the indexes have been set up
+        client.close()
+        self._indexes_created = True

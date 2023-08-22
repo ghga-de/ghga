@@ -26,6 +26,11 @@ searchable_classes:
         name: Field 1
       - key: "has_object.type"
         name: Object Type
+  EmptyCollection:
+    description: An empty collection to test the index creation.
+    facetable_properties:
+      - key: fun_fact
+        name: Fun Fact
 resource_change_event_topic: searchable_resources
 resource_deletion_event_type: searchable_resource_deleted
 resource_upsertion_event_type: searchable_resource_upserted

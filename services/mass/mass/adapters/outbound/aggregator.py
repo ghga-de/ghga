@@ -47,6 +47,10 @@ class Aggregator(AggregatorPort):
         skip: int = 0,
         limit: Optional[int] = None,
     ) -> JsonObject:
+        # don't carry out aggregation if the collection is empty
+        if not await self._collection.find_one():
+            return models.QueryResults().dict()
+
         # build the aggregation pipeline
         pipeline = utils.build_pipeline(
             query=query,

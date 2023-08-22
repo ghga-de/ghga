@@ -66,9 +66,9 @@ class QueryHandlerPort(ABC):
         class_name: str,
         query: str,
         filters: list[models.Filter],
-        skip: int,
+        skip: int = 0,
         limit: Optional[int] = None,
-    ):
+    ) -> models.QueryResults:
         """Processes a query
 
         Raises:
