@@ -126,7 +126,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_A_R1.fastq.gz",
-      "size": 2049,
+      "size": 1048599,
       "study": "STUDY_A"
     },
     {
@@ -137,7 +137,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_A_R2.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_A"
     },
     {
@@ -148,7 +148,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_B_R1.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_A"
     },
     {
@@ -159,7 +159,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_B_R2.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_A"
     },
     {
@@ -170,7 +170,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_C_R1.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_A"
     },
     {
@@ -181,7 +181,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_C_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_A"
     },
     {
@@ -192,7 +192,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_D_R1.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_A"
     },
     {
@@ -203,7 +203,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_D_R2.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_A"
     },
     {
@@ -214,7 +214,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_E_R1.fastq.gz",
-      "size": 2049,
+      "size": 1048599,
       "study": "STUDY_A"
     },
     {
@@ -225,7 +225,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_E_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_A"
     },
     {
@@ -236,7 +236,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_F_R1.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_A"
     },
     {
@@ -247,7 +247,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_F_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_A"
     },
     {
@@ -258,7 +258,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_G_R1.fastq.gz",
-      "size": 2049,
+      "size": 1048599,
       "study": "STUDY_A"
     },
     {
@@ -269,7 +269,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_G_R2.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_A"
     },
     {
@@ -280,7 +280,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_H_R1.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_A"
     },
     {
@@ -291,7 +291,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_H_R2.fastq.gz",
-      "size": 2049,
+      "size": 1048599,
       "study": "STUDY_A"
     },
     {
@@ -302,7 +302,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_I_R1.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_A"
     },
     {
@@ -313,7 +313,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_I_R2.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_A"
     },
     {
@@ -324,7 +324,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_J_R1.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_A"
     },
     {
@@ -335,7 +335,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_J_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_A"
     },
     {
@@ -346,7 +346,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_K_R1.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_A"
     },
     {
@@ -357,7 +357,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_K_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_A"
     },
     {
@@ -368,7 +368,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_L_R1.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_A"
     },
     {
@@ -379,7 +379,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_L_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_A"
     },
     {
@@ -390,7 +390,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_M_R1.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -401,7 +401,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_M_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -412,7 +412,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_N_R1.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_B"
     },
     {
@@ -423,7 +423,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_N_R2.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_B"
     },
     {
@@ -434,7 +434,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_O_R1.fastq.gz",
-      "size": 2049,
+      "size": 1048599,
       "study": "STUDY_B"
     },
     {
@@ -445,7 +445,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_O_R2.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_B"
     },
     {
@@ -456,7 +456,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_P_R1.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_B"
     },
     {
@@ -467,7 +467,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_P_R2.fastq.gz",
-      "size": 2049,
+      "size": 1048599,
       "study": "STUDY_B"
     },
     {
@@ -478,7 +478,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_Q_R1.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -489,7 +489,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_Q_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -500,7 +500,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_R_R1.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -511,7 +511,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_R_R2.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_B"
     },
     {
@@ -522,7 +522,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_S_R1.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_B"
     },
     {
@@ -533,7 +533,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_S_R2.fastq.gz",
-      "size": 2049,
+      "size": 1048599,
       "study": "STUDY_B"
     },
     {
@@ -544,7 +544,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_T_R1.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_B"
     },
     {
@@ -555,7 +555,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_T_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -566,7 +566,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_U_R1.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_B"
     },
     {
@@ -577,7 +577,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_U_R2.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_B"
     },
     {
@@ -588,7 +588,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_V_R1.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -599,7 +599,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_V_R2.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_B"
     },
     {
@@ -610,7 +610,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_W_R1.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -621,7 +621,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_W_R2.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_B"
     },
     {
@@ -632,7 +632,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_X_R1.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_B"
     },
     {
@@ -643,7 +643,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_X_R2.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -654,7 +654,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_Y_R1.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_B"
     },
     {
@@ -665,7 +665,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_Y_R2.fastq.gz",
-      "size": 4097,
+      "size": 2097175,
       "study": "STUDY_B"
     },
     {
@@ -676,7 +676,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "FORWARD",
       "name": "SEQ_FILE_Z_R1.fastq.gz",
-      "size": 8193,
+      "size": 4194327,
       "study": "STUDY_B"
     },
     {
@@ -687,7 +687,7 @@
       "format": "FASTQ",
       "forward_or_reverse": "REVERSE",
       "name": "SEQ_FILE_Z_R2.fastq.gz",
-      "size": 6145,
+      "size": 3145751,
       "study": "STUDY_B"
     }
   ],

@@ -69,6 +69,7 @@ def check_dataset_in_list(
     assert dataset.get("title") == f"The complete-{dataset_char} dataset"
     files = dataset.get("files")
     assert files and isinstance(files, list)
+    set_state("dataset to be downloaded", f"DS_{dataset_char}", fixtures.mongo)
     set_state("files to be downloaded", files, fixtures.mongo)
 
 

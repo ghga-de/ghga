@@ -28,7 +28,7 @@ from pytest import fixture
 
 from fixtures.config import Config
 from fixtures.dsk import DskFixture
-from steps.utils import get_ext_char
+from steps.utils import calculate_checksum
 
 __all__ = ["FileBatch", "FileObject", "batch_file_fixture", "file_fixture"]
 
@@ -46,6 +46,7 @@ def create_named_file(
     name: str,
     file_size: Optional[int] = None,
     alias: Optional[str] = None,
+    checksum: Optional[str] = None,
 ) -> FileObject:
     """Create a file with given parameters"""
     file_path = target_dir / name
@@ -53,10 +54,26 @@ def create_named_file(
     file_size = config.file_size if not file_size else file_size
     alias = os.path.splitext(name)[0] if not alias else alias
 
-    with open(file_path, "w", encoding="utf-8") as file:
-        content_char = get_ext_char(Path(file_path))
-        file_content = content_char * file_size
-        file.write(file_content)
+    with open(file_path, "wb") as file:
+        first_line = f"{name}\n".encode()
+        if file_size <= len(first_line):
+            first_line = first_line[:file_size]
+            file.write(first_line)
+        else:
+            remaining_bytes = file_size - len(first_line)
+            content = first_line + b"\0" * remaining_bytes
+            file.write(content)
+
+    # Validate created file with given checksum
+    if checksum:
+        with open(file_path, "rb") as file:
+            created_file_checksum = calculate_checksum(file.read())
+        if checksum != created_file_checksum:
+            raise RuntimeError(
+                f"Expected checksum {checksum}, "
+                f"but got {created_file_checksum} "
+                f"for file {file_path}."
+            )
 
     file_object = FileObject(
         file_path=Path(file_path),
@@ -85,6 +102,7 @@ def file_fixture(
                 name=file_["name"],
                 file_size=file_["size"],
                 alias=file_["alias"],
+                checksum=file_["checksum"],
             )
 
             created_files.append(file_object)
@@ -115,6 +133,7 @@ def batch_file_fixture(
                     name=file_["name"],
                     file_size=file_["size"],
                     alias=file_["alias"],
+                    checksum=file_["checksum"],
                 )
 
                 created_files.append(file_object)

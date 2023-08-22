@@ -15,6 +15,7 @@
 
 """ Utilities for tests """
 
+import hashlib
 import os
 import tempfile
 from contextlib import contextmanager
@@ -118,10 +119,10 @@ def verify_named_file(
     name: str,
     extension: str,
     encrypted=False,
+    checksum: Optional[str] = None,
+    size_in_bytes: Optional[int] = None,
 ) -> None:
     """Verify a file with given parameters"""
-
-    # TBD: should also check size and checksum of the file
 
     file_path = target_dir
     name += extension
@@ -132,13 +133,20 @@ def verify_named_file(
     assert len(matching) == 1, f"File {name} was not found"
 
     if not encrypted:
+        if size_in_bytes is None:
+            raise ValueError("size_in_bytes must be provided for non-encrypted files")
+
+        if checksum is None:
+            raise ValueError("checksum must be provided for non-encrypted files")
+
         file_path = matching[0]
-        content_char = get_ext_char(file_path)
 
-        with open(file_path, "r", encoding="utf-8") as file:
-            file_content = file.read()
+        file_size_in_bytes = file_path.stat().st_size
+        assert file_size_in_bytes == size_in_bytes
 
-        assert file_content == content_char * len(file_content)
+        with open(file_path, "rb") as file:
+            file_checksum = calculate_checksum(file.read())
+        assert file_checksum == checksum
 
 
 def search_dataset_rpc(
@@ -185,3 +193,8 @@ def get_dataset_overview(content: dict) -> dict:
                 }
     simplified["files"] = files
     return simplified
+
+
+def calculate_checksum(file_contents: bytes) -> str:
+    """Compute the SHA256 hash of a file."""
+    return hashlib.sha256(file_contents).hexdigest()
