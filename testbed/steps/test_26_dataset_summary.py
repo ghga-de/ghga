@@ -43,7 +43,7 @@ EXPECTED_SUMMARIES = {
             "count": 2,
             "stats": {
                 "accessions": 2,
-                "title": ["The B Study", "The A Study"],
+                "titles": "The A Study, The B Study",
             },
         },
         "experiment_summary": {"count": 0, "stats": {"protocol": []}},
@@ -66,7 +66,7 @@ EXPECTED_SUMMARIES = {
         },
         "study_summary": {
             "count": 1,
-            "stats": {"accessions": 1, "title": ["The A Study"]},
+            "stats": {"accessions": 1, "titles": "The A Study"},
         },
         "experiment_summary": {
             "count": 1,
@@ -104,8 +104,10 @@ def check_dataset_summary(alias: str, response: httpx.Response):
     result = response.json()
     accession = result.pop("accession")
     assert accession.startswith("GHGAD")
-    accessions = result["study_summary"]["stats"].pop("accession")
+    study_summary = result["study_summary"]["stats"]
+    accessions = study_summary.pop("accession")
     assert all(accession.startswith("GHGAS") for accession in accessions)
-    result["study_summary"]["stats"]["accessions"] = len(accessions)
+    study_summary["accessions"] = len(accessions)
+    study_summary["titles"] = ", ".join(sorted(study_summary.pop("title")))
     assert alias in EXPECTED_SUMMARIES
     assert result == EXPECTED_SUMMARIES[alias]
