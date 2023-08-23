@@ -15,4 +15,4 @@
 
 """A library that contains the common functionality used in services of GHGA"""
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
