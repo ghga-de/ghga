@@ -27,7 +27,7 @@ import logging
 import os
 from datetime import datetime
 from enum import Enum
-from typing import List
+from typing import List, Union
 
 try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
     from typing_extensions import Literal
@@ -36,10 +36,10 @@ except ImportError:
 
 import httpx
 from fastapi import HTTPException, status
+from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pydantic import BaseModel
-
-from tests.fixtures.endpoints_handler import EndpointsHandler
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -154,35 +154,33 @@ class HttpEnvelopeResponse(httpx.Response):
         super().__init__(content=envelope, status_code=status_code)
 
 
-class HttpyException(Exception):
-    """Testing stand in for httpyexpect HttpException without content validation"""
-
-    def __init__(
-        self, *, status_code: int, exception_id: str, description: str, data: dict
-    ):
-        self.status_code = status_code
-        self.exception_id = exception_id
-        self.description = description
-        self.data = data
-        super().__init__(description)
-
-
-def httpy_exception_handler(exc: HttpyException):
+def exception_handler(request: httpx.Request, exc: Union[HttpException, HTTPException]):
     """Transform HttpException data into a proper response object"""
+    status_code = exc.status_code
 
+    if isinstance(exc, HTTPException):
+        return httpx.Response(status_code=status_code, json={"detail": exc.detail})
+
+    # if exception is HttpException
     return httpx.Response(
-        status_code=exc.status_code,
+        status_code=status_code,
         content=json.dumps(
             {
-                "exception_id": exc.exception_id,
-                "description": exc.description,
-                "data": exc.data,
+                "exception_id": exc.body.exception_id,
+                "description": exc.body.description,
+                "data": exc.body.data,
             }
         ).encode("utf-8"),
     )
 
 
-@EndpointsHandler.get("/")
+router = MockRouter(
+    exception_handler=exception_handler,
+    exceptions_to_handle=(HTTPException, HttpException),
+)
+
+
+@router.get("/")
 def ready():
     """
     Readyness probe.
@@ -190,7 +188,7 @@ def ready():
     return httpx.Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@EndpointsHandler.get("/objects/{file_id}")
+@router.get("/objects/{file_id}")
 def drs3_objects(file_id: str, request: httpx.Request):
     """
     Mock for the drs3 /objects/{file_id} call
@@ -202,12 +200,13 @@ def drs3_objects(file_id: str, request: httpx.Request):
     # simulate token authorization error
     if authorization == "Bearer authfail_normal":
         raise HTTPException(
-            status_code=403, detail="This is not the token you're looking for."
+            status_code=403,
+            detail="This is not the token you're looking for.",
         )
 
     # simulate token file_id/object_id mismatch
     if authorization == "Bearer file_id_mismatch":
-        raise HttpyException(
+        raise HttpException(
             status_code=403,
             exception_id="wrongFileAuthorizationError",
             description="Endpoint file ID did not match file ID announced in work order token.",
@@ -240,11 +239,11 @@ def drs3_objects(file_id: str, request: httpx.Request):
 
     raise HTTPException(
         status_code=404,
-        detail=(f'The DRSObject with the id "{file_id}" does not exist.'),
+        detail=f'The DRSObject with the id "{file_id}" does not exist.',
     )
 
 
-@EndpointsHandler.get("/objects/{file_id}/envelopes")
+@router.get("/objects/{file_id}/envelopes")
 def drs3_objects_envelopes(file_id: str):
     """
     Mock for the dcs /objects/{file_id}/envelopes call
@@ -255,7 +254,7 @@ def drs3_objects_envelopes(file_id: str):
         envelope = base64.b64encode(response_str).decode("utf-8")
         return HttpEnvelopeResponse(envelope=envelope)
 
-    raise HttpyException(
+    raise HttpException(
         status_code=404,
         exception_id="noSuchObject",
         description=(f'The DRSObject with the id "{file_id}" does not exist.'),
@@ -263,7 +262,7 @@ def drs3_objects_envelopes(file_id: str):
     )
 
 
-@EndpointsHandler.get("/files/{file_id}")
+@router.get("/files/{file_id}")
 def ulc_get_files(file_id: str):
     """
     Mock for the ulc GET /files/{file_id} call.
@@ -282,7 +281,7 @@ def ulc_get_files(file_id: str):
             current_upload_id="pending",
         )
 
-    raise HttpyException(
+    raise HttpException(
         status_code=404,
         exception_id="fileNotRegistered",
         description=f'The file with the file_id "{file_id}" does not exist.',
@@ -290,7 +289,7 @@ def ulc_get_files(file_id: str):
     )
 
 
-@EndpointsHandler.get("/uploads/{upload_id}")
+@router.get("/uploads/{upload_id}")
 def ulc_get_uploads(upload_id: str):
     """
     Mock for the ulc GET /uploads/{upload_id} call.
@@ -305,7 +304,7 @@ def ulc_get_uploads(upload_id: str):
             ).json(),
         )
 
-    raise HttpyException(
+    raise HttpException(
         status_code=404,
         exception_id="noSuchUpload",
         description=f'The upload with the id "{upload_id}" does not exist.',
@@ -313,7 +312,7 @@ def ulc_get_uploads(upload_id: str):
     )
 
 
-@EndpointsHandler.post("/uploads")
+@router.post("/uploads")
 def ulc_post_files_uploads(request: httpx.Request):
     """
     Mock for the ulc POST /uploads call.
@@ -352,14 +351,14 @@ def ulc_post_files_uploads(request: httpx.Request):
             ).json(),
         )
     if file_id == "pending":
-        raise HttpyException(
+        raise HttpException(
             status_code=403,
             exception_id="noFileAccess",
             description=f'Can`t start multipart upload for file with file id "{file_id}".',
             data={"file_id": file_id},
         )
 
-    raise HttpyException(
+    raise HttpException(
         status_code=400,
         exception_id="fileNotRegistered",
         description=f'The file with the file_id "{file_id}" does not exist.',
@@ -367,7 +366,7 @@ def ulc_post_files_uploads(request: httpx.Request):
     )
 
 
-@EndpointsHandler.post("/uploads/{upload_id}/parts/{part_no}/signed_urls")
+@router.post("/uploads/{upload_id}/parts/{part_no}/signed_urls")
 def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
     """
     Mock for the ulc POST /uploads/{upload_id}/parts/{part_no}/signed_urls call.
@@ -380,7 +379,7 @@ def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
                 status_code=200, text=json.dumps({"url": urls[part_no - 1]})
             )
 
-    raise HttpyException(
+    raise HttpException(
         status_code=404,
         exception_id="noSuchUpload",
         description=f'The file with the upload id "{upload_id}" does not exist.',
@@ -388,7 +387,7 @@ def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
     )
 
 
-@EndpointsHandler.patch("/uploads/{upload_id}")
+@router.patch("/uploads/{upload_id}")
 def ulc_patch_uploads(upload_id: str, request: httpx.Request):
     """
     Mock for the ulc PATCH /uploads/{upload_id} call
@@ -401,7 +400,7 @@ def ulc_patch_uploads(upload_id: str, request: httpx.Request):
         if upload_status == UploadStatus.CANCELLED:
             return httpx.Response(status_code=status.HTTP_204_NO_CONTENT)
 
-        raise HttpyException(
+        raise HttpException(
             status_code=400,
             exception_id="uploadNotPending",
             description=f'The upload with id "{upload_id}" can`t be set to "{upload_status}"',
@@ -412,7 +411,7 @@ def ulc_patch_uploads(upload_id: str, request: httpx.Request):
         if upload_status == UploadStatus.UPLOADED:
             return httpx.Response(status_code=status.HTTP_204_NO_CONTENT)
 
-        raise HttpyException(
+        raise HttpException(
             status_code=400,
             exception_id="uploadStatusChange",
             description=f'The upload with id "{upload_id}" can`t be set to "{upload_status}"',
@@ -420,14 +419,14 @@ def ulc_patch_uploads(upload_id: str, request: httpx.Request):
         )
 
     if upload_id == "uploadable":
-        raise HttpyException(
+        raise HttpException(
             status_code=400,
             exception_id="uploadNotPending",
             description=f'The upload with id "{upload_id}" can`t be set to "{upload_status}"',
             data={"upload_id": upload_id, "current_upload_status": upload_id},
         )
 
-    raise HttpyException(
+    raise HttpException(
         status_code=404,
         exception_id="noSuchUpload",
         description=f'The upload with id "{upload_id}" does not exist',
@@ -435,7 +434,7 @@ def ulc_patch_uploads(upload_id: str, request: httpx.Request):
     )
 
 
-@EndpointsHandler.post("/work-packages/{package_id}/files/{file_id}/work-order-tokens")
+@router.post("/work-packages/{package_id}/files/{file_id}/work-order-tokens")
 def create_work_order_token(package_id: str, file_id: str):
     """Mock Work Order Token endpoint"""
 
@@ -446,7 +445,7 @@ def create_work_order_token(package_id: str, file_id: str):
     )
 
 
-@EndpointsHandler.get("/values/{value_name}")
+@router.get("/values/{value_name}")
 def mock_wkvs(value_name: str):
     """Mock the WKVS /values/value_name endpoint"""
     values: dict[str, str] = {
@@ -457,26 +456,10 @@ def mock_wkvs(value_name: str):
     }
 
     if value_name not in values:
-        raise HttpyException(
+        raise HttpException(
             status_code=404,
             exception_id="valueNotConfigured",
             description=f"The value {value_name} is not configured.",
             data={"value_name": value_name},
         )
     return httpx.Response(status_code=200, json={value_name: values[value_name]})
-
-
-def handle_request(request: httpx.Request):
-    """
-    This is used as the callback function for the httpx_mock fixture in test_cli.py.
-    """
-    url = str(request.url)
-    logger.info("Received request for url: %s", url)
-    try:
-        endpoint_function = EndpointsHandler.build_loaded_endpoint_function(request)
-        return endpoint_function()
-    except HttpyException as exc:
-        return httpy_exception_handler(exc=exc)
-    except HTTPException as exc:
-        text = json.dumps({"detail": exc.detail})
-        return httpx.Response(status_code=exc.status_code, text=text)

@@ -29,6 +29,9 @@ from unittest.mock import Mock, patch
 import crypt4gh.keys
 import httpx
 import pytest
+from ghga_service_commons.api.mock_router import (  # noqa: F401
+    assert_all_responses_were_requested,
+)
 from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
@@ -38,7 +41,7 @@ from ghga_connector.core.constants import DEFAULT_PART_SIZE
 from ghga_connector.core.file_operations import Crypt4GHEncryptor
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
-from tests.fixtures.mock_api.app import handle_request
+from tests.fixtures.mock_api.app import router
 from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
 from tests.fixtures.utils import PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, mock_wps_token
 
@@ -61,13 +64,6 @@ def non_mocked_hosts() -> list:
     """Hosts that shall not be mocked by httpx."""
     # Let requests go out to localstack/S3.
     return unintercepted_hosts
-
-
-@pytest.fixture
-def assert_all_responses_were_requested() -> bool:
-    """Whether httpx checks that all registered responses are sent back."""
-    # Not all responses must be request here.
-    return False
 
 
 @pytest.mark.parametrize(
@@ -100,7 +96,7 @@ async def test_multipart_download(
     monkeypatch,
 ):
     """Test the multipart download of a file"""
-    httpx_mock.add_callback(callback=handle_request)
+    httpx_mock.add_callback(callback=router.handle_request)
     for name, value in ENVIRON_DEFAULTS.items():
         monkeypatch.setenv(name, value)
 
@@ -202,7 +198,7 @@ async def test_download(
     file = state.FILES[file_name]
 
     # Intercept requests sent with httpx
-    httpx_mock.add_callback(callback=handle_request, url=URL_PATTERN)
+    httpx_mock.add_callback(callback=router.handle_request, url=URL_PATTERN)
     for name, value in ENVIRON_DEFAULTS.items():
         monkeypatch.setenv(name, value)
 
@@ -329,7 +325,7 @@ async def test_upload(
     uploadable_file = state.FILES[file_name]
 
     # Intercept requests sent with httpx
-    httpx_mock.add_callback(callback=handle_request, url=URL_PATTERN)
+    httpx_mock.add_callback(callback=router.handle_request, url=URL_PATTERN)
     for name, value in ENVIRON_DEFAULTS.items():
         monkeypatch.setenv(name, value)
 
@@ -412,7 +408,7 @@ async def test_multipart_upload(
     file_id = "uploadable-" + str(anticipated_part_size)
 
     # Intercept requests sent with httpx
-    httpx_mock.add_callback(callback=handle_request, url=URL_PATTERN)
+    httpx_mock.add_callback(callback=router.handle_request, url=URL_PATTERN)
     for name, value in ENVIRON_DEFAULTS.items():
         monkeypatch.setenv(name, value)
 
