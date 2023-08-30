@@ -22,7 +22,7 @@ from ghga_service_commons.api.mock_router import MockRouter
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 
 # Create an instance of the MockRouter with no exception handler
-app = MockRouter()
+app: MockRouter = MockRouter(exceptions_to_handle=(HttpException,))
 
 
 # basic way to register an endpoint
