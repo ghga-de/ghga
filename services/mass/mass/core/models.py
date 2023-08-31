@@ -14,8 +14,6 @@
 # limitations under the License.
 
 """Defines dataclasses for holding business-logic data"""
-from collections import OrderedDict
-
 from hexkit.custom_types import JsonObject
 from pydantic import BaseModel, Field
 
@@ -27,10 +25,17 @@ class FacetLabel(BaseModel):
     name: str = Field(default="", description="The user-friendly name for the facet")
 
 
+class FacetOption(BaseModel):
+    """Represents the format for an option for a facet"""
+
+    value: str = Field(..., description="The text value of the facet option")
+    count: int = Field(..., description="The number of results matching the facet")
+
+
 class Facet(FacetLabel):
     """Represents a facet's key, name, and the discovered options for the facet"""
 
-    options: OrderedDict[str, int] = Field(
+    options: list[FacetOption] = Field(
         ..., description="The list of options for the facet"
     )
 

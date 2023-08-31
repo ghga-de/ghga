@@ -14,11 +14,11 @@ components:
           title: Name
           type: string
         options:
-          additionalProperties:
-            type: integer
           description: The list of options for the facet
+          items:
+            $ref: '#/components/schemas/FacetOption'
           title: Options
-          type: object
+          type: array
       required:
       - key
       - options
@@ -39,6 +39,22 @@ components:
       required:
       - key
       title: FacetLabel
+      type: object
+    FacetOption:
+      description: Represents the format for an option for a facet
+      properties:
+        count:
+          description: The number of results matching the facet
+          title: Count
+          type: integer
+        value:
+          description: The text value of the facet option
+          title: Value
+          type: string
+      required:
+      - value
+      - count
+      title: FacetOption
       type: object
     Filter:
       description: Represents a filter used to refine results

@@ -18,6 +18,7 @@ from typing import Optional
 
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.provider import ResourceNotFoundError
+from pydantic import ValidationError
 
 from mass.config import SearchableClassesConfig
 from mass.core import models
@@ -92,6 +93,9 @@ class QueryHandler(QueryHandlerPort):
         except AggregationError as exc:
             raise self.SearchError() from exc
 
-        query_results = models.QueryResults(**aggregator_results)
+        try:
+            query_results = models.QueryResults(**aggregator_results)
+        except ValidationError as err:
+            raise self.ValidationError() from err
 
         return query_results

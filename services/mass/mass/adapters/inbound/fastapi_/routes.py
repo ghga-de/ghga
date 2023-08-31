@@ -76,7 +76,7 @@ async def search(
             detail="The specified class name is invalid. See "
             + "/rpc/search-options for a list of valid class names.",
         ) from err
-    except query_handler.SearchError as err:
+    except (query_handler.SearchError, query_handler.ValidationError) as err:
         raise HTTPException(
             status_code=500, detail="An error occurred during search operation"
         ) from err

@@ -48,6 +48,15 @@ class QueryHandlerPort(ABC):
                 + "found in the database."
             )
 
+    class ValidationError(RuntimeError):
+        """Raised when the aggregator results don't pass the model validation"""
+
+        def __init__(self):
+            super().__init__(
+                "A subset of the query results does not conform to the expected results "
+                + "model schema."
+            )
+
     @abstractmethod
     async def delete_resource(self, *, resource_id: str, class_name: str):
         """Delete resource with given ID and class name from the database
@@ -75,6 +84,7 @@ class QueryHandlerPort(ABC):
             ClassNotConfiguredError - when the class_name parameter does not
                 match any configured class
             SearchError - when the search operation fails
+            ValidationError - when the results are malformed and fail model validation
         """
         ...
 

@@ -96,16 +96,27 @@ async def test_facets_returned(joint_fixture: JointFixture):
         assert facet.key in facet_key_to_name
         assert facet.name == facet_key_to_name[facet.key]
         if facet.key == "category":
-            assert len(facet.options) == 1
-            assert facet.options["hotel"] == 2
+            hotel_options = [x for x in facet.options if x.value == "hotel"]
+            assert len(hotel_options) == 1
+            assert hotel_options[0].count == 2
         elif facet.key == "field1":
-            assert len(facet.options) == 2
-            assert facet.options["Miami"] == 1
-            assert facet.options["Denver"] == 1
+            miami_options = [x for x in facet.options if x.value == "Miami"]
+            assert len(miami_options) == 1
+            assert miami_options[0].count == 1
+
+            denver_options = [x for x in facet.options if x.value == "Denver"]
+            assert len(denver_options) == 1
+            assert denver_options[0].count == 1
         else:
             assert len(facet.options) == 2
-            assert facet.options["piano"] == 1
-            assert facet.options["kitchen"] == 1
+
+            piano_options = [x for x in facet.options if x.value == "piano"]
+            assert len(piano_options) == 1
+            assert piano_options[0].count == 1
+
+            kitchen_options = [x for x in facet.options if x.value == "kitchen"]
+            assert len(kitchen_options) == 1
+            assert kitchen_options[0].count == 1
 
 
 @pytest.mark.asyncio
@@ -222,7 +233,7 @@ async def test_error_from_malformed_resource(joint_fixture: JointFixture):
 
     await query_handler.load_resource(resource=resource, class_name="DatasetEmbedded")
 
-    with pytest.raises(query_handler.SearchError):
+    with pytest.raises(query_handler.ValidationError):
         await query_handler.handle_query(
             class_name="DatasetEmbedded", query="", filters=[]
         )

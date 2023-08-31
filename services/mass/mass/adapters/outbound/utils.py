@@ -71,7 +71,8 @@ def pipeline_apply_facets(
                     "count": {"$sum": 1},
                 }
             },
-            {"$sort": {"count": -1}},  # sort by descending order
+            {"$addFields": {"value": "$_id"}},  # rename "_id" to "value" on each option
+            {"$unset": "_id"},
         ]
 
     # this is the total number of hits, but pagination can mean only a few are returned
@@ -102,19 +103,7 @@ def pipeline_project(*, facet_fields: list[models.FacetLabel]) -> JsonObject:
     # add a segment for each facet to summarize the options
     for facet in facet_fields:
         segment["facets"].append(
-            {
-                "key": facet.key,
-                "name": facet.name,
-                "options": {
-                    "$arrayToObject": {
-                        "$map": {
-                            "input": f"${facet.name}",
-                            "as": "temp",
-                            "in": {"k": "$$temp._id", "v": "$$temp.count"},
-                        }
-                    }
-                },
-            }
+            {"key": facet.key, "name": facet.name, "options": f"${facet.name}"}
         )
     return {"$project": segment}
 
