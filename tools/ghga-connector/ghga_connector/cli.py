@@ -16,6 +16,7 @@
 
 """ CLI-specific wrappers around core functions."""
 
+import asyncio
 import os
 import sys
 from distutils.util import strtobool
@@ -102,6 +103,23 @@ def upload(  # noqa C901
     """
     Command to upload a file
     """
+
+    ucs_api_url, server_pubkey, message_display = configure_upload(debug=debug)
+    asyncio.run(
+        core.upload(
+            api_url=ucs_api_url,
+            file_id=file_id,
+            file_path=file_path,
+            message_display=message_display,
+            server_public_key=server_pubkey,
+            my_public_key_path=my_public_key_path,
+            my_private_key_path=my_private_key_path,
+        )
+    )
+
+
+def configure_upload(debug: bool = False):
+    """Run necessary configuration for file upload"""
     message_display = CLIMessageDisplay()
 
     if not debug:
@@ -110,18 +128,10 @@ def upload(  # noqa C901
     core.HttpxClientState.configure(CONFIG.max_retries)
 
     wkvs_caller = core.WKVSCaller(CONFIG.wkvs_api_url)
-    server_pubkey = wkvs_caller.get_server_pubkey()
     ucs_api_url = wkvs_caller.get_ucs_api_url()
+    server_pubkey = wkvs_caller.get_server_pubkey()
 
-    core.upload(
-        api_url=ucs_api_url,
-        file_id=file_id,
-        file_path=file_path,
-        message_display=CLIMessageDisplay(),
-        server_pubkey=server_pubkey,
-        my_public_key_path=my_public_key_path,
-        my_private_key_path=my_private_key_path,
-    )
+    return ucs_api_url, server_pubkey, message_display
 
 
 if strtobool(os.getenv("UPLOAD_ENABLED") or "false"):

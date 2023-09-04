@@ -16,42 +16,35 @@
 
 """Main domain logic."""
 
-import os
 from pathlib import Path
 from queue import Empty, Queue
 from typing import List
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls import (
-    UploadStatus,
     WorkPackageAccessor,
     await_download_url,
     check_url,
     get_download_urls,
     get_file_header_envelope,
-    get_part_upload_urls,
-    patch_multipart_upload,
-    start_multipart_upload,
 )
 from ghga_connector.core.file_operations import (
     Crypt4GHDecryptor,
-    Crypt4GHEncryptor,
     calc_part_ranges,
     download_file_parts,
     is_file_encrypted,
-    read_file_parts,
-    upload_file_part,
 )
 from ghga_connector.core.message_display import AbstractMessageDisplay
+from ghga_connector.core.upload import run_upload
 
 
-def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
+async def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
     *,
     api_url: str,
     file_id: str,
     file_path: Path,
     message_display: AbstractMessageDisplay,
-    server_pubkey: str,
+    server_public_key: str,
     my_public_key_path: Path,
     my_private_key_path: Path,
 ) -> None:
@@ -76,82 +69,17 @@ def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
     if not check_url(api_url):
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
-    try:
-        upload_id, part_size = start_multipart_upload(
-            api_url=api_url, file_id=file_id, pubkey_path=my_public_key_path
-        )
-    except exceptions.NoUploadPossibleError as error:
-        raise error
-    except exceptions.UploadNotRegisteredError as error:
-        raise error
-    except exceptions.UserHasNoUploadAccessError as error:
-        raise error
-    except exceptions.FileNotRegisteredError as error:
-        raise error
-    except exceptions.BadResponseCodeError as error:
-        raise error
-    except exceptions.CantChangeUploadStatusError as error:
-        message_display.failure(f"The file with id '{file_id}' was already uploaded.")
-        raise error
-    except exceptions.RequestFailedError as error:
-        message_display.failure("The request to start a multipart upload has failed.")
-        raise error
-
-    encryptor = Crypt4GHEncryptor(
-        server_pubkey=server_pubkey,
-        my_private_key_path=my_private_key_path,
+    await run_upload(
+        api_url=api_url,
+        file_id=file_id,
+        file_path=file_path,
+        message_display=message_display,
+        private_key_path=my_private_key_path,
+        public_key_path=my_public_key_path,
+        server_public_key=server_public_key,
     )
 
-    encrypted_file_path = encryptor.encrypt_file(file_path=file_path)
-
-    try:
-        upload_file_parts(
-            api_url=api_url,
-            upload_id=upload_id,
-            part_size=part_size,
-            file_path=Path(encrypted_file_path),
-        )
-    except exceptions.ConnectionFailedError as error:
-        message_display.failure("The upload failed too many times and was aborted.")
-        raise error
-    finally:
-        # remove temporary encrypted file
-        os.remove(encrypted_file_path)
-
-    try:
-        patch_multipart_upload(
-            api_url=api_url,
-            upload_id=upload_id,
-            upload_status=UploadStatus.UPLOADED,
-        )
-    except exceptions.BadResponseCodeError as error:
-        message_display.failure(
-            f"The request to confirm the upload with id '{upload_id}' was invalid."
-        )
-        raise error
-    except exceptions.RequestFailedError as error:
-        message_display.failure(f"Confirming the upload with id '{upload_id}' failed.")
-        raise error
     message_display.success(f"File with id '{file_id}' has been successfully uploaded.")
-
-
-def upload_file_parts(
-    *,
-    api_url: str,
-    upload_id: str,
-    part_size: int,
-    file_path: Path,
-) -> None:
-    """
-    Uploads a file using a specific upload id via uploading all its parts.
-    """
-
-    with open(file_path, "rb") as file:
-        file_parts = read_file_parts(file, part_size=part_size)
-        upload_urls = get_part_upload_urls(api_url=api_url, upload_id=upload_id)
-
-        for part, upload_url in zip(file_parts, upload_urls):
-            upload_file_part(presigned_url=upload_url, part=part)
 
 
 def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C901, R0914

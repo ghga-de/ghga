@@ -71,22 +71,30 @@ def test_encryption_decryption():
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
 
     with NamedTemporaryFile() as in_file:
-        with NamedTemporaryFile() as out_file:
-            # fill source file with random data
-            in_file.write(os.urandom(file_size))
-            in_file.seek(0)
+        with NamedTemporaryFile() as encrypted_file:
+            with NamedTemporaryFile() as out_file:
+                # fill source file with random data
+                in_file.write(os.urandom(file_size))
+                in_file.seek(0)
 
-            # produce encrypted file
-            encryptor = Crypt4GHEncryptor(
-                server_pubkey=pubkey, my_private_key_path=private_key_path
-            )
-            encrypted_file_loc = encryptor.encrypt_file(file_path=Path(in_file.name))
+                # produce encrypted file
+                encryptor = Crypt4GHEncryptor(
+                    part_size=8 * 1024**3,
+                    server_public_key=pubkey,
+                    private_key_path=private_key_path,
+                )
 
-            assert is_file_encrypted(encrypted_file_loc)
-            decryptor = Crypt4GHDecryptor(decryption_key_path=private_key_path)
-            decryptor.decrypt_file(
-                input_path=encrypted_file_loc,
-                output_path=Path(out_file.name),
-            )
+                for chunk in encryptor.process_file(file=in_file):  # type: ignore
+                    encrypted_file.write(chunk)
 
-            assert in_file.read() == out_file.read()
+                in_file.seek(0)
+                encrypted_file_loc = Path(encrypted_file.name)
+
+                assert is_file_encrypted(encrypted_file_loc)
+                decryptor = Crypt4GHDecryptor(decryption_key_path=private_key_path)
+                decryptor.decrypt_file(
+                    input_path=encrypted_file_loc,
+                    output_path=Path(out_file.name),
+                )
+
+                assert in_file.read() == out_file.read()

@@ -23,16 +23,7 @@ from .download import (  # noqa: F401
     get_download_urls,
     get_file_header_envelope,
 )
-from .upload import (  # noqa: F401
-    UploadStatus,
-    get_file_metadata,
-    get_part_upload_url,
-    get_part_upload_urls,
-    get_upload_info,
-    initiate_multipart_upload,
-    patch_multipart_upload,
-    start_multipart_upload,
-)
+from .upload import Uploader, UploadStatus  # noqa: F401
 from .utils import check_url  # noqa: F401
 from .well_knowns import WKVSCaller  # noqa: F401
 from .work_package import WorkPackageAccessor  # noqa: F401

@@ -35,8 +35,8 @@ from ghga_service_commons.api.mock_router import (  # noqa: F401
 from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from ghga_connector.cli import download, upload
-from ghga_connector.core import exceptions
+from ghga_connector.cli import configure_upload, download
+from ghga_connector.core import exceptions, upload
 from ghga_connector.core.constants import DEFAULT_PART_SIZE
 from ghga_connector.core.file_operations import Crypt4GHEncryptor
 from tests.fixtures import state
@@ -320,6 +320,7 @@ async def test_upload(
     expected_exception: type[Optional[Exception]],
     s3_fixture: S3Fixture,  # noqa F811
     monkeypatch,
+    tmpdir,
 ):
     """Test the upload of a file, expects Abort, if the file was not found"""
     uploadable_file = state.FILES[file_name]
@@ -335,9 +336,15 @@ async def test_upload(
             crypt4gh.keys.get_public_key(PUBLIC_KEY_FILE)
         ).decode("utf-8")
         encryptor = Crypt4GHEncryptor(
-            server_pubkey=server_pubkey, my_private_key_path=PRIVATE_KEY_FILE
+            part_size=8 * 1024**3,
+            server_public_key=server_pubkey,
+            private_key_path=PRIVATE_KEY_FILE,
         )
-        file_path = Path(encryptor.encrypt_file(file_path=uploadable_file.file_path))
+        with uploadable_file.file_path.open("rb") as source_file:
+            with open(tmpdir.join("encrypted_file"), "wb") as encrypted_file:
+                for chunk in encryptor.process_file(file=source_file):
+                    encrypted_file.write(chunk)
+        file_path = Path(encrypted_file.name)
     else:
         file_path = uploadable_file.file_path
 
@@ -369,9 +376,13 @@ async def test_upload(
         with pytest.raises(  # type: ignore
             expected_exception
         ) if expected_exception else nullcontext():
-            upload(
+            ucs_api_url, server_pubkey, message_display = configure_upload(debug=True)
+            await upload(
+                api_url=ucs_api_url,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
+                message_display=message_display,
+                server_public_key=server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
             )
@@ -458,9 +469,13 @@ async def test_multipart_upload(
             "ghga_connector.cli.CONFIG",
             get_test_config(),
         ):
-            upload(
+            ucs_api_url, server_pubkey, message_display = configure_upload(debug=True)
+            await upload(
+                api_url=ucs_api_url,
                 file_id=file_id,
                 file_path=Path(file.name),
+                message_display=message_display,
+                server_public_key=server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
             )

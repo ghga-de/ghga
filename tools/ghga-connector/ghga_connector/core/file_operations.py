@@ -20,45 +20,161 @@ Contains Calls of the Presigned URLs in order to Up- and Download Files
 
 import base64
 import concurrent.futures
+import hashlib
 import math
+import os
 from io import BufferedReader
 from pathlib import Path
 from queue import Queue
-from tempfile import mkstemp
 from typing import Any, Iterator, Sequence, Tuple, Union
 
+import crypt4gh.header
 import crypt4gh.keys
 import crypt4gh.lib
 import httpx
+from nacl.bindings import crypto_aead_chacha20poly1305_ietf_encrypt
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.client import httpx_client
 from ghga_connector.core.constants import TIMEOUT
 
 
-class Crypt4GHEncryptor:
-    """Convenience class to deal with Crypt4GH encryption"""
+class Checksums:
+    """Container for checksum calculation"""
 
-    def __init__(
-        self,
-        server_pubkey: str,
-        my_private_key_path: Path,
-    ) -> None:
-        self.server_public = base64.b64decode(server_pubkey)
-        self.my_private_key = crypt4gh.keys.get_private_key(
-            my_private_key_path, callback=None
+    def __init__(self):
+        self._unencrypted_sha256 = hashlib.sha256()
+        self._encrypted_md5: list[str] = []
+        self._encrypted_sha256: list[str] = []
+
+    def __repr__(self) -> str:
+        return (
+            f"Unencrypted: {self._unencrypted_sha256.hexdigest()}\n"
+            + f"Encrypted MD5: {self._encrypted_md5}\n"
+            + f"Encrypted SHA256: {self._encrypted_sha256}"
         )
 
-    def encrypt_file(self, *, file_path: Path) -> Path:
-        """Encrypt provided file using Crypt4GH lib"""
-        keys = [(0, self.my_private_key, self.server_public)]
-        with file_path.open("rb") as infile:
-            # NamedTemporaryFile cannot be opened a second time on Windows, manually
-            # deal with setup + teardown instead
-            raw_fd, outfile_path = mkstemp()
-            with open(raw_fd, "wb") as outfile:
-                crypt4gh.lib.encrypt(keys=keys, infile=infile, outfile=outfile)
-            return Path(outfile_path)
+    def encrypted_is_empty(self):
+        """Returns true, the encryption checksum buffer is still empty"""
+        return len(self._encrypted_md5) > 0
+
+    def get(self):
+        """Return all checksums at the end of processing"""
+        return (
+            self._unencrypted_sha256.hexdigest(),
+            self._encrypted_md5,
+            self._encrypted_sha256,
+        )
+
+    def update_unencrypted(self, part: bytes):
+        """Update checksum for unencrypted file"""
+        self._unencrypted_sha256.update(part)
+
+    def update_encrypted(self, part: bytes):
+        """Update encrypted part checksums"""
+        self._encrypted_md5.append(hashlib.md5(part, usedforsecurity=False).hexdigest())
+        self._encrypted_sha256.append(hashlib.sha256(part).hexdigest())
+
+
+class Crypt4GHEncryptor:
+    """Handles on the fly encryption and checksum calculation"""
+
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        part_size: int,
+        private_key_path: Path,
+        server_public_key: str,
+        checksums: Checksums = Checksums(),
+        file_secret: bytes = os.urandom(32),
+    ):
+        self.encrypted_file_size = 0
+        self._checksums = checksums
+        self._file_secret = file_secret
+        self._part_size = part_size
+        self._private_key_path = private_key_path
+        self._server_public_key = base64.b64decode(server_public_key)
+
+    def _encrypt(self, part: bytes):
+        """Encrypt file part using secret"""
+        segments, incomplete_segment = get_segments(
+            part=part, segment_size=crypt4gh.lib.SEGMENT_SIZE
+        )
+
+        encrypted_segments = []
+        for segment in segments:
+            encrypted_segments.append(self._encrypt_segment(segment))
+
+        return b"".join(encrypted_segments), incomplete_segment
+
+    def _encrypt_segment(self, segment: bytes):
+        """Encrypt one single segment"""
+        nonce = os.urandom(12)
+        encrypted_data = crypto_aead_chacha20poly1305_ietf_encrypt(
+            segment, None, nonce, self._file_secret
+        )  # no aad
+        return nonce + encrypted_data
+
+    def _create_envelope(self) -> bytes:
+        """
+        Gather file encryption/decryption secret and assemble a crypt4gh envelope using the
+        servers private and the clients public key
+        """
+        private_key = crypt4gh.keys.get_private_key(
+            self._private_key_path, callback=None
+        )
+        keys = [(0, private_key, self._server_public_key)]
+        header_content = crypt4gh.header.make_packet_data_enc(0, self._file_secret)
+        header_packets = crypt4gh.header.encrypt(header_content, keys)
+        header_bytes = crypt4gh.header.serialize(header_packets)
+
+        return header_bytes
+
+    # type annotation for file parts, should be generator
+    def process_file(self, file: BufferedReader):
+        """Encrypt and upload file parts."""
+        unprocessed_bytes = b""
+        upload_buffer = self._create_envelope()
+
+        # get envelope size to adjust checksum buffers and encrypted content size
+        envelope_size = len(upload_buffer)
+
+        for file_part in read_file_parts(file=file, part_size=self._part_size):
+            # process unencrypted
+            self._checksums.update_unencrypted(file_part)
+            unprocessed_bytes += file_part
+
+            # encrypt in chunks
+            encrypted_bytes, unprocessed_bytes = self._encrypt(unprocessed_bytes)
+            upload_buffer += encrypted_bytes
+
+            # update checksums and yield if part size
+            if len(upload_buffer) >= self._part_size:
+                current_part = upload_buffer[: self._part_size]
+                if self._checksums.encrypted_is_empty():
+                    self._checksums.update_encrypted(current_part[envelope_size:])
+                else:
+                    self._checksums.update_encrypted(current_part)
+                self.encrypted_file_size += self._part_size
+                yield current_part
+                upload_buffer = upload_buffer[self._part_size :]
+
+        # process dangling bytes
+        if unprocessed_bytes:
+            upload_buffer += self._encrypt_segment(unprocessed_bytes)
+
+        while len(upload_buffer) >= self._part_size:
+            current_part = upload_buffer[: self._part_size]
+            self._checksums.update_encrypted(current_part)
+            self.encrypted_file_size += self._part_size
+            yield current_part
+            upload_buffer = upload_buffer[self._part_size :]
+
+        if upload_buffer:
+            self._checksums.update_encrypted(upload_buffer)
+            self.encrypted_file_size += len(upload_buffer)
+            yield upload_buffer
+
+        self.encrypted_file_size -= envelope_size
 
 
 class Crypt4GHDecryptor:
@@ -173,6 +289,18 @@ def calc_part_ranges(
     return part_ranges
 
 
+def get_segments(part: bytes, segment_size: int):
+    """Chunk file part into cipher segments"""
+    full_segments = len(part) // segment_size
+    segments = [
+        part[i * segment_size : (i + 1) * segment_size] for i in range(full_segments)
+    ]
+    # get potential remainder of bytes that we need to handle
+    # for non-matching boundaries between part and cipher segment size
+    incomplete_segment = part[full_segments * segment_size :]
+    return segments, incomplete_segment
+
+
 def read_file_parts(
     file: BufferedReader, *, part_size: int, from_part: int = 1
 ) -> Iterator[bytes]:
@@ -196,22 +324,3 @@ def read_file_parts(
             return
 
         yield file_part
-
-
-def upload_file_part(*, presigned_url: str, part: bytes) -> None:
-    """Upload File"""
-
-    try:
-        with httpx_client() as client:
-            response = client.put(presigned_url, content=part, timeout=TIMEOUT)
-    except httpx.RequestError as request_error:
-        exceptions.raise_if_connection_failed(
-            request_error=request_error, url=presigned_url
-        )
-        raise exceptions.RequestFailedError(url=presigned_url) from request_error
-
-    status_code = response.status_code
-    if status_code == 200:
-        return
-
-    raise exceptions.BadResponseCodeError(url=presigned_url, response_code=status_code)

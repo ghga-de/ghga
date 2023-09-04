@@ -17,6 +17,7 @@
 """Tests for API Calls"""
 
 from contextlib import nullcontext
+from pathlib import Path
 from typing import Optional
 from unittest.mock import Mock
 
@@ -24,12 +25,8 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from ghga_connector.core import WKVSCaller
-from ghga_connector.core.api_calls import (
-    UploadStatus,
-    WorkPackageAccessor,
-    get_part_upload_urls,
-    patch_multipart_upload,
-)
+from ghga_connector.core.api_calls import Uploader, UploadStatus, WorkPackageAccessor
+from ghga_connector.core.client import async_client
 from ghga_connector.core.exceptions import (
     CantChangeUploadStatusError,
     ConnectionFailedError,
@@ -42,6 +39,7 @@ from ghga_connector.core.exceptions import (
 from tests.fixtures.utils import mock_wps_token
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "bad_url,upload_id,upload_status,expected_exception",
     [
@@ -53,7 +51,7 @@ from tests.fixtures.utils import mock_wps_token
         (True, "uploaded", UploadStatus.UPLOADED, ConnectionFailedError),
     ],
 )
-def test_patch_multipart_upload(
+async def test_patch_multipart_upload(
     httpx_mock: HTTPXMock,
     bad_url: bool,
     upload_id: str,
@@ -91,13 +89,16 @@ def test_patch_multipart_upload(
     with pytest.raises(  # type: ignore
         expected_exception
     ) if expected_exception else nullcontext():
-        patch_multipart_upload(
-            api_url=api_url,
-            upload_id=upload_id,
-            upload_status=upload_status,
-        )
+        async with async_client() as client:
+            uploader = Uploader(
+                api_url=api_url, client=client, file_id="", public_key_path=Path("")
+            )
+            uploader.upload_id = upload_id
+
+            await uploader.patch_multipart_upload(upload_status=upload_status)
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "from_part, end_part, expected_exception",
     [
@@ -106,7 +107,7 @@ def test_patch_multipart_upload(
         (9999, 10001, MaxPartNoExceededError),
     ],
 )
-def test_get_part_upload_urls(
+async def test_get_part_upload_urls(
     from_part: Optional[int],
     end_part: int,
     expected_exception: type[Optional[Exception]],
@@ -122,15 +123,18 @@ def test_get_part_upload_urls(
     static_signed_url = "http://my-signed-url.example/97982jsdf7823j"
     get_url_func = Mock(return_value=static_signed_url)
 
-    # create the iterator:
-    kwargs = {
-        "api_url": api_url,
-        "upload_id": upload_id,
-        "get_url_func": get_url_func,
-    }
-    if from_part is not None:
-        kwargs["from_part"] = from_part
-    part_upload_urls = get_part_upload_urls(**kwargs)  # type: ignore
+    if not from_part:
+        from_part = 1
+
+    async with async_client() as client:
+        uploader = Uploader(
+            api_url=api_url, client=client, file_id="", public_key_path=Path("")
+        )
+        uploader.upload_id = upload_id
+
+        part_upload_urls = uploader.get_part_upload_urls(
+            get_url_func=get_url_func, from_part=from_part
+        )
 
     with (
         pytest.raises(expected_exception)  # type: ignore

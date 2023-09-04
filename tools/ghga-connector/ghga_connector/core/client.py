@@ -14,7 +14,7 @@
 # limitations under the License.
 """Handling session initialization for requests"""
 
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 
 import httpx
 
@@ -39,4 +39,14 @@ def httpx_client():
     transport = httpx.HTTPTransport(retries=HttpxClientState.max_retries)
 
     with httpx.Client(transport=transport) as client:
+        yield client
+
+
+@asynccontextmanager
+async def async_client():
+    """Yields a context manager async httpx client and closes it afterward"""
+
+    transport = httpx.AsyncHTTPTransport(retries=HttpxClientState.max_retries)
+
+    async with httpx.AsyncClient(transport=transport) as client:
         yield client

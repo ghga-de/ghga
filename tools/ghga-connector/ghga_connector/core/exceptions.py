@@ -336,6 +336,30 @@ class UnauthorizedAPICallError(RuntimeError):
         super().__init__(message)
 
 
+class EncryptedSizeMismatch(RuntimeError):
+    """
+    Thrown when the actual encrypted size of a file does not match the computed one
+    """
+
+    def __init__(self, *, actual_encrypted_size: int, expected_encrypted_size: int):
+        message = (
+            "Mismatch between actual and theoretical encrypted part size:\n"
+            + f"Is: {actual_encrypted_size}\n"
+            + f"Should be: {expected_encrypted_size}"
+        )
+        super().__init__(message)
+
+
+class UploadIdUnset(RuntimeError):
+    """
+    Thrown when the upload ID was not set for operations requiring a valid upload ID.
+    """
+
+    def __init__(self):
+        message = "Upload ID is not set, upload was not initialized correctly."
+        super().__init__(message)
+
+
 class WellKnownValueNotFound(RuntimeError):
     """
     Thrown when a 404 is returned from a call to the well-known-value-service for a
