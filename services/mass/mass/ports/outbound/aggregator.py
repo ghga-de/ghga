@@ -43,6 +43,7 @@ class AggregatorPort(ABC):
         facet_fields: list[models.FacetLabel],
         skip: int = 0,
         limit: Optional[int] = None,
+        sorting_parameters: list[models.SortingParameter],
     ) -> JsonObject:
         """Applies an aggregation pipeline to a mongodb collection"""
         ...

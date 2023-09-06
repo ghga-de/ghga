@@ -71,7 +71,18 @@ class QueryHandler(QueryHandlerPort):
         filters: list[models.Filter],
         skip: int = 0,
         limit: Optional[int] = None,
+        sorting_parameters: Optional[list[models.SortingParameter]] = None,
     ) -> models.QueryResults:
+        # set empty list if not provided
+        if sorting_parameters is None:
+            sorting_parameters = []
+
+        # if id_ is not in sorting_parameters, add to end
+        if "id_" not in [param.field for param in sorting_parameters]:
+            sorting_parameters.append(
+                models.SortingParameter(field="id_", order=models.SortOrder.ASCENDING)
+            )
+
         # get configured facet fields for given resource class
         try:
             facet_fields: list[models.FacetLabel] = self._config.searchable_classes[
@@ -89,6 +100,7 @@ class QueryHandler(QueryHandlerPort):
                 facet_fields=facet_fields,
                 skip=skip,
                 limit=limit,
+                sorting_parameters=sorting_parameters,
             )
         except AggregationError as exc:
             raise self.SearchError() from exc

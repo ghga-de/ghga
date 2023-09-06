@@ -46,6 +46,7 @@ class Aggregator(AggregatorPort):
         facet_fields: list[models.FacetLabel],
         skip: int = 0,
         limit: Optional[int] = None,
+        sorting_parameters: list[models.SortingParameter],
     ) -> JsonObject:
         # don't carry out aggregation if the collection is empty
         if not await self._collection.find_one():
@@ -58,6 +59,7 @@ class Aggregator(AggregatorPort):
             facet_fields=facet_fields,
             skip=skip,
             limit=limit,
+            sorting_parameters=sorting_parameters,
         )
 
         try:

@@ -69,6 +69,7 @@ async def search(
             filters=parameters.filters,
             skip=parameters.skip,
             limit=parameters.limit,
+            sorting_parameters=parameters.sorting_parameters,
         )
     except query_handler.ClassNotConfiguredError as err:
         raise HTTPException(

@@ -159,6 +159,15 @@ components:
           description: The number of results to skip for pagination
           title: Skip
           type: integer
+        sorting_parameters:
+          default:
+          - field: id_
+            order: ascending
+          description: Collection of sorting parameters used to refine search results
+          items:
+            $ref: '#/components/schemas/SortingParameter'
+          title: Sorting Parameters
+          type: array
       required:
       - class_name
       title: SearchParameters
@@ -180,6 +189,28 @@ components:
       - description
       - facetable_properties
       title: SearchableClass
+      type: object
+    SortOrder:
+      description: Represents the possible sorting orders
+      enum:
+      - ascending
+      - descending
+      title: SortOrder
+    SortingParameter:
+      description: Represents a combination of a field to sort and the sort order
+      properties:
+        field:
+          description: Which field to sort results by.
+          title: Field
+          type: string
+        order:
+          allOf:
+          - $ref: '#/components/schemas/SortOrder'
+          default: ascending
+          description: Sort order to apply to sort_field
+      required:
+      - field
+      title: SortingParameter
       type: object
     ValidationError:
       properties:

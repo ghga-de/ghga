@@ -31,6 +31,11 @@ searchable_classes:
     facetable_properties:
       - key: fun_fact
         name: Fun Fact
+  SortingTests:
+    description: Data for testing sorting functionality.
+    facetable_properties:
+      - key: field
+        name: Field
 resource_change_event_topic: searchable_resources
 resource_deletion_event_type: searchable_resource_deleted
 resource_upsertion_event_type: searchable_resource_upserted

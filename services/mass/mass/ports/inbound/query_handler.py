@@ -77,6 +77,7 @@ class QueryHandlerPort(ABC):
         filters: list[models.Filter],
         skip: int = 0,
         limit: Optional[int] = None,
+        sorting_parameters: Optional[list[models.SortingParameter]] = None,
     ) -> models.QueryResults:
         """Processes a query
 

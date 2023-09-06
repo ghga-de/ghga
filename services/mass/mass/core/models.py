@@ -14,6 +14,8 @@
 # limitations under the License.
 
 """Defines dataclasses for holding business-logic data"""
+from enum import Enum
+
 from hexkit.custom_types import JsonObject
 from pydantic import BaseModel, Field
 
@@ -71,3 +73,22 @@ class QueryResults(BaseModel):
     facets: list[Facet] = Field(default=[], description="Contains the faceted fields")
     count: int = Field(default=0, description="The number of results found")
     hits: list[Resource] = Field(default=[], description="The search results")
+
+
+class SortOrder(Enum):
+    """Represents the possible sorting orders"""
+
+    ASCENDING = "ascending"
+    DESCENDING = "descending"
+
+
+class SortingParameter(BaseModel):
+    """Represents a combination of a field to sort and the sort order"""
+
+    field: str = Field(
+        ...,
+        description=("Which field to sort results by."),
+    )
+    order: SortOrder = Field(
+        default=SortOrder.ASCENDING, description="Sort order to apply to sort_field"
+    )
