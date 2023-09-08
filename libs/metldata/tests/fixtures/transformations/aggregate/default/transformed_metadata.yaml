@@ -35,6 +35,7 @@ dataset_stats:
             count: 4
           - value: VCF
             count: 3
+        total_size: 753721
     accession: GHGAD03742971815534
   - title: The B dataset
     types:
@@ -71,4 +72,5 @@ dataset_stats:
             count: 6
           - value: VCF
             count: 6
+        total_size: 1663486
     accession: GHGAD97673713575489

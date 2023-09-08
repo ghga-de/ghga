@@ -99,3 +99,10 @@ aggregations:
           - study_files.format
           - analysis_process_output_files.format
         function: StringElementCount
+      - output_path: file_summary.stats.total_size
+        input_paths:
+          - sequencing_process_files.size
+          - sample_files.size
+          - study_files.size
+          - analysis_process_output_files.size
+        function: IntegerSum

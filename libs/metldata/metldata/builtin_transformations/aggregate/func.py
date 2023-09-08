@@ -126,6 +126,20 @@ class CountAggregation(AggregationFunction):
         return sum(1 for _ in data)
 
 
+@register_function
+class IntegerSumAggregation(AggregationFunction):
+    """Transformation that returns the sum for a given sequence of integer
+    values."""
+
+    result_range_name = "integer"
+    result_range_cls_def = None
+    result_multivalued = False
+
+    @classmethod
+    def func(cls, data: Iterable[int]) -> int:
+        return sum(data)
+
+
 class ElementCountAggregation(AggregationFunction, ABC):
     """Aggregation that returns the counts of unique elements in the given data."""
 
