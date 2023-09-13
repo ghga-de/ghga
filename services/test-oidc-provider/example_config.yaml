@@ -1,0 +1,13 @@
+api_root_path: /
+auto_reload: false
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+docs_url: /docs
+host: 0.0.0.0
+log_level: info
+openapi_url: /openapi.json
+port: 8080
+service_name: top
+workers: 1
