@@ -15,14 +15,18 @@
 #
 
 """Utility functions for building the aggregation pipeline used by query handler"""
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from typing import Any, Optional
 
 from hexkit.custom_types import JsonObject
 
 from mass.core import models
 
-SORT_ORDER_CONVERSION = {"ascending": 1, "descending": -1}
+SORT_ORDER_CONVERSION: JsonObject = {
+    "ascending": 1,
+    "descending": -1,
+    "relevance": {"$meta": "textScore"},
+}
 
 
 def pipeline_match_text_search(*, query: str) -> JsonObject:
@@ -60,7 +64,7 @@ def pipeline_facet_sort_and_paginate(
     facet_fields: list[models.FacetLabel],
     skip: int,
     limit: Optional[int] = None,
-    sorts: JsonObject,
+    sorts: OrderedDict,
 ):
     """Uses a list of facetable property names to build the subquery for faceting"""
     segment: dict[str, list[JsonObject]] = {}
@@ -136,7 +140,7 @@ def build_pipeline(
         pipeline.append(pipeline_match_filters_stage(filters=filters))
 
     # turn the sorting parameters into a formatted pipeline $sort
-    sorts = {}
+    sorts = OrderedDict()
     for param in sorting_parameters:
         sort_order = SORT_ORDER_CONVERSION[param.order.value]
         sorts[param.field] = sort_order

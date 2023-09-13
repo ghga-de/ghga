@@ -160,9 +160,7 @@ components:
           title: Skip
           type: integer
         sorting_parameters:
-          default:
-          - field: id_
-            order: ascending
+          default: []
           description: Collection of sorting parameters used to refine search results
           items:
             $ref: '#/components/schemas/SortingParameter'
@@ -195,6 +193,7 @@ components:
       enum:
       - ascending
       - descending
+      - relevance
       title: SortOrder
     SortingParameter:
       description: Represents a combination of a field to sort and the sort order

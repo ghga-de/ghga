@@ -27,29 +27,52 @@ BASIC_SORT_PARAMETERS = [
 ]
 
 
-def sort_resources(
+def multi_column_sort(
     resources: list[models.Resource], sorts: list[models.SortingParameter]
 ) -> list[models.Resource]:
-    """Convenience function to sort a list of resources for comparison"""
+    """This is equivalent to nested sorted() calls.
+
+    This uses the same approach as the sorting function in test_relevance, but the
+    difference is that this function uses Resource models and doesn't work with the
+    relevance sorting parameter. There's no spot for a top-level text score parameter in
+    the resource model, which is why the relevance tests use a slightly different version
+    of this function.
+
+    The sorting parameters are supplied in order of most significant to least significant,
+    so we take them off the front and apply sorted(). If there are more parameters to
+    apply (more sorts), we recurse until we apply the final parameter. The sorted lists
+    are passed back up the call chain.
+    """
     sorted_list = resources.copy()
+    sorts = sorts.copy()
 
-    for parameter in sorts:
-        reverse = True if parameter.order == models.SortOrder.DESCENDING else False
+    parameter = sorts[0]
+    del sorts[0]
 
-        if parameter.field == "id_":
-            sorted_list.sort(key=lambda resource: resource.id_, reverse=reverse)
-        else:
-            # all other fields will be contained within 'content'.
-            sorted_list.sort(
-                key=lambda resource: resource.dict()["content"][parameter.field],
-                reverse=reverse,
-            )
+    # sort descending for DESCENDING and RELEVANCE
+    reverse = parameter.order != models.SortOrder.ASCENDING
 
-    return sorted_list
+    if len(sorts) > 0:
+        # if there are more sorting parameters, recurse to nest the sorts
+        sorted_list = multi_column_sort(sorted_list, sorts)
+
+    if parameter.field == "id_":
+        return sorted(
+            sorted_list,
+            key=lambda result: result.dict()[parameter.field],
+            reverse=reverse,
+        )
+    else:
+        # the only top-level fields is "_id" -- all else is in "content"
+        return sorted(
+            sorted_list,
+            key=lambda result: result.dict()["content"][parameter.field],
+            reverse=reverse,
+        )
 
 
 @pytest.mark.asyncio
-async def test_api_without_search_parameters(joint_fixture: JointFixture):
+async def test_api_without_sort_parameters(joint_fixture: JointFixture):
     """Make sure default Pydantic model parameter works as expected"""
 
     search_parameters: JsonObject = {
@@ -61,8 +84,8 @@ async def test_api_without_search_parameters(joint_fixture: JointFixture):
     results = await joint_fixture.call_search_endpoint(
         search_parameters=search_parameters
     )
-    assert results.count >= 0
-    expected = sort_resources(results.hits, BASIC_SORT_PARAMETERS)
+    assert results.count > 0
+    expected = multi_column_sort(results.hits, BASIC_SORT_PARAMETERS)
     assert results.hits == expected
 
 
@@ -91,7 +114,7 @@ async def test_sort_with_id_not_last(joint_fixture: JointFixture):
         for param in sorts
     ]
     results = await joint_fixture.call_search_endpoint(search_parameters)
-    assert results.hits == sort_resources(results.hits, sorts_in_model_form)
+    assert results.hits == multi_column_sort(results.hits, sorts_in_model_form)
 
 
 @pytest.mark.asyncio
@@ -113,7 +136,7 @@ async def test_sort_with_params_but_not_id(joint_fixture: JointFixture):
     }
 
     results = await joint_fixture.call_search_endpoint(search_parameters)
-    assert results.hits == sort_resources(results.hits, BASIC_SORT_PARAMETERS)
+    assert results.hits == multi_column_sort(results.hits, BASIC_SORT_PARAMETERS)
 
 
 @pytest.mark.asyncio
@@ -138,7 +161,7 @@ async def test_sort_with_invalid_field(joint_fixture: JointFixture):
     }
 
     results = await joint_fixture.call_search_endpoint(search_parameters)
-    assert results.hits == sort_resources(results.hits, BASIC_SORT_PARAMETERS)
+    assert results.hits == multi_column_sort(results.hits, BASIC_SORT_PARAMETERS)
 
 
 @pytest.mark.parametrize("order", [-7, 17, "some_string"])

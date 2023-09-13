@@ -80,6 +80,7 @@ class SortOrder(Enum):
 
     ASCENDING = "ascending"
     DESCENDING = "descending"
+    RELEVANCE = "relevance"
 
 
 class SortingParameter(BaseModel):

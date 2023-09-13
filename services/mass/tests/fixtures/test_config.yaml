@@ -36,6 +36,13 @@ searchable_classes:
     facetable_properties:
       - key: field
         name: Field
+  RelevanceTests:
+    description: Data for testing sorting by relevance.
+    facetable_properties:
+      - key: field
+        name: Field
+      - key: data
+        name: Data
 resource_change_event_topic: searchable_resources
 resource_deletion_event_type: searchable_resource_deleted
 resource_upsertion_event_type: searchable_resource_upserted
