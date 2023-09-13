@@ -28,12 +28,11 @@ from .conftest import (
     Config,
     LoginFixture,
     MongoFixture,
-    get_state,
+    StateStorage,
     given,
     parse,
     scenarios,
     then,
-    unset_state,
     when,
 )
 
@@ -41,9 +40,9 @@ scenarios("../features/30_access_request.feature")
 
 
 @given("no access requests have been made yet")
-def ars_database_is_empty(config: Config, mongo: MongoFixture):
+def ars_database_is_empty(config: Config, mongo: MongoFixture, state: StateStorage):
     mongo.empty_databases(config.ars_db_name)
-    unset_state("is allowed to download", mongo)
+    state.unset_state("is allowed to download")
 
 
 @given("the claims repository is empty")
@@ -56,9 +55,9 @@ def claims_repository_is_empty(config: Config, mongo: MongoFixture):
     target_fixture="response",
 )
 def request_access_for_dataset(
-    alias: str, config: Config, login: LoginFixture, mongo: MongoFixture
+    alias: str, config: Config, login: LoginFixture, state: StateStorage
 ):
-    datasets = get_state("all available datasets", mongo)
+    datasets = state.get_state("all available datasets")
     assert alias in datasets
     dataset_id = datasets[alias]["accession"]
     url = f"{config.ars_url}/access-requests"
@@ -114,10 +113,10 @@ def fetch_list_of_access_requests(config: Config, login: LoginFixture):
 def there_is_one_request(
     alias: str,
     name: str,
-    mongo: MongoFixture,
+    state: StateStorage,
     response: httpx.Response,
 ):
-    datasets = get_state("all available datasets", mongo)
+    datasets = state.get_state("all available datasets")
     assert alias in datasets
     dataset_id = datasets[alias]["accession"]
     requests = response.json()

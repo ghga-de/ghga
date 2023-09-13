@@ -19,16 +19,7 @@ import re
 
 import httpx
 
-from .conftest import (
-    TIMEOUT,
-    Config,
-    MongoFixture,
-    get_state,
-    parse,
-    scenarios,
-    then,
-    when,
-)
+from .conftest import TIMEOUT, Config, StateStorage, parse, scenarios, then, when
 from .utils import get_dataset_overview
 
 scenarios("../features/27_dataset_details.feature")
@@ -36,9 +27,9 @@ scenarios("../features/27_dataset_details.feature")
 
 @when(parse('I request the details of "{alias}" dataset'), target_fixture="response")
 def request_dataset_details(
-    alias: str, config: Config, mongo: MongoFixture
+    alias: str, config: Config, state: StateStorage
 ) -> httpx.Response:
-    datasets = get_state("all available datasets", mongo)
+    datasets = state.get_state("all available datasets")
     if alias == "non-existing":
         resource_id = alias
     else:
@@ -52,11 +43,11 @@ def request_dataset_details(
 
 
 @then(parse('I get the details of "{alias}" dataset'))
-def check_dataset_details(alias: str, response: httpx.Response, mongo: MongoFixture):
+def check_dataset_details(alias: str, response: httpx.Response, state: StateStorage):
     result = response.json()
     assert result
     assert alias == result.get("alias")
-    datasets = get_state("all available datasets", mongo)
+    datasets = state.get_state("all available datasets")
     assert alias in datasets
     overview = get_dataset_overview(result)
     assert overview == datasets[alias]

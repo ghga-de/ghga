@@ -20,10 +20,10 @@ import httpx
 from .conftest import (
     Config,
     MongoFixture,
+    StateStorage,
     given,
     parse,
     scenarios,
-    set_state,
     then,
     when,
 )
@@ -54,7 +54,7 @@ def search_items_without_keyword(config: Config):
 
 
 @then("I get all the existing datasets")
-def check_search_without_keyword_results(mongo: MongoFixture, response: httpx.Response):
+def check_search_without_keyword_results(state: StateStorage, response: httpx.Response):
     results = response.json()
     assert results["count"] == 6
     # get an overview of all datasets
@@ -71,7 +71,7 @@ def check_search_without_keyword_results(mongo: MongoFixture, response: httpx.Re
         "DS_B": 12,
     }
     # memorize the overview of all datasets
-    set_state("all available datasets", datasets, mongo)
+    state.set_state("all available datasets", datasets)
 
 
 @when(

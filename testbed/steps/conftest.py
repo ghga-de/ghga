@@ -37,6 +37,7 @@ from fixtures import (  # noqa: F401; pylint: disable=unused-import
     KafkaFixture,
     MongoFixture,
     S3Fixture,
+    StateStorage,
     auth_fixture,
     batch_file_fixture,
     config_fixture,
@@ -48,6 +49,7 @@ from fixtures import (  # noqa: F401; pylint: disable=unused-import
     kafka_fixture,
     mongo_fixture,
     s3_fixture,
+    state_fixture,
 )
 
 TIMEOUT = 10
@@ -127,40 +129,27 @@ def check_status_code(code: int, response: httpx.Response):
 # Global test bed state memory
 
 
-@given("we start on a clean slate", target_fixture="state")
+@given("we start on a clean slate")
 @async_step
 async def reset_state(fixtures: JointFixture):
     await fixtures.s3.empty_buckets()  # empty object storage
     fixtures.kafka.delete_topics()  # empty event queues
-    fixtures.mongo.empty_databases("tb")  # empty state database
+    fixtures.state.reset_state()  # empty state database
     fixtures.mongo.empty_databases()  # empty service databases
     fixtures.dsk.reset_work_dir()  # reset local submission registry
     empty_mail_server(fixtures.config)  # reset mail server
 
 
-@given(parse('we have the state "{name}"'), target_fixture="state")
-def assume_state_clause(name: str, mongo: MongoFixture):
-    value = get_state(name, mongo)
+@given(parse('we have the state "{name}"'))
+def assume_state_clause(name: str, state: StateStorage):
+    value = state.get_state(name)
     assert value, f'The expected state "{name}" has not yet been set.'
     return value
 
 
 @then(parse('set the state to "{name}"'))
-def set_state_clause(name: str, mongo: MongoFixture):
-    set_state(name, True, mongo)
-
-
-def get_state(state_name: str, mongo: MongoFixture) -> Any:
-    state = mongo.find_document("tb", "state", {"_id": state_name})
-    return (state or {}).get("value")
-
-
-def set_state(state_name: str, value: Any, mongo: MongoFixture):
-    mongo.replace_document("tb", "state", {"_id": state_name, "value": value})
-
-
-def unset_state(state_regex: str, mongo: MongoFixture):
-    mongo.remove_document("tb", "state", {"_id": {"$regex": state_regex}})
+def set_state_clause(name: str, state: StateStorage):
+    state.set_state(name, True)
 
 
 def empty_mail_server(config: Config):

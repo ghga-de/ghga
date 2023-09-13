@@ -23,7 +23,6 @@ from .conftest import (
     JointFixture,
     S3Fixture,
     async_step,
-    get_state,
     given,
     scenarios,
     then,
@@ -55,7 +54,7 @@ def keys_are_made_available(connector: ConnectorFixture, config: Config):
 
 @when("I run the download command of the GHGA connector")
 def run_the_download_command(fixtures: JointFixture):
-    download_token = get_state("a download token has been created", fixtures.mongo)
+    download_token = fixtures.state.get_state("a download token has been created")
     assert download_token and isinstance(download_token, str)
     connector = fixtures.connector
     completed_download = subprocess.run(  # nosec B607, B603
@@ -81,7 +80,7 @@ def run_the_download_command(fixtures: JointFixture):
 
 @then("all files announced in metadata have been downloaded")
 def files_are_downloaded(fixtures: JointFixture):
-    files = get_state("files to be downloaded", fixtures.mongo)
+    files = fixtures.state.get_state("files to be downloaded")
 
     for file_ in files:
         verify_named_file(
@@ -116,13 +115,13 @@ def run_the_decrypt_command(fixtures: JointFixture):
 
 @then("all downloaded files have been properly decrypted")
 def files_have_been_decrypted(fixtures: JointFixture):
-    datasets = get_state("all available datasets", fixtures.mongo)
-    dataset_alias = get_state("dataset to be downloaded", fixtures.mongo)
+    datasets = fixtures.state.get_state("all available datasets")
+    dataset_alias = fixtures.state.get_state("dataset to be downloaded")
     assert dataset_alias in datasets
     dataset = datasets[dataset_alias]
     dataset_files = {file["accession"]: file for file in dataset["files"].values()}
 
-    files = get_state("files to be downloaded", fixtures.mongo)
+    files = fixtures.state.get_state("files to be downloaded")
 
     for file_ in files:
         file_id = file_["id"]

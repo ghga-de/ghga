@@ -17,16 +17,7 @@
 
 import httpx
 
-from .conftest import (
-    TIMEOUT,
-    Config,
-    MongoFixture,
-    get_state,
-    parse,
-    scenarios,
-    then,
-    when,
-)
+from .conftest import TIMEOUT, Config, StateStorage, parse, scenarios, then, when
 
 scenarios("../features/26_dataset_summary.feature")
 
@@ -84,9 +75,9 @@ EXPECTED_SUMMARIES = {
 
 @when(parse('I request the summary of "{alias}" dataset'), target_fixture="response")
 def request_dataset_summary(
-    alias: str, config: Config, mongo: MongoFixture
+    alias: str, config: Config, state: StateStorage
 ) -> httpx.Response:
-    datasets = get_state("all available datasets", mongo)
+    datasets = state.get_state("all available datasets")
     if alias == "non-existing":
         resource_id = alias
     else:

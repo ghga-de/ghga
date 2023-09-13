@@ -28,6 +28,7 @@ from fixtures.file import batch_file_fixture, file_fixture
 from fixtures.kafka import KafkaFixture, kafka_fixture
 from fixtures.mongo import MongoFixture, mongo_fixture
 from fixtures.s3 import S3Fixture, s3_fixture
+from fixtures.state import StateStorage, state_fixture
 
 __all__ = [
     "auth_fixture",
@@ -40,6 +41,7 @@ __all__ = [
     "file_fixture",
     "dsk_fixture",
     "connector_fixture",
+    "state_fixture",
 ]
 
 event_loop = get_event_loop(scope="session")
@@ -55,6 +57,7 @@ class JointFixture(NamedTuple):
     auth: TokenGenerator
     dsk: DskFixture
     connector: ConnectorFixture
+    state: StateStorage
 
 
 @fixture(name="config", scope="session")  # pyright: ignore
@@ -65,7 +68,7 @@ def config_fixture() -> Config:
 
 # pylint: disable=redefined-outer-name
 @fixture(name="fixtures", scope="session")
-def joint_fixture(
+def joint_fixture(  # pylint: disable=too-many-arguments
     config: Config,
     kafka: KafkaFixture,
     mongo: MongoFixture,
@@ -73,7 +76,8 @@ def joint_fixture(
     auth: TokenGenerator,
     dsk: DskFixture,
     connector: ConnectorFixture,
+    state: StateStorage,
 ) -> JointFixture:
     """A fixture that collects all fixtures for integration testing."""
 
-    return JointFixture(config, kafka, mongo, s3, auth, dsk, connector)
+    return JointFixture(config, kafka, mongo, s3, auth, dsk, connector, state)
