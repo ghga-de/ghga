@@ -20,7 +20,7 @@ data_steward_email: helpdesk@ghga.de
 db_connection_str: '**********'
 db_name: dev-db
 docs_url: /docs
-download_access_url: http://127.0.0.1:8080/download_access
+download_access_url: http://127.0.0.1:8080/download-access
 host: 127.0.0.1
 kafka_servers:
 - kafka:9092

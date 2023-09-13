@@ -57,7 +57,7 @@ class AccessGrantsConfig(BaseSettings):
 
     download_access_url: str = Field(
         ...,
-        example="http://127.0.0.1/download_access",
+        example="http://127.0.0.1/download-access",
         description="URL pointing to the internal download access API.",
     )
 

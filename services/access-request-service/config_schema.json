@@ -39,7 +39,7 @@
     "download_access_url": {
       "title": "Download Access Url",
       "description": "URL pointing to the internal download access API.",
-      "example": "http://127.0.0.1/download_access",
+      "example": "http://127.0.0.1/download-access",
       "env_names": [
         "ars_download_access_url"
       ],
