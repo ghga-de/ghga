@@ -2,13 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: work-package
-  name: work-package
+    app: {{ .Release.Name }}
+  name: {{ .Release.Name }}
 spec:
   revisionHistoryLimit: 1
   selector:
     matchLabels:
-      app: work-package
+      app: {{ .Release.Name }}
   template:
     metadata:
       annotations:
