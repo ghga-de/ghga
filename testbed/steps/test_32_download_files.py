@@ -15,7 +15,9 @@
 
 """Step definitions for downloading files with the GHGA connector"""
 
+import os
 import subprocess
+from typing import Dict, List
 
 from .conftest import (
     Config,
@@ -24,6 +26,7 @@ from .conftest import (
     S3Fixture,
     async_step,
     given,
+    parse,
     scenarios,
     then,
     when,
@@ -52,9 +55,9 @@ def keys_are_made_available(connector: ConnectorFixture, config: Config):
     )
 
 
-@when("I run the download command of the GHGA connector")
-def run_the_download_command(fixtures: JointFixture):
-    download_token = fixtures.state.get_state("a download token has been created")
+@when(parse('I run the GHGA connector download command for "{file_scope}" files'))
+def run_the_download_command(fixtures: JointFixture, file_scope: str):
+    download_token = fixtures.state.get_state(f"download token for {file_scope} files")
     assert download_token and isinstance(download_token, str)
     connector = fixtures.connector
     completed_download = subprocess.run(  # nosec B607, B603
@@ -78,17 +81,42 @@ def run_the_download_command(fixtures: JointFixture):
     assert not completed_download.stderr
 
 
-@then("all files announced in metadata have been downloaded")
-def files_are_downloaded(fixtures: JointFixture):
-    files = fixtures.state.get_state("files to be downloaded")
+@then(
+    parse('"{file_scope}" files announced in metadata have been downloaded'),
+    target_fixture="downloaded_files",
+)
+def files_are_downloaded(fixtures: JointFixture, file_scope: str):
+    files = fixtures.state.get_state(f"{file_scope} files to be downloaded")
+    dataset_alias = fixtures.state.get_state("dataset to be downloaded")
+    datasets = fixtures.state.get_state("all available datasets")
+
+    assert dataset_alias in datasets
+
+    dataset = datasets[dataset_alias]
+    dataset_file_accessions = set(
+        file["accession"] for file in dataset["files"].values()
+    )
+
+    download_dir = fixtures.connector.config.download_dir
+
+    file_count = sum(1 for item in os.listdir(download_dir) if not os.path.isdir(item))
+    assert len(files) == file_count
 
     for file_ in files:
+        file_id = file_["id"]
+        file_extension = file_["extension"]
+
+        assert file_id.startswith("GHGAF")
+        assert file_id in dataset_file_accessions
+
         verify_named_file(
-            target_dir=fixtures.connector.config.download_dir,
-            extension=file_["extension"],
-            name=file_["id"],
+            target_dir=download_dir,
+            extension=file_extension,
+            name=file_id,
             encrypted=True,
         )
+
+    return files
 
 
 @when("I run the decrypt command of the GHGA connector")
@@ -114,16 +142,18 @@ def run_the_decrypt_command(fixtures: JointFixture):
 
 
 @then("all downloaded files have been properly decrypted")
-def files_have_been_decrypted(fixtures: JointFixture):
+def files_have_been_decrypted(
+    fixtures: JointFixture, downloaded_files: List[Dict[str, str]]
+):
     datasets = fixtures.state.get_state("all available datasets")
     dataset_alias = fixtures.state.get_state("dataset to be downloaded")
+
     assert dataset_alias in datasets
+
     dataset = datasets[dataset_alias]
     dataset_files = {file["accession"]: file for file in dataset["files"].values()}
 
-    files = fixtures.state.get_state("files to be downloaded")
-
-    for file_ in files:
+    for file_ in downloaded_files:
         file_id = file_["id"]
         file_extension = file_["extension"]
 
