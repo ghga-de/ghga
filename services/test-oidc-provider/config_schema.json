@@ -3,6 +3,46 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "type": "object",
   "properties": {
+    "issuer": {
+      "title": "Issuer",
+      "description": "test issuer URL",
+      "default": "https://test-op.org",
+      "env_names": [
+        "top_issuer"
+      ],
+      "minLength": 1,
+      "maxLength": 65536,
+      "format": "uri",
+      "type": "string"
+    },
+    "user_domain": {
+      "title": "User Domain",
+      "description": "domain name of the home organization of the test users",
+      "default": "home.org",
+      "env_names": [
+        "top_user_domain"
+      ],
+      "type": "string"
+    },
+    "client_id": {
+      "title": "Client Id",
+      "description": "test client ID",
+      "default": "test-client",
+      "env_names": [
+        "top_client_id"
+      ],
+      "type": "string"
+    },
+    "valid_seconds": {
+      "title": "Valid Seconds",
+      "description": "default expiration time of access tokens in seconds",
+      "default": 3600,
+      "env_names": [
+        "top_valid_seconds"
+      ],
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
     "host": {
       "title": "Host",
       "description": "IP of the host.",
@@ -138,10 +178,23 @@
     },
     "service_name": {
       "title": "Service Name",
+      "description": "Short name of this service",
       "default": "top",
       "env_names": [
         "top_service_name"
       ],
+      "type": "string"
+    },
+    "service_url": {
+      "title": "Service Url",
+      "description": "External base URL of this service",
+      "default": "https://top",
+      "env_names": [
+        "top_service_url"
+      ],
+      "minLength": 1,
+      "maxLength": 65536,
+      "format": "uri",
       "type": "string"
     }
   },

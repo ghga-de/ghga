@@ -13,22 +13,106 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Module containing the main FastAPI router and (optionally) top-level API enpoints.
-Additional endpoints might be structured in dedicated modules
-(each of them having a sub-router).
-"""
+"""Module containing the main FastAPI router and API endpoints."""
 
-from fastapi import FastAPI
+from enum import Enum
+from typing import Union
+
+from fastapi import FastAPI, HTTPException, Response, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ghga_service_commons.api import configure_app
 
 from ..config import CONFIG
+from ..core.models import LoginInfo, OidcConfiguration, UserInfo
+from ..core.oidc_provider import OidcProvider
 
 app = FastAPI()
 configure_app(app, config=CONFIG)
 
+oidc_provider = OidcProvider(CONFIG)
 
-@app.get("/", summary="Greet the world")
-async def index():
-    """Greet the World"""
-    return "Hello World."
+tags: list[Union[str, Enum]] = ["TestOP"]
+
+
+@app.get(
+    "/health",
+    summary="health",
+    tags=tags,  # pyright: ignore
+    status_code=status.HTTP_200_OK,
+)
+async def health():
+    """Used to test if this service is alive"""
+    return {"status": "OK"}
+
+
+@app.get(
+    "/.well-known/openid-configuration",
+    summary="Get the OpenID connect configuration",
+    tags=tags,  # pyright: ignore
+    status_code=status.HTTP_200_OK,
+)
+async def get_openid_configuration() -> OidcConfiguration:
+    """The OpenID discovery endpoint."""
+    userinfo_endpoint = "/".join(
+        (CONFIG.service_url.rstrip("/"), CONFIG.api_root_path.strip("/"), "userinfo")
+    )
+    return OidcConfiguration(
+        userinfo_endpoint=userinfo_endpoint, issuer=CONFIG.issuer
+    )  # pyright: ignore
+
+
+@app.post(
+    "/login",
+    summary="Log in as a test user",
+    tags=tags,  # pyright: ignore
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_201_CREATED: {
+            "model": str,
+            "description": "Access token has been created.",
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Validation error in submitted data."
+        },
+    },
+)
+async def login(login_info: LoginInfo) -> Response:
+    """Endpoint for logging in to the OP as a test user."""
+    try:
+        token = oidc_provider.login(login_info)
+    except (TypeError, ValueError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ) from error
+    return Response(
+        content=token, media_type="application/jwt", status_code=status.HTTP_201_CREATED
+    )
+
+
+@app.get(
+    "/userinfo",
+    summary="Get user information",
+    tags=tags,  # pyright: ignore
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": UserInfo,
+            "description": "User info has been fetched.",
+        },
+        status.HTTP_403_FORBIDDEN: {"description": "Not authorized to get user info."},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Validation error in submitted data."
+        },
+    },
+)
+async def get_userinfo(
+    credentials: HTTPAuthorizationCredentials = Security(HTTPBearer()),
+) -> UserInfo:
+    """The UserInfo endpoint of the test OP."""
+    token = credentials.credentials
+    try:
+        return oidc_provider.user_info(token)
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+        ) from error

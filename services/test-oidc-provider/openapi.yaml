@@ -1,16 +1,204 @@
+components:
+  schemas:
+    LoginInfo:
+      description: Data that is used to login as a user.
+      properties:
+        email:
+          description: e-mail address of the user
+          format: email
+          title: Email
+          type: string
+        name:
+          description: the full name of the user
+          title: Name
+          type: string
+        sub:
+          description: subject identifier
+          title: Sub
+          type: string
+        valid_seconds:
+          anyOf:
+          - exclusiveMinimum: 0.0
+            type: integer
+          - exclusiveMinimum: 0.0
+            type: number
+          description: seconds until the login expires
+          title: Valid Seconds
+      required:
+      - name
+      title: LoginInfo
+      type: object
+    OidcConfiguration:
+      description: Data that is returned as OpenID Connect configuration.
+      properties:
+        claims_supported:
+          default:
+          - sub
+          - name
+          - email
+          description: List of the Claims that the OP can supply values for
+          items:
+            type: string
+          title: Claims Supported
+          type: array
+        issuer:
+          default: https://test-op.org
+          description: URL that the OP asserts as its Issuer Identifier
+          format: uri
+          maxLength: 65536
+          minLength: 1
+          title: Issuer
+          type: string
+        request_object_signing_alg_values_supported:
+          default:
+          - ES512
+          description: List of JWS signing algorithms supported by the OP for Request
+            Objects
+          items:
+            type: string
+          title: Request Object Signing Alg Values Supported
+          type: array
+        scopes_supported:
+          default:
+          - openid
+          - profile
+          - email
+          description: List of the OAuth 2.0 scope values that this server supports
+          items:
+            type: string
+          title: Scopes Supported
+          type: array
+        service_documentation:
+          default: https://github.com/ghga-de/test-oidc-provider
+          description: URL of a page with information that developers might need to
+            know when using the OP
+          format: uri
+          maxLength: 65536
+          minLength: 1
+          title: Service Documentation
+          type: string
+        userinfo_endpoint:
+          default: http://localhost:8080/useinfo
+          description: URL of the OP's UserInfo Endpoint
+          format: uri
+          maxLength: 65536
+          minLength: 1
+          title: Userinfo Endpoint
+          type: string
+        userinfo_signing_alg_values_supported:
+          default:
+          - ES512
+          description: List of JWS signing algorithms supported by the OP for the
+            UserInfo endpoint
+          items:
+            type: string
+          title: Userinfo Signing Alg Values Supported
+          type: array
+        version:
+          default: 0.1.0
+          description: Version of the test OpenID Connect Provider
+          title: Version
+          type: string
+      title: OidcConfiguration
+      type: object
+    UserInfo:
+      description: Data that is returned by the UserInfo endpoint.
+      properties:
+        email:
+          description: e-mail address of the user
+          format: email
+          title: Email
+          type: string
+        name:
+          description: the full name of the user
+          title: Name
+          type: string
+        sub:
+          description: subject identifier
+          title: Sub
+          type: string
+      required:
+      - sub
+      - email
+      - name
+      title: UserInfo
+      type: object
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
 info:
   title: FastAPI
   version: 0.1.0
 openapi: 3.0.2
 paths:
-  /:
+  /.well-known/openid-configuration:
     get:
-      description: Greet the World
-      operationId: index__get
+      description: The OpenID discovery endpoint.
+      operationId: get_openid_configuration__well_known_openid_configuration_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcConfiguration'
+          description: Successful Response
+      summary: Get the OpenID connect configuration
+      tags:
+      - TestOP
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
       responses:
         '200':
           content:
             application/json:
               schema: {}
           description: Successful Response
-      summary: Greet the world
+      summary: health
+      tags:
+      - TestOP
+  /login:
+    post:
+      description: Endpoint for logging in to the OP as a test user.
+      operationId: login_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInfo'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                title: Response 201 Login Login Post
+                type: string
+          description: Access token has been created.
+        '422':
+          description: Validation error in submitted data.
+      summary: Log in as a test user
+      tags:
+      - TestOP
+  /userinfo:
+    get:
+      description: The UserInfo endpoint of the test OP.
+      operationId: get_userinfo_userinfo_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+          description: User info has been fetched.
+        '403':
+          description: Not authorized to get user info.
+        '422':
+          description: Validation error in submitted data.
+      security:
+      - HTTPBearer: []
+      summary: Get user information
+      tags:
+      - TestOP
