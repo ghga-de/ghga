@@ -30,7 +30,7 @@ class Config(ApiConfigBase, OidcProviderConfig):
 
     service_name: str = Field(SERVICE_NAME, description="Short name of this service")
     service_url: AnyHttpUrl = Field(
-        "https://" + SERVICE_NAME,  # pyright: ignore
+        "https://op.test",  # pyright: ignore
         description="External base URL of this service",
     )
 

@@ -123,7 +123,7 @@ async def test_user_info_for_custom_token():
     assert len(provider.users) == 1
     user = provider.user_info(token)
     assert isinstance(user, UserInfo)
-    assert user.name == "Dr. Jane Roe"
+    assert user.name == "Jane Roe"
     assert user.email == "jane@foo.edu"
     assert user.sub == "sub-of-jane"
 
@@ -178,7 +178,7 @@ async def test_user_infos_for_two_default_tokens():
     user1 = provider.user_info(token1)
     assert user1.name == "John Doe"
     user2 = provider.user_info(token2)
-    assert user2.name == "Dr. Jane Roe"
+    assert user2.name == "Jane Roe"
     assert provider.serial_id == 3
 
     assert len(provider.tasks) == 2

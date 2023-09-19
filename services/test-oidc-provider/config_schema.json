@@ -188,7 +188,7 @@
     "service_url": {
       "title": "Service Url",
       "description": "External base URL of this service",
-      "default": "https://top",
+      "default": "https://op.test",
       "env_names": [
         "top_service_url"
       ],

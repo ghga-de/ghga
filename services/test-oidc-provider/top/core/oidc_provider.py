@@ -147,20 +147,21 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
 
         Returns an access token that can be used to fetch the user info.
         """
-        name = login_info.name
+        name = login_info.name.strip()
         valid_seconds = login_info.valid_seconds
         if valid_seconds is None:
             valid_seconds = self.valid_seconds
+        if name.startswith(("Dr.", "Prof.")):
+            name = name.split(".", 1)[-1].lstrip()
         if login_info.email is None:
-            email = (
-                name.lower().replace(" ", ".").replace("..", ".")
-                + f"@{self.user_domain}"
-            )
+            user_name = name.lower().replace(" ", ".")
+            email = f"{user_name}@{self.user_domain}"
         else:
             email = str(login_info.email)
         sub = login_info.sub
         if not sub:
-            user_id = "id-of-" + name.lower().replace(" ", "-")
+            user_name = name.lower().replace(" ", "-")
+            user_id = f"id-of-{user_name}"
             sub = f"{user_id}@{self.op_domain}"
         user = UserInfo(sub=sub, email=email, name=name)  # pyright: ignore
         jti = f"test-{self.serial_id}"
