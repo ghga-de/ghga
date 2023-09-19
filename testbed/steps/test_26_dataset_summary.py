@@ -26,47 +26,60 @@ EXPECTED_SUMMARIES = {
         "title": "The C dataset",
         "types": ["A Type", "And yet another Type"],
         "dac_email": "dac@dac.dac",
-        "sample_summary": {
+        "description": "An interesting dataset C",
+        "samples_summary": {
             "count": 0,
-            "stats": {"sex": [], "tissues": [], "phenotypes": []},
+            "stats": {"sex": [], "tissues": [], "phenotypic_features": []},
         },
-        "study_summary": {
+        "studies_summary": {
             "count": 2,
             "stats": {
                 "accessions": 2,
                 "titles": "The A Study, The B Study",
             },
         },
-        "experiment_summary": {"count": 0, "stats": {"protocol": []}},
-        "file_summary": {
+        "sequencing_experiments_summary": {
+            "count": 0,
+            "stats": {"sequencing_protocols": []},
+        },
+        "files_summary": {
             "count": 20,
-            "stats": {"format": [{"value": "FASTQ", "count": 20}]},
+            "stats": {"format": [{"value": "FASTQ", "count": 20}], "size": 114708},
         },
     },
     "DS_A": {
         "title": "The complete-A dataset",
         "types": ["Another Type", "A Type"],
         "dac_email": "dac_institute_a@dac.dac",
-        "sample_summary": {
+        "description": "An interesting dataset A of complete example set",
+        "samples_summary": {
             "count": 1,
             "stats": {
                 "sex": [{"value": "MALE_SEX_FOR_CLINICAL_USE", "count": 1}],
                 "tissues": [{"value": "blood", "count": 1}],
-                "phenotypes": [{"value": "Leukemia", "count": 1}],
+                "phenotypic_features": [{"value": "Leukemia", "count": 1}],
             },
         },
-        "study_summary": {
+        "studies_summary": {
             "count": 1,
             "stats": {"accessions": 1, "titles": "The A Study"},
         },
-        "experiment_summary": {
+        "sequencing_experiments_summary": {
             "count": 1,
-            "stats": {"protocol": [{"value": "ILLUMINA_NOVA_SEQ_6000", "count": 1}]},
+            "stats": {
+                "sequencing_protocols": [
+                    {"value": "ILLUMINA_NOVA_SEQ_6000", "count": 1}
+                ]
+            },
         },
-        "file_summary": {
+        "files_summary": {
             "count": 7,
             "stats": {
-                "format": [{"value": "FASTQ", "count": 4}, {"value": "VCF", "count": 3}]
+                "format": [
+                    {"value": "FASTQ", "count": 4},
+                    {"value": "VCF", "count": 3},
+                ],
+                "size": 1816,
             },
         },
     },
@@ -95,10 +108,10 @@ def check_dataset_summary(alias: str, response: httpx.Response):
     result = response.json()
     accession = result.pop("accession")
     assert accession.startswith("GHGAD")
-    study_summary = result["study_summary"]["stats"]
-    accessions = study_summary.pop("accession")
+    studies_summary = result["studies_summary"]["stats"]
+    accessions = studies_summary.pop("accession")
     assert all(accession.startswith("GHGAS") for accession in accessions)
-    study_summary["accessions"] = len(accessions)
-    study_summary["titles"] = ", ".join(sorted(study_summary.pop("title")))
+    studies_summary["accessions"] = len(accessions)
+    studies_summary["titles"] = ", ".join(sorted(studies_summary.pop("title")))
     assert alias in EXPECTED_SUMMARIES
     assert result == EXPECTED_SUMMARIES[alias]

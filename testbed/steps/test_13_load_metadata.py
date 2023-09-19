@@ -74,8 +74,8 @@ def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
         assert content["accession"] == accession
         simplified_dataset = {
             "types": ", ".join(content["types"]),
-            "files": content["file_summary"]["count"],
-            "studies": content["study_summary"]["count"],
+            "files": content["files_summary"]["count"],
+            "studies": content["studies_summary"]["count"],
         }
         simplified_datasets[content["title"]] = simplified_dataset
     assert simplified_datasets == {

@@ -45,11 +45,15 @@ workflow_config:
             input_paths:
               - types
             function: StringListCopy
+          - output_path: description
+            input_paths:
+              - description
+            function: StringCopy
           - output_path: dac_email
             input_paths:
               - data_access_policy.data_access_committee.email
             function: StringCopy
-          - output_path: sample_summary.count
+          - output_path: samples_summary.count
             input_paths:
               - study_files.study.conditions.samples
               - sample_files.sample
@@ -60,7 +64,7 @@ workflow_config:
             function: Count
             visit_only_once:
               - Sample
-          - output_path: sample_summary.stats.sex
+          - output_path: samples_summary.stats.sex
             input_paths:
               - study_files.study.conditions.samples.biospecimen.individual.sex
               - sample_files.sample.biospecimen.individual.sex
@@ -68,7 +72,7 @@ workflow_config:
             function: StringElementCount
             visit_only_once:
               - Individual
-          - output_path: sample_summary.stats.tissues
+          - output_path: samples_summary.stats.tissues
             input_paths:
               - study_files.study.conditions.samples.biospecimen.tissue
               - sample_files.sample.biospecimen.tissue
@@ -76,7 +80,7 @@ workflow_config:
             function: StringElementCount
             visit_only_once:
               - Biospecimen
-          - output_path: sample_summary.stats.phenotypes
+          - output_path: samples_summary.stats.phenotypic_features
             input_paths:
               - study_files.study.conditions.samples.biospecimen.individual.phenotypic_features
               - sample_files.sample.biospecimen.individual.phenotypic_features
@@ -84,7 +88,7 @@ workflow_config:
             function: StringElementCount
             visit_only_once:
               - Biospecimen
-          - output_path: study_summary.count
+          - output_path: studies_summary.count
             input_paths:
               - study_files.study
               - sample_files.sample.condition.study
@@ -92,7 +96,7 @@ workflow_config:
             function: Count
             visit_only_once:
               - Study
-          - output_path: study_summary.stats.accession
+          - output_path: studies_summary.stats.accession
             input_paths:
               - study_files.study.accession
               - sample_files.sample.condition.study.accession
@@ -100,7 +104,7 @@ workflow_config:
             function: StringListCopy
             visit_only_once:
               - Study
-          - output_path: study_summary.stats.title
+          - output_path: studies_summary.stats.title
             input_paths:
               - study_files.study.title
               - sample_files.sample.condition.study.title
@@ -108,32 +112,39 @@ workflow_config:
             function: StringListCopy
             visit_only_once:
               - Study
-          - output_path: experiment_summary.count
+          - output_path: sequencing_experiments_summary.count
             input_paths:
               - sequencing_process_files.sequencing_process.sequencing_experiment
             function: Count
             visit_only_once:
               - SequencingExperiment
-          - output_path: experiment_summary.stats.protocol
+          - output_path: sequencing_experiments_summary.stats.sequencing_protocols
             input_paths:
               - sequencing_process_files.sequencing_process.sequencing_experiment.sequencing_protocol.instrument_model
             function: StringElementCount
             visit_only_once:
               - SequencingProtocol
-          - output_path: file_summary.count
+          - output_path: files_summary.count
             input_paths:
               - sequencing_process_files
               - sample_files
               - study_files
               - analysis_process_output_files
             function: Count
-          - output_path: file_summary.stats.format
+          - output_path: files_summary.stats.format
             input_paths:
               - sequencing_process_files.format
               - sample_files.format
               - study_files.format
               - analysis_process_output_files.format
             function: StringElementCount
+          - output_path: files_summary.stats.size
+            input_paths:
+              - sequencing_process_files.size
+              - sample_files.size
+              - study_files.size
+              - analysis_process_output_files.size
+            function: IntegerSum
   add_accessions:
     accession_slot_name: accession
     accession_slot_description: The accession for an entity.
@@ -226,7 +237,7 @@ workflow_config:
   merge_dataset_file_lists:
     merge_instructions:
       - class_name: Dataset
-        source_slots: [study_files, sample_files]
+        source_slots: [study_files, sample_files, analysis_process_output_files]
         target_slot: files
         target_description: >-
           All files associated with the dataset.
