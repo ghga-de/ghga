@@ -53,19 +53,42 @@ async def test_openid_configuration(client: AsyncTestClient):
     """Test getting the OpenID configuration from the well-known path."""
 
     response = await client.get("/.well-known/openid-configuration")
+    assert response.status_code == status.HTTP_200_OK
 
     openid_config = response.json()
-    print(openid_config)
     assert openid_config == {
         "version": __version__,
-        "issuer": "https://test-op.org",
+        "issuer": "https://op.test",
+        "jwks_uri": "http://localhost:8080/jwks",
         "scopes_supported": ["openid", "profile", "email"],
         "claims_supported": ["sub", "name", "email"],
         "request_object_signing_alg_values_supported": ["ES512"],
         "userinfo_signing_alg_values_supported": ["ES512"],
-        "userinfo_endpoint": "http://localhost:8080//userinfo",
+        "userinfo_endpoint": "http://localhost:8080/userinfo",
         "service_documentation": "https://github.com/ghga-de/test-oidc-provider",
     }
+
+
+@mark.asyncio
+async def test_jwks_via_uri(client: AsyncTestClient):
+    """Test getting the JWKS via the well-known path."""
+
+    response = await client.get("/.well-known/openid-configuration")
+
+    openid_config = response.json()
+    assert isinstance(openid_config, dict)
+    jwks_uri = openid_config["jwks_uri"]
+    assert jwks_uri == "http://localhost:8080/jwks"
+
+    response = await client.get(jwks_uri)
+    assert response.status_code == status.HTTP_200_OK
+
+    jwks = response.json()
+    assert isinstance(jwks, dict)
+    assert list(jwks) == ["keys"]
+    keys = jwks["keys"]
+    assert isinstance(keys, list)
+    assert all("use" in key and "kty" in key and "kid" in key for key in keys)
 
 
 @mark.asyncio
@@ -96,11 +119,11 @@ async def test_login_and_get_user_info(client: AsyncTestClient):
     assert claims == {
         "aud": ["test-client"],
         "client_id": "test-client",
-        "iss": "https://test-op.org",
+        "iss": "https://op.test",
         "jti": "test-1",
         "scope": "openid profile email",
         "sid": "test-1",
-        "sub": "id-of-john-doe@test-op.org",
+        "sub": "id-of-john-doe@op.test",
         "token_class": "access_token",
     }
 
@@ -114,5 +137,5 @@ async def test_login_and_get_user_info(client: AsyncTestClient):
     assert user_info == {
         "email": "john.doe@home.org",
         "name": "John Doe",
-        "sub": "id-of-john-doe@test-op.org",
+        "sub": "id-of-john-doe@op.test",
     }

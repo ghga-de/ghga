@@ -1,5 +1,18 @@
 components:
   schemas:
+    Jwks:
+      properties:
+        keys:
+          items:
+            additionalProperties:
+              type: string
+            type: object
+          title: Keys
+          type: array
+      required:
+      - keys
+      title: Jwks
+      type: object
     LoginInfo:
       description: Data that is used to login as a user.
       properties:
@@ -42,12 +55,20 @@ components:
           title: Claims Supported
           type: array
         issuer:
-          default: https://test-op.org
+          default: https://op.test
           description: URL that the OP asserts as its Issuer Identifier
           format: uri
           maxLength: 65536
           minLength: 1
           title: Issuer
+          type: string
+        jwks_uri:
+          default: http://localhost:8080/jwks
+          description: URL of the OP's JSON Web Key Set document
+          format: uri
+          maxLength: 65536
+          minLength: 1
+          title: Jwks Uri
           type: string
         request_object_signing_alg_values_supported:
           default:
@@ -78,7 +99,7 @@ components:
           title: Service Documentation
           type: string
         userinfo_endpoint:
-          default: http://localhost:8080/useinfo
+          default: http://localhost:8080/userinfo
           description: URL of the OP's UserInfo Endpoint
           format: uri
           maxLength: 65536
@@ -95,7 +116,7 @@ components:
           title: Userinfo Signing Alg Values Supported
           type: array
         version:
-          default: 0.1.0
+          default: 0.2.0
           description: Version of the test OpenID Connect Provider
           title: Version
           type: string
@@ -157,6 +178,20 @@ paths:
               schema: {}
           description: Successful Response
       summary: health
+      tags:
+      - TestOP
+  /jwks:
+    get:
+      description: Get the JSON Web Key Set of the test OP.
+      operationId: get_jwks_jwks_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwks'
+          description: Successful Response
+      summary: Get the JSON Web Key Set of the OP
       tags:
       - TestOP
   /login:

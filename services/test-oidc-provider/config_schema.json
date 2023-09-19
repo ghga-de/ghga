@@ -6,7 +6,7 @@
     "issuer": {
       "title": "Issuer",
       "description": "test issuer URL",
-      "default": "https://test-op.org",
+      "default": "https://op.test",
       "env_names": [
         "top_issuer"
       ],

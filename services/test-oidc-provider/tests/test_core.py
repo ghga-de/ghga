@@ -29,8 +29,8 @@ def test_create_default_op():
     """Create a default test OP."""
     config = OidcProviderConfig()  # pyright: ignore
     provider = OidcProvider(config)
-    assert provider.issuer == "https://test-op.org"
-    assert provider.op_domain == "test-op.org"
+    assert provider.issuer == "https://op.test"
+    assert provider.op_domain == "op.test"
     assert provider.user_domain == "home.org"
     assert provider.client_id == "test-client"
     assert provider.valid_seconds == 60 * 60
@@ -56,6 +56,24 @@ def test_create_custom_op():
     assert provider.serial_id == 1
 
 
+def test_jwks():
+    """Test getting the public key set."""
+    config = OidcProviderConfig()  # pyright: ignore
+    provider = OidcProvider(config)
+    jwks = provider.jwks
+    assert isinstance(jwks, dict)
+    assert list(jwks) == ["keys"]
+    keys = jwks["keys"]
+    assert isinstance(keys, list)
+    assert len(keys) == 1
+    key = keys[0]
+    assert isinstance(key, dict)
+    assert sorted(key) == ["crv", "kid", "kty", "use", "x", "y"]  # no 'd' (public)
+    del key["x"]
+    del key["y"]
+    assert key == {"kty": "EC", "use": "sig", "kid": "test", "crv": "P-256"}
+
+
 def test_invalid_token():
     """Try to get a user with an invalid token."""
     config = OidcProviderConfig()  # pyright: ignore
@@ -77,7 +95,7 @@ async def test_user_info_for_default_token():
     user = provider.user_info(token)
     assert user.name == "John Doe"
     assert user.email == "john.doe@home.org"
-    assert user.sub == "id-of-john-doe@test-op.org"
+    assert user.sub == "id-of-john-doe@op.test"
 
     assert len(provider.tasks) == 1
     await provider.reset()
@@ -183,11 +201,11 @@ async def test_validate_default_tokens():
     assert keys == "aud client_id exp iat iss jti scope sid sub token_class"
     assert claims["client_id"] == "test-client"
     assert claims["aud"] == [claims["client_id"]]
-    assert claims["iss"] == "https://test-op.org"
+    assert claims["iss"] == "https://op.test"
     assert claims["jti"] == "test-1"
     assert claims["sid"] == claims["jti"]
     assert claims["scope"] == "openid profile email"
-    assert claims["sub"] == "id-of-john-doe@test-op.org"
+    assert claims["sub"] == "id-of-john-doe@op.test"
     assert claims["token_class"] == "access_token"
     iat = claims["iat"]
     assert isinstance(iat, int)
@@ -210,7 +228,7 @@ async def test_validate_default_tokens():
     assert keys == "aud client_id exp iat iss jti scope sid sub token_class"
     assert claims["client_id"] == "test-client"
     assert claims["aud"] == [claims["client_id"]]
-    assert claims["iss"] == "https://test-op.org"
+    assert claims["iss"] == "https://op.test"
     assert claims["jti"] == "test-2"
     assert claims["sid"] == claims["jti"]
     assert claims["scope"] == "openid profile email"

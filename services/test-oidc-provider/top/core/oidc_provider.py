@@ -17,7 +17,7 @@
 """Test OpenID Connect provider"""
 
 import asyncio
-from typing import Any, Union
+from typing import Any, TypedDict, Union
 
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
@@ -29,13 +29,19 @@ from pydantic import AnyHttpUrl, BaseSettings, Field, PositiveInt
 
 from .models import LoginInfo, UserInfo
 
-__all__ = ["OidcProviderConfig", "OidcProvider"]
+__all__ = ["Jwks", "OidcProviderConfig", "OidcProvider"]
+
+
+class Jwks(TypedDict):
+    """A JSON Web Key Set as a dictionary."""
+
+    keys: list[dict[str, str]]
 
 
 class OidcProviderConfig(BaseSettings):
     """The configuration for a test OpenID Connect provider."""
 
-    issuer: AnyHttpUrl = Field("https://test-op.org", description="test issuer URL")
+    issuer: AnyHttpUrl = Field("https://op.test", description="test issuer URL")
     user_domain: str = Field(
         "home.org", description="domain name of the home organization of the test users"
     )
@@ -103,7 +109,7 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
     def _generate_keys(self) -> None:
         """Generate a key set with a key pair for signing the tokens."""
         key = generate_jwk()  # generates EC keys
-        key["kid"] = "test"
+        key.update(kid="test", use="sig")
         key_set = jwk.JWKSet()
         key_set.add(key)
         self.key_set = key_set
@@ -115,6 +121,11 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
         if key is None:
             raise KeyError("Cannot retrieve the signing key.")
         return key
+
+    @property
+    def jwks(self) -> Jwks:
+        """Get the public key set."""
+        return self.key_set.export(private_keys=False, as_dict=True)  # pyright: ignore
 
     def _add_cleanup_task(self, token: str, valid_seconds: Union[int, float]) -> None:
         """Add a task to remove the token in the cache after the given time."""

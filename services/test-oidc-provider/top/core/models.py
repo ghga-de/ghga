@@ -51,8 +51,12 @@ class OidcConfiguration(BaseModel):
         __version__, description="Version of the test OpenID Connect Provider"
     )
     issuer: AnyHttpUrl = Field(
-        "https://test-op.org",
+        "https://op.test",
         description="URL that the OP asserts as its Issuer Identifier",
+    )
+    jwks_uri: AnyHttpUrl = Field(
+        "http://localhost:8080/jwks",
+        description="URL of the OP's JSON Web Key Set document",
     )
     scopes_supported: list[str] = Field(
         ["openid", "profile", "email"],
@@ -73,7 +77,8 @@ class OidcConfiguration(BaseModel):
         " supported by the OP for the UserInfo endpoint",
     )
     userinfo_endpoint: AnyHttpUrl = Field(
-        "http://localhost:8080/useinfo", description="URL of the OP's UserInfo Endpoint"
+        "http://localhost:8080/userinfo",
+        description="URL of the OP's UserInfo Endpoint",
     )
     service_documentation: AnyHttpUrl = Field(
         "https://github.com/ghga-de/test-oidc-provider",

@@ -24,7 +24,7 @@ from ghga_service_commons.api import configure_app
 
 from ..config import CONFIG
 from ..core.models import LoginInfo, OidcConfiguration, UserInfo
-from ..core.oidc_provider import OidcProvider
+from ..core.oidc_provider import Jwks, OidcProvider
 
 app = FastAPI()
 configure_app(app, config=CONFIG)
@@ -53,12 +53,25 @@ async def health():
 )
 async def get_openid_configuration() -> OidcConfiguration:
     """The OpenID discovery endpoint."""
-    userinfo_endpoint = "/".join(
-        (CONFIG.service_url.rstrip("/"), CONFIG.api_root_path.strip("/"), "userinfo")
-    )
+    root_url = CONFIG.service_url.rstrip("/") + "/" + CONFIG.api_root_path.strip("/")
+    userinfo_endpoint = root_url + "userinfo"
+    jwks_uri = root_url + "jwks"
     return OidcConfiguration(
-        userinfo_endpoint=userinfo_endpoint, issuer=CONFIG.issuer
+        userinfo_endpoint=userinfo_endpoint,
+        issuer=CONFIG.issuer,
+        jwks_uri=jwks_uri,
     )  # pyright: ignore
+
+
+@app.get(
+    "/jwks",
+    summary="Get the JSON Web Key Set of the OP",
+    tags=tags,  # pyright: ignore
+    status_code=status.HTTP_200_OK,
+)
+async def get_jwks() -> Jwks:
+    """Get the JSON Web Key Set of the test OP."""
+    return oidc_provider.jwks
 
 
 @app.post(

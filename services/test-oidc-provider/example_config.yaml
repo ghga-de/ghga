@@ -7,7 +7,7 @@ cors_allowed_methods: null
 cors_allowed_origins: null
 docs_url: /docs
 host: 0.0.0.0
-issuer: https://test-op.org
+issuer: https://op.test
 log_level: info
 openapi_url: /openapi.json
 port: 8080
