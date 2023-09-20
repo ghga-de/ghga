@@ -16,7 +16,7 @@
 """Config Parameter Modeling and Parsing"""
 
 import logging.config
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from ghga_service_commons.api import ApiConfigBase, LogLevel
 from ghga_service_commons.auth.ghga import AuthConfig
@@ -96,7 +96,7 @@ class Config(ApiConfigBase, AuthConfig):
     # if not run as auth adapter, which APIs should be provided
     include_apis: list[Literal["users", "claims"]] = ["users"]
     # a list of external IDs of data stewards to seed the claims repository with
-    add_as_data_stewards: list[str] = []
+    add_as_data_stewards: list[Union[str, dict]] = []
 
     # expected external token content for validation in auth adapter
     oidc_authority_url: HttpUrl = "https://proxy.aai.lifescience-ri.eu"  # type: ignore

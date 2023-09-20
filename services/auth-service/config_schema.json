@@ -278,7 +278,14 @@
       ],
       "type": "array",
       "items": {
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object"
+          }
+        ]
       }
     },
     "oidc_authority_url": {

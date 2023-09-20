@@ -128,7 +128,7 @@ The service requires the following configuration parameters:
 
 - **`add_as_data_stewards`** *(array)*: Default: `[]`.
 
-  - **Items** *(string)*
+  - **Items**
 
 - **`oidc_authority_url`** *(string)*: Default: `https://proxy.aai.lifescience-ri.eu`.
 

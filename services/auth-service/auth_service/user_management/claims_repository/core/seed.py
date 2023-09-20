@@ -19,13 +19,13 @@ Functions to seed the repository with user claims.
 """
 
 import logging
+from typing import Union
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
 
 from auth_service.config import Config
 from auth_service.deps import get_mongodb_config, get_mongodb_dao_factory
-from auth_service.user_management import CONTACT
 from auth_service.user_management.claims_repository.core.claims import (
     create_data_steward_claim,
 )
@@ -63,15 +63,17 @@ async def _remove_existing_data_steward_claims(claim_dao: ClaimDao) -> None:
         if is_data_steward_claim(claim):
             await claim_dao.delete(id_=claim.id)
             num_removed_claims += 1
-    log.info("Removed %d existing data steward claim(s)", num_removed_claims)
+    log.info("Removed %d existing data steward claim(s).", num_removed_claims)
 
 
-async def _add_user_with_ext_id(ext_id: str, user_dao: UserDao) -> User:
+async def _add_user_with_ext_id(user: Union[str, dict], user_dao: UserDao) -> User:
     """Add a new user with the given external ID to the database."""
+    if not isinstance(user, dict):
+        raise TypeError("User data (name and email) is missing.")
     user_data = UserData(
-        ext_id=ext_id,  # pyright: ignore
-        name=CONTACT["name"],  # pyright: ignore
-        email=CONTACT["email"],  # pyright: ignore
+        ext_id=user["ext_id"],
+        name=user["name"],
+        email=user["email"],
         title=None,
         status=UserStatus.ACTIVE,
         registration_date=now_as_utc(),
@@ -80,26 +82,36 @@ async def _add_user_with_ext_id(ext_id: str, user_dao: UserDao) -> User:
 
 
 async def _add_configured_data_steward_claims(
-    ext_ids: list[str], user_dao: UserDao, claim_dao: ClaimDao
+    data_stewards: list[Union[str, dict]], user_dao: UserDao, claim_dao: ClaimDao
 ) -> None:
     # add configured data steward claims
-    for ext_id in ext_ids:
+    for data_steward in data_stewards:
+        ext_id = (
+            data_steward.get("ext_id")
+            if isinstance(data_steward, dict)
+            else data_steward
+        )
+        if not ext_id:
+            log.warning("External ID of data steward is missing: %r.", data_steward)
+            continue
         try:
             user = await user_dao.find_one(mapping={"ext_id": ext_id})
         except MultipleHitsFoundError:
-            log.warning("User '%r' is not unique in the user registry", ext_id)
+            log.warning("External ID %r is not unique in the user registry.", ext_id)
             continue
         except NoHitsFoundError:
             try:
-                user = await _add_user_with_ext_id(ext_id, user_dao=user_dao)
+                user = await _add_user_with_ext_id(data_steward, user_dao=user_dao)
             except Exception as error:  # pylint: disable=broad-exception-caught
-                log.warning("Could not insert '%r' as new user: %s", ext_id, error)
+                log.warning(
+                    "Could not add new user with external ID %r: %s", ext_id, error
+                )
                 continue
             else:
-                log.warning("Inserted missing data steward '%r' as new user.", ext_id)
+                log.warning("Added missing data steward with external ID %r.", ext_id)
         claim = create_data_steward_claim(user.id)
         await claim_dao.insert(claim)
-        log.info("Data steward %r added to the claims repository", ext_id)
+        log.info("Added data steward role for %r to the claims repository.", ext_id)
 
 
 async def seed_data_steward_claims(config: Config) -> None:
