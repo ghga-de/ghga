@@ -21,6 +21,12 @@ from auth_service.auth_adapter.core.auth import OIDCDiscovery
 LS_AAI = "https://proxy.aai.lifescience-ri.eu"
 
 
+def test_ls_aai_issuer():
+    """Test the issuer discovery."""
+    discovery = OIDCDiscovery(LS_AAI)
+    assert discovery.issuer == LS_AAI
+
+
 def test_ls_aai_jwks_str():
     """Test the JWKS discovery."""
     discovery = OIDCDiscovery(LS_AAI)

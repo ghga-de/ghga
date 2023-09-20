@@ -96,6 +96,14 @@ class OIDCDiscovery:
         return config
 
     @cached_property
+    def issuer(self) -> str:
+        """Fetch the issuer from the configuration."""
+        issuer = self.config.get("issuer")
+        if not issuer:
+            raise ConfigurationDiscoveryError("Cannot discover issuer")
+        return issuer
+
+    @cached_property
     def jwks_str(self) -> str:
         """Fetch the JSON string with the JWKS."""
         jwks_uri = self.config.get("jwks_uri")
@@ -185,7 +193,12 @@ class JWTConfig:
         else:
             log.warning("Allowed external signing algorithms not configured.")
             self.external_algs = None
-        self.check_at_claims["iss"] = discovery.authority_url[:-1]
+        issuer = discovery.authority_url[:-1]
+        if not issuer.startswith("https://") or issuer.endswith(".test"):
+            # this is a test OP, discover the real issuer
+            log.warning("Using issuer from discovery instead of authority URL.")
+            issuer = discovery.issuer
+        self.check_at_claims["iss"] = issuer
         client_id = config.oidc_client_id
         if client_id:
             self.check_at_claims["client_id"] = client_id
