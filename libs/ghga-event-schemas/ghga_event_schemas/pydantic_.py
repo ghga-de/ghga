@@ -172,6 +172,11 @@ class FileUploadReceived(UploadDateModel):
     bucket_id: str = Field(
         ..., description="The ID/name of the S3 bucket used to store the file."
     )
+    s3_endpoint_alias: str = Field(
+        ...,
+        description="Alias for the object storage location where the given object is stored."
+        + "This can be uniquely mapped to an endpoint URL in the service configuration.",
+    )
     submitter_public_key: str = Field(
         ...,
         description="The public key of the submitter.",
@@ -207,6 +212,11 @@ class FileUploadValidationSuccess(UploadDateModel):
     )
     bucket_id: str = Field(
         ..., description="The ID/name of the S3 bucket used to store the file."
+    )
+    s3_endpoint_alias: str = Field(
+        ...,
+        description="Alias for the object storage location where the given object is stored."
+        + "This can be uniquely mapped to an endpoint URL in the service configuration.",
     )
     decrypted_size: int = Field(
         ...,
@@ -275,6 +285,11 @@ class FileUploadValidationFailure(UploadDateModel):
         ...,
         description="The ID/name of the S3 bucket used to store the file.",
     )
+    s3_endpoint_alias: str = Field(
+        ...,
+        description="Alias for the object storage location where the given object is stored."
+        + "This can be uniquely mapped to an endpoint URL in the service configuration.",
+    )
     reason: str = Field(
         ...,
         description="The reason why the validation failed.",
@@ -338,6 +353,11 @@ class NonStagedFileRequested(BaseModel):
     target_bucket_id: str = Field(
         ...,
         description="The ID/name of the S3 bucket in which the object was expected.",
+    )
+    s3_endpoint_alias: str = Field(
+        ...,
+        description="Alias for the object storage location where the given object is stored."
+        + "This can be uniquely mapped to an endpoint URL in the service configuration.",
     )
     decrypted_sha256: str = Field(
         ...,
