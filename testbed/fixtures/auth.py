@@ -16,59 +16,155 @@
 
 """Fixture for testing APIs that use the internal auth token."""
 
+from pathlib import Path
 from typing import Optional
 
+import httpx
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto import jwk
 from pytest import fixture
 
+from .config import Config
+
 __all__ = ["auth_fixture"]
 
-DEFAULT_VALID_SECONDS = 60 * 10  # 10 mins
+DEFAULT_VALID_SECONDS = 60 * 60  # 10 mins
 DEFAULT_USER_STATUS = "active"
+TIMEOUT = 10
 
 
 class TokenGenerator:
     """Generator for internal auth tokens"""
 
-    key: jwk.JWK
+    key_file: Path
+    use_auth_adapter: bool
+    auth_adapter_url: str
+    op_url: str
+    op_issuer: str
 
-    def __init__(self, key_file):
-        self.key_file = key_file
-        self.key = self.read_key()
+    def __init__(self, config: Config):
+        self.use_auth_adapter = config.use_auth_adapter
+        self.key_file = config.auth_key_file
+        self.op_url = config.op_url
+        self.op_issuer = config.op_issuer
+        self.auth_adapter_url = config.auth_adapter_url
+
+    def external_access_token_from_name(
+        self,
+        name: str,
+        email: Optional[str] = None,
+        sub: Optional[str] = None,
+        valid_seconds: Optional[int] = None,
+    ):
+        """Create an external access token for the given name and email address."""
+        if not valid_seconds:
+            valid_seconds = DEFAULT_VALID_SECONDS
+        login_info = {
+            "name": name,
+            "email": email,
+            "valid_seconds": DEFAULT_VALID_SECONDS,
+        }
+        if sub:
+            login_info["sub"] = sub
+        url = self.op_url + "/login"
+        response = httpx.post(url, json=login_info, timeout=TIMEOUT)
+        assert response.status_code == 201
+        token = response.text
+        assert token and token.count(".") == 2
+        return token
+
+    def internal_access_token_from_external_access_token(
+        self, token: str, for_registration: bool = False
+    ) -> str:
+        """Get an internal from an external access token using the auth adapter."""
+        url = self.auth_adapter_url + "/users"
+        method = httpx.post if for_registration else httpx.get
+        headers = {"Authorization": f"Bearer {token}"}
+        response = method(url, headers=headers, timeout=TIMEOUT)  # type: ignore
+        assert response.status_code == 200
+        assert not response.json()
+        authorization = response.headers.get("Authorization")
+        assert authorization and authorization.startswith("Bearer ")
+        token = authorization.split(None, 1)[-1]
+        assert token and token.count(".") == 2
+        return token
+
+    def internal_access_token_from_name(
+        self,
+        name: str,
+        email: Optional[str] = None,
+        title: Optional[str] = None,
+        sub: Optional[str] = None,
+        status: Optional[str] = None,
+        valid_seconds: Optional[int] = None,
+    ) -> str:
+        """Create an internal access token for the given name and email address."""
+        user_id = "id-of-" + name.lower().replace(" ", "-")
+        email = name.lower().replace(" ", ".") + "@home.org"
+        role = "data_steward" if "steward" in name.lower() else None
+        if not status:
+            status = DEFAULT_USER_STATUS
+        claims = {
+            "id": user_id,
+            "name": name,
+            "email": email,
+            "title": title,
+            "role": role,
+            "status": DEFAULT_USER_STATUS,
+        }
+        if sub:
+            claims["ext_id"] = sub
+        if not valid_seconds:
+            valid_seconds = DEFAULT_VALID_SECONDS
+        return sign_and_serialize_token(claims, self.key, valid_seconds)
 
     def generate_headers(
         self,
         *,
         name: str,
-        email: str,
-        title: Optional[str] = None,
-        id_: Optional[str] = None,
-        role: Optional[str] = None,
-        status: str = DEFAULT_USER_STATUS,
+        email: Optional[str],
+        title: Optional[str],
+        for_registration: bool = False,
         valid_seconds: int = DEFAULT_VALID_SECONDS,
     ) -> dict[str, str]:
         """Generate headers with internal auth token with specified claims."""
-        claims = {
-            "id": id_,
-            "name": name,
-            "email": email,
-            "title": title,
-            "role": role,
-            "status": status,
-        }
-        token = sign_and_serialize_token(claims, self.key, valid_seconds)
+        if for_registration:
+            user_name = name.lower().replace(" ", "-")
+            user_id = f"id-of-{user_name}"
+            op_domain = ".".join(
+                self.op_issuer.split("://", 1)[-1].split("/", 1)[0].rsplit(".", 2)[-2:]
+            )
+            sub = f"{user_id}@{op_domain}"
+        else:
+            sub = None
+        if self.use_auth_adapter:
+            token = self.external_access_token_from_name(
+                name=name, email=email, sub=sub, valid_seconds=valid_seconds
+            )
+            token = self.internal_access_token_from_external_access_token(
+                token, for_registration=for_registration
+            )
+        else:
+            token = self.internal_access_token_from_name(
+                name=name,
+                email=email,
+                title=title,
+                sub=sub,
+                valid_seconds=valid_seconds,
+            )
         return {"Authorization": f"Bearer {token}"}
 
-    def read_key(self) -> jwk.JWK:
+    @property
+    def key(self) -> jwk.JWK:
         """Read the signing key from a local env file."""
         with open(self.key_file, encoding="ascii") as key_file:
             for line in key_file:
-                if line.startswith("AUTH_KEY="):
+                if line.startswith("AUTH_SERVICE_AUTH_KEY="):
                     return jwk.JWK.from_json(line.split("=", 1)[1].rstrip().strip("'"))
         raise RuntimeError("Cannot read signing key for authentication")
 
-    def read_simple_token(self) -> str:
+    @property
+    def simple_token(self) -> str:
         """Read the simple token from a local env file."""
         with open(self.key_file, encoding="ascii") as key_file:
             for line in key_file:
@@ -81,4 +177,4 @@ class TokenGenerator:
 def auth_fixture(config) -> TokenGenerator:
     """Fixture that provides an internal auth token generator."""
 
-    return TokenGenerator(key_file=config.auth_key_file)
+    return TokenGenerator(config)

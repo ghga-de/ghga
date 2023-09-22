@@ -39,7 +39,7 @@ def run_the_load_command(fixtures: JointFixture):
         )
     )
 
-    loader_token = fixtures.auth.read_simple_token()
+    loader_token = fixtures.auth.simple_token
     with temporary_file(fixtures.config.dsk_token_path, loader_token):
         completed_upload = subprocess.run(  # nosec B607, B603
             [

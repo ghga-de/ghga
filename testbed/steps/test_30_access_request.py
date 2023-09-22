@@ -26,11 +26,13 @@ from fixtures.mongo import INTERVAL
 from .conftest import (
     TIMEOUT,
     Config,
+    JointFixture,
     LoginFixture,
-    MongoFixture,
     StateStorage,
+    fetch_data_stewardship,
     given,
     parse,
+    restore_data_stewardship,
     scenarios,
     then,
     when,
@@ -40,27 +42,28 @@ scenarios("../features/30_access_request.feature")
 
 
 @given("no access requests have been made yet")
-def ars_database_is_empty(config: Config, mongo: MongoFixture, state: StateStorage):
-    mongo.empty_databases(config.ars_db_name)
-    state.unset_state("is allowed to download")
+def ars_database_is_empty(fixtures: JointFixture):
+    fixtures.mongo.empty_databases(fixtures.config.ars_db_name)
+    fixtures.state.unset_state("is allowed to download")
 
 
 @given("the claims repository is empty")
-def claims_repository_is_empty(config: Config, mongo: MongoFixture):
-    mongo.empty_databases(config.auth_db_name)
+def claims_repository_is_empty(fixtures: JointFixture):
+    """Remove all claims except for the data steward claim."""
+    saved_data_steward = fetch_data_stewardship(fixtures)
+    fixtures.mongo.empty_databases(fixtures.config.ums_db_name)
+    restore_data_stewardship(saved_data_steward, fixtures)
 
 
 @when(
     parse('I request access to the test dataset "{alias}"'),
     target_fixture="response",
 )
-def request_access_for_dataset(
-    alias: str, config: Config, login: LoginFixture, state: StateStorage
-):
-    datasets = state.get_state("all available datasets")
+def request_access_for_dataset(alias: str, fixtures: JointFixture, login: LoginFixture):
+    datasets = fixtures.state.get_state("all available datasets")
     assert alias in datasets
     dataset_id = datasets[alias]["accession"]
-    url = f"{config.ars_url}/access-requests"
+    url = f"{fixtures.config.ars_url}/access-requests"
     date_now = now_as_utc()
     user, headers = login
     data = {
@@ -130,7 +133,7 @@ def there_is_one_request(
 
 @when(parse('I allow the pending request from "{name}"'), target_fixture="response")
 def allow_pending_request(
-    config: Config, name: str, login: LoginFixture, response: httpx.Response
+    name: str, config: Config, login: LoginFixture, response: httpx.Response
 ):
     requests = response.json()
     requests = [

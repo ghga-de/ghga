@@ -33,6 +33,10 @@ class Config(
 ):
     """Config class for the test app."""
 
+    # operation modes
+    use_auth_adapter = True
+    keep_state_in_db = True
+
     # directories
     base_dir: Path = Path(__file__).parent.parent
     data_dir = base_dir / "example_data"
@@ -77,6 +81,17 @@ class Config(
 
     object_id: str = "testbed-event-object"
 
+    # auth
+    auth_key_file = Path(__file__).parent.parent / ".devcontainer/auth.env"
+    auth_adapter_url: str = "http://auth:8080"
+
+    # connector
+    user_private_crypt4gh_key: str
+    user_public_crypt4gh_key: str
+
+    # dskit
+    dsk_token_path: Path = Path.home() / ".ghga_data_steward_token.txt"
+
     # file ingest
     file_ingest_url: str = "http://fis:8080/ingest"
     file_ingest_pubkey: str
@@ -85,18 +100,14 @@ class Config(
     metldata_db_name: str = "metldata"
     metldata_url: str = "http://metldata:8080"
 
-    # connector
-    user_private_crypt4gh_key: str
-    user_public_crypt4gh_key: str
-
     # ars
     ars_db_name: str = "ars"
     ars_url: str = "http://ars:8080"
 
-    # auth
-    auth_db_name: str = "auth"
-    auth_users_collection: str = "users"
-    auth_key_file = Path(__file__).parent.parent / ".devcontainer/auth.env"
+    # ums
+    ums_db_name: str = "auth"
+    ums_users_collection: str = "users"
+    ums_claims_collection: str = "claims"
 
     # wps
     wps_db_name: str = "wps"
@@ -106,13 +117,14 @@ class Config(
     ifrs_db_name: str = "ifrs"
     ifrs_metadata_collection: str = "file_metadata"
 
-    # dskit
-    dsk_token_path: Path = Path.home() / ".ghga_data_steward_token.txt"
-
-    # notifications
-    mailhog_url: str = "http://mailhog:8025"
-
     # mass
     mass_url: str = "http://mass:8080"
     mass_db_name: str = "mass"
     mass_collection: str = "EmbeddedDataset"
+
+    # notifications
+    mailhog_url: str = "http://mailhog:8025"
+
+    # test OP
+    op_url: str = "http://op.test"
+    op_issuer: str = "https://test-aai.ghga.de"

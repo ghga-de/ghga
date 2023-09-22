@@ -93,31 +93,36 @@ class LoginFixture(NamedTuple):
 @given(parse('I am logged in as "{name}"'), target_fixture="login")
 def access_as_user(name: str, fixtures: JointFixture) -> LoginFixture:
     # Create user dictionary
-    if name.startswith(("Prof. ", "Dr. ")):
-        title, name = name.split(None, 1)
+    if name.startswith(("Prof.", "Dr.")):
+        title, name = name.split(".", 1)
+        title += "."
+        name = name.lstrip()
     else:
         title = None
     user_id = "id-of-" + name.lower().replace(" ", "-")
-    ext_id = f"{user_id}@lifescience-ri.eu"
     email = name.lower().replace(" ", ".") + "@home.org"
-    role = "data_steward" if "steward" in name.lower() else None
-    user: dict[str, Any] = {
-        "_id": user_id,
-        "status": "active",
-        "name": name,
-        "email": email,
-        "title": title,
-        "ext_id": ext_id,
-        "registration_date": 1688472000,
-    }
-    # Add the user to the auth database. This is needed
-    # because users are not registered as part of the test.
-    fixtures.mongo.replace_document(
-        fixtures.config.auth_db_name, fixtures.config.auth_users_collection, user
+    ext_id = f"{user_id}@ghga.de"
+    user = fixtures.mongo.find_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_users_collection,
+        {"ext_id": ext_id},
     )
-    headers = fixtures.auth.generate_headers(
-        id_=user_id, name=name, email=email, title=title, role=role
-    )
+    if not user:
+        user = {
+            "_id": user_id,
+            "status": "active",
+            "name": name,
+            "email": email,
+            "title": title,
+            "ext_id": ext_id,
+            "registration_date": 1688472000,
+        }
+        # Add the user to the auth database. This is needed
+        # because users are not (yet) registered as part of the test.
+        fixtures.mongo.replace_document(
+            fixtures.config.ums_db_name, fixtures.config.ums_users_collection, user
+        )
+    headers = fixtures.auth.generate_headers(name=name, email=email, title=title)
     return LoginFixture(user, headers)
 
 
@@ -129,13 +134,51 @@ def check_status_code(code: int, response: httpx.Response):
 # Global test bed state memory
 
 
+def fetch_data_stewardship(fixtures: JointFixture) -> tuple[Any, Any]:
+    """Fetch the data steward and the corresponding claim from the database."""
+    data_steward_claim = fixtures.mongo.find_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_claims_collection,
+        {"visa_value": "data_steward@ghga.de"},
+    )
+    data_steward = (
+        fixtures.mongo.find_document(
+            fixtures.config.ums_db_name,
+            fixtures.config.ums_users_collection,
+            {"_id": data_steward_claim["user_id"]},
+        )
+        if data_steward_claim
+        else None
+    )
+    return data_steward, data_steward_claim
+
+
+def restore_data_stewardship(state: tuple[Any, Any], fixtures: JointFixture) -> None:
+    """Put the data steward and the corresponding claim back into the database."""
+    data_steward, data_steward_claim = state
+    if data_steward:
+        fixtures.mongo.replace_document(
+            fixtures.config.ums_db_name,
+            fixtures.config.ums_users_collection,
+            data_steward,
+        )
+    if data_steward_claim:
+        fixtures.mongo.replace_document(
+            fixtures.config.ums_db_name,
+            fixtures.config.ums_claims_collection,
+            data_steward_claim,
+        )
+
+
 @given("we start on a clean slate")
 @async_step
 async def reset_state(fixtures: JointFixture):
     await fixtures.s3.empty_buckets()  # empty object storage
     fixtures.kafka.delete_topics()  # empty event queues
     fixtures.state.reset_state()  # empty state database
+    saved_data_steward = fetch_data_stewardship(fixtures)
     fixtures.mongo.empty_databases()  # empty service databases
+    restore_data_stewardship(saved_data_steward, fixtures)
     fixtures.dsk.reset_work_dir()  # reset local submission registry
     empty_mail_server(fixtures.config)  # reset mail server
 

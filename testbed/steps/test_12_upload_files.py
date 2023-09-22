@@ -218,7 +218,7 @@ def ingest_file_metadata(fixtures: JointFixture) -> IngestConfig:
     call_data_steward_kit_ingest(
         dsk_token_path=fixtures.config.dsk_token_path,
         ingest_config_path=ingest_config_path,
-        token=fixtures.auth.read_simple_token(),
+        token=fixtures.auth.simple_token,
     )
 
     return ingest_config
