@@ -1,5 +1,5 @@
 @download @files
-Feature: 32 Download files
+Feature: 33 Download files
   As a user, I can download files when I have a download token.
 
   Background:

@@ -31,7 +31,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/31_work_packages.feature")
+scenarios("../features/32_work_packages.feature")
 
 
 @given("no work packages have been created yet")
@@ -53,7 +53,7 @@ def announce_dataset(config: Config, mongo: MongoFixture):
 
 @when("the list of datasets is queried", target_fixture="response")
 def query_datasets(config: Config, login: LoginFixture):
-    user_id = login.user["_id"]
+    user_id = login.user.id
     url = f"{config.wps_url}/users/{user_id}/datasets"
     return httpx.get(url, headers=login.headers, timeout=TIMEOUT)
 
@@ -110,8 +110,7 @@ def create_work_package(
         "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
     }
     url = f"{fixtures.config.wps_url}/work-packages"
-    response = httpx.post(url, headers=login.headers, json=data, timeout=TIMEOUT)
-    return response
+    return httpx.post(url, headers=login.headers, json=data, timeout=TIMEOUT)
 
 
 @then(parse('the response contains a download token for "{file_scope}" files'))

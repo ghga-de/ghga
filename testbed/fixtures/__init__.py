@@ -68,7 +68,7 @@ def config_fixture() -> Config:
 
 # pylint: disable=redefined-outer-name
 @fixture(name="fixtures", scope="session")
-def joint_fixture(  # pylint: disable=too-many-arguments
+def joint_fixture(
     config: Config,
     kafka: KafkaFixture,
     mongo: MongoFixture,

@@ -1,10 +1,11 @@
 @download @wps
-Feature: 31 Work Packages
+Feature: 32 Work Packages
   As a user, I can create a work package for downloading a file
   and a download token corresponding ot that work package.
 
   Background:
     Given we have the state "John Doe is allowed to download the test dataset"
+    And I am registered as "Dr. John Doe"
     And I am logged in as "Dr. John Doe"
 
   Scenario: Starting work package creation

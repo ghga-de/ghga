@@ -41,6 +41,8 @@ class TokenGenerator:
     auth_adapter_url: str
     op_url: str
     op_issuer: str
+    titles = ("Dr.", "Prof.")
+    user_domain = "home.org"
 
     def __init__(self, config: Config):
         self.use_auth_adapter = config.use_auth_adapter
@@ -48,6 +50,34 @@ class TokenGenerator:
         self.op_url = config.op_url
         self.op_issuer = config.op_issuer
         self.auth_adapter_url = config.auth_adapter_url
+
+    @classmethod
+    def split_title(cls, full_name: str) -> tuple[Optional[str], str]:
+        """Split the full name into title and actual name."""
+        if full_name.startswith(cls.titles):
+            title, name = full_name.split(None, 1)
+        else:
+            title, name = None, full_name
+        return title, name
+
+    def get_user_id(self, full_name: str) -> str:
+        """Get the plain identifier of the user without the domain."""
+        name = self.split_title(full_name)[1]
+        return "id-of-" + name.lower().replace(" ", "-")
+
+    def get_sub(self, full_name: str) -> str:
+        """Get the subject identifier of the user with the given full name."""
+        user_id = self.get_user_id(full_name)
+        op_domain = ".".join(
+            self.op_issuer.split("://", 1)[-1].split("/", 1)[0].rsplit(".", 2)[-2:]
+        )
+        return f"{user_id}@{op_domain}"
+
+    def get_email(self, full_name: str) -> str:
+        """Get the email address of the user with the given full name."""
+        name = self.split_title(full_name)[1]
+        mail_id = name.lower().replace(" ", ".")
+        return f"{mail_id}@{self.user_domain}"
 
     def external_access_token_from_name(
         self,
@@ -95,23 +125,24 @@ class TokenGenerator:
         email: Optional[str] = None,
         title: Optional[str] = None,
         sub: Optional[str] = None,
+        user_id: Optional[str] = None,
         status: Optional[str] = None,
         valid_seconds: Optional[int] = None,
     ) -> str:
         """Create an internal access token for the given name and email address."""
-        user_id = "id-of-" + name.lower().replace(" ", "-")
-        email = name.lower().replace(" ", ".") + "@home.org"
+        email = self.get_email(name)
         role = "data_steward" if "steward" in name.lower() else None
         if not status:
             status = DEFAULT_USER_STATUS
         claims = {
-            "id": user_id,
             "name": name,
             "email": email,
             "title": title,
             "role": role,
-            "status": DEFAULT_USER_STATUS,
+            "status": status,
         }
+        if user_id:
+            claims["id"] = user_id
         if sub:
             claims["ext_id"] = sub
         if not valid_seconds:
@@ -120,29 +151,22 @@ class TokenGenerator:
 
     def generate_headers(
         self,
-        *,
         name: str,
-        email: Optional[str],
-        title: Optional[str],
-        for_registration: bool = False,
+        email: Optional[str] = None,
+        title: Optional[str] = None,
+        user_id: Optional[str] = None,
         valid_seconds: int = DEFAULT_VALID_SECONDS,
     ) -> dict[str, str]:
         """Generate headers with internal auth token with specified claims."""
-        if for_registration:
-            user_name = name.lower().replace(" ", "-")
-            user_id = f"id-of-{user_name}"
-            op_domain = ".".join(
-                self.op_issuer.split("://", 1)[-1].split("/", 1)[0].rsplit(".", 2)[-2:]
-            )
-            sub = f"{user_id}@{op_domain}"
-        else:
-            sub = None
+        if title is None:
+            title, name = self.split_title(name)
+        sub = None if user_id else self.get_sub(name)
         if self.use_auth_adapter:
             token = self.external_access_token_from_name(
                 name=name, email=email, sub=sub, valid_seconds=valid_seconds
             )
             token = self.internal_access_token_from_external_access_token(
-                token, for_registration=for_registration
+                token, for_registration=not user_id
             )
         else:
             token = self.internal_access_token_from_name(
@@ -150,6 +174,7 @@ class TokenGenerator:
                 email=email,
                 title=title,
                 sub=sub,
+                user_id=user_id,
                 valid_seconds=valid_seconds,
             )
         return {"Authorization": f"Bearer {token}"}

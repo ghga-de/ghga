@@ -1,5 +1,5 @@
 @download @ars
-Feature: 30 Access Request
+Feature: 31 Access Request
   As a user, I can ask for access request to a given dataset.
 
   Scenario: Requesting access to a dataset
@@ -7,12 +7,15 @@ Feature: 30 Access Request
     Given we have the state "metadata has been loaded into the system"
     And the claims repository is empty
     And no access requests have been made yet
+    And I am registered as "Dr. John Doe"
     And I am logged in as "Dr. John Doe"
 
     When I request access to the test dataset "DS_A"
     Then the response status code is "201"
     And an email has been sent to "helpdesk@ghga.de"
     And an email has been sent to "john.doe@home.org"
+
+  Scenario: Granting access to a dataset
 
     Given I am logged in as "Data Steward"
 

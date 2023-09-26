@@ -22,7 +22,7 @@ from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 from hexkit.providers.s3 import S3Config
-from pydantic import SecretStr
+from pydantic import Field, SecretStr, root_validator
 
 
 @config_from_yaml(prefix="tb")
@@ -34,8 +34,15 @@ class Config(
     """Config class for the test app."""
 
     # operation modes
-    use_auth_adapter = True
-    keep_state_in_db = True
+    use_api_gateway: bool = Field(
+        False, description="set to True for black-box testing"
+    )
+    use_auth_adapter: bool = Field(
+        True, description="set to True for token exchange via auth adapter"
+    )
+    keep_state_in_db: bool = Field(
+        True, description="set to True for saving state permanently"
+    )
 
     # directories
     base_dir: Path = Path(__file__).parent.parent
@@ -108,6 +115,7 @@ class Config(
     ums_db_name: str = "auth"
     ums_users_collection: str = "users"
     ums_claims_collection: str = "claims"
+    ums_url: str = "http://ums:8080"
 
     # wps
     wps_db_name: str = "wps"
@@ -128,3 +136,17 @@ class Config(
     # test OP
     op_url: str = "http://op.test"
     op_issuer: str = "https://test-aai.ghga.de"
+
+    @root_validator(pre=False)
+    @classmethod
+    def check_operation_modes(cls, values):
+        """Check that operation modes are not conflicting."""
+        try:
+            if values["use_api_gateway"]:
+                if not values["use_auth_adapter"]:
+                    raise ValueError("API gateway always uses auth adapter")
+                if values["keep_state_in_db"]:
+                    raise ValueError("Cannot use database when using API gateway")
+        except (KeyError, ValueError) as error:
+            raise ValueError(f"Check operation modes: {error}") from error
+        return values

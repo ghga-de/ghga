@@ -38,7 +38,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/30_access_request.feature")
+scenarios("../features/31_access_request.feature")
 
 
 @given("no access requests have been made yet")
@@ -51,7 +51,10 @@ def ars_database_is_empty(fixtures: JointFixture):
 def claims_repository_is_empty(fixtures: JointFixture):
     """Remove all claims except for the data steward claim."""
     saved_data_steward = fetch_data_stewardship(fixtures)
-    fixtures.mongo.empty_databases(fixtures.config.ums_db_name)
+    fixtures.mongo.empty_databases(
+        fixtures.config.ums_db_name,
+        exclude_collections=fixtures.config.ums_users_collection,
+    )
     restore_data_stewardship(saved_data_steward, fixtures)
 
 
@@ -67,15 +70,14 @@ def request_access_for_dataset(alias: str, fixtures: JointFixture, login: LoginF
     date_now = now_as_utc()
     user, headers = login
     data = {
-        "user_id": user["_id"],
+        "user_id": user.id,
         "dataset_id": dataset_id,
-        "email": user["email"],
+        "email": user.email,
         "request_text": "Can I access the test dataset?",
         "access_starts": date_now.isoformat(),
         "access_ends": (date_now + timedelta(days=365)).isoformat(),
     }
-    response = httpx.post(url, headers=headers, json=data)
-    return response
+    return httpx.post(url, headers=headers, json=data)
 
 
 @then(parse('an email has been sent to "{email}"'))
@@ -108,8 +110,7 @@ def check_email_sent_to(
 @when("I fetch the list of access requests", target_fixture="response")
 def fetch_list_of_access_requests(config: Config, login: LoginFixture):
     url = f"{config.ars_url}/access-requests"
-    response = httpx.get(url, headers=login.headers, timeout=TIMEOUT)
-    return response
+    return httpx.get(url, headers=login.headers, timeout=TIMEOUT)
 
 
 @then(parse('there is one request for test dataset "{alias}" from "{name}"'))
@@ -146,8 +147,7 @@ def allow_pending_request(
     request_id = request["id"]
     url = f"{config.ars_url}/access-requests/{request_id}"
     data = {"status": "allowed"}
-    response = httpx.patch(url, headers=login.headers, json=data)
-    return response
+    return httpx.patch(url, headers=login.headers, json=data)
 
 
 @then(parse('the status of the request from "{name}" is "{status}"'))

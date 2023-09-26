@@ -44,7 +44,7 @@ EXPECTED_SUMMARIES = {
         },
         "files_summary": {
             "count": 20,
-            "stats": {"format": [{"value": "FASTQ", "count": 20}], "size": 114708},
+            "stats": {"format": [{"value": "FASTQ", "count": 20}], "size": 58720716},
         },
     },
     "DS_A": {

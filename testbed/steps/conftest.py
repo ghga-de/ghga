@@ -18,7 +18,7 @@
 
 import inspect
 from functools import wraps
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Optional
 
 import httpx
 from pytest_bdd import (  # noqa: F401; pylint: disable=unused-import
@@ -83,46 +83,43 @@ def async_step(step):
 # Shared step functions
 
 
-class LoginFixture(NamedTuple):
-    """A fixture to hold the users and their access tokens."""
+class UserData(NamedTuple):
+    """A container for user data."""
 
-    user: dict[str, Any]
+    id: str
+    ext_id: str
+    name: str
+    title: Optional[str]
+    email: str
+
+
+class LoginFixture(NamedTuple):
+    """A fixture to hold a user and a corresponding access token."""
+
+    user: UserData
     headers: dict[str, str]
+
+
+def get_user_data(name: str, fixtures: JointFixture) -> UserData:
+    auth = fixtures.auth
+    title, name = auth.split_title(name)
+    sub = auth.get_sub(name)
+    registered_users = fixtures.state.get_state("registered users") or {}
+    user_id = registered_users.get(sub)
+    assert user_id, f"{name} is not a registered user"
+    email = auth.get_email(name)
+    return UserData(user_id, sub, name, title, email)
+
+
+@given(parse('I am registered as "{name}"'), target_fixture="user")
+def registered_as_user(name: str, fixtures: JointFixture) -> UserData:
+    return get_user_data(name, fixtures)
 
 
 @given(parse('I am logged in as "{name}"'), target_fixture="login")
 def access_as_user(name: str, fixtures: JointFixture) -> LoginFixture:
-    # Create user dictionary
-    if name.startswith(("Prof.", "Dr.")):
-        title, name = name.split(".", 1)
-        title += "."
-        name = name.lstrip()
-    else:
-        title = None
-    user_id = "id-of-" + name.lower().replace(" ", "-")
-    email = name.lower().replace(" ", ".") + "@home.org"
-    ext_id = f"{user_id}@ghga.de"
-    user = fixtures.mongo.find_document(
-        fixtures.config.ums_db_name,
-        fixtures.config.ums_users_collection,
-        {"ext_id": ext_id},
-    )
-    if not user:
-        user = {
-            "_id": user_id,
-            "status": "active",
-            "name": name,
-            "email": email,
-            "title": title,
-            "ext_id": ext_id,
-            "registration_date": 1688472000,
-        }
-        # Add the user to the auth database. This is needed
-        # because users are not (yet) registered as part of the test.
-        fixtures.mongo.replace_document(
-            fixtures.config.ums_db_name, fixtures.config.ums_users_collection, user
-        )
-    headers = fixtures.auth.generate_headers(name=name, email=email, title=title)
+    user = get_user_data(name, fixtures)
+    headers = fixtures.auth.generate_headers(name=name, user_id=user.id)
     return LoginFixture(user, headers)
 
 
