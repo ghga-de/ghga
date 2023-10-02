@@ -4,7 +4,6 @@ Feature: 22 Search Datasets
 
   Background:
     Given we have the state "metadata has been loaded into the system"
-    And the database collection is prepared for searching
 
   Scenario: Verify searching with invalid query
     When I search documents with invalid query format

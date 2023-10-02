@@ -26,11 +26,7 @@ from pydantic import Field, SecretStr, root_validator
 
 
 @config_from_yaml(prefix="tb")
-class Config(
-    KafkaConfig,
-    MongoDbConfig,
-    S3Config,
-):
+class Config(KafkaConfig, MongoDbConfig, S3Config):
     """Config class for the test app."""
 
     # operation modes

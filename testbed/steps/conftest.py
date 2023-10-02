@@ -133,6 +133,7 @@ def check_status_code(code: int, response: httpx.Response):
 
 def fetch_data_stewardship(fixtures: JointFixture) -> tuple[Any, Any]:
     """Fetch the data steward and the corresponding claim from the database."""
+    assert not fixtures.config.use_api_gateway
     data_steward_claim = fixtures.mongo.find_document(
         fixtures.config.ums_db_name,
         fixtures.config.ums_claims_collection,
@@ -152,6 +153,7 @@ def fetch_data_stewardship(fixtures: JointFixture) -> tuple[Any, Any]:
 
 def restore_data_stewardship(state: tuple[Any, Any], fixtures: JointFixture) -> None:
     """Put the data steward and the corresponding claim back into the database."""
+    assert not fixtures.config.use_api_gateway
     data_steward, data_steward_claim = state
     if data_steward:
         fixtures.mongo.replace_document(
@@ -170,12 +172,17 @@ def restore_data_stewardship(state: tuple[Any, Any], fixtures: JointFixture) -> 
 @given("we start on a clean slate")
 @async_step
 async def reset_state(fixtures: JointFixture):
-    await fixtures.s3.empty_buckets()  # empty object storage
-    fixtures.kafka.delete_topics()  # empty event queues
+    """Reset all state used by the Archive Test Bed."""
     fixtures.state.reset_state()  # empty state database
-    saved_data_steward = fetch_data_stewardship(fixtures)
-    fixtures.mongo.empty_databases()  # empty service databases
-    restore_data_stewardship(saved_data_steward, fixtures)
+    if not fixtures.config.use_api_gateway:
+        # When running the tests externally using the API gateway,
+        # we do not have access permissions to the state databases,
+        # so we rely on the deployment to start with a clean slate.
+        await fixtures.s3.empty_buckets()  # empty object storage
+        fixtures.kafka.delete_topics()  # empty event queues
+        saved_data_steward = fetch_data_stewardship(fixtures)
+        fixtures.mongo.empty_databases()  # empty service databases
+        restore_data_stewardship(saved_data_steward, fixtures)
     fixtures.dsk.reset_work_dir()  # reset local submission registry
     empty_mail_server(fixtures.config)  # reset mail server
 

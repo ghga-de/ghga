@@ -17,26 +17,10 @@
 
 import httpx
 
-from .conftest import (
-    Config,
-    MongoFixture,
-    StateStorage,
-    given,
-    parse,
-    scenarios,
-    then,
-    when,
-)
+from .conftest import Config, StateStorage, parse, scenarios, then, when
 from .utils import get_dataset_overview, search_dataset_rpc
 
 scenarios("../features/22_search_datasets.feature")
-
-
-@given("the database collection is prepared for searching")
-def index_mass_collection(config: Config, mongo: MongoFixture):
-    mongo.index_collection(
-        db_name=config.mass_db_name, collection_name=config.mass_collection
-    )
 
 
 @when("I search documents with invalid query format", target_fixture="response")

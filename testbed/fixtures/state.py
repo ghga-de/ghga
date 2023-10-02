@@ -67,7 +67,7 @@ class MemoryStateStorage(StateStorage):
     def unset_state(self, state_regex: str):
         regex = re.compile(state_regex)
         for state_name, _ in self.memory_storage.items():
-            if regex.match(state_name):
+            if regex.search(state_name):
                 del self.memory_storage[state_name]
 
     def reset_state(self):
@@ -108,7 +108,7 @@ def state_fixture(config: Config, mongo: MongoFixture) -> StateStorage:
     """Fixture that provides a state storage."""
     storage = (
         MongoStateStorage(mongo=mongo)
-        if config.keep_state_in_db
+        if config.keep_state_in_db or config.use_api_gateway
         else MemoryStateStorage()
     )
 

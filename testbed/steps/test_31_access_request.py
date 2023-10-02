@@ -43,6 +43,10 @@ scenarios("../features/31_access_request.feature")
 
 @given("no access requests have been made yet")
 def ars_database_is_empty(fixtures: JointFixture):
+    if fixtures.config.use_api_gateway:
+        # black-box testing: cannot empty service database
+        assert not fixtures.state.get_state("is allowed to download")
+        return
     fixtures.mongo.empty_databases(fixtures.config.ars_db_name)
     fixtures.state.unset_state("is allowed to download")
 
@@ -50,6 +54,9 @@ def ars_database_is_empty(fixtures: JointFixture):
 @given("the claims repository is empty")
 def claims_repository_is_empty(fixtures: JointFixture):
     """Remove all claims except for the data steward claim."""
+    if fixtures.config.use_api_gateway:
+        # black-box testing: cannot empty service database
+        return
     saved_data_steward = fetch_data_stewardship(fixtures)
     fixtures.mongo.empty_databases(
         fixtures.config.ums_db_name,

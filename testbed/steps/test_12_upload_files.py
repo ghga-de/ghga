@@ -124,6 +124,9 @@ def call_data_steward_kit_ingest(ingest_config_path: str, dsk_token_path: Path, 
 @given("the staging bucket is empty")
 @async_step
 async def staging_bucket_is_empty(fixtures: JointFixture):
+    if fixtures.config.use_api_gateway:
+        # black-box testing: cannot check staging bucket
+        return
     await fixtures.s3.empty_given_buckets(["staging"])
 
 
@@ -196,6 +199,9 @@ async def check_uploaded_files_in_storage(
     fixtures: JointFixture, uploaded_file_uuids: set[str]
 ):
     """Check that the uploaded files exist in the given bucket."""
+    if fixtures.config.use_api_gateway:
+        # black-box testing: cannot check staging bucket
+        return
     bucket_id = fixtures.config.staging_bucket
     for object_id in uploaded_file_uuids:
         assert await fixtures.s3.storage.does_object_exist(
@@ -243,6 +249,13 @@ def check_metadata_documents(
             )
             accessions.add(accession)
 
+    assert accessions
+
+    if fixtures.config.use_api_gateway:
+        # if we use the API gateway, we cannot access the database directly
+        # and therefore just return the accessions
+        return accessions
+
     documents = fixtures.mongo.wait_for_documents(
         db_name=fixtures.config.ifrs_db_name,
         collection_name=fixtures.config.ifrs_metadata_collection,
@@ -257,6 +270,9 @@ def check_metadata_documents(
 @async_step
 async def check_ingested_files_in_storage(fixtures: JointFixture, object_ids: set[str]):
     """Check that the ingested files exist in the permanent bucket."""
+    if fixtures.config.use_api_gateway:
+        # black-box testing: cannot check permanent bucket
+        return
     for object_id in object_ids:
         assert await fixtures.s3.storage.does_object_exist(
             bucket_id=fixtures.config.permanent_bucket, object_id=object_id

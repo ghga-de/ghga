@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Fixture for testing APIs that use the internal auth token."""
+"""Fixture for testing APIs that use an auth token."""
 
 from pathlib import Path
 from typing import Optional
@@ -34,9 +34,10 @@ TIMEOUT = 10
 
 
 class TokenGenerator:
-    """Generator for internal auth tokens"""
+    """Generator for auth tokens"""
 
     key_file: Path
+    use_api_gateway: bool
     use_auth_adapter: bool
     auth_adapter_url: str
     op_url: str
@@ -45,6 +46,7 @@ class TokenGenerator:
     user_domain = "home.org"
 
     def __init__(self, config: Config):
+        self.use_api_gateway = config.use_api_gateway
         self.use_auth_adapter = config.use_auth_adapter
         self.key_file = config.auth_key_file
         self.op_url = config.op_url
@@ -157,17 +159,24 @@ class TokenGenerator:
         user_id: Optional[str] = None,
         valid_seconds: int = DEFAULT_VALID_SECONDS,
     ) -> dict[str, str]:
-        """Generate headers with internal auth token with specified claims."""
+        """Generate headers with auth token with specified claims.
+
+        If the API gateway should used according to the configuration setting
+        `use_api_gateway`, then an external access token will be created.
+        Otherwise an internal access token will be generated, either directly or
+        via the auth adapter, again depending on the setting `use_auth_adapter`.
+        """
         if title is None:
             title, name = self.split_title(name)
         sub = None if user_id else self.get_sub(name)
-        if self.use_auth_adapter:
+        if self.use_api_gateway or self.use_auth_adapter:
             token = self.external_access_token_from_name(
                 name=name, email=email, sub=sub, valid_seconds=valid_seconds
             )
-            token = self.internal_access_token_from_external_access_token(
-                token, for_registration=not user_id
-            )
+            if not self.use_api_gateway:
+                token = self.internal_access_token_from_external_access_token(
+                    token, for_registration=not user_id
+                )
         else:
             token = self.internal_access_token_from_name(
                 name=name,
@@ -200,6 +209,6 @@ class TokenGenerator:
 
 @fixture(name="auth", scope="session")
 def auth_fixture(config) -> TokenGenerator:
-    """Fixture that provides an internal auth token generator."""
+    """Fixture that provides an auth token generator."""
 
     return TokenGenerator(config)

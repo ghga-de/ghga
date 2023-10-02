@@ -38,7 +38,10 @@ scenarios("../features/33_download_files.feature")
 
 @given("the download buckets are empty")
 @async_step
-async def download_buckets_empty(s3: S3Fixture):
+async def download_buckets_empty(config: Config, s3: S3Fixture):
+    if config.use_api_gateway:
+        # black-box testing: cannot check buckets
+        return
     await s3.empty_given_buckets(["inbox", "staging"])
 
 
