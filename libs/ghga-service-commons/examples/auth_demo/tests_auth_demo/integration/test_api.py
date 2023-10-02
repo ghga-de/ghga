@@ -18,11 +18,12 @@
 
 import asyncio
 
-from auth_demo.config import Config
-from auth_demo.main import get_configured_app, get_configured_container
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 from pytest import fixture
+
+from auth_demo.config import Config
+from auth_demo.main import get_configured_app, get_configured_container
 
 
 async def get_app() -> FastAPI:
@@ -80,7 +81,7 @@ def test_users(client):
 
 
 def test_status(client):
-    """Test the status endpoint"""
+    """Test the status endpoint."""
     response = client.get("/status")
     assert response.status_code == status.HTTP_200_OK
 
@@ -98,7 +99,7 @@ def test_status(client):
 
 
 def test_reception(client):
-    """Test the reception endpoint"""
+    """Test the reception endpoint."""
     response = client.get("/reception")
     assert response.status_code == status.HTTP_200_OK
 
@@ -116,7 +117,7 @@ def test_reception(client):
 
 
 def test_lobby(client):
-    """Test the lobby endpoint"""
+    """Test the lobby endpoint."""
     response = client.get("/lobby")
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authenticated"}
@@ -132,7 +133,7 @@ def test_lobby(client):
 
 
 def test_lounge(client):
-    """Test the lounge endpoint"""
+    """Test the lounge endpoint."""
     response = client.get("/lounge")
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authenticated"}

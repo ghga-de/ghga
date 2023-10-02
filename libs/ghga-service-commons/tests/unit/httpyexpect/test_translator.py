@@ -16,7 +16,8 @@
 
 """Test the `translator` module."""
 
-from typing import Callable, NamedTuple, Sequence
+from collections.abc import Sequence
+from typing import Callable, NamedTuple
 from unittest.mock import Mock
 
 import pytest
@@ -30,7 +31,7 @@ from ghga_service_commons.httpyexpect.client.translator import ResponseTranslato
 from ghga_service_commons.httpyexpect.models import HttpExceptionBody
 
 
-class ExampleException(RuntimeError):
+class ExampleError(RuntimeError):
     """A exception that save all its input params."""
 
     def __init__(self, *params):
@@ -59,7 +60,7 @@ class Case(NamedTuple):
             exception_id="myTestException",
             description="Test error.",
             data={"test": "test"},
-            exception_factory=lambda status_code, exception_id, description, data: ExampleException(
+            exception_factory=lambda status_code, exception_id, description, data: ExampleError(
                 status_code, exception_id, description, data
             ),
             required_params=EXCEPTION_FACTORY_PARAMS,
@@ -70,17 +71,17 @@ class Case(NamedTuple):
             exception_id="myTestException",
             description="Test error.",
             data={"test": "test"},
-            exception_factory=lambda status_code, data: ExampleException(
-                status_code, data
-            ),
+            exception_factory=lambda status_code, data: ExampleError(status_code, data),
             required_params=["status_code", "data"],
         ),
     ],
 )
 def test_response_translator_error(case: Case):
-    """Test that the `ResponseTranslator` can interprete a mapping and an error response
-    correctly to translate it into a python exception."""
+    """Test the `ResponseTranslator`.
 
+    Test that the translator can interpret a mapping and an error response
+    correctly to translate it into a python exception.
+    """
     all_params = {
         "status_code": case.status_code,
         "exception_id": case.exception_id,
@@ -90,7 +91,7 @@ def test_response_translator_error(case: Case):
     required_param_values = [
         value for key, value in all_params.items() if key in case.required_params
     ]
-    expected_exception = ExampleException(*required_param_values)
+    expected_exception = ExampleError(*required_param_values)
 
     # create exception mapping mock:
     exception_map = Mock()
@@ -111,18 +112,21 @@ def test_response_translator_error(case: Case):
 
     # translate and get the python exception object:
     obtained_exception = translator.get_error()
-    assert isinstance(obtained_exception, ExampleException)
+    assert isinstance(obtained_exception, ExampleError)
     assert obtained_exception.params == expected_exception.params
 
     # translate into python exception and raise it:
-    with pytest.raises(ExampleException):
+    with pytest.raises(ExampleError):
         translator.raise_for_error()
 
 
 @pytest.mark.parametrize("status_code", [100, 200, 300])
 def test_response_translator_no_error(status_code: int):
-    """Test the behavior of `ResponseTranslator` when the response does not correspond
-    to a exception (e.g. 200 response code)"""
+    """Test the behavior of `ResponseTranslator`.
+
+    Test for when the response does not correspond
+    to a exception (e.g. 200 response code).
+    """
     # create http response mock:
     response = Mock()
     response.status_code = status_code
@@ -155,8 +159,11 @@ def test_response_translator_no_error(status_code: int):
     ),
 )
 def test_response_translator_unstructured(body: dict):
-    """Test the `ResponseTranslator` when receiving a response that does not conform
-    to the expected http exception body model."""
+    """Test the `ResponseTranslator`.
+
+    Test receiving a response that does not conform
+    to the expected http exception body model.
+    """
     status_code = 400
     # create http response mock:
     response = Mock()

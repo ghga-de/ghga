@@ -25,7 +25,6 @@ from ghga_service_commons.api.testing import AsyncTestClient
 @pytest.mark.asyncio
 async def test_async_test_client():
     """Test the AsyncTestClient."""
-
     app = FastAPI()
 
     @app.get("/")

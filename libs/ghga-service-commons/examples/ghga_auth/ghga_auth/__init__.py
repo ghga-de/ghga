@@ -14,5 +14,4 @@
 # limitations under the License.
 #
 
-"""A very simple REST API showing the use of GHGA internal auth tokens.
-"""
+"""A very simple REST API showing the use of GHGA internal auth tokens."""

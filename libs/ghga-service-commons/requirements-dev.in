@@ -1,0 +1,7 @@
+# requirements for development and testing this library
+
+# common requirements for development and testing
+-r requirements-dev-common.in
+
+# additional requirements can be listed here
+hexkit~=0.10.0

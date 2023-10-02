@@ -18,12 +18,13 @@
 
 from typing import Optional
 
+from dependency_injector.wiring import Provide, inject
+from fastapi import APIRouter, Depends
+
 from auth_demo.auth.policies import DemoAuthContext, get_auth, require_auth, require_vip
 from auth_demo.container import Container  # type: ignore
 from auth_demo.ports.hangout import HangoutPort
 from auth_demo.users import create_example_users
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
 
 router = APIRouter()
 

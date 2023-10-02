@@ -14,5 +14,4 @@
 # limitations under the License.
 #
 
-"""A simple REST API using token based authentication and authorization.
-"""
+"""A simple REST API using token based authentication and authorization."""

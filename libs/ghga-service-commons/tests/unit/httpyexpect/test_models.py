@@ -49,6 +49,5 @@ def test_http_exception_body(
     exception_id: str, description: str, data: dict, is_valid: bool
 ):
     """Test validation logic of the HTTPExceptionBody model."""
-
-    with nullcontext() if is_valid else pytest.raises(ValidationError):  # type: ignore
+    with nullcontext() if is_valid else pytest.raises(ValidationError):
         HttpExceptionBody(exception_id=exception_id, description=description, data=data)

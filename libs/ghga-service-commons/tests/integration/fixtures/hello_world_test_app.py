@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A test app that greets the world"""
+"""A test app that greets the world."""
 
 from fastapi import FastAPI
 
@@ -24,5 +24,5 @@ app = FastAPI()
 
 @app.get("/greet")
 def greet():
-    """Hello world endpoint"""
+    """Hello world endpoint."""
     return GREETING

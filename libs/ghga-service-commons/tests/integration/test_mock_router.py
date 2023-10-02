@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Tests for the MockRouter class"""
+"""Tests for the MockRouter class."""
 
 from typing import Union
 
@@ -34,7 +34,7 @@ BASE_URL = "http://localhost"
 
 
 def http_exception_handler(request: httpx.Request, exc: HttpException):
-    """An exception handler that can be attached to the MockRouter"""
+    """Define an exception handler that can be attached to the MockRouter."""
     assert isinstance(exc, HttpException)
     return httpx.Response(
         status_code=exc.status_code,
@@ -51,7 +51,7 @@ def test_non_existent_path(httpx_mock: HTTPXMock):  # noqa: F811
 
 
 def test_url_with_wrong_method(httpx_mock: HTTPXMock):  # noqa: F811
-    """Make a request to a url that is registered but with the wrong method"""
+    """Make a request to a url that is registered but with the wrong method."""
     httpx_mock.add_callback(callback=app.handle_request)
     with pytest.raises(HttpException):
         with httpx.Client(base_url=BASE_URL) as client:
@@ -59,7 +59,7 @@ def test_url_with_wrong_method(httpx_mock: HTTPXMock):  # noqa: F811
 
 
 def test_simplest_get(httpx_mock: HTTPXMock):  # noqa: F811
-    """Make sure there's nothing wrong with an endpoint path with no variables"""
+    """Make sure there's nothing wrong with an endpoint path with no variables."""
     httpx_mock.add_callback(callback=app.handle_request)
     with httpx.Client(base_url=BASE_URL) as client:
         response = client.get("/hello")
@@ -68,7 +68,7 @@ def test_simplest_get(httpx_mock: HTTPXMock):  # noqa: F811
 
 
 def test_get_one_path_variable(httpx_mock: HTTPXMock):  # noqa: F811
-    """Verify that a path terminating with one variable is okay"""
+    """Verify that a path terminating with one variable is okay."""
     httpx_mock.add_callback(callback=app.handle_request)
 
     expected = "beach_ball"
@@ -82,7 +82,7 @@ def test_get_one_path_variable(httpx_mock: HTTPXMock):  # noqa: F811
 
 
 def test_get_two_path_variables(httpx_mock: HTTPXMock):  # noqa: F811
-    """Make sure the handler can parse paths with more than one variable"""
+    """Make sure the handler can parse paths with more than one variable."""
     httpx_mock.add_callback(callback=app.handle_request)
 
     expected = ["4", 9]  # pass str number as a sanity check that it stays a str
@@ -96,7 +96,7 @@ def test_get_two_path_variables(httpx_mock: HTTPXMock):  # noqa: F811
 
 
 def test_get_with_bad_input(httpx_mock: HTTPXMock):  # noqa: F811
-    """Look for error raised with invalid path variables"""
+    """Look for error raised with invalid path variables."""
     httpx_mock.add_callback(callback=app.handle_request)
 
     expected = ["pass", "fail"]
@@ -153,10 +153,11 @@ def test_post_failure_with_handler(httpx_mock: HTTPXMock):  # noqa: F811
 
 
 def test_path_and_function_mismatch():
-    """Make sure that we get an error if path variable names and decorated endpoint
+    """Test endpoint decorators.
+
+    Make sure that we get an error if path variable names and decorated endpoint
     function parameter names are not identical.
     """
-
     # create a new MockRouter so we don't modify 'app'
     throwaway: MockRouter = MockRouter()
 
@@ -167,12 +168,11 @@ def test_path_and_function_mismatch():
 
         @throwaway.get("/dummy/{pram1}")
         def dummy(parameter1: int) -> None:
-            """Dummy function with parameter mismatch"""
+            """Define a dummy function with parameter mismatch."""
 
 
 def test_endpoint_missing_typehint():
-    """Make sure that we get an error when a registered endpoint lacks type hints"""
-
+    """Make sure that we get an error when a registered endpoint lacks type hints."""
     # create a new MockRouter so we don't modify 'app'
     throwaway: MockRouter = MockRouter()
 
@@ -183,15 +183,18 @@ def test_endpoint_missing_typehint():
 
         @throwaway.get("/dummy/{parameter1}")
         def dummy(parameter1) -> None:
-            """Dummy function with missing type-hint info"""
+            """Define a dummy function with missing type-hint info."""
 
 
 def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
-    """When a handler is provided and errors are specified, make sure only the specified
-    errors are passed to the handler, and that all other types are raised again."""
+    """Make sure only the specified errors are passed to the handler.
+
+    When a handler is provided and errors are specified,
+    all other types should be raised again.
+    """
 
     class TestValueError(ValueError):
-        """Subclass of ValueError to test handle_exception_subclasses"""
+        """Subclass of ValueError to test handle_exception_subclasses."""
 
     def handler(request: httpx.Request, exc: Union[ValueError, TestValueError]):
         return httpx.Response(status_code=500)
@@ -229,8 +232,11 @@ def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
 
 
 def test_exceptions_no_handler(httpx_mock: HTTPXMock):  # noqa: F811
-    """Errors specified in exceptions_to_handle should be raised normally if
-    exception_handler is not defined"""
+    """Test exception handlers.
+
+    Errors specified in exceptions_to_handle should be raised normally if
+    exception_handler is not defined.
+    """
     throwaway: MockRouter = MockRouter(
         exceptions_to_handle=(HttpException, HTTPException)
     )
@@ -247,7 +253,7 @@ def test_exceptions_no_handler(httpx_mock: HTTPXMock):  # noqa: F811
 
 
 def test_no_exceptions_specified(httpx_mock: HTTPXMock):  # noqa: F811
-    """Make sure nothing is passed to the error handler if we omit exceptions_to_handle"""
+    """Make sure nothing is passed to the error handler if we omit exceptions_to_handle."""
 
     def handler(request: httpx.Request, exc: HTTPException):
         return httpx.Response(status_code=500)

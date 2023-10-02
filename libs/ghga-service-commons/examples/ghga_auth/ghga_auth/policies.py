@@ -25,8 +25,8 @@ from typing import Optional
 from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from ghga_auth.container import Container  # type: ignore
 
+from ghga_auth.container import Container  # type: ignore
 from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.ghga import AuthContext, has_role, is_active
 from ghga_service_commons.auth.policies import (

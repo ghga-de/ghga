@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Config Parameter Modelling and Parsing"""
+"""Config Parameter Modelling and Parsing."""
 
 from functools import lru_cache
 

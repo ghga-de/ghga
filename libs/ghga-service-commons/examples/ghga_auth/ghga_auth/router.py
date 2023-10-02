@@ -19,6 +19,7 @@
 from typing import Optional
 
 from fastapi import APIRouter
+
 from ghga_auth.policies import (
     AuthContext,
     get_auth,

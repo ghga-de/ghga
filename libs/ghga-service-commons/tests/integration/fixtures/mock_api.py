@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Simple set of endpoints designed to test the MockRouter class"""
+"""Simple set of endpoints designed to test the MockRouter class."""
 import json
 
 import httpx
@@ -28,13 +28,13 @@ app: MockRouter = MockRouter(exceptions_to_handle=(HttpException,))
 # basic way to register an endpoint
 @app.get("/hello")
 def basic() -> httpx.Response:
-    """Basic endpoint"""
+    """Define a basic endpoint."""
     return httpx.Response(status_code=200, json={"hello": "world"})
 
 
 @app.get("/items")
 def get_all_items(request: httpx.Request) -> httpx.Response:
-    """Endpoint meant to match path with the POST endpoint defined below"""
+    """Endpoint meant to match path with the POST endpoint defined below."""
     if request.method == "POST":
         raise HttpException(
             status_code=500,
@@ -47,7 +47,7 @@ def get_all_items(request: httpx.Request) -> httpx.Response:
 
 @app.get("/items/{item_name}")
 def get_item(item_name: str) -> httpx.Response:
-    """Endpoint with only one path variable"""
+    """Endpoint with only one path variable."""
     return httpx.Response(status_code=200, json={"expected": item_name})
 
 

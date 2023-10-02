@@ -20,10 +20,10 @@ import asyncio
 
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
-from ghga_auth.config import AUTH_KEY_PAIR, Config
-from ghga_auth.main import get_configured_app, get_configured_container
 from pytest import fixture
 
+from ghga_auth.config import AUTH_KEY_PAIR, Config
+from ghga_auth.main import get_configured_app, get_configured_container
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 
 

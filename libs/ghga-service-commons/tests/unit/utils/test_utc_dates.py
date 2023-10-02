@@ -39,7 +39,7 @@ def test_does_not_accept_naive_datetimes(value):
     """Test that DateTimeUTC does not accept naive datetimes."""
 
     class Model(BaseModel):
-        """Test model"""
+        """Test model."""
 
         d: DateTimeUTC
 
@@ -61,7 +61,7 @@ def test_accept_aware_datetimes_in_utc(value):
     """Test that DateTimeUTC does not accepts timezone aware UTC datetimes."""
 
     class Model(BaseModel):
-        """Test model"""
+        """Test model."""
 
         dt: datetime
         du: DateTimeUTC
@@ -84,7 +84,7 @@ def test_converts_datetimes_to_utc(value):
     """Test that DateTimeUTC converts other time zones to UTC."""
 
     class Model(BaseModel):
-        """Test model"""
+        """Test model."""
 
         dt: datetime
         du: DateTimeUTC
@@ -102,7 +102,6 @@ def test_converts_datetimes_to_utc(value):
 
 def test_datetime_utc_constructor():
     """Test the constructor for DateTimeUTC values."""
-
     date = DateTimeUTC.construct(2022, 11, 15, 12, 0, 0)
     assert isinstance(date, DateTimeUTC)
     assert date.tzinfo is UTC

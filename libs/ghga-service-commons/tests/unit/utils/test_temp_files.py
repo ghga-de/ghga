@@ -20,7 +20,6 @@ from ghga_service_commons.utils.temp_files import big_temp_file
 
 def test_big_temp_file():
     """Test that the big_temp_file generator works."""
-
     with big_temp_file(42) as temp_file:
         assert temp_file.name.isascii()
         temp_file.seek(0)

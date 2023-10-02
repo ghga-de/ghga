@@ -41,13 +41,14 @@ class DummyAuthProvider(AuthContextProtocol[DummyAuthContext]):
     """Dummy auth provider for testing."""
 
     async def get_context(self, token: str) -> Optional[DummyAuthContext]:
+        """Return a dummy auth context."""
         if not token:
             return None
         return DummyAuthContext(token=token)
 
 
 def dummy_predicate(context: DummyAuthContext) -> bool:
-    """Dummy auth context predicate for testing."""
+    """Return a dummy auth context predicate for testing."""
     return context.token == "foo"
 
 

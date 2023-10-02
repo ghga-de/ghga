@@ -40,7 +40,7 @@ class AuthContext(BaseModel):
 
 
 class AuthConfig(JWTAuthConfig):
-    """Config parameters for testing"""
+    """Config parameters for testing."""
 
     auth_key: str = AUTH_KEY_PAIR.export(private_key=False)
     auth_algs: list[str] = ["RS256"]

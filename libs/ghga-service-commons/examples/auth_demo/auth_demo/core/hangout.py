@@ -18,8 +18,9 @@
 
 from typing import Optional
 
-from auth_demo.ports.hangout import HangoutPort
 from pydantic import BaseSettings, Field
+
+from auth_demo.ports.hangout import HangoutPort
 
 __all__ = ["Hangout", "HangoutConfig"]
 

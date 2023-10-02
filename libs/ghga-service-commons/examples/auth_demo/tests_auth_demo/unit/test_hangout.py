@@ -16,8 +16,9 @@
 
 """Test the core application."""
 
-from auth_demo.core import Hangout, HangoutConfig
 from pytest import fixture, mark
+
+from auth_demo.core import Hangout, HangoutConfig
 
 
 @fixture

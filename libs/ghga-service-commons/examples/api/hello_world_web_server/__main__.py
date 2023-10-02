@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Entrypoint of the package."""
 
 import asyncio
 
@@ -25,7 +25,7 @@ from .config import get_config
 
 
 def run():
-    """Run the service"""
+    """Run the service."""
     assert_tz_is_utc()
     asyncio.run(
         run_server(app="hello_world_web_server.__main__:app", config=get_config())
