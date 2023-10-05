@@ -1,0 +1,36 @@
+args: []
+command: []
+image:
+  name: "ghga/test-oidc-provider"
+  tag: "0.2.1"
+podAnnotations: {}
+port: "8080"
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256M"
+  requests:
+    cpu: "100m"
+    memory: "64M"
+
+config_prefix: top
+
+parameters:
+  api_root_path: /
+  auto_reload: false
+  client_id: test-client
+  cors_allow_credentials: null
+  cors_allowed_headers: null
+  cors_allowed_methods: null
+  cors_allowed_origins: null
+  docs_url: /docs
+  host: 0.0.0.0
+  issuer: https://op.test
+  log_level: info
+  openapi_url: /openapi.json
+  port: 8080
+  service_name: top
+  service_url: http://localhost:8080
+  user_domain: home.org
+  valid_seconds: 3600
+  workers: 1
