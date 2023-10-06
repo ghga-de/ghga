@@ -90,7 +90,7 @@ async def test_rejects_user_info_with_missing_name(httpx_mock):
     """Test the token exchange for a missing name in user info."""
     access_token = create_access_token()
     user_dao: UserDao = cast(UserDao, DummyUserDao(ext_id="not.john@aai.org"))
-    user_info = {**USER_INFO, "name": None}  # type: ignore
+    user_info = {**USER_INFO, "name": None}
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=user_info)
     with raises(auth.UserInfoError, match="Missing value for name claim"):
         await auth.exchange_token(access_token, pass_sub=True, user_dao=user_dao)
@@ -101,7 +101,7 @@ async def test_rejects_user_info_with_missing_email(httpx_mock):
     """Test the token exchange for a missing email in user info."""
     access_token = create_access_token()
     user_dao: UserDao = cast(UserDao, DummyUserDao(ext_id="not.john@aai.org"))
-    user_info = {**USER_INFO, "email": None}  # type: ignore
+    user_info = {**USER_INFO, "email": None}
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=user_info)
     with raises(auth.UserInfoError, match="Missing value for email claim"):
         await auth.exchange_token(access_token, pass_sub=True, user_dao=user_dao)

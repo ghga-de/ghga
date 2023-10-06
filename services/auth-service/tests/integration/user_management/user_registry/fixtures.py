@@ -15,7 +15,7 @@
 
 """Fixtures for the user management integration tests"""
 
-from typing import Generator
+from collections.abc import Generator
 
 from fastapi.testclient import TestClient
 from pytest import fixture
@@ -39,7 +39,6 @@ def fixture_client() -> TestClient:
 @fixture(name="client_with_db")
 def fixture_client_with_db() -> Generator[TestClient, None, None]:
     """Get test client for the user manager with a test database."""
-
     with MongoDbContainer() as mongodb:
         connection_url = mongodb.get_connection_url()
         config = Config(

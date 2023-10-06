@@ -30,13 +30,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:0.5.2
+docker pull ghga/auth-service:0.5.3
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:0.5.2 .
+docker build -t ghga/auth-service:0.5.3 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -44,7 +44,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:0.5.2 --help
+docker run -p 8080:8080 ghga/auth-service:0.5.3 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -62,31 +62,31 @@ auth_service --help
 The service requires the following configuration parameters:
 - **`auth_key`** *(string)*
 
-- **`auth_algs`** *(array)*: Default: `['ES256']`.
+- **`auth_algs`** *(array)*: Default: `["ES256"]`.
 
   - **Items** *(string)*
 
-- **`auth_check_claims`** *(object)*: Default: `{'name': None, 'email': None, 'iat': None, 'exp': None}`.
+- **`auth_check_claims`** *(object)*: Default: `{"name": null, "email": null, "iat": null, "exp": null}`.
 
 - **`auth_map_claims`** *(object)*: Can contain additional properties. Default: `{}`.
 
   - **Additional Properties** *(string)*
 
-- **`host`** *(string)*: IP of the host. Default: `127.0.0.1`.
+- **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
 - **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 
-- **`log_level`** *(string)*: Must be one of: `['critical', 'error', 'warning', 'info', 'debug', 'trace']`. Default: `debug`.
+- **`log_level`** *(string)*: Must be one of: `["critical", "error", "warning", "info", "debug", "trace"]`. Default: `"debug"`.
 
-- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `False`.
+- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
 - **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
 
-- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `/`.
+- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `"/"`.
 
-- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `/openapi.json`.
+- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
 
-- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `/docs`.
+- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
 - **`cors_allowed_origins`** *(array)*: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.
 
@@ -102,49 +102,55 @@ The service requires the following configuration parameters:
 
   - **Items** *(string)*
 
-- **`service_name`** *(string)*: Default: `auth_service`.
+- **`service_name`** *(string)*: Default: `"auth_service"`.
 
-- **`run_auth_adapter`** *(boolean)*: Default: `False`.
+- **`run_auth_adapter`** *(boolean)*: Default: `false`.
 
-- **`api_ext_path`** *(string)*: Default: `/api/auth`.
+- **`api_ext_path`** *(string)*: Default: `"/api/auth"`.
 
 - **`auth_ext_keys`** *(string)*
 
-- **`auth_ext_algs`** *(array)*: Default: `['RS256', 'ES256']`.
+- **`auth_ext_algs`** *(array)*: Default: `["RS256", "ES256"]`.
 
   - **Items** *(string)*
 
 - **`basic_auth_credentials`** *(string)*
 
-- **`basic_auth_realm`** *(string)*: Default: `GHGA Data Portal`.
+- **`basic_auth_realm`** *(string)*: Default: `"GHGA Data Portal"`.
 
-- **`public_paths`** *(array)*: Default: `['/.well-known/*', '/service-logo.png']`.
+- **`public_paths`** *(array)*: Default: `["/.well-known/*", "/service-logo.png"]`.
 
   - **Items** *(string)*
 
-- **`include_apis`** *(array)*: Default: `['users']`.
+- **`include_apis`** *(array)*: Default: `["users"]`.
 
-  - **Items** *(string)*: Must be one of: `['users', 'claims']`.
+  - **Items** *(string)*: Must be one of: `["users", "claims"]`.
 
 - **`add_as_data_stewards`** *(array)*: Default: `[]`.
 
   - **Items**
 
-- **`oidc_authority_url`** *(string)*: Default: `https://proxy.aai.lifescience-ri.eu`.
+    - **Any of**
 
-- **`oidc_userinfo_endpoint`** *(string)*: Default: `https://proxy.aai.lifescience-ri.eu/OIDC/userinfo`.
+      - *string*
 
-- **`oidc_client_id`** *(string)*: Default: `ghga-data-portal`.
+      - *object*
 
-- **`organization_url`** *(string)*: Default: `https://ghga.de`.
+- **`oidc_authority_url`** *(string, format: uri)*: Default: `"https://proxy.aai.lifescience-ri.eu"`.
 
-- **`db_url`** *(string)*: Default: `mongodb://mongodb:27017`.
+- **`oidc_userinfo_endpoint`** *(string, format: uri)*: Default: `"https://proxy.aai.lifescience-ri.eu/OIDC/userinfo"`.
 
-- **`db_name`** *(string)*: Default: `user-management`.
+- **`oidc_client_id`** *(string)*: Default: `"ghga-data-portal"`.
 
-- **`users_collection`** *(string)*: Default: `users`.
+- **`organization_url`** *(string, format: uri)*: Default: `"https://ghga.de"`.
 
-- **`claims_collection`** *(string)*: Default: `claims`.
+- **`db_url`** *(string, format: password)*: Default: `"mongodb://mongodb:27017"`.
+
+- **`db_name`** *(string)*: Default: `"user-management"`.
+
+- **`users_collection`** *(string)*: Default: `"users"`.
+
+- **`claims_collection`** *(string)*: Default: `"claims"`.
 
 
 ### Usage:
@@ -201,7 +207,7 @@ Moreover, inside the devcontainer, a convenience commands `dev_install` is avail
 It installs the service with all development dependencies, installs pre-commit.
 
 The installation is performed automatically when you build the devcontainer. However,
-if you update dependencies in the [`./setup.cfg`](./setup.cfg) or the
+if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
 [`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
 
 ## License

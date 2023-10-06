@@ -46,13 +46,13 @@ def test_is_valid_claim():
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.RESEARCHER_STATUS,
-        visa_value="https://home.org",
-        source="https://home.org",
+        visa_value="https://home.org",  # type: ignore
+        source="https://home.org",  # type: ignore
         assertion_date=datetime_utc(2022, 11, 1),
         valid_from=datetime_utc(2022, 11, 15),
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
-    )  # pyright: ignore
+    )
     assert is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 17))
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2020, 1, 1))
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 7))
@@ -70,14 +70,14 @@ def test_is_internal_claim():
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.GHGA_ROLE,
-        visa_value="data_steward@some.org",
+        visa_value="data_steward@some.org",  # type: ignore
         source=CONFIG.organization_url,
         assertion_date=datetime_utc(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
         valid_from=datetime_utc(2022, 11, 15),
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
-    )  # pyright: ignore
+    )
     assert is_internal_claim(good_claim, VisaType.GHGA_ROLE)
     assert not is_internal_claim(good_claim, VisaType.RESEARCHER_STATUS)
 
@@ -106,14 +106,14 @@ def test_is_data_steward_claim():
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.GHGA_ROLE,
-        visa_value="data_steward@some.org",
+        visa_value="data_steward@some.org",  # type: ignore
         source=CONFIG.organization_url,
         assertion_date=datetime_utc(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
         valid_from=datetime_utc(2022, 11, 15),
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
-    )  # pyright: ignore
+    )
     assert is_data_steward_claim(good_claim)
 
     def check_tampered_claim(**kwargs):
@@ -161,14 +161,14 @@ def test_has_download_access_for_dataset():
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value=f"{org_url}/datasets/some-dataset-id",
+        visa_value=f"{org_url}/datasets/some-dataset-id",  # type: ignore
         source=org_url,
         assertion_date=datetime_utc(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
         valid_from=datetime_utc(2022, 11, 15),
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
-    )  # pyright: ignore
+    )
     assert has_download_access_for_dataset(good_claim, "some-dataset-id")
     assert not has_download_access_for_dataset(good_claim, "another-dataset-id")
 
@@ -194,14 +194,14 @@ def test_dateset_id_when_download_access():
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value=f"{org_url}/datasets/some-dataset-id",
+        visa_value=f"{org_url}/datasets/some-dataset-id",  # type: ignore
         source=org_url,
         assertion_date=datetime_utc(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
         valid_from=datetime_utc(2022, 11, 15),
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
-    )  # pyright: ignore
+    )
     assert dataset_id_for_download_access(good_claim) == "some-dataset-id"
 
     def check_tampered_claim(**kwargs):

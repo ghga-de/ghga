@@ -12,25 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""
-Manage request and response headers
-"""
+"""Core utilities for the User Registry."""
 
-from typing import Optional
-
-__all__ = ["get_bearer_token"]
+__all__ = ["is_internal_id", "is_external_id"]
 
 
-def get_bearer_token(*header_values: Optional[str]) -> Optional[str]:
-    """Extract the bearer token from the authorization header.
+def is_internal_id(id_: str) -> bool:
+    """Check if the passed ID is an internal user id."""
+    if not id_ or not isinstance(id_, str):
+        return False
+    return len(id_) == 36 and id_.count("-") == 4 and "@" not in id_
 
-    Multiple possible authorization header values can be passed,
-    in case one of them is used for Basic authentication.
 
-    Return None if no bearer token was found in one of the header values.
-    """
-    for header_value in header_values:
-        if header_value and header_value.startswith("Bearer "):
-            return header_value.removeprefix("Bearer ")
-    return None
+def is_external_id(id_: str) -> bool:
+    """Check if the passed ID is an external user id."""
+    if not id_ or not isinstance(id_, str):
+        return False
+    return len(id_) > 8 and id_.count("@") == 1

@@ -16,9 +16,10 @@
 """Utils for testing"""
 
 import json
+from collections.abc import AsyncIterator, Mapping
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, AsyncIterator, Mapping, Optional, Union
+from typing import Any, Optional, Union
 
 from fastapi import Request
 from ghga_service_commons.api import ApiConfigBase
@@ -241,14 +242,14 @@ class DummyClaimDao:
             id="dummy-claim-id",
             user_id="james@ghga.de",
             visa_type=VisaType.GHGA_ROLE,
-            visa_value="data_steward@some.org",
+            visa_value="data_steward@some.org",  # type: ignore
             source=CONFIG.organization_url,
             assertion_date=valid_date - timedelta(14),
             asserted_by=AuthorityLevel.SYSTEM,
             valid_from=valid_date - timedelta(7),
             valid_until=valid_date + timedelta(7),
             creation_date=valid_date - timedelta(10),
-        )  # pyright: ignore
+        )
 
     async def get_by_id(self, id_: str) -> Claim:
         """Get the dummy user claim via its ID."""

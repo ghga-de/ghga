@@ -15,9 +15,9 @@
 
 """Fixtures for the auth adapter integration tests"""
 
+from collections.abc import Generator
 from importlib import reload
 from os import environ
-from typing import Generator
 
 from fastapi.testclient import TestClient
 from pytest import fixture

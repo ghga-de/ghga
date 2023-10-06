@@ -121,6 +121,7 @@ class ClaimValidity(BaseDto):
     )
 
     @validator("valid_until")
+    @classmethod
     def period_is_valid(cls, value, values):
         """Validate that the dates of the period are in the right order."""
         if "valid_from" in values and value <= values["valid_from"]:

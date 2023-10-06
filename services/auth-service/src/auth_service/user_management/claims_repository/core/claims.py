@@ -14,9 +14,7 @@
 # limitations under the License.
 #
 
-"""
-Definitions and helper functions for validating user claims.
-"""
+"""Definitions and helper functions for validating user claims."""
 
 from datetime import timedelta
 from typing import Callable, Optional

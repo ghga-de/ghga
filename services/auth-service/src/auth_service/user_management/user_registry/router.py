@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"Routes for managing users"
+"""Routes for managing users"""
 
 import logging
 
@@ -208,10 +208,9 @@ async def get_user(
         raise HTTPException(
             status_code=500, detail="The user cannot be requested."
         ) from error
-    if not is_steward(auth_context):
+    if not is_steward(auth_context) and user.status_change is not None:
         # only data stewards should be able to see the status change information
-        if user.status_change is not None:
-            user = user.copy(update={"status_change": None})
+        user = user.copy(update={"status_change": None})
     return user
 
 

@@ -61,7 +61,6 @@ def non_mocked_hosts() -> list:
 
 def test_get_from_root(client):
     """Test that a simple GET request passes."""
-
     response = client.get("/")
 
     assert response.status_code == status.HTTP_200_OK
@@ -70,7 +69,6 @@ def test_get_from_root(client):
 
 def test_get_from_some_path(client):
     """Test that a simple GET request passes."""
-
     response = client.get("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
@@ -79,7 +77,6 @@ def test_get_from_some_path(client):
 
 def test_get_from_some_path_with_query_parameters(client):
     """Test that a simple GET request passes."""
-
     response = client.get("/some/path?foo=1&bar=2")
 
     assert response.status_code == status.HTTP_200_OK
@@ -88,7 +85,6 @@ def test_get_from_some_path_with_query_parameters(client):
 
 def test_patch_to_some_path(client):
     """Test that a PATCH request to a random path passes."""
-
     response = client.patch("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
@@ -97,7 +93,6 @@ def test_patch_to_some_path(client):
 
 def test_post_to_some_path(client):
     """Test that a POST request to a random path passes."""
-
     response = client.post("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
@@ -106,7 +101,6 @@ def test_post_to_some_path(client):
 
 def test_delete_to_some_path(client):
     """Test that a DELETE request to a random path passes."""
-
     response = client.delete("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
@@ -115,7 +109,6 @@ def test_delete_to_some_path(client):
 
 def test_basic_auth(with_basic_auth, client):
     """Test that the root path can be protected with basic authentication."""
-
     response = client.get("/")
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -140,7 +133,6 @@ def test_basic_auth(with_basic_auth, client):
 
 def test_basic_auth_well_known(with_basic_auth, client):
     """Test that fetching from well-known path is excluded from basic authentication."""
-
     assert with_basic_auth
 
     response = client.get("/.well-known/some/thing")
@@ -174,7 +166,6 @@ def test_basic_auth_well_known(with_basic_auth, client):
 
 def test_basic_auth_service_logo(with_basic_auth, client):
     """Test that fetching the service logo is excluded from basic authentication."""
-
     assert with_basic_auth
 
     response = client.get("/service-logo.png")
@@ -192,7 +183,6 @@ def test_basic_auth_service_logo(with_basic_auth, client):
 
 def test_does_not_authorize_invalid_users(client):
     """Test that unauthenticated or invalid users are not authorized."""
-
     # User without Authorization token
     response = client.get("/some/path")
     assert response.status_code == status.HTTP_200_OK
@@ -262,7 +252,6 @@ def test_token_exchange_for_unknown_user(
     client, httpx_mock
 ):  # pylint:disable=too-many-statements
     """Test the token exchange for authenticated but unknown users."""
-
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     user_dao = DummyUserDao(ext_id="not.john@aai.org")
@@ -369,7 +358,6 @@ def test_token_exchange_for_known_user(
     client, httpx_mock
 ):  # pylint:disable=too-many-statements
     """Test the token exchange for authenticated and registered users."""
-
     user_dao: UserDao = cast(UserDao, DummyUserDao())
     client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
@@ -485,7 +473,6 @@ def test_token_exchange_for_known_user(
 
 def test_token_exchange_with_x_token(client, httpx_mock):
     """Test that the external access token can be passed in separate header."""
-
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     user_dao = DummyUserDao(ext_id="not.john@aai.org")
@@ -533,7 +520,6 @@ def test_token_exchange_for_known_data_steward(
     client, httpx_mock
 ):  # pylint:disable=too-many-statements
     """Test the token exchange for an authenticated data steward."""
-
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     # add a dummy user who is a data steward

@@ -14,9 +14,7 @@
 # limitations under the License.
 #
 
-"""
-Functions to seed the repository with user claims.
-"""
+"""Functions to seed the repository with user claims."""
 
 import logging
 from typing import Union

@@ -43,7 +43,6 @@ MAX_USER_DATA = {**MIN_USER_DATA, **OPT_USER_DATA}
 
 def test_health_check(client):
     """Test that the health check endpoint works."""
-
     response = client.get("/health")
 
     assert response.status_code == status.HTTP_200_OK
@@ -52,7 +51,6 @@ def test_health_check(client):
 
 def test_get_from_a_random_path(client):
     """Test that a GET request to a random path raises a not found error."""
-
     response = client.post("/some/random/path")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -60,7 +58,6 @@ def test_get_from_a_random_path(client):
 
 def test_post_user(client_with_db, user_headers):
     """Test that registering a user works."""
-
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
 
@@ -91,7 +88,6 @@ def test_post_user(client_with_db, user_headers):
 
 def test_post_user_with_minimal_data(client_with_db, user_headers):
     """Test that registering a user with minimal data works."""
-
     user_data = MIN_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
 
@@ -111,7 +107,7 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
 
-    assert user == {**MIN_USER_DATA, **dict.fromkeys(OPT_USER_DATA)}  # type: ignore
+    assert user == {**MIN_USER_DATA, **dict.fromkeys(OPT_USER_DATA)}
 
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
 
@@ -122,7 +118,6 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
 
 def test_post_user_with_status(client_with_db, user_headers):
     """Test that status field is rejected when registering a user."""
-
     user_data = {**MIN_USER_DATA, "status": "active"}
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
 
@@ -131,7 +126,6 @@ def test_post_user_with_status(client_with_db, user_headers):
 
 def test_post_user_with_different_name(client, user_headers):
     """Test that registering a user with different name does not work."""
-
     user_data = {**MAX_USER_DATA, "name": "Max Liebermann"}
     response = client.post("/users", json=user_data, headers=user_headers)
 
@@ -142,7 +136,6 @@ def test_post_user_with_different_name(client, user_headers):
 
 def test_post_user_with_different_email(client, user_headers):
     """Test that registering a user with different email does not work."""
-
     user_data = {**MAX_USER_DATA, "email": "max@fake.org"}
     response = client.post("/users", json=user_data, headers=user_headers)
 
@@ -153,7 +146,6 @@ def test_post_user_with_different_email(client, user_headers):
 
 def test_post_user_with_invalid_email(client, user_headers):
     """Test that registering a user with invalid email does not work."""
-
     user_data = {**MAX_USER_DATA, "email": "invalid"}
     response = client.post("/users", json=user_data, headers=user_headers)
 
@@ -164,7 +156,6 @@ def test_post_user_with_invalid_email(client, user_headers):
 
 def test_post_user_with_different_ext_id(client, user_headers):
     """Test that registering a user with a different external ID does not work."""
-
     user_data = {**MAX_USER_DATA, "ext_id": "frodo@ls.org"}
     response = client.post("/users", json=user_data, headers=user_headers)
 
@@ -175,7 +166,6 @@ def test_post_user_with_different_ext_id(client, user_headers):
 
 def test_post_user_unauthenticated(client_with_db):
     """Test that registering a user without authentication does not work."""
-
     response = client_with_db.post("/users", json=MAX_USER_DATA)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -185,7 +175,6 @@ def test_post_user_unauthenticated(client_with_db):
 
 def test_put_user(client_with_db, user_headers):
     """Test that updating a user works."""
-
     old_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=old_data, headers=user_headers)
     assert response.status_code == status.HTTP_201_CREATED
@@ -222,7 +211,6 @@ def test_put_user(client_with_db, user_headers):
 
 def test_put_nonexisting_user(client_with_db):
     """Test updating a non-existing user."""
-
     user_data = MAX_USER_DATA.copy()
     del user_data["ext_id"]
 
@@ -235,7 +223,6 @@ def test_put_nonexisting_user(client_with_db):
 
 def test_put_user_with_too_much_data(client_with_db):
     """Test that updating a user with too much data does not work."""
-
     user_data = MAX_USER_DATA
     id_ = "nonexisting-user-id"
     headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
@@ -248,7 +235,6 @@ def test_put_user_with_too_much_data(client_with_db):
 
 def test_put_user_with_invalid_data(client_with_db):
     """Test that updating a user with invalid email does not work."""
-
     user_data = MAX_USER_DATA.copy()
     del user_data["ext_id"]
     id_ = "nonexisting-user-id"
@@ -264,7 +250,6 @@ def test_put_user_with_invalid_data(client_with_db):
 
 def test_put_inactive_user(client_with_db, user_headers):
     """Test updating an inactive user."""
-
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     assert response.status_code == status.HTTP_201_CREATED
@@ -285,7 +270,6 @@ def test_put_inactive_user(client_with_db, user_headers):
 
 def test_put_user_unauthenticated(client_with_db, user_headers):
     """Test that updating a user without authentication does not work."""
-
     response = client_with_db.put("/users/nonexisting-user-id", json=MAX_USER_DATA)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -295,7 +279,6 @@ def test_put_user_unauthenticated(client_with_db, user_headers):
 
 def test_get_non_existing_user(client_with_db, steward_headers):
     """Test requesting a non-existing user."""
-
     response = client_with_db.get("/users/bad@example.org", headers=steward_headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -305,7 +288,6 @@ def test_get_non_existing_user(client_with_db, steward_headers):
 
 def test_get_different_user(client, user_headers):
     """Test requesting a different user."""
-
     response = client.get("/users/other@example.org", headers=user_headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -321,7 +303,6 @@ def test_get_different_user(client, user_headers):
 
 def test_get_user_via_id(client_with_db, user_headers):
     """Test that a registered user can be found via internal ID."""
-
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     assert response.status_code == status.HTTP_201_CREATED
@@ -345,7 +326,6 @@ def test_get_user_via_id(client_with_db, user_headers):
 
 def test_get_user_via_ext_id(client_with_db, user_headers):
     """Test that a registered user can be found via external ID."""
-
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     expected_user = response.json()
@@ -364,7 +344,6 @@ def test_get_different_user_as_data_steward(
     client_with_db, user_headers, steward_headers
 ):
     """Test requesting a different user as a data steward."""
-
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     assert response.status_code == status.HTTP_201_CREATED
@@ -389,7 +368,6 @@ def test_get_different_user_as_data_steward(
 
 def test_get_user_unauthenticated(client):
     """Test requesting a user without authentication."""
-
     response = client.get("/users/bad@example.org")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -399,7 +377,6 @@ def test_get_user_unauthenticated(client):
 
 def test_patch_non_existing_user(client_with_db, steward_headers):
     """Test modifying a non-existing user."""
-
     update_data = {"title": "Prof."}
     response = client_with_db.patch(
         "/users/foo-bar-baz-qux", json=update_data, headers=steward_headers
@@ -412,7 +389,6 @@ def test_patch_non_existing_user(client_with_db, steward_headers):
 
 def test_patch_user_as_data_steward(client_with_db, user_headers, steward_headers):
     """Test that a data steward can modify a registered user."""
-
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     expected_user = response.json()
@@ -469,7 +445,6 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
 
 def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     """Test that a data steward can modify a registered user partially."""
-
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     assert response.status_code == status.HTTP_201_CREATED
@@ -527,7 +502,6 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
 
 def test_patch_user_as_same_user(client_with_db, user_headers, steward_headers):
     """Test that users can modify their title, but not their status."""
-
     user_data = MAX_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     assert response.status_code == status.HTTP_201_CREATED
@@ -574,7 +548,6 @@ def test_patch_user_as_same_user(client_with_db, user_headers, steward_headers):
 
 def test_patch_different_user_as_normal_user(client, user_headers):
     """Test that normal users cannot modify other users."""
-
     update_data = {"title": "Prof."}
     response = client.patch(
         "/users/somebody-else", json=update_data, headers=user_headers
@@ -587,7 +560,6 @@ def test_patch_different_user_as_normal_user(client, user_headers):
 
 def test_patch_user_unauthenticated(client):
     """Test that modifying a user without authentication does not work."""
-
     update_data = {"title": "Prof."}
     response = client.patch("/users/foo-bar-baz-qux", json=update_data)
 
@@ -598,7 +570,6 @@ def test_patch_user_unauthenticated(client):
 
 def test_delete_non_existing_user(client, steward_headers):
     """Test deleting a non-existing user."""
-
     response = client.delete("/users/foo-bar-baz-qux", headers=steward_headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -608,7 +579,6 @@ def test_delete_non_existing_user(client, steward_headers):
 
 def test_delete_user_as_data_steward(client_with_db, user_headers, steward_headers):
     """Test that a registered user can be deleted by a data steward."""
-
     user_data = MIN_USER_DATA
     response = client_with_db.post("/users", json=user_data, headers=user_headers)
     assert response.status_code == status.HTTP_201_CREATED
@@ -638,7 +608,6 @@ def test_delete_user_as_data_steward(client_with_db, user_headers, steward_heade
 
 def test_delete_user_as_same_user(client):
     """Test that a registered user can be deleted by a data steward."""
-
     headers = get_headers_for(
         id="some-id", name="Max Headroom", email="max@example.org"
     )
@@ -661,7 +630,6 @@ def test_delete_user_as_same_user(client):
 
 def test_delete_user_unauthenticated(client):
     """Test that deleting a user without authentication does not work."""
-
     response = client.delete("/users/foo-bar-baz-qux")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN

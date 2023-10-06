@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"Routes for managing user claims"
+"""Routes for managing user claims"""
 
 import logging
 

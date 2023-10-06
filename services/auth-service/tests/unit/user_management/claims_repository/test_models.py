@@ -37,30 +37,34 @@ def test_good_visa_type():
     """Test creating a visa with an existing type"""
     ClaimCreation(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value="https://foo.org",
+        visa_value="https://foo.org",  # type: ignore
         assertion_date=datetime_utc(2022, 9, 1, 12, 0),
         valid_from=datetime_utc(2022, 10, 1, 0, 0),
         valid_until=datetime_utc(2022, 10, 31, 23, 59),
-        source="https://foo-bar.org",
-    )  # pyright: ignore
+        source="https://foo-bar.org",  # type: ignore
+    )
 
 
 def test_bas_visa_type():
     """Test creating a visa with a non-existing type"""
     with raises(ValueError):
         ClaimCreation(
-            visa_type="UNKNOWN_TYPE",
-            visa_value="https://foo.org",
+            visa_type="UNKNOWN_TYPE",  # type: ignore
+            visa_value="https://foo.org",  # type: ignore
             assertion_date=datetime_utc(2022, 9, 1, 12, 0),
             valid_from=datetime_utc(2022, 10, 1, 0, 0),
             valid_until=datetime_utc(2022, 10, 31, 23, 59),
-            source="https://foo-bar.org",
-        )  # pyright: ignore
+            source="https://foo-bar.org",  # type: ignore
+        )
 
 
 @mark.parametrize(
     "value",
-    ["foo@bar.org", "https://foo.org", [Identity(iss="https://bar.org", sub="baz")]],
+    [
+        "foo@bar.org",
+        "https://foo.org",
+        [Identity(iss="https://bar.org", sub="baz")],  # type: ignore
+    ],
 )
 def test_good_visa_values(value):
     """Test creating a valid visa value"""
@@ -70,8 +74,8 @@ def test_good_visa_values(value):
         assertion_date=datetime_utc(2022, 9, 1, 12, 0),
         valid_from=datetime_utc(2022, 10, 1, 0, 0),
         valid_until=datetime_utc(2022, 10, 31, 23, 59),
-        source="https://foo-bar.org",
-    )  # pyright: ignore
+        source="https://foo-bar.org",  # type: ignore
+    )
 
 
 @mark.parametrize(
@@ -90,25 +94,25 @@ def test_bad_visa_values(value):
     """Test creating an invalid visa value"""
     with raises(ValueError):
         ClaimCreation(
-            visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
+            visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,  # type: ignore
             visa_value=value,
             assertion_date=datetime_utc(2022, 9, 1, 12, 0),
             valid_from=datetime_utc(2022, 10, 1, 0, 0),
             valid_until=datetime_utc(2022, 10, 31, 23, 59),
-            source="https://foo-bar.org",
-        )  # pyright: ignore
+            source="https://foo-bar.org",  # type: ignore
+        )
 
 
 def test_conditions():
     """Test creating a complex condition"""
     ClaimCreation(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value="baz@foo-bar.org",
+        visa_value="baz@foo-bar.org",  # type: ignore
         assertion_date=datetime_utc(2022, 9, 1, 12, 0),
         valid_from=datetime_utc(2022, 10, 1, 0, 0),
         valid_until=datetime_utc(2022, 10, 31, 23, 59),
-        source="https://foo-bar.org",
-        sub_source="https://baz.foo-bar.org",
+        source="https://foo-bar.org",  # type: ignore
+        sub_source="https://baz.foo-bar.org",  # type: ignore
         asserted_by=AuthorityLevel.DAC,
         conditions=[
             [
@@ -156,7 +160,7 @@ def test_conditions():
                 )
             ],
         ],
-    )  # pyright: ignore
+    )
 
 
 @mark.parametrize(
@@ -188,29 +192,29 @@ def test_validator_period(valid_from, valid_until):
     """Test the validator for valid_from and valid_until"""
     ClaimCreation(
         visa_type=VisaType.RESEARCHER_STATUS,
-        visa_value="foo@bar.org",
+        visa_value="foo@bar.org",  # type: ignore
         assertion_date=datetime_utc(2022, 9, 1, 12, 0),
         valid_from=valid_from,
         valid_until=valid_until,
-        source="https://foo.org",
-    )  # pyright: ignore
+        source="https://foo.org",  # type: ignore
+    )
 
     with raises(ValueError, match="'valid_until' must be later than 'valid_from'"):
         ClaimCreation(
             visa_type=VisaType.RESEARCHER_STATUS,
-            visa_value="foo@bar.org",
+            visa_value="foo@bar.org",  # type: ignore
             assertion_date=datetime_utc(2022, 9, 1, 12, 0),
             valid_from=datetime_utc(2022, 10, 1),
             valid_until=valid_from,
-            source="https://foo.org",
-        )  # pyright: ignore
+            source="https://foo.org",  # type: ignore
+        )
 
     with raises(ValueError, match="'valid_until' must be later than 'valid_from'"):
         ClaimCreation(
             visa_type=VisaType.RESEARCHER_STATUS,
-            visa_value="foo@bar.org",
+            visa_value="foo@bar.org",  # type: ignore
             assertion_date=datetime_utc(2022, 9, 1, 12, 0),
             valid_from=valid_from,
             valid_until=valid_from,
-            source="https://foo.org",
-        )  # pyright: ignore
+            source="https://foo.org",  # type: ignore
+        )

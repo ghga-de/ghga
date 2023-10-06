@@ -57,7 +57,6 @@ if API_EXT_PATH:
 
 def add_public_routes():
     """Add all public (unprotected) routes."""
-
     for route in CONFIG.public_paths:
         if route.endswith("/*"):
             route = route[:-1] + "{path:path}"
@@ -75,7 +74,7 @@ add_public_routes()
 
 
 @app.api_route("/{path:path}", methods=ALL_METHODS)
-async def ext_auth(  # pylint:disable=too-many-arguments
+async def ext_auth(  # noqa: PLR0913
     path: str,
     request: Request,
     response: Response,

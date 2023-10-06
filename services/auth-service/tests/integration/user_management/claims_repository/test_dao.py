@@ -41,7 +41,6 @@ async def test_claim_creation(
     mongodb_fixture,  # noqa: F811  pylint:disable=redefined-outer-name
 ):
     """Test creating a new user claim"""
-
     config = get_config()
     claim_dao_factory_config = get_claim_dao_factory_config(config=config)
     claim_dao_factory = get_claim_dao_factory(
@@ -52,13 +51,13 @@ async def test_claim_creation(
     claim_data = ClaimFullCreation(
         user_id="some-internal-user-id",
         visa_type=VisaType.GHGA_ROLE,
-        visa_value="data-steward@ghga.de",
+        visa_value="data-steward@ghga.de",  # type: ignore
         assertion_date=datetime_utc(2022, 9, 1),
         valid_from=datetime_utc(2022, 10, 1),
         valid_until=datetime_utc(2022, 10, 31),
-        source="https://ghga.de",
+        source="https://ghga.de",  # type: ignore
         creation_date=datetime_utc(2022, 9, 15),
-    )  # pyright: ignore
+    )
     claim = await claim_dao.insert(claim_data)
     assert claim and isinstance(claim, Claim)
     assert claim.id is not None

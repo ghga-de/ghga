@@ -78,5 +78,4 @@ configure_app(app, config=get_config())
 @app.get("/health", summary="health", tags=["health"], status_code=status.HTTP_200_OK)
 async def health():
     """Used to check that this service is alive"""
-
     return {"status": "OK"}

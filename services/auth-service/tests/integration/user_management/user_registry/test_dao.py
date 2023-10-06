@@ -45,7 +45,6 @@ async def test_user_creation(
     mongodb_fixture,  # noqa: F811  pylint:disable=redefined-outer-name
 ):
     """Test creating a new user"""
-
     config = get_config()
     user_dao_factory_config = get_user_dao_factory_config(config=config)
     user_dao_factory = get_user_dao_factory(

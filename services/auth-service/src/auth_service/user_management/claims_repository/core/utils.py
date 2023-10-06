@@ -14,9 +14,7 @@
 # limitations under the License.
 #
 
-"""
-Core utilities for the Claims Repository.
-"""
+"""Core utilities for the Claims Repository."""
 
 from typing import Callable
 

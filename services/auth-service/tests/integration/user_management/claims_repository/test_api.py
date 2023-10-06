@@ -51,7 +51,6 @@ DATASET_CLAIM_DATA = {
 
 def test_health_check(client):
     """Test that the health check endpoint works."""
-
     response = client.get("/health")
 
     assert response.status_code == status.HTTP_200_OK
@@ -60,7 +59,6 @@ def test_health_check(client):
 
 def test_get_from_a_random_path(client):
     """Test that a GET request to a random path raises a not found error."""
-
     response = client.post("/some/random/path")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -68,7 +66,6 @@ def test_get_from_a_random_path(client):
 
 def test_post_claim(client_with_db):
     """Test that creating a user claim works."""
-
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
@@ -97,7 +94,6 @@ def test_post_claim(client_with_db):
 
 def test_get_claims(client_with_db):
     """Test that getting all claims of a user works."""
-
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
@@ -138,7 +134,6 @@ def test_get_claims(client_with_db):
 
 def test_patch_claim(client_with_db):
     """Test that revoking a user claim works."""
-
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
@@ -218,7 +213,6 @@ def test_patch_claim(client_with_db):
 
 def test_delete_claim(client_with_db):
     """Test that deleting a user claim works."""
-
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
@@ -281,7 +275,6 @@ def test_delete_claim(client_with_db):
 
 def test_grant_download_access(client_with_db):
     """Test that granting access to a dataset works."""
-
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
@@ -332,7 +325,6 @@ def test_grant_download_access(client_with_db):
 
 def test_check_download_access(client_with_db):
     """Test that checking download access for a single dataset works."""
-
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
@@ -402,7 +394,6 @@ def test_check_download_access(client_with_db):
 
 def test_get_datasets_with_download_access(client_with_db):
     """Test that getting all datasets with download access works."""
-
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
@@ -474,7 +465,6 @@ def test_get_datasets_with_download_access(client_with_db):
 
 def test_get_claims_for_seeded_data_steward(client_with_db):
     """Test that the database is seeded with the configured data steward."""
-
     response = client_with_db.get("/users/the-id-of-rod-steward/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
