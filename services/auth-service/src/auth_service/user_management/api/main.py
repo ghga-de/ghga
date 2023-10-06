@@ -46,7 +46,7 @@ configure_logging()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # pylint: disable=redefined-outer-name
+async def lifespan(app: FastAPI):
     """Setup the FastAPI application.
 
     This function runs on startup and shutdown of the application.

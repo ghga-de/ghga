@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures for the user management integration tests"""
+"""Fixtures for the user registry integration tests"""
 
 from collections.abc import Generator
 
@@ -28,7 +28,7 @@ from auth_service.user_management.api.main import app
 
 @fixture(name="client")
 def fixture_client() -> TestClient:
-    """Get test client for the user manager"""
+    """Get a test client for the user registry."""
     config = Config(
         include_apis=["users"],
     )  # pyright: ignore
@@ -36,18 +36,26 @@ def fixture_client() -> TestClient:
     return TestClient(app)
 
 
-@fixture(name="client_with_db")
-def fixture_client_with_db() -> Generator[TestClient, None, None]:
-    """Get test client for the user manager with a test database."""
+@fixture(name="mongodb", scope="session")
+def fixture_mongodb() -> Generator[MongoDbContainer, None, None]:
+    """Get a test container for the Mongo database."""
     with MongoDbContainer() as mongodb:
-        connection_url = mongodb.get_connection_url()
-        config = Config(
-            db_url=connection_url,
-            db_name="test-user-registry",
-            include_apis=["users"],
-        )  # pyright: ignore
+        yield mongodb
 
-        app.dependency_overrides[get_config] = lambda: config
-        with TestClient(app) as client:
-            yield client
-        app.dependency_overrides.clear()
+
+@fixture(name="client_with_db")
+def fixture_client_with_db(
+    mongodb: MongoDbContainer,
+) -> Generator[TestClient, None, None]:
+    """Get a test client for the user registry with a test database."""
+    connection_url = mongodb.get_connection_url()
+    config = Config(
+        db_url=connection_url,
+        db_name="test-user-registry",
+        include_apis=["users"],
+    )  # pyright: ignore
+    mongodb.get_connection_client().drop_database(config.db_name)
+    app.dependency_overrides[get_config] = lambda: config
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()

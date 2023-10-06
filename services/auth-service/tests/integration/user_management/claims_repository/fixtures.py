@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures for the user management integration tests"""
+"""Fixtures for the claims repository integration tests"""
 
 import asyncio
 from collections.abc import Generator
@@ -33,7 +33,7 @@ from auth_service.user_management.user_registry.models.dto import User, UserStat
 
 @fixture(name="client")
 def fixture_client() -> TestClient:
-    """Get test client for the user manager"""
+    """Get a test client for the claims repository."""
     config = Config(
         include_apis=["claims"],
     )  # pyright: ignore
@@ -66,20 +66,29 @@ async def seed_database(config: Config) -> None:
         await user_dao.insert(data_steward)
 
 
-@fixture(name="client_with_db")
-def fixture_client_with_db() -> Generator[TestClient, None, None]:
-    """Get test client for the user manager with a test database."""
+@fixture(name="mongodb", scope="session")
+def fixture_mongodb() -> Generator[MongoDbContainer, None, None]:
+    """Get a test container for the Mongo database."""
     with MongoDbContainer() as mongodb:
-        connection_url = mongodb.get_connection_url()
-        config = Config(
-            db_url=connection_url,
-            db_name="test-claims-repository",
-            include_apis=["claims"],
-            add_as_data_stewards=add_as_data_stewards,
-        )  # pyright: ignore
-        asyncio.run(seed_database(config))
+        yield mongodb
 
-        app.dependency_overrides[get_config] = lambda: config
-        with TestClient(app) as client:
-            yield client
-        app.dependency_overrides.clear()
+
+@fixture(name="client_with_db")
+def fixture_client_with_db(
+    mongodb: MongoDbContainer,
+) -> Generator[TestClient, None, None]:
+    """Get a test client for the claims repository with a test database."""
+    connection_url = mongodb.get_connection_url()
+    config = Config(
+        db_url=connection_url,
+        db_name="test-claims-repository",
+        include_apis=["claims"],
+        add_as_data_stewards=add_as_data_stewards,
+    )  # pyright: ignore
+    mongodb.get_connection_client().drop_database(config.db_name)
+    asyncio.run(seed_database(config))
+
+    app.dependency_overrides[get_config] = lambda: config
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()

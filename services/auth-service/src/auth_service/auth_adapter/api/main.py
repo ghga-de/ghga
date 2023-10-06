@@ -63,7 +63,6 @@ def add_public_routes():
         elif "*" in route:
             route = route.replace("*", "{variable}")
 
-        # pylint:disable=cell-var-from-loop
         @app.api_route(route, methods=READ_METHODS)
         async def public_route() -> dict:
             """Unprotected route."""

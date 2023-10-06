@@ -35,7 +35,7 @@ from ...fixtures.utils import (
     create_access_token,
     get_claims_from_token,
 )
-from .fixtures import (  # noqa: F401; pylint: disable=unused-import
+from .fixtures import (  # noqa: F401
     fixture_client,
     fixture_with_basic_auth,
 )
@@ -248,9 +248,7 @@ def test_does_not_authorize_invalid_users(client):
     assert "X-Authorization" not in headers
 
 
-def test_token_exchange_for_unknown_user(
-    client, httpx_mock
-):  # pylint:disable=too-many-statements
+def test_token_exchange_for_unknown_user(client, httpx_mock):
     """Test the token exchange for authenticated but unknown users."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
@@ -354,9 +352,7 @@ def test_token_exchange_for_unknown_user(
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
 
-def test_token_exchange_for_known_user(
-    client, httpx_mock
-):  # pylint:disable=too-many-statements
+def test_token_exchange_for_known_user(client, httpx_mock):
     """Test the token exchange for authenticated and registered users."""
     user_dao: UserDao = cast(UserDao, DummyUserDao())
     client.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -516,9 +512,7 @@ def test_token_exchange_with_x_token(client, httpx_mock):
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
 
-def test_token_exchange_for_known_data_steward(
-    client, httpx_mock
-):  # pylint:disable=too-many-statements
+def test_token_exchange_for_known_data_steward(client, httpx_mock):
     """Test the token exchange for an authenticated data steward."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 

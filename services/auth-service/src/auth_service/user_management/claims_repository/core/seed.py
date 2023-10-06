@@ -100,7 +100,7 @@ async def _add_configured_data_steward_claims(
         except NoHitsFoundError:
             try:
                 user = await _add_user_with_ext_id(data_steward, user_dao=user_dao)
-            except Exception as error:  # pylint: disable=broad-exception-caught
+            except Exception as error:
                 log.warning(
                     "Could not add new user with external ID %r: %s", ext_id, error
                 )

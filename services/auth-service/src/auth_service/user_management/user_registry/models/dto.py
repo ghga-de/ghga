@@ -45,7 +45,7 @@ class AcademicTitle(str, Enum):
 class BaseDto(BaseModel):
     """Base model preconfigured for use as Dto."""
 
-    class Config:  # pylint: disable=missing-class-docstring
+    class Config:
         extra = "forbid"
         frozen = True
 

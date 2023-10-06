@@ -23,9 +23,10 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from auth_service.user_management.user_registry.utils import is_internal_id
 
 from ....fixtures.utils import get_headers_for
-from .fixtures import (  # noqa: F401; pylint: disable=unused-import
+from .fixtures import (  # noqa: F401
     fixture_client,
     fixture_client_with_db,
+    fixture_mongodb,
 )
 
 MIN_USER_DATA = {

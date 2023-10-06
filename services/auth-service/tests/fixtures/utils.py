@@ -188,7 +188,6 @@ def request_with_authorization(token: str = "") -> Request:
 class DummyUserDao:
     """UserDao that can retrieve one dummy user."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self,
         id_="john@ghga.de",

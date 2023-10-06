@@ -132,7 +132,6 @@ async def get_claims(
     return [claim async for claim in claim_dao.find_all(mapping={"user_id": user_id})]
 
 
-# pylint: disable=too-many-arguments
 @router.patch(
     "/users/{user_id}/claims/{claim_id}",
     operation_id="patch_claim",

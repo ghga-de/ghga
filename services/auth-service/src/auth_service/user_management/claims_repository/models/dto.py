@@ -43,7 +43,7 @@ __all__ = [
 class BaseDto(BaseModel):
     """Base model pre-configured for use as Dto."""
 
-    class Config:  # pylint: disable=missing-class-docstring
+    class Config:
         extra = "forbid"
         frozen = True
 
@@ -109,7 +109,6 @@ class Identity(BaseDto):
     sub: str = Field(default=..., title="Subject", description="OpenID Subject")
 
 
-# pylint: disable=no-self-argument
 class ClaimValidity(BaseDto):
     """Start and end dates for validating claims."""
 

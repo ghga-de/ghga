@@ -25,9 +25,10 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from auth_service.user_management.user_registry.deps import get_user_dao
 
 from ....fixtures.utils import DummyUserDao
-from .fixtures import (  # noqa: F401; pylint: disable=unused-import
+from .fixtures import (  # noqa: F401
     fixture_client,
     fixture_client_with_db,
+    fixture_mongodb,
 )
 
 ROLE_CLAIM_DATA = {

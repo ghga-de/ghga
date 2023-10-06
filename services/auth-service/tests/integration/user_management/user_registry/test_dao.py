@@ -17,7 +17,7 @@
 """Test user specific DAOs."""
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
-from hexkit.providers.mongodb.testutils import (  # noqa: F401; pylint: disable=unused-import
+from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_fixture,
 )
 from pydantic import EmailStr
@@ -42,7 +42,7 @@ datetime_utc = DateTimeUTC.construct
 
 @mark.asyncio
 async def test_user_creation(
-    mongodb_fixture,  # noqa: F811  pylint:disable=redefined-outer-name
+    mongodb_fixture,  # noqa: F811
 ):
     """Test creating a new user"""
     config = get_config()
