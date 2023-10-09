@@ -13,6 +13,7 @@ This epic seeks to explore the use of Angular and Vue for a refactoring of the D
 - If so, which framework is best suited for the development of the data portal?
 - Which framework's data handling system is best suited for the requirements of the data portal?
 - Are Vue's advantages (e.g. shallower learning curve, less restrictive framework) enough of a positive to counter the lack of previous experience with it in the team?
+- How is the overall development ergonomics? How many decisions do we have to make ourselves? How much structure is provided?
 
 ## Material and Resources:
 
