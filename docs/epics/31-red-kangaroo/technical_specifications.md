@@ -1,4 +1,4 @@
-Angular/Vue for Data Portal (Red Kangaroo)
+# Angular/Vue for Data Portal (Red Kangaroo)
 **Epic Type:** Exploratory Epic
 
 Epic planning and implementation follows the
