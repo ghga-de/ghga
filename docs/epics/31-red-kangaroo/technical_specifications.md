@@ -29,14 +29,11 @@ This epic covers the following user journeys:
 - The user filters the list of datasets based on facets provided by the API
 - The user can see the summary of the details of the datasets the user selects.
 - The user can see the full details of the datasets the user selects
-- The user views a global summary of the entire metadata database
 
 ## Additional Implementation Details:
 
 - Although self-evident, it is important to specify the Metadata Catalog(ue) functionality will be implemented in both Angular and Vue.
-- The implementation will use the Metadata Repository and Search services used for the Metadata Catalog(ue) to avoid:
-  - Having to use the newer, more complicated loading of test data for the Metldata and MASS services
-  - Or have to immediately set up response mocking to allow the use of test data without an actual backend connection
+- The implementation will require the decelopment of a mock data service to examine the coding required for API calling in both Angular and Vue. This will add to the time required for development.
 
 ## Human Resource/Time Estimation:
 
