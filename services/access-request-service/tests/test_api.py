@@ -18,23 +18,24 @@
 
 import json
 import re
+from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import NamedTuple, Sequence, cast
+from typing import NamedTuple, cast
 
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.providers.akafka.testutils import (  # noqa: F401 # pylint: disable=unused-import
+from hexkit.providers.akafka.testutils import (  # noqa: F401
     KafkaFixture,
     RecordedEvent,
     kafka_fixture,
 )
-from hexkit.providers.mongodb.testutils import (  # noqa: F401 # pylint: disable=unused-import
+from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_fixture,
 )
 from pytest import mark
 from pytest_httpx import HTTPXMock
 
-from .fixtures import (  # noqa: F401 # pylint: disable=unused-import
+from .fixtures import (  # noqa: F401
     fixture_auth_headers_doe,
     fixture_auth_headers_doe_inactive,
     fixture_auth_headers_steward,
@@ -72,7 +73,7 @@ def iso2timestamp(iso_date: str) -> float:
 
 def assert_same_datetime(date1: str, date2: str, max_diff_seconds=5) -> None:
     """Assert that the two given dates in iso format are very close."""
-    assert abs((iso2timestamp(date2) - iso2timestamp(date1))) < max_diff_seconds
+    assert abs(iso2timestamp(date2) - iso2timestamp(date1)) < max_diff_seconds
 
 
 class NotificationPayload(NamedTuple):
@@ -106,7 +107,6 @@ def assert_recorded_events(
 @mark.asyncio
 async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
-
     response = await client.get("/health")
 
     assert response.status_code == 200
@@ -117,10 +117,9 @@ async def test_health_check(client: AsyncTestClient):
 async def test_create_access_request(
     client: AsyncTestClient,
     auth_headers_doe: dict[str, str],
-    kafka_fixture: KafkaFixture,  # noqa: F811 # pylint: disable=redefined-outer-name
+    kafka_fixture: KafkaFixture,  # noqa: F811
 ):
     """Test that an active user can create an access request."""
-
     async with kafka_fixture.record_events(in_topic="notifications") as recorder:
         response = await client.post(
             "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -158,7 +157,6 @@ async def test_create_access_request_unauthorized(
     auth_headers_doe_inactive: dict[str, str],
 ):
     """Test that creating an access request needs authorization."""
-
     # test without authentication
     response = await client.post("/access-requests", json=CREATION_DATA)
     assert response.status_code == 403
@@ -181,7 +179,6 @@ async def test_create_access_request_that_is_too_long(
     client: AsyncTestClient, auth_headers_doe: dict[str, str]
 ):
     """Test that an access request that is too long cannot be created."""
-
     response = await client.post(
         "/access-requests",
         json={
@@ -201,7 +198,6 @@ async def test_get_access_requests(
     auth_headers_steward: dict[str, str],
 ):
     """Test that users can get their access requests."""
-
     # create two access requests for different users
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -259,7 +255,6 @@ async def test_get_access_requests_unauthorized(
     client: AsyncTestClient, auth_headers_doe_inactive: dict[str, str]
 ):
     """Test that getting access requests needs authorization."""
-
     # test unauthenticated
     response = await client.get("/access-requests")
     assert response.status_code == 403
@@ -276,7 +271,6 @@ async def test_filter_access_requests(
     auth_headers_steward: dict[str, str],
 ):
     """Test that when getting access requests these can be filtered."""
-
     # create an access request
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -345,11 +339,10 @@ async def test_patch_access_request(
     client: AsyncTestClient,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
-    kafka_fixture: KafkaFixture,  # noqa: F811 # pylint: disable=redefined-outer-name
+    kafka_fixture: KafkaFixture,  # noqa: F811
     httpx_mock: HTTPXMock,
 ):
     """Test that data stewards can change the status of access requests."""
-
     # mock setting the the access grant
     httpx_mock.add_response(
         method="POST",
@@ -440,7 +433,6 @@ async def test_must_be_data_steward_to_patch_access_request(
     auth_headers_doe: dict[str, str],
 ):
     """Test that only data stewards can change the status of access requests."""
-
     # create access request as user
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe

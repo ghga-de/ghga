@@ -133,7 +133,7 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 0.1.1
+  version: 0.1.2
 openapi: 3.0.2
 paths:
   /access-requests:

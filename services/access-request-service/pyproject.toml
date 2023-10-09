@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=67.7.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ars"
+version = "0.1.2"
+description = "Access Request Service"
+readme = "README.md"
+authors = [
+    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "ghga-event-schemas==0.13.5",
+    "ghga-service-commons[api,auth]>=0.7.0",
+    "hexkit[akafka,mongodb]>=0.10.2",
+    "httpx>=0.23.3",
+    "typer>=0.7.0",
+]
+
+[project.license]
+text = "Apache 2.0"
+
+[project.urls]
+Repository = "https://github.com/ghga-de/access-request-service"
+
+[project.scripts]
+ars = "ars.__main__:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]

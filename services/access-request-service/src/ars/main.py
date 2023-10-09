@@ -26,7 +26,6 @@ from ars.container import Container
 
 def get_container(*, config: Config) -> Container:
     """Create, configure and wire the DI container."""
-
     container = Container()
     container.config.load_config(config)
     container.wire(
@@ -45,7 +44,6 @@ def get_rest_api(*, config: Config) -> FastAPI:
     For full functionality of the AP, run in the context of a CI container with
     correct wiring and initialized resources (see the run_rest function below).
     """
-
     api = FastAPI()
     api.include_router(router)
     configure_app(api, config=config)
@@ -57,15 +55,14 @@ def get_rest_api(*, config: Config) -> FastAPI:
         api.openapi_schema = openapi_schema
         return api.openapi_schema
 
-    api.openapi = custom_openapi  # type: ignore [assignment]
+    api.openapi = custom_openapi  # type: ignore[method-assign]
 
     return api
 
 
 async def run_rest():
     """Run the HTTP REST API."""
-
-    config = Config()  # pyright: ignore
+    config = Config()  # type: ignore
 
     async with get_container(config=config):
         api = get_rest_api(config=config)

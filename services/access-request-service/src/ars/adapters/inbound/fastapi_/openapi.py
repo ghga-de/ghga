@@ -12,22 +12,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
+"""Utils to customize the OpenAPI script"""
 
-import asyncio
+from typing import Any
 
-import typer
-from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
+from fastapi.openapi.utils import get_openapi
 
-from ars.main import run_rest
+from ars import __version__
+from ars.config import Config
 
-cli = typer.Typer()
+__all__ = ["get_openapi_schema"]
 
 
-@cli.command(name="run-rest")
-def sync_run_api():
-    """Run the HTTP REST API."""
+def get_openapi_schema(api) -> dict[str, Any]:
+    """Generate a custom OpenAPI schema for the service."""
+    config = Config()  # type: ignore
 
-    assert_tz_is_utc()
-    asyncio.run(run_rest())
+    return get_openapi(
+        title="Access Request Service",
+        version=__version__,
+        description="A service managing access requests for the GHGA Data Portal",
+        servers=[{"url": config.api_root_path}],
+        tags=[{"name": "AccessRequests"}],
+        routes=api.routes,
+    )

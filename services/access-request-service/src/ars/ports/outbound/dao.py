@@ -14,28 +14,13 @@
 # limitations under the License.
 #
 
-"""Utils to customize the OpenAPI script"""
+"""DAO interface for accessing the database."""
 
-from typing import Any, Dict
+from hexkit.protocols.dao import DaoSurrogateId, ResourceNotFoundError
 
-from fastapi.openapi.utils import get_openapi
+from ars.core import models
 
-from ars import __version__
-from ars.config import Config
+__all__ = ["AccessRequestDaoPort", "ResourceNotFoundError"]
 
-__all__ = ["get_openapi_schema"]
-
-
-def get_openapi_schema(api) -> Dict[str, Any]:
-    """Generate a custom OpenAPI schema for the service."""
-
-    config = Config()
-
-    return get_openapi(
-        title="Access Request Service",
-        version=__version__,
-        description="A service managing access requests for the GHGA Data Portal",
-        servers=[{"url": config.api_root_path}],
-        tags=[{"name": "AccessRequests"}],
-        routes=api.routes,
-    )
+# ports described by type aliases:
+AccessRequestDaoPort = DaoSurrogateId[models.AccessRequest, models.AccessRequestData]

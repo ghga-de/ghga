@@ -14,7 +14,8 @@
 # limitations under the License.
 
 """Defines dataclasses for business-logic data as well as request/reply models for use
-in the API."""
+in the API.
+"""
 
 from enum import Enum
 from typing import Optional
@@ -34,7 +35,7 @@ __all__ = [
 class BaseDto(BaseModel):
     """Base model pre-configured for use as Dto."""
 
-    class Config:  # pylint: disable=missing-class-docstring
+    class Config:
         extra = "forbid"
         frozen = True
 

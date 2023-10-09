@@ -48,7 +48,7 @@ class NotificationEmitter(NotificationEmitterPort):
         self,
         *,
         config: NotificationEmitterConfig,
-        event_publisher: EventPublisherProtocol
+        event_publisher: EventPublisherProtocol,
     ):
         """Initialize with config and a provider of the EventPublisherProtocol."""
         self._event_topic = config.notification_event_topic

@@ -15,7 +15,7 @@
 
 """Fixtures that are used in both integration and unit tests"""
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import (
@@ -30,10 +30,7 @@ from pytest_asyncio import fixture as async_fixture
 
 from ars.config import Config
 from ars.container import Container
-from ars.main import (  # pylint: disable=import-outside-toplevel
-    get_container,
-    get_rest_api,
-)
+from ars.main import get_container, get_rest_api
 
 __all__ = [
     "AUTH_KEY_PAIR",

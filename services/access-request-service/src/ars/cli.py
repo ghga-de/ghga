@@ -13,6 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Access Request Service"""
+"""Entrypoint of the package"""
 
-__version__ = "0.1.1"
+import asyncio
+
+import typer
+from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
+
+from ars.main import run_rest
+
+cli = typer.Typer()
+
+
+@cli.command(name="run-rest")
+def sync_run_api():
+    """Run the HTTP REST API."""
+    assert_tz_is_utc()
+    asyncio.run(run_rest())

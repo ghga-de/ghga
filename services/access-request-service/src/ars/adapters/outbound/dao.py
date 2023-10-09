@@ -48,8 +48,8 @@ class AccessRequestDaoConstructor:
     @staticmethod
     async def construct(*, dao_factory: DaoFactoryProtocol) -> AccessRequestDaoPort:
         """Setup the DAOs using the specified provider of the
-        DaoFactoryProtocol."""
-
+        DaoFactoryProtocol.
+        """
         return await dao_factory.get_dao(
             name="accessRequests",
             dto_model=models.AccessRequest,

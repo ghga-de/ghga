@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Generate signing keys for testing"""
+
 from ghga_service_commons.utils.jwt_helpers import generate_jwk
 
 

@@ -14,9 +14,7 @@
 # limitations under the License.
 
 
-"""
-Module containing the main FastAPI router and all route functions.
-"""
+"""Module containing the main FastAPI router and all route functions."""
 
 import logging
 from typing import Optional

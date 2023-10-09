@@ -176,6 +176,7 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         return async_iterator()
 
     async def get_by_id(self, id_: str) -> AccessRequest:
+        """Get a resource by providing its ID."""
         async for request in self.find_all(mapping={"id": id_}):
             return request
         raise ResourceNotFoundError(id_=id_)
@@ -186,6 +187,7 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         return self.last_upsert
 
     async def update(self, dto: AccessRequest) -> None:
+        """Update an existing resource."""
         self.last_upsert = dto
 
 

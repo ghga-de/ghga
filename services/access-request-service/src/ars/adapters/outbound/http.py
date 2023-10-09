@@ -16,8 +16,8 @@
 
 """Outbound HTTP calls"""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import httpx
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
@@ -33,7 +33,7 @@ TIMEOUT = 60
 class ClaimValidity(BaseModel):
     """Start and end dates for validating claims."""
 
-    class Config:  # pylint: disable=missing-class-docstring
+    class Config:
         extra = "forbid"
         frozen = True
 
@@ -45,7 +45,8 @@ class ClaimValidity(BaseModel):
     )
 
     @validator("valid_until")
-    def period_is_valid(cls, value, values):  # pylint: disable=no-self-argument
+    @classmethod
+    def period_is_valid(cls, value, values):
         """Validate that the dates of the period are in the right order."""
         if "valid_from" in values and value <= values["valid_from"]:
             raise ValueError("'valid_until' must be later than 'valid_from'")
@@ -99,7 +100,7 @@ class AccessGrantsAdapter(AccessGrantsPort):
                 url, content=validity.json(), timeout=TIMEOUT
             )
         except httpx.RequestError as error:
-            raise self.AccessGrantsError(f"HTTP request error: {error}")
+            raise self.AccessGrantsError(f"HTTP request error: {error}") from error
         if response.status_code != httpx.codes.NO_CONTENT:
             raise self.AccessGrantsError(
                 f"Unexpected HTTP response status code {response.status_code}"

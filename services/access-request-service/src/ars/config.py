@@ -26,7 +26,6 @@ from ars.adapters.outbound.http import AccessGrantsConfig
 from ars.core.repository import AccessRequestConfig
 
 
-# pylint: disable=too-many-ancestors
 @config_from_yaml(prefix="ars")
 class Config(
     ApiConfigBase,

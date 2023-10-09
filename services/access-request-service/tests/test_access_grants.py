@@ -17,7 +17,7 @@
 """Test the access grant adapter."""
 
 import json
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import httpx
 from ghga_service_commons.utils.utc_dates import DateTimeUTC

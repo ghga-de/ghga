@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
@@ -15,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Setup script for pip. This setup configs are specified in the `setup.cfg` file"""
+"""Access Request Service"""
 
-import setuptools
+from importlib.metadata import version
 
-if __name__ == "__main__":
-    setuptools.setup()
+__version__ = version(__package__)
