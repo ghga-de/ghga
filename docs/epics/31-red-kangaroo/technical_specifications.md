@@ -29,6 +29,7 @@ This epic covers the following user journeys:
 - The user filters the list of datasets based on facets provided by the API
 - The user can see the summary of the details of the datasets the user selects.
 - The user can see the full details of the datasets the user selects
+- The user can submit a mock access request form
 
 ## Additional Implementation Details:
 
