@@ -37,6 +37,6 @@ This epic covers the following user journeys:
 
 ## Human Resource/Time Estimation:
 
-Number of sprints required: 3-4
+Number of sprints required: 3
 
 Number of developers required: 1
