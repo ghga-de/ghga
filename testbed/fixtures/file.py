@@ -19,16 +19,17 @@
 import json
 import os
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator, List, Optional
+from typing import Optional
 
 from hexkit.providers.s3.testutils import FileObject
 from pydantic import BaseModel
 from pytest import fixture
+from steps.utils import calculate_checksum
 
 from fixtures.config import Config
 from fixtures.dsk import DskFixture
-from steps.utils import calculate_checksum
 
 __all__ = ["FileBatch", "FileObject", "batch_file_fixture", "file_fixture"]
 
@@ -36,7 +37,7 @@ __all__ = ["FileBatch", "FileObject", "batch_file_fixture", "file_fixture"]
 class FileBatch(BaseModel):
     """File batch model"""
 
-    file_objects: List[FileObject]
+    file_objects: list[FileObject]
     tsv_file: Path
 
 
@@ -86,9 +87,8 @@ def create_named_file(
 @fixture(name="file_fixture")
 def file_fixture(
     config: Config, dsk: DskFixture
-) -> Generator[List[FileObject], None, None]:
+) -> Generator[list[FileObject], None, None]:
     """File fixture that provides temporary files for the minimal metadata."""
-
     temp_dir = Path(tempfile.gettempdir())
     metadata = json.loads(dsk.config.minimal_metadata_path.read_text())
 
@@ -118,7 +118,6 @@ def batch_file_fixture(
     config: Config, dsk: DskFixture
 ) -> Generator[FileBatch, None, None]:
     """Batch file fixture that provides temporary files for the complete metadata."""
-
     temp_dir = Path(tempfile.gettempdir())
     metadata = json.loads(dsk.config.complete_metadata_path.read_text())
 

@@ -210,5 +210,4 @@ class TokenGenerator:
 @fixture(name="auth", scope="session")
 def auth_fixture(config) -> TokenGenerator:
     """Fixture that provides an auth token generator."""
-
     return TokenGenerator(config)

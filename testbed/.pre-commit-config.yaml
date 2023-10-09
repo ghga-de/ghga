@@ -36,34 +36,17 @@ repos:
       - id: debug-statements
       - id: debug-statements
       - id: debug-statements
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.290
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
   - repo: https://github.com/psf/black
     rev: 23.9.1
     hooks:
       - id: black
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        args: [--profile, black]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.4.1
+    rev: v1.5.1
     hooks:
       - id: mypy
         args: [--no-warn-unused-ignores]
-  - repo: https://github.com/PyCQA/pylint
-    rev: v2.17.5
-    hooks:
-      - id: pylint
-        args: [--disable=import-error]
-        exclude: .devcontainer
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
-        args: [--config, .flake8]
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
-      - id: bandit
-        args: ["-r", "."]
-        exclude: .devcontainer|.vscode|scripts

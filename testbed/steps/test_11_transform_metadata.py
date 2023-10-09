@@ -30,8 +30,8 @@ def call_data_steward_kit_transform(
     timeout: int = 3 * TIMEOUT,
 ):
     """Call cli command 'ghga-datasteward-kit metadata transform'
-    to run the transformation workflow on submitted metadata"""
-
+    to run the transformation workflow on submitted metadata
+    """
     completed_transform = subprocess.run(  # nosec B607, B603
         [
             "ghga-datasteward-kit",

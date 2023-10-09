@@ -16,7 +16,7 @@
 
 """Fixture for testing code that uses the Kafka-based provider."""
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from hexkit.providers.akafka.provider import KafkaEventPublisher
 from hexkit.providers.akafka.testutils import KafkaFixture
@@ -30,7 +30,6 @@ __all__ = ["kafka_fixture", "KafkaFixture"]
 @async_fixture(name="kafka", scope="session")
 async def kafka_fixture(config: Config) -> AsyncGenerator[KafkaFixture, None]:
     """Pytest fixture for tests depending on the Kafka-based provider."""
-
     async with KafkaEventPublisher.construct(config=config) as publisher:
         yield KafkaFixture(
             config=config, kafka_servers=config.kafka_servers, publisher=publisher

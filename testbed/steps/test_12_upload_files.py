@@ -22,11 +22,11 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from fixtures.config import Config
+from fixtures.file import FileBatch, FileObject
 from ghga_datasteward_kit.file_ingest import IngestConfig, alias_to_accession
 from metldata.submission_registry.submission_store import SubmissionStore
 
-from fixtures.config import Config
-from fixtures.file import FileBatch, FileObject
 from steps.utils import ingest_config_as_file, temporary_file, upload_config_as_file
 
 from .conftest import JointFixture, async_step, given, parse, scenarios, then, when
@@ -38,7 +38,6 @@ def call_data_steward_kit_upload(
     file_object: FileObject, config: Config, file_metadata_dir: Path
 ):
     """Call DSKit upload command to upload a file"""
-
     upload_config_path = upload_config_as_file(
         config=config, file_metadata_dir=file_metadata_dir
     )
@@ -70,7 +69,6 @@ def call_data_steward_kit_batch_upload(
     batch_files_tsv: Path, config: Config, file_metadata_dir: Path
 ):
     """Call DSKit batch-upload command to upload listed files in TSV file"""
-
     upload_config_path = upload_config_as_file(
         config=config, file_metadata_dir=file_metadata_dir
     )
@@ -100,7 +98,6 @@ def call_data_steward_kit_batch_upload(
 
 def call_data_steward_kit_ingest(ingest_config_path: str, dsk_token_path: Path, token):
     """Call DSKit file_ingest command to ingest file"""
-
     with temporary_file(dsk_token_path, token) as _:
         completed_ingest = subprocess.run(  # nosec B607, B603
             [

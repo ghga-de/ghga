@@ -19,9 +19,8 @@ from datetime import timedelta
 from time import sleep
 
 import httpx
-from ghga_service_commons.utils.utc_dates import now_as_utc
-
 from fixtures.mongo import INTERVAL
+from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from .conftest import (
     TIMEOUT,
@@ -96,7 +95,6 @@ def check_email_sent_to(
     Wait for an e-mail to be received by the mail server. If it does not appear
     within the given timeout (in seconds), an AssertionError is raised.
     """
-
     url = f"{config.mailhog_url}/api/v2/search"
     slept: float = 0
     while slept < timeout:
@@ -111,7 +109,7 @@ def check_email_sent_to(
             return
         sleep(interval)
         slept += interval
-    assert False, f"An email notification was not received by {email}."
+    assert False, f"An email notification was not received by {email}."  # noqa: B011
 
 
 @when("I fetch the list of access requests", target_fixture="response")

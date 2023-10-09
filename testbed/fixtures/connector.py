@@ -14,14 +14,15 @@
 # limitations under the License.
 #
 
-""" Metadata related  fixture """
+"""Metadata related fixture"""
 
 import base64
 import os
 import shutil
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator, Literal
+from typing import Literal
 
 from pydantic import BaseSettings
 from pytest import fixture

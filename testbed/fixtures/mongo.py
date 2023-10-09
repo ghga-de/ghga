@@ -16,8 +16,9 @@
 
 """Fixture for testing code that uses the MongoDbDaoFactory provider."""
 
+from collections.abc import Generator, Mapping
 from time import sleep
-from typing import Any, Generator, Mapping, Optional, Union
+from typing import Any, Optional, Union
 
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture as BaseMongoFixture
@@ -161,7 +162,6 @@ class MongoFixture(BaseMongoFixture):
 @fixture(name="mongo", scope="session")
 def mongo_fixture(config: Config) -> Generator[MongoFixture, None, None]:
     """Pytest fixture for tests depending on the Mongo database."""
-
     dao_factory = MongoDbDaoFactory(config=config)
     db_connection_str = str(config.db_connection_str.get_secret_value())
     client: MongoClient = MongoClient(db_connection_str)

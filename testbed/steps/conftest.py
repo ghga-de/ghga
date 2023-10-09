@@ -21,15 +21,7 @@ from functools import wraps
 from typing import Any, NamedTuple, Optional
 
 import httpx
-from pytest_bdd import (  # noqa: F401; pylint: disable=unused-import
-    given,
-    parsers,
-    scenarios,
-    then,
-    when,
-)
-
-from fixtures import (  # noqa: F401; pylint: disable=unused-import
+from fixtures import (  # noqa: RUF100
     Config,
     ConnectorFixture,
     DskFixture,
@@ -51,6 +43,13 @@ from fixtures import (  # noqa: F401; pylint: disable=unused-import
     s3_fixture,
     state_fixture,
 )
+from pytest_bdd import (  # noqa: RUF100
+    given,
+    parsers,
+    scenarios,
+    then,
+    when,
+)
 
 TIMEOUT = 10
 
@@ -62,7 +61,6 @@ parse = parsers.parse  # pylint: disable=invalid-name
 
 def async_step(step):
     """Decorator that converts an async step function to a normal one."""
-
     signature = inspect.signature(step)
     parameters = list(signature.parameters.values())
     has_event_loop = any(parameter.name == "event_loop" for parameter in parameters)

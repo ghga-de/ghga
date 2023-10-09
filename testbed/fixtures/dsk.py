@@ -19,8 +19,8 @@
 import os
 import shutil
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 from pydantic import BaseSettings
 from pytest import fixture

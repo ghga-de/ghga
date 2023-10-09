@@ -2,12 +2,9 @@
 
 pre-commit==3.3.2
 
-mypy==1.4.1
+mypy==1.5.1
 mypy-extensions==1.0.0
 
-pylint==2.17.5
-flake8==6.0.0
-bandit==1.7.5
+ruff>=0.0.290
 
 black==23.9.1
-isort==5.12.0

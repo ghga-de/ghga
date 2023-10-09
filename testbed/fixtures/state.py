@@ -29,7 +29,8 @@ from fixtures.mongo import MongoFixture
 class StateStorage(ABC):
     """Base class representing a storage for the state of the test bed
 
-    Provides mechanisms for storing and managing the state"""
+    Provides mechanisms for storing and managing the state
+    """
 
     @abstractmethod
     def get_state(self, state_name: str) -> Any:

@@ -16,7 +16,8 @@
 
 """Fixture for testing code that uses the S3ObjectStorage provider."""
 
-from typing import Generator, Union
+from collections.abc import Generator
+from typing import Union
 
 from hexkit.providers.s3.provider import S3ObjectStorage
 from hexkit.providers.s3.testutils import S3Fixture as BaseS3Fixture
@@ -54,6 +55,5 @@ class S3Fixture(BaseS3Fixture):
 @fixture(name="s3", scope="session")
 def s3_fixture(config: Config) -> Generator[S3Fixture, None, None]:
     """Pytest fixture for tests depending on the S3ObjectStorage."""
-
     storage = S3ObjectStorage(config=config)
     yield S3Fixture(config=config, storage=storage)

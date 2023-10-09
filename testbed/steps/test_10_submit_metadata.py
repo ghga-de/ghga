@@ -34,8 +34,8 @@ def call_data_steward_kit_submit(
     timeout: int = TIMEOUT,
 ):
     """Call cli command 'ghga-datasteward-kit metadata submit'
-    to submit metadata"""
-
+    to submit metadata
+    """
     completed_submit = subprocess.run(  # nosec B607, B603
         [
             "ghga-datasteward-kit",
