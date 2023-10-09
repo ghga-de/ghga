@@ -22,7 +22,7 @@ from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from pytest import mark
 from pytest_httpx import HTTPXMock
 
-from .fixtures import (  # noqa: F401 # pylint: disable=unused-import
+from .fixtures import (  # noqa: F401
     SIGNING_KEY_PAIR,
     fixture_auth_headers,
     fixture_bad_auth_headers,
@@ -47,7 +47,6 @@ TIMEOUT = 5
 @mark.asyncio
 async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
-
     response = await client.get("/health", timeout=TIMEOUT)
 
     assert response.status_code == status.HTTP_200_OK
@@ -59,7 +58,6 @@ async def test_create_work_package_unauthorized(
     client: AsyncTestClient, bad_auth_headers: dict[str, str]
 ):
     """Test that creating a work package needs authorization."""
-
     response = await client.post("/work-packages", json=CREATION_DATA)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     response = await client.post(
@@ -71,7 +69,6 @@ async def test_create_work_package_unauthorized(
 @mark.asyncio
 async def test_get_work_package_unauthorized(client: AsyncTestClient):
     """Test that getting a work package needs authorization."""
-
     response = await client.get("/work-packages/some-work-package-id")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -81,7 +78,6 @@ async def test_create_work_order_token(
     client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
 ):
     """Test that work order tokens can be properly created."""
-
     # mock the access check for the test dataset
 
     httpx_mock.add_response(
@@ -221,7 +217,6 @@ async def test_create_work_order_token(
 @mark.asyncio
 async def test_get_datasets_unauthenticated(client: AsyncTestClient):
     """Test that the list of accessible datasets cannot be fetched unauthenticated."""
-
     response = await client.get("/users/john-doe@ghga.de/datasets")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -232,7 +227,6 @@ async def test_get_datasets_for_another_user(
     auth_headers: dict[str, str],
 ):
     """Test that the list of accessible datasets for another user cannot be fetched."""
-
     response = await client.get(
         "/users/john-foo@ghga.de/datasets", headers=auth_headers
     )
@@ -244,7 +238,6 @@ async def test_get_datasets_when_none_authorized(
     client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
 ):
     """Test that no datasets are fetched when none are accessible."""
-
     # mock the access check for the test dataset
 
     httpx_mock.add_response(
@@ -270,7 +263,6 @@ async def test_get_datasets(
     client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
 ):
     """Test that the list of accessible datasets can be fetched."""
-
     # mock the access check for the test dataset
 
     httpx_mock.add_response(

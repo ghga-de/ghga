@@ -16,7 +16,7 @@
 
 """Test the access check adapter."""
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from pytest import mark
 from pytest_asyncio import fixture as async_fixture

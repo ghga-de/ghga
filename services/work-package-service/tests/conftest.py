@@ -27,6 +27,6 @@ mongodb_fixture = get_mongodb_fixture("session")
 
 
 @pytest.fixture(autouse=True)
-def reset_db(mongodb_fixture: MongoDbFixture):  # noqa: F811
+def reset_db(mongodb_fixture: MongoDbFixture):
     """Clear the database before tests."""
     mongodb_fixture.empty_collections()

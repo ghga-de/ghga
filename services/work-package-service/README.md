@@ -52,13 +52,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/work-package-service):
 ```bash
-docker pull ghga/work-package-service:0.1.4
+docker pull ghga/work-package-service:0.1.5
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/work-package-service:0.1.4 .
+docker build -t ghga/work-package-service:0.1.5 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -66,7 +66,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/work-package-service:0.1.4 --help
+docker run -p 8080:8080 ghga/work-package-service:0.1.5 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -82,19 +82,19 @@ wps --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`datasets_collection`** *(string)*: The name of the database collection for datasets. Default: `datasets`.
+- **`datasets_collection`** *(string)*: The name of the database collection for datasets. Default: `"datasets"`.
 
-- **`work_packages_collection`** *(string)*: The name of the database collection for work packages. Default: `workPackages`.
+- **`work_packages_collection`** *(string)*: The name of the database collection for work packages. Default: `"workPackages"`.
 
 - **`work_package_valid_days`** *(integer)*: How many days a work package (and its access token) stays valid. Default: `30`.
 
-- **`work_package_signing_key`** *(string)*: The private key for signing work order tokens.
+- **`work_package_signing_key`** *(string, format: password)*: The private key for signing work order tokens.
 
-- **`db_connection_str`** *(string)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
-- **`db_name`** *(string)*: Default: `work-packages`.
+- **`db_name`** *(string)*: Default: `"work-packages"`.
 
-- **`service_name`** *(string)*: Default: `wps`.
+- **`service_name`** *(string)*: Default: `"wps"`.
 
 - **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
@@ -112,31 +112,31 @@ The service requires the following configuration parameters:
 
 - **`auth_key`** *(string)*: The GHGA internal public key for validating the token signature.
 
-- **`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens. Default: `['ES256']`.
+- **`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens. Default: `["ES256"]`.
 
   - **Items** *(string)*
 
-- **`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{'name': None, 'email': None, 'iat': None, 'exp': None}`.
+- **`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{"name": null, "email": null, "iat": null, "exp": null}`.
 
 - **`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
 
   - **Additional Properties** *(string)*
 
-- **`host`** *(string)*: IP of the host. Default: `127.0.0.1`.
+- **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
 - **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 
-- **`log_level`** *(string)*: Controls the verbosity of the log. Must be one of: `['critical', 'error', 'warning', 'info', 'debug', 'trace']`. Default: `info`.
+- **`log_level`** *(string)*: Controls the verbosity of the log. Must be one of: `["critical", "error", "warning", "info", "debug", "trace"]`. Default: `"info"`.
 
-- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `False`.
+- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
 - **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
 
-- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `/`.
+- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `"/"`.
 
-- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `/openapi.json`.
+- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
 
-- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `/docs`.
+- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
 - **`cors_allowed_origins`** *(array)*: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.
 
@@ -207,7 +207,7 @@ Moreover, inside the devcontainer, a convenience commands `dev_install` is avail
 It installs the service with all development dependencies, installs pre-commit.
 
 The installation is performed automatically when you build the devcontainer. However,
-if you update dependencies in the [`./setup.cfg`](./setup.cfg) or the
+if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
 [`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
 
 ## License

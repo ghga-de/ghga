@@ -26,7 +26,7 @@ from wps.config import Config
 from wps.container import Container
 from wps.core.repository import WorkPackageRepository
 
-from .fixtures import fixture_container  # noqa: F401 # pylint: disable=unused-import
+from .fixtures import fixture_container  # noqa: F401
 from .fixtures.datasets import DATASET, DATASET_DELETION_EVENT, DATASET_UPSERTION_EVENT
 
 TIMEOUT = 5
@@ -37,7 +37,6 @@ RETRIES = round(TIMEOUT / RETRY_INTERVAL)
 @mark.asyncio
 async def test_dataset_registration(container: Container):
     """Test the registration of a dataset announced as an event."""
-
     repository = await container.work_package_repository()
     dataset = await repository.get_dataset("some-dataset-id")
 
@@ -52,7 +51,6 @@ async def test_dataset_insert_update_delete(
     container: Container, kafka_fixture: KafkaFixture
 ):
     """Test the whole lifecycle of a dataset announced as an event."""
-
     config: Config = container.config()
     repository: WorkPackageRepository = await container.work_package_repository()
     event_subscriber: InboundProviderBase = await container.event_subscriber()

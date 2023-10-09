@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
@@ -15,9 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Setup script for pip. This setup configs are specified in the `setup.cfg` file"""
+"""Entrypoint of the package"""
 
-import setuptools
+import asyncio
 
-if __name__ == "__main__":
-    setuptools.setup()
+import typer
+from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
+
+from wps.main import consume_events, run_rest
+
+cli = typer.Typer()
+
+
+@cli.command(name="run-rest")
+def sync_run_api():
+    """Run the HTTP REST API."""
+    assert_tz_is_utc()
+    asyncio.run(run_rest())
+
+
+@cli.command(name="consume-events")
+def sync_consume_events(run_forever: bool = True):
+    """Run an event consumer listening to the configured topic."""
+    asyncio.run(consume_events(run_forever=run_forever))

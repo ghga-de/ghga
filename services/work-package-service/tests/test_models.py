@@ -39,7 +39,7 @@ def test_work_order_token():
         user_id="some-user-id",
         user_public_crypt4gh_key="some-public-key",
         full_user_name="Dr. John Doe",
-        email="john@home.org",  # pyright: ignore
+        email="john@home.org",  # type: ignore
     )
     assert token.full_user_name == "Dr. John Doe"
 
@@ -78,7 +78,7 @@ def test_bad_creation_data():
     """Test instantiating invalid work package creation DTO."""
     with raises(ValidationError, match="dataset_id"):
         WorkPackageCreationData(
-            dataset_id=["foo", "bar"],  # pyright: ignore
+            dataset_id=["foo", "bar"],  # type: ignore
             type=WorkType.DOWNLOAD,
             file_ids=["some-file-id", "another-file-id"],
             user_public_crypt4gh_key=user_public_crypt4gh_key,
@@ -86,7 +86,7 @@ def test_bad_creation_data():
     with raises(ValidationError, match="type"):
         WorkPackageCreationData(
             dataset_id="some-dataset-id",
-            type="UNKNOWN_TYPE",  # pyright: ignore
+            type="UNKNOWN_TYPE",  # type: ignore
             file_ids=["some-file-id", "another-file-id"],
             user_public_crypt4gh_key=user_public_crypt4gh_key,
         )
@@ -94,7 +94,7 @@ def test_bad_creation_data():
         WorkPackageCreationData(
             dataset_id="some-dataset-id",
             type=WorkType.DOWNLOAD,
-            file_ids="some-file-id",  # pyright: ignore
+            file_ids="some-file-id",  # type: ignore
             user_public_crypt4gh_key=user_public_crypt4gh_key,
         )
     with raises(ValidationError, match="user_public_crypt4gh_key"):
@@ -116,7 +116,7 @@ def test_work_package():
         files={"some-file-id": ".sam", "another-file-id": ".bam"},
         user_public_crypt4gh_key=user_public_crypt4gh_key,
         full_user_name="Dr. John Doe",
-        email="john@home.org",  # pyright: ignore
+        email="john@home.org",  # type: ignore
         token_hash="308eda9daf26b7446b284449a5895ab9a04ff30c129d4454e471cfb81bf5557d",
         created=datetime(2022, 2, 2, 2, tzinfo=timezone.utc),  # pyright: ignore
         expires=datetime(2022, 2, 2, 3, tzinfo=timezone.utc),  # pyright: ignore

@@ -26,7 +26,6 @@ from wps.adapters.outbound.http import AccessCheckConfig
 from wps.core.repository import WorkPackageConfig
 
 
-# pylint: disable=too-many-ancestors
 @config_from_yaml(prefix="wps")
 class Config(
     ApiConfigBase,

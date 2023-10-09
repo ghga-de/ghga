@@ -12,29 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
+"""Outbound access checks"""
 
-import asyncio
+from abc import ABC, abstractmethod
 
-import typer
-from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
-
-from wps.main import consume_events, run_rest
-
-cli = typer.Typer()
+__all__ = ["AccessCheckPort"]
 
 
-@cli.command(name="run-rest")
-def sync_run_api():
-    """Run the HTTP REST API."""
+class AccessCheckPort(ABC):
+    """A port for checking access permissions for datasets."""
 
-    assert_tz_is_utc()
-    asyncio.run(run_rest())
+    class AccessCheckError(RuntimeError):
+        """Raised when the access check failed without result."""
 
+    @abstractmethod
+    async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
+        """Check whether the given user has download access for the given dataset."""
 
-@cli.command(name="consume-events")
-def sync_consume_events(run_forever: bool = True):
-    """Run an event consumer listening to the configured topic."""
-
-    asyncio.run(consume_events(run_forever=run_forever))
+    @abstractmethod
+    async def get_datasets_with_download_access(self, user_id: str) -> list[str]:
+        """Get all datasets that the given user is allowed to download."""

@@ -44,7 +44,6 @@ class WorkPackageRepositoryPort(ABC):
         self, *, creation_data: WorkPackageCreationData, auth_context: AuthContext
     ) -> WorkPackageCreationResponse:
         """Create a work package and store it in the repository."""
-        ...
 
     @abstractmethod
     async def get(
@@ -62,7 +61,6 @@ class WorkPackageRepositoryPort(ABC):
         - if a work_package_access_token is specified and it does not match
           the token hash that is stored in the work package
         """
-        ...
 
     @abstractmethod
     async def work_order_token(
@@ -82,17 +80,14 @@ class WorkPackageRepositoryPort(ABC):
         - if a work_package_access_token is specified and it does not match
           the token hash that is stored in the work package
         """
-        ...
 
     @abstractmethod
     async def register_dataset(self, dataset: Dataset) -> None:
         """Register a dataset with all of its files."""
-        ...
 
     @abstractmethod
     async def delete_dataset(self, dataset_id: str) -> None:
         """Delete a dataset with all of its files."""
-        ...
 
     @abstractmethod
     async def get_dataset(self, dataset_id: str) -> Dataset:
@@ -100,7 +95,6 @@ class WorkPackageRepositoryPort(ABC):
 
         If the dataset does not exist, a DatasetNotFoundError will be raised.
         """
-        ...
 
     @abstractmethod
     async def get_datasets(
@@ -111,4 +105,3 @@ class WorkPackageRepositoryPort(ABC):
         A work type can be specified for filtering the datasets, but currently
         only downloadable datasets are supported.
         """
-        ...

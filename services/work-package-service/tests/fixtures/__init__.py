@@ -16,8 +16,8 @@
 """Fixtures that are used in both integration and unit tests"""
 
 import asyncio
+from collections.abc import AsyncGenerator
 from datetime import timedelta
-from typing import AsyncGenerator
 
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.auth.ghga import AuthContext
@@ -35,10 +35,7 @@ from wps.adapters.outbound.dao import DatasetDaoConstructor, WorkPackageDaoConst
 from wps.config import Config
 from wps.container import Container
 from wps.core.repository import WorkPackageConfig, WorkPackageRepository
-from wps.main import (  # pylint: disable=import-outside-toplevel
-    get_container,
-    get_rest_api,
-)
+from wps.main import get_container, get_rest_api
 
 from .access import AccessCheckMock
 from .datasets import DATASET_UPSERTION_EVENT
@@ -102,7 +99,7 @@ def fixture_auth_context() -> AuthContext:
 async def fixture_repository(mongodb_fixture: MongoDbFixture) -> WorkPackageRepository:
     """Fixture for creating a configured repository"""
     work_package_config = WorkPackageConfig(
-        work_package_signing_key=SIGNING_KEY_PAIR.export_private()  # pyright: ignore
+        work_package_signing_key=SIGNING_KEY_PAIR.export_private()  # type: ignore
     )
     dataset_dao = await DatasetDaoConstructor.construct(
         config=work_package_config,

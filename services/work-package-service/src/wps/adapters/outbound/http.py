@@ -16,8 +16,8 @@
 
 """Outbound HTTP calls"""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import httpx
 from pydantic import BaseSettings, Field

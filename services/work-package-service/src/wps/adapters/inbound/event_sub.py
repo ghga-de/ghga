@@ -16,6 +16,8 @@
 
 """KafkaEventSubscriber receiving events that announce datasets"""
 
+from contextlib import suppress
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
@@ -50,7 +52,8 @@ class EventSubTranslatorConfig(BaseSettings):
 
 class EventSubTranslator(EventSubscriberProtocol):
     """A triple hexagonal translator compatible with the EventSubscriberProtocol that
-    is used to received events relevant for file uploads."""
+    is used to received events relevant for file uploads.
+    """
 
     def __init__(
         self,
@@ -104,12 +107,10 @@ class EventSubTranslator(EventSubscriberProtocol):
         validated_payload = get_validated_payload(
             payload=payload, schema=event_schemas.MetadataDatasetID
         )
-        try:
+        with suppress(self._repository.DatasetNotFoundError):  # if already deleted
             await self._repository.delete_dataset(validated_payload.accession)
-        except self._repository.DatasetNotFoundError:
-            pass  # already deleted
 
-    async def _consume_validated(  # pylint: disable=unused-argument
+    async def _consume_validated(
         self, *, payload: JsonObject, type_: Ascii, topic: Ascii
     ) -> None:
         """

@@ -28,12 +28,14 @@ class AccessCheckMock(AccessCheckPort):
     """Mock checking dataset access permissions."""
 
     async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
+        """Check whether the given user has download access for the given dataset."""
         return (
             user_id in USERS_WITH_DOWNLOAD_ACCESS
             and dataset_id in DATASETS_WITH_DOWNLOAD_ACCESS
         )
 
     async def get_datasets_with_download_access(self, user_id: str) -> list[str]:
+        """Get all datasets that the given user is allowed to download."""
         return (
             list(DATASETS_WITH_DOWNLOAD_ACCESS)
             if user_id in USERS_WITH_DOWNLOAD_ACCESS

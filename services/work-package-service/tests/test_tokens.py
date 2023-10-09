@@ -64,7 +64,7 @@ def test_sign_work_order_token():
         user_id="some-user-id",
         user_public_crypt4gh_key="some-public-key",
         full_user_name="Dr. John Doe",
-        email="john@home.org",  # pyright: ignore
+        email="john@home.org",  # type: ignore
     )
     token_str = sign_work_order_token(work_order_token=work_order_token, key=key)
     assert isinstance(token_str, str)

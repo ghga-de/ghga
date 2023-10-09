@@ -29,7 +29,7 @@ from wps.core.models import (
 from wps.core.repository import WorkPackageRepository
 from wps.core.tokens import hash_token
 
-from .fixtures import (  # noqa: F401 # pylint: disable=unused-import
+from .fixtures import (  # noqa: F401
     SIGNING_KEY_PAIR,
     fixture_auth_context,
     fixture_repository,
@@ -38,13 +38,11 @@ from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET
 
 
-# pylint: disable=too-many-statements
 @mark.asyncio
 async def test_work_package_and_token_creation(
     repository: WorkPackageRepository, auth_context: AuthContext
 ):
     """Test creating a work package and a work order token"""
-
     # announce dataset
     await repository.register_dataset(DATASET)
 
@@ -204,7 +202,6 @@ async def test_checking_accessible_datasets(
     repository: WorkPackageRepository, auth_context: AuthContext
 ):
     """Test checking the accessibility of datasets"""
-
     with raises(repository.DatasetNotFoundError):
         await repository.get_dataset("some-dataset_id")
 
@@ -223,7 +220,6 @@ async def test_deletion_of_datasets(
     repository: WorkPackageRepository, auth_context: AuthContext
 ):
     """Test deletion of existing datasets"""
-
     with raises(repository.DatasetNotFoundError):
         await repository.delete_dataset(DATASET.id)
 

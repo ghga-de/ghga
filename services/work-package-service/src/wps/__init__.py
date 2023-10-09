@@ -12,20 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""DAO interface for accessing the database."""
+"""Work Package Service"""
 
-from hexkit.protocols.dao import (  # noqa: F401; pylint: disable=unused-import
-    DaoNaturalId,
-    DaoSurrogateId,
-    ResourceNotFoundError,
-)
+from importlib.metadata import version
 
-from wps.core import models
-
-__all__ = ["DatasetDaoPort", "WorkPackageDaoPort", "ResourceNotFoundError"]
-
-# ports described by type aliases:
-DatasetDaoPort = DaoNaturalId[models.Dataset]
-WorkPackageDaoPort = DaoSurrogateId[models.WorkPackage, models.WorkPackageData]
+__version__ = version(__package__)

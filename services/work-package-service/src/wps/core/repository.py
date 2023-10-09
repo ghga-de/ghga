@@ -92,7 +92,6 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         self._dataset_dao = dataset_dao
         self._dao = work_package_dao
 
-    # pylint: disable=too-many-locals
     async def create(
         self, *, creation_data: WorkPackageCreationData, auth_context: AuthContext
     ) -> WorkPackageCreationResponse:
@@ -105,7 +104,6 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         - the files in th dataset cannot be determined
         - no existing files in the dataset have been specified
         """
-
         user_id = auth_context.id
         if user_id is None:
             raise self.WorkPackageAccessError("No internal user specified")
