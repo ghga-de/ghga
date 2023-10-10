@@ -27,4 +27,4 @@ def get_config(
     default_config_yaml: Path = TEST_CONFIG_YAML,
 ) -> Config:
     """Load test config"""
-    return Config(config_yaml=default_config_yaml)
+    return Config(config_yaml=default_config_yaml)  # type: ignore[call-arg]

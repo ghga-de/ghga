@@ -1,0 +1,3 @@
+# requirements for development and testing this service
+
+-r requirements-dev-common.in

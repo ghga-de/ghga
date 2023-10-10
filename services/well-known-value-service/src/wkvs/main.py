@@ -29,7 +29,6 @@ from wkvs.container import Container
 
 def get_configured_container(*, config: Config) -> Container:
     """Create and configure a DI container."""
-
     container = Container()
     container.config.load_config(config)
 
@@ -37,10 +36,7 @@ def get_configured_container(*, config: Config) -> Container:
 
 
 def get_rest_api(*, config: Config) -> FastAPI:
-    """
-    Creates a FastAPI app.
-    """
-
+    """Creates a FastAPI app."""
     api = FastAPI()
     api.include_router(router=router)
     configure_app(api, config=config)
@@ -49,7 +45,7 @@ def get_rest_api(*, config: Config) -> FastAPI:
 
 async def run_rest():
     """Run the server"""
-    config = Config()
+    config = Config()  # type: ignore[call-arg]
 
     container = get_configured_container(config=config)
     container.wire(modules=["wkvs.adapters.inbound.fastapi_.routes"])

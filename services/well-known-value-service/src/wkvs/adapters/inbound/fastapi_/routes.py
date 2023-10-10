@@ -51,7 +51,6 @@ async def retrieve_value(
     Raises:
         HTTPException 404 when the specified value is not configured
     """
-
     try:
         available_values = config.dict(include=WELLKNOWNS_FILTER)
         response = {value_name: available_values[value_name]}
@@ -74,5 +73,4 @@ async def retrieve_all_values(
     config: WellKnownConfig = Depends(Provide[Container.config]),
 ) -> dict[str, Any]:
     """Retrieves all values from the WellKnownsConfig class"""
-
     return config.dict(include=WELLKNOWNS_FILTER)

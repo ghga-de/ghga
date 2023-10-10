@@ -15,8 +15,8 @@
 #
 
 """Joint fixture"""
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import AsyncGenerator
 
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -29,6 +29,8 @@ from wkvs.main import get_configured_container, get_rest_api
 
 @dataclass
 class JointFixture:
+    """Joint fixture for testing"""
+
     config: Config
     container: Container
     rest_client: AsyncTestClient
@@ -37,7 +39,6 @@ class JointFixture:
 @pytest_asyncio.fixture
 async def joint_fixture() -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
-
     config = get_config()
 
     # create a DI container instance
