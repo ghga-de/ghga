@@ -51,7 +51,7 @@ parameters:
 
     Warm regards,
     The GHGA Team
-  service_instance_id: '1'
+  service_instance_id: 'ns_1'
   service_name: ns
   smtp_host: 127.0.0.1
   smtp_port: 587
