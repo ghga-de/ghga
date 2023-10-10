@@ -21,6 +21,7 @@ spec:
         version: staging
     spec:
       serviceAccountName: {{ .Release.Name }}
+      shareProcessNamespace: {{ .Values.shareProcessNamespace }}
       containers:
       - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
         {{- include "ghga-common.command-args" (list "python /service/configure_build_serve/run.py")  | nindent 8 }}

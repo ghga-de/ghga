@@ -80,3 +80,5 @@ parameters:
     service_instance_id: 'dcs_rest_1'
   consumer:
     service_instance_id: 'dcs_consumer_1'
+
+shareProcessNamespace: false

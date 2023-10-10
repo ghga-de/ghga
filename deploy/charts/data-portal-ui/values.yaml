@@ -29,3 +29,5 @@ parameters:
   port: 8080
   svc_repository_url: "/api/repository"
   svc_search_url: "/api/search"
+
+shareProcessNamespace: false

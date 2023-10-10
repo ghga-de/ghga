@@ -55,3 +55,5 @@ parameters:
   service_instance_id: 'ars_1'
   service_name: ars
   workers: 1
+
+shareProcessNamespace: false

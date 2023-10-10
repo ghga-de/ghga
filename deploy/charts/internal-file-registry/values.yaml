@@ -49,3 +49,5 @@ parameters:
   s3_session_token: "**********"
   service_instance_id: "ifrs_1"
   service_name: internal_file_registry
+
+shareProcessNamespace: false

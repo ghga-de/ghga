@@ -36,3 +36,5 @@ parameters:
   user_domain: home.org
   valid_seconds: 3600
   workers: 1
+
+shareProcessNamespace: false

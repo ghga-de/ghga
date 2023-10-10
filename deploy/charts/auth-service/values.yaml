@@ -79,3 +79,5 @@ authService:
   emissary:
     enabled: false
     name: authentication
+
+shareProcessNamespace: false

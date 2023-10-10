@@ -51,3 +51,5 @@ parameters:
   vault_role_id: '**********'
   vault_secret_id: '**********'
   workers: 1
+
+shareProcessNamespace: false
