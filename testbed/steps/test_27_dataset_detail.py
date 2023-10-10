@@ -17,9 +17,16 @@
 
 import re
 
-import httpx
-
-from .conftest import TIMEOUT, Config, StateStorage, parse, scenarios, then, when
+from .conftest import (
+    Config,
+    HttpClient,
+    Response,
+    StateStorage,
+    parse,
+    scenarios,
+    then,
+    when,
+)
 from .utils import get_dataset_overview
 
 scenarios("../features/27_dataset_details.feature")
@@ -27,8 +34,8 @@ scenarios("../features/27_dataset_details.feature")
 
 @when(parse('I request the details of "{alias}" dataset'), target_fixture="response")
 def request_dataset_details(
-    alias: str, config: Config, state: StateStorage
-) -> httpx.Response:
+    alias: str, config: Config, http: HttpClient, state: StateStorage
+) -> Response:
     datasets = state.get_state("all available datasets")
     if alias == "non-existing":
         resource_id = alias
@@ -39,11 +46,11 @@ def request_dataset_details(
         f"{config.metldata_url}/artifacts/"
         f"embedded_public/classes/EmbeddedDataset/resources/{resource_id}"
     )
-    return httpx.get(url, timeout=TIMEOUT)
+    return http.get(url)
 
 
 @then(parse('I get the details of "{alias}" dataset'))
-def check_dataset_details(alias: str, response: httpx.Response, state: StateStorage):
+def check_dataset_details(alias: str, response: Response, state: StateStorage):
     result = response.json()
     assert result
     assert alias == result.get("alias")
@@ -55,8 +62,8 @@ def check_dataset_details(alias: str, response: httpx.Response, state: StateStor
 
 @when(parse("I request an associated sample resource"), target_fixture="response")
 def request_one_associated_samples(
-    config: Config, response: httpx.Response
-) -> httpx.Response:
+    config: Config, http: HttpClient, response: Response
+) -> Response:
     result = response.json()
     match = re.search("'sample': '(GHGAN[0-9]+)'", repr(result))
     assert match
@@ -65,11 +72,11 @@ def request_one_associated_samples(
         f"{config.metldata_url}/artifacts/"
         f"embedded_public/classes/Sample/resources/{resource_id}"
     )
-    return httpx.get(url, timeout=TIMEOUT)
+    return http.get(url)
 
 
 @then("I get a sample resource")
-def check_one_sample_resource(response: httpx.Response):
+def check_one_sample_resource(response: Response):
     result = response.json()
     assert isinstance(result, dict)
     assert sorted(result) == [

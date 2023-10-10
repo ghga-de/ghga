@@ -25,6 +25,7 @@ from fixtures.config import Config
 from fixtures.connector import ConnectorFixture, connector_fixture
 from fixtures.dsk import DskFixture, dsk_fixture
 from fixtures.file import batch_file_fixture, file_fixture
+from fixtures.http import HttpClient, Response, http_fixture
 from fixtures.kafka import KafkaFixture, kafka_fixture
 from fixtures.mongo import MongoFixture, mongo_fixture
 from fixtures.s3 import S3Fixture, s3_fixture
@@ -33,6 +34,7 @@ from fixtures.state import StateStorage, state_fixture
 __all__ = [
     "auth_fixture",
     "config_fixture",
+    "http_fixture",
     "kafka_fixture",
     "mongo_fixture",
     "s3_fixture",
@@ -42,6 +44,11 @@ __all__ = [
     "dsk_fixture",
     "connector_fixture",
     "state_fixture",
+    "Config",
+    "HttpClient",
+    "JointFixture",
+    "Response",
+    "StateStorage",
 ]
 
 event_loop = get_event_loop(scope="session")
@@ -51,6 +58,7 @@ class JointFixture(NamedTuple):
     """Collection of fixtures returned by `joint_fixture`."""
 
     config: Config
+    http: HttpClient
     kafka: KafkaFixture
     mongo: MongoFixture
     s3: S3Fixture
@@ -70,6 +78,7 @@ def config_fixture() -> Config:
 @fixture(name="fixtures", scope="session")
 def joint_fixture(
     config: Config,
+    http: HttpClient,
     kafka: KafkaFixture,
     mongo: MongoFixture,
     s3: S3Fixture,
@@ -80,4 +89,4 @@ def joint_fixture(
 ) -> JointFixture:
     """A fixture that collects all fixtures for integration testing."""
 
-    return JointFixture(config, kafka, mongo, s3, auth, dsk, connector, state)
+    return JointFixture(config, http, kafka, mongo, s3, auth, dsk, connector, state)

@@ -8,11 +8,8 @@ ignore = [
     "E", # pycodestyle errors
     "W", # pycodestyle warnings - pycodestyle covered by black
     "PLW", # pylint warnings
-    "RUF001", # ambiguous unicode character strings
-    "RUF010", # explicit conversion to string or repr: !s or !r
-    "RUF012", # mutable class variables need typing.ClassVar annotation
     "N818", # Errors need to have Error suffix
-    "B008", # function call in arg defaults,
+    "B008", # function call in arg defaults
     "PLR2004", # magic numbers should be constants
     "PLR0913", # Too many arguments to function call
     "D205", # blank-line-after-summary
@@ -23,8 +20,6 @@ ignore = [
     "S101", # Use of `assert` detected
     "D102", # Missing docstring in function
     "D103", # Missing docstring in method
-    "SIM212",
-
 ]
 
 line-length = 88

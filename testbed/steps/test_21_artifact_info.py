@@ -15,21 +15,19 @@
 
 """Step definitions for examining metadata artifacts in the frontend"""
 
-import httpx
-
-from .conftest import TIMEOUT, Config, parse, scenarios, then, when
+from .conftest import Config, HttpClient, Response, parse, scenarios, then, when
 
 scenarios("../features/21_artifact_info.feature")
 
 
 @when("I request info on all available artifacts", target_fixture="response")
-def request_info_on_artifacts(config: Config):
+def request_info_on_artifacts(config: Config, http: HttpClient):
     url = f"{config.metldata_url}/artifacts"
-    return httpx.options(url, timeout=TIMEOUT)
+    return http.options(url)
 
 
 @then("I get the expected info on all the artifacts")
-def check_artifacts(response: httpx.Response):
+def check_artifacts(response: Response):
     artifact_infos = response.json()
     assert isinstance(artifact_infos, list)
     assert len(artifact_infos) == 5
@@ -55,13 +53,13 @@ def check_artifacts(response: httpx.Response):
 @when(
     parse('I request info on the "{artifact_name}" artifact'), target_fixture="response"
 )
-def request_info_on_artifact(config: Config, artifact_name: str):
+def request_info_on_artifact(artifact_name: str, config: Config, http: HttpClient):
     url = f"{config.metldata_url}/artifacts/{artifact_name}"
-    return httpx.options(url, timeout=TIMEOUT)
+    return http.options(url)
 
 
 @then(parse('I get the expected info on the "{artifact_name}" artifact'))
-def check_artifact(artifact_name, response: httpx.Response):
+def check_artifact(artifact_name: str, response: Response):
     artifact_info = response.json()
     assert isinstance(artifact_info, dict)
     assert artifact_info["name"] == artifact_name

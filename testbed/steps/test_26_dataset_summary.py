@@ -15,9 +15,16 @@
 
 """Step definitions for the dataset summary view in the frontend"""
 
-import httpx
-
-from .conftest import TIMEOUT, Config, StateStorage, parse, scenarios, then, when
+from .conftest import (
+    Config,
+    HttpClient,
+    Response,
+    StateStorage,
+    parse,
+    scenarios,
+    then,
+    when,
+)
 
 scenarios("../features/26_dataset_summary.feature")
 
@@ -88,8 +95,8 @@ EXPECTED_SUMMARIES = {
 
 @when(parse('I request the summary of "{alias}" dataset'), target_fixture="response")
 def request_dataset_summary(
-    alias: str, config: Config, state: StateStorage
-) -> httpx.Response:
+    alias: str, config: Config, http: HttpClient, state: StateStorage
+) -> Response:
     datasets = state.get_state("all available datasets")
     if alias == "non-existing":
         resource_id = alias
@@ -100,11 +107,11 @@ def request_dataset_summary(
         f"{config.metldata_url}/artifacts/"
         f"stats_public/classes/DatasetStats/resources/{resource_id}"
     )
-    return httpx.get(url, timeout=TIMEOUT)
+    return http.get(url)
 
 
 @then(parse('I get the summary of "{alias}" dataset'))
-def check_dataset_summary(alias: str, response: httpx.Response):
+def check_dataset_summary(alias: str, response: Response):
     result = response.json()
     accession = result.pop("accession")
     assert accession.startswith("GHGAD")

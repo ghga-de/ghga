@@ -20,14 +20,15 @@ import inspect
 from functools import wraps
 from typing import Any, NamedTuple, Optional
 
-import httpx
 from fixtures import (  # noqa: RUF100
     Config,
     ConnectorFixture,
     DskFixture,
+    HttpClient,
     JointFixture,
     KafkaFixture,
     MongoFixture,
+    Response,
     S3Fixture,
     StateStorage,
     auth_fixture,
@@ -37,6 +38,7 @@ from fixtures import (  # noqa: RUF100
     dsk_fixture,
     event_loop,
     file_fixture,
+    http_fixture,
     joint_fixture,
     kafka_fixture,
     mongo_fixture,
@@ -50,8 +52,6 @@ from pytest_bdd import (  # noqa: RUF100
     then,
     when,
 )
-
-TIMEOUT = 10
 
 parse = parsers.parse  # pylint: disable=invalid-name
 
@@ -122,7 +122,7 @@ def access_as_user(name: str, fixtures: JointFixture) -> LoginFixture:
 
 
 @then(parse('the response status code is "{code:d}"'))
-def check_status_code(code: int, response: httpx.Response):
+def check_status_code(code: int, response: Response):
     assert response.status_code == code
 
 
@@ -182,7 +182,7 @@ async def reset_state(fixtures: JointFixture):
         fixtures.mongo.empty_databases()  # empty service databases
         restore_data_stewardship(saved_data_steward, fixtures)
     fixtures.dsk.reset_work_dir()  # reset local submission registry
-    empty_mail_server(fixtures.config)  # reset mail server
+    empty_mail_server(fixtures)  # reset mail server
 
 
 @given(parse('we have the state "{name}"'))
@@ -197,19 +197,19 @@ def set_state_clause(name: str, state: StateStorage):
     state.set_state(name, True)
 
 
-def empty_mail_server(config: Config):
+def empty_mail_server(fixtures: JointFixture):
     """Delete all e-mails from mail server"""
-    httpx.delete(f"{config.mailhog_url}/api/v1/messages", timeout=TIMEOUT)
+    fixtures.http.delete(f"{fixtures.config.mailhog_url}/api/v1/messages")
 
 
 @then(parse('the expected hit count is "{count:d}"'))
-def check_hit_count(count: int, response: httpx.Response):
+def check_hit_count(count: int, response: Response):
     results = response.json()
     assert results["count"] == count
 
 
 @then(parse('I receive "{item_count:d}" item'))
 @then(parse('I receive "{item_count:d}" items'))
-def check_received_item_count(response: httpx.Response, item_count):
+def check_received_item_count(response: Response, item_count):
     results = response.json()
     assert len(results["hits"]) == item_count

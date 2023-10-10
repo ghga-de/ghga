@@ -52,7 +52,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     # Kafka config
     service_name: str = "testbed_kafka"
     service_instance_id: str = "testbed-app-1"
-    kafka_servers: list[str] = ["kafka:9092"]
+    kafka_servers: list[str] = ["kafka:9092"]  # noqa: RUF012
 
     # MongoDb config
     db_connection_str: SecretStr = SecretStr(
@@ -60,7 +60,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     )
     db_name: str = "test-db"
     # databases that shall be dropped when running from scratch
-    service_db_names: list[str] = [
+    service_db_names: list[str] = [  # noqa: RUF012
         "ars",
         "auth",
         "dcs",
@@ -133,6 +133,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     op_url: str = "http://op.test"
     op_issuer: str = "https://test-aai.ghga.de"
 
+    # basic authentication
+    basic_auth_credentials: str = ""
+
     @root_validator(pre=False)
     @classmethod
     def check_operation_modes(cls, values):
@@ -143,6 +146,8 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
                     raise ValueError("API gateway always uses auth adapter")
                 if values["keep_state_in_db"]:
                     raise ValueError("Cannot use database when using API gateway")
+            elif values["basic_auth_credentials"]:
+                raise ValueError("Basic auth must only be used with API gateway")
         except (KeyError, ValueError) as error:
             raise ValueError(f"Check operation modes: {error}") from error
         return values

@@ -15,14 +15,12 @@
 
 """Step definitions for creating work package tests in the frontend"""
 
-import httpx
-
 from .conftest import (
-    TIMEOUT,
     Config,
     JointFixture,
     LoginFixture,
     MongoFixture,
+    Response,
     StateStorage,
     given,
     parse,
@@ -63,15 +61,15 @@ def announce_dataset(config: Config, mongo: MongoFixture):
 
 
 @when("the list of datasets is queried", target_fixture="response")
-def query_datasets(config: Config, login: LoginFixture):
+def query_datasets(fixtures: JointFixture, login: LoginFixture):
     user_id = login.user.id
-    url = f"{config.wps_url}/users/{user_id}/datasets"
-    return httpx.get(url, headers=login.headers, timeout=TIMEOUT)
+    url = f"{fixtures.config.wps_url}/users/{user_id}/datasets"
+    return fixtures.http.get(url, headers=login.headers)
 
 
 @then(parse('only the test dataset "{dataset_char}" is returned'))
 def check_dataset_in_list(
-    dataset_char: str, fixtures: JointFixture, response: httpx.Response
+    dataset_char: str, fixtures: JointFixture, response: Response
 ):
     data = response.json()
     assert isinstance(data, list) and len(data) == 1
@@ -89,10 +87,7 @@ def check_dataset_in_list(
     target_fixture="response",
 )
 def create_work_package(
-    login: LoginFixture,
-    fixtures: JointFixture,
-    response: httpx.Response,
-    file_scope: str,
+    login: LoginFixture, fixtures: JointFixture, response: Response, file_scope: str
 ):
     data = response.json()
     assert isinstance(data, list) and len(data) == 1
@@ -121,13 +116,11 @@ def create_work_package(
         "user_public_crypt4gh_key": fixtures.config.user_public_crypt4gh_key,
     }
     url = f"{fixtures.config.wps_url}/work-packages"
-    return httpx.post(url, headers=login.headers, json=data, timeout=TIMEOUT)
+    return fixtures.http.post(url, headers=login.headers, json=data)
 
 
 @then(parse('the response contains a download token for "{file_scope}" files'))
-def check_download_token(
-    fixtures: JointFixture, response: httpx.Response, file_scope: str
-):
+def check_download_token(fixtures: JointFixture, response: Response, file_scope: str):
     data = response.json()
     assert set(data) == {"id", "token"}
     id_, token = data["id"], data["token"]

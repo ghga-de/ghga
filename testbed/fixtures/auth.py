@@ -19,18 +19,17 @@
 from pathlib import Path
 from typing import Optional
 
-import httpx
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto import jwk
 from pytest import fixture
 
 from .config import Config
+from .http import HttpClient
 
 __all__ = ["auth_fixture"]
 
 DEFAULT_VALID_SECONDS = 60 * 60  # 10 mins
 DEFAULT_USER_STATUS = "active"
-TIMEOUT = 10
 
 
 class TokenGenerator:
@@ -45,13 +44,14 @@ class TokenGenerator:
     titles = ("Dr.", "Prof.")
     user_domain = "home.org"
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, http: HttpClient):
         self.use_api_gateway = config.use_api_gateway
         self.use_auth_adapter = config.use_auth_adapter
         self.key_file = config.auth_key_file
         self.op_url = config.op_url
         self.op_issuer = config.op_issuer
         self.auth_adapter_url = config.auth_adapter_url
+        self.http = http
 
     @classmethod
     def split_title(cls, full_name: str) -> tuple[Optional[str], str]:
@@ -99,8 +99,9 @@ class TokenGenerator:
         if sub:
             login_info["sub"] = sub
         url = self.op_url + "/login"
-        response = httpx.post(url, json=login_info, timeout=TIMEOUT)
-        assert response.status_code == 201
+        response = self.http.post(url, json=login_info)
+        status_code = response.status_code
+        assert status_code == 201, status_code
         token = response.text
         assert token and token.count(".") == 2
         return token
@@ -110,10 +111,11 @@ class TokenGenerator:
     ) -> str:
         """Get an internal from an external access token using the auth adapter."""
         url = self.auth_adapter_url + "/users"
-        method = httpx.post if for_registration else httpx.get
+        method = self.http.post if for_registration else self.http.get
         headers = {"Authorization": f"Bearer {token}"}
-        response = method(url, headers=headers, timeout=TIMEOUT)  # type: ignore
-        assert response.status_code == 200
+        response = method(url, headers=headers)  # type: ignore
+        status_code = response.status_code
+        assert status_code == 200, status_code
         assert not response.json()
         authorization = response.headers.get("Authorization")
         assert authorization and authorization.startswith("Bearer ")
@@ -208,6 +210,6 @@ class TokenGenerator:
 
 
 @fixture(name="auth", scope="session")
-def auth_fixture(config) -> TokenGenerator:
+def auth_fixture(config: Config, http: HttpClient) -> TokenGenerator:
     """Fixture that provides an auth token generator."""
-    return TokenGenerator(config)
+    return TokenGenerator(config, http)

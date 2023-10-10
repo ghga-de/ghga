@@ -26,10 +26,10 @@ from typing import Optional
 from hexkit.providers.s3.testutils import FileObject
 from pydantic import BaseModel
 from pytest import fixture
-from steps.utils import calculate_checksum
 
 from fixtures.config import Config
 from fixtures.dsk import DskFixture
+from fixtures.utils import calculate_checksum
 
 __all__ = ["FileBatch", "FileObject", "batch_file_fixture", "file_fixture"]
 
@@ -52,8 +52,10 @@ def create_named_file(
     """Create a file with given parameters"""
     file_path = target_dir / name
 
-    file_size = config.file_size if not file_size else file_size
-    alias = os.path.splitext(name)[0] if not alias else alias
+    if not file_size:
+        file_size = config.file_size
+    if not alias:
+        alias = os.path.splitext(name)[0]
 
     with open(file_path, "wb") as file:
         first_line = f"{name}\n".encode()

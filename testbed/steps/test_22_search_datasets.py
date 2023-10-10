@@ -15,30 +15,36 @@
 
 """Step definitions for searching metadata in the frontend"""
 
-import httpx
-
-from .conftest import Config, StateStorage, parse, scenarios, then, when
+from .conftest import (
+    JointFixture,
+    Response,
+    StateStorage,
+    parse,
+    scenarios,
+    then,
+    when,
+)
 from .utils import get_dataset_overview, search_dataset_rpc
 
 scenarios("../features/22_search_datasets.feature")
 
 
 @when("I search documents with invalid query format", target_fixture="response")
-def search_with_invalid_query(config: Config):
+def search_with_invalid_query(fixtures: JointFixture):
     invalid_query = {"Invalid": "Query"}
-    return search_dataset_rpc(config=config, query=invalid_query)  # type: ignore
+    return search_dataset_rpc(fixtures=fixtures, query=invalid_query)  # type: ignore
 
 
 @when(
     parse("I search datasets without any keyword"),
     target_fixture="response",
 )
-def search_items_without_keyword(config: Config):
-    return search_dataset_rpc(config=config)
+def search_items_without_keyword(fixtures: JointFixture):
+    return search_dataset_rpc(fixtures=fixtures)
 
 
 @then("I get all the existing datasets")
-def check_search_without_keyword_results(state: StateStorage, response: httpx.Response):
+def check_search_without_keyword_results(state: StateStorage, response: Response):
     results = response.json()
     assert results["count"] == 6
     # get an overview of all datasets
@@ -62,12 +68,12 @@ def check_search_without_keyword_results(state: StateStorage, response: httpx.Re
     parse('I search datasets with the "{keyword}" query'),
     target_fixture="response",
 )
-def search_dataset(config: Config, keyword):
-    return search_dataset_rpc(config, query=keyword)
+def search_dataset(fixtures: JointFixture, keyword: str):
+    return search_dataset_rpc(fixtures=fixtures, query=keyword)
 
 
 @then("I get the expected results from study search")
-def check_study_search_result(response: httpx.Response):
+def check_study_search_result(response: Response):
     results = response.json()
     assert results["count"] == 4
     contents = [hit["content"] for hit in results["hits"]]
@@ -84,7 +90,7 @@ def check_study_search_result(response: httpx.Response):
 
 
 @then("I get the expected results from description search")
-def check_description_search_result(response: httpx.Response):
+def check_description_search_result(response: Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]

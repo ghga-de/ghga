@@ -18,15 +18,13 @@
 from datetime import timedelta
 from time import sleep
 
-import httpx
-from fixtures.mongo import INTERVAL
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from .conftest import (
-    TIMEOUT,
     Config,
     JointFixture,
     LoginFixture,
+    Response,
     StateStorage,
     fetch_data_stewardship,
     given,
@@ -83,26 +81,26 @@ def request_access_for_dataset(alias: str, fixtures: JointFixture, login: LoginF
         "access_starts": date_now.isoformat(),
         "access_ends": (date_now + timedelta(days=365)).isoformat(),
     }
-    return httpx.post(url, headers=headers, json=data)
+    return fixtures.http.post(url, headers=headers, json=data)
 
 
 @then(parse('an email has been sent to "{email}"'))
 def check_email_sent_to(
-    config: Config, email: str, timeout: float = TIMEOUT, interval: float = INTERVAL
+    email: str, fixtures: JointFixture, timeout: float = 15, interval: float = 0.1
 ):
     """Validate e-mail notification.
 
     Wait for an e-mail to be received by the mail server. If it does not appear
     within the given timeout (in seconds), an AssertionError is raised.
     """
-    url = f"{config.mailhog_url}/api/v2/search"
+    url = f"{fixtures.config.mailhog_url}/api/v2/search"
     slept: float = 0
     while slept < timeout:
-        response = httpx.get(
+        response = fixtures.http.get(
             url,
             headers={"accept": "application/json"},
             params={"kind": "to", "query": email},
-            timeout=TIMEOUT,
+            timeout=timeout,
         )
         assert response.status_code == 200
         if response.json()["count"] > 0:
@@ -113,9 +111,9 @@ def check_email_sent_to(
 
 
 @when("I fetch the list of access requests", target_fixture="response")
-def fetch_list_of_access_requests(config: Config, login: LoginFixture):
-    url = f"{config.ars_url}/access-requests"
-    return httpx.get(url, headers=login.headers, timeout=TIMEOUT)
+def fetch_list_of_access_requests(fixtures: JointFixture, login: LoginFixture):
+    url = f"{fixtures.config.ars_url}/access-requests"
+    return fixtures.http.get(url, headers=login.headers)
 
 
 @then(parse('there is one request for test dataset "{alias}" from "{name}"'))
@@ -123,7 +121,7 @@ def there_is_one_request(
     alias: str,
     name: str,
     state: StateStorage,
-    response: httpx.Response,
+    response: Response,
 ):
     datasets = state.get_state("all available datasets")
     assert alias in datasets
@@ -139,7 +137,7 @@ def there_is_one_request(
 
 @when(parse('I allow the pending request from "{name}"'), target_fixture="response")
 def allow_pending_request(
-    name: str, config: Config, login: LoginFixture, response: httpx.Response
+    name: str, fixtures: JointFixture, login: LoginFixture, response: Response
 ):
     requests = response.json()
     requests = [
@@ -150,13 +148,13 @@ def allow_pending_request(
     assert len(requests) == 1
     request = requests[0]
     request_id = request["id"]
-    url = f"{config.ars_url}/access-requests/{request_id}"
+    url = f"{fixtures.config.ars_url}/access-requests/{request_id}"
     data = {"status": "allowed"}
-    return httpx.patch(url, headers=login.headers, json=data)
+    return fixtures.http.patch(url, headers=login.headers, json=data)
 
 
 @then(parse('the status of the request from "{name}" is "{status}"'))
-def there_are_access_requests(name: str, status: str, response: httpx.Response):
+def there_are_access_requests(name: str, status: str, response: Response):
     requests = response.json()
     requests = [request for request in requests if request["full_user_name"] == name]
     assert len(requests) == 1

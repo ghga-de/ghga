@@ -17,21 +17,19 @@
 
 from datetime import datetime, timezone
 
-import httpx
-
-from .conftest import TIMEOUT, Config, scenarios, then, when
+from .conftest import Config, HttpClient, Response, scenarios, then, when
 
 scenarios("../features/20_global_summary.feature")
 
 
 @when("I get the global summary", target_fixture="response")
-def get_the_global_summary(config: Config) -> httpx.Response:
+def get_the_global_summary(config: Config, http: HttpClient) -> Response:
     url = f"{config.metldata_url}/stats"
-    return httpx.get(url, timeout=TIMEOUT)
+    return http.get(url)
 
 
 @then("the summary statistics is as expected")
-def check_summary_statistics(response: httpx.Response):
+def check_summary_statistics(response: Response):
     result = response.json()
     assert isinstance(result, dict)
     assert sorted(result) == ["created", "id", "resource_stats"]

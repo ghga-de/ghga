@@ -19,9 +19,10 @@
 import subprocess
 from collections import Counter
 
+from fixtures.utils import temporary_file
 from ghga_datasteward_kit.loading import LoadConfig
 
-from steps.utils import load_config_as_file, temporary_file
+from steps.utils import load_config_as_file
 
 from .conftest import Config, JointFixture, MongoFixture, scenarios, then, when
 

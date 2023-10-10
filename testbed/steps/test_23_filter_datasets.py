@@ -15,27 +15,25 @@
 
 """Step definitions for filtering metadata in the frontend"""
 
-import httpx
-
-from .conftest import Config, parse, scenarios, then, when
+from .conftest import Config, JointFixture, Response, parse, scenarios, then, when
 from .utils import search_dataset_rpc
 
 scenarios("../features/23_filter_datasets.feature")
 
 
 @when("I query documents with invalid class name", target_fixture="response")
-def query_with_invalid_class(config: Config):
-    return search_dataset_rpc(config, class_name="InvalidClass")
+def query_with_invalid_class(fixtures: JointFixture):
+    return search_dataset_rpc(fixtures=fixtures, class_name="InvalidClass")
 
 
 @when("I filter dataset with alias", target_fixture="response")
-def filter_dataset_with_alias(config: Config):
+def filter_dataset_with_alias(fixtures: JointFixture):
     filters = [{"key": "alias", "value": "DS_A"}]
-    return search_dataset_rpc(config, filters)
+    return search_dataset_rpc(fixtures=fixtures, filters=filters)
 
 
 @then("I get the expected results from alias filter")
-def check_alias_filter(response: httpx.Response):
+def check_alias_filter(response: Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]
@@ -46,19 +44,19 @@ def check_alias_filter(response: httpx.Response):
     parse('I filter dataset with "{file_format}" study file format'),
     target_fixture="response",
 )
-def filter_dataset_with_file_format(config: Config, file_format):
+def filter_dataset_with_file_format(fixtures: JointFixture, file_format):
     filters = [{"key": "study_files.format", "value": file_format}]
-    return search_dataset_rpc(config, filters)
+    return search_dataset_rpc(fixtures=fixtures, filters=filters)
 
 
 @when("I filter dataset with sequencing file alias", target_fixture="response")
-def filter_dataset_for_sequencing_process_file(config: Config):
+def filter_dataset_for_sequencing_process_file(fixtures: JointFixture):
     filters = [{"key": "sequencing_process_files.alias", "value": "SEQ_FILE_6"}]
-    return search_dataset_rpc(config, filters)
+    return search_dataset_rpc(fixtures=fixtures, filters=filters)
 
 
 @then("I get the expected results from sequencing file filter")
-def check_sequencing_file_filter(response: httpx.Response):
+def check_sequencing_file_filter(response: Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]

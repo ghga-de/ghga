@@ -17,10 +17,9 @@
 
 from datetime import datetime, timedelta
 
-import httpx
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from .conftest import TIMEOUT, JointFixture, given, parse, scenarios, then, when
+from .conftest import JointFixture, Response, given, parse, scenarios, then, when
 
 scenarios("../features/30_user_registration.feature")
 
@@ -49,7 +48,7 @@ def user_fetches_own_info(full_name: str, fixtures: JointFixture):
     sub = fixtures.auth.get_sub(full_name)
     url = f"{fixtures.config.ums_url}/users/{sub}"
     headers = fixtures.auth.generate_headers(full_name)
-    return httpx.get(url, headers=headers, timeout=TIMEOUT)
+    return fixtures.http.get(url, headers=headers)
 
 
 @when(
@@ -68,11 +67,11 @@ def user_registers(full_name: str, fixtures: JointFixture):
     }
     url = f"{fixtures.config.ums_url}/users"
     headers = fixtures.auth.generate_headers(full_name)
-    return httpx.post(url, json=user_data, headers=headers, timeout=TIMEOUT)
+    return fixtures.http.post(url, json=user_data, headers=headers)
 
 
 @then(parse('the user data of "{full_name}" is returned'))
-def user_gets_id(full_name: str, fixtures: JointFixture, response: httpx.Response):
+def user_gets_id(full_name: str, fixtures: JointFixture, response: Response):
     title, name = fixtures.auth.split_title(full_name)
     email = fixtures.auth.get_email(full_name)
     sub = fixtures.auth.get_sub(full_name)
@@ -87,10 +86,10 @@ def user_gets_id(full_name: str, fixtures: JointFixture, response: httpx.Respons
     assert user["status"] == "active"
     registration_date = user.get("registration_date")
     assert registration_date and isinstance(registration_date, str)
-    # the data steward has been pre-registered when the test bed started,
+    # the data steward has been pre-registered when the test bed first started,
     # but other users should have registered only when this test was running
     registration_timedelta = timedelta(
-        seconds=60 * 60 * 24 * 7 if name == "Data Steward" else 60
+        seconds=60 * 60 * 24 * 365 if name == "Data Steward" else 60
     )
     assert (
         now_as_utc() - registration_timedelta

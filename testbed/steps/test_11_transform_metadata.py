@@ -20,14 +20,14 @@ import os
 import subprocess
 from pathlib import Path
 
-from .conftest import TIMEOUT, JointFixture, scenarios, then, when
+from .conftest import JointFixture, scenarios, then, when
 
 scenarios("../features/11_transform_metadata.feature")
 
 
 def call_data_steward_kit_transform(
     metadata_config_path: Path,
-    timeout: int = 3 * TIMEOUT,
+    timeout: int = 1800,  # this command may take more than 15 min
 ):
     """Call cli command 'ghga-datasteward-kit metadata transform'
     to run the transformation workflow on submitted metadata
@@ -44,7 +44,7 @@ def call_data_steward_kit_transform(
         check=True,
         encoding="utf-8",
         text=True,
-        timeout=timeout * 60,
+        timeout=timeout,
     )
 
     assert not completed_transform.stdout
@@ -57,8 +57,7 @@ def transform_metadata(fixtures: JointFixture):
     cwd = os.getcwd()
     os.chdir(workdir)
     call_data_steward_kit_transform(
-        metadata_config_path=fixtures.dsk.config.metadata_config_path,
-        timeout=30,  # this command may take more than 15 min
+        metadata_config_path=fixtures.dsk.config.metadata_config_path
     )
     os.chdir(cwd)
 

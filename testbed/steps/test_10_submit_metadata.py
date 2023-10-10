@@ -21,7 +21,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from .conftest import TIMEOUT, JointFixture, given, parse, scenarios, then, when
+from .conftest import JointFixture, given, parse, scenarios, then, when
 
 scenarios("../features/10_submit_metadata.feature")
 
@@ -31,7 +31,7 @@ def call_data_steward_kit_submit(
     metadata_config_path: Path,
     submission_title: str = "Test Submission",
     submission_description: str = "Test Submission Description",
-    timeout: int = TIMEOUT,
+    timeout: int = 600,
 ):
     """Call cli command 'ghga-datasteward-kit metadata submit'
     to submit metadata
@@ -54,7 +54,7 @@ def call_data_steward_kit_submit(
         check=True,
         encoding="utf-8",
         text=True,
-        timeout=timeout * 60,
+        timeout=timeout,
     )
 
     assert not completed_submit.stdout
