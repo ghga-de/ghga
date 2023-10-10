@@ -26,6 +26,9 @@ mapping:
   rewrite: null
 
 parameters:
+  access_grant_max_days: 730
+  access_grant_min_days: 7
+  access_upfront_max_days: 180
   api_root_path: ""
   auth_algs:
   - ES256
@@ -50,6 +53,8 @@ parameters:
   kafka_servers:
   - kafka-kafka-bootstrap:9092
   log_level: info
+  notification_event_topic: notifications
+  notification_event_type: notification
   openapi_url: /openapi.json
   port: 8080
   service_instance_id: 'ars_1'
