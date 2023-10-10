@@ -67,7 +67,7 @@ def upload_config_as_file(config: Config, file_metadata_dir: Path):
         "s3_access_key_id": config.s3_access_key_id,
         "s3_secret_access_key": config.s3_secret_access_key.get_secret_value(),
         "bucket_id": config.staging_bucket,
-        "part_size": str(config.part_size),
+        "part_size": str(config.upload_part_size),
         "output_dir": str(file_metadata_dir),
     }
 

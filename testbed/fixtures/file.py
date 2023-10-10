@@ -53,7 +53,7 @@ def create_named_file(
     file_path = target_dir / name
 
     if not file_size:
-        file_size = config.file_size
+        file_size = config.default_file_size
     if not alias:
         alias = os.path.splitext(name)[0]
 

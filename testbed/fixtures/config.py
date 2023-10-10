@@ -46,8 +46,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     test_dir = base_dir / "test_data"
 
     # constants used in testing
-    part_size = 1024
-    file_size: int = 20 * part_size**2
+    upload_part_size: int = 1024
+    download_part_size: int = 8589934592
+    default_file_size: int = 20 * upload_part_size**2
 
     # Kafka config
     service_name: str = "testbed_kafka"
@@ -87,6 +88,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     # auth
     auth_key_file = Path(__file__).parent.parent / ".devcontainer/auth.env"
     auth_adapter_url: str = "http://auth:8080"
+
+    # wkvs
+    wkvs_url: str = "http://wkvs"
 
     # connector
     user_private_crypt4gh_key: str
