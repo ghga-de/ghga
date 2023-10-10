@@ -34,7 +34,6 @@ async def test_resource_upsert(
     joint_fixture: JointFixture, resource_id: str, is_insert: bool
 ):
     """Try upserting with no pre-existing resource with matching ID (i.e. insert)"""
-
     query_handler = await joint_fixture.container.query_handler()
 
     # get all the documents in the collection

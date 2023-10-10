@@ -74,7 +74,6 @@ def multi_column_sort(
 @pytest.mark.asyncio
 async def test_api_without_sort_parameters(joint_fixture: JointFixture):
     """Make sure default Pydantic model parameter works as expected"""
-
     search_parameters: JsonObject = {
         "class_name": CLASS_NAME,
         "query": "",
@@ -147,7 +146,6 @@ async def test_sort_with_invalid_field(joint_fixture: JointFixture):
     value for it. If we sort with a truly invalid field, it should have no impact on the
     resulting sort order.
     """
-
     search_parameters: JsonObject = {
         "class_name": CLASS_NAME,
         "query": "",

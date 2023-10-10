@@ -35,7 +35,7 @@ class AggregatorPort(ABC):
     """Describes an aggregator class, which performs aggregation ops on a mongodb collection"""
 
     @abstractmethod
-    async def aggregate(
+    async def aggregate(  # noqa: PLR0913
         self,
         *,
         query: str,

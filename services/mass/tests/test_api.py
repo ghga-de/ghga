@@ -32,7 +32,7 @@ def compare(
     count: int,
     hit_length: int,
     hits: Optional[list[models.Resource]] = None,
-    facets: Optional[list[models.Facet]] = None
+    facets: Optional[list[models.Facet]] = None,
 ) -> None:
     """Perform common comparisons for results"""
     assert results.count == count
@@ -54,7 +54,6 @@ def compare(
 @pytest.mark.asyncio
 async def test_search_options(joint_fixture: JointFixture):
     """Verify that we can request the configured resource class information correctly"""
-
     response = await joint_fixture.rest_client.get(url="/rpc/search-options")
     assert response.json() == joint_fixture.config.searchable_classes
 
@@ -62,7 +61,6 @@ async def test_search_options(joint_fixture: JointFixture):
 @pytest.mark.asyncio
 async def test_malformed_document(joint_fixture: JointFixture):
     """Test behavior from API perspective upon querying when bad doc exists"""
-
     joint_fixture.remove_db_data()
 
     query_handler = await joint_fixture.container.query_handler()
@@ -130,7 +128,7 @@ async def test_search_with_limit(joint_fixture: JointFixture):
             "type": "resort",
         },
     }
-    hits = [models.Resource(**hit)]
+    hits = [models.Resource(**hit)]  # type: ignore[arg-type]
     compare(results=results, count=3, hit_length=1, hits=hits)
 
 

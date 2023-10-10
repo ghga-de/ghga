@@ -19,14 +19,14 @@
 
 import glob
 import re
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import AsyncGenerator
 
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.custom_types import JsonObject
 from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture  # noqa: F401
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest_asyncio.plugin import _ScopeName
 
 from mass.config import Config
@@ -80,13 +80,12 @@ class JointFixture:
 
 
 async def joint_fixture_function(
-    mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture  # noqa: F811
+    mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing
 
     **Do not call directly** Instead, use get_joint_fixture().
     """
-
     # merge configs from different sources with the default one:
     config = get_config(sources=[mongodb_fixture.config, kafka_fixture.config])
 

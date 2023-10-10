@@ -28,7 +28,7 @@ from tests.fixtures.joint import JointFixture, get_joint_fixture
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def reset_state(joint_fixture: JointFixture):  # noqa: F811
+async def reset_state(joint_fixture: JointFixture):
     """Clear joint_fixture state before tests.
 
     This is a function-level fixture because it needs to run in each test.

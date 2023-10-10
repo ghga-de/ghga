@@ -46,7 +46,6 @@ async def search_options(
     search hits for further search refinement. They contain a key, which is used by the
     system, and a name, which is more user-friendly.
     """
-
     return config.searchable_classes
 
 

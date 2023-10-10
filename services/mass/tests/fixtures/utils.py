@@ -34,7 +34,7 @@ def dto_to_document(dto: BaseModel):
 
 def get_resources_from_file(filename: str) -> list[Resource]:
     """Utility function to load resources from a file"""
-    with open(filename, "r", encoding="utf-8") as file:
+    with open(filename, encoding="utf-8") as file:
         json_object = json.loads(file.read())
         resources: list[Resource] = []
         for item in json_object["items"]:

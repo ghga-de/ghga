@@ -42,7 +42,9 @@ class QueryHandler(QueryHandlerPort):
         self._aggregator_collection = aggregator_collection
         self._dao_collection = dao_collection
 
-    async def load_resource(self, *, resource: models.Resource, class_name: str):
+    async def load_resource(  # noqa: D102
+        self, *, resource: models.Resource, class_name: str
+    ):
         if class_name not in self._config.searchable_classes:
             raise self.ClassNotConfiguredError(class_name=class_name)
 
@@ -52,7 +54,7 @@ class QueryHandler(QueryHandlerPort):
 
         await dao.upsert(resource)
 
-    async def delete_resource(self, *, resource_id: str, class_name: str):
+    async def delete_resource(self, *, resource_id: str, class_name: str):  # noqa: D102
         if class_name not in self._config.searchable_classes:
             raise self.ClassNotConfiguredError(class_name=class_name)
 
@@ -63,7 +65,7 @@ class QueryHandler(QueryHandlerPort):
         except ResourceNotFoundError as err:
             raise self.ResourceNotFoundError(resource_id=resource_id) from err
 
-    async def handle_query(
+    async def handle_query(  # noqa: PLR0913, D102
         self,
         *,
         class_name: str,

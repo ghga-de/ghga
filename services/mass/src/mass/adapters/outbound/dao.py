@@ -41,7 +41,7 @@ class DaoCollection(DaoCollectionPort):
     ):
         """Initialize the DAO collection with one DAO for each resource class"""
         resource_daos: dict[str, ResourceDao] = {}
-        for name in config.searchable_classes.keys():
+        for name in config.searchable_classes:
             resource_daos[name] = await dao_factory.get_dao(
                 name=name, dto_model=models.Resource, id_field="id_"
             )
@@ -59,7 +59,7 @@ class DaoCollection(DaoCollectionPort):
         self._indexes_created = False
 
     def get_dao(self, *, class_name: str) -> ResourceDao:
-        """returns a dao for the given resource class name
+        """Returns a dao for the given resource class name
 
         Raises:
             DaoNotFoundError: if the DAO isn't found
@@ -69,7 +69,7 @@ class DaoCollection(DaoCollectionPort):
         except KeyError as err:
             raise DaoNotFoundError(class_name=class_name) from err
 
-    def create_collections_and_indexes_if_needed(self) -> None:
+    def create_collections_and_indexes_if_needed(self) -> None:  # noqa: D102
         # This only needs to be done once, so exit if we've already created the indexes
         if self._indexes_created:
             return

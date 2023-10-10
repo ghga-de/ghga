@@ -69,7 +69,7 @@ class QueryHandlerPort(ABC):
         """
 
     @abstractmethod
-    async def handle_query(
+    async def handle_query(  # noqa: PLR0913
         self,
         *,
         class_name: str,

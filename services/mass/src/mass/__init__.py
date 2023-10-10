@@ -15,4 +15,6 @@
 
 """A service for searching metadata artifacts and filtering results."""
 
-__version__ = "0.3.2"
+from importlib.metadata import version
+
+__version__ = version(__package__)

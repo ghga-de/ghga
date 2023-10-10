@@ -21,8 +21,9 @@ from typing import Union
 import pytest
 from ghga_event_schemas.pydantic_ import (
     MetadataDatasetID,  # used for intentionally failing validation
+    SearchableResource,
+    SearchableResourceInfo,
 )
-from ghga_event_schemas.pydantic_ import SearchableResource, SearchableResourceInfo
 
 from mass.adapters.inbound.event_sub import (
     CLASS_NOT_CONFIGURED_LOG_MSG,

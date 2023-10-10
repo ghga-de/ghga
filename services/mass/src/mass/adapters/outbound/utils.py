@@ -36,7 +36,7 @@ def pipeline_match_text_search(*, query: str) -> JsonObject:
 
 
 def args_for_getfield(*, root_object_name: str, field_name: str) -> tuple[str, str]:
-    """fieldpath names can't have '.', so specify any nested fields with $getField"""
+    """Fieldpath names can't have '.', so specify any nested fields with $getField"""
     prefix = f"${root_object_name}"
     specified_field = field_name
     if "." in field_name:
@@ -49,7 +49,6 @@ def args_for_getfield(*, root_object_name: str, field_name: str) -> tuple[str, s
 
 def pipeline_match_filters_stage(*, filters: list[models.Filter]) -> JsonObject:
     """Build segment of pipeline to apply search filters"""
-
     segment: dict[str, dict[str, list[str]]] = defaultdict(lambda: {"$in": []})
     for item in filters:
         filter_key = "content." + str(item.key)
@@ -118,7 +117,7 @@ def pipeline_project(*, facet_fields: list[models.FacetLabel]) -> JsonObject:
     return {"$project": segment}
 
 
-def build_pipeline(
+def build_pipeline(  # noqa: PLR0913
     *,
     query: str,
     filters: list[models.Filter],

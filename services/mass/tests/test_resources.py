@@ -26,7 +26,6 @@ from tests.fixtures.joint import JointFixture
 @pytest.mark.asyncio
 async def test_basic_query(joint_fixture: JointFixture):
     """Make sure we can pull back the documents as expected"""
-
     # pull back all 3 test documents
     query_handler = await joint_fixture.container.query_handler()
     results = await query_handler.handle_query(
@@ -39,7 +38,6 @@ async def test_basic_query(joint_fixture: JointFixture):
 @pytest.mark.asyncio
 async def test_text_search(joint_fixture: JointFixture):
     """Test basic text search"""
-
     query_handler = await joint_fixture.container.query_handler()
     results_text = await query_handler.handle_query(
         class_name="DatasetEmbedded", query="poolside", filters=[]
@@ -52,7 +50,6 @@ async def test_text_search(joint_fixture: JointFixture):
 @pytest.mark.asyncio
 async def test_filters_work(joint_fixture: JointFixture):
     """Test a query with filters selected but no query string"""
-
     query_handler = await joint_fixture.container.query_handler()
     results_filtered = await query_handler.handle_query(
         class_name="DatasetEmbedded",
@@ -142,7 +139,7 @@ async def test_skip_parameter(joint_fixture: JointFixture):
 
 @pytest.mark.asyncio
 async def test_all_parameters(joint_fixture: JointFixture):
-    """sanity check - make sure it all works together"""
+    """Sanity check - make sure it all works together"""
     query_handler = await joint_fixture.container.query_handler()
     results_all = await query_handler.handle_query(
         class_name="DatasetEmbedded",
@@ -255,7 +252,6 @@ async def test_resource_deletion(joint_fixture: JointFixture):
 
     Verify that the targeted resource is deleted and nothing else.
     """
-
     query_handler = await joint_fixture.container.query_handler()
     all_resources = await query_handler.handle_query(
         class_name="DatasetEmbedded", query="", filters=[]
@@ -280,7 +276,6 @@ async def test_resource_deletion(joint_fixture: JointFixture):
 @pytest.mark.asyncio
 async def test_resource_deletion_failure(joint_fixture: JointFixture):
     """Test for correct error when failing to delete a resource"""
-
     query_handler = await joint_fixture.container.query_handler()
     all_resources = await query_handler.handle_query(
         class_name="DatasetEmbedded", query="", filters=[]

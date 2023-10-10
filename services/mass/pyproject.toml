@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=67.7.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mass"
+version = "0.3.3"
+description = "Metadata Artifact Search Service  - A service for searching metadata artifacts and filtering results."
+readme = "README.md"
+authors = [
+    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "typer>=0.7.0",
+    "ghga-service-commons[api]>=0.4.3",
+    "ghga-event-schemas>=0.13.4",
+    "hexkit[mongodb,akafka]>=0.10.2",
+]
+
+[project.license]
+text = "Apache 2.0"
+
+[project.urls]
+Repository = "https://github.com/ghga-de/mass"
+
+[project.scripts]
+mass = "mass.__main__:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]

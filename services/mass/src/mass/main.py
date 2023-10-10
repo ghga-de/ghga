@@ -24,7 +24,6 @@ from mass.container import Container
 
 def get_configured_container(*, config: Config) -> Container:
     """Create and configure a DI container."""
-
     container = Container()
     container.config.load_config(config)
     container.wire(modules=["mass.adapters.inbound.fastapi_.routes"])
@@ -38,7 +37,6 @@ def get_rest_api(*, config: Config) -> FastAPI:
     For full functionality of the api, run in the context of a CI container with
     correct wiring and initialized resources (see the run_api function below).
     """
-
     api = FastAPI()
     api.include_router(router=router)
     configure_app(api, config=config)
@@ -47,7 +45,7 @@ def get_rest_api(*, config: Config) -> FastAPI:
 
 async def run_rest():
     """Run the server"""
-    config = Config()
+    config = Config()  # type: ignore[call-arg]
 
     async with get_configured_container(config=config):
         api = get_rest_api(config=config)
@@ -56,8 +54,7 @@ async def run_rest():
 
 async def consume_events(run_forever: bool = True):
     """Run the event consumer"""
-
-    config = Config()
+    config = Config()  # type: ignore[call-arg]
 
     async with get_configured_container(config=config) as container:
         event_subscriber = await container.event_subscriber()

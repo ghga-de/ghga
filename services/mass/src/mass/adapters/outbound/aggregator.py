@@ -35,10 +35,10 @@ class Aggregator(AggregatorPort):
     """Concrete implementation of an Aggregator"""
 
     def __init__(self, *, collection):
-        """initialize with a MongoDB collection"""
+        """Initialize with a MongoDB collection"""
         self._collection = collection
 
-    async def aggregate(
+    async def aggregate(  # noqa: PLR0913, D102
         self,
         *,
         query: str,
@@ -113,7 +113,7 @@ class AggregatorCollection(AggregatorCollectionPort):
     ):
         """Initialize the Aggregator collection with one Aggregator for each resource class"""
         aggregators: dict[str, AggregatorPort] = {}
-        for name in config.searchable_classes.keys():
+        for name in config.searchable_classes:
             aggregators[name] = aggregator_factory.get_aggregator(name=name)
 
         return cls(aggregators=aggregators)
@@ -131,7 +131,6 @@ class AggregatorCollection(AggregatorCollectionPort):
         Raises:
             AggregatorNotFoundError: if the aggregator isn't found
         """
-
         try:
             return self._aggregators[class_name]
         except KeyError as err:
