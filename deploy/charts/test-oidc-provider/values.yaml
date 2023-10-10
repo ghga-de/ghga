@@ -17,6 +17,12 @@ service:
 
 config_prefix: top
 
+mapping:
+  enabled: false
+  hostname: ""
+  prefix: /
+  rewrite: null
+
 parameters:
   api_root_path: /
   auto_reload: false
