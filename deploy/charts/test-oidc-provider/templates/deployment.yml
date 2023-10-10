@@ -36,7 +36,7 @@ spec:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
         ports:
-        - containerPort: {{ .Values.port }}
+        - containerPort: {{ .Values.parameters.port }}
         resources:
           limits:
             cpu: {{ .Values.resources.limits.cpu }}
@@ -46,12 +46,12 @@ spec:
             memory: {{ .Values.resources.requests.memory }}
         readinessProbe:
           tcpSocket:
-            port: {{ .Values.port }}
+            port: {{ .Values.parameters.port }}
           initialDelaySeconds: 10
           periodSeconds: 15
         livenessProbe:
           tcpSocket:
-            port: {{ .Values.port }}
+            port: {{ .Values.parameters.port }}
           initialDelaySeconds: 10
           periodSeconds: 15
         volumeMounts:
