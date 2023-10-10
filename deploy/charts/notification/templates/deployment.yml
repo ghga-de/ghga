@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.podAnnotations }}
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- end }}
+      labels:
+        app: {{ .Release.Name }}
+        version: staging
+        sidecar.istio.io/inject: "true"
+    spec:
+      serviceAccountName: {{ .Release.Name }}
+      shareProcessNamespace: {{ .Values.shareProcessNamespace }}
+      containers:
+      - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        {{- include "ghga-common.command-args" (list "ns")  | nindent 8 }}
+        name: {{ .Release.Name }}
+        securityContext:
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: "RuntimeDefault"
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: {{ .Values.port }}
+        resources:
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+        volumeMounts:
+        - name: config
+          mountPath: "/home/appuser/.{{ .Values.config_prefix }}.yaml"
+          subPath: .{{ .Values.config_prefix }}.yaml
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ .Release.Name }}
+          items:
+          - key: parameters
+            path: .{{ .Values.config_prefix }}.yaml
+      restartPolicy: Always
