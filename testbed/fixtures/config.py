@@ -86,6 +86,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     object_id: str = "testbed-event-object"
 
     # auth
+    auth_basic: str = ""
     auth_key_file = Path(__file__).parent.parent / ".devcontainer/auth.env"
     auth_adapter_url: str = "http://auth:8080"
 
@@ -127,8 +128,6 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
 
     # mass
     mass_url: str = "http://mass:8080"
-    mass_db_name: str = "mass"
-    mass_collection: str = "EmbeddedDataset"
 
     # notifications
     mailhog_url: str = "http://mailhog:8025"
@@ -136,9 +135,6 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     # test OP
     op_url: str = "http://op.test"
     op_issuer: str = "https://test-aai.ghga.de"
-
-    # basic authentication
-    basic_auth_credentials: str = ""
 
     @root_validator(pre=False)
     @classmethod
@@ -148,9 +144,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
             if values["use_api_gateway"]:
                 if not values["use_auth_adapter"]:
                     raise ValueError("API gateway always uses auth adapter")
-                if values["keep_state_in_db"]:
-                    raise ValueError("Cannot use database when using API gateway")
-            elif values["basic_auth_credentials"]:
+            elif values["auth_basic"]:
                 raise ValueError("Basic auth must only be used with API gateway")
         except (KeyError, ValueError) as error:
             raise ValueError(f"Check operation modes: {error}") from error

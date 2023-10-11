@@ -34,20 +34,20 @@ TIMEOUT = 10  # timeout for HTTP requests in seconds
 def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
     """Pytest fixture for tests using an HTTP client."""
     if config.use_api_gateway:
-        basic_auth = config.basic_auth_credentials
-        if basic_auth:
-            basic_auth = b64encode(basic_auth.encode("ascii")).decode("ascii")
-            basic_auth = f"Basic {basic_auth}"
+        auth_basic = config.auth_basic
+        if auth_basic:
+            auth_basic = b64encode(auth_basic.encode("ascii")).decode("ascii")
+            auth_basic = f"Basic {auth_basic}"
     else:
-        basic_auth = None
+        auth_basic = None
 
     def request_hook(request):
         """Add Basic Authentication if necessary and log request."""
         headers = request.headers
         url = str(request.url)
         auth = headers.get("Authorization")
-        if basic_auth:
-            headers["Authorization"] = basic_auth
+        if auth_basic:
+            headers["Authorization"] = auth_basic
             auth_methods = "with basic"
             if auth:
                 headers["X-Authorization"] = auth
