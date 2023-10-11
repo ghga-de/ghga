@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mass"
-version = "0.3.3"
+version = "0.3.4"
 description = "Metadata Artifact Search Service  - A service for searching metadata artifacts and filtering results."
 readme = "README.md"
 authors = [

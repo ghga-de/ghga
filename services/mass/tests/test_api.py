@@ -52,6 +52,15 @@ def compare(
 
 
 @pytest.mark.asyncio
+async def test_health_check(joint_fixture: JointFixture):
+    """Test that the health check endpoint works."""
+    response = await joint_fixture.rest_client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "OK"}
+
+
+@pytest.mark.asyncio
 async def test_search_options(joint_fixture: JointFixture):
     """Verify that we can request the configured resource class information correctly"""
     response = await joint_fixture.rest_client.get(url="/rpc/search-options")

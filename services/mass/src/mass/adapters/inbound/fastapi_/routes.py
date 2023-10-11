@@ -18,7 +18,7 @@
 from typing import Union
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from fastapi.exceptions import HTTPException
 
 from mass.adapters.inbound.fastapi_ import models as api_models
@@ -28,6 +28,16 @@ from mass.core import models
 from mass.ports.inbound.query_handler import QueryHandlerPort
 
 router = APIRouter()
+
+
+@router.get(
+    "/health",
+    summary="health",
+    status_code=status.HTTP_200_OK,
+)
+async def health():
+    """Used to test if this service is alive"""
+    return {"status": "OK"}
 
 
 # GET /rpc/search-options
