@@ -21,6 +21,15 @@ from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
 
 
 @pytest.mark.asyncio
+async def test_health_check(joint_fixture: JointFixture):  # noqa: F811
+    """Test that the health check endpoint works."""
+    response = await joint_fixture.rest_client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "OK"}
+
+
+@pytest.mark.asyncio
 async def test_happy_retrieval(joint_fixture: JointFixture):  # noqa: F811
     """Test that configured values can be retrieved"""
     url = "/values/crypt4gh_public_key"

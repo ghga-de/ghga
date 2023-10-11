@@ -29,6 +29,16 @@ router = APIRouter()
 
 
 @router.get(
+    "/health",
+    summary="health",
+    status_code=status.HTTP_200_OK,
+)
+async def health():
+    """Used to test if this service is alive"""
+    return {"status": "OK"}
+
+
+@router.get(
     "/values/{value_name}",
     summary="retrieve a configured value",
     status_code=status.HTTP_200_OK,
