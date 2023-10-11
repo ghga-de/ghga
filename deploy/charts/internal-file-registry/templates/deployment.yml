@@ -36,8 +36,6 @@ spec:
           readOnlyRootFilesystem: true
           runAsNonRoot: true
           allowPrivilegeEscalation: false
-        ports:
-        - containerPort: {{ .Values.port }}
         resources:
           limits:
             cpu: {{ .Values.resources.limits.cpu }}
