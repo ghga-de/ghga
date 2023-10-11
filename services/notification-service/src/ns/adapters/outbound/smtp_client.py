@@ -44,6 +44,11 @@ class SmtpClient(SmtpClientPort):
         self._config = config
 
     def send_email_message(self, message: EmailMessage):
+        """Send an email message.
+
+        Creates an ssl security context if configured, then log in with the configured
+        credentials and send the provided email message.
+        """
         try:
             with smtplib.SMTP(self._config.smtp_host, self._config.smtp_port) as server:
                 if self._config.use_starttls:
@@ -60,4 +65,4 @@ class SmtpClient(SmtpClientPort):
                     raise self.ConnectionError()
                 server.send_message(msg=message)
         except smtplib.SMTPException as exc:
-            raise self.GeneralSmtpException(error_info=exc.args[0])
+            raise self.GeneralSmtpException(error_info=exc.args[0]) from exc

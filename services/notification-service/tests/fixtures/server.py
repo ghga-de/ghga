@@ -33,6 +33,7 @@ class Authenticator:
         self._password = password
 
     def __call__(self, server, session, envelope, mechanism, auth_data):
+        """Authenticate the credentials"""
         login = str(auth_data.login, encoding="utf-8")
         password = str(auth_data.password, encoding="utf-8")
 
@@ -49,7 +50,7 @@ class CustomHandler(Sink):
         self.email_received: Envelope
         super().__init__()
 
-    async def handle_DATA(self, server, session, envelope):
+    async def handle_DATA(self, server, session, envelope):  # noqa: N802
         """Handler function for email message which closes controller upon use"""
         self.email_received = envelope
 
@@ -87,6 +88,7 @@ class EmailRecorder:
         self._controller = controller
 
     async def __aenter__(self):
+        """Async context manager entry method"""
         try:
             self._controller.start()
 
@@ -95,6 +97,7 @@ class EmailRecorder:
             raise RuntimeError(err.args[0]) from err
 
     async def __aexit__(self, *args):
+        """Async context manager exit method"""
         if self._controller.loop.is_running():
             self._controller.stop()
 
@@ -103,7 +106,7 @@ class DummyServer:
     """Test server for making sure emails are received as intended"""
 
     def __init__(self, *, config: Config):
-        """assign config"""
+        """Assign config"""
         self._config = config
         self.login = self._config.login_user
         self.password = self._config.login_password
@@ -117,7 +120,8 @@ class DummyServer:
     @asynccontextmanager
     async def expect_email(self, expected_email: EmailMessage):
         """Yields an async context manager with a single-use SMTP message handler,
-        and compares the received message envelope with the original EmailMessage"""
+        and compares the received message envelope with the original EmailMessage
+        """
         handler = CustomHandler()
         controller = Controller(
             handler,

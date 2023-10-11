@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+"""Bundle test fixtures into one fixture"""
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import AsyncGenerator
 
 import pytest_asyncio
 from hexkit.providers.akafka.testutils import KafkaFixture, kafka_fixture  # noqa: F401
@@ -40,7 +40,6 @@ async def joint_fixture(
     kafka_fixture: KafkaFixture,  # noqa: F811
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for integration testing"""
-
     # merge configs from different sources with the default one:
     config = get_config(sources=[kafka_fixture.config])
 

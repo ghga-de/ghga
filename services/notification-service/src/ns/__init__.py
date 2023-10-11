@@ -15,4 +15,6 @@
 
 """The Notification Service (NS) handles notification kafka events. """
 
-__version__ = "0.1.2"
+from importlib.metadata import version
+
+__version__ = version(__package__)

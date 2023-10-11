@@ -33,13 +33,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-service):
 ```bash
-docker pull ghga/notification-service:0.1.2
+docker pull ghga/notification-service:0.1.3
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-service:0.1.2 .
+docker build -t ghga/notification-service:0.1.3 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -47,7 +47,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-service:0.1.2 --help
+docker run -p 8080:8080 ghga/notification-service:0.1.3 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -67,7 +67,7 @@ The service requires the following configuration parameters:
 
 - **`html_email_template`** *(string)*: The HTML template to use for email notifications.
 
-- **`from_address`** *(string)*: The sender's address.
+- **`from_address`** *(string, format: email)*: The sender's address.
 
 - **`smtp_host`** *(string)*: The mail server host to connect to.
 
@@ -77,13 +77,13 @@ The service requires the following configuration parameters:
 
 - **`login_password`** *(string)*: The login password.
 
-- **`use_starttls`** *(boolean)*: Boolean flag indicating the use of STARTTLS. Default: `True`.
+- **`use_starttls`** *(boolean)*: Boolean flag indicating the use of STARTTLS. Default: `true`.
 
 - **`notification_event_topic`** *(string)*: Name of the event topic used to track notification events.
 
 - **`notification_event_type`** *(string)*: The type to use for events containing content to be sent.
 
-- **`service_name`** *(string)*: Default: `ns`.
+- **`service_name`** *(string)*: Default: `"ns"`.
 
 - **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
@@ -150,7 +150,7 @@ Moreover, inside the devcontainer, a convenience commands `dev_install` is avail
 It installs the service with all development dependencies, installs pre-commit.
 
 The installation is performed automatically when you build the devcontainer. However,
-if you update dependencies in the [`./setup.cfg`](./setup.cfg) or the
+if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
 [`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
 
 ## License
