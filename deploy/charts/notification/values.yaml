@@ -17,7 +17,7 @@ resources:
     cpu: "100m"
     memory: "64M"
 
-config_prefix: ifrs
+config_prefix: ns
 
 mapping:
   enabled: false
