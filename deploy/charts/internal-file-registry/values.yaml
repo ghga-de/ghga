@@ -18,12 +18,6 @@ resources:
 
 config_prefix: ifrs
 
-mapping:
-  enabled: false
-  hostname: ""
-  prefix: /
-  rewrite: null
-
 parameters:
   aws_config_ini: null
   db_connection_str: "**********"

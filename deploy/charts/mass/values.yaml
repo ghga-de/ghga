@@ -35,7 +35,7 @@ parameters:
     db_connection_str: '**********'
     db_name: metadata-store
     docs_url: /docs
-    host: 127.0.0.1
+    host: "0.0.0.0"
     kafka_servers:
     - kafka:9092
     log_level: info

@@ -18,12 +18,6 @@ resources:
 
 config_prefix: ns
 
-mapping:
-  enabled: false
-  hostname: ""
-  prefix: /
-  rewrite: null
-
 parameters:
   from_address: test@test.com
   html_email_template: >-

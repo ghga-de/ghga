@@ -35,7 +35,7 @@ parameters:
   crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
   dcs_api_url: http://127.0.0.1/download
   docs_url: /docs
-  host: 127.0.0.1
+  host: "0.0.0.0"
   log_level: info
   openapi_url: /openapi.json
   port: 8080

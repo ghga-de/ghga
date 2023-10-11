@@ -59,7 +59,7 @@ parameters:
     files_to_delete_type: files_to_delete
     files_to_register_topic: internal_registrations
     files_to_register_type: internal_file_registered
-    host: 127.0.0.1
+    host: "0.0.0.0"
     kafka_servers: []
     log_level: info
     openapi_url: /openapi.json
