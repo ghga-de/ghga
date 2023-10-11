@@ -43,6 +43,16 @@ spec:
           requests:
             cpu: {{ .Values.resources.requests.cpu }}
             memory: {{ .Values.resources.requests.memory }}
+        readinessProbe:
+          tcpSocket:
+            port: {{ .Values.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        livenessProbe:
+          tcpSocket:
+            port: {{ .Values.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 15
         volumeMounts:
         - name: config
           mountPath: "/home/appuser/.{{ .Values.config_prefix }}.yaml"
