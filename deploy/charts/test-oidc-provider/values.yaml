@@ -2,7 +2,6 @@ args: []
 command: []
 image:
   name: "ghga/test-oidc-provider"
-  tag: "0.2.1"
 podAnnotations: {}
 resources:
   limits:

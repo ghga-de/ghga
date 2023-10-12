@@ -6,7 +6,6 @@ horizontalPodAutoscaler:
   averageMemoryUtilization: 75
 image:
   name: "ghga/mass"
-  tag: "0.3.4"
 podAnnotations: {}
 port: "8080"
 resources:

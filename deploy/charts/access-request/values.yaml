@@ -6,7 +6,6 @@ horizontalPodAutoscaler:
   averageMemoryUtilization: 75
 image:
   name: "ghga/access-request-service"
-  tag: "0.1.1"
 podAnnotations: {}
 port: "8080"
 resources:

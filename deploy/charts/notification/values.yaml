@@ -6,7 +6,6 @@ horizontalPodAutoscaler:
   averageMemoryUtilization: 75
 image:
   name: "ghga/notification-service"
-  tag: "0.1.2"
 podAnnotations: {}
 resources:
   limits:

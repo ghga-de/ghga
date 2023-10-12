@@ -6,7 +6,6 @@ horizontalPodAutoscaler:
   averageMemoryUtilization: 75
 image:
   name: "ghga/metadata-search-service"
-  tag: "0.0.0-44-c60ea17-main"
 podAnnotations: {}
 port: "8080"
 resources:
