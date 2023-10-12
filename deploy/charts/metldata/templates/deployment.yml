@@ -23,7 +23,7 @@ spec:
       serviceAccountName: {{ .Release.Name }}
       shareProcessNamespace: {{ .Values.shareProcessNamespace }}
       containers:
-      - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+      - image: "{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
         {{- include "ghga-common.command-args" (list "metldata")  | nindent 8 }}
         name: {{ .Release.Name }}
         securityContext:
