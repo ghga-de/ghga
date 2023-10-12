@@ -93,7 +93,7 @@ def check_email_sent_to(
     Wait for an e-mail to be received by the mail server. If it does not appear
     within the given timeout (in seconds), an AssertionError is raised.
     """
-    url = f"{fixtures.config.mailhog_url}/api/v2/search"
+    url = f"{fixtures.config.mail_url}/api/v2/search"
     slept: float = 0
     while slept < timeout:
         response = fixtures.http.get(

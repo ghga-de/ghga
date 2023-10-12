@@ -199,7 +199,7 @@ def set_state_clause(name: str, state: StateStorage):
 
 def empty_mail_server(fixtures: JointFixture):
     """Delete all e-mails from mail server"""
-    fixtures.http.delete(f"{fixtures.config.mailhog_url}/api/v1/messages")
+    fixtures.http.delete(f"{fixtures.config.mail_url}/api/v1/messages")
 
 
 @then(parse('the expected hit count is "{count:d}"'))

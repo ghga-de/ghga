@@ -85,6 +85,20 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
 
     object_id: str = "testbed-event-object"
 
+    # external base URL
+    external_base_url: str = ""
+    external_apis: list[str] = [  # noqa: RUF012
+        "wkvs",
+        "fis",
+        "metldata",
+        "ars",
+        "ums",
+        "wps",
+        "mass",
+        "mail",
+        "op",
+    ]
+
     # auth
     auth_basic: str = ""
     auth_key_file = Path(__file__).parent.parent / ".devcontainer/auth.env"
@@ -101,8 +115,8 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     dsk_token_path: Path = Path.home() / ".ghga_data_steward_token.txt"
 
     # file ingest
-    file_ingest_url: str = "http://fis:8080/ingest"
-    file_ingest_pubkey: str
+    fis_url: str = "http://fis:8080"
+    fis_pubkey: str
 
     # metldata
     metldata_db_name: str = "metldata"
@@ -130,7 +144,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     mass_url: str = "http://mass:8080"
 
     # notifications
-    mailhog_url: str = "http://mailhog:8025"
+    mail_url: str = "http://mailhog:8025"
 
     # test OP
     op_url: str = "http://op.test"
@@ -148,4 +162,32 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
                 raise ValueError("Basic auth must only be used with API gateway")
         except (KeyError, ValueError) as error:
             raise ValueError(f"Check operation modes: {error}") from error
+        return values
+
+    @root_validator(pre=False)
+    @classmethod
+    def add_external_base_url(cls, values):
+        """Add external base URL for all external APIs.
+
+        This allows the external URLs to be specified as paths relative to the
+        external base URL to avoid repetition in the external mode configuration.
+        """
+        base_url = values["external_base_url"]
+        external_apis = values["external_apis"]
+        if base_url and external_apis:
+            if not base_url.startswith(("http://", "https://")):
+                raise ValueError("External base URL must be absolute")
+            base_url = base_url.rstrip("/")
+
+            for api in external_apis:
+                key = f"{api}_url"
+                try:
+                    url = values[key]
+                    if not url:
+                        raise KeyError("URL is empty")
+                except KeyError as error:
+                    raise ValueError(f"Missing value for {key}") from error
+                if "://" not in url:
+                    url = base_url + "/" + url.lstrip("/")
+                values[key] = url
         return values

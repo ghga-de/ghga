@@ -122,10 +122,8 @@ def call_data_steward_kit_ingest(ingest_config_path: str, dsk_token_path: Path, 
 @given("the staging bucket is empty")
 @async_step
 async def staging_bucket_is_empty(fixtures: JointFixture):
-    if fixtures.config.use_api_gateway:
-        # black-box testing: cannot check staging bucket
-        return
-    await fixtures.s3.empty_given_buckets(["staging"])
+    config = fixtures.config
+    await fixtures.s3.empty_given_buckets([config.staging_bucket])
 
 
 @given("no file metadata exists")
@@ -210,8 +208,8 @@ async def check_uploaded_files_in_storage(
 @when("the file metadata is ingested", target_fixture="ingest_config")
 def ingest_file_metadata(fixtures: JointFixture) -> IngestConfig:
     ingest_config = IngestConfig(
-        file_ingest_url=fixtures.config.file_ingest_url,
-        file_ingest_pubkey=fixtures.config.file_ingest_pubkey,
+        file_ingest_url=fixtures.config.fis_url + "/ingest",
+        file_ingest_pubkey=fixtures.config.fis_pubkey,
         input_dir=fixtures.dsk.config.file_metadata_dir,
         submission_store_dir=fixtures.dsk.config.submission_store,
         map_files_fields=fixtures.dsk.config.metadata_file_fields,
