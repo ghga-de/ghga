@@ -15,7 +15,7 @@
 #
 
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 import yaml
 from pydantic.env_settings import BaseSettings
@@ -27,12 +27,12 @@ TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 
 
 def get_config(
-    sources: Optional[List[Union[BaseSettings, dict]]] = None,
+    sources: Optional[list[Union[BaseSettings, dict]]] = None,
     default_config_yaml: Path = TEST_CONFIG_YAML,
 ) -> ArtifactLoaderAPIConfig:
     """Merges parameters from the default TEST_CONFIG_YAML with params inferred
     from testcontainers."""
-    sources_dict: Dict[str, object] = {}
+    sources_dict: dict[str, object] = {}
 
     if sources is not None:
         for source in sources:
@@ -41,7 +41,7 @@ def get_config(
             else:
                 sources_dict.update(**source)
 
-    with open(default_config_yaml, "r", encoding="UTF-8") as file:
+    with open(default_config_yaml, encoding="UTF-8") as file:
         default_config = yaml.safe_load(file)
 
     return ArtifactLoaderAPIConfig(**default_config, **sources_dict)  # type: ignore

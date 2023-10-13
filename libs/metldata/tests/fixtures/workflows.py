@@ -69,7 +69,7 @@ class WorkflowTestCase(Generic[Config]):
     artifact_models: dict[str, MetadataModel]
     artifact_metadata: dict[str, Json]
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"{self.workflow_name}-{self.case_name}"
 
 
@@ -160,7 +160,7 @@ WORKFLOWS_BY_NAME: dict[str, WorkflowDefinition] = {
 
 WORKFLOW_TEST_CASES = _read_all_test_cases(workflows_by_name=WORKFLOWS_BY_NAME)
 
-EXAMPLE_WORKFLOW_TEST_CASE = [
+EXAMPLE_WORKFLOW_TEST_CASE = [  # noqa: RUF015
     test_case
     for test_case in WORKFLOW_TEST_CASES
     if test_case.workflow_name == "example_workflow"

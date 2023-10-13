@@ -27,8 +27,10 @@ from metldata.submission_registry.event_publisher import SourceEventPublisher
 from metldata.submission_registry.submission_registry import SubmissionRegistry
 from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.config import config_sub_fixture  # noqa: F401
-from tests.fixtures.event_handling import file_system_event_fixture  # noqa: F401
-from tests.fixtures.event_handling import FileSystemEventFixture
+from tests.fixtures.event_handling import (
+    FileSystemEventFixture,
+    file_system_event_fixture,  # noqa: F401
+)
 from tests.fixtures.metadata import (
     INVALID_MINIMAL_METADATA_EXAMPLES,
     VALID_MINIMAL_METADATA_EXAMPLES,

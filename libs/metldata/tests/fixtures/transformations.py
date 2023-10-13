@@ -59,7 +59,7 @@ class TransformationTestCase(Generic[Config]):
     transformed_model: MetadataModel
     transformed_metadata: Json
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         return f"{self.transformation_name}-{self.case_name}"
 
 

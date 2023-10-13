@@ -28,9 +28,7 @@ class FakeAccessionRegistry:
         self._counter = 1
 
     def get_accession(self, *, resource_type: str) -> str:
-        """
-        Generates and registers a new accession for a resource of the specified type.
-        """
+        """Generates and registers a new accession for a resource of the specified type."""
 
         accession = f"generated_{resource_type.lower()}_accession{self._counter}"
         self._counter += 1

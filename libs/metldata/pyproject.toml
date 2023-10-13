@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=67.7.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metldata"
+version = "0.4.5"
+description = "metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing."
+readme = "README.md"
+authors = [
+    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.9",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "hexkit[akafka,mongodb]>=0.10.2",
+    "ghga-service-commons[api,auth]>=0.5.0",
+    "ghga-event-schemas>=0.13.4",
+    "typer>=0.7.0",
+    "linkml==1.6.1",
+    "linkml-runtime==1.6.0",
+    "linkml-validator==0.4.5",
+]
+
+[project.license]
+text = "Apache 2.0"
+
+[project.urls]
+Repository = "https://github.com/ghga-de/metldata"
+
+[project.scripts]
+metldata = "metldata.__main__:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]

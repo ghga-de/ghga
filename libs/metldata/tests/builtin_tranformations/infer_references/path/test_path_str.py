@@ -55,7 +55,7 @@ from metldata.builtin_transformations.infer_references.path.path_str import (
 def test_validate_path_str_characters(path_str: str, is_valid: bool):
     """Test the validate_path_str_characters method."""
 
-    with nullcontext() if is_valid else pytest.raises(ValidationError):  # type: ignore
+    with nullcontext() if is_valid else pytest.raises(ValidationError):
         validate_path_str_characters(path_str)
 
 
@@ -83,7 +83,7 @@ def test_validate_path_str_characters(path_str: str, is_valid: bool):
 def test_validate_path_str_format(path_str: str, is_valid: bool):
     """Test the validate_path_str_format method."""
 
-    with nullcontext() if is_valid else pytest.raises(ValidationError):  # type: ignore
+    with nullcontext() if is_valid else pytest.raises(ValidationError):
         validate_path_str_format(path_str)
 
 
@@ -181,7 +181,7 @@ def test_get_string_elements(path_str: str, expected_elements: list[str]):
 def test_validate_string_element(string_element: str, is_valid: bool):
     """Test the validate_string_element method."""
 
-    with nullcontext() if is_valid else pytest.raises(ValidationError):  # type: ignore
+    with nullcontext() if is_valid else pytest.raises(ValidationError):
         validate_string_element(string_element)
 
 

@@ -27,7 +27,7 @@ def test_slot_merge_instruction_overlap():
     exception."""
 
     with pytest.raises(ValidationError):
-        SlotMergeInstruction(
+        SlotMergeInstruction(  # type: ignore
             class_name="class_a",
             source_slots=["some_slot", "another_slot"],
             target_slot="some_slot",

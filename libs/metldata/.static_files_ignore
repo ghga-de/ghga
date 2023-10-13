@@ -8,3 +8,4 @@ scripts/update_openapi_docs.py
 .github/workflows/cd.yaml
 
 .pre-commit-config.yaml
+.ruff.toml

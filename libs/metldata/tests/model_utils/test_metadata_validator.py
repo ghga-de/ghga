@@ -41,7 +41,7 @@ def test_validate_against_model(metadata: dict[str, Any], is_valid: bool):
 
     validator = MetadataValidator(model=VALID_MINIMAL_METADATA_MODEL)
 
-    with nullcontext() if is_valid else pytest.raises(  # type:ignore
+    with nullcontext() if is_valid else pytest.raises(
         MetadataValidator.ValidationError
     ):
         validator.validate(metadata)

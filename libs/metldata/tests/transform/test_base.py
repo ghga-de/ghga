@@ -200,4 +200,4 @@ def test_workflow_definition_step_order_circular():
     )
 
     with pytest.raises(RuntimeError):
-        workflow_definition.step_order
+        _ = workflow_definition.step_order

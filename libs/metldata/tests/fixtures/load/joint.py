@@ -49,6 +49,8 @@ EMBEDDED_ARTIFACT_MODEL_PATH = (
 
 @dataclass
 class JointFixture:
+    """Joint fixture for testing"""
+
     artifact_infos: list[ArtifactInfo]
     artifact_resources: dict[str, Any]
     client: AsyncTestClient
@@ -75,7 +77,7 @@ async def joint_fixture(
         )
     ]
 
-    with open(EMBEDDED_ARTIFACT_PATH, "r", encoding="utf-8") as file:
+    with open(EMBEDDED_ARTIFACT_PATH, encoding="utf-8") as file:
         raw_artifacts = json.load(file)
         artifacts: ArtifactResourceDict = {
             raw_artifacts["type_"]: [raw_artifacts["payload"]["content"]]

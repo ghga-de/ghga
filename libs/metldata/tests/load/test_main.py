@@ -205,7 +205,7 @@ async def test_load_artifacts_endpoint_invalid_resources(
 
     # load example artifacts resources:
     unknown_artifact_resources = {
-        "unknown_artifact": [list(EXAMPLE_ARTIFACTS.values())[0]]
+        "unknown_artifact": [list(EXAMPLE_ARTIFACTS.values())[0]]  # noqa: RUF015
     }
     response = await joint_fixture.client.post(
         "/rpc/load-artifacts",
@@ -238,7 +238,7 @@ async def test_file_slot_transformation(
 ):
     """Test that file slots are discovered and file extensions are extracted correctly"""
 
-    with open(EMBEDDED_DATASET_TEST_PATH, "r", encoding="utf-8") as file:
+    with open(EMBEDDED_DATASET_TEST_PATH, encoding="utf-8") as file:
         embedded_datasets = json.load(file)
 
     file_slots = []

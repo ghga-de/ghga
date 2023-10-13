@@ -17,13 +17,13 @@ from pathlib import Path
 
 import yaml
 from pytest import fixture
+from tests.fixtures.metadata import _get_example_metadata
+from tests.fixtures.metadata_models import _get_example_model
+from tests.fixtures.utils import BASE_DIR
 
 from metldata.builtin_transformations.aggregate import AggregateConfig
 from metldata.custom_types import Json
 from metldata.model_utils.essentials import MetadataModel
-from tests.fixtures.metadata import _get_example_metadata
-from tests.fixtures.metadata_models import _get_example_model
-from tests.fixtures.utils import BASE_DIR
 
 
 def load_yaml(path: Path) -> Json:

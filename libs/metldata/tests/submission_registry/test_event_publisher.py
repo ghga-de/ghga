@@ -25,8 +25,11 @@ from metldata.event_handling.models import SubmissionAnnotation, SubmissionEvent
 from metldata.submission_registry import models
 from metldata.submission_registry.event_publisher import SourceEventPublisher
 from tests.fixtures.config import config_sub_fixture  # noqa: F401
-from tests.fixtures.event_handling import file_system_event_fixture  # noqa: F401
-from tests.fixtures.event_handling import Event, FileSystemEventFixture
+from tests.fixtures.event_handling import (
+    Event,
+    FileSystemEventFixture,
+    file_system_event_fixture,  # noqa: F401
+)
 
 
 def check_source_events(
@@ -51,7 +54,7 @@ def check_source_events(
             payload=json.loads(
                 SubmissionEventPayload(
                     submission_id=expected_submission.id,
-                    content=expected_submission.content,
+                    content=expected_submission.content,  # type: ignore
                     annotation=SubmissionAnnotation(
                         accession_map=expected_submission.accession_map
                     ),

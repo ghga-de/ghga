@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
+from collections.abc import Generator
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import Generator
 
 import pytest
 
@@ -36,9 +36,9 @@ def config_sub_fixture() -> Generator[SubmissionConfig, None, None]:
 
     with TemporaryDirectory() as submission_store_dir:
         with NamedTemporaryFile() as accession_store_path:
-            yield SubmissionConfig(
+            yield SubmissionConfig(  # type: ignore
                 metadata_model_path=VALID_MINIMAL_MODEL_EXAMPLE_PATH,
-                submission_store_dir=submission_store_dir,
-                accession_store_path=accession_store_path.name,
+                submission_store_dir=submission_store_dir,  # type: ignore
+                accession_store_path=accession_store_path.name,  # type: ignore
                 prefix_mapping=PREFIX_MAPPING,
             )

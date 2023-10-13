@@ -41,9 +41,7 @@ from tests.fixtures.metadata_models import (
 def test_metadata_model_assumption_checking(model: MetadataModel, is_valid: bool):
     """Test the assumptions regarding the metadata model are correctly checked."""
 
-    with nullcontext() if is_valid else pytest.raises(  # type:ignore
-        MetadataModelAssumptionError
-    ):
+    with nullcontext() if is_valid else pytest.raises(MetadataModelAssumptionError):
         check_basic_model_assumption(model)
 
 
@@ -57,9 +55,7 @@ def test_metadata_model_assumption_checking(model: MetadataModel, is_valid: bool
 def test_check_class_exists(model: MetadataModel, class_name: str, exists: bool):
     """Test the check_class_exists function."""
 
-    with nullcontext() if exists else pytest.raises(  # type:ignore
-        MetadataModelAssumptionError
-    ):
+    with nullcontext() if exists else pytest.raises(MetadataModelAssumptionError):
         check_class_exists(model=model, class_name=class_name)
 
 
@@ -82,9 +78,7 @@ def test_check_class_slot_exists(
 ):
     """Test the check_class_slot_exists function."""
 
-    with nullcontext() if exists else pytest.raises(  # type:ignore
-        MetadataModelAssumptionError
-    ):
+    with nullcontext() if exists else pytest.raises(MetadataModelAssumptionError):
         check_class_slot_exists(
             model=model,
             class_name=class_name,

@@ -3442,6 +3442,8 @@ types:
       - schema:Boolean
     repr: bool
     uri: xsd:boolean
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower case "boolean".
   curie:
     base: Curie
     comments:
@@ -3451,20 +3453,28 @@ types:
     description: a compact URI
     repr: str
     uri: xsd:string
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "curie".
   date:
     base: XSDDate
     description: a date (year, month and day) in an idealized calendar
     exact_mappings:
       - schema:Date
-    notes:
-      - URI is dateTime because OWL reasoners don't work with straight date or time
     repr: str
     uri: xsd:date
+    notes:
+      - URI is dateTime because OWL reasoners don't work with straight date or time
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "date".
   date_or_datetime:
     base: str
     description: Either a date or a datetime
     repr: str
     uri: linkml:DateOrDatetime
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "date_or_datetime".
   datetime:
     base: XSDDateTime
     description: The combination of a date and time
@@ -3472,6 +3482,9 @@ types:
       - schema:DateTime
     repr: str
     uri: xsd:dateTime
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "datetime".
   decimal:
     base: Decimal
     broad_mappings:
@@ -3480,39 +3493,60 @@ types:
       A real number with arbitrary precision that conforms to the xsd:decimal
       specification
     uri: xsd:decimal
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "decimal".
   double:
     base: float
     close_mappings:
       - schema:Float
     description: A real number that conforms to the xsd:double specification
     uri: xsd:double
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "double".
   float:
     base: float
     description: A real number that conforms to the xsd:float specification
     exact_mappings:
       - schema:Float
     uri: xsd:float
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "float".
   integer:
     base: int
     description: An integer
     exact_mappings:
       - schema:Integer
     uri: xsd:integer
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "integer".
   ncname:
     base: NCName
     description: Prefix part of CURIE
     repr: str
     uri: xsd:string
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "ncname".
   nodeidentifier:
     base: NodeIdentifier
     description: A URI, CURIE or BNODE that represents a node in a model.
     repr: str
     uri: shex:nonLiteral
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "nodeidentifier".
   objectidentifier:
     base: ElementIdentifier
     comments:
-      - Used for inheritence and type checking
+      - Used for inheritance and type checking
     description: A URI or CURIE that represents an object in the model.
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "objectidentifier".
     repr: str
     uri: shex:iri
   string:
@@ -3520,18 +3554,21 @@ types:
     description: A character string
     exact_mappings:
       - schema:Text
+    notes:
+      - In RDF serializations, a slot with range of string is treated as a literal or
+        type xsd:string.   If you are authoring schemas in LinkML YAML, the type is referenced
+        with the lower case "string".
     uri: xsd:string
   time:
     base: XSDTime
-    description:
-      A time object represents a (local) time of day, independent of any
-      particular day
-    exact_mappings:
-      - schema:Time
+    description: A time object represents a (local) time of day, independent of any particular day
+    exact_mappings: schema:Time
     notes:
       - URI is dateTime because OWL reasoners do not work with straight date or time
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "time".
     repr: str
-    uri: xsd:dateTime
+    uri: xsd:time
   uri:
     base: URI
     close_mappings:
@@ -3544,9 +3581,39 @@ types:
     description: a complete URI
     repr: str
     uri: xsd:anyURI
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "uri".
   uriorcurie:
     base: URIorCURIE
     description: a URI or a CURIE
     repr: str
     uri: xsd:anyURI
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower
+        case "uriorcurie".
+  sparqlpath:
+    base: str
+    conforms_to: https://www.w3.org/TR/sparql11-query/#propertypaths
+    description: A string encoding a SPARQL Property Path. The value of the string MUST conform to SPARQL syntax and SHOULD dereference to zero or more valid objects within the current instance document when encoded as RDF.
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower case "sparqlpath".
+    repr: str
+    uri: xsd:string
+  jsonpath:
+    base: str
+    conforms_to: https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html
+    description: A string encoding a JSON Path. The value of the string MUST conform to JSON Point syntax and SHOULD dereference to zero or more valid objects within the current instance document when encoded in tree form.
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower case "jsonpath".
+    repr: str
+    uri: xsd:string
+  jsonpointer:
+    base: str
+    conforms_to: https://datatracker.ietf.org/doc/html/rfc6901
+    description: A string encoding a JSON Pointer. The value of the string MUST conform to JSON Point syntax and SHOULD dereference to a valid object within the current instance document when encoded in tree form.
+    notes:
+      - If you are authoring schemas in LinkML YAML, the type is referenced with the lower case "jsonpointer".
+    repr: str
+    uri: xsd:string
 version: 1.1.0

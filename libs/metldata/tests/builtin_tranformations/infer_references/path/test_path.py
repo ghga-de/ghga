@@ -145,8 +145,8 @@ def test_reference_path_pydantic(path_str: str, is_valid: bool):
 
         path: ReferencePath
 
-    with nullcontext() if is_valid else pytest.raises(ValueError):  # type: ignore
-        observed_path = ExampleModel(path=path_str).path
+    with nullcontext() if is_valid else pytest.raises(ValueError):
+        observed_path = ExampleModel(path=path_str).path  # type: ignore
 
     if is_valid:
         expected_path = ReferencePath(path_str=path_str)

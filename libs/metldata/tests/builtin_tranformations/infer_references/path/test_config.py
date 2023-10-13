@@ -70,6 +70,6 @@ def test_config():
         ),
     ]
 
-    config = ReferenceInferenceConfig(inferred_ref_map=inferred_ref_map)
+    config = ReferenceInferenceConfig(inferred_ref_map=inferred_ref_map)  # type: ignore
     observed_refs = config.inferred_references
     assert expected_refs == observed_refs
