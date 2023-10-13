@@ -17,6 +17,7 @@
 """The configuration for the test app."""
 
 from pathlib import Path
+from urllib.parse import urljoin
 
 from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig
@@ -99,6 +100,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
         "op",
     ]
 
+    # internal APIs
+    internal_apis: list[str] = ["ekss", "dcs", "auth_adapter"]  # noqa: RUF012
+
     # auth
     auth_basic: str = ""
     auth_key_file = Path(__file__).parent.parent / ".devcontainer/auth.env"
@@ -149,6 +153,12 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     # test OP
     op_url: str = "http://op.test"
     op_issuer: str = "https://test-aai.ghga.de"
+
+    # ekss
+    ekss_url: str = "http://ekss"
+
+    # dcs
+    dcs_url: str = "http://dcs:8080"
 
     @root_validator(pre=False)
     @classmethod

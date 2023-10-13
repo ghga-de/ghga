@@ -4,7 +4,8 @@ Feature: 10 Submit Metadata
   into the local submission store
 
   Scenario: Starting the metadata submission
-    Given we start on a clean slate
+    Given we have the state "health check is completed"
+    And we start on a clean slate
     And we have a valid metadata config YAML file
     Then no submission JSON files exist in the local submission store
 

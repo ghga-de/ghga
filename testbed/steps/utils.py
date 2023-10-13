@@ -17,6 +17,7 @@
 
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urljoin
 
 from fixtures import Config, JointFixture
 from fixtures.utils import calculate_checksum, write_data_to_yaml

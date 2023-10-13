@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from urllib.parse import urljoin
 
 from fixtures.config import Config
 from fixtures.file import FileBatch, FileObject
