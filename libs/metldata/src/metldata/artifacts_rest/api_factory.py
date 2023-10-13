@@ -53,6 +53,11 @@ async def rest_api_factory(
 
     router = APIRouter()
 
+    @router.get("/health")
+    async def health() -> dict[str, str]:
+        """Used to test if this service is alive"""
+        return {"status": "OK"}
+
     @router.options("/artifacts")
     async def get_artifacts_info() -> list[ArtifactInfo]:
         """Get information on available artifacts."""

@@ -53,6 +53,20 @@ async def get_example_app_client(
 
 
 @pytest.mark.asyncio
+async def test_health_check(
+    mongodb_fixture: MongoDbFixture,  # noqa: F811
+):
+    """Test that the health check endpoint works."""
+    async with await get_example_app_client(
+        dao_factory=mongodb_fixture.dao_factory
+    ) as client:
+        response = await client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "OK"}
+
+
+@pytest.mark.asyncio
 async def test_artifacts_info_endpoint(
     mongodb_fixture: MongoDbFixture,  # noqa: F811
 ):
