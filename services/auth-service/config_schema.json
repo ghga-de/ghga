@@ -239,14 +239,25 @@
       ],
       "type": "string"
     },
-    "public_paths": {
-      "title": "Public Paths",
+    "allow_read_paths": {
+      "title": "Allow Read Paths",
       "default": [
         "/.well-known/*",
         "/service-logo.png"
       ],
       "env_names": [
-        "auth_service_public_paths"
+        "auth_service_allow_read_paths"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allow_write_paths": {
+      "title": "Allow Write Paths",
+      "default": [],
+      "env_names": [
+        "auth_service_allow_write_paths"
       ],
       "type": "array",
       "items": {

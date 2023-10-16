@@ -1,4 +1,8 @@
 add_as_data_stewards: []
+allow_read_paths:
+- /.well-known/*
+- /service-logo.png
+allow_write_paths: []
 api_ext_path: /api/auth
 api_root_path: /
 auth_algs:
@@ -35,9 +39,6 @@ oidc_userinfo_endpoint: https://proxy.aai.lifescience-ri.eu/OIDC/userinfo
 openapi_url: /openapi.json
 organization_url: https://ghga.de
 port: 8080
-public_paths:
-- /.well-known/*
-- /service-logo.png
 run_auth_adapter: false
 service_name: auth_service
 users_collection: users

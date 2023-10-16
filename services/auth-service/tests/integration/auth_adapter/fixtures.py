@@ -29,8 +29,16 @@ from auth_service.auth_adapter.api import main
 @fixture(name="client")
 def fixture_client() -> Generator[TestClient, None, None]:
     """Get test client for the auth adapter"""
-    yield TestClient(main.app)
-    main.app.dependency_overrides.clear()
+    environ["AUTH_SERVICE_ALLOW_READ_PATHS"] = '["/allowed/read/*", "/logo.png"]'
+    environ["AUTH_SERVICE_ALLOW_WRITE_PATHS"] = '["/allowed/write/*"]'
+    reload(config)
+    reload(main)
+    with TestClient(main.app) as client:
+        yield client
+    del environ["AUTH_SERVICE_ALLOW_READ_PATHS"]
+    del environ["AUTH_SERVICE_ALLOW_WRITE_PATHS"]
+    reload(config)
+    reload(main)
 
 
 @fixture(name="with_basic_auth")

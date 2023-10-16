@@ -131,53 +131,71 @@ def test_basic_auth(with_basic_auth, client):
     assert response.json() == {}
 
 
-def test_basic_auth_well_known(with_basic_auth, client):
-    """Test that fetching from well-known path is excluded from basic authentication."""
+def test_allowed_paths(with_basic_auth, client):
+    """Test that allowed paths are excluded from authentication."""
     assert with_basic_auth
 
-    response = client.get("/.well-known/some/thing")
-
+    response = client.get(
+        "/allowed/read/some/thing", headers={"Authorization": "Bearer foo"}
+    )
+    # access should be allowed without basic authentication
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
+    # and authorization headers should be passed through
+    assert response.headers["Authorization"] == "Bearer foo"
 
-    response = client.head("/.well-known/some/thing")
-
+    response = client.head("/allowed/read/some/thing")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.options("/.well-known/some/thing")
-
+    response = client.options("/allowed/read/some/thing")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.post("/.well-known/some/thing")
+    response = client.post(
+        "/allowed/write/some/thing", headers={"Authorization": "Bearer bar"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {}
+    assert response.headers["Authorization"] == "Bearer bar"
 
+    response = client.patch("/allowed/write/some/thing")
+    assert response.status_code == status.HTTP_200_OK
+
+    response = client.delete("/allowed/write/some/thing")
+    assert response.status_code == status.HTTP_200_OK
+
+    response = client.post("/allowed/read/some/thing")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.text == "GHGA Data Portal: Not authenticated"
 
-    response = client.delete("/.well-known/some/thing")
+    response = client.delete("/allowed/read/some/thing")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
+    response = client.get("/allowed/write/some/thing")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.text == "GHGA Data Portal: Not authenticated"
 
-    response = client.get("/.not-well-known/some/thing")
+    response = client.options("/allowed/write/some/thing")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
+    response = client.post("/not-allowed/some/thing")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.text == "GHGA Data Portal: Not authenticated"
 
 
 def test_basic_auth_service_logo(with_basic_auth, client):
-    """Test that fetching the service logo is excluded from basic authentication."""
+    """Test that fetching the service logo is excluded from authentication."""
     assert with_basic_auth
 
-    response = client.get("/service-logo.png")
+    response = client.get("/logo.png")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.head("/service-logo.png")
+    response = client.head("/logo.png")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.get("/some-other-image.png")
+    response = client.get("/image.png")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    response = client.head("/some-other-image.png")
+    response = client.head("/image.png")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 

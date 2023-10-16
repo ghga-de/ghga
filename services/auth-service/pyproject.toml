@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "auth_service"
-version = "0.5.3"
+version = "0.5.4"
 description = "Authentication service for the GHGA data portal used by the API gateway via the ExtAuth protocol"
 readme = "README.md"
 authors = [

@@ -90,8 +90,10 @@ class Config(ApiConfigBase, AuthConfig):
     basic_auth_credentials: Optional[str] = None
     # realm for basic authentication
     basic_auth_realm: str = "GHGA Data Portal"
-    # paths that are always publicly visible without authentication
-    public_paths: list[str] = ["/.well-known/*", "/service-logo.png"]
+    # paths that are public or use their own authentication mechanism
+    allow_read_paths: list[str] = ["/.well-known/*", "/service-logo.png"]
+    # paths for writing that use their own authentication mechanism
+    allow_write_paths: list[str] = []
 
     # if not run as auth adapter, which APIs should be provided
     include_apis: list[Literal["users", "claims"]] = ["users"]
