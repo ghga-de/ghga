@@ -35,9 +35,9 @@ DEFAULT_USER_STATUS = "active"
 class TokenGenerator:
     """Generator for auth tokens"""
 
-    key_file: Path
     use_api_gateway: bool
     use_auth_adapter: bool
+    key_file: Path
     auth_adapter_url: str
     op_url: str
     op_issuer: str
@@ -198,15 +198,6 @@ class TokenGenerator:
                 if line.startswith("AUTH_SERVICE_AUTH_KEY="):
                     return jwk.JWK.from_json(line.split("=", 1)[1].rstrip().strip("'"))
         raise RuntimeError("Cannot read signing key for authentication")
-
-    @property
-    def simple_token(self) -> str:
-        """Read the simple token from a local env file."""
-        with open(self.key_file, encoding="ascii") as key_file:
-            for line in key_file:
-                if line.startswith("SIMPLE_TOKEN="):
-                    return line.split("=", 1)[1].rstrip().strip('"')
-        raise RuntimeError("Cannot read simple token for authentication")
 
 
 @fixture(name="auth", scope="session")
