@@ -48,7 +48,7 @@ def validate_json(file: Path, schema: Path, report: Path, target_class: str) -> 
         schema: The URL or path to YAML file (submission schema)
         report: The URL or path to store the validation results
     """
-    with open(file, "r", encoding="utf8") as json_file:
+    with open(file, encoding="utf8") as json_file:
         submission_json = yaml.safe_load(json_file)
     if submission_json is None:
         raise EOFError(f"<{file}> is empty! Nothing to validate!")

@@ -43,6 +43,6 @@ def get_target_class(schema: str) -> Optional[str]:
     Returns:
         class name for root class, if found in the scheme
     """
-    with open(schema, "r", encoding="utf8") as file:
+    with open(schema, encoding="utf8") as file:
         input_schema = file.read()
         return infer_root_class(SchemaView(input_schema))

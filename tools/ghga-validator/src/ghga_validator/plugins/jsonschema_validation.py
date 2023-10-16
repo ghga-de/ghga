@@ -16,7 +16,6 @@
 """Plugin for LinkML JSON Validator used for validating the non inline references"""
 
 import json
-from typing import Dict
 
 import jsonschema
 from linkml.generators.jsonschemagen import JsonSchemaGenerator
@@ -39,7 +38,7 @@ class GHGAJsonSchemaValidationPlugin(BasePlugin):
 
     NAME = "GHGAJsonSchemaValidationPlugin"
 
-    def process(self, obj: Dict, **kwargs) -> ValidationResult:
+    def process(self, obj: dict, **kwargs) -> ValidationResult:
         """
         Perform validation on an object.
 
@@ -83,10 +82,8 @@ class GHGAJsonSchemaValidationPlugin(BasePlugin):
         )
         return result
 
-    def jsonschema_from_linkml(self, target_class: ClassDefinitionName) -> Dict:
-        """
-        Generates JSON schema from a LinkML schema
-        """
+    def jsonschema_from_linkml(self, target_class: ClassDefinitionName) -> dict:
+        """Generates JSON schema from a LinkML schema"""
         json_schema_as_string = JsonSchemaGenerator(
             schema=self.schema, top_class=target_class
         ).serialize()

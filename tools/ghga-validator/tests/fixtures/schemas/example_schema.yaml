@@ -58,6 +58,7 @@ classes:
     slot_usage:
       id:
         identifier: true
+        range: string
       words:
         range: Word
         multivalued: true

@@ -16,10 +16,11 @@
 
 """Provides an ObjectIterator for LinkML data."""
 
+from collections.abc import Iterable, Iterator
 from copy import deepcopy
 from itertools import chain
 from numbers import Number
-from typing import Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from linkml_runtime.linkml_model.meta import ClassDefinitionName, SlotDefinition
 from linkml_runtime.utils.schemaview import SchemaView
@@ -27,33 +28,35 @@ from linkml_runtime.utils.schemaview import SchemaView
 
 class RootInferenceError(RuntimeError):
     """This error is produced if the root class could not be determined from a
-    LinkML schema."""
+    LinkML schema.
+    """
 
 
-class ObjectIterator:  # pylint: disable=too-many-instance-attributes
+class ObjectIterator:
     """This iterator class enables iterating through all elements below a
     specified or inferred root element. The iterator returns tuples of an
     elements class name, identifier if present and the corresponding element
     data, which has been re-serialized such that all identifiable inlined
     elements below the element itself have been un-inlined, i.e. replaced by
-    their identifiers."""
+    their identifiers.
+    """
 
     _schema: SchemaView
     _root: Union[ClassDefinitionName, str]
-    _data: Dict
+    _data: dict
     _recursion_iterator: Optional[Iterator]
     _enumerate_non_identifiable: bool
     _inline_non_identifiable: bool
-    _path: List
+    _path: list
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         schema: SchemaView,
-        data: Dict,
+        data: dict,
         root: Optional[str] = None,
         enumerate_non_identifiable=False,
         inline_non_identifiable=True,
-        path: Optional[List] = None,
+        path: Optional[list] = None,
     ):  # pylint: disable=too-many-arguments
         """Creates a new IdentifiedObjectIterator."""
         self._schema = schema
@@ -83,7 +86,8 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
         """Iterates through all class definitions in a schema and returns the
         name of the single class that is defined as the tree root.
 
-        Raises a RootInferenceError if no or multiple such classes are found."""
+        Raises a RootInferenceError if no or multiple such classes are found.
+        """
         # Identify all classes that have tree_root set to true
         root_labeled_classes = [
             name
@@ -101,14 +105,15 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
 
     @staticmethod
     def _re_serialize_element(
-        data: Dict,
+        data: dict,
         schema: SchemaView,
         root: Union[str, ClassDefinitionName],
         inline_non_identifiable: bool,
     ):
         """Re-serializes the element serialized in the passed data such that all
         inlined slots are not inlined anymore if the corresponding slot class
-        itself has an identifier slot."""
+        itself has an identifier slot.
+        """
         re_serialized_element = {}
         for slot_name, slot_value in data.items():
             slot_def = schema.induced_slot(slot_name, root)
@@ -144,7 +149,7 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
                             slot_def.range,
                             inline_non_identifiable,
                         )
-                elif id_slot is not None:
+                elif id_slot is not None:  # noqa: SIM102
                     # If the slot is multivalued, we must differentiate whether it
                     # is inlined as list or as dictionary
                     if slot_def.multivalued:
@@ -182,7 +187,8 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
     def _re_serialize_root(self):
         """Re-serializes the data stored in this iterator object such that
         inlined slots are not inlined anymore if the corresponding slot class
-        itself has an identifier slot."""
+        itself has an identifier slot.
+        """
         return ObjectIterator._re_serialize_element(
             self._data, self._schema, self._root, self._inline_non_identifiable
         )
@@ -190,9 +196,10 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
     def _child_iterators(self) -> Iterable[Iterator]:
         """Returns an iterable of IdentifiedObjectIterator objects for every
         class-range slot of the current root class that has not been iterated
-        yet."""
+        yet.
+        """
         for next_slot_name, next_slot_def in self._recursion_slots:
-            if next_slot_name in self._data.keys():
+            if next_slot_name in self._data.keys():  # noqa: SIM118
                 # If the slot is not multivalued, a single-value list is returned
                 # with an IdentifiedObjectIterator for the value of the slot
                 if not next_slot_def.multivalued:
@@ -202,7 +209,7 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
                         next_slot_def.range,
                         enumerate_non_identifiable=self._enumerate_non_identifiable,
                         inline_non_identifiable=self._inline_non_identifiable,
-                        path=self._path + [next_slot_name],
+                        path=self._path + [next_slot_name],  # noqa: RUF005
                     )
                 # If the slot is multivalued and encoded in list format, a list with
                 # one IdentifiedObjectIterator per element is returned
@@ -217,7 +224,7 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
                             next_slot_def.range,
                             enumerate_non_identifiable=self._enumerate_non_identifiable,
                             inline_non_identifiable=self._inline_non_identifiable,
-                            path=self._path + [next_slot_name] + [idx],
+                            path=self._path + [next_slot_name] + [idx],  # noqa: RUF005
                         )
                 # If the slot is multivalued and encoded in dictionary format, a list with
                 # one IdentifiedObjectIterator per element is returned. Since the
@@ -245,7 +252,7 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
                             next_slot_def.range,
                             enumerate_non_identifiable=self._enumerate_non_identifiable,
                             inline_non_identifiable=self._inline_non_identifiable,
-                            path=self._path + [next_slot_name] + [key],
+                            path=self._path + [next_slot_name] + [key],  # noqa: RUF005
                         )
                 # If none of the previous conditions were met, we have encountered a
                 # data format that is incompatible with the multivalued, inlined and
@@ -259,12 +266,13 @@ class ObjectIterator:  # pylint: disable=too-many-instance-attributes
 
     def __next__(
         self,
-    ) -> Tuple[
+    ) -> tuple[
         Union[str, ClassDefinitionName],
         Optional[Union[str, Number]],
-        Dict,
-        List[Union[str, Number]],
+        dict,
+        list[Union[str, Number]],
     ]:
+        """Select the next element"""
         if self._recursion_iterator is None:
             # Build an iterator for all slots of the root class that have a class range
             self._recursion_iterator = chain.from_iterable(self._child_iterators())

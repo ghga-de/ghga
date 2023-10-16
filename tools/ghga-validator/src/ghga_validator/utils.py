@@ -12,12 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""The package provides the functionality required for the ghga_validator
-command line utility."""
+"""Utils"""
 
-__version__ = "1.0.0"
 
-from pathlib import Path
-
-BASE_DIR = Path(__file__).parent.parent.resolve()
+def path_as_string(error_path: list) -> str:
+    """Convert the path to the error in JSON to string format
+    Args:
+        error_path (List): path to the error in JSON
+    Returns:
+        str: string representation of the error path
+    """
+    path_str = ".".join(str(elem) for elem in error_path)
+    return path_str

@@ -17,7 +17,7 @@
 
 from collections import defaultdict
 from numbers import Number
-from typing import Dict, List, Union
+from typing import Union
 
 from linkml_runtime.utils.schemaview import SchemaView
 from linkml_validator.models import SeverityEnum, ValidationMessage, ValidationResult
@@ -46,7 +46,7 @@ class RefValidationPlugin(BasePlugin):
         super().__init__(schema)
         self.schemaview = SchemaView(schema)
 
-    def process(self, obj: Dict, **kwargs) -> ValidationResult:
+    def process(self, obj: dict, **kwargs) -> ValidationResult:
         """
         Perform validation on an object.
 
@@ -70,7 +70,7 @@ class RefValidationPlugin(BasePlugin):
         )
         return result
 
-    def get_all_class_ids(self, obj: Dict, target_class: str) -> Dict[str, List[str]]:
+    def get_all_class_ids(self, obj: dict, target_class: str) -> dict[str, list[str]]:
         """Get all lists of identifies of inlined objects organized by class name
 
         Args:
@@ -92,10 +92,10 @@ class RefValidationPlugin(BasePlugin):
 
     def validate_refs(
         self,
-        object_to_validate: Dict,
+        object_to_validate: dict,
         target_class: str,
-        all_class_ids: Dict,
-    ) -> List[ValidationMessage]:
+        all_class_ids: dict,
+    ) -> list[ValidationMessage]:
         """
         Validate non inlined reference fields in the JSON data
 
@@ -133,9 +133,9 @@ class RefValidationPlugin(BasePlugin):
 
     def find_missing_refs(
         self,
-        ref_value: Union[List[Union[Number, str]], Union[Number, str]],
-        id_list: List,
-    ) -> List:
+        ref_value: Union[list[Union[Number, str]], Union[Number, str]],
+        id_list: list,
+    ) -> list:
         """
         Search for missing references
 

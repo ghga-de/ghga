@@ -15,8 +15,6 @@
 
 """Plugin for LinkML JSON Validator used for validating the non inline references"""
 
-from typing import Dict, List, Tuple
-
 from linkml_runtime.utils.schemaview import SchemaView
 from linkml_validator.models import SeverityEnum, ValidationMessage, ValidationResult
 from linkml_validator.plugins.base import BasePlugin
@@ -42,7 +40,7 @@ class UniqueIdentifierValidationPlugin(BasePlugin):
         super().__init__(schema)
         self.schemaview = SchemaView(schema)
 
-    def process(self, obj: Dict, **kwargs) -> ValidationResult:
+    def process(self, obj: dict, **kwargs) -> ValidationResult:
         """
         Perform validation on an object.
 
@@ -66,9 +64,9 @@ class UniqueIdentifierValidationPlugin(BasePlugin):
 
     def validate_unique_fields(
         self,
-        object_to_validate: Dict,
+        object_to_validate: dict,
         target_class: str,
-    ) -> List[ValidationMessage]:
+    ) -> list[ValidationMessage]:
         """
         Validate non inlined reference fields in a JSON object
 
@@ -82,7 +80,7 @@ class UniqueIdentifierValidationPlugin(BasePlugin):
         """
         messages = []
 
-        seen_ids: Dict[Tuple, List] = {}
+        seen_ids: dict[tuple, list] = {}
         for class_name, identifier, data, path in ObjectIterator(
             self.schemaview, object_to_validate, target_class
         ):
@@ -99,5 +97,5 @@ class UniqueIdentifierValidationPlugin(BasePlugin):
                 )
                 messages.append(message)
             else:
-                seen_ids[class_name, identifier] = path + [id_slot_name]
+                seen_ids[class_name, identifier] = [*path, id_slot_name]
         return messages

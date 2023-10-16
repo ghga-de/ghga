@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test data validation (using all validation plugins)"""
+
 import os
 
 from ghga_validator.cli import validate_json

@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=67.7.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+
+name = "ghga_validator"
+version = "1.0.0"
+description = "GHGA Validator - A Python library and command line utility to validate metadata"
+readme = "README.md"
+authors = [
+    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+]
+requires-python = ">=3.9"
+license = { text = "Apache 2.0" }
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "typer ~= 0.7.0",
+    "pydantic >1.10.6, <2",
+    "linkml==1.6.1",
+    "linkml-runtime==1.6.0",
+    "linkml-validator==0.4.5"
+]
+
+[project.urls]
+
+Repository = "https://github.com/ghga-de/ghga_validator"
+
+[project.scripts]
+
+ghga_validator = "ghga_validator.__main__:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
