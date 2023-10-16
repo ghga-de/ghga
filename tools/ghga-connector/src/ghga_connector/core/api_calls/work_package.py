@@ -12,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-This file contains all api calls related to obtaining work package and work order tokens
-"""
+"""This file contains all api calls related to obtaining work package and work order tokens"""
 
 import base64
 import json
@@ -39,10 +37,7 @@ class WorkPackageAccessor:
     my_public_key: bytes
 
     def get_package_files(self) -> dict[str, str]:
-        """
-        Call WPS endpoint and retrieve work package information.
-        """
-
+        """Call WPS endpoint and retrieve work package information."""
         url = f"{self.api_url}/work-packages/{self.package_id}"
 
         # send authorization header as bearer token
@@ -66,10 +61,7 @@ class WorkPackageAccessor:
         return work_package["files"]
 
     def get_work_order_token(self, *, file_id: str) -> str:
-        """
-        Call WPS endpoint to retrieve and decrypt work order token.
-        """
-
+        """Call WPS endpoint to retrieve and decrypt work order token."""
         url = f"{self.api_url}/work-packages/{self.package_id}/files/{file_id}/work-order-tokens"
 
         # send authorization header as bearer token

@@ -42,7 +42,6 @@ class ChunkedUploader:
 
     async def encrypt_and_upload(self):
         """Delegate encryption and perform multipart upload"""
-
         # compute encrypted_file_size
         num_segments = math.ceil(self.unencrypted_file_size / crypt4gh.lib.SEGMENT_SIZE)
         expected_encrypted_size = (
@@ -66,7 +65,7 @@ class ChunkedUploader:
                 )
 
 
-async def run_upload(  # pylint: disable=too-many-arguments
+async def run_upload(  # noqa: PLR0913
     api_url: str,
     file_id: str,
     file_path: Path,
@@ -79,7 +78,6 @@ async def run_upload(  # pylint: disable=too-many-arguments
     Initialize httpx.client and Uploader and delegate to function peforming the actual
     upload
     """
-
     async with async_client() as client:
         uploader = Uploader(
             api_url=api_url,

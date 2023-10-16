@@ -57,7 +57,6 @@ class WKVSCaller:
             KeyError: when a successful response is received but doesn't contain the expected value
 
         """
-
         url = f"{self.wkvs_url}/values/{value_name}"
 
         try:

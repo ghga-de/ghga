@@ -14,19 +14,18 @@
 # limitations under the License.
 #
 
-"""
-Contains Calls of the Presigned URLs in order to Up- and Download Files
-"""
+"""Contains Calls of the Presigned URLs in order to Up- and Download Files"""
 
 import base64
 import concurrent.futures
 import hashlib
 import math
 import os
+from collections.abc import Iterator, Sequence
 from io import BufferedReader
 from pathlib import Path
 from queue import Queue
-from typing import Any, Iterator, Sequence, Tuple, Union
+from typing import Any, Union
 
 import crypt4gh.header
 import crypt4gh.keys
@@ -48,6 +47,7 @@ class Checksums:
         self._encrypted_sha256: list[str] = []
 
     def __repr__(self) -> str:
+        """Return a string representation of the object"""
         return (
             f"Unencrypted: {self._unencrypted_sha256.hexdigest()}\n"
             + f"Encrypted MD5: {self._encrypted_md5}\n"
@@ -79,7 +79,7 @@ class Checksums:
 class Crypt4GHEncryptor:
     """Handles on the fly encryption and checksum calculation"""
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(  # noqa: PLR0913
         self,
         part_size: int,
         private_key_path: Path,
@@ -188,14 +188,12 @@ class Crypt4GHDecryptor:
     def decrypt_file(self, *, input_path: Path, output_path: Path):
         """Decrypt provided file using Crypt4GH lib"""
         keys = [(0, self.decryption_key, None)]
-        with input_path.open("rb") as infile:
-            with output_path.open("wb") as outfile:
-                crypt4gh.lib.decrypt(keys=keys, infile=infile, outfile=outfile)
+        with input_path.open("rb") as infile, output_path.open("wb") as outfile:
+            crypt4gh.lib.decrypt(keys=keys, infile=infile, outfile=outfile)
 
 
 def is_file_encrypted(file_path: Path):
     """Checks if a file is Crypt4GH encrypted"""
-
     with file_path.open("rb") as input_file:
         num_relevant_bytes = 12
         file_header = input_file.read(num_relevant_bytes)
@@ -218,7 +216,6 @@ def download_content_range(
     queue: Queue,
 ) -> None:
     """Download a specific range of a file's content using a presigned download url."""
-
     headers = {"Range": f"bytes={start}-{end}"}
     try:
         with httpx_client() as client:
@@ -242,13 +239,11 @@ def download_content_range(
 def download_file_parts(
     max_concurrent_downloads: int,
     queue: Queue,
-    part_ranges: Sequence[Tuple[int, int]],
-    download_urls: Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]],
+    part_ranges: Sequence[tuple[int, int]],
+    download_urls: Iterator[Union[tuple[None, None, int], tuple[str, int, None]]],
     download_part_funct=download_content_range,
 ) -> None:
-    """
-    Download stuff
-    """
+    """Download stuff"""
     # Download the parts using a thread pool executor
     executor = concurrent.futures.ThreadPoolExecutor(
         max_workers=max_concurrent_downloads,
@@ -313,7 +308,6 @@ def read_file_parts(
 
     Please note: opening and closing of the file MUST happen outside of this function.
     """
-
     initial_offset = part_size * (from_part - 1)
     file.seek(initial_offset)
 

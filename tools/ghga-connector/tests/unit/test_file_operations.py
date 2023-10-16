@@ -48,7 +48,7 @@ def test_read_file_parts(from_part: Optional[int]):
         file.seek(0)
 
         # read the file in parts:
-        obtained_content = bytes()
+        obtained_content = b""
         file_parts = (
             read_file_parts(file, part_size=part_size)
             if from_part is None

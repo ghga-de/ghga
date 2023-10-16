@@ -129,7 +129,8 @@ class RequestFailedError(RuntimeError):
 
 class NoS3AccessMethodError(RuntimeError):
     """Thrown, when a request returns the desired response code, but no S3 Access
-    Method"""
+    Method
+    """
 
     def __init__(self, *, url: str):
         message = f"The request to '{url}' did not return an S3 Access Method."
@@ -235,7 +236,8 @@ class CantChangeUploadStatusError(RuntimeError):
 
 class MaxWaitTimeExceededError(RuntimeError):
     """Thrown, when the specified wait time for getting a download url has been
-    exceeded."""
+    exceeded.
+    """
 
     def __init__(self, *, max_wait_time: int):
         message = f"Exceeded maximum wait time of ({max_wait_time}) seconds."
@@ -263,9 +265,7 @@ class MaxPartNoExceededError(RuntimeError):
 
 
 def raise_if_connection_failed(request_error: httpx.RequestError, url: str):
-    """
-    Check if request exception is caused by hitting max retries and raise accordingly
-    """
+    """Check if request exception is caused by hitting max retries and raise accordingly"""
     if isinstance(request_error, (httpx.ConnectError, httpx.ConnectTimeout)):
         connection_failure = str(request_error.args[0])
         raise ConnectionFailedError(url=url, reason=connection_failure)
@@ -327,9 +327,7 @@ class InvalidWPSResponseError(RuntimeError):
 
 
 class UnauthorizedAPICallError(RuntimeError):
-    """
-    Thrown when a 403 is returned from a call requiring a work order token for authorization
-    """
+    """Thrown when a 403 is returned from a call requiring a work order token for authorization"""
 
     def __init__(self, *, url: str, cause: str):
         message = f"Could not authorize call to '{url}': {cause}"
@@ -337,9 +335,7 @@ class UnauthorizedAPICallError(RuntimeError):
 
 
 class EncryptedSizeMismatch(RuntimeError):
-    """
-    Thrown when the actual encrypted size of a file does not match the computed one
-    """
+    """Thrown when the actual encrypted size of a file does not match the computed one"""
 
     def __init__(self, *, actual_encrypted_size: int, expected_encrypted_size: int):
         message = (
@@ -351,9 +347,7 @@ class EncryptedSizeMismatch(RuntimeError):
 
 
 class UploadIdUnset(RuntimeError):
-    """
-    Thrown when the upload ID was not set for operations requiring a valid upload ID.
-    """
+    """Thrown when the upload ID was not set for operations requiring a valid upload ID."""
 
     def __init__(self):
         message = "Upload ID is not set, upload was not initialized correctly."

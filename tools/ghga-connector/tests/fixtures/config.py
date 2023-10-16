@@ -31,5 +31,4 @@ def get_test_config(**kwargs):
     """Get test config params with the defaults being overwritten by the parameter
     passed as kwargs.
     """
-
     return DEFAULT_TEST_CONFIG.copy(update=kwargs)

@@ -28,13 +28,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
 ```bash
-docker pull ghga/ghga-connector:0.3.15
+docker pull ghga/ghga-connector:0.3.16
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-connector:0.3.15 .
+docker build -t ghga/ghga-connector:0.3.16 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -42,7 +42,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/ghga-connector:0.3.15 --help
+docker run -p 8080:8080 ghga/ghga-connector:0.3.16 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -64,7 +64,7 @@ The service requires the following configuration parameters:
 
 - **`part_size`** *(integer)*: The part size to use for download. Default: `16777216`.
 
-- **`wkvs_api_url`** *(string)*: URL to the root of the WKVS API. Should start with https://. Default: `https://data.ghga.de/.well-known`.
+- **`wkvs_api_url`** *(string)*: URL to the root of the WKVS API. Should start with https://. Default: `"https://data.ghga.de/.well-known"`.
 
 
 ### Usage:
@@ -128,7 +128,7 @@ Moreover, inside the devcontainer, a convenience commands `dev_install` is avail
 It installs the service with all development dependencies, installs pre-commit.
 
 The installation is performed automatically when you build the devcontainer. However,
-if you update dependencies in the [`./setup.cfg`](./setup.cfg) or the
+if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
 [`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
 
 ## License

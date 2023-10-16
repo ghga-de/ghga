@@ -24,7 +24,7 @@ from ghga_connector.core.constants import DEFAULT_PART_SIZE, MAX_RETRIES, MAX_WA
 
 @config_from_yaml(prefix="ghga_connector")
 class Config(BaseSettings):
-    "Global Config Parameters"
+    """Global Config Parameters"""
 
     max_retries: int = Field(
         MAX_RETRIES, description="Number of times to retry failed API calls."

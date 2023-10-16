@@ -12,9 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
 """
-CLI - Client to perform up- and download operations to and from a local ghga instance
+Adds wrapper classes to translate httpyexpect errors and check against
+provided exception specs for all API endpoints
 """
 
-__version__ = "0.3.15"
+import httpx
+from ghga_service_commons.httpyexpect.client import ExceptionMapping, ResponseTranslator
+
+
+class ResponseExceptionTranslator:
+    """Base class providing behaviour and injection point for spec"""
+
+    def __init__(self, *, spec: dict[int, object]) -> None:
+        self._exception_map = ExceptionMapping(spec)
+
+    def handle(self, response: httpx.Response):
+        """Translate and raise error, if defined by spec"""
+        translator = ResponseTranslator(response, exception_map=self._exception_map)
+        translator.raise_for_error()

@@ -16,8 +16,9 @@
 
 """Test file operations"""
 
+from collections.abc import Iterator
 from queue import Empty, Queue
-from typing import Any, Iterator, Tuple, Union
+from typing import Any, Union
 
 import pytest
 
@@ -86,7 +87,7 @@ async def test_download_file_parts(
     )
 
     def url_generator() -> (
-        Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]]
+        Iterator[Union[tuple[None, None, int], tuple[str, int, None]]]
     ):
         while True:
             yield download_url, 0, None

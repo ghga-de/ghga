@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-""" CLI-specific wrappers around core functions."""
+"""CLI-specific wrappers around core functions."""
 
 import asyncio
 import os
@@ -32,7 +32,7 @@ from ghga_service_commons.utils import crypt
 from ghga_connector import core
 from ghga_connector.config import Config
 
-CONFIG = Config()  # will be patched for testing
+CONFIG = Config()  # type: ignore [call-arg]
 
 
 class CLIMessageDisplay(core.AbstractMessageDisplay):
@@ -42,21 +42,15 @@ class CLIMessageDisplay(core.AbstractMessageDisplay):
     """
 
     def display(self, message: str):
-        """
-        Write message with default color to stdout
-        """
+        """Write message with default color to stdout"""
         typer.secho(message, fg=core.MessageColors.DEFAULT)
 
     def success(self, message: str):
-        """
-        Write message to stdout representing information about a successful operation
-        """
+        """Write message to stdout representing information about a successful operation"""
         typer.secho(message, fg=core.MessageColors.SUCCESS)
 
     def failure(self, message: str):
-        """
-        Write message to stderr representing information about a failed operation
-        """
+        """Write message to stderr representing information about a failed operation"""
         typer.secho(message, fg=core.MessageColors.FAILURE, err=True)
 
 
@@ -67,7 +61,8 @@ def exception_hook(
     message_display: CLIMessageDisplay,
 ):
     """When debug mode is NOT enabled, gets called to perform final error handling
-    before program exits"""
+    before program exits
+    """
     message = (
         "An error occurred. Rerun command"
         + " with --debug at the end to see more information."
@@ -82,7 +77,7 @@ def exception_hook(
 cli = typer.Typer(no_args_is_help=True)
 
 
-def upload(  # noqa C901
+def upload(
     *,
     file_id: str = typer.Option(..., help="The id of the file to upload"),
     file_path: Path = typer.Option(..., help="The path to the file to upload"),
@@ -100,10 +95,7 @@ def upload(  # noqa C901
         False, help="Set this option in order to view traceback for errors."
     ),
 ):
-    """
-    Command to upload a file
-    """
-
+    """Command to upload a file"""
     ucs_api_url, server_pubkey, message_display = configure_upload(debug=debug)
     asyncio.run(
         core.upload(
@@ -160,10 +152,7 @@ def download(  # pylint: disable=too-many-arguments,too-many-locals
         False, help="Set this option in order to view traceback for errors."
     ),
 ):
-    """
-    Command to download files
-    """
-
+    """Command to download files"""
     core.HttpxClientState.configure(CONFIG.max_retries)
     message_display = CLIMessageDisplay()
 
@@ -236,7 +225,7 @@ def download(  # pylint: disable=too-many-arguments,too-many-locals
 
 
 @cli.command(no_args_is_help=True)
-def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
+def decrypt(  # noqa: PLR0912, C901
     *,
     input_dir: Path = typer.Option(
         ...,
@@ -259,7 +248,6 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
     ),
 ):
     """Command to decrypt a downloaded file"""
-
     message_display = CLIMessageDisplay()
 
     if not debug:
@@ -282,8 +270,8 @@ def decrypt(  # noqa: C901 # pylint: disable=too-many-branches
     skipped_files = []
     file_count = 0
     for input_file in input_dir.iterdir():
-        if not input_file.is_file() or not input_file.suffix == ".c4gh":
-            skipped_files.append((str(input_file)))
+        if not input_file.is_file() or input_file.suffix != ".c4gh":
+            skipped_files.append(str(input_file))
             continue
 
         file_count += 1

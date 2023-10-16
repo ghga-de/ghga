@@ -58,10 +58,7 @@ async def test_patch_multipart_upload(
     upload_status: UploadStatus,
     expected_exception: type[Optional[Exception]],
 ):
-    """
-    Test the patch_multipart_upload function
-    """
-
+    """Test the patch_multipart_upload function"""
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
     if bad_url:
         httpx_mock.add_exception(
@@ -112,9 +109,7 @@ async def test_get_part_upload_urls(
     end_part: int,
     expected_exception: type[Optional[Exception]],
 ):
-    """
-    Test the `get_part_upload_urls` generator for iterating through signed part urls
-    """
+    """Test the `get_part_upload_urls` generator for iterating through signed part urls"""
     upload_id = "example-upload"
     api_url = "http://my-api.example"
     from_part_ = 1 if from_part is None else from_part
@@ -155,7 +150,6 @@ async def test_get_part_upload_urls(
 
 def test_get_wps_file_info(httpx_mock: HTTPXMock):
     """Test response handling with some mock - just make sure code paths work"""
-
     files = {"file_1": ".tar.gz"}
     httpx_mock.add_response(json={"files": files}, status_code=200)
 
@@ -203,7 +197,6 @@ def test_get_wps_file_info(httpx_mock: HTTPXMock):
 @pytest.mark.asyncio
 async def test_wkvs_calls(httpx_mock: HTTPXMock):
     """Test handling of responses for WKVS api calls"""
-
     wkvs_url = "https://127.0.0.1"
     wkvs_caller = WKVSCaller(wkvs_url)
 

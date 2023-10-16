@@ -1,0 +1,7 @@
+# requirements for development and testing this service
+
+-r requirements-dev-common.in
+
+# additional requirements can be listed here
+testcontainers>=3.4.1
+hexkit[s3]>=0.10,<0.11

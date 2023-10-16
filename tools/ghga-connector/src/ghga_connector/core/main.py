@@ -18,7 +18,6 @@
 
 from pathlib import Path
 from queue import Empty, Queue
-from typing import List
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls import (
@@ -48,10 +47,7 @@ async def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-bra
     my_public_key_path: Path,
     my_private_key_path: Path,
 ) -> None:
-    """
-    Core command to upload a file. Can be called by CLI, GUI, etc.
-    """
-
+    """Core command to upload a file. Can be called by CLI, GUI, etc."""
     if not my_public_key_path.is_file():
         raise exceptions.PubKeyFileDoesNotExistError(pubkey_path=my_public_key_path)
 
@@ -82,7 +78,7 @@ async def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-bra
     message_display.success(f"File with id '{file_id}' has been successfully uploaded.")
 
 
-def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C901, R0914
+def download(  # noqa: PLR0913
     *,
     api_url: str,
     output_dir: Path,
@@ -93,10 +89,7 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     file_id: str,
     file_extension: str = "",
 ) -> None:
-    """
-    Core command to download a file. Can be called by CLI, GUI, etc.
-    """
-
+    """Core command to download a file. Can be called by CLI, GUI, etc."""
     if not check_url(api_url):
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
@@ -167,7 +160,7 @@ def download(  # pylint: disable=too-many-arguments, too-many-locals # noqa: C90
     )
 
 
-def download_parts(  # pylint: disable=too-many-locals
+def download_parts(  # noqa: PLR0913
     *,
     max_concurrent_downloads: int = 5,
     max_queue_size: int = 10,
@@ -185,7 +178,6 @@ def download_parts(  # pylint: disable=too-many-locals
     :param max_queue_size: Maximum size of the queue.
     :param part_size: Size of each part to download.
     """
-
     # Split the file into parts based on the part size
     part_ranges = calc_part_ranges(part_size=part_size, total_file_size=file_size)
 
@@ -222,7 +214,7 @@ def download_parts(  # pylint: disable=too-many-locals
             queue.task_done()
 
 
-def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> List[str]:
+def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> list[str]:
     """
     Expect the work package id and access token as a colon separated string
     The user will have to input this manually to avoid it becoming part of the

@@ -14,18 +14,9 @@
 # limitations under the License.
 
 """
-This file contains general utility api calls
+CLI - Client to perform up- and download operations to and from a local ghga instance
 """
 
-import httpx
+from importlib.metadata import version
 
-
-def check_url(api_url, *, wait_time=1) -> bool:
-    """
-    Checks, if an url is reachable within a certain time
-    """
-    try:
-        httpx.get(url=api_url, timeout=wait_time)
-    except httpx.RequestError:
-        return False
-    return True
+__version__ = version(__package__)

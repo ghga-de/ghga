@@ -13,15 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-This file contains all api calls related to uploading files
-"""
+"""This file contains all api calls related to uploading files"""
 
 import base64
 import json
+from collections.abc import Iterator
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Iterator
 
 import crypt4gh.keys
 import httpx
@@ -37,9 +35,7 @@ NO_RETRY_TIME = None
 
 
 class UploadStatus(str, Enum):
-    """
-    Enum for the possible statuses of an upload attempt.
-    """
+    """Enum for the possible statuses of an upload attempt."""
 
     ACCEPTED = "accepted"
     CANCELLED = "cancelled"
@@ -99,7 +95,6 @@ class Uploader:
         Perform a RESTful API call to initiate a multipart upload
         Returns an upload id and a part size
         """
-
         # build url and headers
         url = f"{self._api_url}/uploads"
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -144,11 +139,8 @@ class Uploader:
         self.part_size = int(response_body["part_size"])
         self.upload_id = response_body["upload_id"]
 
-    async def get_file_metadata(self) -> Dict:
-        """
-        Get all file metadata
-        """
-
+    async def get_file_metadata(self) -> dict:
+        """Get all file metadata"""
         # build url and headers
         url = f"{self._api_url}/files/{self._file_id}"
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -181,10 +173,7 @@ class Uploader:
         return file_metadata
 
     async def get_part_upload_url(self, *, part_no: int):
-        """
-        Get a presigned url to upload a specific part
-        """
-
+        """Get a presigned url to upload a specific part"""
         if not self.upload_id:
             raise exceptions.UploadIdUnset()
 
@@ -242,7 +231,6 @@ class Uploader:
 
         `get_url_func` only for testing purposes.
         """
-
         if not self.upload_id:
             raise exceptions.UploadIdUnset()
 
@@ -253,11 +241,8 @@ class Uploader:
 
         raise exceptions.MaxPartNoExceededError()
 
-    async def get_upload_info(self) -> Dict:
-        """
-        Get details on a specific upload
-        """
-
+    async def get_upload_info(self) -> dict:
+        """Get details on a specific upload"""
         if not self.upload_id:
             raise exceptions.UploadIdUnset()
 
@@ -296,7 +281,6 @@ class Uploader:
         The API accepts "uploaded" or "accepted",
         if the upload_id is currently set to "pending"
         """
-
         if not self.upload_id:
             raise exceptions.UploadIdUnset()
 
@@ -341,7 +325,6 @@ class Uploader:
 
     async def upload_file_part(self, *, presigned_url: str, part: bytes) -> None:
         """Upload File"""
-
         try:
             response = await self._client.put(
                 presigned_url, content=part, timeout=TIMEOUT

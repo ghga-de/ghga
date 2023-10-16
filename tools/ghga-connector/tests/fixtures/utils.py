@@ -28,10 +28,7 @@ PRIVATE_KEY_FILE = KEY_DIR / "key.sec"
 
 
 def mock_wps_token(max_tries: int, message_display: Any) -> list[str]:
-    """
-    Helper to mock user input
-    """
-
+    """Helper to mock user input"""
     work_package_id = "wp_1"
     token = "abcde"
 

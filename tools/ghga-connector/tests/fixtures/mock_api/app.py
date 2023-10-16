@@ -27,7 +27,7 @@ import logging
 import os
 from datetime import datetime
 from enum import Enum
-from typing import List, Union
+from typing import Union
 
 try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
     from typing_extensions import Literal
@@ -46,9 +46,7 @@ logger.setLevel(logging.INFO)
 
 
 class UploadStatus(str, Enum):
-    """
-    Enum for the possible UploadStatus of a specific upload_id
-    """
+    """Enum for the possible UploadStatus of a specific upload_id"""
 
     ACCEPTED = "accepted"
     CANCELLED = "cancelled"
@@ -59,33 +57,25 @@ class UploadStatus(str, Enum):
 
 
 class StatePatch(BaseModel):
-    """
-    Model containing a state parameter. Needed for the UCS patch: /uploads/... api call
-    """
+    """Model containing a state parameter. Needed for the UCS patch: /uploads/... api call"""
 
     status: UploadStatus
 
 
 class StatePost(BaseModel):
-    """
-    Model containing a state parameter. Needed for the UCS post: /uploads api call
-    """
+    """Model containing a state parameter. Needed for the UCS post: /uploads api call"""
 
     file_id: str
 
 
 class PresignedPostURL(BaseModel):
-    """
-    Model containing an url
-    """
+    """Model containing an url"""
 
     url: str
 
 
 class Checksum(BaseModel):
-    """
-    A Checksum as per the DRS OpenApi specs.
-    """
+    """A Checksum as per the DRS OpenApi specs."""
 
     checksum: str
     type: Literal["md5", "sha-256"]
@@ -93,7 +83,8 @@ class Checksum(BaseModel):
 
 class AccessURL(BaseModel):
     """Describes the URL for accessing the actual bytes of the object as per the
-    DRS OpenApi spec."""
+    DRS OpenApi spec.
+    """
 
     url: str
 
@@ -139,8 +130,8 @@ class DrsObjectServe(BaseModel):
     size: int
     created_time: str
     updated_time: str
-    checksums: List[Checksum]
-    access_methods: List[AccessMethod]
+    checksums: list[Checksum]
+    access_methods: list[AccessMethod]
 
 
 class HttpEnvelopeResponse(httpx.Response):
@@ -150,7 +141,6 @@ class HttpEnvelopeResponse(httpx.Response):
 
     def __init__(self, *, envelope: str, status_code: int = 200):
         """Construct message and init the response."""
-
         super().__init__(content=envelope, status_code=status_code)
 
 
@@ -182,18 +172,13 @@ router = MockRouter(
 
 @router.get("/")
 def ready():
-    """
-    Readyness probe.
-    """
+    """Readyness probe."""
     return httpx.Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/objects/{file_id}")
 def drs3_objects(file_id: str, request: httpx.Request):
-    """
-    Mock for the drs3 /objects/{file_id} call
-    """
-
+    """Mock for the drs3 /objects/{file_id} call"""
     # get authorization header
     authorization = request.headers["authorization"]
 
@@ -245,10 +230,7 @@ def drs3_objects(file_id: str, request: httpx.Request):
 
 @router.get("/objects/{file_id}/envelopes")
 def drs3_objects_envelopes(file_id: str):
-    """
-    Mock for the dcs /objects/{file_id}/envelopes call
-    """
-
+    """Mock for the dcs /objects/{file_id}/envelopes call"""
     if file_id in ("downloadable", "big-downloadable"):
         response_str = str.encode(os.environ["FAKE_ENVELOPE"])
         envelope = base64.b64encode(response_str).decode("utf-8")
@@ -264,10 +246,7 @@ def drs3_objects_envelopes(file_id: str):
 
 @router.get("/files/{file_id}")
 def ulc_get_files(file_id: str):
-    """
-    Mock for the ulc GET /files/{file_id} call.
-    """
-
+    """Mock for the ulc GET /files/{file_id} call."""
     if file_id == "pending":
         return FileProperties(
             file_id=file_id,
@@ -291,9 +270,7 @@ def ulc_get_files(file_id: str):
 
 @router.get("/uploads/{upload_id}")
 def ulc_get_uploads(upload_id: str):
-    """
-    Mock for the ulc GET /uploads/{upload_id} call.
-    """
+    """Mock for the ulc GET /uploads/{upload_id} call."""
     if upload_id == "pending":
         return httpx.Response(
             status_code=200,
@@ -314,9 +291,7 @@ def ulc_get_uploads(upload_id: str):
 
 @router.post("/uploads")
 def ulc_post_files_uploads(request: httpx.Request):
-    """
-    Mock for the ulc POST /uploads call.
-    """
+    """Mock for the ulc POST /uploads call."""
     content = json.loads(request.content)
     state: StatePost = StatePost(**content)
 
@@ -368,10 +343,7 @@ def ulc_post_files_uploads(request: httpx.Request):
 
 @router.post("/uploads/{upload_id}/parts/{part_no}/signed_urls")
 def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
-    """
-    Mock for the ulc POST /uploads/{upload_id}/parts/{part_no}/signed_urls call.
-    """
-
+    """Mock for the ulc POST /uploads/{upload_id}/parts/{part_no}/signed_urls call."""
     if upload_id == "pending":
         if part_no in (1, 2):
             urls = (os.environ["S3_UPLOAD_URL_1"], os.environ["S3_UPLOAD_URL_2"])
@@ -389,9 +361,7 @@ def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
 
 @router.patch("/uploads/{upload_id}")
 def ulc_patch_uploads(upload_id: str, request: httpx.Request):
-    """
-    Mock for the ulc PATCH /uploads/{upload_id} call
-    """
+    """Mock for the ulc PATCH /uploads/{upload_id} call"""
     content = json.loads(request.content)
     state: StatePatch = StatePatch(**content)
     upload_status = state.status
@@ -437,7 +407,6 @@ def ulc_patch_uploads(upload_id: str, request: httpx.Request):
 @router.post("/work-packages/{package_id}/files/{file_id}/work-order-tokens")
 def create_work_order_token(package_id: str, file_id: str):
     """Mock Work Order Token endpoint"""
-
     # has to be at least 48 chars long
     return httpx.Response(
         status_code=201,

@@ -16,7 +16,6 @@
 """Test data"""
 
 from pathlib import Path
-from typing import Dict, List
 
 from hexkit.providers.s3.testutils import TEST_FILE_PATHS, FileObject
 
@@ -43,7 +42,7 @@ class FileState:
         self.file_path = file_path
         self.populate_storage = populate_storage
 
-        self.storage_objects: List[FileObject] = []
+        self.storage_objects: list[FileObject] = []
         if self.populate_storage:
             self.storage_objects.append(
                 FileObject(
@@ -54,7 +53,7 @@ class FileState:
             )
 
 
-FILES: Dict[str, FileState] = {
+FILES: dict[str, FileState] = {
     "encrypted_file": FileState(
         file_id="encrypted",
         grouping_label="inbox",

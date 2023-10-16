@@ -27,8 +27,6 @@ from ghga_connector.core.main import check_url
     [("https://www.google.de/", 1000, True), ("https://bad_url", 1000, False)],
 )
 def test_check_url(api_url: str, wait_time: int, expected_response: bool):
-    """
-    Test the check_url function
-    """
+    """Test the check_url function"""
     response = check_url(api_url, wait_time=wait_time)
     assert response == expected_response

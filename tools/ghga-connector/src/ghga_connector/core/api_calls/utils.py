@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
@@ -15,9 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Setup script for pip. This setup configs are specified in the `setup.cfg` file"""
+"""This file contains general utility api calls"""
 
-import setuptools
+import httpx
 
-if __name__ == "__main__":
-    setuptools.setup()
+
+def check_url(api_url, *, wait_time=1) -> bool:
+    """Checks, if an url is reachable within a certain time"""
+    try:
+        httpx.get(url=api_url, timeout=wait_time)
+    except httpx.RequestError:
+        return False
+    return True

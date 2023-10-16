@@ -14,9 +14,7 @@
 # limitations under the License.
 #
 
-"""
-Contains abstract message display base class
-"""
+"""Contains abstract message display base class"""
 import enum
 from abc import ABC, abstractmethod
 

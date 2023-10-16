@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-This file contains all api calls related to uploading files
-"""
+"""This file contains all api calls related to uploading files"""
 
 import base64
+from collections.abc import Iterator
 from time import sleep
-from typing import Iterator, Tuple, Union
+from typing import Union
 
 import httpx
 from requests.structures import CaseInsensitiveDict
@@ -37,9 +36,9 @@ NO_FILE_SIZE = None
 NO_RETRY_TIME = None
 
 
-def get_download_url(  # noqa: C901 pylint: disable=too-many-locals
+def get_download_url(
     *, file_id: str, work_package_accessor: WorkPackageAccessor
-) -> Union[Tuple[None, None, int], Tuple[str, int, None]]:
+) -> Union[tuple[None, None, int], tuple[str, int, None]]:
     """
     Perform a RESTful API call to retrieve a presigned download URL.
     Returns:
@@ -51,7 +50,6 @@ def get_download_url(  # noqa: C901 pylint: disable=too-many-locals
         the retry-time is set.
         Otherwise, only the last element is None while the others are set.
     """
-
     # fetch a work order token
     decrypted_token = work_package_accessor.get_work_order_token(file_id=file_id)
 
@@ -110,7 +108,7 @@ def get_download_url(  # noqa: C901 pylint: disable=too-many-locals
 
 def get_download_urls(
     *, file_id: str, work_package_accessor: WorkPackageAccessor
-) -> Iterator[Union[Tuple[None, None, int], Tuple[str, int, None]]]:
+) -> Iterator[Union[tuple[None, None, int], tuple[str, int, None]]]:
     """
     For a specific mutli-part upload identified by the `file_id`, it returns an
     iterator to obtain download_urls.
@@ -127,13 +125,12 @@ def await_download_url(
     max_wait_time: int,
     message_display: AbstractMessageDisplay,
     work_package_accessor: WorkPackageAccessor,
-) -> Tuple[str, int]:
+) -> tuple[str, int]:
     """Wait until download URL can be generated.
     Returns a tuple with two elements:
         1. the download url
         2. the file size in bytes
     """
-
     # get the download_url, wait if needed
     wait_time = 0
     while wait_time < max_wait_time:

@@ -207,7 +207,6 @@ class StagingState:
 
     def _check_wait_time(self, *, max_wait_time: int):
         """Raise exception if maximum wait time has been exceeded"""
-
         time_waited = datetime.utcnow() - self.time_started
         if time_waited.total_seconds() >= max_wait_time:
             raise exceptions.MaxWaitTimeExceededError(max_wait_time=max_wait_time)
@@ -225,12 +224,11 @@ class FileStager:  # pylint: disable=too-many-instance-attributes
 
     def check_and_stage(self, output_dir: Path):
         """Call DRS endpoint to stage files. Report file ids with 404 responses to user."""
-
         existing_files = self.io_handler.check_output(location=output_dir)
         self.staging_parameters.remove_existing(file_ids=existing_files)
 
         unknown_ids = []
-        for file_id in self.staging_parameters.file_ids_with_extension.keys():
+        for file_id in self.staging_parameters.file_ids_with_extension:
             try:
                 download_information = get_download_url(
                     file_id=file_id, work_package_accessor=self.work_package_accessor

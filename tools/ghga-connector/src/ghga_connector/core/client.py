@@ -27,7 +27,6 @@ class HttpxClientState:
     @classmethod
     def configure(cls, max_retries: int):
         """Configure client with exponential backoff retry (using httpx's 0.5 default)"""
-
         # can't be negative - should we log this?
         cls.max_retries = max(0, max_retries)
 
@@ -35,7 +34,6 @@ class HttpxClientState:
 @contextmanager
 def httpx_client():
     """Yields a context manager httpx client and closes it afterward"""
-
     transport = httpx.HTTPTransport(retries=HttpxClientState.max_retries)
 
     with httpx.Client(transport=transport) as client:
@@ -45,7 +43,6 @@ def httpx_client():
 @asynccontextmanager
 async def async_client():
     """Yields a context manager async httpx client and closes it afterward"""
-
     transport = httpx.AsyncHTTPTransport(retries=HttpxClientState.max_retries)
 
     async with httpx.AsyncClient(transport=transport) as client:

@@ -15,9 +15,9 @@
 
 """Fixtures for testing the storage DAO"""
 
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncGenerator, List
 
 import pytest_asyncio
 from ghga_service_commons.utils.temp_files import big_temp_file
@@ -59,8 +59,8 @@ DEFAULT_NON_EXISTING_OBJECTS = [
     for idx, file_path in enumerate(TEST_FILE_PATHS[2:4])
 ]
 
-existing_buckets: List[str] = ["inbox", "outbox"]
-existing_objects: List[FileObject] = []
+existing_buckets: list[str] = ["inbox", "outbox"]
+existing_objects: list[FileObject] = []
 
 for file in state.FILES.values():
     if file.populate_storage:
@@ -85,19 +85,18 @@ class S3Fixture:
 
     config: S3Config
     storage: S3ObjectStorage
-    existing_buckets: List[str]
-    non_existing_buckets: List[str]
-    existing_objects: List[FileObject]
-    non_existing_objects: List[FileObject]
+    existing_buckets: list[str]
+    non_existing_buckets: list[str]
+    existing_objects: list[FileObject]
+    non_existing_objects: list[FileObject]
 
 
 async def populate_storage(
     storage: S3ObjectStorage,
-    bucket_fixtures: List[str],
-    object_fixtures: List[FileObject],
+    bucket_fixtures: list[str],
+    object_fixtures: list[FileObject],
 ):
     """Populate Storage with object and bucket fixtures"""
-
     for bucket_fixture in bucket_fixtures:
         await storage.create_bucket(bucket_fixture)
 
