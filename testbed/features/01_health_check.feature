@@ -1,7 +1,7 @@
 @healthcheck
 Feature: 01 Health Check
-  Check health endpoints of all services
+  Upfront health check for all services
 
-  Scenario: Check service health endpoints
-    Given all the service APIs respond as expected
-    Then set the state to "health check is completed"
+  Scenario: Check health of all services
+    When all service APIs are checked
+    Then they report as being healthy

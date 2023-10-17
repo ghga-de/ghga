@@ -51,10 +51,7 @@ def user_fetches_own_info(full_name: str, fixtures: JointFixture):
     return fixtures.http.get(url, headers=headers)
 
 
-@when(
-    parse('the user "{full_name}" tries to register'),
-    target_fixture="response",
-)
+@when(parse('the user "{full_name}" tries to register'), target_fixture="response")
 def user_registers(full_name: str, fixtures: JointFixture):
     title, name = fixtures.auth.split_title(full_name)
     email = fixtures.auth.get_email(name)

@@ -16,40 +16,53 @@
 
 """Step definition for service health check using health endpoint"""
 
-from urllib.parse import urljoin
+from pytest_bdd import scenarios, then, when
 
-import httpx
-from fixtures.http import TIMEOUT
-from pytest_bdd import given, scenarios
-
-from .conftest import Config
+from .conftest import Config, JointFixture
 
 scenarios("../features/01_health_check.feature")
 
 
-def check_api_health(api, config, expected_status_code):
-    """Check service API returns expected status code"""
-    service_url = getattr(config, f"{api}_url")
-    endpoint = urljoin(service_url, "health")
+def check_api_is_healthy(api: str, fixtures: JointFixture):
+    """Check that service API is healthy or not reachable if internal."""
+    config = fixtures.config
+    is_internal = config.use_api_gateway and api in config.internal_apis
+    health_endpoint = getattr(config, f"{api}_url").rstrip("/")
     if api == "mail":
-        endpoint = service_url  # Mail service has no /health endpoint
-    response = httpx.get(endpoint, timeout=TIMEOUT)
-    assert (
-        response.status_code == expected_status_code
-    ), f"Service did not return expected status code {expected_status_code}: {service_url}"
-
-
-@given("all the service APIs respond as expected")
-def check_service_health(config: Config):
-    """Check 'health' endpoint of all service APIs"""
-    if config.use_api_gateway:
-        # black-box testing: external APIs are accessible internal APIs are not
-        for ext_api in config.external_apis:
-            check_api_health(ext_api, config, 200)
-        for int_api in config.internal_apis:
-            check_api_health(int_api, config, 404)
+        health_endpoint += "/api/v2/messages"
     else:
-        # white-box testing: all of the APIs are accessible
-        all_apis = config.external_apis + config.internal_apis
-        for api in all_apis:
-            check_api_health(api, config, 200)
+        health_endpoint += "/health"
+    response = fixtures.http.get(health_endpoint)
+    status_code = response.status_code
+    expected_status = 404 if is_internal else 200
+    if status_code == 200 and response.text.startswith("<!doctype html>"):
+        # count response from frontend as "not found"
+        status_code = 404
+    msg = None
+    if status_code != expected_status:
+        msg = f"status should be {expected_status}, but is {status_code}"
+    elif not is_internal:
+        ret = response.json()
+        if not isinstance(ret, dict):
+            msg = "does not return JSON object"
+        if api == "mail":
+            ok = "total" in ret
+        elif api == "auth_adapter":
+            ok = not ret
+        else:
+            ok = ret.get("status") == "OK"
+        if not ok:
+            msg = f"unexpected response: {ret}"
+    assert not msg, f"Health check at endpoint {health_endpoint}: {msg}"
+
+
+@when("all service APIs are checked", target_fixture="apis")
+def list_of_all_service_apis(config: Config) -> list[str]:
+    return config.external_apis + config.internal_apis
+
+
+@then("they report as being healthy")
+def check_service_health(apis: list[str], fixtures: JointFixture):
+    """Check health of all service APIs depending on the test mode."""
+    for api in apis:
+        check_api_is_healthy(api, fixtures)
