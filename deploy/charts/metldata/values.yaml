@@ -22,6 +22,8 @@ mapping:
   enabled: false
   hostname: ""
   prefix: /
+  rewrite: /
+  timeout_ms: 600000
 
 parameters:
   api_root_path: /

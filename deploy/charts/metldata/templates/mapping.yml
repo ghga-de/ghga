@@ -8,4 +8,5 @@ spec:
   hostname: {{ .Values.mapping.hostname }}
   prefix: {{ .Values.mapping.prefix }}
   rewrite: {{ .Values.mapping.rewrite }}
+  timeout_ms: {{ .Values.mapping.timeout_ms }}
 {{ end }}
