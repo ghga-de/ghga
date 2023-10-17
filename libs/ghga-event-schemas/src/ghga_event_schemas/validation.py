@@ -16,8 +16,9 @@
 """Utils for validating event payloads against event schemas."""
 
 import json
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, Mapping, TypeVar
+from typing import Any, TypeVar
 
 import pydantic
 
@@ -41,8 +42,8 @@ Schema = TypeVar("Schema", bound=pydantic.BaseModel)
 
 def get_validated_payload(payload: JsonObject, schema: type[Schema]) -> Schema:
     """Validate an event payload against a specified pydantic-based event schema
-    and return the validated pydantic model."""
-
+    and return the validated pydantic model.
+    """
     try:
         return schema(**payload)
     except pydantic.ValidationError as error:

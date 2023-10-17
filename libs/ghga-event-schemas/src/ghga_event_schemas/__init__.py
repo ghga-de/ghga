@@ -15,4 +15,6 @@
 
 """A package that collects schemas used for events exchanges between GHGA service."""
 
-__version__ = "0.13.5"
+from importlib.metadata import version
+
+__version__ = version(__package__)

@@ -158,9 +158,7 @@ class MetadataSubmissionUpserted(BaseModel):
 
 
 class FileUploadReceived(UploadDateModel):
-    """
-    This event is triggered when a new file upload is received.
-    """
+    """This event is triggered when a new file upload is received."""
 
     file_id: str = Field(
         ...,
@@ -200,9 +198,7 @@ class FileUploadReceived(UploadDateModel):
 
 
 class FileUploadValidationSuccess(UploadDateModel):
-    """
-    This event is triggered when an uploaded file is successfully validated.
-    """
+    """This event is triggered when an uploaded file is successfully validated."""
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
@@ -271,9 +267,7 @@ class FileUploadValidationSuccess(UploadDateModel):
 
 
 class FileUploadValidationFailure(UploadDateModel):
-    """
-    This event is triggered when an uploaded file failed to validate.
-    """
+    """This event is triggered when an uploaded file failed to validate."""
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
@@ -302,9 +296,7 @@ class FileUploadValidationFailure(UploadDateModel):
 
 
 class FileInternallyRegistered(FileUploadValidationSuccess):
-    """
-    This event is triggered when an newly uploaded file is internally registered.
-    """
+    """This event is triggered when an newly uploaded file is internally registered."""
 
     # currently identical to the FileUploadValidationSuccess event model
 
@@ -371,9 +363,7 @@ class NonStagedFileRequested(BaseModel):
 
 
 class FileStagedForDownload(NonStagedFileRequested):
-    """
-    This event type is triggered when a file is staged to the outbox storage.
-    """
+    """This event type is triggered when a file is staged to the outbox storage."""
 
     # currently identical to the NonStagedFileRequested event model.
 

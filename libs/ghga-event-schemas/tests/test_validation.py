@@ -36,7 +36,6 @@ class ExampleSchema(BaseModel):
 
 def test_happy():
     """Test successful payload validation using a schema."""
-
     payload = {"some_param": "test", "another_param": 1234}
 
     validated_payload = get_validated_payload(payload=payload, schema=ExampleSchema)
@@ -45,7 +44,6 @@ def test_happy():
 
 def test_failure():
     """Test failed payload validation using a schema."""
-
     payload = {"some_param": "test", "another_param": "test"}
 
     with pytest.raises(EventSchemaValidationError):
