@@ -44,7 +44,7 @@ parameters:
     resource_deletion_event_type: searchable_resource_deleted
     resource_upsertion_event_type: searchable_resource_upserted
     searchable_classes:
-      Dataset:
+      EmbeddedDataset:
         description: Dataset grouping files under controlled access.
         facetable_properties:
         - key: alias
