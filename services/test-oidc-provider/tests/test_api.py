@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-from typing import AsyncGenerator
+"""Tests for the REST API"""
+
+from collections.abc import AsyncGenerator
 
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -28,7 +30,6 @@ from top.api.main import app, oidc_provider
 @async_fixture(name="client")
 async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for this application."""
-
     async with AsyncTestClient(app=app) as client:
         yield client
 
@@ -41,7 +42,6 @@ def headers_for_token(token: str) -> dict[str, str]:
 @mark.asyncio
 async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
-
     response = await client.get("/health")
 
     assert response.status_code == status.HTTP_200_OK
@@ -51,7 +51,6 @@ async def test_health_check(client: AsyncTestClient):
 @mark.asyncio
 async def test_openid_configuration(client: AsyncTestClient):
     """Test getting the OpenID configuration from the well-known path."""
-
     response = await client.get("/.well-known/openid-configuration")
     assert response.status_code == status.HTTP_200_OK
 
@@ -72,7 +71,6 @@ async def test_openid_configuration(client: AsyncTestClient):
 @mark.asyncio
 async def test_jwks_via_uri(client: AsyncTestClient):
     """Test getting the JWKS via the well-known path."""
-
     response = await client.get("/.well-known/openid-configuration")
 
     openid_config = response.json()
@@ -94,7 +92,6 @@ async def test_jwks_via_uri(client: AsyncTestClient):
 @mark.asyncio
 async def test_get_user_info_without_login(client: AsyncTestClient):
     """Test getting user info without first logging in."""
-
     response = await client.get("/userinfo")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -105,7 +102,6 @@ async def test_get_user_info_without_login(client: AsyncTestClient):
 @mark.asyncio
 async def test_login_and_get_user_info(client: AsyncTestClient):
     """Test logging in as a user and getting the user info back."""
-
     response = await client.post("/login", json={"name": "John Doe"})
     assert response.status_code == status.HTTP_201_CREATED
 

@@ -17,6 +17,7 @@
 """Test OpenID Connect provider"""
 
 import asyncio
+from contextlib import suppress
 from typing import Any, TypedDict, Union
 
 from ghga_service_commons.utils.jwt_helpers import (
@@ -90,10 +91,8 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
             task = tasks.pop()
             if not task.done():
                 task.cancel()
-                try:
+                with suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
     async def reset(self):
         """Reset the OP, clear all data."""
@@ -163,7 +162,7 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
             user_name = name.lower().replace(" ", "-")
             user_id = f"id-of-{user_name}"
             sub = f"{user_id}@{self.op_domain}"
-        user = UserInfo(sub=sub, email=email, name=name)  # pyright: ignore
+        user = UserInfo(sub=sub, email=email, name=name)  # type: ignore
         jti = f"test-{self.serial_id}"
         claims = {
             "jti": jti,

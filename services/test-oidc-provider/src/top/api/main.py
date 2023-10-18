@@ -15,6 +15,7 @@
 
 """Module containing the main FastAPI router and API endpoints."""
 
+import logging
 from enum import Enum
 from typing import Union
 
@@ -25,6 +26,8 @@ from ghga_service_commons.api import configure_app
 from ..config import CONFIG
 from ..core.models import LoginInfo, OidcConfiguration, UserInfo
 from ..core.oidc_provider import Jwks, OidcProvider
+
+log = logging.getLogger(__name__)
 
 app = FastAPI()
 configure_app(app, config=CONFIG)
@@ -60,7 +63,7 @@ async def get_openid_configuration() -> OidcConfiguration:
         userinfo_endpoint=userinfo_endpoint,
         issuer=CONFIG.issuer,
         jwks_uri=jwks_uri,
-    )  # pyright: ignore
+    )  # type: ignore
 
 
 @app.get(
@@ -91,12 +94,15 @@ async def get_jwks() -> Jwks:
 )
 async def login(login_info: LoginInfo) -> Response:
     """Endpoint for logging in to the OP as a test user."""
+    log.debug("Logging in with info: %s", login_info)
     try:
         token = oidc_provider.login(login_info)
     except (TypeError, ValueError) as error:
+        log.info("Invalid login info: %s", error)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         ) from error
+    log.debug("Created login token: %s", token)
     return Response(
         content=token, media_type="application/jwt", status_code=status.HTTP_201_CREATED
     )
@@ -123,9 +129,11 @@ async def get_userinfo(
 ) -> UserInfo:
     """The UserInfo endpoint of the test OP."""
     token = credentials.credentials
+    log.debug("Getting user info for token: %s", token)
     try:
         return oidc_provider.user_info(token)
     except KeyError as error:
+        log.info("User not found in cache.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
         ) from error

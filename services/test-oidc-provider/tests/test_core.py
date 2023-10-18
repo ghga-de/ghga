@@ -27,7 +27,7 @@ from top.core.oidc_provider import OidcProvider, OidcProviderConfig
 
 def test_create_default_op():
     """Create a default test OP."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
     assert provider.issuer == "https://op.test"
     assert provider.op_domain == "op.test"
@@ -41,7 +41,7 @@ def test_create_default_op():
 def test_create_custom_op():
     """Create a custom test OP."""
     config = OidcProviderConfig(
-        issuer="https://proxy.aai.lifescience-ri.eu",  # pyright: ignore
+        issuer="https://proxy.aai.lifescience-ri.eu",  # type: ignore
         user_domain="dkfz.de",
         client_id="GHGA-Client",
         valid_seconds=90 * 60,
@@ -58,7 +58,7 @@ def test_create_custom_op():
 
 def test_jwks():
     """Test getting the public key set."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
     jwks = provider.jwks
     assert isinstance(jwks, dict)
@@ -76,7 +76,7 @@ def test_jwks():
 
 def test_invalid_token():
     """Try to get a user with an invalid token."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
     with raises(KeyError):
         provider.user_info("bad")
@@ -85,10 +85,10 @@ def test_invalid_token():
 @mark.asyncio
 async def test_user_info_for_default_token():
     """Create a default access token for a dummy user."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="John Doe")  # pyright: ignore
+    login = LoginInfo(name="John Doe")  # type: ignore
     token = provider.login(login)
     assert isinstance(token, str)
     assert len(provider.users) == 1
@@ -109,12 +109,12 @@ async def test_user_info_for_default_token():
 @mark.asyncio
 async def test_user_info_for_custom_token():
     """Create a custom access token for a dummy user."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
 
     login = LoginInfo(
         name="Dr. Jane Roe",
-        email="jane@foo.edu",  # pyright: ignore
+        email="jane@foo.edu",  # type: ignore
         sub="sub-of-jane",
         valid_seconds=30,
     )
@@ -140,14 +140,14 @@ async def test_user_info_for_custom_token():
 async def test_user_info_for_default_token_of_custom_op():
     """Create a custom access token for a dummy user."""
     config = OidcProviderConfig(
-        issuer="https://proxy.aai.lifescience-ri.eu",  # pyright: ignore
+        issuer="https://proxy.aai.lifescience-ri.eu",  # type: ignore
         user_domain="dkfz.de",
         client_id="GHGA-Client",
         valid_seconds=90 * 60,
     )
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="Frank Foo")  # pyright: ignore
+    login = LoginInfo(name="Frank Foo")  # type: ignore
     token = provider.login(login)
     assert isinstance(token, str)
     assert len(provider.users) == 1
@@ -166,12 +166,12 @@ async def test_user_info_for_default_token_of_custom_op():
 @mark.asyncio
 async def test_user_infos_for_two_default_tokens():
     """Create two default access tokens for two dummy users."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="John Doe")  # pyright: ignore
+    login = LoginInfo(name="John Doe")  # type: ignore
     token1 = provider.login(login)
-    login = LoginInfo(name="Dr. Jane Roe")  # pyright: ignore
+    login = LoginInfo(name="Dr. Jane Roe")  # type: ignore
     token2 = provider.login(login)
     assert token1 != token2
     assert len(provider.users) == 2
@@ -190,10 +190,10 @@ async def test_user_infos_for_two_default_tokens():
 @mark.asyncio
 async def test_validate_default_tokens():
     """Create two access tokens and validate them."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="John Doe")  # pyright: ignore
+    login = LoginInfo(name="John Doe")  # type: ignore
     token = provider.login(login)
     claims = provider.decode_and_validate_token(token)
     assert isinstance(claims, dict)
@@ -217,7 +217,7 @@ async def test_validate_default_tokens():
 
     login = LoginInfo(
         name="Dr. Jane Roe",
-        email="jane@foo.edu",  # pyright: ignore
+        email="jane@foo.edu",  # type: ignore
         sub="sub-of-jane",
         valid_seconds=30,
     )
@@ -251,16 +251,16 @@ async def test_validate_default_tokens():
 @mark.asyncio
 async def test_expiration():
     """Check that tokens expire after the specified time."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="Long John Silver")  # pyright: ignore
+    login = LoginInfo(name="Long John Silver")  # type: ignore
     token1 = provider.login(login)
 
     user1 = provider.user_info(token1)
     assert user1.name == "Long John Silver"
 
-    login = LoginInfo(name="Short John Silver", valid_seconds=0.1)  # pyright: ignore
+    login = LoginInfo(name="Short John Silver", valid_seconds=0.1)  # type: ignore
     token2 = provider.login(login)
 
     user2 = provider.user_info(token2)
@@ -286,12 +286,12 @@ async def test_expiration():
 @mark.asyncio
 async def test_more_expiring_tasks():
     """Check that multiple tokens expire after the specified time."""
-    config = OidcProviderConfig()  # pyright: ignore
+    config = OidcProviderConfig()  # type: ignore
     provider = OidcProvider(config)
 
     def create_token(name: str, short=False) -> str:
         valid_seconds = 0.1 if short else None
-        login = LoginInfo(name=name, valid_seconds=valid_seconds)  # pyright: ignore
+        login = LoginInfo(name=name, valid_seconds=valid_seconds)  # type: ignore
         return provider.login(login)
 
     tokens = [

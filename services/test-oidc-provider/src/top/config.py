@@ -13,6 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test OpenID Connect provider"""
+"""Config Parameter Modeling and Parsing"""
 
-__version__ = "0.2.1"
+from ghga_service_commons.api import ApiConfigBase
+from hexkit.config import config_from_yaml
+from pydantic import AnyHttpUrl, Field
+
+from top.core.oidc_provider import OidcProviderConfig
+
+SERVICE_NAME = "top"
+
+
+@config_from_yaml(prefix=SERVICE_NAME)
+class Config(ApiConfigBase, OidcProviderConfig):
+    """Config parameters and their defaults."""
+
+    service_name: str = Field(SERVICE_NAME, description="Short name of this service")
+    service_url: AnyHttpUrl = Field(
+        "https://op.test",  # pyright: ignore
+        description="External base URL of this service",
+    )
+
+
+CONFIG = Config()  # type: ignore
