@@ -20,6 +20,7 @@ import json
 import logging
 from functools import cached_property, lru_cache
 from typing import Any, Optional, Union
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import status
@@ -203,9 +204,15 @@ class JWTConfig:
         else:
             log.warning("Allowed external signing algorithms not configured.")
             self.external_algs = None
-        issuer = discovery.authority_url[:-1]
-        if not issuer.startswith("https://") or issuer.endswith((".dev", ".test")):
-            # this is a test OP, discover the real issuer
+        authority_url_parts = urlparse(discovery.authority_url)
+        if (
+            authority_url_parts.scheme == "https"
+            and not authority_url_parts.netloc.endswith((".dev", ".test"))
+        ):
+            # this is a real OP, the issuer should match the authority URL
+            issuer = authority_url_parts.scheme + "://" + authority_url_parts.netloc
+        else:
+            # this is a test OP, discover its issuer, may not match the authority URL
             log.warning("Using issuer from discovery instead of authority URL.")
             issuer = discovery.issuer
         self.check_at_claims["iss"] = issuer
