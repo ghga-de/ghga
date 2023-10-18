@@ -90,7 +90,10 @@ class OIDCDiscovery:
     def config(self) -> dict[str, Any]:
         """Fetch the OIDC configuration directory."""
         response = httpx.get(self.config_url, timeout=TIMEOUT)
-        config = response.json()
+        try:
+            config = response.json()
+        except json.JSONDecodeError:
+            config = None
         if not isinstance(config, dict) or "version" not in config:
             raise ConfigurationDiscoveryError("Unexpected discovery object")
         return config
@@ -101,6 +104,7 @@ class OIDCDiscovery:
         issuer = self.config.get("issuer")
         if not issuer:
             raise ConfigurationDiscoveryError("Cannot discover issuer")
+        log.info("Discovered issuer: %s", issuer)
         return issuer
 
     @cached_property
@@ -111,8 +115,12 @@ class OIDCDiscovery:
             raise ConfigurationDiscoveryError("Cannot discover JWKS URI")
         if not jwks_uri.startswith(self.authority_url):
             raise ConfigurationDiscoveryError("Unexpected JWKS URI")
+        log.info("Discovered JWKS URI: %s", jwks_uri)
         jwks_response = httpx.get(jwks_uri, timeout=TIMEOUT)
-        jwks_dict = jwks_response.json()
+        try:
+            jwks_dict = jwks_response.json()
+        except json.JSONDecodeError:
+            jwks_dict = None
         if not isinstance(jwks_dict, dict) or "keys" not in jwks_dict:
             raise ConfigurationDiscoveryError("Unexpected JWKS object")
         return jwks_response.text
@@ -123,6 +131,7 @@ class OIDCDiscovery:
         token_endpoint = self.config.get("token_endpoint")
         if not token_endpoint or not isinstance(token_endpoint, str):
             raise ConfigurationDiscoveryError("Cannot discover token endpoint")
+        log.info("Discovered token endpoint: %s", token_endpoint)
         return token_endpoint
 
     @property
@@ -131,6 +140,7 @@ class OIDCDiscovery:
         userinfo_endpoint = self.config.get("userinfo_endpoint")
         if not userinfo_endpoint or not isinstance(userinfo_endpoint, str):
             raise ConfigurationDiscoveryError("Cannot discover userinfo endpoint")
+        log.info("Discovered userinfo endpoint: %s", userinfo_endpoint)
         return userinfo_endpoint
 
 
@@ -194,7 +204,7 @@ class JWTConfig:
             log.warning("Allowed external signing algorithms not configured.")
             self.external_algs = None
         issuer = discovery.authority_url[:-1]
-        if not issuer.startswith("https://") or issuer.endswith(".test"):
+        if not issuer.startswith("https://") or issuer.endswith((".dev", ".test")):
             # this is a test OP, discover the real issuer
             log.warning("Using issuer from discovery instead of authority URL.")
             issuer = discovery.issuer
@@ -202,6 +212,7 @@ class JWTConfig:
         client_id = config.oidc_client_id
         if client_id:
             self.check_at_claims["client_id"] = client_id
+            log.debug("Using OIDC client ID: %s", client_id)
         else:
             log.warning("No OIDC client ID configured.")
 
