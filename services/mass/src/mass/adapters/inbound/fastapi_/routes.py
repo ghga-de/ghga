@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-"""Contains API endpoints"""
+"""API endpoints"""
+
+import logging
 from typing import Union
 
 from dependency_injector.wiring import Provide, inject
@@ -26,6 +28,8 @@ from mass.config import Config
 from mass.container import Container
 from mass.core import models
 from mass.ports.inbound.query_handler import QueryHandlerPort
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -83,10 +87,11 @@ async def search(
     except query_handler.ClassNotConfiguredError as err:
         raise HTTPException(
             status_code=422,
-            detail="The specified class name is invalid. See "
-            + "/rpc/search-options for a list of valid class names.",
+            detail="The specified class name is invalid."
+            + " See /rpc/search-options for a list of valid class names.",
         ) from err
     except (query_handler.SearchError, query_handler.ValidationError) as err:
+        log.error("Search operation error: %s", err)
         raise HTTPException(
             status_code=500, detail="An error occurred during search operation"
         ) from err

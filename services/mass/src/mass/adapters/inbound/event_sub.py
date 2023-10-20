@@ -36,6 +36,9 @@ DELETION_FAILED_LOG_MSG = (
 )
 SCHEMA_VALIDATION_ERROR_LOG_MSG = "Failed to validate event schema for '%s'"
 
+EVENT_RECEIVED_LOG_MESSAGE = "Received event of type '%s'"
+UNEXPECTED_EVENT_LOG_MESSAGE = "Received unexpected event of type '%s'"
+
 log = logging.getLogger(__name__)
 
 
@@ -140,7 +143,10 @@ class EventSubTranslator(EventSubscriberProtocol):
         topic: Ascii,  # pylint: disable=unused-argument
     ) -> None:
         """Consumes an event"""
+        log.info(EVENT_RECEIVED_LOG_MESSAGE, type)
         if type_ == self._config.resource_deletion_event_type:
             await self._handle_deletion(payload=payload)
         elif type_ == self._config.resource_upsertion_event_type:
             await self._handle_upsertion(payload=payload)
+        else:
+            log.warning(UNEXPECTED_EVENT_LOG_MESSAGE, type)
