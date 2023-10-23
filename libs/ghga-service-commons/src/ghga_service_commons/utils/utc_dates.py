@@ -17,11 +17,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any
 
-from pydantic import parse_obj_as
+from pydantic import GetCoreSchemaHandler
+from pydantic.type_adapter import TypeAdapter
+from pydantic_core import CoreSchema, core_schema
 
 __all__ = ["DateTimeUTC", "UTC", "assert_tz_is_utc", "now_as_utc"]
 
@@ -43,14 +44,21 @@ class DateTimeUTC(datetime):
         return cls(*args, **kwargs)
 
     @classmethod
-    def __get_validators__(cls) -> Generator[Callable[[Any], datetime], None, None]:
-        """Get all validators."""
-        yield cls.validate
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Provide the schema with validation function.
+
+        Uses `core_schema.no_info_plain_validator_function` because `cls.validate` is
+        the sole validator for `DateTimeUTC`.
+        """
+        return core_schema.no_info_plain_validator_function(cls.validate)
 
     @classmethod
     def validate(cls, value: Any) -> datetime:
         """Validate the given value."""
-        date_value = parse_obj_as(datetime, value)
+        datetime_validator = TypeAdapter(datetime)
+        date_value = datetime_validator.validate_python(value)
         if date_value.tzinfo is None:
             raise ValueError(f"Date-time value is missing a timezone: {value!r}")
         if date_value.tzinfo is not UTC:

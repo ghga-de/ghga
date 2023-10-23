@@ -22,7 +22,8 @@ from typing import Any, Optional
 
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
-from pydantic import BaseSettings, Field, ValidationError
+from pydantic import Field, ValidationError
+from pydantic_settings import BaseSettings
 
 from ghga_service_commons.auth.context import AuthContext, AuthContextProtocol
 
@@ -38,7 +39,7 @@ class JWTAuthConfig(BaseSettings):
 
     auth_key: str = Field(
         ...,
-        example='{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}',
+        examples=['{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}'],
         description="The public key for validating the token signature.",
     )
     auth_algs: list[str] = Field(

@@ -4,4 +4,4 @@
 -r requirements-dev-common.in
 
 # additional requirements can be listed here
-hexkit~=0.10.0
+hexkit~=0.11.0

@@ -105,7 +105,7 @@ def test_response_translator_error(case: Case):
     )
     response = Mock()
     response.status_code = case.status_code
-    response.json.return_value = body.dict()
+    response.json.return_value = body.model_dump()
 
     # initialize the ResponseTranslator:
     translator = ResponseTranslator(response, exception_map=exception_map)

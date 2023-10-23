@@ -40,4 +40,4 @@ def configure_exception_handler(app: FastAPI) -> None:
         The custom exception handler translates httpyexpect's HttpExceptions
         into a FastAPI JSONResponse.
         """
-        return JSONResponse(status_code=exc.status_code, content=exc.body.dict())
+        return JSONResponse(status_code=exc.status_code, content=exc.body.model_dump())

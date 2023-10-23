@@ -38,7 +38,7 @@ def http_exception_handler(request: httpx.Request, exc: HttpException):
     assert isinstance(exc, HttpException)
     return httpx.Response(
         status_code=exc.status_code,
-        json=exc.body.dict(),
+        json=exc.body.model_dump(),
     )
 
 

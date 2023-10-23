@@ -34,22 +34,22 @@ router = APIRouter()
 @router.get("/get_auth")
 async def get_auth_route(context: Optional[AuthContext] = get_auth):
     """Get and return auth context without requiring it."""
-    return {"context": context.dict() if context else None}
+    return {"context": context.model_dump() if context else None}
 
 
 @router.get("/require_auth")
 async def require_auth_route(context: AuthContext = require_auth):
     """Require and return auth context."""
-    return {"context": context.dict()}
+    return {"context": context.model_dump()}
 
 
 @router.get("/require_active")
 async def require_active_route(context: AuthContext = require_active):
     """Require and return active auth context."""
-    return {"context": context.dict()}
+    return {"context": context.model_dump()}
 
 
 @router.get("/require_admin")
 async def require_admin_route(context: AuthContext = require_admin):
     """Require and return active auth context with admin role."""
-    return {"context": context.dict()}
+    return {"context": context.model_dump()}

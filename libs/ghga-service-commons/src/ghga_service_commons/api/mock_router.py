@@ -389,10 +389,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         for exc_type in self.exceptions_to_handle:
             if isinstance(exc, exc_type) and (
                 self.handle_exception_subclasses
-                or (
-                    not self.handle_exception_subclasses
-                    and type(exc) is exc_type  # pylint: disable=unidiomatic-typecheck
-                )
+                or (not self.handle_exception_subclasses and type(exc) is exc_type)
             ):
                 pass_to_handler = True
         return pass_to_handler

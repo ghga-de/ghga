@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ghga_service_commons"
-version = "0.7.1"
+version = "0.8.0"
 description = "A library that contains common functionality used in services of GHGA"
 readme = "README.md"
 authors = [
@@ -24,14 +24,14 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "pydantic >=1.10.6, <2",
+    "pydantic >=2, <3",
 ]
 
 [project.optional-dependencies]
-api = ["fastapi~=0.96.0", "uvicorn[standard]~=0.20.0", "httpx~=0.23.3"]
-auth = ["jwcrypto>=1.5.0, <2", "pydantic[email]>=1.10.6, <2"]
+api = ["fastapi~=0.103.2", "uvicorn[standard]~=0.20.0", "httpx~=0.23.3"]
+auth = ["jwcrypto>=1.5.0, <2", "pydantic[email]>=2, <3"]
 crypt = ["pynacl>=1.5.0, <2"]
-dev = ["datamodel-code-generator~=0.19.0","dnspython<2.4.0","requests>=2.28.2, <3"]
+dev = ["datamodel-code-generator~=0.22.0","requests>=2.28.2, <3"]
 
 all = ["ghga-service-commons[api,auth,crypt,dev]"]
 

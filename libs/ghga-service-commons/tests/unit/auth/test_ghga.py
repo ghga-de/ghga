@@ -16,7 +16,6 @@
 
 """Test the auth.ghga module."""
 
-from pydantic import EmailStr
 
 from ghga_service_commons.auth.ghga import (
     AcademicTitle,
@@ -31,7 +30,7 @@ from ghga_service_commons.utils.utc_dates import DateTimeUTC
 
 context_kwargs = {
     "name": "John Doe",
-    "email": EmailStr("john@home.org"),
+    "email": "john@home.org",
     "title": AcademicTitle.DR,
     "iat": DateTimeUTC.construct(2022, 11, 15, 12, 0, 0),
     "exp": DateTimeUTC.construct(2022, 11, 15, 13, 0, 0),
@@ -45,7 +44,7 @@ context_kwargs = {
 def test_create_auth_context():
     """Test that a GHGA auth context can be crated."""
     context = AuthContext(**context_kwargs)  # type: ignore
-    assert context.dict() == context
+    assert context.model_dump() == context.model_dump()
 
 
 def test_has_role():

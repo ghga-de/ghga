@@ -15,9 +15,9 @@
 
 """General data model with build in validation."""
 
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Extra, Field, constr
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 EXCEPTION_ID_PATTERN = r"^[a-z][a-zA-Z0-9]{2,39}$"
 
@@ -28,10 +28,7 @@ class HttpExceptionBody(BaseModel):
     Shipped with HTTP exception (on 4xx or 5xx status codes).
     """
 
-    class Config:
-        """Configure Model."""
-
-        extra = Extra.forbid
+    model_config = ConfigDict(extra="forbid")
 
     data: dict[str, Any] = Field(
         ...,
@@ -49,7 +46,9 @@ class HttpExceptionBody(BaseModel):
             + " exception."
         ),
     )
-    exception_id: constr(regex=EXCEPTION_ID_PATTERN) = Field(  # type: ignore
+    exception_id: Annotated[
+        str, StringConstraints(pattern=EXCEPTION_ID_PATTERN)
+    ] = Field(
         ...,
         description=(
             "An identifier used to distinguish between different exception"

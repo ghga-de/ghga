@@ -86,7 +86,7 @@ def test_typical_client_usage(
     # create http response mock:
     response = Mock()
     response.status_code = status_code
-    response.json.return_value = body.dict()
+    response.json.return_value = body.model_dump()
 
     # create a exception mapping:
     exception_map = ExceptionMapping(spec)

@@ -25,7 +25,8 @@ from typing import Optional, Union
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
     configure_exception_handler,
@@ -88,7 +89,7 @@ class ApiConfigBase(BaseSettings):
     # non-None value is specified:
     cors_allowed_origins: Optional[Sequence[str]] = Field(
         None,
-        example=["https://example.org", "https://www.example.org"],
+        examples=[["https://example.org", "https://www.example.org"]],
         description=(
             "A list of origins that should be permitted to make cross-origin requests."
             + " By default, cross-origin requests are not allowed."
@@ -97,7 +98,7 @@ class ApiConfigBase(BaseSettings):
     )
     cors_allow_credentials: Optional[bool] = Field(
         None,
-        example=["https://example.org", "https://www.example.org"],
+        examples=[["https://example.org", "https://www.example.org"]],
         description=(
             "Indicate that cookies should be supported for cross-origin requests."
             + " Defaults to False."
@@ -107,7 +108,7 @@ class ApiConfigBase(BaseSettings):
     )
     cors_allowed_methods: Optional[Sequence[str]] = Field(
         None,
-        example=["*"],
+        examples=[["*"]],
         description=(
             "A list of HTTP methods that should be allowed for cross-origin requests."
             + " Defaults to ['GET']. You can use ['*'] to allow all standard methods."
@@ -115,7 +116,7 @@ class ApiConfigBase(BaseSettings):
     )
     cors_allowed_headers: Optional[Sequence[str]] = Field(
         None,
-        example=[],
+        examples=[[]],
         description=(
             "A list of HTTP request headers that should be supported for cross-origin"
             + " requests. Defaults to []."

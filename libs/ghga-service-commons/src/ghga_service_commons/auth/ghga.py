@@ -54,16 +54,22 @@ class AuthContext(BaseModel):
     """Auth context for all GHGA services."""
 
     name: str = Field(
-        ..., title="Name", description="The full name of the user", example="John Doe"
+        ...,
+        title="Name",
+        description="The full name of the user",
+        examples=["John Doe"],
     )
     email: EmailStr = Field(
         default=...,
         title="E-Mail",
         description="The preferred e-mail address of the user",
-        example="user@home.org",
+        examples=["user@home.org"],
     )
     title: Optional[AcademicTitle] = Field(
-        None, title="Title", description="The academic title of the user", example="Dr."
+        None,
+        title="Title",
+        description="The academic title of the user",
+        examples=["Dr."],
     )
     iat: DateTimeUTC = Field(..., title="Issued at")
     exp: DateTimeUTC = Field(..., title="Expiration time")
@@ -109,7 +115,7 @@ class AuthConfig(JWTAuthConfig):
         ...,
         title="Internal public key",
         description="The GHGA internal public key for validating the token signature.",
-        example='{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}',
+        examples=['{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}'],
     )
     auth_algs: list[str] = Field(
         ["ES256"],
