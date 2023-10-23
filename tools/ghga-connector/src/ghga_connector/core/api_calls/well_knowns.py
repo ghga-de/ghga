@@ -26,31 +26,34 @@ from ghga_connector.core.constants import TIMEOUT
 
 @dataclass
 class WKVSCaller:
-    """Class to facilitate calls to WKVS (mainly just avoid providing url repeatedly)"""
+    """Class to facilitate calls to WKVS (mainly just avoid providing URL repeatedly)"""
 
-    wkvs_url: str
+    wkvs_url: str  # base URL for the well-known-value-service
 
     def get_server_pubkey(self) -> str:
-        """Retrieve the GHGA crypt4gh public key"""
+        """Retrieve the GHGA Crypt4GH public key"""
         return self._get_value("crypt4gh_public_key")
 
     def get_wps_api_url(self) -> str:
-        """Retrieve the API url for the WPS"""
-        return self._get_value("wps_api_url")
+        """Retrieve the API URL for the WPS"""
+        return self._get_api_url("wps")
 
     def get_dcs_api_url(self) -> str:
-        """Retrieve the API url for the DCS"""
-        return self._get_value("dcs_api_url")
+        """Retrieve the API URL for the DCS"""
+        return self._get_api_url("dcs")
 
     def get_ucs_api_url(self) -> str:
-        """Retrieve the API url for the UCS"""
-        return self._get_value("ucs_api_url")
+        """Retrieve the API URL for the UCS"""
+        return self._get_api_url("ucs")
+
+    def _get_api_url(self, api_name: str) -> Any:
+        return self._get_value(f"{api_name}_api_url").rstrip("/")
 
     def _get_value(self, value_name: str) -> Any:
-        """Retrieve the GHGA crypt4gh public key
+        """Retrieve a value from the well-known-value-service.
 
         Args:
-            wkvs_url (str): The base url for the well-known-value-service
+            value_name (str): the name of the value to be retrieved
 
         Raises:
             WellKnownValueNotFound: when a 404 response is received from the WKVS
