@@ -107,7 +107,7 @@ def check_email_sent_to(
             return
         sleep(interval)
         slept += interval
-    assert False, f"An email notification was not received by {email}."  # noqa: B011
+    assert False, f"An email notification was not received by {email}."
 
 
 @when("I fetch the list of access requests", target_fixture="response")

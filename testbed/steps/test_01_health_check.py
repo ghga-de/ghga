@@ -54,6 +54,44 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):
         if not ok:
             msg = f"unexpected response: {ret}"
     assert not msg, f"Health check at endpoint {health_endpoint}: {msg}"
+    if api == "ums":
+        check_user_management_apis_are_healthy(fixtures)
+
+
+def check_user_management_apis_are_healthy(fixtures: JointFixture):
+    """Check health and security of user management APIs more thoroughly."""
+    name = "Data Steward"
+    sub = fixtures.auth.get_sub(name)
+    ums_url = fixtures.config.ums_url
+    endpoint = f"{ums_url}/users/{sub}"
+    headers = fixtures.auth.generate_headers(name)
+    response = fixtures.http.get(endpoint, headers=headers)
+    status_code = response.status_code
+    assert status_code == 200, f"Error {status_code} when requesting info for {name}"
+    ret = response.json()
+    assert isinstance(ret, dict), f"Bad return value when requesting info for {name}"
+    user_id = ret.get("id")
+    assert user_id, f"No user ID when requesting info for {name}"
+    endpoint = f"{ums_url}/users/{user_id}/claims"
+    response = fixtures.http.get(endpoint)
+    status_code = response.status_code
+    if fixtures.config.use_api_gateway:
+        assert status_code == 404, (
+            "The claims repository should bot be reachable from outside,"
+            f" but responds with status code {status_code}"
+        )
+    else:
+        assert (
+            status_code == 200
+        ), f"Error {status_code} when requesting claims for {name}"
+        ret = response.json()
+        if not (
+            isinstance(ret, list)
+            and len(ret) == 1
+            and ret[0]["visa_type"] == "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0"
+            and ret[0]["visa_value"] == "data_steward@ghga.de"
+        ):
+            assert False, f"{name} should have exactly one data steward claim"
 
 
 @when("all service APIs are checked", target_fixture="apis")

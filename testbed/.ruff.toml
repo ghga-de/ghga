@@ -10,6 +10,7 @@ ignore = [
     "PLW", # pylint warnings
     "N818", # Errors need to have Error suffix
     "B008", # function call in arg defaults
+    "B011", # allow assert False
     "PLR2004", # magic numbers should be constants
     "PLR0913", # Too many arguments to function call
     "D205", # blank-line-after-summary

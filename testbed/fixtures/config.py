@@ -154,7 +154,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
 
     # test OP
     op_url: str = "http://op.test"
-    op_issuer: str = "https://test-aai.ghga.de"
+    op_issuer: str = "https://test-aai.ghga.dev"
 
     # ekss
     ekss_url: str = "http://ekss"

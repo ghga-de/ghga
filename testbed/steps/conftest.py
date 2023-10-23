@@ -123,7 +123,8 @@ def access_as_user(name: str, fixtures: JointFixture) -> LoginFixture:
 
 @then(parse('the response status code is "{code:d}"'))
 def check_status_code(code: int, response: Response):
-    assert response.status_code == code
+    status_code = response.status_code
+    assert status_code == code, f"{status_code}: {response.text}"
 
 
 # Global test bed state memory
