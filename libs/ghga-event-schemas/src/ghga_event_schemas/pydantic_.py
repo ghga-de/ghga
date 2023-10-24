@@ -22,7 +22,7 @@ schema representations such as json-schema.
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from ghga_event_schemas.validation import validated_upload_date
 
@@ -45,12 +45,7 @@ class MetadataDatasetFile(BaseModel):
     file_extension: str = Field(
         ..., description="The file extension with a leading dot."
     )
-
-    class Config:
-        """Model config."""
-
-        title = "metadata_dataset_file"
-        extra = "allow"
+    model_config = ConfigDict(title="metadata_dataset_file", extra="allow")
 
 
 class MetadataDatasetID(BaseModel):
@@ -93,12 +88,7 @@ class MetadataDatasetOverview(MetadataDatasetID):
     files: list[MetadataDatasetFile] = Field(
         ..., description="Files contained in the dataset."
     )
-
-    class Config:
-        """Model config."""
-
-        title = "metadata_dataset_overview"
-        extra = "allow"
+    model_config = ConfigDict(title="metadata_dataset_overview", extra="allow")
 
 
 class UploadDateModel(BaseModel):
@@ -113,7 +103,7 @@ class UploadDateModel(BaseModel):
         + "String format should follow ISO 8601 as produced by datetime.utcnow().isoformat()",
     )
 
-    @validator("upload_date")
+    @field_validator("upload_date")
     @classmethod
     def check_datetime_format(cls, upload_date):
         """Validate provided upload date string can be interpreted as datetime"""
@@ -132,7 +122,7 @@ class MetadataSubmissionFiles(BaseModel):
     file_name: str = Field(
         ...,
         description="The name of the file as it was submitted.",
-        example="treatment_R1.fastq.gz",
+        examples=["treatment_R1.fastq.gz"],
     )
     decrypted_size: int = Field(
         ...,
@@ -150,11 +140,7 @@ class MetadataSubmissionUpserted(BaseModel):
     """
 
     associated_files: list[MetadataSubmissionFiles]
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "metadata_submission_upserted"
+    model_config = ConfigDict(title="metadata_submission_upserted")
 
 
 class FileUploadReceived(UploadDateModel):
@@ -190,11 +176,7 @@ class FileUploadReceived(UploadDateModel):
             + " To be validated."
         ),
     )
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_upload_received"
+    model_config = ConfigDict(title="file_upload_received")
 
 
 class FileUploadValidationSuccess(UploadDateModel):
@@ -259,11 +241,7 @@ class FileUploadValidationSuccess(UploadDateModel):
         ...,
         description="The SHA-256 checksum of the entire decrypted file content.",
     )
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_upload_validation_success"
+    model_config = ConfigDict(title="file_upload_validation_success")
 
 
 class FileUploadValidationFailure(UploadDateModel):
@@ -288,22 +266,13 @@ class FileUploadValidationFailure(UploadDateModel):
         ...,
         description="The reason why the validation failed.",
     )
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_upload_validation_failure"
+    model_config = ConfigDict(title="file_upload_validation_failure")
 
 
 class FileInternallyRegistered(FileUploadValidationSuccess):
     """This event is triggered when an newly uploaded file is internally registered."""
 
-    # currently identical to the FileUploadValidationSuccess event model
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_internally_registered"
+    model_config = ConfigDict(title="file_internally_registered")
 
 
 class FileRegisteredForDownload(UploadDateModel):
@@ -323,11 +292,7 @@ class FileRegisteredForDownload(UploadDateModel):
         ...,
         description="A URI for accessing the file according to the GA4GH DRS standard.",
     )
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_registered_for_download"
+    model_config = ConfigDict(title="file_registered_for_download")
 
 
 class NonStagedFileRequested(BaseModel):
@@ -355,22 +320,13 @@ class NonStagedFileRequested(BaseModel):
         ...,
         description="The SHA-256 checksum of the entire decrypted file content.",
     )
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "non_staged_file_requested"
+    model_config = ConfigDict(title="non_staged_file_requested")
 
 
 class FileStagedForDownload(NonStagedFileRequested):
     """This event type is triggered when a file is staged to the outbox storage."""
 
-    # currently identical to the NonStagedFileRequested event model.
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_staged_for_download"
+    model_config = ConfigDict(title="file_staged_for_download")
 
 
 class FileDownloadServed(NonStagedFileRequested):
@@ -386,11 +342,7 @@ class FileDownloadServed(NonStagedFileRequested):
             + " access request)."
         ),
     )
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_download_served"
+    model_config = ConfigDict(title="file_download_served")
 
 
 class Notification(BaseModel):
@@ -416,11 +368,7 @@ class Notification(BaseModel):
     plaintext_body: str = Field(
         ..., description="The basic text for the notification body"
     )
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "notification"
+    model_config = ConfigDict(title="notification")
 
 
 class FileDeletionRequested(BaseModel):
@@ -432,11 +380,7 @@ class FileDeletionRequested(BaseModel):
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
     )
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_deletion_requested"
+    model_config = ConfigDict(title="file_deletion_requested")
 
 
 class FileDeletionSuccess(FileDeletionRequested):
@@ -445,12 +389,7 @@ class FileDeletionSuccess(FileDeletionRequested):
     as the S3 buckets it controls.
     """
 
-    # currently identical to the FileDeletionRequested event model.
-
-    class Config:
-        """Additional Model Config."""
-
-        title = "file_deletion_success"
+    model_config = ConfigDict(title="file_deletion_success")
 
 
 # Lists event schemas (values) by event types (key):

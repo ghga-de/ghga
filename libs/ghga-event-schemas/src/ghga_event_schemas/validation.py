@@ -32,7 +32,7 @@ class EventSchemaValidationError(ValueError):
         message = (
             "The the following event payload failed validation against the corresponding"
             + f" event schema. The payload was '{json.dumps(payload)}' but the schema"
-            + f" was '{schema.schema_json()}."
+            + f" was '{schema.model_json_schema()}."
         )
         super().__init__(message)
 
