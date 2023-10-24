@@ -37,7 +37,7 @@ Moreover, inside the devcontainer, there if following convenience commands avail
 (please type it in the integrated terminal of vscode):
 `dev_install` - installs the package with all development dependencies and installs pre-commit
 (please run that if you are starting the devcontainer for the first time
-or if you added any python dependencies to the [`./setup.cfg`](./setup.cfg))
+or if you added any python dependencies to the [`./pyproject.toml`](./pyproject.toml))
 
 If you prefer not to use vscode, you could get a similar setup (without the editor specific features)
 by running the following commands:
