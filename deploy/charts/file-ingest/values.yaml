@@ -31,7 +31,6 @@ parameters:
   cors_allowed_headers: []
   cors_allowed_methods: []
   cors_allowed_origins: []
-  debug_vault: false
   docs_url: /docs
   host: 0.0.0.0
   kafka_servers: []
@@ -45,8 +44,8 @@ parameters:
   service_name: fis
   source_bucket_id: staging
   token_hashes: []
-  vault_host: http://vault
-  vault_port: 8200
+  vault_url: http://vault:8200
+  vault_verify: false
   vault_role_id: '**********'
   vault_secret_id: '**********'
   workers: 1
