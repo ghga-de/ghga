@@ -52,7 +52,9 @@ class DateTimeUTC(datetime):
         Uses `core_schema.no_info_plain_validator_function` because `cls.validate` is
         the sole validator for `DateTimeUTC`.
         """
-        return core_schema.no_info_plain_validator_function(cls.validate)
+        return core_schema.no_info_after_validator_function(
+            cls.validate, handler(datetime)
+        )
 
     @classmethod
     def validate(cls, value: Any) -> datetime:

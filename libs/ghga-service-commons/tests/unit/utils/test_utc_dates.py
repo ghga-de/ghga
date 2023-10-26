@@ -119,3 +119,16 @@ def test_now_as_utc():
     assert now_as_utc().tzinfo is UTC
     assert now_as_utc().utcoffset() == timedelta(0)
     assert abs(now_as_utc().timestamp() - datetime.now().timestamp()) < 5
+
+
+def test_datetime_utc_in_pydantic_json_schema():
+    """Test that pydantic can generate a valid json schema for models using
+    DateTimeUTC.
+    """
+
+    class Model(BaseModel):
+        """Test model."""
+
+        test: DateTimeUTC
+
+    Model.model_json_schema()
