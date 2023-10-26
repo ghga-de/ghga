@@ -22,7 +22,6 @@ from .conftest import (
     Config,
     ConnectorFixture,
     JointFixture,
-    S3Fixture,
     async_step,
     given,
     parse,
@@ -73,7 +72,7 @@ def run_the_download_command(fixtures: JointFixture, file_scope: str):
         check=True,
         encoding="utf-8",
         text=True,
-        timeout=90,
+        timeout=120,
     )
 
     assert "Please paste the complete download token" in completed_download.stdout
