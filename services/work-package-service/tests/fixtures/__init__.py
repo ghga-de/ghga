@@ -26,6 +26,7 @@ from ghga_service_commons.utils.jwt_helpers import (
     sign_and_serialize_token,
 )
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest import fixture
@@ -33,9 +34,8 @@ from pytest_asyncio import fixture as async_fixture
 
 from wps.adapters.outbound.dao import DatasetDaoConstructor, WorkPackageDaoConstructor
 from wps.config import Config
-from wps.container import Container
-from wps.core.repository import WorkPackageConfig, WorkPackageRepository
-from wps.main import get_container, get_rest_api
+from wps.core.repository import WorkPackageRepository
+from wps.inject import Consumer, prepare_consumer, prepare_rest_app
 
 from .access import AccessCheckMock
 from .datasets import DATASET_UPSERTION_EVENT
@@ -47,11 +47,13 @@ __all__ = [
     "fixture_auth_context",
     "fixture_auth_headers",
     "fixture_bad_auth_headers",
-    "fixture_client",
-    "fixture_container",
+    "fixture_config",
     "fixture_repository",
+    "fixture_client",
+    "fixture_consumer",
     "headers_for_token",
     "non_mocked_hosts",
+    "Consumer",
 ]
 
 AUTH_KEY_PAIR = generate_jwk()
@@ -95,71 +97,71 @@ def fixture_auth_context() -> AuthContext:
     return AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)  # pyright: ignore
 
 
+@async_fixture(name="config")
+async def fixture_config(
+    kafka_fixture: KafkaFixture, mongodb_fixture: MongoDbFixture
+) -> AsyncGenerator[Config, None]:
+    """Fixture for creating a test configuration."""
+    return Config(
+        auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
+        download_access_url="http://access",
+        work_package_signing_key=SIGNING_KEY_PAIR.export_private(),  # pyright: ignore
+        **kafka_fixture.config.model_dump(),
+        **mongodb_fixture.config.model_dump(),
+    )
+
+
 @async_fixture(name="repository")
-async def fixture_repository(mongodb_fixture: MongoDbFixture) -> WorkPackageRepository:
+async def fixture_repository(
+    config: Config, mongodb_fixture: MongoDbFixture
+) -> WorkPackageRepository:
     """Fixture for creating a configured repository"""
-    work_package_config = WorkPackageConfig(
-        work_package_signing_key=SIGNING_KEY_PAIR.export_private()  # type: ignore
+    dao_factory = mongodb_fixture.dao_factory
+    work_package_dao = await WorkPackageDaoConstructor.construct(
+        config=config,
+        dao_factory=dao_factory,
     )
     dataset_dao = await DatasetDaoConstructor.construct(
-        config=work_package_config,
-        dao_factory=mongodb_fixture.dao_factory,
+        config=config,
+        dao_factory=dao_factory,
     )
-    work_package_dao = await WorkPackageDaoConstructor.construct(
-        config=work_package_config,
-        dao_factory=mongodb_fixture.dao_factory,
-    )
-    repository = WorkPackageRepository(
-        config=work_package_config,
+    return WorkPackageRepository(
+        config=config,
         access_check=AccessCheckMock(),
         dataset_dao=dataset_dao,
         work_package_dao=work_package_dao,
     )
-    return repository
 
 
-@async_fixture(name="container")
-async def fixture_container(
-    mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture
-) -> AsyncGenerator[Container, None]:
-    """Populate database and get configured container"""
-
-    # create configuration for testing
-    config = Config(
-        auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
-        download_access_url="http://access",
-        work_package_signing_key=SIGNING_KEY_PAIR.export_private(),  # pyright: ignore
-        **kafka_fixture.config.dict(),
-        **mongodb_fixture.config.dict(),
-    )
-
+@async_fixture(name="consumer")
+async def fixture_consumer(
+    config: Config, kafka_fixture: KafkaFixture
+) -> AsyncGenerator[Consumer, None]:
+    """Get test event subscriber for the work package service."""
     # publish an event announcing a dataset
-    async with get_container(config=config) as container:
-        await kafka_fixture.publish_event(
-            payload=DATASET_UPSERTION_EVENT.dict(),
-            topic=config.dataset_change_event_topic,
-            type_=config.dataset_upsertion_event_type,
-            key="test-key-fixture",
-        )
-
-        # populate database with published dataset
-        event_subscriber = await container.event_subscriber()
-        # wait for event to be submitted and processed
-        await asyncio.wait_for(event_subscriber.run(forever=False), timeout=10)
+    await kafka_fixture.publish_event(
+        payload=DATASET_UPSERTION_EVENT.model_dump(),
+        topic=config.dataset_change_event_topic,
+        type_=config.dataset_upsertion_event_type,
+        key="test-key-fixture",
+    )
+    async with prepare_consumer(config=config) as consumer:
+        # wait for event to be submitted and processed,
+        # so that the database is populated with the published datasets
+        await asyncio.wait_for(consumer.event_subscriber.run(forever=False), timeout=10)
         await asyncio.sleep(0.25)
-
-        # return the configured and wired container
-        yield container
+        yield consumer
 
 
 @async_fixture(name="client")
-async def fixture_client(container: Container) -> AsyncGenerator[AsyncTestClient, None]:
-    """Get test client for the work package service"""
-
-    config = container.config()
-    api = get_rest_api(config=config)
-    async with AsyncTestClient(app=api) as client:
-        yield client
+async def fixture_client(
+    config: Config, consumer: KafkaEventSubscriber
+) -> AsyncGenerator[AsyncTestClient, None]:
+    """Get test client for the work package service."""
+    assert consumer  # we need the consumer only to populate the database
+    async with prepare_rest_app(config=config) as app:
+        async with AsyncTestClient(app=app) as client:
+            yield client
 
 
 @fixture

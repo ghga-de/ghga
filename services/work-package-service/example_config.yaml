@@ -27,7 +27,7 @@ kafka_servers:
 log_level: info
 openapi_url: /openapi.json
 port: 8080
-service_instance_id: '1'
+service_instance_id: wps_1
 service_name: wps
 work_package_signing_key: '**********'
 work_package_valid_days: 30

@@ -3,5 +3,5 @@
 -r requirements-dev-common.in
 
 # additional requirements can be listed here
-testcontainers[kafka,mongo]>=3.4.1
 pytest_httpx>=0.21.3
+testcontainers[kafka,mongo]>=3.4.1

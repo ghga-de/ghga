@@ -22,7 +22,8 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from wps.core.models import Dataset, DatasetFile, WorkType
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
@@ -36,17 +37,17 @@ class EventSubTranslatorConfig(BaseSettings):
     dataset_change_event_topic: str = Field(
         ...,
         description="Name of the topic for events that inform about datasets.",
-        example="metadata_datasets",
+        examples=["metadata_datasets"],
     )
     dataset_upsertion_event_type: str = Field(
         ...,
         description="The type of events that inform about new and changed datasets.",
-        example="dataset_created",
+        examples=["dataset_created"],
     )
     dataset_deletion_event_type: str = Field(
         ...,
         description="The type of events that inform about deleted datasets.",
-        example="dataset_deleted",
+        examples=["dataset_deleted"],
     )
 
 

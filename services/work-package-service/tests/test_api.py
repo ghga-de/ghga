@@ -27,7 +27,9 @@ from .fixtures import (  # noqa: F401
     fixture_auth_headers,
     fixture_bad_auth_headers,
     fixture_client,
-    fixture_container,
+    fixture_config,
+    fixture_consumer,
+    fixture_repository,
     headers_for_token,
     non_mocked_hosts,
 )
@@ -280,4 +282,4 @@ async def test_get_datasets(
 
     response_data = response.json()
     assert isinstance(response_data, list)
-    assert response_data == [DATASET]
+    assert response_data == [DATASET.model_dump()]

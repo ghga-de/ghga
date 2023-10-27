@@ -32,6 +32,7 @@ from wps.core.tokens import hash_token
 from .fixtures import (  # noqa: F401
     SIGNING_KEY_PAIR,
     fixture_auth_context,
+    fixture_config,
     fixture_repository,
 )
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key

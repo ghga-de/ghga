@@ -18,15 +18,17 @@
 
 import asyncio
 
-from hexkit.base import InboundProviderBase
 from hexkit.providers.akafka.testutils import KafkaFixture
 from pytest import mark, raises
 
 from wps.config import Config
-from wps.container import Container
-from wps.core.repository import WorkPackageRepository
 
-from .fixtures import fixture_container  # noqa: F401
+from .fixtures import (  # noqa: F401
+    Consumer,
+    fixture_config,
+    fixture_consumer,
+    fixture_repository,
+)
 from .fixtures.datasets import DATASET, DATASET_DELETION_EVENT, DATASET_UPSERTION_EVENT
 
 TIMEOUT = 5
@@ -35,9 +37,9 @@ RETRIES = round(TIMEOUT / RETRY_INTERVAL)
 
 
 @mark.asyncio
-async def test_dataset_registration(container: Container):
+async def test_dataset_registration(consumer: Consumer):
     """Test the registration of a dataset announced as an event."""
-    repository = await container.work_package_repository()
+    repository = consumer.work_package_repository
     dataset = await repository.get_dataset("some-dataset-id")
 
     assert dataset == DATASET
@@ -48,12 +50,11 @@ async def test_dataset_registration(container: Container):
 
 @mark.asyncio
 async def test_dataset_insert_update_delete(
-    container: Container, kafka_fixture: KafkaFixture
+    config: Config, kafka_fixture: KafkaFixture, consumer: Consumer
 ):
     """Test the whole lifecycle of a dataset announced as an event."""
-    config: Config = container.config()
-    repository: WorkPackageRepository = await container.work_package_repository()
-    event_subscriber: InboundProviderBase = await container.event_subscriber()
+    repository, subscriber = consumer
+    run = subscriber.run
 
     accession = "another-dataset-id"
     with raises(repository.DatasetNotFoundError):
@@ -63,14 +64,14 @@ async def test_dataset_insert_update_delete(
     # insert a dataset
 
     inserted_dataset = DATASET_UPSERTION_EVENT
-    inserted_dataset = inserted_dataset.copy(update={"accession": accession})
+    inserted_dataset = inserted_dataset.model_copy(update={"accession": accession})
     await kafka_fixture.publish_event(
-        payload=inserted_dataset.dict(),
+        payload=inserted_dataset.model_dump(),
         topic=config.dataset_change_event_topic,
         type_=config.dataset_upsertion_event_type,
         key=key,
     )
-    await asyncio.wait_for(event_subscriber.run(forever=False), timeout=TIMEOUT)
+    await asyncio.wait_for(run(forever=False), timeout=TIMEOUT)
 
     # wait until dataset is stored
     dataset = None
@@ -89,16 +90,16 @@ async def test_dataset_insert_update_delete(
     # update the dataset
 
     updated_dataset = DATASET_UPSERTION_EVENT
-    updated_dataset = inserted_dataset.copy(
+    updated_dataset = inserted_dataset.model_copy(
         update={"accession": accession, "title": "Changed dataset 1"}
     )
     await kafka_fixture.publish_event(
-        payload=updated_dataset.dict(),
+        payload=updated_dataset.model_dump(),
         topic=config.dataset_change_event_topic,
         type_=config.dataset_upsertion_event_type,
         key=key,
     )
-    await asyncio.wait_for(event_subscriber.run(forever=False), timeout=TIMEOUT)
+    await asyncio.wait_for(run(forever=False), timeout=TIMEOUT)
     # wait until dataset is updated
     dataset = None
     for _ in range(RETRIES):
@@ -112,14 +113,14 @@ async def test_dataset_insert_update_delete(
     # delete the dataset again
 
     deleted_dataset = DATASET_DELETION_EVENT
-    deleted_dataset = deleted_dataset.copy(update={"accession": accession})
+    deleted_dataset = deleted_dataset.model_copy(update={"accession": accession})
     await kafka_fixture.publish_event(
-        payload=deleted_dataset.dict(),
+        payload=deleted_dataset.model_dump(),
         topic=config.dataset_change_event_topic,
         type_=config.dataset_deletion_event_type,
         key=key,
     )
-    await asyncio.wait_for(event_subscriber.run(forever=False), timeout=TIMEOUT)
+    await asyncio.wait_for(run(forever=False), timeout=TIMEOUT)
 
     # wait until dataset is deleted
     for _ in range(RETRIES):

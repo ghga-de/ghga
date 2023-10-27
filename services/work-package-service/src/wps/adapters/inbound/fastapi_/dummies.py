@@ -14,27 +14,24 @@
 # limitations under the License.
 #
 
-"""Utils to customize the OpenAPI script"""
+"""A collection of dependency dummies.
 
-from typing import Any
+These dummies are used in path operation definitions, but at runtime they need
+to be replaced  with actual dependencies.
+"""
 
-from fastapi.openapi.utils import get_openapi
+from typing import Annotated
 
-from wps import __version__
-from wps.config import Config
+from fastapi import Depends
+from ghga_service_commons.api.di import DependencyDummy
 
-__all__ = ["get_openapi_schema"]
+from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
+__all__ = ["auth_provider", "work_package_repo_port", "WorkPackageRepositoryDummy"]
 
-def get_openapi_schema(api) -> dict[str, Any]:
-    """Generate a custom OpenAPI schema for the service."""
-    config = Config()  # type: ignore
+auth_provider = DependencyDummy("auth_provider")
 
-    return get_openapi(
-        title="Work Package Service",
-        version=__version__,
-        description="A service managing work packages for the GHGA CLI",
-        servers=[{"url": config.api_root_path}],
-        tags=[{"name": "WorkPackages"}, {"name": "Datasets"}],
-        routes=api.routes,
-    )
+work_package_repo_port = DependencyDummy("work_package_repo_port")
+WorkPackageRepositoryDummy = Annotated[
+    WorkPackageRepositoryPort, Depends(work_package_repo_port)
+]

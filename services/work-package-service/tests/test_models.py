@@ -39,7 +39,7 @@ def test_work_order_token():
         user_id="some-user-id",
         user_public_crypt4gh_key="some-public-key",
         full_user_name="Dr. John Doe",
-        email="john@home.org",  # type: ignore
+        email="john@home.org",
     )
     assert token.full_user_name == "Dr. John Doe"
 
@@ -116,7 +116,7 @@ def test_work_package():
         files={"some-file-id": ".sam", "another-file-id": ".bam"},
         user_public_crypt4gh_key=user_public_crypt4gh_key,
         full_user_name="Dr. John Doe",
-        email="john@home.org",  # type: ignore
+        email="john@home.org",
         token_hash="308eda9daf26b7446b284449a5895ab9a04ff30c129d4454e471cfb81bf5557d",
         created=datetime(2022, 2, 2, 2, tzinfo=timezone.utc),  # pyright: ignore
         expires=datetime(2022, 2, 2, 3, tzinfo=timezone.utc),  # pyright: ignore

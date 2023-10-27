@@ -5,9 +5,11 @@ components:
       description: A model describing a dataset.
       properties:
         description:
+          anyOf:
+          - type: string
+          - type: 'null'
           description: The description of the dataset.
           title: Description
-          type: string
         files:
           description: Files contained in the dataset.
           items:
@@ -59,12 +61,14 @@ components:
           title: Dataset Id
           type: string
         file_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           description: IDs of all included files. If None, all files of the dataset
             are assumed as target.
-          items:
-            type: string
           title: File Ids
-          type: array
         type:
           $ref: '#/components/schemas/WorkType'
         user_public_crypt4gh_key:
@@ -110,8 +114,8 @@ components:
           additionalProperties:
             type: string
           description: IDs of all included files mapped to their file extensions
-          example:
-            file-id-1: .json
+          examples:
+          - file-id-1: .json
             file-id-2: .csv
           title: Files
           type: object
@@ -138,8 +142,8 @@ components:
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
-  version: 0.1.5
-openapi: 3.0.2
+  version: 1.0.0
+openapi: 3.1.0
 paths:
   /health:
     get:

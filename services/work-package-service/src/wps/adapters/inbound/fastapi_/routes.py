@@ -18,22 +18,19 @@
 
 import logging
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, HTTPException, status
 
 from wps.adapters.inbound.fastapi_.auth import (
-    AuthContext,
-    requires_auth_context,
-    requires_work_package_access_token,
+    RequiresAuthContext,
+    RequiresWorkPackageAccessToken,
 )
-from wps.container import Container
+from wps.adapters.inbound.fastapi_.dummies import WorkPackageRepositoryDummy
 from wps.core.models import (
     Dataset,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
     WorkPackageDetails,
 )
-from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
 __all__ = ["router"]
 
@@ -69,13 +66,10 @@ async def health():
     },
     status_code=201,
 )
-@inject
 async def create_work_package(
     creation_data: WorkPackageCreationData,
-    repository: WorkPackageRepositoryPort = Depends(
-        Provide[Container.work_package_repository]
-    ),
-    auth_context: AuthContext = requires_auth_context,
+    repository: WorkPackageRepositoryDummy,
+    auth_context: RequiresAuthContext,
 ) -> WorkPackageCreationResponse:
     """Create a work package using an internal auth token with a user context."""
     try:
@@ -102,16 +96,10 @@ async def create_work_package(
     },
     status_code=200,
 )
-@inject
 async def get_work_package(
-    work_package_id: str = Path(
-        ...,
-        alias="work_package_id",
-    ),
-    repository: WorkPackageRepositoryPort = Depends(
-        Provide[Container.work_package_repository]
-    ),
-    work_package_access_token: str = requires_work_package_access_token,
+    work_package_id: str,
+    repository: WorkPackageRepositoryDummy,
+    work_package_access_token: RequiresWorkPackageAccessToken,
 ) -> WorkPackageDetails:
     """Get work package details using a work package access token."""
     try:
@@ -147,20 +135,11 @@ async def get_work_package(
     },
     status_code=201,
 )
-@inject
 async def create_work_order_token(
-    work_package_id: str = Path(
-        ...,
-        alias="work_package_id",
-    ),
-    file_id: str = Path(
-        ...,
-        alias="file_id",
-    ),
-    repository: WorkPackageRepositoryPort = Depends(
-        Provide[Container.work_package_repository]
-    ),
-    work_package_access_token: str = requires_work_package_access_token,
+    work_package_id: str,
+    file_id: str,
+    repository: WorkPackageRepositoryDummy,
+    work_package_access_token: RequiresWorkPackageAccessToken,
 ) -> str:
     """Get an encrypted work order token using a work package access token."""
     try:
@@ -193,16 +172,10 @@ async def create_work_order_token(
     },
     status_code=200,
 )
-@inject
 async def get_datasets(
-    user_id: str = Path(
-        ...,
-        alias="user_id",
-    ),
-    repository: WorkPackageRepositoryPort = Depends(
-        Provide[Container.work_package_repository]
-    ),
-    auth_context: AuthContext = requires_auth_context,
+    user_id: str,
+    repository: WorkPackageRepositoryDummy,
+    auth_context: RequiresAuthContext,
 ) -> list[Dataset]:
     """Get datasets using an internal auth token with a user context."""
     try:

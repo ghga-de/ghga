@@ -21,7 +21,7 @@ from enum import Enum
 from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from wps.core.crypt import validate_public_key
 
@@ -38,9 +38,7 @@ __all__ = [
 class BaseDto(BaseModel):
     """Base model pre-configured for use as Dto."""
 
-    class Config:
-        extra = "forbid"
-        frozen = True
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class WorkType(str, Enum):
@@ -95,9 +93,9 @@ class WorkPackageCreationData(BaseDto):
         description="The user's public Crypt4GH key in base64 encoding",
     )
 
-    @validator("user_public_crypt4gh_key")
+    @field_validator("user_public_crypt4gh_key")
     @classmethod
-    def user_public_crypt4gh_key_valid(cls, key):
+    def user_public_crypt4gh_key_valid(cls, key: str):
         """Validate the user's public Crypt4GH key."""
         return validate_public_key(key)
 
@@ -120,7 +118,7 @@ class WorkPackageDetails(BaseModel):
     files: dict[str, str] = Field(
         default=...,
         description="IDs of all included files mapped to their file extensions",
-        example={"file-id-1": ".json", "file-id-2": ".csv"},
+        examples=[{"file-id-1": ".json", "file-id-2": ".csv"}],
     )
     created: DateTimeUTC = Field(
         default=..., description="Creation date of the work package"

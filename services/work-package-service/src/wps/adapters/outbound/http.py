@@ -20,7 +20,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from wps.ports.outbound.access import AccessCheckPort
 
@@ -34,7 +35,7 @@ class AccessCheckConfig(BaseSettings):
 
     download_access_url: str = Field(
         ...,
-        example="http://127.0.0.1/download-access",
+        examples=["http://127.0.0.1/download-access"],
         description="URL pointing to the internal download access API.",
     )
 

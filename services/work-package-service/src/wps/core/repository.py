@@ -23,7 +23,8 @@ from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.crypt import encrypt
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from jwcrypto import jwk
-from pydantic import BaseSettings, Field, SecretStr
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings
 
 from wps.core.models import (
     Dataset,
@@ -66,7 +67,7 @@ class WorkPackageConfig(BaseSettings):
     work_package_signing_key: SecretStr = Field(
         ...,
         description="The private key for signing work order tokens",
-        example='{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}',
+        examples=['{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}'],
     )
 
 

@@ -16,24 +16,24 @@
 
 """Helper dependencies for requiring authentication and authorization."""
 
-from dependency_injector.wiring import Provide, inject
+from typing import Annotated
+
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.ghga import AuthContext, is_active
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
 
-from wps.container import Container
+from wps.adapters.inbound.fastapi_.dummies import auth_provider
 
-__all__ = ["requires_auth_context", "requires_work_package_access_token"]
+__all__ = ["RequiresAuthContext", "RequiresWorkPackageAccessToken"]
 
 
-@inject
 async def require_active_context(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[AuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
+    credentials: Annotated[
+        HTTPAuthorizationCredentials, Depends(HTTPBearer(auto_error=True))
+    ],
+    auth_provider: Annotated[AuthContextProtocol[AuthContext], Depends(auth_provider)],
 ) -> AuthContext:
     """Require an active GHGA auth context using FastAPI."""
     return await require_auth_context_using_credentials(
@@ -42,14 +42,16 @@ async def require_active_context(
 
 
 async def require_access_token(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
+    credentials: Annotated[
+        HTTPAuthorizationCredentials, Depends(HTTPBearer(auto_error=True))
+    ],
 ) -> str:
     """Require an access token using FastAPI."""
     return credentials.credentials
 
 
 # policy that requires (and returns) an active auth context
-requires_auth_context = Security(require_active_context)
+RequiresAuthContext = Annotated[AuthContext, Security(require_active_context)]
 
 # policy that requires (and returns) a work package access token
-requires_work_package_access_token = Security(require_access_token)
+RequiresWorkPackageAccessToken = Annotated[str, Security(require_access_token)]

@@ -15,64 +15,23 @@
 
 """In this module object construction and dependency injection is carried out."""
 
-from fastapi import FastAPI
-from ghga_service_commons.api import configure_app, run_server
+from ghga_service_commons.api import run_server
 
-from wps.adapters.inbound.fastapi_.openapi import get_openapi_schema
-from wps.adapters.inbound.fastapi_.routes import router
 from wps.config import Config
-from wps.container import Container
+from wps.inject import prepare_consumer, prepare_rest_app
 
 
-def get_container(*, config: Config) -> Container:
-    """Create, configure and wire the DI container."""
-    container = Container()
-    container.config.load_config(config)
-    container.wire(
-        modules=[
-            "wps.adapters.inbound.fastapi_.auth",
-            "wps.adapters.inbound.fastapi_.openapi",
-            "wps.adapters.inbound.fastapi_.routes",
-        ]
-    )
-    return container
-
-
-def get_rest_api(*, config: Config) -> FastAPI:
-    """Create a FastAPI app.
-
-    For full functionality of the AP, run in the context of a CI container with
-    correct wiring and initialized resources (see the run_rest function below).
-    """
-    api = FastAPI()
-    api.include_router(router)
-    configure_app(api, config=config)
-
-    def custom_openapi():
-        if api.openapi_schema:
-            return api.openapi_schema
-        openapi_schema = get_openapi_schema(api)
-        api.openapi_schema = openapi_schema
-        return api.openapi_schema
-
-    api.openapi = custom_openapi  # type: ignore[method-assign]
-
-    return api
-
-
-async def run_rest():
+async def run_rest_app() -> None:
     """Run the HTTP REST API."""
     config = Config()  # type: ignore
 
-    async with get_container(config=config):
-        api = get_rest_api(config=config)
-        await run_server(app=api, config=config)
+    async with prepare_rest_app(config=config) as app:
+        await run_server(app=app, config=config)
 
 
-async def consume_events(run_forever: bool = True):
+async def consume_events(run_forever: bool = True) -> None:
     """Run an event consumer listening to the configured topic."""
     config = Config()  # type: ignore
 
-    async with get_container(config=config) as container:
-        event_subscriber = await container.event_subscriber()
-        await event_subscriber.run(forever=run_forever)
+    async with prepare_consumer(config=config) as consumer:
+        await consumer.event_subscriber.run(forever=run_forever)
