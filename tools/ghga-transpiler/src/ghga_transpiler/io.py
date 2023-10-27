@@ -24,15 +24,13 @@ from typing import Optional, TextIO
 
 from openpyxl import load_workbook
 
-from ghga_transpiler.core import GHGAWorkbook
+from .core import GHGAWorkbook
 
 
 def read_workbook(
     path: Path, configs_package: resources.Package = "ghga_transpiler.configs"
 ) -> GHGAWorkbook:
-    """
-    Function to read-in a workbook
-    """
+    """Function to read-in a workbook"""
     return GHGAWorkbook(load_workbook(path), configs_package=configs_package)
 
 
@@ -43,7 +41,8 @@ def _write_json(data: dict, file: TextIO):
 
 def write_json(data: dict, path: Optional[Path], force: bool) -> None:
     """Write the data provided as a dictionary to the specified output path or
-    to stdout if the path is None."""
+    to stdout if the path is None.
+    """
     if path is None:
         _write_json(data, sys.stdout)
     elif path.exists() and not force:

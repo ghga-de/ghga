@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+"""Tests for converting the workbook"""
+
 from ghga_transpiler import io
 from ghga_transpiler.core import convert_workbook
 
@@ -22,7 +25,6 @@ from .fixtures.utils import get_project_root
 
 def test_convert_workbook() -> None:
     """Function to test workbook to json conversion"""
-
     workbook_path = (
         get_project_root() / "tests" / "fixtures" / "workbooks" / "a_workbook.xlsx"
     )

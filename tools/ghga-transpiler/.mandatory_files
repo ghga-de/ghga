@@ -6,7 +6,6 @@
 # may differ from that of the template repository.
 
 .devcontainer/dev_launcher
-.devcontainer/devcontainer.json
 .devcontainer/docker-compose.yml
 .devcontainer/Dockerfile
 
@@ -19,10 +18,12 @@ Dockerfile
 config_schema.json
 example_config.yaml
 LICENSE
+pyproject.toml
 README.md
-setup.py
-setup.cfg
+requirements-dev.in
 requirements-dev.txt
+requirements.txt
 
 .description.md
 .design.md
+.pre-commit-config.yaml

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=67.7.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# please adapt to package name
+name = "ghga-transpiler"
+version = "0.1.0"
+description = "GHGA-Transpiler - excel to JSON converter"
+readme = "README.md"
+authors = [
+    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+]
+requires-python = ">=3.9"
+license = { text = "Apache 2.0" }
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "typer >= 0.7.0",
+    "ghga-service-commons[api] >= 0.7.0",
+    "ghga-event-schemas >= 0.13.0",
+    "hexkit[akafka,s3,mongodb] >= 0.10.0",
+    "openpyxl >= 3.1.2, == 3.*",
+    "defusedxml ~= 0.7.1",
+    "PyYAML == 6.*"
+]
+
+[project.urls]
+# please adapt to package name
+Repository = "https://github.com/ghga-de/ghga-transpiler"
+
+[project.scripts]
+# please adapt to package name
+ghga-transpiler = "ghga_transpiler.__main__:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]

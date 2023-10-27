@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+"""Tests for creating the config"""
+
 from ghga_transpiler.config.config import (
     Config,
     DefaultSettings,
@@ -23,12 +26,11 @@ from ghga_transpiler.config.config import (
 
 def test_config_params() -> None:
     """Testing if default parameters of config yaml are used in the absence of worksheet settings"""
-
     books_sheet = Worksheet(
-        sheet_name="books", settings=WorksheetSettings(name="books", end_column=3)
+        sheet_name="books", settings=WorksheetSettings(name="books", end_column=3)  # type: ignore
     )
     publisher_sheet = Worksheet(
-        sheet_name="publisher", settings=WorksheetSettings(name="publisher")
+        sheet_name="publisher", settings=WorksheetSettings(name="publisher")  # type: ignore
     )
 
     config = Config(

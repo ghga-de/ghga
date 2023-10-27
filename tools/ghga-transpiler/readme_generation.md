@@ -24,11 +24,11 @@ outlined in the following.
 - name: The full name of the package is derived from the remote origin Git repository.
 - title: A title case representation of the name.
 - shortname: An abbreviation of the full name. This is derived from the name mentioned
-  in the [`./setup.cfg`](`./setup.cfg).
+  in the [`./pyproject.toml`](./pyproject.toml).
 - summary: A short 1-2 sentence summary derived from the description in the
-  [`./setup.cfg`](`./setup.cfg).
+  [`./pyproject.toml`](./pyproject.toml).
 - version: The package version derived from the version specified in the
-  [`./setup.cfg`](`./setup.cfg).
+  [`./pyproject.toml`](./pyproject.toml).
 - description: A markdown-formatted description of the features and use cases of this
   service or package. Obtained from the [`./.description.md`](./.description.md).
 - design_description: A markdown-formatted description of the overall architecture and

@@ -62,7 +62,7 @@ class Config(BaseModel):
     worksheets: list[Worksheet]
 
     @root_validator(pre=False)
-    def get_param(cls, values):  # pylint: disable=no-self-argument
+    def get_param(cls, values):  # noqa
         """Function to manage parameters of global and worksheet specific configuration"""
         for sheet in values.get("worksheets"):
             for key in values.get("default_settings").__dict__:
@@ -72,7 +72,7 @@ class Config(BaseModel):
         return values
 
     @root_validator(pre=False)
-    def check_name(cls, values):  # pylint: disable=no-self-argument
+    def check_name(cls, values):  # noqa
         """Function to ensure that each worksheets has a unique sheet_name and name attributes."""
         # Check for duplicate attribute names
         attrs_counter = Counter(ws.settings.name for ws in values["worksheets"])
@@ -94,11 +94,10 @@ class Config(BaseModel):
 
 def load_config(version: str, package: resources.Package) -> Config:
     """Reads configuration yaml file from default location and creates a Config object"""
-
     config_resource = resources.files(package).joinpath(f"{version}.yaml")
     try:
         config_str = config_resource.read_text(encoding="utf8")
     except FileNotFoundError:
         # pylint: disable=raise-missing-from
-        raise UnknownVersionError(f"Unknown metadata version: {version}")
-    return Config.parse_obj(yaml.load(config_str, yaml.Loader))  # nosec
+        raise UnknownVersionError(f"Unknown metadata version: {version}") from None
+    return Config.parse_obj(yaml.load(config_str, yaml.Loader))  # noqa # nosec

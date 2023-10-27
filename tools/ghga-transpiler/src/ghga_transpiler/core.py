@@ -21,7 +21,7 @@ from typing import Callable, Optional, Union
 
 from openpyxl import Workbook
 
-from ghga_transpiler import config
+from . import config
 
 # pylint: disable=line-too-long
 SEMVER_REGEX = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
@@ -81,7 +81,8 @@ def get_header(
 
 def convert_rows(header, rows) -> list[dict]:
     """Function to return list of dictionaries, rows as worksheet row values and
-    column names as keys"""
+    column names as keys
+    """
     return [
         {
             key: value

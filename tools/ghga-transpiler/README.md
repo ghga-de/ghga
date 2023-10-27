@@ -4,7 +4,7 @@
 
 # Ghga Transpiler
 
-GHGA-Transpiler - GHGA metadata XLSX to JSON transpilation
+GHGA-Transpiler - excel to JSON converter
 
 ## Description
 
