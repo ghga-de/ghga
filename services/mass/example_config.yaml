@@ -26,6 +26,6 @@ searchable_classes:
       name: Study Type
     - key: study.project.alias
       name: Project Alias
-service_instance_id: '1'
+service_instance_id: '001'
 service_name: mass
 workers: 1

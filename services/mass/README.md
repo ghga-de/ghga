@@ -28,6 +28,7 @@ For more information see the OpenAPI spec linked below.
 
 
 ## Installation
+
 We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/mass):
@@ -59,30 +60,89 @@ mass --help
 ```
 
 ## Configuration
+
 ### Parameters
 
 The service requires the following configuration parameters:
 - **`searchable_classes`** *(object)*: A collection of searchable_classes with facetable properties. Can contain additional properties.
 
-  - **Additional Properties**: Refer to *[#/definitions/SearchableClass](#definitions/SearchableClass)*.
+  - **Additional Properties**: Refer to *[#/$defs/SearchableClass](#$defs/SearchableClass)*.
 
 - **`resource_change_event_topic`** *(string)*: Name of the event topic used to track resource deletion and upsertion events.
 
+
+  Examples:
+
+  ```json
+  "searchable_resource"
+  ```
+
+
 - **`resource_deletion_event_type`** *(string)*: The type to use for events with deletion instructions.
 
+
+  Examples:
+
+  ```json
+  "searchable_resource_deleted"
+  ```
+
+
 - **`resource_upsertion_event_type`** *(string)*: The type to use for events with upsert instructions.
+
+
+  Examples:
+
+  ```json
+  "searchable_resource_upserted"
+  ```
+
 
 - **`service_name`** *(string)*: Default: `"mass"`.
 
 - **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
+
+  Examples:
+
+  ```json
+  "germany-bw-instance-001"
+  ```
+
+
 - **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
+
+  Examples:
+
+  ```json
+  [
+      "localhost:9092"
+  ]
+  ```
+
+
 - **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
+
+  Examples:
+
+  ```json
+  "mongodb://localhost:27017"
+  ```
+
+
 - **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+
+
+  Examples:
+
+  ```json
+  "my-database"
+  ```
+
 
 - **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
@@ -100,36 +160,83 @@ The service requires the following configuration parameters:
 
 - **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
-- **`cors_allowed_origins`** *(array)*: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.
+- **`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
 
-  - **Items** *(string)*
+  - **Any of**
 
-- **`cors_allow_credentials`** *(boolean)*: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.
+    - *array*
 
-- **`cors_allowed_methods`** *(array)*: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.
+      - **Items** *(string)*
 
-  - **Items** *(string)*
-
-- **`cors_allowed_headers`** *(array)*: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.
-
-  - **Items** *(string)*
-
-## Definitions
+    - *null*
 
 
-- <a id="definitions/FacetLabel"></a>**`FacetLabel`** *(object)*: Contains the key and corresponding user-friendly name for a facet.
+  Examples:
 
-  - **`key`** *(string, required)*: The raw facet key, such as study.type.
+  ```json
+  [
+      "https://example.org",
+      "https://www.example.org"
+  ]
+  ```
 
-  - **`name`** *(string)*: The user-friendly name for the facet. Default: `""`.
 
-- <a id="definitions/SearchableClass"></a>**`SearchableClass`** *(object)*: Represents a searchable artifact or resource type.
+- **`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
 
-  - **`description`** *(string, required)*: A brief description of the resource type.
+  - **Any of**
 
-  - **`facetable_properties`** *(array, required)*: A list of of the facetable properties for the resource type.
+    - *boolean*
 
-    - **Items**: Refer to *[#/definitions/FacetLabel](#definitions/FacetLabel)*.
+    - *null*
+
+
+  Examples:
+
+  ```json
+  [
+      "https://example.org",
+      "https://www.example.org"
+  ]
+  ```
+
+
+- **`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
+
+  - **Any of**
+
+    - *array*
+
+      - **Items** *(string)*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  [
+      "*"
+  ]
+  ```
+
+
+- **`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+
+  - **Any of**
+
+    - *array*
+
+      - **Items** *(string)*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  []
+  ```
+
 
 
 ### Usage:
@@ -185,19 +292,20 @@ Typical sequence of events is as follows:
 
 
 ## Development
+
 For setting up the development environment, we rely on the
-[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode
+[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of VS Code
 in combination with Docker Compose.
 
-To use it, you have to have Docker Compose as well as vscode with its "Remote - Containers"
+To use it, you have to have Docker Compose as well as VS Code with its "Remote - Containers"
 extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in vscode and run the command
-`Remote-Containers: Reopen in Container` from the vscode "Command Palette".
+Then open this repository in VS Code and run the command
+`Remote-Containers: Reopen in Container` from the VS Code "Command Palette".
 
 This will give you a full-fledged, pre-configured development environment including:
 - infrastructural dependencies of the service (databases, etc.)
-- all relevant vscode extensions pre-installed
-- pre-configured linting and auto-formating
+- all relevant VS Code extensions pre-installed
+- pre-configured linting and auto-formatting
 - a pre-configured debugger
 - automatic license-header insertion
 
@@ -209,9 +317,11 @@ if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
 [`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
 
 ## License
+
 This repository is free to use and modify according to the
 [Apache 2.0 License](./LICENSE).
 
-## Readme Generation
-This readme is autogenerate, please see [`readme_generation.md`](./readme_generation.md)
+## README Generation
+
+This README file is auto-generated, please see [`readme_generation.md`](./readme_generation.md)
 for details.

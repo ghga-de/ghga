@@ -19,7 +19,8 @@ from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.provider import MongoDbConfig
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from mass.adapters.inbound.event_sub import EventSubTranslatorConfig
 from mass.core.models import SearchableClass

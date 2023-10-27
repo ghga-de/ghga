@@ -59,14 +59,14 @@ def multi_column_sort(
     if parameter.field == "id_":
         return sorted(
             sorted_list,
-            key=lambda result: result.dict()[parameter.field],
+            key=lambda result: result.model_dump()[parameter.field],
             reverse=reverse,
         )
     else:
         # the only top-level fields is "_id" -- all else is in "content"
         return sorted(
             sorted_list,
-            key=lambda result: result.dict()["content"][parameter.field],
+            key=lambda result: result.model_dump()["content"][parameter.field],
             reverse=reverse,
         )
 

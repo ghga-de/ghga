@@ -16,7 +16,7 @@
 """Models only used by the API"""
 from typing import Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from mass.core.models import Filter, SortingParameter
 
@@ -42,7 +42,7 @@ class SearchParameters(BaseModel):
         description=("Collection of sorting parameters used to refine search results"),
     )
 
-    @validator("sorting_parameters")
+    @field_validator("sorting_parameters")
     @classmethod
     def no_duplicate_fields(
         cls, parameters: list[SortingParameter]

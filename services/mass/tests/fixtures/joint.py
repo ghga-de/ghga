@@ -24,10 +24,9 @@ from dataclasses import dataclass
 
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
-from hexkit.custom_types import JsonObject
+from hexkit.custom_types import JsonObject, PytestScope
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from pytest_asyncio.plugin import _ScopeName
 
 from mass.config import Config
 from mass.container import Container
@@ -103,6 +102,6 @@ async def joint_fixture_function(
             )
 
 
-def get_joint_fixture(scope: _ScopeName = "function"):
+def get_joint_fixture(scope: PytestScope = "function"):
     """Produce a joint fixture with desired scope"""
     return pytest_asyncio.fixture(joint_fixture_function, scope=scope)

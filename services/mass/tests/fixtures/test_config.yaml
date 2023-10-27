@@ -46,5 +46,5 @@ searchable_classes:
 resource_change_event_topic: searchable_resources
 resource_deletion_event_type: searchable_resource_deleted
 resource_upsertion_event_type: searchable_resource_upserted
-service_instance_id: 001
+service_instance_id: "001"
 kafka_servers: ["kafka:9092"]

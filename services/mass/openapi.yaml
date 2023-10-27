@@ -146,9 +146,11 @@ components:
           title: Filters
           type: array
         limit:
+          anyOf:
+          - type: integer
+          - type: 'null'
           description: Limit the results to this number
           title: Limit
-          type: integer
         query:
           default: ''
           description: The keyword search for the query
@@ -195,6 +197,7 @@ components:
       - descending
       - relevance
       title: SortOrder
+      type: string
     SortingParameter:
       description: Represents a combination of a field to sort and the sort order
       properties:
@@ -235,7 +238,7 @@ components:
 info:
   title: FastAPI
   version: 0.1.0
-openapi: 3.0.2
+openapi: 3.1.0
 paths:
   /health:
     get:

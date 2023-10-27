@@ -39,9 +39,12 @@ def compare(
     assert len(results.hits) == hit_length
 
     if not facets:
-        configured_facets = (
-            get_config().searchable_classes["DatasetEmbedded"].facetable_properties
-        )
+        config = get_config()
+
+        dataset_embedded_class = config.searchable_classes["DatasetEmbedded"]
+        assert dataset_embedded_class is not None
+
+        configured_facets = dataset_embedded_class.facetable_properties
         assert len(results.facets) == len(configured_facets)
         assert {x.key for x in results.facets} == {x.key for x in configured_facets}
     else:
@@ -64,7 +67,8 @@ async def test_health_check(joint_fixture: JointFixture):
 async def test_search_options(joint_fixture: JointFixture):
     """Verify that we can request the configured resource class information correctly"""
     response = await joint_fixture.rest_client.get(url="/rpc/search-options")
-    assert response.json() == joint_fixture.config.searchable_classes
+
+    assert response.json() == joint_fixture.config.model_dump()["searchable_classes"]
 
 
 @pytest.mark.asyncio

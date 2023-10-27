@@ -60,7 +60,7 @@ async def test_resource_upsert(
         accession=resource_id,
         class_name="DatasetEmbedded",
         content=content,
-    ).dict()
+    ).model_dump()
 
     # publish the event
     await joint_fixture.kafka.publish_event(
@@ -106,7 +106,7 @@ async def test_resource_delete(joint_fixture: JointFixture):
     )
 
     await joint_fixture.kafka.publish_event(
-        payload=resource_info.dict(),
+        payload=resource_info.model_dump(),
         type_=joint_fixture.config.resource_deletion_event_type,
         topic=joint_fixture.config.resource_change_event_topic,
         key=f"dataset_embedded_{resource_info.accession}",

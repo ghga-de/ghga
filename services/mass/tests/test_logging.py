@@ -129,7 +129,7 @@ async def test_event_sub_logging(
     )
 
     await joint_fixture.kafka.publish_event(
-        payload=resource.dict(),
+        payload=resource.model_dump(),
         type_=event_to_use,
         topic=joint_fixture.config.resource_change_event_topic,
         key=f"dataset_embedded_{resource.accession}",

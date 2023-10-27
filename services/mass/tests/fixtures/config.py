@@ -18,7 +18,7 @@
 from pathlib import Path
 from typing import Optional
 
-from pydantic.env_settings import BaseSettings
+from pydantic_settings import BaseSettings
 
 from mass.config import Config
 from tests.fixtures.utils import BASE_DIR
@@ -37,9 +37,6 @@ def get_config(
 
     if sources is not None:
         for source in sources:
-            sources_dict.update(**source.dict())
+            sources_dict.update(**source.model_dump())
 
     return Config(config_yaml=default_config_yaml, **sources_dict)  # type: ignore
-
-
-DEFAULT_CONFIG = get_config()

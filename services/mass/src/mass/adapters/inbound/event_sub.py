@@ -23,7 +23,8 @@ from ghga_event_schemas.validation import (
 )
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from mass.core.models import Resource
 from mass.ports.inbound.query_handler import QueryHandlerPort
@@ -51,17 +52,17 @@ class EventSubTranslatorConfig(BaseSettings):
             "Name of the event topic used to track resource deletion "
             + "and upsertion events"
         ),
-        example="searchable_resource",
+        examples=["searchable_resource"],
     )
     resource_deletion_event_type: str = Field(
         ...,
         description="The type to use for events with deletion instructions",
-        example="searchable_resource_deleted",
+        examples=["searchable_resource_deleted"],
     )
     resource_upsertion_event_type: str = Field(
         ...,
         description="The type to use for events with upsert instructions",
-        example="searchable_resource_upserted",
+        examples=["searchable_resource_upserted"],
     )
 
 
