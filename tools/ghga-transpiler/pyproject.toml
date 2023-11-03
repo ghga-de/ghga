@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 # please adapt to package name
 name = "ghga-transpiler"
-version = "1.2.1"
+version = "1.3.0"
 description = "GHGA-Transpiler - excel to JSON converter"
 readme = "README.md"
 authors = [
@@ -25,10 +25,10 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "typer >= 0.7.0",
-    "ghga-service-commons[api] >= 0.7.0",
-    "ghga-event-schemas >= 0.13.0",
-    "hexkit[akafka,s3,mongodb] >= 0.10.0",
+    "typer >= 0.9.0",
+    "ghga-service-commons[api] >= 1.1.0",
+    "ghga-event-schemas >= 1.0.0",
+    "hexkit[akafka,s3,mongodb] >= 0.11.1",
     "openpyxl >= 3.1.2, == 3.*",
     "defusedxml ~= 0.7.1",
     "PyYAML == 6.*"
