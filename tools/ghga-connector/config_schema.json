@@ -1,44 +1,32 @@
 {
-  "title": "ModSettings",
+  "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
-  "type": "object",
   "properties": {
     "max_retries": {
-      "title": "Max Retries",
-      "description": "Number of times to retry failed API calls.",
       "default": 5,
-      "env_names": [
-        "ghga_connector_max_retries"
-      ],
+      "description": "Number of times to retry failed API calls.",
+      "title": "Max Retries",
       "type": "integer"
     },
     "max_wait_time": {
-      "title": "Max Wait Time",
-      "description": "Maximal time in seconds to wait before quitting without a download.",
       "default": 3600,
-      "env_names": [
-        "ghga_connector_max_wait_time"
-      ],
+      "description": "Maximal time in seconds to wait before quitting without a download.",
+      "title": "Max Wait Time",
       "type": "integer"
     },
     "part_size": {
-      "title": "Part Size",
-      "description": "The part size to use for download.",
       "default": 16777216,
-      "env_names": [
-        "ghga_connector_part_size"
-      ],
+      "description": "The part size to use for download.",
+      "title": "Part Size",
       "type": "integer"
     },
     "wkvs_api_url": {
-      "title": "Wkvs Api Url",
-      "description": "URL to the root of the WKVS API. Should start with https://",
       "default": "https://data.ghga.de/.well-known",
-      "env_names": [
-        "ghga_connector_wkvs_api_url"
-      ],
+      "description": "URL to the root of the WKVS API. Should start with https://",
+      "title": "Wkvs Api Url",
       "type": "string"
     }
   },
-  "additionalProperties": false
+  "title": "ModSettings",
+  "type": "object"
 }

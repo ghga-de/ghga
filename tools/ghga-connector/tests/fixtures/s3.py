@@ -28,6 +28,7 @@ from hexkit.providers.s3.testutils import (
     config_from_localstack_container,
     upload_file,
 )
+from pydantic import PrivateAttr
 from testcontainers.localstack import LocalStackContainer
 
 from . import state
@@ -77,6 +78,24 @@ existing_objects_ = (
     DEFAULT_EXISTING_OBJECTS if existing_objects is None else existing_objects
 )
 non_existing_objects_ = DEFAULT_NON_EXISTING_OBJECTS
+
+
+class CachedFileObject(FileObject):
+    """A subclass of FileObject that adds caching to the `content` property."""
+
+    _cached_content: bytes = PrivateAttr(default=b"")
+    _is_cached: bool = PrivateAttr(default=False)
+
+    @property
+    def content(self) -> bytes:
+        """
+        Overrides the computed 'content' property of FileObject to cache the content,
+        useful if the file is temporary and may be removed.
+        """
+        if not self._is_cached:
+            self._cached_content = super().content
+            self._is_cached = True
+        return self._cached_content
 
 
 @dataclass
@@ -152,14 +171,14 @@ class BigObjectS3Fixture(S3Fixture):
 
 async def get_big_s3_object(
     s3: S3Fixture, object_size: int = 20 * 1024 * 1024
-) -> FileObject:
+) -> CachedFileObject:
     """
     Extends the s3_fixture to also include a big file with the specified `file_size` on
     the provided s3 storage.
     """
     with big_temp_file(object_size) as big_file:
         file_path = Path(big_file.name)
-        object_fixture = FileObject(
+        object_fixture = CachedFileObject(
             file_path=file_path,
             bucket_id=s3.existing_buckets[0],
             object_id="big-downloadable",

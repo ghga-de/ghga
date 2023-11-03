@@ -219,7 +219,7 @@ def drs3_objects(file_id: str, request: httpx.Request):
                         type="s3",
                     )
                 ],
-            ).json(),
+            ).model_dump_json(),
         )
 
     raise HTTPException(
@@ -304,7 +304,7 @@ def ulc_post_files_uploads(request: httpx.Request):
                 upload_id="pending",
                 file_id=file_id,
                 part_size=int(os.environ["DEFAULT_PART_SIZE"]),
-            ).json(),
+            ).model_dump_json(),
         )
     if file_id == "uploadable-16":
         return httpx.Response(
@@ -313,7 +313,7 @@ def ulc_post_files_uploads(request: httpx.Request):
                 upload_id="pending",
                 file_id=file_id,
                 part_size=16 * 1024 * 1024,
-            ).json(),
+            ).model_dump_json(),
         )
 
     if file_id == "uploadable-8":
@@ -323,7 +323,7 @@ def ulc_post_files_uploads(request: httpx.Request):
                 upload_id="pending",
                 file_id=file_id,
                 part_size=8 * 1024 * 1024,
-            ).json(),
+            ).model_dump_json(),
         )
     if file_id == "pending":
         raise HttpException(

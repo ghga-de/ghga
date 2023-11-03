@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ghga_connector"
-version = "0.3.16"
+version = "1.0.0"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
 readme = "README.md"
 authors = [
@@ -25,8 +25,8 @@ classifiers = [
 dependencies = [
     "typer~=0.9.0",
     "crypt4gh>=1.6, <2",
-    "ghga-service-commons[api, crypt]~=0.7",
-    "hexkit~=0.10.0",
+    "ghga-service-commons[api, crypt]~=1.1.0",
+    "hexkit~=0.11.1",
 ]
 
 [project.license]

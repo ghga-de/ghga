@@ -4,4 +4,4 @@
 
 # additional requirements can be listed here
 testcontainers>=3.4.1
-hexkit[s3]>=0.10,<0.11
+hexkit[s3]>=0.11.1

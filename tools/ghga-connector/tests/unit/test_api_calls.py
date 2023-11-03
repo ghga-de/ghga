@@ -70,7 +70,7 @@ async def test_patch_multipart_upload(
         httpx_mock.add_response(
             status_code=400,
             json={
-                "data": "",
+                "data": {},
                 "description": "",
                 "exception_id": "uploadNotPending",
             },
@@ -78,7 +78,7 @@ async def test_patch_multipart_upload(
     elif expected_exception == UploadNotRegisteredError:
         httpx_mock.add_response(
             status_code=404,
-            json={"data": "", "description": "", "exception_id": "noSuchUpload"},
+            json={"data": {}, "description": "", "exception_id": "noSuchUpload"},
         )
     elif expected_exception is None:
         httpx_mock.add_response(status_code=204)
