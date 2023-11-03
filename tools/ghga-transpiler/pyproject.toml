@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 # please adapt to package name
 name = "ghga-transpiler"
-version = "0.1.0"
+version = "1.2.1"
 description = "GHGA-Transpiler - excel to JSON converter"
 readme = "README.md"
 authors = [
