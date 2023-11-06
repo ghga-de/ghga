@@ -16,14 +16,13 @@
 """Contains endpoint functions for the API"""
 from typing import Any
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
 
+from wkvs.adapters.inbound.fastapi_ import dummies
 from wkvs.config import WellKnownConfig
-from wkvs.container import Container
 
-WELLKNOWNS_FILTER: set[str] = WellKnownConfig.schema()["properties"].keys()
+WELLKNOWNS_FILTER: set[str] = WellKnownConfig.model_json_schema()["properties"].keys()
 
 router = APIRouter()
 
@@ -49,10 +48,9 @@ async def health():
         }
     },
 )
-@inject
 async def retrieve_value(
     value_name: str,
-    config: WellKnownConfig = Depends(Provide[Container.config]),
+    config: dummies.ConfigDummy,
 ) -> dict[str, Any]:
     """Retrieves the given value from configuration
     Args:
@@ -78,9 +76,8 @@ async def retrieve_value(
     summary="retrieve all configured values",
     status_code=status.HTTP_200_OK,
 )
-@inject
 async def retrieve_all_values(
-    config: WellKnownConfig = Depends(Provide[Container.config]),
+    config: dummies.ConfigDummy,
 ) -> dict[str, Any]:
     """Retrieves all values from the WellKnownsConfig class"""
     return config.dict(include=WELLKNOWNS_FILTER)

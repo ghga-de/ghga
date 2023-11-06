@@ -13,41 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Module containing the main FastAPI router and (optionally) top-level API endpoints.
-Additional endpoints might be structured in dedicated modules
-(each of them having a sub-router).
-"""
+"""In this module object construction and dependency injection is carried out."""
 
-from fastapi import FastAPI
-from ghga_service_commons.api import configure_app, run_server
+from ghga_service_commons.api import run_server
 
-from wkvs.adapters.inbound.fastapi_.routes import router
 from wkvs.config import Config
-from wkvs.container import Container
+from wkvs.inject import prepare_rest_app
 
 
-def get_configured_container(*, config: Config) -> Container:
-    """Create and configure a DI container."""
-    container = Container()
-    container.config.load_config(config)
+async def run_rest_app():
+    """Run the HTTP REST API."""
+    config = Config()  # type: ignore
 
-    return container
-
-
-def get_rest_api(*, config: Config) -> FastAPI:
-    """Creates a FastAPI app."""
-    api = FastAPI()
-    api.include_router(router=router)
-    configure_app(api, config=config)
-    return api
-
-
-async def run_rest():
-    """Run the server"""
-    config = Config()  # type: ignore[call-arg]
-
-    container = get_configured_container(config=config)
-    container.wire(modules=["wkvs.adapters.inbound.fastapi_.routes"])
-    api = get_rest_api(config=config)
-    await run_server(app=api, config=config)
+    async with prepare_rest_app(config=config) as app:
+        await run_server(app=app, config=config)

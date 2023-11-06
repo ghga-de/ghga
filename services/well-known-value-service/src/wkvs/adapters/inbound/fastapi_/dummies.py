@@ -13,13 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Dependency-Injection container for config"""
-from hexkit.inject import ContainerBase, get_configurator
+
+"""A collection of dependency dummies that are used in view definitions but need to be
+replaced at runtime by actual dependencies.
+"""
+
+from typing import Annotated
+
+from fastapi import Depends
+from ghga_service_commons.api.di import DependencyDummy
 
 from wkvs.config import Config
 
+config_provider = DependencyDummy("config_provider")
 
-class Container(ContainerBase):
-    """Dependency-Injection Container"""
-
-    config = get_configurator(Config)
+ConfigDummy = Annotated[Config, Depends(config_provider)]

@@ -23,8 +23,7 @@ from ghga_service_commons.api.testing import AsyncTestClient
 
 from tests.fixtures.config import get_config
 from wkvs.config import Config
-from wkvs.container import Container
-from wkvs.main import get_configured_container, get_rest_api
+from wkvs.inject import prepare_rest_app
 
 
 @dataclass
@@ -32,7 +31,6 @@ class JointFixture:
     """Joint fixture for testing"""
 
     config: Config
-    container: Container
     rest_client: AsyncTestClient
 
 
@@ -41,15 +39,9 @@ async def joint_fixture() -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
     config = get_config()
 
-    # create a DI container instance
-    container = get_configured_container(config=config)
-    container.wire(modules=["wkvs.adapters.inbound.fastapi_.routes"])
-
-    # setup an API test client:
-    api = get_rest_api(config=config)
-    async with AsyncTestClient(app=api) as rest_client:
-        yield JointFixture(
-            config=config,
-            container=container,
-            rest_client=rest_client,
-        )
+    async with prepare_rest_app(config=config) as app:
+        async with AsyncTestClient(app=app) as rest_client:
+            yield JointFixture(
+                config=config,
+                rest_client=rest_client,
+            )

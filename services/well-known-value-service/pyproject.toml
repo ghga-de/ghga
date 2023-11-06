@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wkvs"
-version = "0.1.2"
+version = "1.0.0"
 description = "Well-Known-Value-Service - Provides access to common values via API"
 readme = "README.md"
 authors = [
@@ -23,9 +23,9 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "typer>=0.7.0",
-    "ghga-service-commons[all]>=0.4.2",
-    "hexkit>=0.10.2",
+    "ghga-service-commons[api]>=1.1.0",
+    "hexkit[api]>=0.11.0",
+    "typer>=0.6.0",
 ]
 
 [project.license]

@@ -15,7 +15,16 @@
 
 """Entrypoint of the package"""
 
-from wkvs.cli import cli
+import asyncio
 
-if __name__ == "__main__":
-    cli()
+import typer
+
+from wkvs.main import run_rest_app
+
+cli = typer.Typer()
+
+
+@cli.command(name="run-rest")
+def sync_run_api():
+    """Run the HTTP REST API."""
+    asyncio.run(run_rest_app())
