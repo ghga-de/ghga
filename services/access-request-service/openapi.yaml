@@ -15,15 +15,16 @@ components:
           title: Access Starts
           type: string
         changed_by:
+          anyOf:
+          - type: string
+          - type: 'null'
           description: The ID of the data steward who made the status change
           title: Changed By
-          type: string
         dataset_id:
           title: Dataset Id
           type: string
         email:
           description: Contact e-mail address of the requester
-          format: email
           title: Email
           type: string
         full_user_name:
@@ -49,10 +50,12 @@ components:
           default: pending
           description: The status of this access request
         status_changed:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
           description: Last change date of the status of this request
-          format: date-time
           title: Status Changed
-          type: string
         user_id:
           title: User Id
           type: string
@@ -87,7 +90,6 @@ components:
           type: string
         email:
           description: Contact e-mail address of the requester
-          format: email
           title: Email
           type: string
         request_text:
@@ -133,8 +135,8 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 0.1.2
-openapi: 3.0.2
+  version: 1.0.0
+openapi: 3.1.0
 paths:
   /access-requests:
     get:
@@ -145,19 +147,26 @@ paths:
         name: dataset_id
         required: false
         schema:
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Dataset Id
-          type: string
       - in: query
         name: user_id
         required: false
         schema:
+          anyOf:
+          - type: string
+          - type: 'null'
           title: User Id
-          type: string
       - in: query
         name: status
         required: false
         schema:
-          $ref: '#/components/schemas/AccessRequestStatus'
+          anyOf:
+          - $ref: '#/components/schemas/AccessRequestStatus'
+          - type: 'null'
+          title: Status
       responses:
         '200':
           content:
@@ -247,7 +256,5 @@ paths:
       summary: health
       tags:
       - AccessRequests
-servers:
-- url: /
 tags:
 - name: AccessRequests

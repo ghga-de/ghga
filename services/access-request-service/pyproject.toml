@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ars"
-version = "0.1.2"
+version = "1.0.0"
 description = "Access Request Service"
 readme = "README.md"
 authors = [
@@ -23,11 +23,11 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "ghga-event-schemas==0.13.5",
-    "ghga-service-commons[api,auth]>=0.7.0",
-    "hexkit[akafka,mongodb]>=0.10.2",
+    "ghga-service-commons[api,auth]>=1.1.0",
+    "ghga-event-schemas~=1.0.0",
+    "hexkit[mongodb,akafka]>=0.11.0",
     "httpx>=0.23.3",
-    "typer>=0.7.0",
+    "typer>=0.6.0",
 ]
 
 [project.license]

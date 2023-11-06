@@ -23,7 +23,6 @@ from typing import Any, NamedTuple, Optional
 
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext, UserStatus
 from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
-from pydantic import EmailStr
 from pytest import mark, raises
 
 from ars.core.models import (
@@ -48,7 +47,7 @@ EXP = IAT + ONE_HOUR
 auth_context_doe = AuthContext(
     id="id-of-john-doe@ghga.de",
     name="John Doe",
-    email=EmailStr("john@home.org"),
+    email="john@home.org",
     title=AcademicTitle.DR,
     ext_id=None,
     role=None,
@@ -61,7 +60,7 @@ auth_context_doe = AuthContext(
 auth_context_steward = AuthContext(
     id="id-of-rod-steward@ghga.de",
     name="Rod Steward",
-    email=EmailStr("steward@ghga.de"),
+    email="steward@ghga.de",
     title=None,
     ext_id=None,
     role="data_steward@ghga.de",
@@ -84,7 +83,7 @@ ACCESS_REQUESTS = [
         id="request-id-1",
         user_id="id-of-john-doe@ghga.de",
         dataset_id="some-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=datetime_utc(2020, 1, 1, 0, 0),
         access_ends=datetime_utc(2020, 12, 31, 23, 59),
@@ -98,7 +97,7 @@ ACCESS_REQUESTS = [
         id="request-id-2",
         user_id="id-of-john-doe@ghga.de",
         dataset_id="another-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access another dataset?",
         access_starts=datetime_utc(2020, 1, 1, 0, 0),
         access_ends=datetime_utc(2020, 12, 31, 23, 59),
@@ -112,7 +111,7 @@ ACCESS_REQUESTS = [
         id="request-id-3",
         user_id="id-of-john-doe@ghga.de",
         dataset_id="yet-another-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access yet another dataset?",
         access_starts=datetime_utc(2020, 1, 1, 0, 0),
         access_ends=datetime_utc(2020, 12, 31, 23, 59),
@@ -126,7 +125,7 @@ ACCESS_REQUESTS = [
         id="request-id-4",
         user_id="id-of-john-doe@ghga.de",
         dataset_id="new-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access a new dataset?",
         access_starts=datetime_utc(2021, 1, 1, 0, 0),
         access_ends=datetime_utc(2021, 12, 31, 23, 59),
@@ -140,7 +139,7 @@ ACCESS_REQUESTS = [
         id="request-id-5",
         user_id="id-of-jane-roe@ghga.de",
         dataset_id="some-dataset",
-        email=EmailStr("me@jane-roe.name"),
+        email="me@jane-roe.name",
         request_text="Can I access the same dataset as Joe?",
         access_starts=datetime_utc(2020, 1, 1, 0, 0),
         access_ends=datetime_utc(2020, 12, 31, 23, 59),
@@ -183,7 +182,7 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
 
     async def insert(self, dto: AccessRequestData) -> AccessRequest:
         """Create a new record."""
-        self.last_upsert = AccessRequest(**dto.dict(), id="newly-created-id")
+        self.last_upsert = AccessRequest(**dto.model_dump(), id="newly-created-id")
         return self.last_upsert
 
     async def update(self, dto: AccessRequest) -> None:
@@ -218,7 +217,7 @@ class NotificationEmitterDummy(NotificationEmitterPort):
         return self.notifications[email]
 
     async def notify(
-        self, *, email: EmailStr, full_name: str, subject: str, text: str
+        self, *, email: str, full_name: str, subject: str, text: str
     ) -> None:
         """Send a notification."""
         if email in self.notifications:
@@ -281,7 +280,7 @@ async def test_can_create_request():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="some-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
@@ -336,7 +335,7 @@ async def test_cannot_create_request_for_somebody_else():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-foo@ghga.de",
         dataset_id="some-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
@@ -354,7 +353,7 @@ async def test_silently_correct_request_that_is_too_early():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="some-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
@@ -380,7 +379,7 @@ async def test_cannot_create_request_too_much_in_advance():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="some-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
@@ -404,7 +403,7 @@ async def test_cannot_create_request_too_short():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="some-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
@@ -428,7 +427,7 @@ async def test_cannot_create_request_too_long():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="some-dataset",
-        email=EmailStr("me@john-doe.name"),
+        email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
@@ -543,7 +542,7 @@ async def test_filtering_using_multiple_criteria():
 async def test_set_status_to_allowed():
     """Test setting the status of a request from pending to allowed."""
     original_request = await dao.get_by_id("request-id-4")
-    original_dict = original_request.dict()
+    original_dict = original_request.model_dump()
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
@@ -557,7 +556,7 @@ async def test_set_status_to_allowed():
 
     changed_request = dao.last_upsert
     assert changed_request is not None
-    changed_dict = changed_request.dict()
+    changed_dict = changed_request.model_dump()
     assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
     status_changed = changed_dict.pop("status_changed")
     assert status_changed is not None

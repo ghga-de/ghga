@@ -18,8 +18,6 @@
 
 from abc import ABC, abstractmethod
 
-from pydantic import EmailStr
-
 __all__ = ["NotificationEmitterPort"]
 
 
@@ -28,7 +26,7 @@ class NotificationEmitterPort(ABC):
 
     @abstractmethod
     async def notify(
-        self, *, email: EmailStr, full_name: str, subject: str, text: str
+        self, *, email: str, full_name: str, subject: str, text: str
     ) -> None:
         """Send notification to the specified email address."""
         ...

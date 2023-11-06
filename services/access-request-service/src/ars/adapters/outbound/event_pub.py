@@ -19,7 +19,8 @@
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import BaseSettings, EmailStr, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from ars.ports.outbound.notification_emitter import NotificationEmitterPort
 
@@ -32,12 +33,12 @@ class NotificationEmitterConfig(BaseSettings):
     notification_event_topic: str = Field(
         ...,
         description=("Name of the topic used for notification events."),
-        example="notifications",
+        examples=["notifications"],
     )
     notification_event_type: str = Field(
         ...,
         description=("The type used for notification events."),
-        example="notification",
+        examples=["notification"],
     )
 
 
@@ -56,7 +57,7 @@ class NotificationEmitter(NotificationEmitterPort):
         self._event_publisher = event_publisher
 
     async def notify(
-        self, *, email: EmailStr, full_name: str, subject: str, text: str
+        self, *, email: str, full_name: str, subject: str, text: str
     ) -> None:
         """Send notification to the specified email address."""
         payload: JsonObject = event_schemas.Notification(
@@ -64,7 +65,7 @@ class NotificationEmitter(NotificationEmitterPort):
             recipient_name=full_name,
             subject=subject,
             plaintext_body=text,
-        ).dict()
+        ).model_dump()
 
         await self._event_publisher.publish(
             payload=payload,

@@ -15,55 +15,15 @@
 
 """In this module object construction and dependency injection is carried out."""
 
-from fastapi import FastAPI
-from ghga_service_commons.api import configure_app, run_server
+from ghga_service_commons.api import run_server
 
-from ars.adapters.inbound.fastapi_.openapi import get_openapi_schema
-from ars.adapters.inbound.fastapi_.routes import router
 from ars.config import Config
-from ars.container import Container
+from ars.inject import prepare_rest_app
 
 
-def get_container(*, config: Config) -> Container:
-    """Create, configure and wire the DI container."""
-    container = Container()
-    container.config.load_config(config)
-    container.wire(
-        modules=[
-            "ars.adapters.inbound.fastapi_.auth",
-            "ars.adapters.inbound.fastapi_.openapi",
-            "ars.adapters.inbound.fastapi_.routes",
-        ]
-    )
-    return container
-
-
-def get_rest_api(*, config: Config) -> FastAPI:
-    """Create a FastAPI app.
-
-    For full functionality of the AP, run in the context of a CI container with
-    correct wiring and initialized resources (see the run_rest function below).
-    """
-    api = FastAPI()
-    api.include_router(router)
-    configure_app(api, config=config)
-
-    def custom_openapi():
-        if api.openapi_schema:
-            return api.openapi_schema
-        openapi_schema = get_openapi_schema(api)
-        api.openapi_schema = openapi_schema
-        return api.openapi_schema
-
-    api.openapi = custom_openapi  # type: ignore[method-assign]
-
-    return api
-
-
-async def run_rest():
+async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()  # type: ignore
 
-    async with get_container(config=config):
-        api = get_rest_api(config=config)
-        await run_server(app=api, config=config)
+    async with prepare_rest_app(config=config) as app:
+        await run_server(app=app, config=config)

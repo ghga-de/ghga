@@ -20,7 +20,6 @@ from typing import Any
 
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import EmailStr
 from pytest import mark
 
 from ars.adapters.outbound.event_pub import (
@@ -62,7 +61,7 @@ notification_emitter = NotificationEmitter(
 async def test_sending_a_notification():
     """Test that a notification is translated properly."""
     await notification_emitter.notify(
-        email=EmailStr("someone@somewhere.org"),
+        email="someone@somewhere.org",
         full_name="Some User Name",
         subject="Some subject",
         text="Some text",

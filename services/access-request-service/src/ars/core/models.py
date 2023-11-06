@@ -21,7 +21,7 @@ from enum import Enum
 from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "AccessRequest",
@@ -35,9 +35,7 @@ __all__ = [
 class BaseDto(BaseModel):
     """Base model pre-configured for use as Dto."""
 
-    class Config:
-        extra = "forbid"
-        frozen = True
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class AccessRequestStatus(str, Enum):
@@ -53,7 +51,7 @@ class AccessRequestCreationData(BaseDto):
 
     user_id: str
     dataset_id: str
-    email: EmailStr = Field(
+    email: str = Field(
         default=..., description="Contact e-mail address of the requester"
     )
     request_text: str = Field(

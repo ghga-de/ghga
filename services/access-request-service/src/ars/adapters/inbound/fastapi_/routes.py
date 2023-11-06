@@ -19,23 +19,21 @@
 import logging
 from typing import Optional
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Response
 from fastapi.exceptions import HTTPException
 
+from ars.adapters.inbound.fastapi_ import dummies
 from ars.adapters.inbound.fastapi_.auth import (
     AuthContext,
     require_steward_context,
     require_user_context,
 )
-from ars.container import Container
 from ars.core.models import (
     AccessRequest,
     AccessRequestCreationData,
     AccessRequestPatchData,
     AccessRequestStatus,
 )
-from ars.ports.inbound.repository import AccessRequestRepositoryPort
 
 __all__ = ["router"]
 
@@ -71,12 +69,9 @@ async def health():
     },
     status_code=201,
 )
-@inject
 async def create_access_request(
     creation_data: AccessRequestCreationData,
-    repository: AccessRequestRepositoryPort = Depends(
-        Provide[Container.access_request_repository]
-    ),
+    repository: dummies.AccessRequestRepoDummy,
     auth_context: AuthContext = require_user_context,
 ) -> str:
     """Create an access request"""
@@ -112,14 +107,11 @@ async def create_access_request(
     },
     status_code=200,
 )
-@inject
 async def get_access_requests(
+    repository: dummies.AccessRequestRepoDummy,
     dataset_id: Optional[str] = None,
     user_id: Optional[str] = None,
     status: Optional[AccessRequestStatus] = None,
-    repository: AccessRequestRepositoryPort = Depends(
-        Provide[Container.access_request_repository]
-    ),
     auth_context: AuthContext = require_user_context,
 ) -> list[AccessRequest]:
     """Get access requests"""
@@ -154,13 +146,10 @@ async def get_access_requests(
     },
     status_code=204,
 )
-@inject
 async def patch_access_request(
     access_request_id: str,
     patch_data: AccessRequestPatchData,
-    repository: AccessRequestRepositoryPort = Depends(
-        Provide[Container.access_request_repository]
-    ),
+    repository: dummies.AccessRequestRepoDummy,
     auth_context: AuthContext = require_steward_context,
 ) -> Response:
     """Set the status of an access request"""

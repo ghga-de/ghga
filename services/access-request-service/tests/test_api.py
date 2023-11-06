@@ -41,7 +41,6 @@ from .fixtures import (  # noqa: F401
     fixture_auth_headers_steward,
     fixture_auth_headers_steward_inactive,
     fixture_client,
-    fixture_container,
     non_mocked_hosts,
 )
 
@@ -73,7 +72,13 @@ def iso2timestamp(iso_date: str) -> float:
 
 def assert_same_datetime(date1: str, date2: str, max_diff_seconds=5) -> None:
     """Assert that the two given dates in iso format are very close."""
-    assert abs(iso2timestamp(date2) - iso2timestamp(date1)) < max_diff_seconds
+    assert (
+        abs(
+            iso2timestamp(date2.replace("Z", "+00:00"))
+            - iso2timestamp(date1.replace("Z", "+00:00"))
+        )
+        < max_diff_seconds
+    )
 
 
 class NotificationPayload(NamedTuple):
@@ -373,7 +378,9 @@ async def test_patch_access_request(
     validity = json.loads(grant_request.content)
     # validity period may start a bit later because integration tests can be slow
     assert_same_datetime(validity["valid_from"], CREATION_DATA["access_starts"], 300)
-    assert validity["valid_until"] == CREATION_DATA["access_ends"]
+    assert (
+        validity["valid_until"].replace("Z", "+00:00") == CREATION_DATA["access_ends"]
+    )
 
     # check that notifications have been sent
     assert_recorded_events(

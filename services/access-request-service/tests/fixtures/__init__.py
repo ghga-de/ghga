@@ -24,13 +24,11 @@ from ghga_service_commons.utils.jwt_helpers import (
 )
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from pydantic import EmailStr
 from pytest import fixture
 from pytest_asyncio import fixture as async_fixture
 
 from ars.config import Config
-from ars.container import Container
-from ars.main import get_container, get_rest_api
+from ars.inject import prepare_rest_app
 
 __all__ = [
     "AUTH_KEY_PAIR",
@@ -100,37 +98,24 @@ def fixture_auth_headers_steward_inactive() -> dict[str, str]:
     return headers_for_token(token)
 
 
-@async_fixture(name="container")
-async def fixture_container(
-    kafka_fixture: KafkaFixture,
-    mongodb_fixture: MongoDbFixture,
-) -> AsyncGenerator[Container, None]:
-    """Populate database and get configured container"""
-
-    # create configuration for testing
-    config = Config(
-        auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
-        download_access_url="http://access",
-        data_steward_email=EmailStr("steward@ghga.de"),
-        **kafka_fixture.config.dict(),
-        **mongodb_fixture.config.dict(),
-    )
-
-    async with get_container(config=config) as container:
-        # return the configured and wired container
-        yield container
-
-
 @async_fixture(name="client")
 async def fixture_client(
-    container: Container,
+    kafka_fixture: KafkaFixture,
+    mongodb_fixture: MongoDbFixture,
 ) -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for the access request service"""
 
-    config = container.config()
-    api = get_rest_api(config=config)
-    async with AsyncTestClient(app=api) as client:
-        yield client
+    config = Config(
+        auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
+        download_access_url="http://access",
+        data_steward_email="steward@ghga.de",
+        **kafka_fixture.config.model_dump(),
+        **mongodb_fixture.config.model_dump(),
+    )
+
+    async with prepare_rest_app(config=config) as app:
+        async with AsyncTestClient(app=app) as client:
+            yield client
 
 
 @fixture

@@ -29,6 +29,6 @@ notification_event_topic: notifications
 notification_event_type: notification
 openapi_url: /openapi.json
 port: 8080
-service_instance_id: '1'
+service_instance_id: '001'
 service_name: ars
 workers: 1

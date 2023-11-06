@@ -12,29 +12,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Utils to customize the OpenAPI script"""
-
+"""Utils to configure the FastAPI app"""
 from typing import Any
 
+from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
+from ghga_service_commons.api import ApiConfigBase, configure_app
 
 from ars import __version__
-from ars.config import Config
-
-__all__ = ["get_openapi_schema"]
+from ars.adapters.inbound.fastapi_.routes import router
 
 
-def get_openapi_schema(api) -> dict[str, Any]:
-    """Generate a custom OpenAPI schema for the service."""
-    config = Config()  # type: ignore
-
+def get_openapi_schema(app: FastAPI) -> dict[str, Any]:
+    """Generates a custom openapi schema for the service"""
     return get_openapi(
         title="Access Request Service",
         version=__version__,
         description="A service managing access requests for the GHGA Data Portal",
-        servers=[{"url": config.api_root_path}],
         tags=[{"name": "AccessRequests"}],
-        routes=api.routes,
+        routes=app.routes,
     )
+
+
+def get_configured_app(*, config: ApiConfigBase) -> FastAPI:
+    """Create and configure a REST API application."""
+    app = FastAPI()
+    app.include_router(router)
+    configure_app(app, config=config)
+
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        openapi_schema = get_openapi_schema(app)
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi  # type: ignore [method-assign]
+
+    return app

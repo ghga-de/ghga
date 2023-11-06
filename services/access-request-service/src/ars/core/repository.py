@@ -22,7 +22,8 @@ from typing import Any, Optional
 
 from ghga_service_commons.auth.ghga import AuthContext, has_role
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from pydantic import BaseSettings, EmailStr, Field
+from pydantic import EmailStr, Field
+from pydantic_settings import BaseSettings
 
 from ars.core.models import (
     AccessRequest,
@@ -120,7 +121,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             full_user_name = auth_context.title + " " + full_user_name
 
         access_request_data = AccessRequestData(
-            **creation_data.dict(),
+            **creation_data.model_dump(),
             full_user_name=full_user_name,
             request_created=request_created,
         )
@@ -270,7 +271,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
     async def _notify(
         self,
-        recipient_email: EmailStr,
+        recipient_email: str,
         recipient_name: str,
         request: AccessRequest,
         notification: Notification,
@@ -280,5 +281,5 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             email=recipient_email,
             full_name=recipient_name,
             subject=notification.subject,
-            text=notification.text.format(**request.dict()).strip(),
+            text=notification.text.format(**request.model_dump()).strip(),
         )

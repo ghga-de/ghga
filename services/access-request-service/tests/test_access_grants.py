@@ -65,8 +65,8 @@ async def test_grant_download_access(
     request = httpx_mock.get_request()
     assert request
     assert json.loads(request.content) == {
-        "valid_from": VALID_FROM.isoformat(),
-        "valid_until": VALID_UNTIL.isoformat(),
+        "valid_from": VALID_FROM.isoformat().replace("+00:00", "Z"),
+        "valid_until": VALID_UNTIL.isoformat().replace("+00:00", "Z"),
     }
 
 

@@ -17,26 +17,24 @@
 """Helper dependencies for requiring authentication and authorization."""
 
 from functools import partial
+from typing import Annotated
 
-from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.ghga import AuthContext, has_role, is_active
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
 
-from ars.container import Container
+from ars.adapters.inbound.fastapi_ import dummies
 from ars.core.roles import DATA_STEWARD_ROLE
 
 __all__ = ["require_user_context", "require_steward_context"]
 
 
-@inject
 async def _require_user_context(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[AuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
+    credentials: Annotated[
+        HTTPAuthorizationCredentials, Depends(HTTPBearer(auto_error=True))
+    ],
+    auth_provider: dummies.AuthProviderDummy,
 ) -> AuthContext:
     """Require an active GHGA auth context using FastAPI."""
     return await require_auth_context_using_credentials(
@@ -47,12 +45,11 @@ async def _require_user_context(
 is_steward = partial(has_role, role=DATA_STEWARD_ROLE)
 
 
-@inject
 async def _require_steward_context(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[AuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
+    credentials: Annotated[
+        HTTPAuthorizationCredentials, Depends(HTTPBearer(auto_error=True))
+    ],
+    auth_provider: dummies.AuthProviderDummy,
 ) -> AuthContext:
     """Require an active GHGA auth context of a data steward using FastAPI."""
     return await require_auth_context_using_credentials(
