@@ -27,10 +27,10 @@ from ghga_transpiler.config.config import (
 def test_config_params() -> None:
     """Testing if default parameters of config yaml are used in the absence of worksheet settings"""
     books_sheet = Worksheet(
-        sheet_name="books", settings=WorksheetSettings(name="books", end_column=3)  # type: ignore
+        sheet_name="books", settings=WorksheetSettings(name="books", end_column=3)
     )
     publisher_sheet = Worksheet(
-        sheet_name="publisher", settings=WorksheetSettings(name="publisher")  # type: ignore
+        sheet_name="publisher", settings=WorksheetSettings(name="publisher")
     )
 
     config = Config(

@@ -21,7 +21,7 @@ from importlib import resources
 from typing import Callable, Optional
 
 import yaml
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, model_validator
 
 from .exceptions import DuplicatedName, UnknownVersionError
 
@@ -40,11 +40,11 @@ class WorksheetSettings(BaseModel):
     """A data model for the per-worksheet settings of a transpiler config"""
 
     name: str
-    header_row: Optional[int]
-    start_row: Optional[int]
-    start_column: Optional[int]
-    end_column: Optional[int]
-    transformations: Optional[dict[str, Callable]]
+    header_row: Optional[int] = None
+    start_row: Optional[int] = None
+    start_column: Optional[int] = None
+    end_column: Optional[int] = None
+    transformations: Optional[dict[str, Callable]] = None
 
 
 class Worksheet(BaseModel):
@@ -61,21 +61,21 @@ class Config(BaseModel):
     default_settings: DefaultSettings
     worksheets: list[Worksheet]
 
-    @root_validator(pre=False)
+    @model_validator(mode="after")
     def get_param(cls, values):  # noqa
         """Function to manage parameters of global and worksheet specific configuration"""
-        for sheet in values.get("worksheets"):
-            for key in values.get("default_settings").__dict__:
+        for sheet in values.worksheets:
+            for key in values.default_settings.__dict__:
                 if getattr(sheet.settings, key) is None:
-                    val = getattr(values.get("default_settings"), key)
+                    val = getattr(values.default_settings, key)
                     setattr(sheet.settings, key, val)
         return values
 
-    @root_validator(pre=False)
+    @model_validator(mode="after")
     def check_name(cls, values):  # noqa
         """Function to ensure that each worksheets has a unique sheet_name and name attributes."""
         # Check for duplicate attribute names
-        attrs_counter = Counter(ws.settings.name for ws in values["worksheets"])
+        attrs_counter = Counter(ws.settings.name for ws in values.worksheets)
         dup_attrs = [name for name, count in attrs_counter.items() if count > 1]
         if dup_attrs:
             raise DuplicatedName(
@@ -83,7 +83,7 @@ class Config(BaseModel):
             )
 
         # Check for duplicate worksheet names
-        attrs_counter = Counter(ws.sheet_name for ws in values["worksheets"])
+        attrs_counter = Counter(ws.sheet_name for ws in values.worksheets)
         dup_ws_names = [name for name, count in attrs_counter.items() if count > 1]
         if dup_ws_names:
             raise DuplicatedName(
@@ -100,4 +100,4 @@ def load_config(version: str, package: resources.Package) -> Config:
     except FileNotFoundError:
         # pylint: disable=raise-missing-from
         raise UnknownVersionError(f"Unknown metadata version: {version}") from None
-    return Config.parse_obj(yaml.load(config_str, yaml.Loader))  # noqa # nosec
+    return Config.model_validate(yaml.load(config_str, yaml.Loader))  # noqa # nosec
