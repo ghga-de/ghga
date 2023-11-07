@@ -12,9 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Plugins module"""
+"""Base Class for Validation Plugins"""
 
-from .jsonschema_validation import GHGAJsonSchemaValidationPlugin  # noqa: F401
-from .ref_validation import RefValidationPlugin  # noqa: F401
-from .unique_identifier_validation import UniqueIdentifierValidationPlugin  # noqa: F401
+from abc import ABC, abstractmethod
+
+from ghga_validator.core.models import ValidationResult
+
+
+class ValidationPlugin(ABC):
+    """An abstract class for validation plugins"""
+
+    def __init__(self, schema):
+        """
+        Initialize the plugin with the given schema.
+
+        Args:
+            schema: schema representation
+
+        """
+        self.schema = schema
+
+    @abstractmethod
+    def validate(self, data, target_class) -> ValidationResult:
+        """Validate input data against the schema starting with the target class"""

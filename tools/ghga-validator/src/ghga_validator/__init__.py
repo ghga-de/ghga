@@ -17,7 +17,5 @@
 command line utility."""
 
 from importlib.metadata import version
-from pathlib import Path
 
 __version__ = version(__package__)
-BASE_DIR = Path(__file__).parent.parent.resolve()

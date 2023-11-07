@@ -17,7 +17,7 @@
 
 import os
 
-from ghga_validator.cli import validate_json
+from ghga_validator.cli import validate_json_file
 
 from .fixtures.utils import BASE_DIR
 
@@ -29,6 +29,6 @@ def test_validate_ref():
     report = BASE_DIR / "tmp.json"
     target_class = "TextAnalysis"
 
-    assert validate_json(file, schema, report, str(target_class)) is False
+    assert validate_json_file(file, schema, report, str(target_class)) is False
     if os.path.exists(report):
         os.remove(report)
