@@ -21,6 +21,7 @@ The following environment variables are evaluated:
 - `VAULT_ADDR`: the address of the vault server
 - `VAULT_TOKEN`: token for allowing write access to the vault server
 - `VAULT_NAMESPACE`: vault namespace ("vault" by default)
+- `AUTH_KM_KUBE_ROLE`: name of the role used to authenticate to Vault
 
 ## Vault paths
 

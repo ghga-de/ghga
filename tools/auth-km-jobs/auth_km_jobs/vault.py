@@ -3,6 +3,7 @@
 import os
 
 import hvac
+from hvac.api.auth_methods import Kubernetes
 
 DEFAULT_ADDR = "http://localhost:8200"
 DEFAULT_NAMESPACE = "vault"
@@ -21,6 +22,7 @@ SHOW_EXTERNAL_KEYS = True  # print public key set
 SSL_VERIFY = False  # could also be path to the certificate
 TIMEOUT = 15  # timeout in seconds
 
+SA_TOKEN_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/token'
 
 def env(name: str, default=None) -> str:
     """Get an environment variable"""
@@ -36,14 +38,27 @@ def get_vault() -> hvac.Client:
     """Get HashiCorp Vault client."""
     url = env("VAULT_ADDR", DEFAULT_ADDR)
     namespace = env("VAULT_NAMESPACE", DEFAULT_NAMESPACE)
-    token = env("VAULT_TOKEN", DEFAULT_TOKEN)
-    return hvac.Client(
+
+    role = env("AUTH_KM_KUBE_ROLE")
+    if role:
+        jwt = open(SA_TOKEN_PATH).read()
+        token = None
+    else:
+        jwt = None
+        token = env("VAULT_TOKEN", DEFAULT_TOKEN)
+
+    client = hvac.Client(
         url=url,
-        namespace=namespace,
         token=token,
         verify=SSL_VERIFY,
         timeout=TIMEOUT,
+        namespace=namespace,
     )
+
+    if role:
+        Kubernetes(client.adapter).login(role=role, jwt=jwt)
+
+    return client
 
 
 def store_in_vault(path: str, value: str):
