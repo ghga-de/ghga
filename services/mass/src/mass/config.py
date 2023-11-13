@@ -35,7 +35,7 @@ class SearchableClassesConfig(BaseSettings):
 
 
 @config_from_yaml(prefix="mass")
-class Config(  # pylint: disable=too-many-ancestors
+class Config(
     ApiConfigBase,
     MongoDbConfig,
     KafkaConfig,

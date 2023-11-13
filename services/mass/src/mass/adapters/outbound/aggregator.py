@@ -108,6 +108,7 @@ class AggregatorCollection(AggregatorCollectionPort):
     @classmethod
     async def construct(
         cls,
+        *,
         aggregator_factory: AggregatorFactory,
         config: SearchableClassesConfig,
     ):

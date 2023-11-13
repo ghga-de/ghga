@@ -76,8 +76,6 @@ async def test_malformed_document(joint_fixture: JointFixture):
     """Test behavior from API perspective upon querying when bad doc exists"""
     joint_fixture.remove_db_data()
 
-    query_handler = await joint_fixture.container.query_handler()
-
     # define and load a new resource without all the required facets
     resource = models.Resource(
         id_="added-resource",
@@ -88,7 +86,9 @@ async def test_malformed_document(joint_fixture: JointFixture):
         },
     )
 
-    await query_handler.load_resource(resource=resource, class_name="DatasetEmbedded")
+    await joint_fixture.query_handler.load_resource(
+        resource=resource, class_name="DatasetEmbedded"
+    )
     search_parameters: JsonObject = {
         "class_name": "DatasetEmbedded",
         "query": "",

@@ -12,25 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
+"""A collection of dependency dummies that are used in view definitions but need to be
+replaced at runtime by actual dependencies.
+"""
 
-import asyncio
+from typing import Annotated
 
-import typer
+from fastapi import Depends
+from ghga_service_commons.api.di import DependencyDummy
 
-from mass.main import consume_events, run_rest_app
+from mass.config import Config
+from mass.ports.inbound.query_handler import QueryHandlerPort
 
-cli = typer.Typer()
+config_dummy = DependencyDummy("config")
+ConfigDummy = Annotated[Config, Depends(config_dummy)]
 
-
-@cli.command(name="run-rest")
-def sync_run_api():
-    """Run the HTTP REST API."""
-    asyncio.run(run_rest_app())
-
-
-@cli.command(name="consume-events")
-def sync_consume_events(run_forever: bool = True):
-    """Run an event consumer listening to the specified topic."""
-    asyncio.run(consume_events(run_forever=run_forever))
+query_handler_port = DependencyDummy("query_handler_port")
+QueryHandlerDummy = Annotated[QueryHandlerPort, Depends(query_handler_port)]

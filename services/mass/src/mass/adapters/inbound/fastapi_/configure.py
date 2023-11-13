@@ -13,24 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Utils to configure the FastAPI app"""
 
-import asyncio
+from fastapi import FastAPI
+from ghga_service_commons.api import configure_app
 
-import typer
-
-from mass.main import consume_events, run_rest_app
-
-cli = typer.Typer()
+from mass.adapters.inbound.fastapi_.routes import router
+from mass.config import Config
 
 
-@cli.command(name="run-rest")
-def sync_run_api():
-    """Run the HTTP REST API."""
-    asyncio.run(run_rest_app())
+def get_configured_app(*, config: Config) -> FastAPI:
+    """Create and configure a REST API application."""
+    app = FastAPI()
+    app.include_router(router)
+    configure_app(app, config=config)
 
-
-@cli.command(name="consume-events")
-def sync_consume_events(run_forever: bool = True):
-    """Run an event consumer listening to the specified topic."""
-    asyncio.run(consume_events(run_forever=run_forever))
+    return app

@@ -36,6 +36,7 @@ class DaoCollection(DaoCollectionPort):
     @classmethod
     async def construct(
         cls,
+        *,
         dao_factory: DaoFactoryProtocol,
         config: Config,
     ):

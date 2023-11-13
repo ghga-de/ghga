@@ -40,15 +40,11 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
     database = joint_fixture.mongodb.client[joint_fixture.config.db_name]
     assert CLASS_NAME not in database.list_collection_names()
 
-    query_handler = await joint_fixture.container.query_handler()
-
     # reset the flag so it actually runs the indexing function
-    query_handler._dao_collection._indexes_created = (
-        False  # pylint: disable=protected-access
-    )
+    joint_fixture.query_handler._dao_collection._indexes_created = False  # type: ignore
 
     # make sure we do not get an error when trying to query non-existent collection
-    results_without_coll = await query_handler.handle_query(
+    results_without_coll = await joint_fixture.query_handler.handle_query(
         class_name=CLASS_NAME,
         query=QUERY_STRING,
         filters=[],
@@ -72,7 +68,7 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
     )
 
     # Verify querying empty collection with query string gives empty results model
-    results_without_coll = await query_handler.handle_query(
+    results_without_coll = await joint_fixture.query_handler.handle_query(
         class_name=CLASS_NAME,
         query=QUERY_STRING,
         filters=[],
@@ -87,13 +83,15 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
         )
 
     # load a resource
-    await query_handler.load_resource(resource=RESOURCE, class_name=CLASS_NAME)
+    await joint_fixture.query_handler.load_resource(
+        resource=RESOURCE, class_name=CLASS_NAME
+    )
 
     # verify the text index exists now
     assert any(index["name"] == f"$**_{TEXT}" for index in collection.list_indexes())
 
     # verify that supplying a query string doesn't result in an error
-    results_with_coll = await query_handler.handle_query(
+    results_with_coll = await joint_fixture.query_handler.handle_query(
         class_name=CLASS_NAME,
         query=QUERY_STRING,
         filters=[],

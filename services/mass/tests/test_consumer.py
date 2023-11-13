@@ -34,10 +34,8 @@ async def test_resource_upsert(
     joint_fixture: JointFixture, resource_id: str, is_insert: bool
 ):
     """Try upserting with no pre-existing resource with matching ID (i.e. insert)"""
-    query_handler = await joint_fixture.container.query_handler()
-
     # get all the documents in the collection
-    results_all = await query_handler.handle_query(
+    results_all = await joint_fixture.query_handler.handle_query(
         class_name="DatasetEmbedded", query="", filters=[]
     )
     assert results_all.count > 0
@@ -71,11 +69,10 @@ async def test_resource_upsert(
     )
 
     # consume the event
-    consumer = await joint_fixture.container.event_subscriber()
-    await consumer.run(forever=False)
+    await joint_fixture.event_subscriber.run(forever=False)
 
     # verify that the resource was added
-    updated_resources = await query_handler.handle_query(
+    updated_resources = await joint_fixture.query_handler.handle_query(
         class_name="DatasetEmbedded", query="", filters=[]
     )
     if is_insert:
@@ -90,10 +87,8 @@ async def test_resource_upsert(
 @pytest.mark.asyncio
 async def test_resource_delete(joint_fixture: JointFixture):
     """Test resource deletion via event consumption"""
-    query_handler = await joint_fixture.container.query_handler()
-
     # get all the documents in the collection
-    targeted_initial_results = await query_handler.handle_query(
+    targeted_initial_results = await joint_fixture.query_handler.handle_query(
         class_name="DatasetEmbedded",
         query='"1HotelAlpha-id"',
         filters=[],
@@ -113,11 +108,10 @@ async def test_resource_delete(joint_fixture: JointFixture):
     )
 
     # consume the event
-    consumer = await joint_fixture.container.event_subscriber()
-    await consumer.run(forever=False)
+    await joint_fixture.event_subscriber.run(forever=False)
 
     # get all the documents in the collection
-    results_post_delete = await query_handler.handle_query(
+    results_post_delete = await joint_fixture.query_handler.handle_query(
         class_name="DatasetEmbedded", query='"1HotelAlpha-id"', filters=[]
     )
 

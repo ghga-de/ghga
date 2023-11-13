@@ -14,48 +14,23 @@
 # limitations under the License.
 #
 """Top-level functionality for the microservice"""
-from fastapi import FastAPI
-from ghga_service_commons.api import configure_app, run_server
+from ghga_service_commons.api import run_server
 
-from mass.adapters.inbound.fastapi_.routes import router
 from mass.config import Config
-from mass.container import Container
+from mass.inject import prepare_event_subscriber, prepare_rest_app
 
 
-def get_configured_container(*, config: Config) -> Container:
-    """Create and configure a DI container."""
-    container = Container()
-    container.config.load_config(config)
-    container.wire(modules=["mass.adapters.inbound.fastapi_.routes"])
+async def run_rest_app():
+    """Run the HTTP REST API."""
+    config = Config()  # type: ignore [call-arg]
 
-    return container
-
-
-def get_rest_api(*, config: Config) -> FastAPI:
-    """
-    Creates a FastAPI app.
-    For full functionality of the api, run in the context of a CI container with
-    correct wiring and initialized resources (see the run_api function below).
-    """
-    api = FastAPI()
-    api.include_router(router=router)
-    configure_app(api, config=config)
-    return api
-
-
-async def run_rest():
-    """Run the server"""
-    config = Config()  # type: ignore[call-arg]
-
-    async with get_configured_container(config=config):
-        api = get_rest_api(config=config)
-        await run_server(app=api, config=config)
+    async with prepare_rest_app(config=config) as app:
+        await run_server(app=app, config=config)
 
 
 async def consume_events(run_forever: bool = True):
     """Run the event consumer"""
     config = Config()  # type: ignore[call-arg]
 
-    async with get_configured_container(config=config) as container:
-        event_subscriber = await container.event_subscriber()
+    async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)

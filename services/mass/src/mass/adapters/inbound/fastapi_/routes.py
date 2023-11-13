@@ -19,15 +19,12 @@
 import logging
 from typing import Union
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
 
 from mass.adapters.inbound.fastapi_ import models as api_models
-from mass.config import Config
-from mass.container import Container
+from mass.adapters.inbound.fastapi_.dummies import ConfigDummy, QueryHandlerDummy
 from mass.core import models
-from mass.ports.inbound.query_handler import QueryHandlerPort
 
 log = logging.getLogger(__name__)
 
@@ -44,15 +41,13 @@ async def health():
     return {"status": "OK"}
 
 
-# GET /rpc/search-options
 @router.get(
     path="/rpc/search-options",
     summary="Retrieve all configured resource classes and facetable properties",
     response_model=dict[str, models.SearchableClass],
 )
-@inject
 async def search_options(
-    config: Config = Depends(Provide[Container.config]),
+    config: ConfigDummy,
 ) -> dict[str, models.SearchableClass]:
     """Returns the configured searchable classes. This describes which resource classes
     are accounted for in the system, as well as their facetable properties. The facetable
@@ -63,16 +58,14 @@ async def search_options(
     return config.searchable_classes
 
 
-# POST /rpc/search
 @router.post(
     path="/rpc/search",
     summary="Perform a search using query string and filter parameters",
     response_model=models.QueryResults,
 )
-@inject
 async def search(
     parameters: api_models.SearchParameters,
-    query_handler: QueryHandlerPort = Depends(Provide[Container.query_handler]),
+    query_handler: QueryHandlerDummy,
 ) -> Union[models.QueryResults, None]:
     """Perform search query"""
     try:

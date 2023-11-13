@@ -15,7 +15,6 @@
 #
 
 """Provides multiple fixtures in one spot, with a mongodb fixture that comes pre-populated"""
-# pylint: disable=unused-import, redefined-outer-name
 
 import glob
 import re
@@ -25,13 +24,14 @@ from dataclasses import dataclass
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.custom_types import JsonObject, PytestScope
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from mass.config import Config
-from mass.container import Container
 from mass.core import models
-from mass.main import get_configured_container, get_rest_api
+from mass.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
+from mass.ports.inbound.query_handler import QueryHandlerPort
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import get_resources_from_file
 
@@ -41,7 +41,8 @@ class JointFixture:
     """Returned by the `joint_fixture`."""
 
     config: Config
-    container: Container
+    query_handler: QueryHandlerPort
+    event_subscriber: KafkaEventSubscriber
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     rest_client: AsyncTestClient
@@ -53,17 +54,14 @@ class JointFixture:
     async def load_test_data(self) -> None:
         """Populate a collection for each file in test_data"""
         filename_pattern = re.compile(r"/(\w+)\.json")
-        query_handler = await self.container.query_handler()
-        query_handler._dao_collection._indexes_created = (
-            False  # pylint: disable=protected-access
-        )
+        self.query_handler._dao_collection._indexes_created = False  # type: ignore
         for filename in glob.glob("tests/fixtures/test_data/*.json"):
             match_obj = re.search(filename_pattern, filename)
             if match_obj:
                 collection_name = match_obj.group(1)
                 resources = get_resources_from_file(filename)
                 for resource in resources:
-                    await query_handler.load_resource(
+                    await self.query_handler.load_resource(
                         resource=resource, class_name=collection_name
                     )
 
@@ -89,17 +87,24 @@ async def joint_fixture_function(
     config = get_config(sources=[mongodb_fixture.config, kafka_fixture.config])
 
     # create a DI container instance:translators
-    async with get_configured_container(config=config) as container:
-        # setup an API test client:
-        api = get_rest_api(config=config)
-        async with AsyncTestClient(app=api) as rest_client:
-            yield JointFixture(
-                config=config,
-                container=container,
-                kafka=kafka_fixture,
-                mongodb=mongodb_fixture,
-                rest_client=rest_client,
-            )
+    async with prepare_core(config=config) as query_handler:
+        async with (
+            prepare_rest_app(
+                config=config, query_handler_override=query_handler
+            ) as app,
+            prepare_event_subscriber(
+                config=config, query_handler_override=query_handler
+            ) as event_subscriber,
+        ):
+            async with AsyncTestClient(app=app) as rest_client:
+                yield JointFixture(
+                    config=config,
+                    query_handler=query_handler,
+                    event_subscriber=event_subscriber,
+                    kafka=kafka_fixture,
+                    mongodb=mongodb_fixture,
+                    rest_client=rest_client,
+                )
 
 
 def get_joint_fixture(scope: PytestScope = "function"):
