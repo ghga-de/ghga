@@ -7,12 +7,12 @@ cors_allowed_methods: null
 cors_allowed_origins: null
 docs_url: /docs
 host: 0.0.0.0
-issuer: https://op.test
+issuer: https://op.test/
 log_level: info
 openapi_url: /openapi.json
 port: 8080
 service_name: top
-service_url: http://localhost:8080
+service_url: http://localhost:8080/
 user_domain: home.org
 valid_seconds: 3600
 workers: 1

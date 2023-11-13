@@ -18,7 +18,15 @@
 
 from typing import Optional, Union
 
-from pydantic import AnyHttpUrl, BaseModel, EmailStr, Field, PositiveFloat, PositiveInt
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    EmailStr,
+    Field,
+    PositiveFloat,
+    PositiveInt,
+    field_serializer,
+)
 
 from .. import __version__
 
@@ -51,11 +59,11 @@ class OidcConfiguration(BaseModel):
         __version__, description="Version of the test OpenID Connect Provider"
     )
     issuer: AnyHttpUrl = Field(
-        "https://op.test",
+        AnyHttpUrl("https://op.test"),
         description="URL that the OP asserts as its Issuer Identifier",
     )
     jwks_uri: AnyHttpUrl = Field(
-        "http://localhost:8080/jwks",
+        AnyHttpUrl("http://localhost:8080/jwks"),
         description="URL of the OP's JSON Web Key Set document",
     )
     scopes_supported: list[str] = Field(
@@ -77,11 +85,16 @@ class OidcConfiguration(BaseModel):
         " supported by the OP for the UserInfo endpoint",
     )
     userinfo_endpoint: AnyHttpUrl = Field(
-        "http://localhost:8080/userinfo",
+        AnyHttpUrl("http://localhost:8080/userinfo"),
         description="URL of the OP's UserInfo Endpoint",
     )
     service_documentation: AnyHttpUrl = Field(
-        "https://github.com/ghga-de/test-oidc-provider",
+        AnyHttpUrl("https://github.com/ghga-de/test-oidc-provider"),
         description="URL of a page with information"
         " that developers might need to know when using the OP",
     )
+
+    @field_serializer("issuer")
+    def serialize_system(self, system: AnyHttpUrl) -> str:
+        """Remove trailing slash from issuer."""
+        return str(system).rstrip("/")

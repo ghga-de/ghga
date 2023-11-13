@@ -22,6 +22,7 @@ from typing import Union
 from fastapi import FastAPI, HTTPException, Response, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ghga_service_commons.api import configure_app
+from pydantic import AnyHttpUrl
 
 from ..config import CONFIG
 from ..core.models import LoginInfo, OidcConfiguration, UserInfo
@@ -40,7 +41,7 @@ tags: list[Union[str, Enum]] = ["TestOP"]
 @app.get(
     "/health",
     summary="health",
-    tags=tags,  # pyright: ignore
+    tags=tags,
     status_code=status.HTTP_200_OK,
 )
 async def health():
@@ -51,14 +52,16 @@ async def health():
 @app.get(
     "/.well-known/openid-configuration",
     summary="Get the OpenID connect configuration",
-    tags=tags,  # pyright: ignore
+    tags=tags,
     status_code=status.HTTP_200_OK,
 )
 async def get_openid_configuration() -> OidcConfiguration:
     """The OpenID discovery endpoint."""
-    root_url = CONFIG.service_url.rstrip("/") + "/" + CONFIG.api_root_path.strip("/")
-    userinfo_endpoint = root_url + "userinfo"
-    jwks_uri = root_url + "jwks"
+    service_url = str(CONFIG.service_url).rstrip("/")
+    root_path = str(CONFIG.api_root_path).strip("/") + "/"
+    root_url = service_url + root_path
+    userinfo_endpoint = AnyHttpUrl(root_url + "userinfo")
+    jwks_uri = AnyHttpUrl(root_url + "jwks")
     return OidcConfiguration(
         userinfo_endpoint=userinfo_endpoint,
         issuer=CONFIG.issuer,
@@ -69,7 +72,7 @@ async def get_openid_configuration() -> OidcConfiguration:
 @app.get(
     "/jwks",
     summary="Get the JSON Web Key Set of the OP",
-    tags=tags,  # pyright: ignore
+    tags=tags,
     status_code=status.HTTP_200_OK,
 )
 async def get_jwks() -> Jwks:
@@ -80,7 +83,7 @@ async def get_jwks() -> Jwks:
 @app.post(
     "/login",
     summary="Log in as a test user",
-    tags=tags,  # pyright: ignore
+    tags=tags,
     status_code=status.HTTP_201_CREATED,
     responses={
         status.HTTP_201_CREATED: {
@@ -111,7 +114,7 @@ async def login(login_info: LoginInfo) -> Response:
 @app.get(
     "/userinfo",
     summary="Get user information",
-    tags=tags,  # pyright: ignore
+    tags=tags,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {

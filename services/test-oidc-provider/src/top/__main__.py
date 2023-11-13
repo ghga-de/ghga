@@ -19,7 +19,7 @@ import asyncio
 
 from ghga_service_commons.api import run_server
 
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
+from .api.main import app  # noqa: F401
 from .config import CONFIG, Config
 
 

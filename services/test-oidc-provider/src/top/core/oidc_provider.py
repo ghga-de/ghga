@@ -18,7 +18,7 @@
 
 import asyncio
 from contextlib import suppress
-from typing import Any, TypedDict, Union
+from typing import Any, Union
 
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
@@ -26,7 +26,9 @@ from ghga_service_commons.utils.jwt_helpers import (
     sign_and_serialize_token,
 )
 from jwcrypto import jwk
-from pydantic import AnyHttpUrl, BaseSettings, Field, PositiveInt
+from pydantic import AnyHttpUrl, Field, PositiveInt
+from pydantic_settings import BaseSettings
+from typing_extensions import TypedDict
 
 from .models import LoginInfo, UserInfo
 
@@ -42,7 +44,9 @@ class Jwks(TypedDict):
 class OidcProviderConfig(BaseSettings):
     """The configuration for a test OpenID Connect provider."""
 
-    issuer: AnyHttpUrl = Field("https://op.test", description="test issuer URL")
+    issuer: AnyHttpUrl = Field(
+        AnyHttpUrl("https://op.test"), description="test issuer URL"
+    )
     user_domain: str = Field(
         "home.org", description="domain name of the home organization of the test users"
     )
@@ -52,7 +56,7 @@ class OidcProviderConfig(BaseSettings):
     )
 
 
-class OidcProvider:  # pylint: disable=too-many-instance-attributes
+class OidcProvider:
     """A test OpenID Connect provider."""
 
     users: dict[str, UserInfo]
@@ -66,7 +70,7 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, config: OidcProviderConfig) -> None:
         """Initialize the OP."""
-        issuer = config.issuer
+        issuer = str(config.issuer).rstrip("/")
         self.issuer = issuer
         if not issuer or "://" not in issuer or "." not in issuer:
             raise ValueError(f"Invalid issuer: {issuer!r}")
@@ -77,7 +81,7 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
             issuer.split("://", 1)[-1].split("/", 1)[0].rsplit(".", 2)[-2:]
         )
         self.valid_seconds = config.valid_seconds
-        self.user_domain = user_domain
+        self.user_domain = str(user_domain)
         self.client_id = config.client_id
         self._generate_keys()
         self.users = {}
@@ -124,7 +128,7 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
     @property
     def jwks(self) -> Jwks:
         """Get the public key set."""
-        return self.key_set.export(private_keys=False, as_dict=True)  # pyright: ignore
+        return self.key_set.export(private_keys=False, as_dict=True)
 
     def _add_cleanup_task(self, token: str, valid_seconds: Union[int, float]) -> None:
         """Add a task to remove the token in the cache after the given time."""
@@ -162,7 +166,7 @@ class OidcProvider:  # pylint: disable=too-many-instance-attributes
             user_name = name.lower().replace(" ", "-")
             user_id = f"id-of-{user_name}"
             sub = f"{user_id}@{self.op_domain}"
-        user = UserInfo(sub=sub, email=email, name=name)  # type: ignore
+        user = UserInfo(sub=sub, email=email, name=name)
         jti = f"test-{self.serial_id}"
         claims = {
             "jti": jti,

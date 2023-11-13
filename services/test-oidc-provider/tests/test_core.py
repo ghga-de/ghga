@@ -114,7 +114,7 @@ async def test_user_info_for_custom_token():
 
     login = LoginInfo(
         name="Dr. Jane Roe",
-        email="jane@foo.edu",  # type: ignore
+        email="jane@foo.edu",
         sub="sub-of-jane",
         valid_seconds=30,
     )
@@ -217,7 +217,7 @@ async def test_validate_default_tokens():
 
     login = LoginInfo(
         name="Dr. Jane Roe",
-        email="jane@foo.edu",  # type: ignore
+        email="jane@foo.edu",
         sub="sub-of-jane",
         valid_seconds=30,
     )

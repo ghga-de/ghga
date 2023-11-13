@@ -1,6 +1,7 @@
 components:
   schemas:
     Jwks:
+      description: A JSON Web Key Set as a dictionary.
       properties:
         keys:
           items:
@@ -17,24 +18,29 @@ components:
       description: Data that is used to login as a user.
       properties:
         email:
+          anyOf:
+          - format: email
+            type: string
+          - type: 'null'
           description: e-mail address of the user
-          format: email
           title: Email
-          type: string
         name:
           description: the full name of the user
           title: Name
           type: string
         sub:
+          anyOf:
+          - type: string
+          - type: 'null'
           description: subject identifier
           title: Sub
-          type: string
         valid_seconds:
           anyOf:
           - exclusiveMinimum: 0.0
             type: integer
           - exclusiveMinimum: 0.0
             type: number
+          - type: 'null'
           description: seconds until the login expires
           title: Valid Seconds
       required:
@@ -55,18 +61,13 @@ components:
           title: Claims Supported
           type: array
         issuer:
-          default: https://op.test
           description: URL that the OP asserts as its Issuer Identifier
-          format: uri
-          maxLength: 65536
-          minLength: 1
           title: Issuer
           type: string
         jwks_uri:
           default: http://localhost:8080/jwks
           description: URL of the OP's JSON Web Key Set document
           format: uri
-          maxLength: 65536
           minLength: 1
           title: Jwks Uri
           type: string
@@ -94,7 +95,6 @@ components:
           description: URL of a page with information that developers might need to
             know when using the OP
           format: uri
-          maxLength: 65536
           minLength: 1
           title: Service Documentation
           type: string
@@ -102,7 +102,6 @@ components:
           default: http://localhost:8080/userinfo
           description: URL of the OP's UserInfo Endpoint
           format: uri
-          maxLength: 65536
           minLength: 1
           title: Userinfo Endpoint
           type: string
@@ -116,7 +115,7 @@ components:
           title: Userinfo Signing Alg Values Supported
           type: array
         version:
-          default: 0.2.2
+          default: 1.0.0
           description: Version of the test OpenID Connect Provider
           title: Version
           type: string
@@ -151,7 +150,7 @@ components:
 info:
   title: FastAPI
   version: 0.1.0
-openapi: 3.0.2
+openapi: 3.1.0
 paths:
   /.well-known/openid-configuration:
     get:

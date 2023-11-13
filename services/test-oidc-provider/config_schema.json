@@ -1,73 +1,49 @@
 {
-  "title": "ModSettings",
+  "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
-  "type": "object",
   "properties": {
     "issuer": {
-      "title": "Issuer",
+      "default": "https://op.test/",
       "description": "test issuer URL",
-      "default": "https://op.test",
-      "env_names": [
-        "top_issuer"
-      ],
-      "minLength": 1,
-      "maxLength": 65536,
       "format": "uri",
+      "minLength": 1,
+      "title": "Issuer",
       "type": "string"
     },
     "user_domain": {
-      "title": "User Domain",
-      "description": "domain name of the home organization of the test users",
       "default": "home.org",
-      "env_names": [
-        "top_user_domain"
-      ],
+      "description": "domain name of the home organization of the test users",
+      "title": "User Domain",
       "type": "string"
     },
     "client_id": {
-      "title": "Client Id",
-      "description": "test client ID",
       "default": "test-client",
-      "env_names": [
-        "top_client_id"
-      ],
+      "description": "test client ID",
+      "title": "Client Id",
       "type": "string"
     },
     "valid_seconds": {
-      "title": "Valid Seconds",
-      "description": "default expiration time of access tokens in seconds",
       "default": 3600,
-      "env_names": [
-        "top_valid_seconds"
-      ],
+      "description": "default expiration time of access tokens in seconds",
       "exclusiveMinimum": 0,
+      "title": "Valid Seconds",
       "type": "integer"
     },
     "host": {
-      "title": "Host",
-      "description": "IP of the host.",
       "default": "127.0.0.1",
-      "env_names": [
-        "top_host"
-      ],
+      "description": "IP of the host.",
+      "title": "Host",
       "type": "string"
     },
     "port": {
-      "title": "Port",
-      "description": "Port to expose the server on the specified host",
       "default": 8080,
-      "env_names": [
-        "top_port"
-      ],
+      "description": "Port to expose the server on the specified host",
+      "title": "Port",
       "type": "integer"
     },
     "log_level": {
-      "title": "Log Level",
-      "description": "Controls the verbosity of the log.",
       "default": "info",
-      "env_names": [
-        "top_log_level"
-      ],
+      "description": "Controls the verbosity of the log.",
       "enum": [
         "critical",
         "error",
@@ -76,127 +52,135 @@
         "debug",
         "trace"
       ],
+      "title": "Log Level",
       "type": "string"
     },
     "auto_reload": {
-      "title": "Auto Reload",
-      "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
       "default": false,
-      "env_names": [
-        "top_auto_reload"
-      ],
+      "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
+      "title": "Auto Reload",
       "type": "boolean"
     },
     "workers": {
-      "title": "Workers",
-      "description": "Number of workers processes to run.",
       "default": 1,
-      "env_names": [
-        "top_workers"
-      ],
+      "description": "Number of workers processes to run.",
+      "title": "Workers",
       "type": "integer"
     },
     "api_root_path": {
-      "title": "Api Root Path",
-      "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "default": "/",
-      "env_names": [
-        "top_api_root_path"
-      ],
+      "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
+      "title": "Api Root Path",
       "type": "string"
     },
     "openapi_url": {
-      "title": "Openapi Url",
-      "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
       "default": "/openapi.json",
-      "env_names": [
-        "top_openapi_url"
-      ],
+      "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
+      "title": "Openapi Url",
       "type": "string"
     },
     "docs_url": {
-      "title": "Docs Url",
-      "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
       "default": "/docs",
-      "env_names": [
-        "top_docs_url"
-      ],
+      "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
+      "title": "Docs Url",
       "type": "string"
     },
     "cors_allowed_origins": {
-      "title": "Cors Allowed Origins",
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.",
-      "example": [
-        "https://example.org",
-        "https://www.example.org"
+      "examples": [
+        [
+          "https://example.org",
+          "https://www.example.org"
+        ]
       ],
-      "env_names": [
-        "top_cors_allowed_origins"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "title": "Cors Allowed Origins"
     },
     "cors_allow_credentials": {
-      "title": "Cors Allow Credentials",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.",
-      "example": [
-        "https://example.org",
-        "https://www.example.org"
+      "examples": [
+        [
+          "https://example.org",
+          "https://www.example.org"
+        ]
       ],
-      "env_names": [
-        "top_cors_allow_credentials"
-      ],
-      "type": "boolean"
+      "title": "Cors Allow Credentials"
     },
     "cors_allowed_methods": {
-      "title": "Cors Allowed Methods",
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.",
-      "example": [
-        "*"
+      "examples": [
+        [
+          "*"
+        ]
       ],
-      "env_names": [
-        "top_cors_allowed_methods"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "title": "Cors Allowed Methods"
     },
     "cors_allowed_headers": {
-      "title": "Cors Allowed Headers",
-      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
-      "example": [],
-      "env_names": [
-        "top_cors_allowed_headers"
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
       ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "default": null,
+      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
+      "examples": [
+        []
+      ],
+      "title": "Cors Allowed Headers"
     },
     "service_name": {
-      "title": "Service Name",
-      "description": "Short name of this service",
       "default": "top",
-      "env_names": [
-        "top_service_name"
-      ],
+      "description": "Short name of this service",
+      "title": "Service Name",
       "type": "string"
     },
     "service_url": {
-      "title": "Service Url",
+      "default": "https://op.test/",
       "description": "External base URL of this service",
-      "default": "https://op.test",
-      "env_names": [
-        "top_service_url"
-      ],
-      "minLength": 1,
-      "maxLength": 65536,
       "format": "uri",
+      "minLength": 1,
+      "title": "Service Url",
       "type": "string"
     }
   },
-  "additionalProperties": false
+  "title": "ModSettings",
+  "type": "object"
 }

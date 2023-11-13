@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "top"
-version = "0.2.2"
+version = "1.0.0"
 description = "Test OpenID Connect provider"
 readme = "README.md"
 authors = [
@@ -24,8 +24,8 @@ classifiers = [
 ]
 dependencies = [
     "typer>=0.7.0",
-    "ghga-service-commons[api,auth]>=0.7.1",
-    "hexkit>=0.10.2",
+    "ghga-service-commons[api,auth]>=1.1.0",
+    "hexkit>=0.11.1",
 ]
 
 [project.license]
