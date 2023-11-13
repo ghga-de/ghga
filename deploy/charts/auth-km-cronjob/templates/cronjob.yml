@@ -29,6 +29,8 @@ spec:
               value: {{ .Values.vault.address }}
             - name: VAULT_NAMESPACE
               value: {{ .Values.vault.namespace }}
+            - name: AUTH_KM_KUBE_ROLE
+              value: {{ .Values.vault.kubeRole }}
             image: "{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
             {{- if eq .Values.service.keyType "internal" }}
             {{- include "ghga-common.command-args" (list .Values.service.runCommands.internal )  | nindent 12 }}
