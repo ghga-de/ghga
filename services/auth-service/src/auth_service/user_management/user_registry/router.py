@@ -94,7 +94,9 @@ async def post_user(
     else:
         raise HTTPException(status_code=409, detail="User was already registered.")
     full_user_data = UserData(
-        **user_data.dict(), status=INITIAL_USER_STATUS, registration_date=now_as_utc()
+        **user_data.model_dump(),
+        status=INITIAL_USER_STATUS,
+        registration_date=now_as_utc(),
     )
     try:
         user = await user_dao.insert(full_user_data)
@@ -148,7 +150,7 @@ async def put_user(
         raise HTTPException(status_code=422, detail="User cannot be updated.")
     try:
         user = await user_dao.get_by_id(id_)
-        user = user.copy(update=user_data.dict())
+        user = user.model_copy(update=user_data.model_dump())
         await user_dao.update(user)
     except Exception as error:
         log.error("Could not update user: %s", error)
@@ -210,7 +212,7 @@ async def get_user(
         ) from error
     if not is_steward(auth_context) and user.status_change is not None:
         # only data stewards should be able to see the status change information
-        user = user.copy(update={"status_change": None})
+        user = user.model_copy(update={"status_change": None})
     return user
 
 
@@ -240,7 +242,7 @@ async def patch_user(
     auth_context: AuthContext = require_active,
 ) -> Response:
     """Modify user data"""
-    update_data = user_data.dict(exclude_unset=True)
+    update_data = user_data.model_dump(exclude_unset=True)
     # Everybody is allowed to modify their own data except the status,
     # but only data stewards are allowed to modify other accounts
     allowed = (
@@ -263,7 +265,7 @@ async def patch_user(
                 context="manual change",
                 change_date=now_as_utc(),
             )
-        user = user.copy(update=update_data)
+        user = user.model_copy(update=update_data)
         await user_dao.update(user)
     except ResourceNotFoundError as error:
         raise HTTPException(

@@ -42,7 +42,7 @@ def test_decodes_and_validates_a_valid_access_token():
         "token_class",
     }
     assert claims["client_id"] == CONFIG.oidc_client_id
-    assert claims["iss"] == CONFIG.oidc_authority_url
+    assert claims["iss"] == str(CONFIG.oidc_authority_url).rstrip("/")
     assert claims["jti"] == "123-456-789-0"
     assert claims["sub"] == "john@aai.org"
     assert claims["foo"] == "bar"

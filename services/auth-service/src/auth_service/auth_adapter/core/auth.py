@@ -174,7 +174,7 @@ class JWTConfig:
 
     def __init__(self, config: Config = CONFIG) -> None:
         """Load the JWT related configuration parameters."""
-        discovery = OIDCDiscovery(config.oidc_authority_url)
+        discovery = OIDCDiscovery(str(config.oidc_authority_url))
 
         external_keys = config.auth_ext_keys
         if not external_keys:

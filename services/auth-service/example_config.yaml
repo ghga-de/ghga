@@ -33,11 +33,11 @@ host: 0.0.0.0
 include_apis:
 - users
 log_level: debug
-oidc_authority_url: https://proxy.aai.lifescience-ri.eu
+oidc_authority_url: https://proxy.aai.lifescience-ri.eu/
 oidc_client_id: ghga-data-portal
 oidc_userinfo_endpoint: https://proxy.aai.lifescience-ri.eu/OIDC/userinfo
 openapi_url: /openapi.json
-organization_url: https://ghga.de
+organization_url: https://ghga.de/
 port: 8080
 run_auth_adapter: false
 service_name: auth_service

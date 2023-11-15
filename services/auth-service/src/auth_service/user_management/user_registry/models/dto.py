@@ -43,11 +43,9 @@ class AcademicTitle(str, Enum):
 
 
 class BaseDto(BaseModel):
-    """Base model preconfigured for use as Dto."""
+    """Base model pre-configured for use as Dto."""
 
-    class Config:
-        extra = "forbid"
-        frozen = True
+    model_config = {"extra": "forbid", "frozen": True}
 
 
 class StatusChange(BaseDto):
@@ -61,8 +59,10 @@ class StatusChange(BaseDto):
         title="Changed by",
         description="ID of the user who changed the status",
     )
-    context: str = Field(default=None, description="Status change context")
-    change_date: DateTimeUTC = Field(default=None, description="Date of last change")
+    context: Optional[str] = Field(default=None, description="Status change context")
+    change_date: Optional[DateTimeUTC] = Field(
+        default=None, description="Date of last change"
+    )
 
 
 class UserBasicData(BaseDto):
@@ -71,7 +71,7 @@ class UserBasicData(BaseDto):
     name: str = Field(
         default=...,
         description="Full name of the user",
-        example="Rosalind Franklin",
+        examples=["Rosalind Franklin"],
     )
     title: Optional[AcademicTitle] = Field(
         default=None, title="Academic title", description="Academic title of the user"
@@ -79,7 +79,7 @@ class UserBasicData(BaseDto):
     email: EmailStr = Field(
         default=...,
         description="Preferred e-mail address of the user",
-        example="user@home.org",
+        examples=["user@home.org"],
     )
 
 
@@ -90,7 +90,7 @@ class UserRegisteredData(UserBasicData):
         default=...,
         title="External ID",
         description="External (Life Science) ID",
-        example="user@lifescience-ri.eu",
+        examples=["user@lifescience-ri.eu"],
     )
 
 

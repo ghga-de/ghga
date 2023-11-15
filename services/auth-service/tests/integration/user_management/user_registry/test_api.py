@@ -16,6 +16,7 @@
 """Test the REST API"""
 
 from datetime import datetime
+from typing import cast
 
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -40,6 +41,14 @@ OPT_USER_DATA = {
 }
 
 MAX_USER_DATA = {**MIN_USER_DATA, **OPT_USER_DATA}
+
+
+def seconds_passed(date_string: str) -> float:
+    """Get number of seconds that have passed since the given date string."""
+    return (
+        cast(datetime, now_as_utc())
+        - datetime.fromisoformat(date_string.replace("Z", "+00:00"))
+    ).total_seconds()
 
 
 def test_health_check(client):
@@ -70,10 +79,7 @@ def test_post_user(client_with_db, user_headers):
 
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
-    date_diff = now_as_utc() - datetime.fromisoformat(
-        user.pop("registration_date")
-    )  # pyright: ignore
-    assert 0 <= date_diff.total_seconds() <= 10
+    assert 0 <= seconds_passed(user.pop("registration_date")) <= 10
 
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
@@ -100,10 +106,7 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
 
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
-    date_diff = now_as_utc() - datetime.fromisoformat(
-        user.pop("registration_date")
-    )  # pyright: ignore
-    assert 0 <= date_diff.total_seconds() <= 10
+    assert 0 <= seconds_passed(user.pop("registration_date")) <= 10
 
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
@@ -152,7 +155,7 @@ def test_post_user_with_invalid_email(client, user_headers):
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
-    assert error["detail"][0]["msg"] == "value is not a valid email address"
+    assert "email address is not valid" in error["detail"][0]["msg"]
 
 
 def test_post_user_with_different_ext_id(client, user_headers):
@@ -200,10 +203,7 @@ def test_put_user(client_with_db, user_headers):
     assert user.pop("ext_id") == old_data["ext_id"]
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
-    date_diff = now_as_utc() - datetime.fromisoformat(
-        user.pop("registration_date")
-    )  # pyright: ignore
-    assert 0 <= date_diff.total_seconds() <= 10
+    assert 0 <= seconds_passed(user.pop("registration_date")) <= 10
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
 
@@ -231,7 +231,7 @@ def test_put_user_with_too_much_data(client_with_db):
     response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
-    assert error["detail"][0]["msg"] == "extra fields not permitted"
+    assert "Extra inputs are not permitted" in error["detail"][0]["msg"]
 
 
 def test_put_user_with_invalid_data(client_with_db):
@@ -246,7 +246,7 @@ def test_put_user_with_invalid_data(client_with_db):
     response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
-    assert error["detail"][0]["msg"] == "value is not a valid email address"
+    assert "email address is not valid" in error["detail"][0]["msg"]
 
 
 def test_put_inactive_user(client_with_db, user_headers):
@@ -421,10 +421,7 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
     assert status_change["previous"] == "active"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
-    date_diff = now_as_utc() - datetime.fromisoformat(
-        status_change["change_date"]
-    )  # pyright: ignore
-    assert 0 <= date_diff.total_seconds() <= 10
+    assert 0 <= seconds_passed(status_change["change_date"]) <= 10
 
     assert user == expected_user
 
@@ -436,10 +433,7 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
 
     # cannot get status change as normal user
     assert user.pop("status_change") is None
-    date_diff = now_as_utc() - datetime.fromisoformat(
-        status_change["change_date"]
-    )  # pyright: ignore
-    assert 0 <= date_diff.total_seconds() <= 10
+    assert 0 <= seconds_passed(status_change["change_date"]) <= 10
 
     assert user == expected_user
 
@@ -474,10 +468,7 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     assert status_change["previous"] == "active"
     assert status_change["by"] == "steve-internal"
     assert status_change["context"] == "manual change"
-    date_diff = now_as_utc() - datetime.fromisoformat(
-        status_change["change_date"]
-    )  # pyright: ignore
-    assert 0 <= date_diff.total_seconds() <= 10
+    assert 0 <= seconds_passed(status_change["change_date"]) <= 10
 
     assert user == expected_user
 

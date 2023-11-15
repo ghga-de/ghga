@@ -21,7 +21,6 @@ from collections.abc import Generator
 from fastapi.testclient import TestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
-from pydantic import EmailStr
 from pytest import fixture
 from testcontainers.mongodb import MongoDbContainer
 
@@ -43,9 +42,9 @@ def fixture_client() -> TestClient:
 
 data_steward = User(
     id="the-id-of-rod-steward",
-    ext_id=EmailStr("rod@ls.org"),
+    ext_id="rod@ls.org",
     name="Rod Steward",
-    email=EmailStr("rod@example.org"),
+    email="rod@example.org",
     status=UserStatus.ACTIVE,
     registration_date=now_as_utc(),
 )

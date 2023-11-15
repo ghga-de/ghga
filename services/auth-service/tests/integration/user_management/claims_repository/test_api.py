@@ -34,9 +34,9 @@ from .fixtures import (  # noqa: F401
 ROLE_CLAIM_DATA = {
     "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
     "visa_value": "data-steward@ghga.de",
-    "valid_from": "2022-10-01T12:00:00+00:00",
-    "valid_until": "2022-10-31T12:00:00+00:00",
-    "assertion_date": "2022-09-01T12:00:00+00:00",
+    "valid_from": "2022-10-01T12:00:00Z",
+    "valid_until": "2022-10-31T12:00:00Z",
+    "assertion_date": "2022-09-01T12:00:00Z",
     "source": "https://ghga.de",
     "asserted_by": "system",
 }
@@ -44,7 +44,7 @@ ROLE_CLAIM_DATA = {
 DATASET_CLAIM_DATA = {
     "visa_type": "ControlledAccessGrants",
     "visa_value": "https://ghga.de/datasets/some-dataset-id",
-    "assertion_date": "2022-06-01T12:00:00+00:00",
+    "assertion_date": "2022-06-01T12:00:00Z",
     "source": "https://ghga.de",
     "asserted_by": "system",
 }
@@ -104,7 +104,7 @@ def test_get_claims(client_with_db):
     claim1 = ROLE_CLAIM_DATA
     claim2 = {
         **claim1,
-        "assertion_date": "2022-09-01T13:00:00+00:00",
+        "assertion_date": "2022-09-01T13:00:00Z",
         "visa_type": "ResearcherStatus",
         "visa_value": "researcher@ghga.de",
     }
@@ -150,7 +150,7 @@ def test_patch_claim(client_with_db):
     assert posted_claim.pop("revocation_date") is None
 
     # revoke test claim
-    revocation_date = "2022-10-15T12:00:00+00:00"
+    revocation_date = "2022-10-15T12:00:00Z"
     patch_data = {"revocation_date": revocation_date}
     response = client_with_db.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
@@ -174,7 +174,7 @@ def test_patch_claim(client_with_db):
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     # test with later revocation date
-    patch_data = {"revocation_date": "2022-10-15T13:00:00+00:00"}
+    patch_data = {"revocation_date": "2022-10-15T13:00:00Z"}
     response = client_with_db.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
@@ -182,7 +182,7 @@ def test_patch_claim(client_with_db):
     assert response.json()["detail"] == "Already revoked earlier."
 
     # test with earlier revocation date
-    revocation_date = "2022-10-15T11:00:00+00:00"
+    revocation_date = "2022-10-15T11:00:00Z"
     patch_data = {"revocation_date": revocation_date}
     response = client_with_db.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
@@ -282,15 +282,14 @@ def test_grant_download_access(client_with_db):
     current_date = now_as_utc()
     current_year = current_date.year
     validity = {
-        "valid_from": f"{current_year - 1}-01-01T00:00:00+00:00",
-        "valid_until": f"{current_year + 1}-12-31T23:59:59+00:00",
+        "valid_from": f"{current_year - 1}-01-01T00:00:00Z",
+        "valid_until": f"{current_year + 1}-12-31T23:59:59Z",
     }
 
     response = client_with_db.post(
         "/download-access/users/john@ghga.de/datasets/some-dataset-id",
         json=validity,
     )
-
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     response = client_with_db.get("/users/john@ghga.de/claims")
@@ -304,7 +303,8 @@ def test_grant_download_access(client_with_db):
     creation_date = claim_data.pop("creation_date")
     assert creation_date
     assert claim_data.pop("assertion_date") == creation_date
-    assert 0 <= (datetime.fromisoformat(creation_date) - current_date).seconds < 5
+    creation_datetime = datetime.fromisoformat(creation_date.replace("Z", "+00:00"))
+    assert 0 <= (creation_datetime - current_date).seconds < 5
 
     assert claim_data == {
         "asserted_by": "dac",

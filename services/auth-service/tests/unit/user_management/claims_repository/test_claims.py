@@ -39,6 +39,8 @@ from auth_service.user_management.claims_repository.models.dto import (
 
 datetime_utc = DateTimeUTC.construct
 
+ORG_URL = str(CONFIG.organization_url).rstrip("/")
+
 
 def test_is_valid_claim():
     """Test that claims can be checked for validity regarding expiry."""
@@ -58,7 +60,7 @@ def test_is_valid_claim():
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 7))
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 27))
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2029, 12, 31))
-    claim = claim.copy(update={"revocation_date": datetime(2022, 11, 30)})
+    claim = claim.model_copy(update={"revocation_date": datetime(2022, 11, 30)})
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2020, 1, 1))
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 17))
     assert not is_valid_claim(claim, now=lambda: datetime_utc(2029, 12, 31))
@@ -82,7 +84,7 @@ def test_is_internal_claim():
     assert not is_internal_claim(good_claim, VisaType.RESEARCHER_STATUS)
 
     def check_tampered_claim(**kwargs):
-        bad_claim = good_claim.copy(update=kwargs)
+        bad_claim = good_claim.model_copy(update=kwargs)
         return not is_internal_claim(bad_claim, VisaType.GHGA_ROLE)
 
     assert check_tampered_claim(source="https://wrong.org")
@@ -94,7 +96,7 @@ def test_create_data_steward_claim():
     """Test that a data steward claim can be created."""
     created_claim = create_data_steward_claim(user_id="some-user-id")
     assert created_claim.user_id == "some-user-id"
-    full_claim = Claim(id="some-claim-id", **created_claim.dict())
+    full_claim = Claim(id="some-claim-id", **created_claim.model_dump())
     assert is_valid_claim(full_claim)
     assert is_data_steward_claim(full_claim)
     assert not has_download_access_for_dataset(full_claim, "some-dataset-id")
@@ -117,7 +119,7 @@ def test_is_data_steward_claim():
     assert is_data_steward_claim(good_claim)
 
     def check_tampered_claim(**kwargs):
-        bad_claim = good_claim.copy(update=kwargs)
+        bad_claim = good_claim.model_copy(update=kwargs)
         return not is_data_steward_claim(bad_claim)
 
     assert check_tampered_claim(visa_type=VisaType.AFFILIATION_AND_ROLE)
@@ -139,7 +141,7 @@ def test_create_controlled_access_claim():
     )
     assert created_claim.user_id == "some-user-id"
     assert get_dataset_for_value(str(created_claim.visa_value)) == "some-dataset-id"
-    full_claim = Claim(id="some-claim-id", **created_claim.dict())
+    full_claim = Claim(id="some-claim-id", **created_claim.model_dump())
     assert is_valid_claim(full_claim)
     assert not is_data_steward_claim(full_claim)
     assert has_download_access_for_dataset(full_claim, "some-dataset-id")
@@ -148,32 +150,34 @@ def test_create_controlled_access_claim():
 
 def test_get_dataset_for_value():
     """Test that a dataset id for a visa value can be created."""
-    source = CONFIG.organization_url
     assert (
-        get_dataset_for_value(f"{source}/datasets/some-dataset-id") == "some-dataset-id"
+        get_dataset_for_value(f"{ORG_URL}/datasets/some-dataset-id")
+        == "some-dataset-id"
     )
 
 
 def test_has_download_access_for_dataset():
     """Test that the dataset access permission can be derived from a claim."""
-    org_url = CONFIG.organization_url
     good_claim = Claim(
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value=f"{org_url}/datasets/some-dataset-id",  # type: ignore
-        source=org_url,
+        visa_value=f"{ORG_URL}/datasets/some-dataset-id",  # pyright: ignore
+        source=ORG_URL,  # type: ignore[arg-type]
+        sub_source=None,
         assertion_date=datetime_utc(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
         valid_from=datetime_utc(2022, 11, 15),
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
+        revocation_date=None,
+        conditions=None,
     )
     assert has_download_access_for_dataset(good_claim, "some-dataset-id")
     assert not has_download_access_for_dataset(good_claim, "another-dataset-id")
 
     def check_tampered_claim(**kwargs):
-        bad_claim = good_claim.copy(update=kwargs)
+        bad_claim = good_claim.model_copy(update=kwargs)
         return not has_download_access_for_dataset(bad_claim, "some-dataset-id")
 
     assert check_tampered_claim(visa_type=VisaType.ACCEPTED_TERMS_AND_POLICIES)
@@ -184,28 +188,30 @@ def test_has_download_access_for_dataset():
     assert check_tampered_claim(
         visa_value="https://another.org/datasets/some-dataset-id"
     )
-    assert check_tampered_claim(visa_value=[f"{org_url}/datasets/some-dataset-id"])
+    assert check_tampered_claim(visa_value=[f"{ORG_URL}/datasets/some-dataset-id"])
 
 
 def test_dateset_id_when_download_access():
     """Test that the dataset ID for access can be derived from a claim."""
-    org_url = CONFIG.organization_url
     good_claim = Claim(
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value=f"{org_url}/datasets/some-dataset-id",  # type: ignore
-        source=org_url,
+        visa_value=f"{ORG_URL}/datasets/some-dataset-id",  # pyright: ignore
+        source=ORG_URL,  # type: ignore[arg-type]
+        sub_source=None,
         assertion_date=datetime_utc(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
         valid_from=datetime_utc(2022, 11, 15),
         valid_until=datetime_utc(2022, 11, 20),
         creation_date=datetime_utc(2022, 11, 1),
+        revocation_date=None,
+        conditions=None,
     )
     assert dataset_id_for_download_access(good_claim) == "some-dataset-id"
 
     def check_tampered_claim(**kwargs):
-        bad_claim = good_claim.copy(update=kwargs)
+        bad_claim = good_claim.model_copy(update=kwargs)
         return dataset_id_for_download_access(bad_claim) is None
 
     assert check_tampered_claim(visa_type=VisaType.ACCEPTED_TERMS_AND_POLICIES)
@@ -216,4 +222,4 @@ def test_dateset_id_when_download_access():
     assert check_tampered_claim(
         visa_value="https://another.org/datasets/some-dataset-id"
     )
-    assert check_tampered_claim(visa_value=[f"{org_url}/datasets/some-dataset-id"])
+    assert check_tampered_claim(visa_value=[f"{ORG_URL}/datasets/some-dataset-id"])

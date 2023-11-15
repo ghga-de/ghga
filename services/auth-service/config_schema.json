@@ -1,76 +1,61 @@
 {
-  "title": "ModSettings",
+  "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
-  "type": "object",
   "properties": {
     "auth_key": {
-      "title": "Auth Key",
-      "env_names": [
-        "auth_service_auth_key"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ],
-      "type": "string"
+      "default": null,
+      "title": "Auth Key"
     },
     "auth_algs": {
-      "title": "Auth Algs",
       "default": [
         "ES256"
       ],
-      "env_names": [
-        "auth_service_auth_algs"
-      ],
-      "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "title": "Auth Algs",
+      "type": "array"
     },
     "auth_check_claims": {
-      "title": "Auth Check Claims",
       "default": {
-        "name": null,
         "email": null,
+        "exp": null,
         "iat": null,
-        "exp": null
+        "name": null
       },
-      "env_names": [
-        "auth_service_auth_check_claims"
-      ],
+      "title": "Auth Check Claims",
       "type": "object"
     },
     "auth_map_claims": {
-      "title": "Auth Map Claims",
-      "default": {},
-      "env_names": [
-        "auth_service_auth_map_claims"
-      ],
-      "type": "object",
       "additionalProperties": {
         "type": "string"
-      }
+      },
+      "default": {},
+      "title": "Auth Map Claims",
+      "type": "object"
     },
     "host": {
-      "title": "Host",
-      "description": "IP of the host.",
       "default": "127.0.0.1",
-      "env_names": [
-        "auth_service_host"
-      ],
+      "description": "IP of the host.",
+      "title": "Host",
       "type": "string"
     },
     "port": {
-      "title": "Port",
-      "description": "Port to expose the server on the specified host",
       "default": 8080,
-      "env_names": [
-        "auth_service_port"
-      ],
+      "description": "Port to expose the server on the specified host",
+      "title": "Port",
       "type": "integer"
     },
     "log_level": {
-      "title": "Log Level",
       "default": "debug",
-      "env_names": [
-        "auth_service_log_level"
-      ],
       "enum": [
         "critical",
         "error",
@@ -79,215 +64,210 @@
         "debug",
         "trace"
       ],
+      "title": "Log Level",
       "type": "string"
     },
     "auto_reload": {
-      "title": "Auto Reload",
-      "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
       "default": false,
-      "env_names": [
-        "auth_service_auto_reload"
-      ],
+      "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
+      "title": "Auto Reload",
       "type": "boolean"
     },
     "workers": {
-      "title": "Workers",
-      "description": "Number of workers processes to run.",
       "default": 1,
-      "env_names": [
-        "auth_service_workers"
-      ],
+      "description": "Number of workers processes to run.",
+      "title": "Workers",
       "type": "integer"
     },
     "api_root_path": {
-      "title": "Api Root Path",
-      "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "default": "/",
-      "env_names": [
-        "auth_service_api_root_path"
-      ],
+      "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
+      "title": "Api Root Path",
       "type": "string"
     },
     "openapi_url": {
-      "title": "Openapi Url",
-      "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
       "default": "/openapi.json",
-      "env_names": [
-        "auth_service_openapi_url"
-      ],
+      "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
+      "title": "Openapi Url",
       "type": "string"
     },
     "docs_url": {
-      "title": "Docs Url",
-      "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
       "default": "/docs",
-      "env_names": [
-        "auth_service_docs_url"
-      ],
+      "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
+      "title": "Docs Url",
       "type": "string"
     },
     "cors_allowed_origins": {
-      "title": "Cors Allowed Origins",
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.",
-      "example": [
-        "https://example.org",
-        "https://www.example.org"
+      "examples": [
+        [
+          "https://example.org",
+          "https://www.example.org"
+        ]
       ],
-      "env_names": [
-        "auth_service_cors_allowed_origins"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "title": "Cors Allowed Origins"
     },
     "cors_allow_credentials": {
-      "title": "Cors Allow Credentials",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.",
-      "example": [
-        "https://example.org",
-        "https://www.example.org"
+      "examples": [
+        [
+          "https://example.org",
+          "https://www.example.org"
+        ]
       ],
-      "env_names": [
-        "auth_service_cors_allow_credentials"
-      ],
-      "type": "boolean"
+      "title": "Cors Allow Credentials"
     },
     "cors_allowed_methods": {
-      "title": "Cors Allowed Methods",
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.",
-      "example": [
-        "*"
+      "examples": [
+        [
+          "*"
+        ]
       ],
-      "env_names": [
-        "auth_service_cors_allowed_methods"
-      ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "title": "Cors Allowed Methods"
     },
     "cors_allowed_headers": {
-      "title": "Cors Allowed Headers",
-      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
-      "example": [],
-      "env_names": [
-        "auth_service_cors_allowed_headers"
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
       ],
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "default": null,
+      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
+      "examples": [
+        []
+      ],
+      "title": "Cors Allowed Headers"
     },
     "service_name": {
-      "title": "Service Name",
       "default": "auth_service",
-      "env_names": [
-        "auth_service_service_name"
-      ],
+      "title": "Service Name",
       "type": "string"
     },
     "run_auth_adapter": {
-      "title": "Run Auth Adapter",
       "default": false,
-      "env_names": [
-        "auth_service_run_auth_adapter"
-      ],
+      "title": "Run Auth Adapter",
       "type": "boolean"
     },
     "api_ext_path": {
-      "title": "Api Ext Path",
       "default": "/api/auth",
-      "env_names": [
-        "auth_service_api_ext_path"
-      ],
+      "title": "Api Ext Path",
       "type": "string"
     },
     "auth_ext_keys": {
-      "title": "Auth Ext Keys",
-      "env_names": [
-        "auth_service_auth_ext_keys"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ],
-      "type": "string"
+      "default": null,
+      "title": "Auth Ext Keys"
     },
     "auth_ext_algs": {
-      "title": "Auth Ext Algs",
       "default": [
         "RS256",
         "ES256"
       ],
-      "env_names": [
-        "auth_service_auth_ext_algs"
-      ],
-      "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "title": "Auth Ext Algs",
+      "type": "array"
     },
     "basic_auth_credentials": {
-      "title": "Basic Auth Credentials",
-      "env_names": [
-        "auth_service_basic_auth_credentials"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ],
-      "type": "string"
+      "default": null,
+      "title": "Basic Auth Credentials"
     },
     "basic_auth_realm": {
-      "title": "Basic Auth Realm",
       "default": "GHGA Data Portal",
-      "env_names": [
-        "auth_service_basic_auth_realm"
-      ],
+      "title": "Basic Auth Realm",
       "type": "string"
     },
     "allow_read_paths": {
-      "title": "Allow Read Paths",
       "default": [
         "/.well-known/*",
         "/service-logo.png"
       ],
-      "env_names": [
-        "auth_service_allow_read_paths"
-      ],
-      "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "title": "Allow Read Paths",
+      "type": "array"
     },
     "allow_write_paths": {
-      "title": "Allow Write Paths",
       "default": [],
-      "env_names": [
-        "auth_service_allow_write_paths"
-      ],
-      "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "title": "Allow Write Paths",
+      "type": "array"
     },
     "include_apis": {
-      "title": "Include Apis",
       "default": [
         "users"
       ],
-      "env_names": [
-        "auth_service_include_apis"
-      ],
-      "type": "array",
       "items": {
         "enum": [
           "users",
           "claims"
         ],
         "type": "string"
-      }
+      },
+      "title": "Include Apis",
+      "type": "array"
     },
     "add_as_data_stewards": {
-      "title": "Add As Data Stewards",
       "default": [],
-      "env_names": [
-        "auth_service_add_as_data_stewards"
-      ],
-      "type": "array",
       "items": {
         "anyOf": [
           {
@@ -297,83 +277,69 @@
             "type": "object"
           }
         ]
-      }
+      },
+      "title": "Add As Data Stewards",
+      "type": "array"
     },
     "oidc_authority_url": {
-      "title": "Oidc Authority Url",
       "default": "https://proxy.aai.lifescience-ri.eu",
-      "env_names": [
-        "auth_service_oidc_authority_url"
-      ],
-      "minLength": 1,
-      "maxLength": 2083,
       "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Oidc Authority Url",
       "type": "string"
     },
     "oidc_userinfo_endpoint": {
-      "title": "Oidc Userinfo Endpoint",
-      "default": "https://proxy.aai.lifescience-ri.eu/OIDC/userinfo",
-      "env_names": [
-        "auth_service_oidc_userinfo_endpoint"
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ],
-      "minLength": 1,
-      "maxLength": 2083,
-      "format": "uri",
-      "type": "string"
+      "default": "https://proxy.aai.lifescience-ri.eu/OIDC/userinfo",
+      "title": "Oidc Userinfo Endpoint"
     },
     "oidc_client_id": {
-      "title": "Oidc Client Id",
       "default": "ghga-data-portal",
-      "env_names": [
-        "auth_service_oidc_client_id"
-      ],
+      "title": "Oidc Client Id",
       "type": "string"
     },
     "organization_url": {
-      "title": "Organization Url",
       "default": "https://ghga.de",
-      "env_names": [
-        "auth_service_organization_url"
-      ],
-      "minLength": 1,
-      "maxLength": 2083,
       "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Organization Url",
       "type": "string"
     },
     "db_url": {
-      "title": "Db Url",
       "default": "mongodb://mongodb:27017",
-      "env_names": [
-        "auth_service_db_url"
-      ],
+      "format": "password",
+      "title": "Db Url",
       "type": "string",
-      "writeOnly": true,
-      "format": "password"
+      "writeOnly": true
     },
     "db_name": {
-      "title": "Db Name",
       "default": "user-management",
-      "env_names": [
-        "auth_service_db_name"
-      ],
+      "title": "Db Name",
       "type": "string"
     },
     "users_collection": {
-      "title": "Users Collection",
       "default": "users",
-      "env_names": [
-        "auth_service_users_collection"
-      ],
+      "title": "Users Collection",
       "type": "string"
     },
     "claims_collection": {
-      "title": "Claims Collection",
       "default": "claims",
-      "env_names": [
-        "auth_service_claims_collection"
-      ],
+      "title": "Claims Collection",
       "type": "string"
     }
   },
-  "additionalProperties": false
+  "title": "ModSettings",
+  "type": "object"
 }

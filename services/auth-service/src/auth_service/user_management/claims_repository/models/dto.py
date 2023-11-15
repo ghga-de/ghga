@@ -19,10 +19,18 @@ Note: we currently use the DTOs also as the core entities.
 """
 
 from enum import Enum
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
-from pydantic import BaseModel, EmailStr, Field, HttpUrl, validator
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    HttpUrl,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+)
 
 __all__ = [
     "AuthorityLevel",
@@ -43,9 +51,7 @@ __all__ = [
 class BaseDto(BaseModel):
     """Base model pre-configured for use as Dto."""
 
-    class Config:
-        extra = "forbid"
-        frozen = True
+    model_config = {"extra": "forbid", "frozen": True}
 
 
 class VisaType(str, Enum):
@@ -108,22 +114,28 @@ class Identity(BaseDto):
     iss: HttpUrl = Field(default=..., title="Issuer", description="OpenID Issuer")
     sub: str = Field(default=..., title="Subject", description="OpenID Subject")
 
+    @field_serializer("iss")
+    def serialize_system(self, iss: HttpUrl) -> str:
+        """Remove trailing slash from issuer."""
+        return str(iss).rstrip("/")
+
 
 class ClaimValidity(BaseDto):
     """Start and end dates for validating claims."""
 
     valid_from: DateTimeUTC = Field(
-        ..., description="Start date of validity", example="2023-01-01T00:00:00Z"
+        ..., description="Start date of validity", examples=["2023-01-01T00:00:00Z"]
     )
     valid_until: DateTimeUTC = Field(
-        ..., description="End date of validity", example="2023-12-31T23:59:59Z"
+        ..., description="End date of validity", examples=["2023-12-31T23:59:59Z"]
     )
 
-    @validator("valid_until")
+    @field_validator("valid_until")
     @classmethod
-    def period_is_valid(cls, value, values):
+    def period_is_valid(cls, value: DateTimeUTC, info: ValidationInfo):
         """Validate that the dates of the period are in the right order."""
-        if "valid_from" in values and value <= values["valid_from"]:
+        data = info.data
+        if "valid_from" in data and value <= data["valid_from"]:
             raise ValueError("'valid_until' must be later than 'valid_from'")
         return value
 
@@ -131,32 +143,43 @@ class ClaimValidity(BaseDto):
 class ClaimCreation(ClaimValidity):
     """A claim made about a user with a user ID"""
 
-    visa_type: VisaType = Field(default=..., example="AffiliationAndRole")
+    visa_type: VisaType = Field(default=..., examples=["AffiliationAndRole"])
     visa_value: Union[EmailStr, HttpUrl, list[Identity]] = Field(
         default=...,
         description="Scope of the claim depending of the visa type",
-        example="faculty@home.org",
+        examples=["faculty@home.org"],
     )
 
     assertion_date: DateTimeUTC = Field(
         ...,
         description="Date when the assertion was made",
-        example="2022-11-30T12:00:00Z",
+        examples=["2022-11-30T12:00:00Z"],
     )
 
     source: HttpUrl = Field(
-        ..., description="Asserting organization", example="https://home.org"
+        ..., description="Asserting organization", examples=["https://home.org"]
     )  # organization making the assertion
     sub_source: Optional[HttpUrl] = Field(
-        None, description="Asserting sub-organization", example="https://dac.home.org"
+        None,
+        description="Asserting sub-organization",
+        examples=["https://dac.home.org"],
     )  # e.g. DAC or Data Hub
     asserted_by: Optional[AuthorityLevel] = Field(
-        None, description="Authority level", example="so"
+        None, description="Authority level", examples=["so", "dac", "system"]
     )
 
     conditions: Optional[list[list[Condition]]] = Field(
         None, description="Set of conditions"
     )  # nested list (first level OR, second level AND)
+
+    @field_serializer("source", "sub_source", "visa_value")
+    def serialize_url(self, value: Any) -> Optional[str]:
+        """Remove trailing slash from sources without path."""
+        if value:
+            value = str(value)
+            if value.startswith(("http://", "https://")) and value.count("/") == 3:
+                value = value.rstrip("/")
+        return value
 
 
 class ClaimUpdate(BaseDto):

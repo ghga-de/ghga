@@ -17,7 +17,7 @@
 """Translation between general and user specific DAOs."""
 
 from hexkit.protocols.dao import DaoFactoryProtocol
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 from ..models.dto import User as UserDto
 from ..models.dto import UserData as UserCreationDto

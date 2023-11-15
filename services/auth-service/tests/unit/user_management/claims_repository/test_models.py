@@ -50,7 +50,7 @@ def test_bas_visa_type():
     with raises(ValueError):
         ClaimCreation(
             visa_type="UNKNOWN_TYPE",  # type: ignore
-            visa_value="https://foo.org",  # type: ignore
+            visa_value="https://foo.org",
             assertion_date=datetime_utc(2022, 9, 1, 12, 0),
             valid_from=datetime_utc(2022, 10, 1, 0, 0),
             valid_until=datetime_utc(2022, 10, 31, 23, 59),
@@ -83,9 +83,9 @@ def test_good_visa_values(value):
     [
         "not-a-valid-value",
         "foo bar baz",
-        "https://foo@bar",
-        "bad@email@org",
+        "http://foo:bar",
         "ftp://bad.url.org",
+        "bad@email@org",
         ["not-an-identity"],
         [{"iss": "foo", "sub": "bar"}],
     ],
@@ -93,7 +93,8 @@ def test_good_visa_values(value):
 def test_bad_visa_values(value):
     """Test creating an invalid visa value"""
     with raises(ValueError):
-        ClaimCreation(
+        print("VALUE=", value)
+        c = ClaimCreation(
             visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,  # type: ignore
             visa_value=value,
             assertion_date=datetime_utc(2022, 9, 1, 12, 0),
@@ -101,13 +102,16 @@ def test_bad_visa_values(value):
             valid_until=datetime_utc(2022, 10, 31, 23, 59),
             source="https://foo-bar.org",  # type: ignore
         )
+        print(c.visa_value)
+        print(type(c.visa_value))
+        print(getattr(c.visa_value, "host", None))
 
 
 def test_conditions():
     """Test creating a complex condition"""
     ClaimCreation(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value="baz@foo-bar.org",  # type: ignore
+        visa_value="baz@foo-bar.org",
         assertion_date=datetime_utc(2022, 9, 1, 12, 0),
         valid_from=datetime_utc(2022, 10, 1, 0, 0),
         valid_until=datetime_utc(2022, 10, 31, 23, 59),

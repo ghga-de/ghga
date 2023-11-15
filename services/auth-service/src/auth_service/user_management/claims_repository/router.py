@@ -86,7 +86,7 @@ async def post_claim(
 
     current_date = now_as_utc()
     full_claim = ClaimFullCreation(
-        **claim_creation.dict(),
+        **claim_creation.model_dump(),
         user_id=user_id,
         creation_date=current_date,
         revocation_date=None,
@@ -176,7 +176,7 @@ async def patch_user(
     if claim.revocation_date and revocation_date > claim.revocation_date:
         raise HTTPException(status_code=422, detail="Already revoked earlier.")
 
-    claim = claim.copy(update={"revocation_date": revocation_date})
+    claim = claim.model_copy(update={"revocation_date": revocation_date})
     try:
         await claim_dao.update(claim)
     except ResourceNotFoundError as error:

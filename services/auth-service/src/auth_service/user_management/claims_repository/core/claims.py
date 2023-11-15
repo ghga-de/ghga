@@ -20,7 +20,6 @@ from datetime import timedelta
 from typing import Callable, Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
-from pydantic import EmailStr, HttpUrl, parse_obj_as
 
 from ....config import CONFIG
 from ..models.dto import AuthorityLevel, Claim, ClaimFullCreation, VisaType
@@ -38,9 +37,9 @@ __all__ = [
 
 
 INTERNAL_SOURCE = CONFIG.organization_url
-INTERNAL_DOMAIN = INTERNAL_SOURCE.split("://", 1)[-1]
+INTERNAL_DOMAIN = INTERNAL_SOURCE.host
 DATA_STEWARD_ROLE = "data_steward"
-DATASET_PREFIX = f"{INTERNAL_SOURCE}/datasets/"
+DATASET_PREFIX = str(INTERNAL_SOURCE).rstrip("/") + "/datasets/"
 
 
 def is_valid_claim(claim: Claim, now: Callable[[], DateTimeUTC] = now_as_utc) -> bool:
@@ -69,7 +68,7 @@ def create_data_steward_claim(user_id: str, valid_days=365) -> ClaimFullCreation
     valid_until = now_as_utc() + timedelta(days=valid_days)
     return ClaimFullCreation(
         visa_type=VisaType.GHGA_ROLE,
-        visa_value=parse_obj_as(EmailStr, f"{DATA_STEWARD_ROLE}@{INTERNAL_DOMAIN}"),
+        visa_value=f"{DATA_STEWARD_ROLE}@{INTERNAL_DOMAIN}",
         assertion_date=valid_from,
         valid_from=valid_from,
         valid_until=valid_until,
@@ -104,7 +103,7 @@ def create_controlled_access_claim(
     creation_date = now_as_utc()
     return ClaimFullCreation(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value=parse_obj_as(HttpUrl, DATASET_PREFIX + dataset_id),
+        visa_value=DATASET_PREFIX + dataset_id,
         assertion_date=creation_date,
         valid_from=valid_from,
         valid_until=valid_until,
@@ -130,9 +129,7 @@ def has_download_access_for_dataset(claim: Claim, dataset_id: str) -> bool:
     if not is_internal_claim(claim, VisaType.CONTROLLED_ACCESS_GRANTS):
         return False
     visa_value = claim.visa_value
-    if not isinstance(visa_value, str):
-        return False
-    return get_dataset_for_value(visa_value) == dataset_id
+    return get_dataset_for_value(str(visa_value)) == dataset_id
 
 
 def dataset_id_for_download_access(claim: Claim) -> Optional[str]:
@@ -140,6 +137,4 @@ def dataset_id_for_download_access(claim: Claim) -> Optional[str]:
     if not is_internal_claim(claim, VisaType.CONTROLLED_ACCESS_GRANTS):
         return None
     visa_value = claim.visa_value
-    if not isinstance(visa_value, str):
-        return None
-    return get_dataset_for_value(visa_value)
+    return get_dataset_for_value(str(visa_value))

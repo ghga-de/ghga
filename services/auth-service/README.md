@@ -1,5 +1,5 @@
 
-[![tests](https://github.com/ghga-de/auth-service/actions/workflows/unit_and_int_tests.yaml/badge.svg)](https://github.com/ghga-de/auth-service/actions/workflows/unit_and_int_tests.yaml)
+[![tests](https://github.com/ghga-de/auth-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/auth-service/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/auth-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/auth-service?branch=main)
 
 # Auth Service
@@ -26,17 +26,18 @@ The user management contains two APIs, the `users` API for the user registry, an
 
 
 ## Installation
+
 We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:0.5.6
+docker pull ghga/auth-service:1.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:0.5.6 .
+docker build -t ghga/auth-service:1.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -44,7 +45,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:0.5.6 --help
+docker run -p 8080:8080 ghga/auth-service:1.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -57,16 +58,23 @@ auth_service --help
 ```
 
 ## Configuration
+
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`auth_key`** *(string)*
+- **`auth_key`**: Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
 
 - **`auth_algs`** *(array)*: Default: `["ES256"]`.
 
   - **Items** *(string)*
 
-- **`auth_check_claims`** *(object)*: Default: `{"name": null, "email": null, "iat": null, "exp": null}`.
+- **`auth_check_claims`** *(object)*: Default: `{"email": null, "exp": null, "iat": null, "name": null}`.
 
 - **`auth_map_claims`** *(object)*: Can contain additional properties. Default: `{}`.
 
@@ -88,19 +96,83 @@ The service requires the following configuration parameters:
 
 - **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
-- **`cors_allowed_origins`** *(array)*: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.
+- **`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
 
-  - **Items** *(string)*
+  - **Any of**
 
-- **`cors_allow_credentials`** *(boolean)*: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.
+    - *array*
 
-- **`cors_allowed_methods`** *(array)*: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.
+      - **Items** *(string)*
 
-  - **Items** *(string)*
+    - *null*
 
-- **`cors_allowed_headers`** *(array)*: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.
 
-  - **Items** *(string)*
+  Examples:
+
+  ```json
+  [
+      "https://example.org",
+      "https://www.example.org"
+  ]
+  ```
+
+
+- **`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
+
+  - **Any of**
+
+    - *boolean*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  [
+      "https://example.org",
+      "https://www.example.org"
+  ]
+  ```
+
+
+- **`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
+
+  - **Any of**
+
+    - *array*
+
+      - **Items** *(string)*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  [
+      "*"
+  ]
+  ```
+
+
+- **`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+
+  - **Any of**
+
+    - *array*
+
+      - **Items** *(string)*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  []
+  ```
+
 
 - **`service_name`** *(string)*: Default: `"auth_service"`.
 
@@ -108,13 +180,25 @@ The service requires the following configuration parameters:
 
 - **`api_ext_path`** *(string)*: Default: `"/api/auth"`.
 
-- **`auth_ext_keys`** *(string)*
+- **`auth_ext_keys`**: Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
 
 - **`auth_ext_algs`** *(array)*: Default: `["RS256", "ES256"]`.
 
   - **Items** *(string)*
 
-- **`basic_auth_credentials`** *(string)*
+- **`basic_auth_credentials`**: Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
 
 - **`basic_auth_realm`** *(string)*: Default: `"GHGA Data Portal"`.
 
@@ -142,7 +226,13 @@ The service requires the following configuration parameters:
 
 - **`oidc_authority_url`** *(string, format: uri)*: Default: `"https://proxy.aai.lifescience-ri.eu"`.
 
-- **`oidc_userinfo_endpoint`** *(string, format: uri)*: Default: `"https://proxy.aai.lifescience-ri.eu/OIDC/userinfo"`.
+- **`oidc_userinfo_endpoint`**: Default: `"https://proxy.aai.lifescience-ri.eu/OIDC/userinfo"`.
+
+  - **Any of**
+
+    - *string, format: uri*
+
+    - *null*
 
 - **`oidc_client_id`** *(string)*: Default: `"ghga-data-portal"`.
 
@@ -191,19 +281,20 @@ This repository will be eventually refactored and split into three separate serv
 
 
 ## Development
+
 For setting up the development environment, we rely on the
-[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode
+[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of VS Code
 in combination with Docker Compose.
 
-To use it, you have to have Docker Compose as well as vscode with its "Remote - Containers"
+To use it, you have to have Docker Compose as well as VS Code with its "Remote - Containers"
 extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in vscode and run the command
-`Remote-Containers: Reopen in Container` from the vscode "Command Palette".
+Then open this repository in VS Code and run the command
+`Remote-Containers: Reopen in Container` from the VS Code "Command Palette".
 
 This will give you a full-fledged, pre-configured development environment including:
 - infrastructural dependencies of the service (databases, etc.)
-- all relevant vscode extensions pre-installed
-- pre-configured linting and auto-formating
+- all relevant VS Code extensions pre-installed
+- pre-configured linting and auto-formatting
 - a pre-configured debugger
 - automatic license-header insertion
 
@@ -215,9 +306,11 @@ if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
 [`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
 
 ## License
+
 This repository is free to use and modify according to the
 [Apache 2.0 License](./LICENSE).
 
-## Readme Generation
-This readme is autogenerate, please see [`readme_generation.md`](./readme_generation.md)
+## README Generation
+
+This README file is auto-generated, please see [`readme_generation.md`](./readme_generation.md)
 for details.
