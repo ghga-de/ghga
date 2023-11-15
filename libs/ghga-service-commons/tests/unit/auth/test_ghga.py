@@ -26,14 +26,14 @@ from ghga_service_commons.auth.ghga import (
     is_active,
 )
 from ghga_service_commons.utils.jwt_helpers import generate_jwk
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import utc_datetime
 
 context_kwargs = {
     "name": "John Doe",
     "email": "john@home.org",
     "title": AcademicTitle.DR,
-    "iat": DateTimeUTC.construct(2022, 11, 15, 12, 0, 0),
-    "exp": DateTimeUTC.construct(2022, 11, 15, 13, 0, 0),
+    "iat": utc_datetime(2022, 11, 15, 12, 0, 0),
+    "exp": utc_datetime(2022, 11, 15, 13, 0, 0),
     "id": "some-internal-id",
     "ext_id": "some-external-id",
     "role": "admin",

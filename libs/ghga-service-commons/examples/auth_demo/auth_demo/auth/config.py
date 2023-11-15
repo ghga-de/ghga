@@ -24,14 +24,14 @@ from pydantic import BaseModel, Field
 
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig
 from ghga_service_commons.utils.jwt_helpers import generate_jwk
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 
 class DemoAuthContext(BaseModel):
     """Example auth context."""
 
     name: str = Field(..., description="The name of the user")
-    expires: DateTimeUTC = Field(..., description="The expiration date of this context")
+    expires: UTCDatetime = Field(..., description="The expiration date of this context")
     is_vip: bool = Field(False, description="Whether the user is a VIP")
 
 

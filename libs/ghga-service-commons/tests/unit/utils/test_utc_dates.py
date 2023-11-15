@@ -21,7 +21,12 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel
 from pytest import mark, raises
 
-from ghga_service_commons.utils.utc_dates import UTC, DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import (
+    UTC,
+    UTCDatetime,
+    now_as_utc,
+    utc_datetime,
+)
 
 
 @mark.parametrize(
@@ -41,9 +46,9 @@ def test_does_not_accept_naive_datetimes(value):
     class Model(BaseModel):
         """Test model."""
 
-        d: DateTimeUTC
+        d: UTCDatetime
 
-    with raises(ValueError, match="missing a timezone"):
+    with raises(ValueError):
         Model(d=value)
 
 
@@ -58,13 +63,13 @@ def test_does_not_accept_naive_datetimes(value):
     ],
 )
 def test_accept_aware_datetimes_in_utc(value):
-    """Test that DateTimeUTC does not accepts timezone aware UTC datetimes."""
+    """Test that DateTimeUTC accepts timezone aware UTC datetimes."""
 
     class Model(BaseModel):
         """Test model."""
 
         dt: datetime
-        du: DateTimeUTC
+        du: UTCDatetime
 
     model = Model(dt=value, du=value)
 
@@ -87,7 +92,7 @@ def test_converts_datetimes_to_utc(value):
         """Test model."""
 
         dt: datetime
-        du: DateTimeUTC
+        du: UTCDatetime
 
     model = Model(dt=value, du=value)
 
@@ -102,20 +107,17 @@ def test_converts_datetimes_to_utc(value):
 
 def test_datetime_utc_constructor():
     """Test the constructor for DateTimeUTC values."""
-    date = DateTimeUTC.construct(2022, 11, 15, 12, 0, 0)
-    assert isinstance(date, DateTimeUTC)
+    date = utc_datetime(2022, 11, 15, 12, 0, 0)
     assert date.tzinfo is UTC
     assert date.utcoffset() == timedelta(0)
 
-    date = DateTimeUTC.construct(2022, 11, 15, 12, 0, 0, tzinfo=UTC)
-    assert isinstance(date, DateTimeUTC)
+    date = utc_datetime(2022, 11, 15, 12, 0, 0, tzinfo=UTC)
     assert date.tzinfo is UTC
     assert date.utcoffset() == timedelta(0)
 
 
 def test_now_as_utc():
     """Test the now_as_utc function."""
-    assert isinstance(now_as_utc(), DateTimeUTC)
     assert now_as_utc().tzinfo is UTC
     assert now_as_utc().utcoffset() == timedelta(0)
     assert abs(now_as_utc().timestamp() - datetime.now().timestamp()) < 5
@@ -129,6 +131,6 @@ def test_datetime_utc_in_pydantic_json_schema():
     class Model(BaseModel):
         """Test model."""
 
-        test: DateTimeUTC
+        test: UTCDatetime
 
     Model.model_json_schema()

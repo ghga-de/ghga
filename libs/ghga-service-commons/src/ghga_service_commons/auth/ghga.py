@@ -23,7 +23,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, EmailStr, Field
 
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 __all__ = [
     "AcademicTitle",
@@ -71,8 +71,8 @@ class AuthContext(BaseModel):
         description="The academic title of the user",
         examples=["Dr."],
     )
-    iat: DateTimeUTC = Field(..., title="Issued at")
-    exp: DateTimeUTC = Field(..., title="Expiration time")
+    iat: UTCDatetime = Field(..., title="Issued at")
+    exp: UTCDatetime = Field(..., title="Expiration time")
     id: Optional[str] = Field(
         None,
         title="Internal ID",

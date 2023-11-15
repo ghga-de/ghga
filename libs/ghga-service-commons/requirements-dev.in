@@ -4,4 +4,3 @@
 -r requirements-dev-common.in
 
 # additional requirements can be listed here
-hexkit >=1, <2

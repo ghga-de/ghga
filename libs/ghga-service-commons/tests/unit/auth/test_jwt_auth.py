@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from pytest import fixture, mark, raises
 
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
-from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 AUTH_KEY_PAIR = jwk.JWK.generate(kty="RSA", size=2048)
 
@@ -34,8 +34,8 @@ class AuthContext(BaseModel):
 
     name: str
     subject: str
-    issued: DateTimeUTC
-    expiry: DateTimeUTC
+    issued: UTCDatetime
+    expiry: UTCDatetime
     admin: bool
 
 
