@@ -1,1 +1,8 @@
 charts/**/charts/*.tgz
+
+.idea/
+.vscode/
+
+.DS_Store
+desktop.ini
+thumbs.db
