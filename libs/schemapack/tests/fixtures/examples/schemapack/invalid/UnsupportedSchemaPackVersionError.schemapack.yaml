@@ -1,0 +1,7 @@
+# a version that is not known to the tooling
+schemapack: 0.1.0-not-supported # <-
+classes:
+  Dataset:
+    id:
+      from_content: alias
+    content: ../../content_schemas/Dataset.schema.json

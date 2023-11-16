@@ -1,0 +1,6 @@
+schemapack: 0.1.0
+classes:
+  Dataset:
+    # every class must have an ID, this one does not
+    content: ../../content_schemas/Dataset.schema.json
+root: Dataset

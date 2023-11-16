@@ -1,0 +1,6 @@
+schemapack: 0.1.0
+classes:
+  Dataset:
+    id:
+      from_content: alias
+    content: ../../content_schemas/Invalid.schema.json # <-

@@ -1,0 +1,16 @@
+# a simple schema with an embedded relation
+schemapack: 0.1.0
+classes:
+  File:
+    id:
+      from_content: alias
+    content: ../../content_schemas/File.schema.json
+  Dataset:
+    id:
+      from_content: alias
+    content: ../../content_schemas/Dataset.schema.json
+    relations:
+      files:
+        to: File
+        cardinality: many_to_many
+        lookup: in_document

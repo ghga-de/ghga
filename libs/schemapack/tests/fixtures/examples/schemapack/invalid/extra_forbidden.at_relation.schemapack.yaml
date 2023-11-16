@@ -1,0 +1,16 @@
+# attributes that are not part of the schemapack spec are not allowed:
+schemapack: 0.1.0
+classes:
+  File:
+    id:
+      from_content: alias
+    content: ../../content_schemas/File.schema.json
+  Dataset:
+    id:
+      from_content: alias
+    content: ../../content_schemas/Dataset.schema.json
+    relations:
+      files:
+        to: File
+        cardinality: many_to_many
+        additional_attribute: is_not_allowed # <-

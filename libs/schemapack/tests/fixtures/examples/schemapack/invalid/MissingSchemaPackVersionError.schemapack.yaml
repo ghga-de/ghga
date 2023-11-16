@@ -1,0 +1,6 @@
+# every schemapack document must specify a schemapack version
+classes:
+  Dataset:
+    id:
+      from_content: alias
+    content: ../../content_schemas/Dataset.schema.json

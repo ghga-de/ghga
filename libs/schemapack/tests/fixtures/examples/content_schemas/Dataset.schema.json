@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "A dataset that is a collection of files.",
+  "properties": {
+    "alias": {
+      "type": "string"
+    },
+    "dac_contact": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "alias"
+  ],
+  "type": "object"
+}
