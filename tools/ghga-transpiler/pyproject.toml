@@ -26,12 +26,10 @@ classifiers = [
 ]
 dependencies = [
     "typer ~= 0.9.0",
-    "ghga-service-commons[api] >= 1.1.0, <2",
-    "ghga-event-schemas >= 1.0.0, <2",
-    "hexkit[akafka,s3,mongodb] ~= 0.11.1",
     "openpyxl >= 3.1.2, == 3.*",
-    "defusedxml ~= 0.7.1",
-    "PyYAML == 6.*"
+    "defusedxml", # whichever version is compatible with openpyxl
+    "pydantic >=2, <3",
+    "PyYAML ~= 6.0"
 ]
 
 [project.urls]
