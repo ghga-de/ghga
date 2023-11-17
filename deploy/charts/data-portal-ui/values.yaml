@@ -26,7 +26,7 @@ mapping:
 parameters:
   host: "0.0.0.0"
   port: 8080
-  svc_repository_url: "/api/repository"
-  svc_search_url: "/api/search"
+  mass_url: "/api/mass"
+  metldata_url: "/api/metldata"
 
 shareProcessNamespace: false
