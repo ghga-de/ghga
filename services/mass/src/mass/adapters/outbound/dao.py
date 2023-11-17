@@ -70,8 +70,8 @@ class DaoCollection(DaoCollectionPort):
         except KeyError as err:
             raise DaoNotFoundError(class_name=class_name) from err
 
-    def create_collections_and_indexes_if_needed(self) -> None:  # noqa: D102
-        # This only needs to be done once, so exit if we've already created the indexes
+    def create_collections_and_indexes_if_needed(self) -> None:
+        """Create collections and indexes if this hasn't been done yet."""
         if self._indexes_created:
             return
 
@@ -100,3 +100,8 @@ class DaoCollection(DaoCollectionPort):
         # close client and remember that the indexes have been set up
         client.close()
         self._indexes_created = True
+
+    def recreate_collections_and_indexes(self) -> None:
+        """Recreate collections and indexes if they have been removed."""
+        self._indexes_created = False
+        self.create_collections_and_indexes_if_needed()

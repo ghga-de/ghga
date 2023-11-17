@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mass"
-version = "1.0.0"
+version = "1.0.1"
 description = "Metadata Artifact Search Service  - A service for searching metadata artifacts and filtering results."
 readme = "README.md"
 authors = [
@@ -24,9 +24,9 @@ classifiers = [
 ]
 dependencies = [
     "typer>=0.7.0",
-    "ghga-service-commons[api]>=1.0.0",
+    "ghga-service-commons[api]>=1.2.0",
     "ghga-event-schemas>=1.0.0",
-    "hexkit[mongodb,akafka]>=0.11.0",
+    "hexkit[mongodb,akafka]>=1.0.0",
 ]
 
 [project.license]

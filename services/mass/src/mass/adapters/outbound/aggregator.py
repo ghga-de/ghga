@@ -67,13 +67,23 @@ class Aggregator(AggregatorPort):
                 item async for item in self._collection.aggregate(pipeline=pipeline)
             ]
         except OperationFailure as err:
+            filter_repr = [{f.key: f.value} for f in filters]
+            facet_repr = [{f.key: f.name} for f in facet_fields]
             aggregation_details = (
-                f"query={query}, "
-                + "filters={[{filter_.key: filter_.value} for filter_ in filters]}, "
-                + "facet_fields={facet_fields}, skip={skip}, limit={limit}"
+                f"query={query}, filters={filter_repr}, facet_fields={facet_repr},"
+                + f" skip={skip}, limit={limit}"
                 + ". Check that all documents have required facet fields."
             )
-            raise AggregationError(aggregation_details=aggregation_details) from err
+            error_details = err.details
+            missing_index = (
+                error_details is not None
+                and error_details["codeName"] == "IndexNotFound"
+            )
+            raise AggregationError(
+                message=str(err),
+                details=aggregation_details,
+                missing_index=missing_index,
+            ) from err
 
         return results
 
@@ -84,7 +94,7 @@ class AggregatorFactory:
     def __init__(self, *, config: MongoDbConfig):
         """Initialize the factory with the DB config information"""
         self._config = config
-        self._client = AsyncIOMotorClient(
+        self._client = AsyncIOMotorClient(  # type: ignore[var-annotated]
             self._config.db_connection_str.get_secret_value()
         )
         self._db = self._client[self._config.db_name]

@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 """Contains implementation of a QueryHandler to field queries on metadata"""
+
+import logging
 from typing import Optional
 
 from hexkit.custom_types import JsonObject
@@ -26,6 +28,8 @@ from mass.ports.inbound.query_handler import QueryHandlerPort
 from mass.ports.outbound.aggregator import AggregationError, AggregatorCollectionPort
 from mass.ports.outbound.dao import DaoCollectionPort
 
+log = logging.getLogger(__name__)
+
 
 class QueryHandler(QueryHandlerPort):
     """Concrete implementation of a query handler"""
@@ -37,7 +41,7 @@ class QueryHandler(QueryHandlerPort):
         aggregator_collection: AggregatorCollectionPort,
         dao_collection: DaoCollectionPort,
     ):
-        """Initialize the query handler with resource daos/aggregators"""
+        """Initialize the query handler with resource DAOs/aggregators"""
         self._config = config
         self._aggregator_collection = aggregator_collection
         self._dao_collection = dao_collection
@@ -65,7 +69,7 @@ class QueryHandler(QueryHandlerPort):
         except ResourceNotFoundError as err:
             raise self.ResourceNotFoundError(resource_id=resource_id) from err
 
-    async def handle_query(  # noqa: PLR0913, D102
+    async def handle_query(  # noqa: PLR0912, PLR0913, D102
         self,
         *,
         class_name: str,
@@ -102,21 +106,33 @@ class QueryHandler(QueryHandlerPort):
 
         # run the aggregation. Results will have {facets, count, hits} format
         aggregator = self._aggregator_collection.get_aggregator(class_name=class_name)
-        try:
-            aggregator_results: JsonObject = await aggregator.aggregate(
-                query=query,
-                filters=filters,
-                facet_fields=facet_fields,
-                skip=skip,
-                limit=limit,
-                sorting_parameters=sorting_parameters,
-            )
-        except AggregationError as exc:
-            raise self.SearchError() from exc
+        for attempt in range(2):
+            try:
+                aggregator_results: JsonObject = await aggregator.aggregate(
+                    query=query,
+                    filters=filters,
+                    facet_fields=facet_fields,
+                    skip=skip,
+                    limit=limit,
+                    sorting_parameters=sorting_parameters,
+                )
+            except AggregationError as err:
+                if err.missing_index and not attempt:
+                    log.warning("Missing text indexes, trying to recreate them.")
+                    try:
+                        self._dao_collection.recreate_collections_and_indexes()
+                    except Exception as recreation_error:
+                        log.error("Cannot recreate text indexes: %s", recreation_error)
+                        raise self.SearchError() from recreation_error
+                    continue
+                log.warning("Search operation error: %s", err)
+                raise self.SearchError() from err
+            break
 
         try:
             query_results = models.QueryResults(**aggregator_results)
         except ValidationError as err:
+            log.warning("Search results validation error: %s", err)
             raise self.ValidationError() from err
 
         return query_results

@@ -49,3 +49,11 @@ class DaoCollectionPort(ABC):
         to perform query string searches.
         """
         ...
+
+    def recreate_collections_and_indexes(self) -> None:  # noqa: B027
+        """Recreates `MongoDB` collections and indexes.
+
+        Recreates collections and indexes even if they have already been created. This may
+        happen when the database has been modified from the outside, e.g. for testing.
+        """
+        ...

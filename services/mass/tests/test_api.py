@@ -16,10 +16,13 @@
 
 """Tests to assess API functionality"""
 
+import logging
 from typing import Optional
 
+import httpx
 import pytest
 from hexkit.custom_types import JsonObject
+from pymongo import MongoClient
 
 from mass.core import models
 from tests.fixtures.config import get_config
@@ -72,7 +75,9 @@ async def test_search_options(joint_fixture: JointFixture):
 
 
 @pytest.mark.asyncio
-async def test_malformed_document(joint_fixture: JointFixture):
+async def test_malformed_document(
+    joint_fixture: JointFixture, caplog: pytest.LogCaptureFixture
+):
     """Test behavior from API perspective upon querying when bad doc exists"""
     joint_fixture.remove_db_data()
 
@@ -81,7 +86,7 @@ async def test_malformed_document(joint_fixture: JointFixture):
         id_="added-resource",
         content={
             "has_object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
-            "field3": "something",  # expects field1 to exist
+            "field1": 42,  # expected to be a string
             "category": "test object",
         },
     )
@@ -96,10 +101,19 @@ async def test_malformed_document(joint_fixture: JointFixture):
         "skip": 0,
     }
 
-    response = await joint_fixture.rest_client.post(
-        url="/rpc/search", json=search_parameters
-    )
-    assert response.status_code == 500
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(
+            httpx.HTTPStatusError, match="500 Internal Server Error"
+        ) as exc_info:
+            await joint_fixture.call_search_endpoint(search_parameters)
+        assert (
+            exc_info.value.response.json().get("detail")
+            == "An error occurred during the search operation"
+        )
+        assert len(caplog.records) == 1
+        msg = caplog.records[0].message
+        assert "Input should be a valid string" in msg
+        assert "type=string_type, input_value=42, input_type=int" in msg
 
 
 @pytest.mark.asyncio
@@ -184,7 +198,43 @@ async def test_search_invalid_class(joint_fixture: JointFixture):
         "limit": 1,
     }
 
-    response = await joint_fixture.rest_client.post(
-        url="/rpc/search", json=search_parameters
-    )
-    assert response.status_code == 422
+    with pytest.raises(httpx.HTTPStatusError, match="422 Unprocessable Entity"):
+        await joint_fixture.call_search_endpoint(search_parameters)
+
+
+@pytest.mark.asyncio
+async def test_auto_recreation_of_indexes(
+    joint_fixture: JointFixture, caplog: pytest.LogCaptureFixture
+):
+    """Make sure the indexes are recreated on the fly when they were deleted"""
+    search_parameters: JsonObject = {
+        "class_name": "DatasetEmbedded",
+        "query": "hotel",
+        "filters": [],
+        "skip": 0,
+    }
+
+    # should not give a warning when indexes are present
+    with caplog.at_level(logging.WARNING):
+        await joint_fixture.call_search_endpoint(search_parameters)
+        assert not caplog.records
+
+    # drop all text indexes
+    config = joint_fixture.config
+    client: MongoClient = MongoClient(config.db_connection_str.get_secret_value())
+    db = client[config.db_name]
+    for collection_name in db.list_collection_names():
+        collection = db[collection_name]
+        for index in collection.list_indexes():
+            if "text" in index["key"].values():
+                collection.drop_index(index["name"])
+    client.close()
+
+    # should work, but give a warning when indexes are recreated
+    with caplog.at_level(logging.WARNING):
+        results = await joint_fixture.call_search_endpoint(search_parameters)
+        compare(results=results, count=2, hit_length=2)
+
+        assert len(caplog.records) == 1
+        msg = caplog.records[0].message
+        assert "Missing text indexes, trying to recreate them" in msg

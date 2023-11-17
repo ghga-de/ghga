@@ -72,8 +72,8 @@ class JointFixture:
         response = await self.rest_client.post(
             url="/rpc/search", json=search_parameters
         )
-        results = models.QueryResults(**response.json())
-        return results
+        response.raise_for_status()
+        return models.QueryResults(**response.json())
 
 
 async def joint_fixture_function(

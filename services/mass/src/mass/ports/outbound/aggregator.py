@@ -25,10 +25,9 @@ from mass.core import models
 class AggregationError(RuntimeError):
     """Raised when something goes wrong with the aggregation operation"""
 
-    def __init__(self, aggregation_details: str):
-        super().__init__(
-            f"Something went wrong while aggregating with: {aggregation_details}"
-        )
+    def __init__(self, message: str, details: str, missing_index: bool = False):
+        super().__init__(f"{message}, while aggregating with {details}")
+        self.missing_index = missing_index
 
 
 class AggregatorPort(ABC):
