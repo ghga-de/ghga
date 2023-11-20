@@ -27,4 +27,4 @@ def load_schemapack(path: Path):
     schemapack_dict = read_json_or_yaml(path)
 
     with transient_directory_change(path.parent):
-        return SchemaPack.model_validate({**schemapack_dict, "self_path": path})
+        return SchemaPack.model_validate(schemapack_dict)

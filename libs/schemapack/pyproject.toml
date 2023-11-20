@@ -28,6 +28,7 @@ dependencies = [
     "pydantic_settings >=2, <3",
     "PyYAML >=6.0.1, <7",
     "jsonschema >=4.19.2, <5",
+    "immutabledict >=3.0.0, <4",
 ]
 
 [tool.setuptools.packages.find]
