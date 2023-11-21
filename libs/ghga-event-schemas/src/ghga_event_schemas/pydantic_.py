@@ -159,7 +159,7 @@ class FileUploadReceived(UploadDateModel):
     s3_endpoint_alias: str = Field(
         ...,
         description="Alias for the object storage location where the given object is stored."
-        + "This can be uniquely mapped to an endpoint URL in the service configuration.",
+        + "This can be uniquely mapped to an endpoint configuration in the service.",
     )
     submitter_public_key: str = Field(
         ...,
@@ -194,7 +194,7 @@ class FileUploadValidationSuccess(UploadDateModel):
     s3_endpoint_alias: str = Field(
         ...,
         description="Alias for the object storage location where the given object is stored."
-        + "This can be uniquely mapped to an endpoint URL in the service configuration.",
+        + "This can be uniquely mapped to an endpoint configuration in the service.",
     )
     decrypted_size: int = Field(
         ...,
@@ -260,7 +260,7 @@ class FileUploadValidationFailure(UploadDateModel):
     s3_endpoint_alias: str = Field(
         ...,
         description="Alias for the object storage location where the given object is stored."
-        + "This can be uniquely mapped to an endpoint URL in the service configuration.",
+        + "This can be uniquely mapped to an endpoint configuration in the service.",
     )
     reason: str = Field(
         ...,
@@ -314,7 +314,7 @@ class NonStagedFileRequested(BaseModel):
     s3_endpoint_alias: str = Field(
         ...,
         description="Alias for the object storage location where the given object is stored."
-        + "This can be uniquely mapped to an endpoint URL in the service configuration.",
+        + "This can be uniquely mapped to an endpoint configuration in the service.",
     )
     decrypted_sha256: str = Field(
         ...,
@@ -379,6 +379,11 @@ class FileDeletionRequested(BaseModel):
 
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
+    )
+    s3_endpoint_alias: str = Field(
+        ...,
+        description="Alias for the object storage location where the given object is stored."
+        + "This can be uniquely mapped to an endpoint configuration in the service.",
     )
     model_config = ConfigDict(title="file_deletion_requested")
 
