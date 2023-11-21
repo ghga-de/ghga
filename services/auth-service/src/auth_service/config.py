@@ -16,17 +16,17 @@
 """Config Parameter Modeling and Parsing"""
 
 import logging.config
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 from ghga_service_commons.api import ApiConfigBase, LogLevel
 from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
+from hexkit.providers.akafka import KafkaConfig
 from pydantic import HttpUrl, SecretStr
 
-try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
-    from typing_extensions import Literal
-except ImportError:
-    from typing import Literal  # type: ignore
+from auth_service.user_management.claims_repository.translators.akafka import (
+    EventSubTranslatorConfig,
+)
 
 
 def configure_logging():
@@ -63,7 +63,7 @@ def configure_logging():
 
 
 @config_from_yaml(prefix="auth_service")
-class Config(ApiConfigBase, AuthConfig):
+class Config(ApiConfigBase, AuthConfig, EventSubTranslatorConfig, KafkaConfig):
     """Config parameters and their defaults."""
 
     service_name: str = "auth_service"
@@ -96,6 +96,7 @@ class Config(ApiConfigBase, AuthConfig):
     allow_write_paths: list[str] = []
 
     # if not run as auth adapter, which APIs should be provided
+    # if no APIs are specified, run the event consumer
     include_apis: list[Literal["users", "claims"]] = ["users"]
     # a list of external IDs of data stewards to seed the claims repository with
     add_as_data_stewards: list[Union[str, dict]] = []
@@ -114,6 +115,13 @@ class Config(ApiConfigBase, AuthConfig):
     db_name: str = "user-management"
     users_collection: str = "users"
     claims_collection: str = "claims"
+
+    service_instance_id: str = "1"
+    kafka_servers: list[str] = ["kafka:9092"]
+
+    # the topic and type of the event announcing dataset deletions
+    dataset_deletion_event_topic: str = "metadata_datasets"
+    dataset_deletion_event_type: str = "dataset_deleted"
 
 
 CONFIG = Config()  # pyright: ignore

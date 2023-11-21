@@ -2,6 +2,70 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "service_name": {
+      "default": "auth_service",
+      "title": "Service Name",
+      "type": "string"
+    },
+    "service_instance_id": {
+      "default": "1",
+      "title": "Service Instance Id",
+      "type": "string"
+    },
+    "kafka_servers": {
+      "default": [
+        "kafka:9092"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Kafka Servers",
+      "type": "array"
+    },
+    "kafka_security_protocol": {
+      "default": "PLAINTEXT",
+      "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
+      "enum": [
+        "PLAINTEXT",
+        "SSL"
+      ],
+      "title": "Kafka Security Protocol",
+      "type": "string"
+    },
+    "kafka_ssl_cafile": {
+      "default": "",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL.",
+      "title": "Kafka Ssl Cafile",
+      "type": "string"
+    },
+    "kafka_ssl_certfile": {
+      "default": "",
+      "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
+      "title": "Kafka Ssl Certfile",
+      "type": "string"
+    },
+    "kafka_ssl_keyfile": {
+      "default": "",
+      "description": "Optional filename containing the client private key.",
+      "title": "Kafka Ssl Keyfile",
+      "type": "string"
+    },
+    "kafka_ssl_password": {
+      "default": "",
+      "description": "Optional password to be used for the client private key.",
+      "title": "Kafka Ssl Password",
+      "type": "string"
+    },
+    "dataset_deletion_event_topic": {
+      "default": "metadata_datasets",
+      "title": "Dataset Deletion Event Topic",
+      "type": "string"
+    },
+    "dataset_deletion_event_type": {
+      "default": "dataset_deleted",
+      "title": "Dataset Deletion Event Type",
+      "type": "string"
+    },
     "auth_key": {
       "anyOf": [
         {
@@ -26,10 +90,10 @@
     },
     "auth_check_claims": {
       "default": {
+        "name": null,
         "email": null,
-        "exp": null,
         "iat": null,
-        "name": null
+        "exp": null
       },
       "title": "Auth Check Claims",
       "type": "object"
@@ -177,11 +241,6 @@
         []
       ],
       "title": "Cors Allowed Headers"
-    },
-    "service_name": {
-      "default": "auth_service",
-      "title": "Service Name",
-      "type": "string"
     },
     "run_auth_adapter": {
       "default": false,

@@ -18,7 +18,7 @@
 
 from typing import Callable
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import UserDao
@@ -43,7 +43,7 @@ async def is_data_steward(
     user_id: str,
     user_dao: UserDao,
     claim_dao: ClaimDao,
-    now: Callable[[], DateTimeUTC] = now_as_utc,
+    now: Callable[[], UTCDatetime] = now_as_utc,
 ):
     """Check whether the user with the given ID is a data steward."""
     if not await user_exists(user_id, user_dao=user_dao):

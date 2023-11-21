@@ -23,7 +23,7 @@ from typing import Any, Optional, Union
 
 from fastapi import Request
 from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc, utc_datetime
 from hexkit.config import config_from_yaml
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
@@ -37,8 +37,6 @@ from auth_service.user_management.claims_repository.models.dto import (
 from auth_service.user_management.user_registry.models.dto import User
 
 BASE_DIR = Path(__file__).parent.resolve()
-
-datetime_utc = DateTimeUTC.construct
 
 
 @config_from_yaml(prefix="test_auth_service")
@@ -206,7 +204,7 @@ class DummyUserDao:
             ext_id=ext_id,  # pyright: ignore
             status=status,  # pyright: ignore
             status_change=None,
-            registration_date=datetime_utc(2020, 1, 1),
+            registration_date=utc_datetime(2020, 1, 1),
             active_submissions=[],
             active_access_requests=[],
         )
@@ -237,32 +235,53 @@ class DummyClaimDao:
         """Initialize the dummy ClaimDao"""
         self.valid_date = valid_date
         self.invalid_date = valid_date + timedelta(14)
-        self.claim = Claim(
-            id="dummy-claim-id",
-            user_id="james@ghga.de",
-            visa_type=VisaType.GHGA_ROLE,
-            visa_value="data_steward@some.org",  # type: ignore
-            source=CONFIG.organization_url,
-            assertion_date=valid_date - timedelta(14),
-            asserted_by=AuthorityLevel.SYSTEM,
-            valid_from=valid_date - timedelta(7),
-            valid_until=valid_date + timedelta(7),
-            creation_date=valid_date - timedelta(10),
-        )
+        self.claims = [
+            Claim(
+                id="data-steward-claim-id",
+                user_id="james@ghga.de",
+                visa_type=VisaType.GHGA_ROLE,
+                visa_value="data_steward@some.org",  # type: ignore
+                source="https://ghga.de",  # type: ignore
+                assertion_date=valid_date - timedelta(14),
+                asserted_by=AuthorityLevel.SYSTEM,
+                valid_from=valid_date - timedelta(7),
+                valid_until=valid_date + timedelta(7),
+                creation_date=valid_date - timedelta(10),
+            ),
+            Claim(
+                id="data-access-claim-id",
+                user_id="john@ghga.de",
+                visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
+                visa_value="https://ghga.de/datasets/some-dataset-id",  # type: ignore
+                source="https://ghga.de",  # type: ignore
+                assertion_date=valid_date - timedelta(14),
+                asserted_by=AuthorityLevel.DAC,
+                valid_from=valid_date - timedelta(7),
+                valid_until=valid_date + timedelta(7),
+                creation_date=valid_date - timedelta(10),
+            ),
+        ]
 
     async def get_by_id(self, id_: str) -> Claim:
-        """Get the dummy user claim via its ID."""
-        if id_ == self.claim.id:
-            return self.claim
+        """Get a dummy user claim via its ID."""
+        for claim in self.claims:
+            if claim.id == id_:
+                return claim
         raise ResourceNotFoundError(id_=id_)
 
     async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[Claim]:
         """Find all dummy user claims."""
-        claim = self.claim
-        claim_id, user_id, visa_type = claim.id, claim.user_id, claim.visa_type
-        if (
-            mapping.get("id", claim_id) == claim_id
-            and mapping.get("user_id", user_id) == user_id
-            and mapping.get("visa_type", visa_type) == visa_type
-        ):
-            yield claim
+        mapping = json.loads(json.dumps(mapping))
+        for claim in self.claims:
+            data = claim.model_dump()
+            data["id_"] = data.pop("id")
+            for key in mapping:
+                if mapping[key] != data[key]:
+                    break
+            else:
+                yield claim
+
+    async def delete(self, *, id_: str) -> None:
+        """Delete a dummy user claim."""
+        claim = await self.get_by_id(id_)
+        self.claims.remove(claim)

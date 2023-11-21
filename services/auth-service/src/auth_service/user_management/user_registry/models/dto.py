@@ -21,7 +21,7 @@ Note: we currently use the DTOs also as the core entities.
 from enum import Enum
 from typing import Optional
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, EmailStr, Field
 
 __all__ = ["User", "UserData", "UserStatus", "StatusChange"]
@@ -60,7 +60,7 @@ class StatusChange(BaseDto):
         description="ID of the user who changed the status",
     )
     context: Optional[str] = Field(default=None, description="Status change context")
-    change_date: Optional[DateTimeUTC] = Field(
+    change_date: Optional[UTCDatetime] = Field(
         default=None, description="Date of last change"
     )
 
@@ -108,7 +108,7 @@ class UserModifiableData(BaseDto):
 class UserAutomaticData(BaseModel):
     """User data that is automatically created except the ID"""
 
-    registration_date: DateTimeUTC = Field(default=...)
+    registration_date: UTCDatetime = Field(default=...)
 
     status_change: Optional[StatusChange] = None
 

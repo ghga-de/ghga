@@ -19,13 +19,14 @@
 from datetime import timedelta
 from typing import Callable, Optional
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 from ....config import CONFIG
 from ..models.dto import AuthorityLevel, Claim, ClaimFullCreation, VisaType
 
 __all__ = [
     "create_controlled_access_claim",
+    "create_controlled_access_filter",
     "create_data_steward_claim",
     "dataset_id_for_download_access",
     "is_valid_claim",
@@ -42,7 +43,7 @@ DATA_STEWARD_ROLE = "data_steward"
 DATASET_PREFIX = str(INTERNAL_SOURCE).rstrip("/") + "/datasets/"
 
 
-def is_valid_claim(claim: Claim, now: Callable[[], DateTimeUTC] = now_as_utc) -> bool:
+def is_valid_claim(claim: Claim, now: Callable[[], UTCDatetime] = now_as_utc) -> bool:
     """Check whether the given claim is currently valid."""
     return not claim.revocation_date and claim.valid_from <= now() <= claim.valid_until
 
@@ -97,7 +98,7 @@ def is_data_steward_claim(claim: Claim) -> bool:
 
 
 def create_controlled_access_claim(
-    user_id: str, dataset_id: str, valid_from: DateTimeUTC, valid_until: DateTimeUTC
+    user_id: str, dataset_id: str, valid_from: UTCDatetime, valid_until: UTCDatetime
 ) -> ClaimFullCreation:
     """Create a claim for a controlled access grant."""
     creation_date = now_as_utc()
@@ -115,6 +116,15 @@ def create_controlled_access_claim(
         creation_date=creation_date,
         revocation_date=None,
     )
+
+
+def create_controlled_access_filter(dataset_id: str) -> dict[str, str]:
+    """Create a mapping for filtering controlled access grants for a given dataset."""
+    return {
+        "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS.value,
+        "visa_value": DATASET_PREFIX + dataset_id,
+        "source": str(INTERNAL_SOURCE).rstrip("/"),
+    }
 
 
 def get_dataset_for_value(value: str) -> Optional[str]:

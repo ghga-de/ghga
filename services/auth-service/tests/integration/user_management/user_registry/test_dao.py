@@ -16,7 +16,7 @@
 
 """Test user specific DAOs."""
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import utc_datetime
 from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_fixture,
 )
@@ -35,8 +35,6 @@ from auth_service.user_management.user_registry.models.dto import (
     UserStatus,
 )
 from auth_service.user_management.user_registry.utils import is_internal_id
-
-datetime_utc = DateTimeUTC.construct
 
 
 @mark.asyncio
@@ -57,7 +55,7 @@ async def test_user_creation(
         name="Max Headroom",
         title=AcademicTitle.DR,
         email="max@example.org",
-        registration_date=datetime_utc(2022, 9, 1, 12, 0),
+        registration_date=utc_datetime(2022, 9, 1, 12, 0),
         status_change=StatusChange(previous=None, by=None, context="test"),
         active_submissions=["sub-1"],
         active_access_requests=["req-1", "req-2"],

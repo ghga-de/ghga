@@ -16,7 +16,7 @@
 
 """Test Claims models and show some usage examples."""
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import utc_datetime
 from pytest import mark, raises
 
 from auth_service.user_management.claims_repository.models.dto import (
@@ -30,17 +30,15 @@ from auth_service.user_management.claims_repository.models.dto import (
     VisaType,
 )
 
-datetime_utc = DateTimeUTC.construct
-
 
 def test_good_visa_type():
     """Test creating a visa with an existing type"""
     ClaimCreation(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value="https://foo.org",  # type: ignore
-        assertion_date=datetime_utc(2022, 9, 1, 12, 0),
-        valid_from=datetime_utc(2022, 10, 1, 0, 0),
-        valid_until=datetime_utc(2022, 10, 31, 23, 59),
+        assertion_date=utc_datetime(2022, 9, 1, 12, 0),
+        valid_from=utc_datetime(2022, 10, 1, 0, 0),
+        valid_until=utc_datetime(2022, 10, 31, 23, 59),
         source="https://foo-bar.org",  # type: ignore
     )
 
@@ -51,9 +49,9 @@ def test_bas_visa_type():
         ClaimCreation(
             visa_type="UNKNOWN_TYPE",  # type: ignore
             visa_value="https://foo.org",
-            assertion_date=datetime_utc(2022, 9, 1, 12, 0),
-            valid_from=datetime_utc(2022, 10, 1, 0, 0),
-            valid_until=datetime_utc(2022, 10, 31, 23, 59),
+            assertion_date=utc_datetime(2022, 9, 1, 12, 0),
+            valid_from=utc_datetime(2022, 10, 1, 0, 0),
+            valid_until=utc_datetime(2022, 10, 31, 23, 59),
             source="https://foo-bar.org",  # type: ignore
         )
 
@@ -71,9 +69,9 @@ def test_good_visa_values(value):
     ClaimCreation(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value=value,
-        assertion_date=datetime_utc(2022, 9, 1, 12, 0),
-        valid_from=datetime_utc(2022, 10, 1, 0, 0),
-        valid_until=datetime_utc(2022, 10, 31, 23, 59),
+        assertion_date=utc_datetime(2022, 9, 1, 12, 0),
+        valid_from=utc_datetime(2022, 10, 1, 0, 0),
+        valid_until=utc_datetime(2022, 10, 31, 23, 59),
         source="https://foo-bar.org",  # type: ignore
     )
 
@@ -93,18 +91,14 @@ def test_good_visa_values(value):
 def test_bad_visa_values(value):
     """Test creating an invalid visa value"""
     with raises(ValueError):
-        print("VALUE=", value)
-        c = ClaimCreation(
+        ClaimCreation(
             visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,  # type: ignore
             visa_value=value,
-            assertion_date=datetime_utc(2022, 9, 1, 12, 0),
-            valid_from=datetime_utc(2022, 10, 1, 0, 0),
-            valid_until=datetime_utc(2022, 10, 31, 23, 59),
+            assertion_date=utc_datetime(2022, 9, 1, 12, 0),
+            valid_from=utc_datetime(2022, 10, 1, 0, 0),
+            valid_until=utc_datetime(2022, 10, 31, 23, 59),
             source="https://foo-bar.org",  # type: ignore
         )
-        print(c.visa_value)
-        print(type(c.visa_value))
-        print(getattr(c.visa_value, "host", None))
 
 
 def test_conditions():
@@ -112,9 +106,9 @@ def test_conditions():
     ClaimCreation(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value="baz@foo-bar.org",
-        assertion_date=datetime_utc(2022, 9, 1, 12, 0),
-        valid_from=datetime_utc(2022, 10, 1, 0, 0),
-        valid_until=datetime_utc(2022, 10, 31, 23, 59),
+        assertion_date=utc_datetime(2022, 9, 1, 12, 0),
+        valid_from=utc_datetime(2022, 10, 1, 0, 0),
+        valid_until=utc_datetime(2022, 10, 31, 23, 59),
         source="https://foo-bar.org",  # type: ignore
         sub_source="https://baz.foo-bar.org",  # type: ignore
         asserted_by=AuthorityLevel.DAC,
@@ -171,24 +165,24 @@ def test_conditions():
     "valid_from, valid_until",
     [
         (
-            datetime_utc(2022, 10, 1, 0, 0),
-            datetime_utc(2022, 10, 31, 23, 59),
+            utc_datetime(2022, 10, 1, 0, 0),
+            utc_datetime(2022, 10, 31, 23, 59),
         ),
         (
-            datetime_utc(2001, 12, 31, 23, 59),
-            datetime_utc(2021, 1, 1, 0, 0),
+            utc_datetime(2001, 12, 31, 23, 59),
+            utc_datetime(2021, 1, 1, 0, 0),
         ),
         (
-            datetime_utc(2020, 6, 15, 12, 59),
-            datetime_utc(2020, 6, 15, 13, 1),
+            utc_datetime(2020, 6, 15, 12, 59),
+            utc_datetime(2020, 6, 15, 13, 1),
         ),
         (
-            datetime_utc(2022, 2, 28, 13, 1),
-            datetime_utc(2022, 3, 1, 12, 59),
+            utc_datetime(2022, 2, 28, 13, 1),
+            utc_datetime(2022, 3, 1, 12, 59),
         ),
         (
-            datetime_utc(2021, 12, 31, 23, 59),
-            datetime_utc(2022, 1, 1, 0, 0),
+            utc_datetime(2021, 12, 31, 23, 59),
+            utc_datetime(2022, 1, 1, 0, 0),
         ),
     ],
 )
@@ -197,7 +191,7 @@ def test_validator_period(valid_from, valid_until):
     ClaimCreation(
         visa_type=VisaType.RESEARCHER_STATUS,
         visa_value="foo@bar.org",  # type: ignore
-        assertion_date=datetime_utc(2022, 9, 1, 12, 0),
+        assertion_date=utc_datetime(2022, 9, 1, 12, 0),
         valid_from=valid_from,
         valid_until=valid_until,
         source="https://foo.org",  # type: ignore
@@ -207,8 +201,8 @@ def test_validator_period(valid_from, valid_until):
         ClaimCreation(
             visa_type=VisaType.RESEARCHER_STATUS,
             visa_value="foo@bar.org",  # type: ignore
-            assertion_date=datetime_utc(2022, 9, 1, 12, 0),
-            valid_from=datetime_utc(2022, 10, 1),
+            assertion_date=utc_datetime(2022, 9, 1, 12, 0),
+            valid_from=utc_datetime(2022, 10, 1),
             valid_until=valid_from,
             source="https://foo.org",  # type: ignore
         )
@@ -217,7 +211,7 @@ def test_validator_period(valid_from, valid_until):
         ClaimCreation(
             visa_type=VisaType.RESEARCHER_STATUS,
             visa_value="foo@bar.org",  # type: ignore
-            assertion_date=datetime_utc(2022, 9, 1, 12, 0),
+            assertion_date=utc_datetime(2022, 9, 1, 12, 0),
             valid_from=valid_from,
             valid_until=valid_from,
             source="https://foo.org",  # type: ignore

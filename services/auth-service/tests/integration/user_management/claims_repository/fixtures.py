@@ -82,7 +82,7 @@ def fixture_client_with_db(
         db_url=connection_url,
         db_name="test-claims-repository",
         include_apis=["claims"],
-        add_as_data_stewards=add_as_data_stewards,
+        add_as_data_stewards=add_as_data_stewards,  # type: ignore
     )  # pyright: ignore
     mongodb.get_connection_client().drop_database(config.db_name)
     asyncio.run(seed_database(config))

@@ -18,7 +18,7 @@
 
 from datetime import datetime
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc, utc_datetime
 
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.core.claims import (
@@ -37,8 +37,6 @@ from auth_service.user_management.claims_repository.models.dto import (
     VisaType,
 )
 
-datetime_utc = DateTimeUTC.construct
-
 ORG_URL = str(CONFIG.organization_url).rstrip("/")
 
 
@@ -50,20 +48,20 @@ def test_is_valid_claim():
         visa_type=VisaType.RESEARCHER_STATUS,
         visa_value="https://home.org",  # type: ignore
         source="https://home.org",  # type: ignore
-        assertion_date=datetime_utc(2022, 11, 1),
-        valid_from=datetime_utc(2022, 11, 15),
-        valid_until=datetime_utc(2022, 11, 20),
-        creation_date=datetime_utc(2022, 11, 1),
+        assertion_date=utc_datetime(2022, 11, 1),
+        valid_from=utc_datetime(2022, 11, 15),
+        valid_until=utc_datetime(2022, 11, 20),
+        creation_date=utc_datetime(2022, 11, 1),
     )
-    assert is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 17))
-    assert not is_valid_claim(claim, now=lambda: datetime_utc(2020, 1, 1))
-    assert not is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 7))
-    assert not is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 27))
-    assert not is_valid_claim(claim, now=lambda: datetime_utc(2029, 12, 31))
+    assert is_valid_claim(claim, now=lambda: utc_datetime(2022, 11, 17))
+    assert not is_valid_claim(claim, now=lambda: utc_datetime(2020, 1, 1))
+    assert not is_valid_claim(claim, now=lambda: utc_datetime(2022, 11, 7))
+    assert not is_valid_claim(claim, now=lambda: utc_datetime(2022, 11, 27))
+    assert not is_valid_claim(claim, now=lambda: utc_datetime(2029, 12, 31))
     claim = claim.model_copy(update={"revocation_date": datetime(2022, 11, 30)})
-    assert not is_valid_claim(claim, now=lambda: datetime_utc(2020, 1, 1))
-    assert not is_valid_claim(claim, now=lambda: datetime_utc(2022, 11, 17))
-    assert not is_valid_claim(claim, now=lambda: datetime_utc(2029, 12, 31))
+    assert not is_valid_claim(claim, now=lambda: utc_datetime(2020, 1, 1))
+    assert not is_valid_claim(claim, now=lambda: utc_datetime(2022, 11, 17))
+    assert not is_valid_claim(claim, now=lambda: utc_datetime(2029, 12, 31))
 
 
 def test_is_internal_claim():
@@ -74,11 +72,11 @@ def test_is_internal_claim():
         visa_type=VisaType.GHGA_ROLE,
         visa_value="data_steward@some.org",  # type: ignore
         source=CONFIG.organization_url,
-        assertion_date=datetime_utc(2022, 11, 1),
+        assertion_date=utc_datetime(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
-        valid_from=datetime_utc(2022, 11, 15),
-        valid_until=datetime_utc(2022, 11, 20),
-        creation_date=datetime_utc(2022, 11, 1),
+        valid_from=utc_datetime(2022, 11, 15),
+        valid_until=utc_datetime(2022, 11, 20),
+        creation_date=utc_datetime(2022, 11, 1),
     )
     assert is_internal_claim(good_claim, VisaType.GHGA_ROLE)
     assert not is_internal_claim(good_claim, VisaType.RESEARCHER_STATUS)
@@ -110,11 +108,11 @@ def test_is_data_steward_claim():
         visa_type=VisaType.GHGA_ROLE,
         visa_value="data_steward@some.org",  # type: ignore
         source=CONFIG.organization_url,
-        assertion_date=datetime_utc(2022, 11, 1),
+        assertion_date=utc_datetime(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
-        valid_from=datetime_utc(2022, 11, 15),
-        valid_until=datetime_utc(2022, 11, 20),
-        creation_date=datetime_utc(2022, 11, 1),
+        valid_from=utc_datetime(2022, 11, 15),
+        valid_until=utc_datetime(2022, 11, 20),
+        creation_date=utc_datetime(2022, 11, 1),
     )
     assert is_data_steward_claim(good_claim)
 
@@ -136,8 +134,8 @@ def test_create_controlled_access_claim():
     created_claim = create_controlled_access_claim(
         user_id="some-user-id",
         dataset_id="some-dataset-id",
-        valid_from=datetime_utc(current_year - 1, 7, 1),
-        valid_until=datetime_utc(current_year + 1, 6, 30),
+        valid_from=utc_datetime(current_year - 1, 7, 1),
+        valid_until=utc_datetime(current_year + 1, 6, 30),
     )
     assert created_claim.user_id == "some-user-id"
     assert get_dataset_for_value(str(created_claim.visa_value)) == "some-dataset-id"
@@ -165,11 +163,11 @@ def test_has_download_access_for_dataset():
         visa_value=f"{ORG_URL}/datasets/some-dataset-id",  # pyright: ignore
         source=ORG_URL,  # type: ignore[arg-type]
         sub_source=None,
-        assertion_date=datetime_utc(2022, 11, 1),
+        assertion_date=utc_datetime(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
-        valid_from=datetime_utc(2022, 11, 15),
-        valid_until=datetime_utc(2022, 11, 20),
-        creation_date=datetime_utc(2022, 11, 1),
+        valid_from=utc_datetime(2022, 11, 15),
+        valid_until=utc_datetime(2022, 11, 20),
+        creation_date=utc_datetime(2022, 11, 1),
         revocation_date=None,
         conditions=None,
     )
@@ -200,11 +198,11 @@ def test_dateset_id_when_download_access():
         visa_value=f"{ORG_URL}/datasets/some-dataset-id",  # pyright: ignore
         source=ORG_URL,  # type: ignore[arg-type]
         sub_source=None,
-        assertion_date=datetime_utc(2022, 11, 1),
+        assertion_date=utc_datetime(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
-        valid_from=datetime_utc(2022, 11, 15),
-        valid_until=datetime_utc(2022, 11, 20),
-        creation_date=datetime_utc(2022, 11, 1),
+        valid_from=utc_datetime(2022, 11, 15),
+        valid_until=utc_datetime(2022, 11, 20),
+        creation_date=utc_datetime(2022, 11, 1),
         revocation_date=None,
         conditions=None,
     )

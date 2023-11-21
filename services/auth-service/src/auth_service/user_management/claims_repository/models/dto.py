@@ -21,7 +21,7 @@ Note: we currently use the DTOs also as the core entities.
 from enum import Enum
 from typing import Any, Optional, Union
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -123,16 +123,16 @@ class Identity(BaseDto):
 class ClaimValidity(BaseDto):
     """Start and end dates for validating claims."""
 
-    valid_from: DateTimeUTC = Field(
+    valid_from: UTCDatetime = Field(
         ..., description="Start date of validity", examples=["2023-01-01T00:00:00Z"]
     )
-    valid_until: DateTimeUTC = Field(
+    valid_until: UTCDatetime = Field(
         ..., description="End date of validity", examples=["2023-12-31T23:59:59Z"]
     )
 
     @field_validator("valid_until")
     @classmethod
-    def period_is_valid(cls, value: DateTimeUTC, info: ValidationInfo):
+    def period_is_valid(cls, value: UTCDatetime, info: ValidationInfo):
         """Validate that the dates of the period are in the right order."""
         data = info.data
         if "valid_from" in data and value <= data["valid_from"]:
@@ -150,7 +150,7 @@ class ClaimCreation(ClaimValidity):
         examples=["faculty@home.org"],
     )
 
-    assertion_date: DateTimeUTC = Field(
+    assertion_date: UTCDatetime = Field(
         ...,
         description="Date when the assertion was made",
         examples=["2022-11-30T12:00:00Z"],
@@ -185,7 +185,7 @@ class ClaimCreation(ClaimValidity):
 class ClaimUpdate(BaseDto):
     """A set of attributes that shall be updated in a claim."""
 
-    revocation_date: DateTimeUTC = Field(..., description="Date of revocation")
+    revocation_date: UTCDatetime = Field(..., description="Date of revocation")
 
 
 class ClaimFullCreation(ClaimCreation):
@@ -195,10 +195,10 @@ class ClaimFullCreation(ClaimCreation):
         default=..., description="Internally used ID of the user"
     )
 
-    creation_date: DateTimeUTC = Field(
+    creation_date: UTCDatetime = Field(
         ..., description="Date of creation of this claim"
     )
-    revocation_date: Optional[DateTimeUTC] = Field(
+    revocation_date: Optional[UTCDatetime] = Field(
         None, description="If revoked, date of revocation"
     )
 

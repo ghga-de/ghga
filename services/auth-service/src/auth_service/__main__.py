@@ -16,19 +16,86 @@
 """Entrypoint of the package"""
 
 import asyncio
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from ghga_service_commons.api import run_server
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
+from hexkit.providers.akafka.provider import KafkaEventSubscriber
+
+from auth_service.deps import get_mongodb_config, get_mongodb_dao_factory
+from auth_service.user_management.claims_repository.core.deletion import (
+    DatasetDeletionHandler,
+    DatasetDeletionPort,
+)
+from auth_service.user_management.claims_repository.deps import (
+    ClaimDao,
+    get_claim_dao_factory,
+    get_claim_dao_factory_config,
+)
+from auth_service.user_management.claims_repository.translators.akafka import (
+    EventSubTranslator,
+)
 
 from .config import CONFIG, Config
+
+
+async def get_claim_dao(
+    config: Config,
+) -> ClaimDao:
+    """Get an event handler for dataset deletion events."""
+    claim_dao_factory_config = get_claim_dao_factory_config(config=config)
+    db_config = get_mongodb_config(config=config)
+    dao_factory = get_mongodb_dao_factory(config=db_config)
+    claim_dao_factory = get_claim_dao_factory(
+        config=claim_dao_factory_config, dao_factory=dao_factory
+    )
+    return await claim_dao_factory.get_claim_dao()
+
+
+@asynccontextmanager
+async def prepare_event_handler(
+    config: Config,
+) -> AsyncGenerator[DatasetDeletionPort, None]:
+    """Get an event handler for dataset deletion events."""
+    claim_dao = await get_claim_dao(config)
+    yield DatasetDeletionHandler(claim_dao=claim_dao)
+
+
+@asynccontextmanager
+async def prepare_event_subscriber(
+    config: Config,
+) -> AsyncGenerator[KafkaEventSubscriber, None]:
+    """Get an event subscriber for dataset deletion events."""
+    async with prepare_event_handler(config) as handler:
+        translator = EventSubTranslator(config=config, handler=handler)
+        async with KafkaEventSubscriber.construct(
+            config=config, translator=translator
+        ) as event_subscriber:
+            yield event_subscriber
+
+
+async def consume_events(config: Config = CONFIG):
+    """Run an event consumer listening to the configured topic."""
+    async with prepare_event_subscriber(config=config) as event_subscriber:
+        await event_subscriber.run()
 
 
 def run(config: Config = CONFIG):
     """Run the service"""
     assert_tz_is_utc()
-    service = "auth_adapter" if config.run_auth_adapter else "user_management"
-    print(f"Starting {service} service")
-    asyncio.run(run_server(app=f"auth_service.{service}.api.main:app", config=config))
+    run_adapter = config.run_auth_adapter
+    service = "auth_adapter" if run_adapter else "user_management"
+    apis = config.include_apis
+    consumer = not run_adapter and not apis
+    mode = " and ".join(apis)
+    mode = f"with {mode} API" if mode else "as event consumer"
+    print(f"Starting {service} service {mode}")
+    asyncio.run(
+        consume_events(config=config)
+        if consumer
+        else run_server(app=f"auth_service.{service}.api.main:app", config=config)
+    )
 
 
 if __name__ == "__main__":
