@@ -18,7 +18,8 @@
 
 from pathlib import Path
 
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class AccessionStoreConfig(BaseSettings):

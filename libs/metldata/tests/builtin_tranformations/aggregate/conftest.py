@@ -54,7 +54,7 @@ def data_complete_1_resolved_public() -> Json:
 @fixture
 def config() -> AggregateConfig:
     """A working config"""
-    return AggregateConfig.parse_obj(
+    return AggregateConfig.model_validate(
         load_yaml(Path("transformations/aggregate/default/config.yaml"))
     )
 
@@ -62,6 +62,6 @@ def config() -> AggregateConfig:
 @fixture
 def invalid_config() -> AggregateConfig:
     """An invalid config with conflicting output paths."""
-    return AggregateConfig.parse_obj(
+    return AggregateConfig.model_validate(
         load_yaml(Path("transformations/aggregate/config_invalid.yaml"))
     )

@@ -51,7 +51,7 @@ async def test_upload_artifacts_via_http_api(
         artifact_types=list(EXAMPLE_ARTIFACTS.keys()),
         artifact_topic_prefix="artifact",
         loader_api_root="http://localhost:8000",
-        **file_system_event_fixture.config.dict(),
+        **file_system_event_fixture.config.model_dump(),
     )
 
     # publish artifacts:

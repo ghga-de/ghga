@@ -16,7 +16,8 @@
 
 """Config parameters and their defaults."""
 
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
 
 from metldata.artifacts_rest.models import ArtifactInfo
 
@@ -29,8 +30,7 @@ class ArtifactsRestConfig(BaseSettings):
         description="Information for artifacts to be queryable via the Artifacts REST API.",
     )
 
-    # pylint: disable=no-self-argument
-    @validator("artifact_infos")
+    @field_validator("artifact_infos")
     def validate_artifact_info_names(
         cls, value: list[ArtifactInfo]
     ) -> list[ArtifactInfo]:

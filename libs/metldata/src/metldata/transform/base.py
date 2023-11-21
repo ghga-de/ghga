@@ -22,7 +22,14 @@ from dataclasses import dataclass
 from graphlib import CycleError, TopologicalSorter
 from typing import Callable, Generic, Optional, TypeVar
 
-from pydantic import BaseModel, Field, create_model, root_validator, validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    create_model,
+    field_validator,
+    model_validator,
+)
 
 from metldata.custom_types import Json
 from metldata.event_handling.models import SubmissionAnnotation
@@ -97,7 +104,7 @@ class TransformationDefinition(Generic[Config]):
             + " MetadataModelTransformationError if the transformation fails."
         ),
     )
-    metadata_transformer_factory: type[MetadataTransformer[Config]] = Field(
+    metadata_transformer_factory: type[MetadataTransformer] = Field(
         ...,
         description=(
             "A class for transforming metadata. Raises a MetadataTransformationError"
@@ -113,6 +120,7 @@ class WorkflowConfig(BaseModel, ABC):
 class WorkflowStepBase(BaseModel, ABC):
     """A base class for workflow steps."""
 
+    model_config = ConfigDict(frozen=True)
     description: str = Field(..., description="A description of the step.")
     input: Optional[str] = Field(
         ...,
@@ -121,11 +129,6 @@ class WorkflowStepBase(BaseModel, ABC):
             " for this step. If this is the first step, set to None."
         ),
     )
-
-    class Config:
-        """Config for the workflow step."""
-
-        frozen = True
 
 
 class WorkflowStep(WorkflowStepBase):
@@ -140,6 +143,7 @@ class WorkflowStep(WorkflowStepBase):
 class WorkflowDefinition(BaseModel):
     """A definition of a transformation workflow."""
 
+    model_config = ConfigDict(frozen=True)
     description: str = Field(..., description="A description of the workflow.")
     steps: dict[str, WorkflowStep] = Field(
         ...,
@@ -158,7 +162,7 @@ class WorkflowDefinition(BaseModel):
     )
 
     # pylint: disable=no-self-argument
-    @validator("steps", pre=False)
+    @field_validator("steps", mode="after")
     def validate_step_references(
         cls, steps: dict[str, WorkflowStep]
     ) -> dict[str, WorkflowStep]:
@@ -188,13 +192,13 @@ class WorkflowDefinition(BaseModel):
 
         return steps
 
-    @root_validator(pre=False)
+    @model_validator(mode="after")
     def validate_artifact_references(cls, values):
         """Validate that artifacts reference existing workflow steps."""
-        steps = values.get("steps")
+        steps = values.steps
         if steps is None:
             raise ValueError("Steps are undefined.")
-        artifacts = values.get("artifacts")
+        artifacts = values.artifacts
         if artifacts is None:
             raise ValueError("Artifacts are undefined.")
 
@@ -239,8 +243,3 @@ class WorkflowDefinition(BaseModel):
             return list(topological_sorter.static_order())
         except CycleError as exc:
             raise RuntimeError("Step definitions imply a circular dependency.") from exc
-
-    class Config:
-        """Config for the workflow step."""
-
-        frozen = True

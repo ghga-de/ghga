@@ -62,7 +62,7 @@ def test_happy(config_sub_fixture: SubmissionConfig):  # noqa: F811
     assert EXAMPLE_SUBMISSION == submission_queried
 
     # update the submision:
-    submission_updated = EXAMPLE_SUBMISSION.copy(
+    submission_updated = EXAMPLE_SUBMISSION.model_copy(
         update={"title": "updated test submission"}
     )
     submission_store.update_existing(submission=submission_updated)
@@ -74,7 +74,7 @@ def test_happy(config_sub_fixture: SubmissionConfig):  # noqa: F811
     assert submission_updated_queried == submission_updated
 
     # test getting all existing submission IDs
-    submission_2 = EXAMPLE_SUBMISSION.copy(update={"id": "testsubmission002"})
+    submission_2 = EXAMPLE_SUBMISSION.model_copy(update={"id": "testsubmission002"})
     submission_store.insert_new(submission=submission_2)
 
     assert submission_store.get_all_submission_ids() == [

@@ -16,13 +16,16 @@
 
 """Config parameters and their defaults."""
 
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from metldata.builtin_transformations.merge_slots.models import SlotMergeInstruction
 
 
 class SlotMergingConfig(BaseSettings):
     """Config containing slots to be deleted from models and associated metadata."""
+
+    model_config = SettingsConfigDict(extra="forbid")
 
     merge_instructions: list[SlotMergeInstruction] = Field(
         ...,
@@ -34,7 +37,7 @@ class SlotMergingConfig(BaseSettings):
             + " a source slot in another merge instruction."
             + " The source slots will not be deleted."
         ),
-        example=[
+        examples=[
             {
                 "class_name": "class_a",
                 "source_slots": ["some_slot", "another_slot"],
@@ -43,8 +46,7 @@ class SlotMergingConfig(BaseSettings):
         ],
     )
 
-    # pylint: disable=no-self-argument
-    @validator("merge_instructions")
+    @field_validator("merge_instructions")
     def validate_merge_instructions(
         cls, filtered_merge_instructions: list[SlotMergeInstruction]
     ) -> list[SlotMergeInstruction]:
@@ -82,8 +84,3 @@ class SlotMergingConfig(BaseSettings):
                 )
 
         return filtered_merge_instructions
-
-    class Config:
-        """Pydantic config."""
-
-        extra = "forbid"

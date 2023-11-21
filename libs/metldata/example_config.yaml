@@ -204,8 +204,13 @@ db_connection_str: '**********'
 db_name: dev_db
 docs_url: /docs
 host: 127.0.0.1
+kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
 loader_token_hashes:
 - 09e5724dab34b50fe2db5ebae7ac5eac4ef2904d105f8f2b3d5a4cb2c7f43da4
 log_level: trace
@@ -216,6 +221,6 @@ primary_dataset_name: EmbeddedDataset
 resource_change_event_topic: searchable_resources
 resource_deletion_event_type: searchable_resource_deleted
 resource_upsertion_type: searchable_resource_upserted
-service_instance_id: '1'
+service_instance_id: '001'
 service_name: metldata
 workers: 1

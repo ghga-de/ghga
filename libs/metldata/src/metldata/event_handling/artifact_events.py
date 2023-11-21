@@ -16,7 +16,7 @@
 
 """Logic for handling artifact events."""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ArtifactEventConfig(BaseModel):
@@ -31,8 +31,7 @@ class ArtifactEventConfig(BaseModel):
         ),
     )
 
-    # pylint: disable=no-self-argument
-    @validator("artifact_topic_prefix")
+    @field_validator("artifact_topic_prefix")
     def artifact_topic_prefix_must_not_contain_dots(cls, value: str):
         """Validate that artifact topic prefix does not contain dots."""
         if "." in value:

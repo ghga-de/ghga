@@ -62,8 +62,8 @@ class FileSystemEventFixture:
             )
 
         # hashable versions for comparison:
-        observed_event_jsons = {event.json() for event in observed_events}
-        expected_event_jsons = {event.json() for event in expected_events}
+        observed_event_jsons = {event.model_dump_json() for event in observed_events}
+        expected_event_jsons = {event.model_dump_json() for event in expected_events}
 
         if expected_event_jsons != observed_event_jsons:
             raise EventExpectationMismatch(

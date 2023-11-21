@@ -18,7 +18,7 @@
 
 from collections import defaultdict
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 from metldata.event_handling.artifact_events import (
     ArtifactEventConfig,
@@ -40,8 +40,7 @@ class ArtifactCollectorConfig(ArtifactEventConfig):
         ),
     )
 
-    # pylint: disable=no-self-argument
-    @validator("artifact_types")
+    @field_validator("artifact_types")
     def artifact_types_must_not_contain_dots(cls, value: list[str]):
         """Validate that artifact types do not contain dots."""
         for artifact_type in value:

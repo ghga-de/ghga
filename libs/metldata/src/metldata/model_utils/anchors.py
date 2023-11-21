@@ -21,7 +21,7 @@ that class. This module provides logic for handling these anchor points.
 
 from linkml_runtime import SchemaView
 from linkml_runtime.linkml_model import SlotDefinition
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from metldata.model_utils.essentials import ROOT_CLASS, MetadataModel
 from metldata.model_utils.identifiers import get_class_identifiers
@@ -42,6 +42,8 @@ class ClassNotAnchoredError(RuntimeError):
 class AnchorPoint(BaseModel):
     """A model for describing an anchor point for the specified target class."""
 
+    model_config = ConfigDict(frozen=True)
+
     target_class: str = Field(..., description="The name of the class to be targeted.")
     identifier_slot: str = Field(
         ...,
@@ -55,11 +57,6 @@ class AnchorPoint(BaseModel):
             "The name of the slot in the root class used to link to the target class."
         ),
     )
-
-    class Config:
-        """Pydantic Configs."""
-
-        frozen = True
 
 
 def check_root_slot(slot: SlotDefinition):

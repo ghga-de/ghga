@@ -166,7 +166,11 @@ async def test_get_stats_endpoint(
     observed_stats = response.json()
     assert isinstance(observed_stats, dict)
 
-    observed_created = DateTimeUTC.fromisoformat(observed_stats.pop("created"))
+    raw_observed_created = observed_stats.pop("created")
+    if isinstance(raw_observed_created, str) and raw_observed_created.endswith("Z"):
+        raw_observed_created = raw_observed_created.replace("Z", "+00:00")
+
+    observed_created = DateTimeUTC.fromisoformat(raw_observed_created)
     assert abs((now_as_utc() - observed_created).seconds) < 5
 
     expected_stats = {

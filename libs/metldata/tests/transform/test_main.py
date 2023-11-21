@@ -47,7 +47,7 @@ async def test_run_workflow_on_all_source_events(
         artifact_topic_prefix="artifacts",
         source_event_topic="source-events",
         source_event_type="source-event",
-        **file_system_event_fixture.config.dict(),
+        **file_system_event_fixture.config.model_dump(),
     )
 
     submission_id = "some-submission-id"
@@ -60,7 +60,7 @@ async def test_run_workflow_on_all_source_events(
                 submission_id=submission_id,
                 content=EXAMPLE_WORKFLOW_TEST_CASE.original_metadata,
                 annotation=EXAMPLE_WORKFLOW_TEST_CASE.submission_annotation,
-            ).json()
+            ).model_dump_json()
         ),
     )
     await file_system_event_fixture.publish_events(events=[source_event])
@@ -78,7 +78,7 @@ async def test_run_workflow_on_all_source_events(
                     submission_id=submission_id,
                     content=artifact,
                     annotation=EXAMPLE_WORKFLOW_TEST_CASE.submission_annotation,
-                ).json()
+                ).model_dump_json()
             ),
         )
         for artifact_type, artifact in EXAMPLE_WORKFLOW_TEST_CASE.artifact_metadata.items()

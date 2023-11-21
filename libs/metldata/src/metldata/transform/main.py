@@ -56,7 +56,7 @@ async def run_workflow_on_source_event(
     for artifact_type, artifact_content in artifacts.items():
         artifact_event = ArtifactEvent(
             artifact_type=artifact_type,
-            payload=source_event.copy(update={"content": artifact_content}),
+            payload=source_event.model_copy(update={"content": artifact_content}),
         )
 
         await publish_artifact_func(artifact_event)

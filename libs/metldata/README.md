@@ -1,5 +1,5 @@
 
-[![tests](https://github.com/ghga-de/metldata/actions/workflows/unit_and_int_tests.yaml/badge.svg)](https://github.com/ghga-de/metldata/actions/workflows/unit_and_int_tests.yaml)
+[![tests](https://github.com/ghga-de/metldata/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/metldata/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/metldata/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/metldata?branch=main)
 
 # Metldata
@@ -58,6 +58,7 @@ accessions are not violated, however, data might become unavailable.
 
 
 ## Installation
+
 We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/metldata):
@@ -89,40 +90,145 @@ metldata --help
 ```
 
 ## Configuration
+
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`artifact_infos`** *(array)*: Information for artifacts to be queryable via the Artifacts REST API.
-
-  - **Items**: Refer to *[#/definitions/ArtifactInfo](#definitions/ArtifactInfo)*.
-
 - **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
+
+  Examples:
+
+  ```json
+  "mongodb://localhost:27017"
+  ```
+
+
 - **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+
+
+  Examples:
+
+  ```json
+  "my-database"
+  ```
+
 
 - **`service_name`** *(string)*: Default: `"metldata"`.
 
 - **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
+
+  Examples:
+
+  ```json
+  "germany-bw-instance-001"
+  ```
+
+
 - **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
+
+  Examples:
+
+  ```json
+  [
+      "localhost:9092"
+  ]
+  ```
+
+
+- **`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
+
+- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+
+- **`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
+
+- **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
+
+- **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+
 - **`primary_artifact_name`** *(string)*: Name of the artifact from which the information for outgoing change events is derived.
+
+
+  Examples:
+
+  ```json
+  "embedded_public"
+  ```
+
 
 - **`primary_dataset_name`** *(string)*: Name of the resource class corresponding to the embedded_dataset slot.
 
+
+  Examples:
+
+  ```json
+  "EmbeddedDataset"
+  ```
+
+
 - **`resource_change_event_topic`** *(string)*: Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.
+
+
+  Examples:
+
+  ```json
+  "searchable_resources"
+  ```
+
 
 - **`resource_deletion_event_type`** *(string)*: Type used for events indicating the deletion of a previously existing resource.
 
+
+  Examples:
+
+  ```json
+  "searchable_resource_deleted"
+  ```
+
+
 - **`resource_upsertion_type`** *(string)*: Type used for events indicating the upsert of a resource.
+
+
+  Examples:
+
+  ```json
+  "searchable_resource_upserted"
+  ```
+
 
 - **`dataset_change_event_topic`** *(string)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
 
+
+  Examples:
+
+  ```json
+  "metadata_datasets"
+  ```
+
+
 - **`dataset_deletion_type`** *(string)*: Type used for events announcing a new dataset overview.
 
+
+  Examples:
+
+  ```json
+  "dataset_deleted"
+  ```
+
+
 - **`dataset_upsertion_type`** *(string)*: Type used for events announcing a new dataset overview.
+
+
+  Examples:
+
+  ```json
+  "dataset_created"
+  ```
+
 
 - **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
@@ -140,60 +246,91 @@ The service requires the following configuration parameters:
 
 - **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
-- **`cors_allowed_origins`** *(array)*: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.
+- **`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
 
-  - **Items** *(string)*
+  - **Any of**
 
-- **`cors_allow_credentials`** *(boolean)*: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.
+    - *array*
 
-- **`cors_allowed_methods`** *(array)*: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.
+      - **Items** *(string)*
 
-  - **Items** *(string)*
+    - *null*
 
-- **`cors_allowed_headers`** *(array)*: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.
 
-  - **Items** *(string)*
+  Examples:
+
+  ```json
+  [
+      "https://example.org",
+      "https://www.example.org"
+  ]
+  ```
+
+
+- **`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
+
+  - **Any of**
+
+    - *boolean*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  [
+      "https://example.org",
+      "https://www.example.org"
+  ]
+  ```
+
+
+- **`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
+
+  - **Any of**
+
+    - *array*
+
+      - **Items** *(string)*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  [
+      "*"
+  ]
+  ```
+
+
+- **`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+
+  - **Any of**
+
+    - *array*
+
+      - **Items** *(string)*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  []
+  ```
+
+
+- **`artifact_infos`** *(array)*: Information for artifacts to be queryable via the Artifacts REST API.
+
+  - **Items**: Refer to *[#/$defs/ArtifactInfo](#$defs/ArtifactInfo)*.
 
 - **`loader_token_hashes`** *(array)*: Hashes of tokens used to authenticate for loading artifact.
 
   - **Items** *(string)*
-
-## Definitions
-
-
-- <a id="definitions/AnchorPoint"></a>**`AnchorPoint`** *(object)*: A model for describing an anchor point for the specified target class.
-
-  - **`target_class`** *(string, required)*: The name of the class to be targeted.
-
-  - **`identifier_slot`** *(string, required)*: The name of the slot in the target class that is used as identifier.
-
-  - **`root_slot`** *(string, required)*: The name of the slot in the root class used to link to the target class.
-
-- <a id="definitions/ArtifactResourceClass"></a>**`ArtifactResourceClass`** *(object)*: Model to describe a resource class of an artifact.
-
-  - **`name`** *(string, required)*: The name of the metadata class.
-
-  - **`description`** *(string)*: A description of the metadata class.
-
-  - **`anchor_point`**: The anchor point for this metadata class.
-
-    - **All of**
-
-      - : Refer to *[#/definitions/AnchorPoint](#definitions/AnchorPoint)*.
-
-  - **`json_schema`** *(object, required)*: The JSON schema for this metadata class.
-
-- <a id="definitions/ArtifactInfo"></a>**`ArtifactInfo`** *(object)*: Model to describe general information on an artifact.
-Please note, it does not contain actual artifact instances derived from specific
-metadata.
-
-  - **`name`** *(string, required)*: The name of the artifact.
-
-  - **`description`** *(string, required)*: A description of the artifact.
-
-  - **`resource_classes`** *(object, required)*: A dictionary of resource classes for this artifact. The keys are the names of the classes. The values are the corresponding class models. Can contain additional properties.
-
-    - **Additional Properties**: Refer to *[#/definitions/ArtifactResourceClass](#definitions/ArtifactResourceClass)*.
 
 
 ### Usage:
@@ -383,19 +520,20 @@ that is applied to the source events as explained above.
 
 
 ## Development
+
 For setting up the development environment, we rely on the
-[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode
+[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of VS Code
 in combination with Docker Compose.
 
-To use it, you have to have Docker Compose as well as vscode with its "Remote - Containers"
+To use it, you have to have Docker Compose as well as VS Code with its "Remote - Containers"
 extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in vscode and run the command
-`Remote-Containers: Reopen in Container` from the vscode "Command Palette".
+Then open this repository in VS Code and run the command
+`Remote-Containers: Reopen in Container` from the VS Code "Command Palette".
 
 This will give you a full-fledged, pre-configured development environment including:
 - infrastructural dependencies of the service (databases, etc.)
-- all relevant vscode extensions pre-installed
-- pre-configured linting and auto-formating
+- all relevant VS Code extensions pre-installed
+- pre-configured linting and auto-formatting
 - a pre-configured debugger
 - automatic license-header insertion
 
@@ -407,9 +545,11 @@ if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
 [`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
 
 ## License
+
 This repository is free to use and modify according to the
 [Apache 2.0 License](./LICENSE).
 
-## Readme Generation
-This readme is autogenerate, please see [`readme_generation.md`](./readme_generation.md)
+## README Generation
+
+This README file is auto-generated, please see [`readme_generation.md`](./readme_generation.md)
 for details.

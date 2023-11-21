@@ -58,7 +58,7 @@ def check_source_events(
                     annotation=SubmissionAnnotation(
                         accession_map=expected_submission.accession_map
                     ),
-                ).json()
+                ).model_dump_json()
             ),
         )
         for expected_submission in expected_submissions

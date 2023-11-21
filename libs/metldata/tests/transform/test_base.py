@@ -104,16 +104,17 @@ def test_workflow_definition_config_cls():
     """Test that the config_cls of the WorkflowDefinition generates a concatenated
     config class correctly."""
 
-    config_fields = EXAMPLE_WORKFLOW_DEFINITION.config_cls.__fields__
+    config_fields = EXAMPLE_WORKFLOW_DEFINITION.config_cls.model_fields
 
     assert "infer_references" in config_fields
     assert "delete_slots" in config_fields
     assert (
-        config_fields["infer_references"].type_
+        config_fields["infer_references"].annotation
         == REFERENCE_INFERENCE_TRANSFORMATION.config_cls
     )
     assert (
-        config_fields["delete_slots"].type_ == SLOT_DELETION_TRANSFORMATION.config_cls
+        config_fields["delete_slots"].annotation
+        == SLOT_DELETION_TRANSFORMATION.config_cls
     )
 
 

@@ -26,7 +26,8 @@ from ghga_event_schemas.pydantic_ import (
     SearchableResourceInfo,
 )
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class EventPubTranslatorConfig(BaseSettings):
@@ -36,47 +37,47 @@ class EventPubTranslatorConfig(BaseSettings):
         ...,
         description="Name of the artifact from which the information for outgoing"
         + " change events is derived.",
-        example="embedded_public",
+        examples=["embedded_public"],
     )
     primary_dataset_name: str = Field(
         ...,
         description="Name of the resource class corresponding to the embedded_dataset slot.",
-        example="EmbeddedDataset",
+        examples=["EmbeddedDataset"],
     )
 
     resource_change_event_topic: str = Field(
         ...,
         description="Name of the topic used for events informing other services about"
         + " resource changes, i.e. deletion or insertion.",
-        example="searchable_resources",
+        examples=["searchable_resources"],
     )
     resource_deletion_event_type: str = Field(
         ...,
         description="Type used for events indicating the deletion of a previously"
         + " existing resource.",
-        example="searchable_resource_deleted",
+        examples=["searchable_resource_deleted"],
     )
     resource_upsertion_type: str = Field(
         ...,
         description="Type used for events indicating the upsert of a resource.",
-        example="searchable_resource_upserted",
+        examples=["searchable_resource_upserted"],
     )
 
     dataset_change_event_topic: str = Field(
         ...,
         description="Name of the topic announcing, among other things, the list of"
         + " files included in a new dataset.",
-        example="metadata_datasets",
+        examples=["metadata_datasets"],
     )
     dataset_deletion_type: str = Field(
         ...,
         description="Type used for events announcing a new dataset overview.",
-        example="dataset_deleted",
+        examples=["dataset_deleted"],
     )
     dataset_upsertion_type: str = Field(
         ...,
         description="Type used for events announcing a new dataset overview.",
-        example="dataset_created",
+        examples=["dataset_created"],
     )
 
 
@@ -129,7 +130,7 @@ class EventPubTranslator(EventPublisherPort):
         """
         dataset_id = MetadataDatasetID(accession=accession)
 
-        payload = json.loads(dataset_id.json())
+        payload = json.loads(dataset_id.model_dump_json())
         await self._provider.publish(
             payload=payload,
             type_=self._config.dataset_deletion_type,
@@ -146,7 +147,7 @@ class EventPubTranslator(EventPublisherPort):
             accession=accession, class_name=class_name
         )
 
-        payload = json.loads(resource_info.json())
+        payload = json.loads(resource_info.model_dump_json())
         await self._provider.publish(
             payload=payload,
             type_=self._config.resource_deletion_event_type,
@@ -161,7 +162,7 @@ class EventPubTranslator(EventPublisherPort):
 
         Fires an event that should be processed by the WPS
         """
-        payload = json.loads(dataset_overview.json())
+        payload = json.loads(dataset_overview.model_dump_json())
         await self._provider.publish(
             payload=payload,
             type_=self._config.dataset_upsertion_type,
@@ -174,7 +175,7 @@ class EventPubTranslator(EventPublisherPort):
 
         Fires an event that should be processed by MASS
         """
-        payload = json.loads(resource.json())
+        payload = json.loads(resource.model_dump_json())
         await self._provider.publish(
             payload=payload,
             type_=self._config.resource_upsertion_type,

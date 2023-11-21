@@ -16,7 +16,7 @@
 
 """Reference models."""
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from metldata.builtin_transformations.infer_references.path.path import ReferencePath
 
@@ -40,6 +40,8 @@ class InferredReference(ReferenceDetails):
     references.
     """
 
+    model_config = ConfigDict(frozen=True)
+
     source: str = Field(
         ..., description="The source class to which this reference should be added."
     )
@@ -49,25 +51,20 @@ class InferredReference(ReferenceDetails):
         description="The name of the new slot in the source to store the inferred reference.",
     )
 
-    @root_validator(pre=False)
+    @model_validator(mode="after")
     @classmethod
     def validate_source_and_target(cls, values):
         """Validate that the source and target attributes are identical with the
         source and target specified in the path.
         """
-        if values.get("source") != values.get("path").source:
+        if values.source != values.path.source:
             raise ValueError(
                 "The source is not identical with the source of the specified path."
             )
 
-        if values.get("target") != values.get("path").target:
+        if values.target != values.path.target:
             raise ValueError(
                 "The target is not identical with the target of the specified path."
             )
 
         return values
-
-    class Config:
-        """Config for this model."""
-
-        frozen = True

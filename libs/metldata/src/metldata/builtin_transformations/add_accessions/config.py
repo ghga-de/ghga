@@ -16,11 +16,14 @@
 
 """Config parameters and their defaults."""
 
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AccessionAdditionConfig(BaseSettings):
     """Config to add accessions to a model and associated metadata."""
+
+    model_config = SettingsConfigDict(extra="forbid")
 
     accession_slot_name: str = Field(
         "accession", description="The name of the slot to contain the accessions to."
@@ -29,8 +32,3 @@ class AccessionAdditionConfig(BaseSettings):
         "The accession for an entity.",
         description="The description of the slot to contain the accessions to.",
     )
-
-    class Config:
-        """Pydantic config."""
-
-        extra = "forbid"

@@ -16,10 +16,11 @@
 
 """Data models."""
 
-from typing import Optional, TypedDict
+from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import DateTimeUTC
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
+from typing_extensions import TypedDict
 
 from metldata.custom_types import Json
 from metldata.model_utils.anchors import AnchorPoint
@@ -73,8 +74,7 @@ class ArtifactInfo(BaseModel):
         ),
     )
 
-    # pylint: disable=no-self-argument
-    @validator("resource_classes")
+    @field_validator("resource_classes")
     def check_resource_class_names(
         cls, value: dict[str, ArtifactResourceClass]
     ) -> dict[str, ArtifactResourceClass]:

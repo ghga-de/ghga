@@ -18,7 +18,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class SlotMergeInstruction(BaseModel):
@@ -28,7 +28,7 @@ class SlotMergeInstruction(BaseModel):
     source_slots: list[str] = Field(
         ...,
         description="The slots that should be merged into the target slot.",
-        min_items=2,
+        min_length=2,
     )
     target_slot: str = Field(
         ..., description="The slot into which the source slots should be merged."
@@ -38,9 +38,8 @@ class SlotMergeInstruction(BaseModel):
         description="A description of the target slot.",
     )
 
-    # pylint: disable=no-self-argument
-    @root_validator()
-    def validate_overlapping_slots(cls, values: dict) -> dict:
+    @model_validator(mode="before")
+    def validate_overlapping_slots(cls, values) -> dict:
         """Validate that source and target slots do not overlap."""
         source_slots = set(values["source_slots"])
         target_slot = values["target_slot"]

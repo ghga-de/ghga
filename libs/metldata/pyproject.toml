@@ -21,10 +21,10 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "hexkit[akafka,mongodb]>=0.10.2",
-    "ghga-service-commons[api,auth]>=0.5.0",
-    "ghga-event-schemas>=0.13.4",
-    "typer>=0.7.0",
+    "hexkit[akafka,mongodb]~=1.0.0",
+    "ghga-service-commons[api,auth]~=1.1.0",
+    "ghga-event-schemas~=1.0.0",
+    "typer~=0.9.0",
     "linkml==1.6.1",
     "linkml-runtime==1.6.0",
     "linkml-validator==0.4.5",

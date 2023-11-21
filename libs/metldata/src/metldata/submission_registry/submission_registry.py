@@ -112,7 +112,7 @@ class SubmissionRegistry:
         submission content is still empty.
         """
         id_ = generate_submission_id()
-        submission_creation = models.Submission(id=id_, **header.dict())
+        submission_creation = models.Submission(id=id_, **header.model_dump())
         self._submission_store.insert_new(submission=submission_creation)
 
         return id_
@@ -156,7 +156,7 @@ class SubmissionRegistry:
             anchor_points_by_target=self._anchor_points_by_target,
         )
 
-        updated_submission = submission.copy(
+        updated_submission = submission.model_copy(
             update={"content": content, "accession_map": updated_accession_map}
         )
         self._submission_store.update_existing(submission=updated_submission)
@@ -186,7 +186,7 @@ class SubmissionRegistry:
         status_change = models.StatusChange(
             timestamp=now_as_utc(), new_status=models.SubmissionStatus.COMPLETED
         )
-        updated_submission = submission.copy(
+        updated_submission = submission.model_copy(
             update={
                 "status_history": submission.status_history  # noqa: RUF005
                 + (status_change,)

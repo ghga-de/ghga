@@ -56,6 +56,6 @@ class SourceEventPublisher:
                 topic=self._config.source_event_topic,
                 type_=self._config.source_event_type,
                 key=submission.id,
-                payload=json.loads(payload.json()),
+                payload=json.loads(payload.model_dump_json()),
             )
         )

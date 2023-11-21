@@ -19,7 +19,8 @@
 import json
 from pathlib import Path
 
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from metldata.submission_registry import models
 
@@ -67,7 +68,7 @@ class SubmissionStore:
         """Save a submission to a JSON file."""
         json_path = self._get_submission_json_path(submission_id=submission.id)
         with open(json_path, "w", encoding="utf-8") as file:
-            file.write(submission.json(indent=4))
+            file.write(submission.model_dump_json(indent=4))
 
     def exists(self, *, submission_id: str) -> bool:
         """Check whether a submission with the specified ID exists."""

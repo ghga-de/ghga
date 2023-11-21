@@ -52,7 +52,7 @@ class ArtifactEventPublisher:
 
     async def publish_artifact(self, artifact_event: ArtifactEvent):
         """Publish an artifact as submission event"""
-        payload = json.loads(artifact_event.payload.json())
+        payload = json.loads(artifact_event.payload.model_dump_json())
         topic = get_artifact_topic(
             artifact_topic_prefix=self._config.artifact_topic_prefix,
             artifact_type=artifact_event.artifact_type,

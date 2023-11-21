@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import yaml
-from pydantic.env_settings import BaseSettings
+from pydantic_settings import BaseSettings
 
 from metldata.load.config import ArtifactLoaderAPIConfig
 from tests.fixtures.load.utils import BASE_DIR
@@ -37,7 +37,7 @@ def get_config(
     if sources is not None:
         for source in sources:
             if isinstance(source, BaseSettings):
-                sources_dict.update(**source.dict())
+                sources_dict.update(**source.model_dump())
             else:
                 sources_dict.update(**source)
 

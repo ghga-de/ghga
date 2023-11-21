@@ -16,6 +16,8 @@
 
 """Logic for handling reference paths."""
 
+from pydantic import GetJsonSchemaHandler, ValidationInfo
+
 from metldata.builtin_transformations.infer_references.path.path_str import (
     PATH_PATTERN,
     ValidationError,
@@ -72,7 +74,7 @@ class ReferencePath:
         self.target = self.elements[-1].target
 
     @classmethod
-    def validate(cls, value) -> "ReferencePath":
+    def validate(cls, value, info: ValidationInfo) -> "ReferencePath":
         """A validator for pydantic."""
         if isinstance(value, cls):
             return value
@@ -91,7 +93,9 @@ class ReferencePath:
         yield cls.validate
 
     @classmethod
-    def __modify_schema__(cls, field_schema: dict):
+    def __get_pydantic_json_schema__(
+        cls, field_schema: dict, handler: GetJsonSchemaHandler
+    ):
         """Modify the field schema for pydantic."""
         field_schema.update(type="string", pattern=PATH_PATTERN)
 

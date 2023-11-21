@@ -18,7 +18,8 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, BaseSettings, root_validator
+from pydantic import BaseModel, model_validator
+from pydantic_settings import BaseSettings
 
 from metldata.builtin_transformations.aggregate.func import (
     AggregationFunction,
@@ -36,8 +37,7 @@ class AggregationOperation(BaseModel):
     visit_only_once: Optional[list[str]] = None
     function: type[AggregationFunction]
 
-    # pylint: disable=no-self-argument
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def lookup_operation(cls, values: dict) -> dict:
         """Replaces operation strings with operation types."""
         if "function" in values:

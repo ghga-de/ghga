@@ -19,7 +19,8 @@
 import secrets
 from collections.abc import Iterable
 
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 from metldata.accession_registry.accession_store import AccessionStore
 
@@ -30,12 +31,14 @@ class AccessionRegistryConfig(BaseSettings):
     prefix_mapping: dict[str, str] = Field(
         ...,
         description="Specifies the ID prefix (values) per resource type (keys).",
-        example={
-            "file": "GHGAF",
-            "experiment": "GHGAE",
-            "sample": "GHGAS",
-            "dataset": "GHGAD",
-        },
+        examples=[
+            {
+                "file": "GHGAF",
+                "experiment": "GHGAE",
+                "sample": "GHGAS",
+                "dataset": "GHGAD",
+            }
+        ],
     )
 
     suffix_length: int = Field(8, description="Length of the numeric ID suffix.")
