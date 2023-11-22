@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wkvs"
-version = "1.0.0"
+version = "1.0.1"
 description = "Well-Known-Value-Service - Provides access to common values via API"
 readme = "README.md"
 authors = [
@@ -23,9 +23,9 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "ghga-service-commons[api]>=1.1.0",
-    "hexkit[api]>=0.11.0",
-    "typer>=0.6.0",
+    "ghga-service-commons[api]>=1.2.0",
+    "hexkit[api]>=1.0.0",
+    "typer>=0.9.0",
 ]
 
 [project.license]
@@ -35,7 +35,7 @@ text = "Apache 2.0"
 Repository = "https://github.com/ghga-de/well-known-value-service"
 
 [project.scripts]
-wkvs = "wkvs.__main__:run"
+wkvs = "wkvs.__main__:cli"
 
 [tool.setuptools.packages.find]
 where = ["src"]

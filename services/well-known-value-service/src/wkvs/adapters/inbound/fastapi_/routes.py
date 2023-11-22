@@ -60,7 +60,7 @@ async def retrieve_value(
         HTTPException 404 when the specified value is not configured
     """
     try:
-        available_values = config.dict(include=WELLKNOWNS_FILTER)
+        available_values = config.model_dump(include=WELLKNOWNS_FILTER)
         response = {value_name: available_values[value_name]}
     except KeyError as err:
         raise HTTPException(
@@ -80,4 +80,4 @@ async def retrieve_all_values(
     config: dummies.ConfigDummy,
 ) -> dict[str, Any]:
     """Retrieves all values from the WellKnownsConfig class"""
-    return config.dict(include=WELLKNOWNS_FILTER)
+    return config.model_dump(include=WELLKNOWNS_FILTER)
