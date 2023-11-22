@@ -1,5 +1,5 @@
 
-[![tests](https://github.com/ghga-de/ghga-connector/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-connector/actions/workflows/unit_and_int_tests.yaml)
+[![tests](https://github.com/ghga-de/ghga-connector/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-connector/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-connector/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-connector?branch=main)
 
 # Ghga Connector
@@ -29,13 +29,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
 ```bash
-docker pull ghga/ghga-connector:1.0.0
+docker pull ghga/ghga-connector:1.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-connector:1.0.0 .
+docker build -t ghga/ghga-connector:1.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -43,7 +43,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/ghga-connector:1.0.0 --help
+docker run -p 8080:8080 ghga/ghga-connector:1.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
