@@ -1,0 +1,11 @@
+datapack: 0.1.0
+resources:
+  File: {}
+  Dataset:
+    example_dataset:
+      content:
+        alias: example_dataset
+        dac_contact: dac@example.org
+      relations:
+        files: []
+root: example_dataset

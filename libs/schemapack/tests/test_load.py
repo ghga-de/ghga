@@ -15,13 +15,19 @@
 
 """Tests the load module."""
 
+from contextlib import nullcontext
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
-from schemapack.load import load_schemapack
-from tests.fixtures.examples import INVALID_SCHEMAPACK_PATHS, VALID_SCHEMAPACK_PATHS
+from schemapack.exceptions import DataPackSpecError, SchemaPackSpecError
+from schemapack.load import load_datapack, load_schemapack
+from tests.fixtures.examples import (
+    INVALID_DATAPACK_PATHS,
+    INVALID_SCHEMAPACK_PATHS,
+    VALID_DATAPACK_PATHS,
+    VALID_SCHEMAPACK_PATHS,
+)
 
 
 @pytest.mark.parametrize(
@@ -39,10 +45,31 @@ def test_load_schemapack_invalid(name: str, path: Path):
     """Test loading invalid schemapacks."""
     error_type = name.split(".")[0]
 
-    with pytest.raises(ValidationError) as error:
+    with pytest.raises(SchemaPackSpecError) as exception_info:
         _ = load_schemapack(path)
 
-    original_errors = error.value.errors()
-    assert len(original_errors) == 1
+    error_details = exception_info.value.details
+    assert len(error_details) == 1
 
-    assert original_errors[0]["type"] == error_type
+    assert error_details[0]["type"] == error_type
+
+
+@pytest.mark.parametrize(
+    "path", VALID_DATAPACK_PATHS.values(), ids=VALID_DATAPACK_PATHS
+)
+def test_load_datapack_valid(path: Path):
+    """Test loading valid datapacks."""
+    _ = load_datapack(path)
+
+
+@pytest.mark.parametrize(
+    "name, path", INVALID_DATAPACK_PATHS.items(), ids=INVALID_DATAPACK_PATHS
+)
+def test_load_datapack_invalid(name: str, path: Path):
+    """Test loading invalid datapacks."""
+    error_type = name.split(".")[1]
+
+    with pytest.raises(
+        DataPackSpecError
+    ) if error_type == "DataPackSpecError" else nullcontext():
+        _ = load_datapack(path)

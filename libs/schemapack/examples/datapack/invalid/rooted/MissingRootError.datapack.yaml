@@ -1,0 +1,12 @@
+# No root defined despite the schemapack requiring it:
+datapack: 0.1.0
+resources:
+  File: {}
+  Dataset:
+    example_dataset:
+      content:
+        alias: example_dataset
+        dac_contact: dac@example.org
+      relations:
+        files: []
+# Missing definition of the datapack root that must point to a Dataset resource

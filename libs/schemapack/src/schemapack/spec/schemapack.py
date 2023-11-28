@@ -37,8 +37,7 @@ from schemapack.utils import (
     DecodeError,
     FrozenDict,
     JsonSchemaError,
-    JsonSchemaValidator,
-    get_json_schema_validator,
+    assert_valid_json_schema,
     read_json_or_yaml,
 )
 
@@ -112,35 +111,23 @@ class ContentSchema(FrozenBaseModel):
         """
         return frozenset(self.json_schema_dict.get("properties", {}))
 
-    # cannot be cached because pydantic includes cached properties in the hash and this
-    # is unhashable:
-    @property
-    def validator(self) -> JsonSchemaValidator:
-        """Get a JSON schema validator for validating data against the content schema.
-
-        Raises:
-            JsonSchemaError: If the schema is invalid.
-        """
-        # this call to the following function is cached:
-        # (Caching here might be either way better as is happens independent of the
-        # ContentSchema model and there might be many instances of ContentSchema with
-        # the same json_schema.)
-        return get_json_schema_validator(self.json_schema)
-
     @model_validator(mode="after")
-    def trigger_validator_construction(self) -> "ContentSchema":
-        """Trigger the construction of a validator (for validating data against the
-        schema) and thereby the generation of the json_schema_dict attribute. This also
-        validates the content schema itself.
-        """
+    def validate_schema(self) -> "ContentSchema":
+        """Make sure that the schema is a valid JSON Schema."""
         try:
-            _ = self.validator
+            assert_valid_json_schema(self.json_schema)
         except JsonSchemaError as error:
             raise PydanticCustomError(
                 "InvalidContentSchemaError",
                 "The content schema is not a valid JSON schema: {error_message}",
                 {"error_message": str(error)},
             ) from error
+
+        if self.json_schema_dict.get("type") != "object":
+            raise PydanticCustomError(
+                "InvalidContentSchemaError",
+                "The content schema must be an object.",
+            )
 
         return self
 
@@ -289,6 +276,19 @@ class ClassDefinition(FrozenBaseModel):
                 {
                     "id_property": self.id.from_content,
                     "content_properties": self.content.properties,
+                },
+            )
+        if self.id.from_content not in self.content.json_schema_dict.get(
+            "required", []
+        ):
+            raise PydanticCustomError(
+                "IdNotRequiredError",
+                (
+                    "The ID property '{id_property}' is not required in the content"
+                    + " schema. It must be marked as required."
+                ),
+                {
+                    "id_property": self.id.from_content,
                 },
             )
 

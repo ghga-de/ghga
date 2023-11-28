@@ -26,10 +26,10 @@ from typing import Any, Literal, TypeVar
 
 import jsonschema
 import jsonschema.exceptions
+import jsonschema.protocols
 import jsonschema.validators
 import yaml
 from immutabledict import immutabledict
-from jsonschema.protocols import Validator as JsonSchemaValidator
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import core_schema
 
@@ -87,21 +87,21 @@ class JsonSchemaError(ValueError):
 
 
 @lru_cache
-def get_json_schema_validator(schema_str: str) -> JsonSchemaValidator:
-    """Get a JSON Schema validator for the given schema formatted as JSON string.
+def assert_valid_json_schema(schema_str: str) -> None:
+    """Asserts that the given string is a valid JSON Schema.
 
     Raises:
         JsonSchemaError: If the schema is invalid.
     """
     schema = json.loads(schema_str)
-    cls: type[JsonSchemaValidator] = jsonschema.validators.validator_for(schema)
+    cls: type[jsonschema.protocols.Validator] = jsonschema.validators.validator_for(
+        schema
+    )
 
     try:
         cls.check_schema(schema)
     except jsonschema.exceptions.SchemaError as error:
         raise JsonSchemaError(error.message) from error
-
-    return cls(schema)
 
 
 @contextmanager

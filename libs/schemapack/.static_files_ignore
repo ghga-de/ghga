@@ -6,6 +6,8 @@
 .github/workflows/check_readme.yaml
 .github/workflows/cd.yaml
 .github/workflows/dev_cd.yaml
+.github/workflows/ci_workflow_dispatch.yaml
+.github/workflows/ci_release.yaml
 
 scripts/script_utils/fastapi_app_location.py
 

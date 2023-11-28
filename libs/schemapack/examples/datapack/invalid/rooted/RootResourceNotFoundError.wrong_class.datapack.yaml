@@ -1,0 +1,14 @@
+# The class of the root resource does not correspond to the root class of the
+# schemapack:
+datapack: 0.1.0
+resources:
+  File:
+    example_file_a:
+      content:
+        alias: example_file_a
+        filename: example_file_a.fastq
+        format: FASTQ
+        checksum: 1a5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92b8
+        size: 12321
+  Dataset: {}
+root: example_file_a # <- using an existing resource id but of the wrong class

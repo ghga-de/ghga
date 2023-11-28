@@ -1,0 +1,13 @@
+# Contains a relation property that does not exist according to the schemapack:
+datapack: 0.1.0
+resources:
+  File: {}
+  Dataset:
+    example_dataset:
+      content:
+        alias: example_dataset
+        dac_contact: dac@example.org
+      relations:
+        files: []
+        non_existing_property: [] # <-
+root: example_dataset

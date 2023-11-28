@@ -1,0 +1,7 @@
+# The content schema does not describe a JSON object.
+schemapack: 0.1.0
+classes:
+  Dataset:
+    id:
+      from_content: alias
+    content: ../../content_schemas/NonObject.schema.json # <-

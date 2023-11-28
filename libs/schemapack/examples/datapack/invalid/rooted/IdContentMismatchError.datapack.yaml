@@ -1,0 +1,13 @@
+# Used resource ID does not match the corresponding field in the content as defined in
+# the schemapack:
+datapack: 0.1.0
+resources:
+  File: {}
+  Dataset:
+    wrong_id: # <-
+      content:
+        alias: example_dataset
+        dac_contact: dac@example.org
+      relations:
+        files: []
+root: wrong_id

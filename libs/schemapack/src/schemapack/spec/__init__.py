@@ -12,10 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Utils for Fixture handling."""
-
-from pathlib import Path
-
-BASE_DIR = Path(__file__).parent.resolve()
-ROOT_DIR = BASE_DIR.parent.parent
+"""Models for SchemaPack and DataPack definitions."""

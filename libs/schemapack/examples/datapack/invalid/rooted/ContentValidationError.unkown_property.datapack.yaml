@@ -1,0 +1,13 @@
+# Contains a content property that does not exist according to the content schema:
+datapack: 0.1.0
+resources:
+  File: {}
+  Dataset:
+    example_dataset:
+      content:
+        alias: example_dataset
+        dac_contact: dac@example.org
+        non_existing_property: "non_existing_value" # <-
+      relations:
+        files: []
+root: example_dataset
