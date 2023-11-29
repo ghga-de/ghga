@@ -6,8 +6,8 @@ data:
   parameters: |
     {{- if .Values.parameters.default }}
     default:
-    {{- toYaml .Values.parameters.default | nindent 5 }}
+    {{- toYaml .Values.parameters.default | nindent 6 }}
     {{- else }}
     default:
-    {{- toYaml .Values.parameters | nindent 5 }}
+    {{- toYaml .Values.parameters | nindent 6 }}
     {{- end }}
