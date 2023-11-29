@@ -4,4 +4,11 @@ metadata:
   name: {{ .Release.Name }}
 data:
   parameters: |
-    {{- toYaml .Values.parameters | nindent 4 }}
+    {{- if .Values.parameters.default }}
+    default:
+    {{- toYaml .Values.parameters.default | nindent 5 }}
+    {{- else }}
+    default:
+    {{- toYaml .Values.parameters | nindent 5 }}
+    {{- end }}
+    

@@ -24,19 +24,20 @@ mapping:
   prefix: /
 
 parameters:
-  api_root_path: /
-  auto_reload: true
-  cors_allow_credentials: false
-  cors_allowed_headers: []
-  cors_allowed_methods: []
-  cors_allowed_origins: []
-  db_name: metadata-store
-  db_url: "**********"
-  docs_url: /docs
-  host: 0.0.0.0
-  log_level: info
-  openapi_url: /openapi.json
-  port: 8080
-  workers: 1
+  default:
+    api_root_path: /
+    auto_reload: true
+    cors_allow_credentials: false
+    cors_allowed_headers: []
+    cors_allowed_methods: []
+    cors_allowed_origins: []
+    db_name: metadata-store
+    db_url: "**********"
+    docs_url: /docs
+    host: 0.0.0.0
+    log_level: info
+    openapi_url: /openapi.json
+    port: 8080
+    workers: 1
 
 shareProcessNamespace: false

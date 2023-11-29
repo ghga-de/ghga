@@ -25,29 +25,30 @@ mapping:
   rewrite: null
 
 parameters:
-  api_root_path: /
-  auto_reload: false
-  cors_allow_credentials: false
-  cors_allowed_headers: []
-  cors_allowed_methods: []
-  cors_allowed_origins: []
-  docs_url: /docs
-  host: 0.0.0.0
-  kafka_servers: []
-  log_level: info
-  openapi_url: /openapi.json
-  port: 8080
-  private_key: ""
-  publisher_topic: interrogations
-  publisher_type: validation_success
-  service_instance_id: "fis_1"
-  service_name: fis
-  source_bucket_id: staging
-  token_hashes: []
-  vault_url: http://vault:8200
-  vault_verify: false
-  vault_role_id: '**********'
-  vault_secret_id: '**********'
-  workers: 1
+  default:
+    api_root_path: /
+    auto_reload: false
+    cors_allow_credentials: false
+    cors_allowed_headers: []
+    cors_allowed_methods: []
+    cors_allowed_origins: []
+    docs_url: /docs
+    host: 0.0.0.0
+    kafka_servers: []
+    log_level: info
+    openapi_url: /openapi.json
+    port: 8080
+    private_key: ""
+    publisher_topic: interrogations
+    publisher_type: validation_success
+    service_instance_id: "fis_1"
+    service_name: fis
+    source_bucket_id: staging
+    token_hashes: []
+    vault_url: http://vault:8200
+    vault_verify: false
+    vault_role_id: '**********'
+    vault_secret_id: '**********'
+    workers: 1
 
 shareProcessNamespace: false
