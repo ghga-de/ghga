@@ -46,7 +46,7 @@ def convert_tz_to_utc(date: datetime) -> datetime:
 # This behaves exactly like the normal datetime type, but requires a
 # a timezone aware object which is converted to UTC if necessary.
 # Validation and timezone conversion is only done via Pydantic.
-# Direct use of DateTimeUTC is identical to normal datetime.
+# Direct use of UTCDatetime is identical to normal datetime.
 UTCDatetime = Annotated[
     datetime,
     # note that BeforeValidators run right-to-left

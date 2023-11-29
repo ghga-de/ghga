@@ -23,14 +23,20 @@ from pydantic_settings import BaseSettings
 
 
 class S3ObjectStorageNodeConfig(BaseSettings):
-    """Configuration for one specific object storage node"""
+    """Configuration for one specific object storage node and one bucket in it.
+
+    The bucket is the main bucket that the service is responsible for.
+    """
 
     bucket: str
     credentials: S3Config
 
 
 class S3ObjectStoragesConfig(BaseSettings):
-    """Configuration for all available object storage nodes indexed by location label"""
+    """Configuration for all available object storage nodes indexed by location label.
+
+    The location label serves as an alias to access different object storage instances.
+    """
 
     object_storages: dict[str, S3ObjectStorageNodeConfig]
 
@@ -43,7 +49,7 @@ class ObjectStorages(ABC):
 
     @abstractmethod
     def for_alias(self, endpoint_alias: str) -> tuple[str, ObjectStorageProtocol]:
-        """Get bucket ID and object storage instance for a specific alias"""
+        """Get bucket ID and object storage instance for a specific alias."""
 
 
 class S3ObjectStorages(ObjectStorages):
@@ -56,6 +62,6 @@ class S3ObjectStorages(ObjectStorages):
         self._config = config
 
     def for_alias(self, endpoint_alias: str) -> tuple[str, S3ObjectStorage]:
-        """Get bucket ID and object storage instance for a specific alias"""
+        """Get bucket ID and object storage instance for a specific alias."""
         node_config = self._config.object_storages[endpoint_alias]
         return node_config.bucket, S3ObjectStorage(config=node_config.credentials)
