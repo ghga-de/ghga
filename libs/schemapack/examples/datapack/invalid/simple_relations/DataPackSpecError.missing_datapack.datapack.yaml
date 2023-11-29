@@ -1,5 +1,4 @@
-# Contains a relation property that does not exist according to the schemapack:
-datapack: 0.1.0
+# Missing the datapack field:
 resources:
   File: {}
   Dataset:
@@ -7,7 +6,6 @@ resources:
       content:
         alias: example_dataset
         dac_contact: dac@example.org
+        non_existing_property: "non_existing_value"
       relations:
         files: []
-        non_existing_property: [] # <-
-root: example_dataset

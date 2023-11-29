@@ -18,46 +18,43 @@
 
 
 from schemapack.load import load_schemapack
+from schemapack.utils import FrozenDict
 from tests.fixtures.examples import VALID_SCHEMAPACK_PATHS
 
 
 def test_schemapack_is_hashable():
     """Test that instances of SchemaPack are hashable."""
-    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["rooted"])
+    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["simple_relations"])
     _ = hash(schemapack)
 
 
-def test_hashing_of_equivalent_schemapacks():
+def test_comparison_and_hashing():
     """Test that equivalent schemapack (content schemas embedded or not) have the same
-    hash.
+    hash and are equal.
     """
-    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["rooted"])
-    schemapack_condensed = load_schemapack(VALID_SCHEMAPACK_PATHS["rooted_condensed"])
+    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["simple_relations"])
+    schemapack_condensed = load_schemapack(VALID_SCHEMAPACK_PATHS["condensed"])
 
     assert hash(schemapack) == hash(schemapack_condensed)
-
-
-def test_hashing_of_different_schemapacks():
-    """Test that different SchemaPack instances have different hashes."""
-    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["rooted"])
-    schemapack_modified = schemapack.model_copy(update={"root": None})
-
-    assert hash(schemapack) != hash(schemapack_modified)
-
-
-def test_comparison_of_equivalent_schemapacks():
-    """Test that equivalent schemapack (content schemas embedded or not) definitions
-    are considered equal.
-    """
-    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["rooted"])
-    schemapack_condensed = load_schemapack(VALID_SCHEMAPACK_PATHS["rooted_condensed"])
-
     assert schemapack == schemapack_condensed
 
 
-def test_comparison_of_different_schemapacks():
-    """Test that different schemapack definitions fail equality checks."""
-    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["rooted"])
-    schemapack_modified = schemapack.model_copy(update={"root": None})
+def test_comparison_and_hashing_different():
+    """Test that different SchemaPack instances have different hashes and are unequal."""
+    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["simple_relations"])
 
+    schemapack_modified = schemapack.model_copy(
+        update={
+            "classes": FrozenDict(
+                {
+                    "AdditionalClass": schemapack.classes[
+                        set(schemapack.classes).pop()
+                    ],
+                    **schemapack.classes,
+                }
+            )
+        }
+    )
+
+    assert hash(schemapack) != hash(schemapack_modified)
     assert schemapack != schemapack_modified

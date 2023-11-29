@@ -47,4 +47,3 @@ classes:
       files:
         to: File
         cardinality: many_to_many
-root: Dataset

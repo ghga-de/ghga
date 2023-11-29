@@ -17,4 +17,3 @@ resources:
       relations:
         files:
           - example_file_a
-root: example_dataset

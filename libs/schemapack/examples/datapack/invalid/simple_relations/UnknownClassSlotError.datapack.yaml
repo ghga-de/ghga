@@ -1,4 +1,4 @@
-# Has a root even though the schemapack is non-rooted:
+# Contains a slot for a class that does not exist in the schemapack:
 datapack: 0.1.0
 resources:
   File: {}
@@ -9,4 +9,4 @@ resources:
         dac_contact: dac@example.org
       relations:
         files: []
-root: example_dataset # <-
+  NoExistingClass: {} # <-

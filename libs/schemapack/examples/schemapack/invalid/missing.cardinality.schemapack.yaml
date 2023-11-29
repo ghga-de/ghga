@@ -12,4 +12,3 @@ classes:
       files:
         to: File
         # every relation must have a cardinality, this has none
-root: Dataset

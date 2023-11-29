@@ -38,20 +38,11 @@ from schemapack.validation.plugins.missing_class import (
 from schemapack.validation.plugins.missing_relations import (
     MissingRelationValidationPlugin,  # noqa: F401
 )
-from schemapack.validation.plugins.missing_root import (
-    MissingRootValidationPlugin,  # noqa: F401
-)
 from schemapack.validation.plugins.one_to_many_overlap import (
     OneToManyOverlapValidationPlugin,  # noqa: F401
 )
 from schemapack.validation.plugins.one_to_one_overlap import (
     OneToOneOverlapValidationPlugin,  # noqa: F401
-)
-from schemapack.validation.plugins.root_not_found import (
-    RootResourceExistenceValidationPlugin,  # noqa: F401
-)
-from schemapack.validation.plugins.unexpected_root import (
-    UnexpectedRootValidationPlugin,  # noqa: F401
 )
 from schemapack.validation.plugins.unknown_class import (
     UnknownClassSlotValidationPlugin,  # noqa: F401

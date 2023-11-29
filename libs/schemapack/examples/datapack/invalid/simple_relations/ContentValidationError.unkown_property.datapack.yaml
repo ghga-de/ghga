@@ -1,13 +1,12 @@
-# Every class defined in the schemapack must be present in the datapack even if no
-# resources for that class are available:
+# Contains a content property that does not exist according to the content schema:
 datapack: 0.1.0
 resources:
-  # missing slot for File
+  File: {}
   Dataset:
     example_dataset:
       content:
         alias: example_dataset
         dac_contact: dac@example.org
+        non_existing_property: "non_existing_value" # <-
       relations:
         files: []
-root: example_dataset

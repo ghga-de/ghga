@@ -7,4 +7,3 @@ resources:
       # missing the content definition
       relations:
         files: []
-root: example_dataset

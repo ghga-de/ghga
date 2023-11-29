@@ -1,4 +1,4 @@
-# Additional field that is not part of the DataPack specification:
+# The root points to a non-existing resource:
 datapack: 0.1.0
 resources:
   File: {}
@@ -9,5 +9,6 @@ resources:
         dac_contact: dac@example.org
       relations:
         files: []
-root: example_dataset
-extra_field: {} # <-
+root:
+  class_name: Dataset
+  resource_id: not_existing_dataset # <-

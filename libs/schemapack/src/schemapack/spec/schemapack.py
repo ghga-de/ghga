@@ -21,7 +21,7 @@ import typing
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Union
 
 from pydantic import (
     BaseModel,
@@ -314,17 +314,6 @@ class SchemaPack(FrozenBaseModel):
         ),
         min_length=1,
     )
-    root: Optional[str] = Field(
-        None,
-        description=(
-            "By default, schemapacks are unrooted, meaning that they can be used to"
-            + " describe any number of instances of the classes contained in the"
-            + " schemapack."
-            + " Using this field, you may optionally specify the name of a class that"
-            + " acts as root. The schemapack will then be scoped to only"
-            + " describe a single instance of the root class along with its relations."
-        ),
-    )
 
     @model_validator(mode="before")
     @classmethod
@@ -405,20 +394,6 @@ class SchemaPack(FrozenBaseModel):
                 {
                     "number": len(invalid_relations),
                     "invalid_relations": invalid_relations,
-                },
-            )
-
-        return self
-
-    @model_validator(mode="after")
-    def root_class_validation(self) -> "SchemaPack":
-        """Validate that the root class exists."""
-        if self.root and self.root not in self.classes:
-            raise PydanticCustomError(
-                "RootClassNotFoundError",
-                ("The root class '{root}' does not exist."),
-                {
-                    "root": self.root,
                 },
             )
 

@@ -1,4 +1,4 @@
-# One relation points to a non-existing resource:
+# Misses relations property defined in the schemapack:
 datapack: 0.1.0
 resources:
   File: {}
@@ -7,7 +7,4 @@ resources:
       content:
         alias: example_dataset
         dac_contact: dac@example.org
-      relations:
-        files:
-          - not_existing_file # <-
-root: example_dataset
+      relations: {} # should contain `files` property

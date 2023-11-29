@@ -1,4 +1,4 @@
-# No root defined despite the schemapack requiring it:
+# Contains a relation property that does not exist according to the schemapack:
 datapack: 0.1.0
 resources:
   File: {}
@@ -9,4 +9,4 @@ resources:
         dac_contact: dac@example.org
       relations:
         files: []
-# Missing definition of the datapack root that must point to a Dataset resource
+        non_existing_property: [] # <-

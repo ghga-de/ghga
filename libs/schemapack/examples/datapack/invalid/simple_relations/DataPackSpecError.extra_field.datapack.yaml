@@ -1,4 +1,4 @@
-# Contains a slot for a class that does not exist in the schemapack:
+# Additional field that is not part of the DataPack specification:
 datapack: 0.1.0
 resources:
   File: {}
@@ -9,5 +9,7 @@ resources:
         dac_contact: dac@example.org
       relations:
         files: []
-  NoExistingClass: {} # <-
-root: example_dataset
+root:
+  class_name: Dataset
+  resource_id: example_dataset
+extra_field: {} # <-

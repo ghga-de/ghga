@@ -29,19 +29,13 @@ from schemapack.validation.plugins import (
     IdFromContentValidationPlugin,
     MissingClassSlotValidationPlugin,
     MissingRelationValidationPlugin,
-    MissingRootValidationPlugin,
     OneToManyOverlapValidationPlugin,
     OneToOneOverlapValidationPlugin,
-    RootResourceExistenceValidationPlugin,
-    UnexpectedRootValidationPlugin,
     UnknownClassSlotValidationPlugin,
     UnknownRelationValidationPlugin,
 )
 
 DEFAULT_GLOBAL_PLUGIN_REGISTRY: list[type[GlobalValidationPlugin]] = [
-    UnexpectedRootValidationPlugin,
-    MissingRootValidationPlugin,
-    RootResourceExistenceValidationPlugin,
     MissingClassSlotValidationPlugin,
     UnknownClassSlotValidationPlugin,
 ]

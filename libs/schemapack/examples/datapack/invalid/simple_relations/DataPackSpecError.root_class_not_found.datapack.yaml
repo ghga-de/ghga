@@ -1,4 +1,4 @@
-# Missing optional property
+# The root class does not exist:
 datapack: 0.1.0
 resources:
   File:
@@ -9,12 +9,7 @@ resources:
         format: FASTQ
         checksum: 1a5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92b8
         size: 12321
-  Dataset:
-    example_dataset:
-      content:
-        alias: example_dataset
-        # missing non require property dac_contact
-      relations:
-        files:
-          - example_file_a
-root: example_dataset
+  Dataset: {}
+root:
+  class_name: NonExistingClass # <-
+  resource_id: example_dataset

@@ -1,7 +1,8 @@
-# Root id points to a non-existing resource:
+# Every class defined in the schemapack must be present in the datapack even if no
+# resources for that class are available:
 datapack: 0.1.0
 resources:
-  File: {}
+  # missing slot for File
   Dataset:
     example_dataset:
       content:
@@ -9,4 +10,3 @@ resources:
         dac_contact: dac@example.org
       relations:
         files: []
-root: not_existing_dataset # <-

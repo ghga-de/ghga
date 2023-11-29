@@ -19,7 +19,8 @@
 import typing
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic_core import PydanticCustomError
 from typing_extensions import TypeAlias
 
 SupportedDataPackVersions = Literal["0.1.0"]
@@ -28,6 +29,19 @@ SUPPORTED_DATA_PACK_VERSIONS = typing.get_args(SupportedDataPackVersions)
 ClassName: TypeAlias = str
 ResourceId: TypeAlias = str
 RelationName: TypeAlias = str
+
+
+class RootResource(BaseModel):
+    """A model for describing the root resource of a datapack."""
+
+    class_name: ClassName = Field(
+        ...,
+        description="The name of the class of the root resource.",
+    )
+    resource_id: ResourceId = Field(
+        ...,
+        description="The ID of the root resource.",
+    )
 
 
 class NoExtraBaseModel(BaseModel):
@@ -83,11 +97,39 @@ class DataPack(NoExtraBaseModel):
         ),
     )
 
-    root: Optional[ResourceId] = Field(
+    root: Optional[RootResource] = Field(
         None,
         description=(
-            "The ID of the root resource which must be of the class defined as root"
-            + " in the schemapack. This must and may be only specified if the"
-            + " schemapack is rooted."
+            "Optionally, a datapack can be rooted to a specific resource. This means"
+            + " that the datapack must only contain resources references by the root"
+            + " resource as well as the root resource itself."
         ),
     )
+
+    @model_validator(mode="after")
+    def check_root_existence(self) -> "DataPack":
+        """Make sure that the root resource exists in the datapack."""
+        if self.root:
+            if self.root.class_name not in self.resources:
+                raise PydanticCustomError(
+                    "RootClassNotFoundError",
+                    (
+                        "Root resource class '{class_name}' does not exist in"
+                        + " the datapack."
+                    ),
+                    {
+                        "class_name": self.root.class_name,
+                    },
+                )
+            if self.root.resource_id not in self.resources[self.root.class_name]:
+                raise PydanticCustomError(
+                    "RootResourceNotFoundError",
+                    (
+                        "Root resource with ID '{resource_id}' does not exist"
+                        + " in the datapack."
+                    ),
+                    {
+                        "resource_id": self.root.resource_id,
+                    },
+                )
+        return self
