@@ -10,6 +10,6 @@ spec:
   ports:
     - name: tcp-web
       port: {{ .Values.service.port }}
-      targetPort: {{ .Values.parameters.port }}
+      targetPort: {{ if .Values.parameters.default }}{{ .Values.parameters.default.port }}{{ else }}{{ .Values.parameters.port }}{{ end }}
   selector:
     app: {{ .Release.Name }}
