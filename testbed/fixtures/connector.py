@@ -24,7 +24,7 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from pytest import fixture
 
 from fixtures.config import Config

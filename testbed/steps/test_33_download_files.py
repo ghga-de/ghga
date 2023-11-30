@@ -130,7 +130,7 @@ def run_the_decrypt_command(fixtures: JointFixture):
         ],
         cwd=connector.config.work_dir,
         capture_output=True,
-        check=True,
+        check=False,
         encoding="utf-8",
         text=True,
         timeout=60,
@@ -138,6 +138,7 @@ def run_the_decrypt_command(fixtures: JointFixture):
 
     assert "Successfully decrypted file" in completed_download.stdout
     assert not completed_download.stderr
+    assert not completed_download.returncode
 
 
 @then("all downloaded files have been properly decrypted")

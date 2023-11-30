@@ -83,6 +83,7 @@ def user_gets_id(full_name: str, fixtures: JointFixture, response: Response):
     assert user["status"] == "active"
     registration_date = user.get("registration_date")
     assert registration_date and isinstance(registration_date, str)
+    registration_date = registration_date.replace("Z", "+00:00")
     # the data steward has been pre-registered when the test bed first started,
     # but other users should have registered only when this test was running
     registration_timedelta = timedelta(

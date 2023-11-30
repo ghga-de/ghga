@@ -51,7 +51,7 @@ def call_data_steward_kit_submit(
             metadata_config_path,
         ],
         capture_output=True,
-        check=True,
+        check=False,
         encoding="utf-8",
         text=True,
         timeout=timeout,
@@ -59,6 +59,7 @@ def call_data_steward_kit_submit(
 
     assert not completed_submit.stdout
     assert "ERROR" not in completed_submit.stderr
+    assert not completed_submit.returncode
 
 
 @given(parse('we have a valid "{name}" research metadata JSON files'))

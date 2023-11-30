@@ -33,7 +33,7 @@ def check_summary_statistics(response: Response):
     result = response.json()
     assert isinstance(result, dict)
     assert sorted(result) == ["created", "id", "resource_stats"]
-    date_created = datetime.fromisoformat(result["created"])
+    date_created = datetime.fromisoformat(result["created"].replace("Z", "+00:00"))
     date_now = datetime.now(timezone.utc)
     assert abs((date_created - date_now).seconds) < 24 * 60 * 60
     assert result["id"] == "global"

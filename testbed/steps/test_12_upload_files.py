@@ -21,7 +21,6 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from urllib.parse import urljoin
 
 from fixtures.config import Config
 from fixtures.file import FileBatch, FileObject
@@ -37,70 +36,88 @@ scenarios("../features/12_upload_files.feature")
 
 
 def call_data_steward_kit_upload(
-    file_object: FileObject, config: Config, file_metadata_dir: Path
+    file_object: FileObject,
+    config: Config,
+    file_metadata_dir: Path,
+    token_path: Path,
+    token: str,
 ):
     """Call DSKit upload command to upload a file"""
     upload_config_path = upload_config_as_file(
-        config=config, file_metadata_dir=file_metadata_dir
+        config=config,
+        file_metadata_dir=file_metadata_dir,
     )
 
-    completed_upload = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "files",
-            "upload",
-            "--alias",
-            file_object.object_id,
-            "--input-path",
-            str(file_object.file_path),
-            "--config-path",
-            upload_config_path,
-        ],
-        capture_output=True,
-        check=True,
-        encoding="utf-8",
-        text=True,
-        timeout=60,
-    )
+    with temporary_file(token_path, token) as _:
+        completed_upload = subprocess.run(  # nosec B607, B603
+            [
+                "ghga-datasteward-kit",
+                "files",
+                "upload",
+                "--alias",
+                file_object.object_id,
+                "--input-path",
+                str(file_object.file_path),
+                "--config-path",
+                upload_config_path,
+            ],
+            capture_output=True,
+            check=False,
+            encoding="utf-8",
+            text=True,
+            timeout=60,
+        )
+
+    print("STDERR")
+    print(completed_upload.stderr)
 
     assert not completed_upload.stdout
     assert "ERROR" not in completed_upload.stderr
+    assert not completed_upload.returncode
 
 
 def call_data_steward_kit_batch_upload(
-    batch_files_tsv: Path, config: Config, file_metadata_dir: Path
+    batch_files_tsv: Path,
+    config: Config,
+    file_metadata_dir: Path,
+    token_path: Path,
+    token: str,
 ):
     """Call DSKit batch-upload command to upload listed files in TSV file"""
     upload_config_path = upload_config_as_file(
         config=config, file_metadata_dir=file_metadata_dir
     )
 
-    completed_upload = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "files",
-            "batch-upload",
-            "--tsv",
-            str(batch_files_tsv),
-            "--config-path",
-            upload_config_path,
-            "--parallel-processes",
-            "2",
-        ],
-        capture_output=True,
-        check=True,
-        encoding="utf-8",
-        text=True,
-        timeout=180,
-    )
+    with temporary_file(token_path, token) as _:
+        completed_upload = subprocess.run(  # nosec B607, B603
+            [
+                "ghga-datasteward-kit",
+                "files",
+                "batch-upload",
+                "--tsv",
+                str(batch_files_tsv),
+                "--config-path",
+                upload_config_path,
+                "--parallel-processes",
+                "2",
+            ],
+            capture_output=True,
+            check=False,
+            encoding="utf-8",
+            text=True,
+            timeout=180,
+        )
 
     assert not completed_upload.stdout
     assert "ERROR" not in completed_upload.stderr
+    assert not completed_upload.returncode
 
 
-def call_data_steward_kit_ingest(ingest_config_path: str, dsk_token_path: Path, token):
+def call_data_steward_kit_ingest(
+    ingest_config_path: str, token_path: Path, token: str
+) -> None:
     """Call DSKit file_ingest command to ingest file"""
-    with temporary_file(dsk_token_path, token) as _:
+    with temporary_file(token_path, token) as _:
         completed_ingest = subprocess.run(  # nosec B607, B603
             [
                 "ghga-datasteward-kit",
@@ -110,17 +127,18 @@ def call_data_steward_kit_ingest(ingest_config_path: str, dsk_token_path: Path, 
                 ingest_config_path,
             ],
             capture_output=True,
-            check=True,
+            check=False,
             encoding="utf-8",
             text=True,
             timeout=10 * 60,
         )
 
-        assert (
-            completed_ingest.stdout.strip()
-            == "Sucessfully sent all file upload metadata for ingest."
-        )
-        assert not completed_ingest.stderr
+    assert (
+        completed_ingest.stdout.strip()
+        == "Sucessfully sent all file upload metadata for ingest."
+    )
+    assert not completed_ingest.stderr
+    assert not completed_ingest.returncode
 
 
 @given("the staging bucket is empty")
@@ -152,6 +170,8 @@ def upload_files_individually(
             file_object=file_object,
             config=fixtures.config,
             file_metadata_dir=file_metadata_dir,
+            token_path=fixtures.config.dsk_token_path,
+            token=fixtures.config.upload_token,
         )
     return file_fixture
 
@@ -171,6 +191,8 @@ def upload_files_as_batch(
         batch_files_tsv=tsv_file,
         config=fixtures.config,
         file_metadata_dir=file_metadata_dir,
+        token_path=fixtures.config.dsk_token_path,
+        token=fixtures.config.upload_token,
     )
     return batch_file_fixture.file_objects
 
@@ -212,18 +234,18 @@ async def check_uploaded_files_in_storage(
 @when("the file metadata is ingested", target_fixture="ingest_config")
 def ingest_file_metadata(fixtures: JointFixture) -> IngestConfig:
     ingest_config = IngestConfig(
-        file_ingest_url=fixtures.config.fis_url + "/ingest",
+        file_ingest_baseurl=fixtures.config.fis_url,
         file_ingest_pubkey=fixtures.config.fis_pubkey,
         input_dir=fixtures.dsk.config.file_metadata_dir,
         submission_store_dir=fixtures.dsk.config.submission_store,
-        map_files_fields=fixtures.dsk.config.metadata_file_fields,
+        map_files_fields=list(fixtures.dsk.config.metadata_file_fields),
     )
 
     ingest_config_path = ingest_config_as_file(config=ingest_config)
 
     call_data_steward_kit_ingest(
-        dsk_token_path=fixtures.config.dsk_token_path,
         ingest_config_path=ingest_config_path,
+        token_path=fixtures.config.dsk_token_path,
         token=fixtures.config.upload_token,
     )
 

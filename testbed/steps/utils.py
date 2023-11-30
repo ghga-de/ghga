@@ -17,7 +17,6 @@
 
 from pathlib import Path
 from typing import Optional
-from urllib.parse import urljoin
 
 from fixtures import Config, JointFixture
 from fixtures.utils import calculate_checksum, write_data_to_yaml
@@ -39,7 +38,7 @@ FILE_OVERVIEW_KEYS = {
 def ingest_config_as_file(config: IngestConfig):
     """Create upload config file for data steward kit files ingest-upload-metadata"""
     ingest_config = {
-        "file_ingest_url": config.file_ingest_url,
+        "file_ingest_baseurl": config.file_ingest_baseurl,
         "file_ingest_pubkey": config.file_ingest_pubkey,
         "submission_store_dir": str(config.submission_store_dir),
         "input_dir": str(config.input_dir),
@@ -70,6 +69,8 @@ def upload_config_as_file(config: Config, file_metadata_dir: Path):
         "bucket_id": config.staging_bucket,
         "part_size": str(config.upload_part_size),
         "output_dir": str(file_metadata_dir),
+        "secret_ingest_baseurl": config.fis_url,
+        "secret_ingest_pubkey": config.fis_pubkey,
     }
 
     return write_data_to_yaml(data=upload_config)

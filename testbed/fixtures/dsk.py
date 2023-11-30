@@ -22,7 +22,7 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from pytest import fixture
 
 BASE_DIR = Path(__file__).parent.parent
@@ -45,12 +45,12 @@ class DskConfig(BaseSettings):
     complete_metadata_path: Path = metadata_dir / "complete_metadata.json"
 
     metadata_model_file: str = "metadata_model.yaml"
-    metadata_file_fields: list = [
+    metadata_file_fields: tuple = (
         "analysis_process_output_files",
         "sample_files",
         "sequencing_process_files",
         "study_files",
-    ]
+    )
 
     file_metadata_dir: Path = submission_registry / "file_metadata"
     files_to_upload_tsv: Path = submission_registry / "files.tsv"

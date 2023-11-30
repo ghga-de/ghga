@@ -50,7 +50,7 @@ def run_the_load_command(fixtures: JointFixture):
                 load_config_path,
             ],
             capture_output=True,
-            check=True,
+            check=False,
             encoding="utf-8",
             text=True,
             timeout=10 * 60,
@@ -58,6 +58,7 @@ def run_the_load_command(fixtures: JointFixture):
 
         assert not completed_upload.stdout
         assert not completed_upload.stderr
+        assert not completed_upload.returncode
 
 
 @then("the stats for the datasets exist in the database")

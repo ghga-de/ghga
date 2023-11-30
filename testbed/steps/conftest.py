@@ -198,6 +198,11 @@ def set_state_clause(name: str, state: StateStorage):
     state.set_state(name, True)
 
 
+@then(parse('remove the state "{name}"'))
+def unset_state_clause(name: str, state: StateStorage):
+    state.unset_state(name)
+
+
 def empty_mail_server(fixtures: JointFixture):
     """Delete all e-mails from mail server"""
     fixtures.http.delete(f"{fixtures.config.mail_url}/api/v1/messages")

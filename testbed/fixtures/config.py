@@ -17,13 +17,12 @@
 """The configuration for the test app."""
 
 from pathlib import Path
-from urllib.parse import urljoin
 
 from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 from hexkit.providers.s3 import S3Config
-from pydantic import Field, SecretStr, root_validator
+from pydantic import Field, SecretStr, model_validator
 
 
 @config_from_yaml(prefix="tb")
@@ -43,8 +42,8 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
 
     # directories
     base_dir: Path = Path(__file__).parent.parent
-    data_dir = base_dir / "example_data"
-    test_dir = base_dir / "test_data"
+    data_dir: Path = base_dir / "example_data"
+    test_dir: Path = base_dir / "test_data"
 
     # constants used in testing
     upload_part_size: int = 1024
@@ -105,7 +104,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     internal_apis: list[str] = ["ekss", "auth_adapter"]  # noqa: RUF012
 
     # auth
-    auth_key_file = Path(__file__).parent.parent / ".devcontainer/auth.env"
+    auth_key_file: Path = Path(__file__).parent.parent / ".devcontainer/auth.env"
     auth_adapter_url: str = "http://auth:8080"
     auth_basic: str = ""  # for Basic Authentication
     upload_token: str = ""  # simple token for uploading metadata
@@ -162,44 +161,42 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     # dcs
     dcs_url: str = "http://dcs:8080"
 
-    @root_validator(pre=False)
-    @classmethod
-    def check_operation_modes(cls, values):
+    @model_validator(mode="after")
+    def check_operation_modes(self):
         """Check that operation modes are not conflicting."""
         try:
-            if values["use_api_gateway"]:
-                if not values["use_auth_adapter"]:
+            if self.use_api_gateway:
+                if not self.use_auth_adapter:
                     raise ValueError("API gateway always uses auth adapter")
-            elif values["auth_basic"]:
+            elif self.auth_basic:
                 raise ValueError("Basic auth must only be used with API gateway")
         except (KeyError, ValueError) as error:
             raise ValueError(f"Check operation modes: {error}") from error
-        return values
+        return self
 
-    @root_validator(pre=False)
-    @classmethod
-    def add_external_base_url(cls, values):
+    @model_validator(mode="after")
+    def add_external_base_url(self):
         """Add base URL to all APIs.
 
         This allows the URLs to be specified as paths relative to the external base URL
         to avoid repetition in the external mode configuration.
         """
-        base_url = values["external_base_url"]
-        apis = values["external_apis"] + values["internal_apis"]
+        base_url = self.external_base_url
+        apis = self.external_apis + self.internal_apis
         if base_url and apis:
             if not base_url.startswith(("http://", "https://")):
                 raise ValueError("External base URL must be absolute")
             base_url = base_url.rstrip("/")
 
             for api in apis:
-                key = f"{api}_url"
+                attr = f"{api}_url"
                 try:
-                    url = values[key]
+                    url = getattr(self, attr)
                     if not url:
                         raise KeyError("URL is empty")
                 except KeyError as error:
-                    raise ValueError(f"Missing value for {key}") from error
+                    raise ValueError(f"Missing value for {attr}") from error
                 if "://" not in url:
                     url = base_url + "/" + url.lstrip("/")
-                    values[key] = url
-        return values
+                    setattr(self, attr, url)
+        return self

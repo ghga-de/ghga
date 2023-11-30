@@ -61,7 +61,7 @@ def announce_dataset(config: Config, mongo: MongoFixture):
 
 
 @when("the list of datasets is queried", target_fixture="response")
-def query_datasets(fixtures: JointFixture, login: LoginFixture):
+def query_datasets_with_wps(fixtures: JointFixture, login: LoginFixture):
     user_id = login.user.id
     url = f"{fixtures.config.wps_url}/users/{user_id}/datasets"
     return fixtures.http.get(url, headers=login.headers)
