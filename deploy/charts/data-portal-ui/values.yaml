@@ -24,9 +24,10 @@ mapping:
   prefix: /
 
 parameters:
-  host: "0.0.0.0"
-  port: 8080
-  mass_url: "/api/mass"
-  metldata_url: "/api/metldata"
+  default:
+    host: "0.0.0.0"
+    port: 8080
+    mass_url: "/api/mass"
+    metldata_url: "/api/metldata"
 
 shareProcessNamespace: false

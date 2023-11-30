@@ -25,24 +25,25 @@ mapping:
   rewrite: null
 
 parameters:
-  api_root_path: /
-  auto_reload: false
-  cors_allow_credentials: false
-  cors_allowed_headers: []
-  cors_allowed_methods: []
-  cors_allowed_origins: []
-  docs_url: /docs
-  host: 0.0.0.0
-  log_level: info
-  openapi_url: /openapi.json
-  port: 8080
-  server_private_key: <Please fill>
-  server_public_key: <Please fill>
-  service_name: encryption_key_store
-  vault_url: http://vault:8200
-  vault_verify: false
-  vault_role_id: '**********'
-  vault_secret_id: '**********'
-  workers: 1
+  default:
+    api_root_path: /
+    auto_reload: false
+    cors_allow_credentials: false
+    cors_allowed_headers: []
+    cors_allowed_methods: []
+    cors_allowed_origins: []
+    docs_url: /docs
+    host: 0.0.0.0
+    log_level: info
+    openapi_url: /openapi.json
+    port: 8080
+    server_private_key: <Please fill>
+    server_public_key: <Please fill>
+    service_name: encryption_key_store
+    vault_url: http://vault:8200
+    vault_verify: false
+    vault_role_id: '**********'
+    vault_secret_id: '**********'
+    workers: 1
 
 shareProcessNamespace: false
