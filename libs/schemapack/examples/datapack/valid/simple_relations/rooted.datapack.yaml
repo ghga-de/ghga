@@ -1,3 +1,4 @@
+# Same as ./non_rooted.datapack.yaml, but rooted to example_dataset:
 datapack: 0.1.0
 resources:
   File:
@@ -16,9 +17,9 @@ resources:
         checksum: 2b5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92c9
         size: 12314
   Dataset:
-    example_dataset:
+    example_dataset_1:
       content:
-        alias: example_dataset
+        alias: example_dataset_1
         dac_contact: dac@example.org
       relations:
         files:
@@ -26,4 +27,4 @@ resources:
           - example_file_b
 root:
   class_name: Dataset
-  resource_id: example_dataset
+  resource_id: example_dataset_1

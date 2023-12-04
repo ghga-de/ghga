@@ -1,0 +1,20 @@
+# This datapack has a circular relation between two resources:
+# (This is valid, but no integration can be performed.)
+datapack: 0.1.0
+resources:
+  SomeClass:
+    a:
+      content:
+        alias: a
+      relations:
+        some_relation:
+          - b # <-
+    b:
+      content:
+        alias: b
+      relations:
+        some_relation:
+          - a # <-
+root:
+  class_name: SomeClass
+  resource_id: a

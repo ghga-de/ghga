@@ -1,0 +1,37 @@
+# This datapack contains two groups of resources that are in relation to each other
+# within the group but not across groups. Rooting to a specific resource would result
+# in the deletion of unrelated resources.
+# (Same as ./nested_relations.datapack.yaml, but with a additional unrelated resources.)
+datapack: 0.1.0
+resources:
+  SomeClass:
+    # one group of resources:
+    a:
+      content:
+        alias: a
+      relations:
+        some_relation:
+          - b
+    b:
+      content:
+        alias: b
+      relations:
+        some_relation:
+          - c
+    c:
+      content:
+        alias: c
+      relations:
+        some_relation: []
+    # another group of resources:
+    d:
+      content:
+        alias: d
+      relations:
+        some_relation:
+          - e
+    e:
+      content:
+        alias: e
+      relations:
+        some_relation: []

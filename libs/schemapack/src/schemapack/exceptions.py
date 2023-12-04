@@ -170,3 +170,27 @@ class ValidationError(BaseError, ValueError):
         message = f"Validation failed with {n_records} issue(s):\n{record_messages}"
 
         super().__init__(message)
+
+
+class ValidationAssumptionError(BaseError, RuntimeError):
+    """This is raised when a unit of code assumes to work with a datapack that has
+    already been validated against a specific schemapack, however, it became apparent
+    that this assumption was not correct. The error should not contain the details on
+    which aspect is invalid. These details can be retrieved by performing a validation
+    and receiving a ValidationError.
+    """
+
+    def __init__(self, *, context: str):
+        """Initiate a ValidationAssumptionError.
+
+        Args:
+            context: Some context to be included in the error message.
+        """
+        message = (
+            "It was assumed that the provided datapack has already been validated"
+            + " against the provided schemapack, however, this assumption failed in"
+            + f" the context of {context}. Please validate the datapack against the"
+            + " schemapack to get further details."
+        )
+        super().__init__(message)
+        self.message = message
