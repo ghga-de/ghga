@@ -46,9 +46,7 @@ def test_email_construction(notification_details):
     notification = make_notification(notification_details)
     smtp_client = SmtpClient(config=config)
     notifier = Notifier(config=config, smtp_client=smtp_client)
-    msg = notifier._construct_email(
-        notification=notification
-    )  # pylint: disable=protected-access
+    msg = notifier._construct_email(notification=notification)
 
     assert msg is not None
 
@@ -85,9 +83,7 @@ async def test_transmission(notification_details):
     notifier = Notifier(config=config, smtp_client=smtp_client)
 
     # send the notification so it gets intercepted by the dummy client
-    expected_email = notifier._construct_email(
-        notification=notification
-    )  # pylint: disable=protected-access
+    expected_email = notifier._construct_email(notification=notification)
 
     # tell the smtp client to send the message and compare that with what is received
     async with server.expect_email(expected_email=expected_email):
@@ -105,9 +101,7 @@ async def test_failed_authentication():
     notification = make_notification(sample_notification)
     smtp_client = SmtpClient(config=config)
     notifier = Notifier(config=config, smtp_client=smtp_client)
-    expected_email = notifier._construct_email(
-        notification=notification
-    )  # pylint: disable=protected-access
+    expected_email = notifier._construct_email(notification=notification)
 
     # send the notification so it gets intercepted by the dummy client
     with pytest.raises(SmtpClient.FailedLoginError):
@@ -132,9 +126,8 @@ async def test_consume_thru_send(joint_fixture: JointFixture):  # noqa: F811
         topic=joint_fixture.config.notification_event_topic,
     )
 
-    event_subscriber = await joint_fixture.container.kafka_event_subscriber()
     with pytest.raises(ConnectionRefusedError):
         # the connection error tells us that the smtp_client tried to connect, which
         # means that the consumer successfully passed the event through the notifier
         # and on to the client for emailing.
-        await event_subscriber.run(forever=False)
+        await joint_fixture.event_subscriber.run(forever=False)

@@ -1,122 +1,124 @@
 {
-  "title": "ModSettings",
+  "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
-  "type": "object",
   "properties": {
     "plaintext_email_template": {
-      "title": "Plaintext Email Template",
       "description": "The plaintext template to use for email notifications",
-      "env_names": [
-        "ns_plaintext_email_template"
-      ],
+      "title": "Plaintext Email Template",
       "type": "string"
     },
     "html_email_template": {
-      "title": "Html Email Template",
       "description": "The HTML template to use for email notifications",
-      "env_names": [
-        "ns_html_email_template"
-      ],
+      "title": "Html Email Template",
       "type": "string"
     },
     "from_address": {
-      "title": "From Address",
       "description": "The sender's address.",
-      "env_names": [
-        "ns_from_address"
-      ],
-      "type": "string",
-      "format": "email"
+      "format": "email",
+      "title": "From Address",
+      "type": "string"
     },
     "smtp_host": {
-      "title": "Smtp Host",
       "description": "The mail server host to connect to",
-      "env_names": [
-        "ns_smtp_host"
-      ],
+      "title": "Smtp Host",
       "type": "string"
     },
     "smtp_port": {
-      "title": "Smtp Port",
       "description": "The port for the mail server connection",
-      "env_names": [
-        "ns_smtp_port"
-      ],
+      "title": "Smtp Port",
       "type": "integer"
     },
     "login_user": {
-      "title": "Login User",
       "description": "The login username or email",
-      "env_names": [
-        "ns_login_user"
-      ],
+      "title": "Login User",
       "type": "string"
     },
     "login_password": {
-      "title": "Login Password",
       "description": "The login password",
-      "env_names": [
-        "ns_login_password"
-      ],
+      "title": "Login Password",
       "type": "string"
     },
     "use_starttls": {
-      "title": "Use Starttls",
-      "description": "Boolean flag indicating the use of STARTTLS",
       "default": true,
-      "env_names": [
-        "ns_use_starttls"
-      ],
+      "description": "Boolean flag indicating the use of STARTTLS",
+      "title": "Use Starttls",
       "type": "boolean"
     },
     "notification_event_topic": {
-      "title": "Notification Event Topic",
       "description": "Name of the event topic used to track notification events",
-      "example": "notifications",
-      "env_names": [
-        "ns_notification_event_topic"
+      "examples": [
+        "notifications"
       ],
+      "title": "Notification Event Topic",
       "type": "string"
     },
     "notification_event_type": {
-      "title": "Notification Event Type",
       "description": "The type to use for events containing content to be sent",
-      "example": "notification",
-      "env_names": [
-        "ns_notification_event_type"
+      "examples": [
+        "notification"
       ],
+      "title": "Notification Event Type",
       "type": "string"
     },
     "service_name": {
-      "title": "Service Name",
       "default": "ns",
-      "env_names": [
-        "ns_service_name"
-      ],
+      "title": "Service Name",
       "type": "string"
     },
     "service_instance_id": {
-      "title": "Service Instance Id",
       "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
-      "example": "germany-bw-instance-001",
-      "env_names": [
-        "ns_service_instance_id"
+      "examples": [
+        "germany-bw-instance-001"
       ],
+      "title": "Service Instance Id",
       "type": "string"
     },
     "kafka_servers": {
-      "title": "Kafka Servers",
       "description": "A list of connection strings to connect to Kafka bootstrap servers.",
-      "example": [
-        "localhost:9092"
+      "examples": [
+        [
+          "localhost:9092"
+        ]
       ],
-      "env_names": [
-        "ns_kafka_servers"
-      ],
-      "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "title": "Kafka Servers",
+      "type": "array"
+    },
+    "kafka_security_protocol": {
+      "default": "PLAINTEXT",
+      "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
+      "enum": [
+        "PLAINTEXT",
+        "SSL"
+      ],
+      "title": "Kafka Security Protocol",
+      "type": "string"
+    },
+    "kafka_ssl_cafile": {
+      "default": "",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL.",
+      "title": "Kafka Ssl Cafile",
+      "type": "string"
+    },
+    "kafka_ssl_certfile": {
+      "default": "",
+      "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
+      "title": "Kafka Ssl Certfile",
+      "type": "string"
+    },
+    "kafka_ssl_keyfile": {
+      "default": "",
+      "description": "Optional filename containing the client private key.",
+      "title": "Kafka Ssl Keyfile",
+      "type": "string"
+    },
+    "kafka_ssl_password": {
+      "default": "",
+      "description": "Optional password to be used for the client private key.",
+      "title": "Kafka Ssl Password",
+      "type": "string"
     }
   },
   "required": [
@@ -132,5 +134,6 @@
     "service_instance_id",
     "kafka_servers"
   ],
-  "additionalProperties": false
+  "title": "ModSettings",
+  "type": "object"
 }

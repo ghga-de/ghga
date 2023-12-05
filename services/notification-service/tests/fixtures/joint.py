@@ -18,11 +18,11 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture, kafka_fixture  # noqa: F401
 
 from ns.config import Config
-from ns.container import Container
-from ns.main import get_configured_container
+from ns.inject import prepare_core, prepare_event_subscriber
 from tests.fixtures.config import get_config
 
 
@@ -32,7 +32,7 @@ class JointFixture:
 
     config: Config
     kafka: KafkaFixture
-    container: Container
+    event_subscriber: KafkaEventSubscriber
 
 
 @pytest_asyncio.fixture
@@ -44,5 +44,12 @@ async def joint_fixture(
     config = get_config(sources=[kafka_fixture.config])
 
     # create a DI container instance:translators
-    async with get_configured_container(config=config) as container:
-        yield JointFixture(config=config, container=container, kafka=kafka_fixture)
+    async with prepare_core(config=config) as notifier:
+        async with prepare_event_subscriber(
+            config=config, notifier_override=notifier
+        ) as event_subscriber:
+            yield JointFixture(
+                config=config,
+                kafka=kafka_fixture,
+                event_subscriber=event_subscriber,
+            )

@@ -18,7 +18,8 @@ from email.message import EmailMessage
 from string import Template
 
 from ghga_event_schemas import pydantic_ as event_schemas
-from pydantic import BaseSettings, EmailStr, Field
+from pydantic import EmailStr, Field
+from pydantic_settings import BaseSettings
 
 from ns.ports.inbound.notifier import NotifierPort
 from ns.ports.outbound.smtp_client import SmtpClientPort
@@ -61,7 +62,7 @@ class Notifier(NotifierPort):
         message["Subject"] = notification.subject
         message["From"] = self._config.from_address
 
-        payload_as_dict = notification.dict()
+        payload_as_dict = notification.model_dump()
 
         # create plaintext html with template
         plaintext_template = Template(self._config.plaintext_email_template)

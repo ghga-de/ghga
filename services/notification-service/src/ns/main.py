@@ -16,21 +16,12 @@
 """Top-level DI Container and consumer creation, entry point is consume_events()"""
 
 from ns.config import Config
-from ns.container import Container
-
-
-def get_configured_container(*, config: Config) -> Container:
-    """Create and configure a DI container."""
-    container = Container()
-    container.config.load_config(config)
-
-    return container
+from ns.inject import prepare_event_subscriber
 
 
 async def consume_events(run_forever: bool = True):
     """Start consuming events with kafka"""
     config = Config()  # type: ignore [call-arg]
 
-    async with get_configured_container(config=config) as container:
-        event_consumer = await container.kafka_event_subscriber()
-        await event_consumer.run(forever=run_forever)
+    async with prepare_event_subscriber(config=config) as event_subscriber:
+        await event_subscriber.run(forever=run_forever)
