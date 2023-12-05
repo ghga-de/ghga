@@ -17,4 +17,11 @@
 
 from importlib.metadata import version
 
+from openpyxl.xml import DEFUSEDXML
+
 __version__ = version(__package__)
+
+if not DEFUSEDXML:
+    raise RuntimeError(
+        "The 'defusedxml' package must be present to safely run ghga-transpiler."
+    )
