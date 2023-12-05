@@ -20,7 +20,7 @@ config_prefix: ifrs
 parameters:
   default:
     aws_config_ini: null
-    db_connection_str: "**********"
+    db_connection_str: null
     db_name: ifrs
     file_deleted_event_topic: internal_registrations
     file_deleted_event_type: internal_file_deleted
@@ -36,10 +36,10 @@ parameters:
     files_to_stage_type: unstaged_drs_object_requested
     kafka_servers: []
     permanent_bucket: permanent
-    s3_access_key_id: "**********"
-    s3_endpoint_url: "**********"
-    s3_secret_access_key: "**********"
-    s3_session_token: "**********"
+    s3_access_key_id: null
+    s3_endpoint_url: null
+    s3_secret_access_key: null
+    s3_session_token: null
     service_instance_id: "ifrs_1"
     service_name: internal_file_registry
 

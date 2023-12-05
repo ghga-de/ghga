@@ -31,7 +31,7 @@ parameters:
     cors_allowed_headers: null
     cors_allowed_methods: null
     cors_allowed_origins: null
-    db_connection_str: '**********'
+    db_connection_str: null
     db_name: metadata-store
     docs_url: /docs
     host: "0.0.0.0"

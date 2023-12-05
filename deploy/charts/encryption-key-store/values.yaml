@@ -42,8 +42,8 @@ parameters:
     service_name: encryption_key_store
     vault_url: http://vault:8200
     vault_verify: false
-    vault_role_id: '**********'
-    vault_secret_id: '**********'
+    vault_role_id: null
+    vault_secret_id: null
     workers: 1
 
 shareProcessNamespace: false

@@ -45,7 +45,7 @@ parameters:
     cors_allowed_methods: []
     cors_allowed_origins: []
     data_steward_email: helpdesk@ghga.de
-    db_connection_str: "**********"
+    db_connection_str: null
     db_name: ars
     docs_url: /docs
     download_access_url: http://claims-repository-svc:8080/download-access

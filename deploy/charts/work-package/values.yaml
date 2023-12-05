@@ -44,7 +44,7 @@ parameters:
     dataset_deletion_event_type: dataset_deleted
     dataset_upsertion_event_type: dataset_created
     datasets_collection: datasets
-    db_connection_str: "**********"
+    db_connection_str: null
     db_name: wps
     docs_url: /docs
     download_access_url: http://claims-repository-svc:8080/download-access

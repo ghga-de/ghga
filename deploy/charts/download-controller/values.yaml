@@ -47,7 +47,7 @@ parameters:
     cors_allowed_headers: []
     cors_allowed_methods: []
     cors_allowed_origins: []
-    db_connection_str: "**********"
+    db_connection_str: null
     db_name: dcs
     docs_url: /docs
     download_served_event_topic: downloads
@@ -70,10 +70,10 @@ parameters:
     port: 8080
     presigned_url_expires_after: 10
     retry_access_after: 120
-    s3_access_key_id: "**********"
-    s3_endpoint_url: "**********"
-    s3_secret_access_key: "**********"
-    s3_session_token: "**********"
+    s3_access_key_id: null
+    s3_endpoint_url: null
+    s3_secret_access_key: null
+    s3_session_token: null
     service_instance_id: 'dcs_1'
     service_name: dcs
     unstaged_download_event_topic: downloads

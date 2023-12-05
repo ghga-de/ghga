@@ -32,7 +32,7 @@ parameters:
     cors_allowed_methods: []
     cors_allowed_origins: []
     db_name: metadata-store
-    db_url: "**********"
+    db_url: null
     docs_url: /docs
     host: 0.0.0.0
     log_level: info
