@@ -7,7 +7,6 @@
 
 .devcontainer/dev_launcher
 .devcontainer/docker-compose.yml
-.devcontainer/Dockerfile
 
 tests/__init__.py
 tests/fixtures/__init__.py

@@ -20,7 +20,7 @@ in the API.
 from enum import Enum
 from typing import Optional
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from wps.core.crypt import validate_public_key
@@ -120,10 +120,10 @@ class WorkPackageDetails(BaseModel):
         description="IDs of all included files mapped to their file extensions",
         examples=[{"file-id-1": ".json", "file-id-2": ".csv"}],
     )
-    created: DateTimeUTC = Field(
+    created: UTCDatetime = Field(
         default=..., description="Creation date of the work package"
     )
-    expires: DateTimeUTC = Field(
+    expires: UTCDatetime = Field(
         default=..., title="Expiration date of the work package"
     )
 

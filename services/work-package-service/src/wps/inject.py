@@ -39,7 +39,8 @@ __all__ = ["prepare_core", "prepare_rest_app", "prepare_consumer", "Consumer"]
 
 @asynccontextmanager
 async def prepare_core(
-    *, config: Config
+    *,
+    config: Config,
 ) -> AsyncGenerator[WorkPackageRepositoryPort, None]:
     """Constructs and initializes all core components with outbound dependencies."""
     dao_factory = MongoDbDaoFactory(config=config)
@@ -95,9 +96,9 @@ async def prepare_rest_app(
         ) as auth_context,
     ):
         app.dependency_overrides[dummies.auth_provider] = lambda: auth_context
-        app.dependency_overrides[
-            dummies.work_package_repo_port
-        ] = lambda: work_package_repo
+        app.dependency_overrides[dummies.work_package_repo_port] = (
+            lambda: work_package_repo
+        )
         yield app
 
 
