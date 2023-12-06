@@ -56,12 +56,18 @@ class ExampleWithArgsError(RuntimeError):
         (
             {
                 400: {
-                    "myTestException0": lambda status_code, exception_id, description, data: ExampleError(),
-                    "myTestException1": lambda exception_id, description, data: ExampleError(),
+                    "myTestException0": lambda status_code,
+                    exception_id,
+                    description,
+                    data: ExampleError(),
+                    "myTestException1": lambda exception_id,
+                    description,
+                    data: ExampleError(),
                     "myTestException2": lambda status_code, data: ExampleError(),
                 },
                 403: {
-                    "myTestException3": lambda exception_id, description: ExampleError(),
+                    "myTestException3": lambda exception_id,
+                    description: ExampleError(),
                     "myTestException4": lambda exception_id, data: ExampleError(),
                 },
                 404: {

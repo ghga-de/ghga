@@ -19,26 +19,34 @@ Contains functionality for initializing, configuring, and running
 RESTful webapps with FastAPI.
 """
 
+import logging
 from collections.abc import Sequence
-from typing import Optional, Union
+from functools import partial
+from typing import Literal, Optional, Union
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from hexkit.correlation import (
+    InvalidCorrelationIdError,
+    new_correlation_id,
+    set_correlation_id,
+    validate_correlation_id,
+)
 from pydantic import Field
 from pydantic_settings import BaseSettings
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
     configure_exception_handler,
 )
 
-try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
-    from typing_extensions import Literal
-except ImportError:
-    from typing import Literal  # type: ignore
+CORRELATION_ID_HEADER_NAME = "X-Correlation-ID"
 
 # type alias for log level parameter
 LogLevel = Literal["critical", "error", "warning", "info", "debug", "trace"]
+
+log = logging.getLogger("api")
 
 
 class ApiConfigBase(BaseSettings):
@@ -125,6 +133,80 @@ class ApiConfigBase(BaseSettings):
             + " are always allowed for CORS requests."
         ),
     )
+    generate_correlation_id: bool = Field(
+        True,
+        examples=[True, False],
+        description=(
+            "A flag, which, if False, will result in an error when inbound requests don't"
+            + " possess a correlation ID. If True, requests without a correlation ID will"
+            + " be assigned a newly generated ID in the correlation ID middleware function."
+        ),
+    )
+
+
+def set_header_correlation_id(request: Request, correlation_id: str):
+    """Set the correlation ID on the request header. Modifies the header in-place."""
+    headers = request.headers.mutablecopy()
+    headers[CORRELATION_ID_HEADER_NAME] = correlation_id
+    request.scope.update(headers=headers.raw)
+    # delete _headers to force update
+    delattr(request, "_headers")
+    log.info("Assigned %s as header correlation ID value.", correlation_id)
+
+
+def get_validated_correlation_id(
+    correlation_id: str, generate_correlation_id: bool
+) -> str:
+    """Returns valid correlation ID.
+
+    If `correlation_id` is valid, it returns that.
+    If it is empty and `generate_correlation_id` is True, a new value is generated.
+    Otherwise, an error is raised.
+
+    Raises:
+        InvalidCorrelationIdError: If a correlation ID is invalid or empty (and
+            `generate_correlation_id` is False).
+    """
+    if not correlation_id and generate_correlation_id:
+        correlation_id = new_correlation_id()
+        log.info("Generated new correlation id: %s", correlation_id)
+    else:
+        validate_correlation_id(correlation_id)
+    return correlation_id
+
+
+async def correlation_id_middleware(
+    request: Request, call_next, generate_correlation_id: bool
+):
+    """Ensure request header has a valid correlation ID.
+
+    Set the correlation ID ContextVar before passing on the request.
+
+    Raises:
+        InvalidCorrelationIdError: If a correlation ID is invalid or empty (and
+            `generate_correlation_id` is False).
+    """
+    correlation_id = request.headers.get(CORRELATION_ID_HEADER_NAME, "")
+
+    # Validate the correlation ID. If validation fails, return a Response with status 400.
+    try:
+        validated_correlation_id = get_validated_correlation_id(
+            correlation_id, generate_correlation_id
+        )
+    except InvalidCorrelationIdError:
+        return Response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content="Correlation ID missing or invalid.",
+        )
+
+    # Update header if the validated value differs
+    if validate_correlation_id != correlation_id:
+        set_header_correlation_id(request, validated_correlation_id)
+
+    # Set the correlation ID ContextVar
+    async with set_correlation_id(validated_correlation_id):
+        response = await call_next(request)
+        return response
 
 
 def configure_app(app: FastAPI, config: ApiConfigBase):
@@ -145,6 +227,13 @@ def configure_app(app: FastAPI, config: ApiConfigBase):
         kwargs["allow_credentials"] = config.cors_allow_credentials
 
     app.add_middleware(CORSMiddleware, **kwargs)
+    app.add_middleware(
+        BaseHTTPMiddleware,
+        dispatch=partial(
+            correlation_id_middleware,
+            generate_correlation_id=config.generate_correlation_id,
+        ),
+    )
 
     # Configure the exception handler to issue error according to httpyexpect model:
     configure_exception_handler(app)

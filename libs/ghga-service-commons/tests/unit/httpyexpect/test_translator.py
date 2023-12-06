@@ -60,9 +60,10 @@ class Case(NamedTuple):
             exception_id="myTestException",
             description="Test error.",
             data={"test": "test"},
-            exception_factory=lambda status_code, exception_id, description, data: ExampleError(
-                status_code, exception_id, description, data
-            ),
+            exception_factory=lambda status_code,
+            exception_id,
+            description,
+            data: ExampleError(status_code, exception_id, description, data),
             required_params=EXCEPTION_FACTORY_PARAMS,
         ),
         # only use some parameters in the factory:
