@@ -22,7 +22,7 @@ from operator import attrgetter
 from typing import Any, NamedTuple, Optional
 
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext, UserStatus
-from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_datetime
 from pytest import mark, raises
 
 from ars.core.models import (
@@ -35,8 +35,6 @@ from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
 from ars.ports.outbound.notification_emitter import NotificationEmitterPort
-
-datetime_utc = DateTimeUTC.construct
 
 ONE_HOUR = timedelta(seconds=60 * 60)
 ONE_YEAR = timedelta(days=365)
@@ -85,12 +83,12 @@ ACCESS_REQUESTS = [
         dataset_id="some-dataset",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
-        access_starts=datetime_utc(2020, 1, 1, 0, 0),
-        access_ends=datetime_utc(2020, 12, 31, 23, 59),
+        access_starts=utc_datetime(2020, 1, 1, 0, 0),
+        access_ends=utc_datetime(2020, 12, 31, 23, 59),
         full_user_name="Dr. John Doe",
-        request_created=datetime_utc(2019, 12, 9, 12, 0),
+        request_created=utc_datetime(2019, 12, 9, 12, 0),
         status=AccessRequestStatus.ALLOWED,
-        status_changed=datetime_utc(2019, 12, 16, 12, 0),
+        status_changed=utc_datetime(2019, 12, 16, 12, 0),
         changed_by="id-of-rod-steward@ghga.de",
     ),
     AccessRequest(
@@ -99,12 +97,12 @@ ACCESS_REQUESTS = [
         dataset_id="another-dataset",
         email="me@john-doe.name",
         request_text="Can I access another dataset?",
-        access_starts=datetime_utc(2020, 1, 1, 0, 0),
-        access_ends=datetime_utc(2020, 12, 31, 23, 59),
+        access_starts=utc_datetime(2020, 1, 1, 0, 0),
+        access_ends=utc_datetime(2020, 12, 31, 23, 59),
         full_user_name="Dr. John Doe",
-        request_created=datetime_utc(2019, 12, 9, 12, 0),
+        request_created=utc_datetime(2019, 12, 9, 12, 0),
         status=AccessRequestStatus.ALLOWED,
-        status_changed=datetime_utc(2019, 12, 16, 12, 0),
+        status_changed=utc_datetime(2019, 12, 16, 12, 0),
         changed_by="id-of-rod-steward@ghga.de",
     ),
     AccessRequest(
@@ -113,12 +111,12 @@ ACCESS_REQUESTS = [
         dataset_id="yet-another-dataset",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset?",
-        access_starts=datetime_utc(2020, 1, 1, 0, 0),
-        access_ends=datetime_utc(2020, 12, 31, 23, 59),
+        access_starts=utc_datetime(2020, 1, 1, 0, 0),
+        access_ends=utc_datetime(2020, 12, 31, 23, 59),
         full_user_name="Dr. John Doe",
-        request_created=datetime_utc(2019, 12, 9, 12, 0),
+        request_created=utc_datetime(2019, 12, 9, 12, 0),
         status=AccessRequestStatus.DENIED,
-        status_changed=datetime_utc(2019, 12, 16, 12, 0),
+        status_changed=utc_datetime(2019, 12, 16, 12, 0),
         changed_by="id-of-rod-steward@ghga.de",
     ),
     AccessRequest(
@@ -127,10 +125,10 @@ ACCESS_REQUESTS = [
         dataset_id="new-dataset",
         email="me@john-doe.name",
         request_text="Can I access a new dataset?",
-        access_starts=datetime_utc(2021, 1, 1, 0, 0),
-        access_ends=datetime_utc(2021, 12, 31, 23, 59),
+        access_starts=utc_datetime(2021, 1, 1, 0, 0),
+        access_ends=utc_datetime(2021, 12, 31, 23, 59),
         full_user_name="Dr. John Doe",
-        request_created=datetime_utc(2020, 12, 7, 12, 0),
+        request_created=utc_datetime(2020, 12, 7, 12, 0),
         status=AccessRequestStatus.PENDING,
         status_changed=None,
         changed_by=None,
@@ -141,12 +139,12 @@ ACCESS_REQUESTS = [
         dataset_id="some-dataset",
         email="me@jane-roe.name",
         request_text="Can I access the same dataset as Joe?",
-        access_starts=datetime_utc(2020, 1, 1, 0, 0),
-        access_ends=datetime_utc(2020, 12, 31, 23, 59),
+        access_starts=utc_datetime(2020, 1, 1, 0, 0),
+        access_ends=utc_datetime(2020, 12, 31, 23, 59),
         full_user_name="Dr. Jane Roe",
-        request_created=datetime_utc(2019, 12, 9, 12, 0),
+        request_created=utc_datetime(2019, 12, 9, 12, 0),
         status=AccessRequestStatus.ALLOWED,
-        status_changed=datetime_utc(2019, 12, 16, 12, 0),
+        status_changed=utc_datetime(2019, 12, 16, 12, 0),
         changed_by="id-of-rod-steward@ghga.de",
     ),
 ]
@@ -240,8 +238,8 @@ class AccessGrantsDummy(AccessGrantsPort):
         self,
         user_id: str,
         dataset_id: str,
-        valid_from: DateTimeUTC,
-        valid_until: DateTimeUTC,
+        valid_from: UTCDatetime,
+        valid_until: UTCDatetime,
     ) -> None:
         """Grant download access."""
         if self.simulate_error:
@@ -459,7 +457,7 @@ async def test_can_get_all_own_requests_as_requester():
     assert 0 < len(requests) < len(ACCESS_REQUESTS)
     assert requests == sorted(
         (
-            request.copy(update={"changed_by": None})  # data steward is hidden
+            request.model_copy(update={"changed_by": None})  # data steward is hidden
             for request in ACCESS_REQUESTS
             if request.full_user_name == "Dr. John Doe"
         ),
@@ -499,7 +497,7 @@ async def test_data_steward_can_get_requests_for_specific_dataset():
     )
     assert len(requests) == 1
     assert requests == [
-        request.copy(update={"changed_by": None})  # data steward is hidden
+        request.model_copy(update={"changed_by": None})  # data steward is hidden
         for request in ACCESS_REQUESTS
         if request.dataset_id == "another-dataset"
     ]

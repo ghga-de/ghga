@@ -20,7 +20,7 @@ in the API.
 from enum import Enum
 from typing import Optional
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
@@ -57,10 +57,10 @@ class AccessRequestCreationData(BaseDto):
     request_text: str = Field(
         default=..., description="Text note submitted with the request"
     )
-    access_starts: DateTimeUTC = Field(
+    access_starts: UTCDatetime = Field(
         default=..., description="Requested start date of access"
     )
-    access_ends: DateTimeUTC = Field(
+    access_ends: UTCDatetime = Field(
         default=..., description="Requested end date of access"
     )
 
@@ -72,14 +72,14 @@ class AccessRequestData(AccessRequestCreationData):
         default=...,
         description="The requester's full name including academic title",
     )
-    request_created: DateTimeUTC = Field(
+    request_created: UTCDatetime = Field(
         default=..., description="Creation date of the access request"
     )
     status: AccessRequestStatus = Field(
         default=AccessRequestStatus.PENDING,
         description="The status of this access request",
     )
-    status_changed: Optional[DateTimeUTC] = Field(
+    status_changed: Optional[UTCDatetime] = Field(
         default=None, description="Last change date of the status of this request"
     )
     changed_by: Optional[str] = Field(

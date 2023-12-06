@@ -20,21 +20,19 @@ import json
 from collections.abc import AsyncGenerator
 
 import httpx
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import utc_datetime
 from pytest import mark, raises
 from pytest_asyncio import fixture as async_fixture
 from pytest_httpx import HTTPXMock
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
 
-datetime_utc = DateTimeUTC.construct
-
 DOWNLOAD_ACCESS_URL = "http://test-access:1234"
 
 USER_ID = "some-user-id"
 DATASET_ID = "some-dataset-id"
-VALID_FROM = datetime_utc(2020, 1, 1, 0, 0)
-VALID_UNTIL = datetime_utc(2020, 12, 31, 23, 59)
+VALID_FROM = utc_datetime(2020, 1, 1, 0, 0)
+VALID_UNTIL = utc_datetime(2020, 12, 31, 23, 59)
 
 URL = f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets/{DATASET_ID}"
 

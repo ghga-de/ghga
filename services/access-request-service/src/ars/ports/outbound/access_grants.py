@@ -18,7 +18,7 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 __all__ = ["AccessGrantsPort"]
 
@@ -37,8 +37,8 @@ class AccessGrantsPort(ABC):
         self,
         user_id: str,
         dataset_id: str,
-        valid_from: DateTimeUTC,
-        valid_until: DateTimeUTC,
+        valid_from: UTCDatetime,
+        valid_until: UTCDatetime,
     ) -> None:
         """Grant download access to a user for a given dataset and duration."""
         ...

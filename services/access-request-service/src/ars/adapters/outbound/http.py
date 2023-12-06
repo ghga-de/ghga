@@ -20,7 +20,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings
 
@@ -36,10 +36,10 @@ class ClaimValidity(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    valid_from: DateTimeUTC = Field(
+    valid_from: UTCDatetime = Field(
         ..., description="Start date of validity", examples=["2023-01-01T00:00:00Z"]
     )
-    valid_until: DateTimeUTC = Field(
+    valid_until: UTCDatetime = Field(
         ..., description="End date of validity", examples=["2023-12-31T23:59:59Z"]
     )
 
@@ -83,8 +83,8 @@ class AccessGrantsAdapter(AccessGrantsPort):
         self,
         user_id: str,
         dataset_id: str,
-        valid_from: DateTimeUTC,
-        valid_until: DateTimeUTC,
+        valid_from: UTCDatetime,
+        valid_until: UTCDatetime,
     ) -> None:
         """Grant download access to a user for a given dataset and duration."""
         url = f"{self._url}/users/{user_id}/datasets/{dataset_id}"

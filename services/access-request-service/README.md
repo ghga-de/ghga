@@ -1,5 +1,5 @@
 
-[![tests](https://github.com/ghga-de/access-request-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/access-request-service/actions/workflows/unit_and_int_tests.yaml)
+[![tests](https://github.com/ghga-de/access-request-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/access-request-service/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/access-request-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/access-request-service?branch=main)
 
 # Access Request Service
@@ -103,6 +103,16 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
+
+- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+
+- **`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
+
+- **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
+
+- **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+
 - **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
@@ -129,7 +139,7 @@ The service requires the following configuration parameters:
 
   - **Items** *(string)*
 
-- **`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{"email": null, "exp": null, "iat": null, "name": null}`.
+- **`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{"name": null, "email": null, "iat": null, "exp": null}`.
 
 - **`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
 

@@ -38,7 +38,8 @@ from ars.ports.inbound.repository import AccessRequestRepositoryPort
 
 @asynccontextmanager
 async def prepare_core(
-    *, config: Config
+    *,
+    config: Config,
 ) -> AsyncGenerator[AccessRequestRepositoryPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     dao_factory = MongoDbDaoFactory(config=config)
@@ -94,7 +95,7 @@ async def prepare_rest_app(
         ) as auth_context,
     ):
         app.dependency_overrides[dummies.auth_provider] = lambda: auth_context
-        app.dependency_overrides[
-            dummies.access_request_repo_port
-        ] = lambda: access_request_repository
+        app.dependency_overrides[dummies.access_request_repo_port] = (
+            lambda: access_request_repository
+        )
         yield app

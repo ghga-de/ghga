@@ -22,8 +22,13 @@ db_name: dev-db
 docs_url: /docs
 download_access_url: http://127.0.0.1:8080/download-access
 host: 127.0.0.1
+kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
 log_level: info
 notification_event_topic: notifications
 notification_event_type: notification

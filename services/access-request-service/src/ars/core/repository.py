@@ -109,7 +109,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if request_created > access_starts:
             # force the start to be not earlier than the request creation date
             access_starts = request_created
-            creation_data = creation_data.copy(update={"access_starts": access_starts})
+            creation_data = creation_data.model_copy(
+                update={"access_starts": access_starts}
+            )
         if access_starts > request_created + self._max_lead_time:
             raise self.AccessRequestInvalidDuration("Access start date is invalid")
         access_ends = creation_data.access_ends
@@ -217,7 +219,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if request.status != AccessRequestStatus.PENDING:
             raise self.AccessRequestInvalidState("Status cannot be reverted")
 
-        modified_request = request.copy(
+        modified_request = request.model_copy(
             update={
                 "status": status,
                 "status_changed": now_as_utc(),
@@ -267,7 +269,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:
         """Blank out internal information in the request"""
-        return request.copy(update={"changed_by": None})
+        return request.model_copy(update={"changed_by": None})
 
     async def _notify(
         self,
