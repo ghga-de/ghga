@@ -1,0 +1,13 @@
+alias: example_dataset_1
+dac_contact: dac@example.org
+files:
+  - alias: example_file_a
+    filename: example_file_a.fastq
+    format: FASTQ
+    checksum: 1a5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92b8
+    size: 12321
+  - alias: example_file_b
+    filename: example_file_b.fastq
+    format: FASTQ
+    checksum: 2b5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92c9
+    size: 12314

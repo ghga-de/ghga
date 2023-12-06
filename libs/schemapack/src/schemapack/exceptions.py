@@ -194,3 +194,9 @@ class ValidationAssumptionError(BaseError, RuntimeError):
         )
         super().__init__(message)
         self.message = message
+
+
+class CircularRelationError(BaseError, ValueError):
+    """Raised when a circular relation between resources is detected, but the requested
+    operation cannot be performed on datapacks with circular relations.
+    """

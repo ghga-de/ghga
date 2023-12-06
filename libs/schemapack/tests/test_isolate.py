@@ -57,12 +57,20 @@ from tests.fixtures.examples import VALID_DATAPACK_PATHS, VALID_SCHEMAPACK_PATHS
             "a",
             VALID_DATAPACK_PATHS["self_relation.rooted_circular_self_relations"],
         ),
+        (
+            VALID_SCHEMAPACK_PATHS["complex_cardinality"],
+            VALID_DATAPACK_PATHS["complex_cardinality.all_cardinalities"],
+            "A",
+            "a1",
+            VALID_DATAPACK_PATHS["complex_cardinality.rooted_all_cardinalities"],
+        ),
     ],
     ids=[
         "nested_relations",
         "cross_class_relations",
         "circular_relations",
         "circular_self_relations",
+        "all_cardinalities",
     ],
 )
 def test_isolate(

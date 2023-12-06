@@ -27,9 +27,11 @@ INVALID_SCHEMAPACK_DIR = SCHEMAPACK_DIR / "invalid"
 DATAPACK_DIR = EXAMPLES_DIR / "datapack"
 VALID_DATAPACK_DIR = DATAPACK_DIR / "valid"
 INVALID_DATAPACK_DIR = DATAPACK_DIR / "invalid"
+INTEGRATIONS_DIR = EXAMPLES_DIR / "integrations"
 
 schemapack_suffix = ".schemapack.yaml"
 datapack_suffix = ".datapack.yaml"
+integration_suffix = ".integration.yaml"
 
 
 def list_examples_in_dir(dir: Path, *, suffix: str) -> dict[str, Path]:
@@ -42,6 +44,23 @@ def list_examples_in_dir(dir: Path, *, suffix: str) -> dict[str, Path]:
         path.name.removesuffix(suffix): path
         for path in dir.iterdir()
         if path.name.endswith(suffix)
+    }
+
+    return dict(sorted(examples.items()))
+
+
+def list_examples_in_nested_dir(dir: Path, *, suffix: str) -> dict[str, Path]:
+    """List all example files with the given suffix contained in the sub-directories
+    inside the provided dictionary.
+
+    Returns:
+        A dict of {"subdir.example_name": path}.
+    """
+    examples = {
+        f"{subdir.name}.{example_name}": example
+        for subdir in dir.iterdir()
+        if not subdir.is_file()
+        for example_name, example in list_examples_in_dir(subdir, suffix=suffix).items()
     }
 
     return dict(sorted(examples.items()))
@@ -66,17 +85,20 @@ def list_datapacks_in_dir(dir: Path) -> dict[str, Path]:
     Returns:
         A dict of {"schempack_name.example_name": path}.
     """
-    examples = {
-        f"{per_schemapack_dir.name}.{example_name}": example
-        for per_schemapack_dir in dir.iterdir()
-        if not per_schemapack_dir.is_file()
-        for example_name, example in list_examples_in_dir(
-            per_schemapack_dir, suffix=".datapack.yaml"
-        ).items()
-    }
-
-    return dict(sorted(examples.items()))
+    return list_examples_in_nested_dir(dir, suffix=datapack_suffix)
 
 
 VALID_DATAPACK_PATHS = list_datapacks_in_dir(VALID_DATAPACK_DIR)
 INVALID_DATAPACK_PATHS = list_datapacks_in_dir(INVALID_DATAPACK_DIR)
+
+
+def list_integrations_in_dir(dir: Path) -> dict[str, Path]:
+    """List all integration example files in the given dir.
+
+    Returns:
+        A dict of {example_name: path}.
+    """
+    return list_examples_in_nested_dir(dir, suffix=integration_suffix)
+
+
+INTEGRATIONS_PATHS = list_integrations_in_dir(INTEGRATIONS_DIR)
