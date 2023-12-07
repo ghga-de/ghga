@@ -22,7 +22,7 @@ import typer
 
 from . import __version__, io
 from .config.exceptions import UnknownVersionError
-from .core import convert_workbook
+from .core import InvalidSematicVersion, convert_workbook
 
 cli = typer.Typer()
 
@@ -66,7 +66,7 @@ def transpile(
     """
     try:
         ghga_workbook = io.read_workbook(spread_sheet)
-    except (SyntaxError, UnknownVersionError) as exc:
+    except (SyntaxError, UnknownVersionError, InvalidSematicVersion) as exc:
         sys.exit(f"Unable to parse input file '{spread_sheet}': {exc}")
 
     converted = convert_workbook(ghga_workbook)
