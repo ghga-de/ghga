@@ -7,7 +7,11 @@ default_settings:
 worksheets:
   - sheet_name: books
     settings:
+      end_column: 5
       name: books
+      transformations:
+        genre: !!python/object/apply:ghga_transpiler.transformations.to_snake_case_list []
+        set_in: !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
   - sheet_name: publisher
     settings:
       name: publisher

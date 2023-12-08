@@ -22,11 +22,15 @@ EXPECTED_CONVERSION = {
             "writer_name": "Albert Camus",
             "book_name": "The Plague",
             "isbn": "9780679720218",
+            "genre": ["PHILOSOPHICAL_NOVEL", "ABSURDIST_NOVEL"],
+            "set_in": "FRENCH_ALGERIA",
         },
         {
             "writer_name": "George Orwell",
             "book_name": "1984",
             "isbn": "9783548234106",
+            "genre": ["DYSTOPIAN_NOVEL", "CAUTIONARY_TALE"],
+            "set_in": "UNITED_KINGDOM",
         },
     ],
     "publisher": [

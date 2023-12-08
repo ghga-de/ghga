@@ -38,7 +38,28 @@ def to_attributes() -> Callable:
         return dict(zip(("key", "value"), splitted))
 
     def split_mult(value: str) -> list[dict]:
-        """Function to convert string to attributes"""
+        """Converts string to attributes"""
         return [split_one(elem) for elem in split_by_semicolon(value)]
 
     return split_mult
+
+
+def snake_case(cv: str) -> str:
+    """Converts format of a string to SNAKE_CASE"""
+    return cv.replace(" ", "_").upper()
+
+
+def to_snake_case() -> Callable:
+    """Returns a function that converts a string to SNAKE_CASE"""
+    return snake_case
+
+
+def snake_case_list(value: str) -> list[str]:
+    """Combines the functions to split_by_semicolon and convert_to_snake_case"""
+    list_to_convert = split_by_semicolon(value)
+    return [snake_case(elem) for elem in list_to_convert]
+
+
+def to_snake_case_list() -> Callable:
+    """Returns a function that converts a semicolon separated string into a list of snake-cased strings"""
+    return snake_case_list
