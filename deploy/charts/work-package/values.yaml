@@ -20,7 +20,7 @@ config_prefix: wps
 
 ingress:
   enabled: false
-  annotations: []
+  annotations: {}
   hostname: ""
   prefix: /
   tls:

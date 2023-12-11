@@ -20,7 +20,7 @@ config_prefix: ekss
 
 ingress:
   enabled: false
-  annotations: []
+  annotations: {}
   hostname: ""
   prefix: /
   tls:

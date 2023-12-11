@@ -20,7 +20,7 @@ config_prefix: fis
 
 ingress:
   enabled: false
-  annotations: []
+  annotations: {}
   hostname: ""
   prefix: /
   tls:

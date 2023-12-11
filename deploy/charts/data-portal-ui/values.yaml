@@ -20,7 +20,7 @@ config_prefix: data_portal_ui
 
 ingress:
   enabled: false
-  annotations: []
+  annotations: {}
   hostname: ""
   prefix: /
   tls:

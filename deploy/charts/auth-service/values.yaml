@@ -20,7 +20,7 @@ config_prefix: auth_service
 
 ingress:
   enabled: false
-  annotations: []
+  annotations: {}
   hostname: ""
   prefix: /
   tls:
