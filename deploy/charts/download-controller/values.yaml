@@ -18,6 +18,15 @@ resources:
 
 config_prefix: dcs
 
+ingress:
+  enabled: false
+  annotations: []
+  hostname: ""
+  prefix: /
+  tls:
+    enabled: false
+    secretName: ""
+
 mapping:
   enabled: false
   hostname: ""

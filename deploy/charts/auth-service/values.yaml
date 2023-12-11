@@ -18,6 +18,15 @@ resources:
 
 config_prefix: auth_service
 
+ingress:
+  enabled: false
+  annotations: []
+  hostname: ""
+  prefix: /
+  tls:
+    enabled: false
+    secretName: ""
+
 mapping:
   enabled: false
   hostname: ""

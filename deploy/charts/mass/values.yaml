@@ -18,6 +18,15 @@ resources:
 
 config_prefix: mass
 
+ingress:
+  enabled: false
+  annotations: []
+  hostname: ""
+  prefix: /
+  tls:
+    enabled: false
+    secretName: ""
+
 mapping:
   enabled: false
   hostname: ""
