@@ -24,8 +24,8 @@ spec:
     - host: {{ .Values.ingress.hostname }}
       http:
         paths:
-          - path: {{ .Values.ingress.prefix }}
-            pathType: Prefix
+          - path: {{ .Values.ingress.path }}
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: {{ .Release.Name }}-svc
