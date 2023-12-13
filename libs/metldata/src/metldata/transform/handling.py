@@ -89,7 +89,11 @@ class TransformationHandler:
         )
 
     def transform_metadata(
-        self, metadata: Json, *, annotation: SubmissionAnnotation
+        self,
+        metadata: Json,
+        *,
+        annotation: SubmissionAnnotation,
+        assume_validated: bool = False,
     ) -> Json:
         """Transforms metadata using the transformation definition. Validates the
         original metadata against the original model and the transformed metadata
@@ -98,12 +102,14 @@ class TransformationHandler:
         Args:
             metadata: The metadata to be transformed.
             annotation: The annotation on the metadata.
+            assume_validated: Whether the input can be assumed to be valid.
 
         Raises:
             MetadataTransformationError:
                 if the transformation fails.
         """
-        self._original_metadata_validator.validate(metadata)
+        if not assume_validated:
+            self._original_metadata_validator.validate(metadata)
         transformed_metadata = self._metadata_transformer.transform(
             metadata=metadata, annotation=annotation
         )
@@ -248,6 +254,7 @@ class WorkflowHandler:
         artifacts.
         """
         transformed_metadata: dict[str, Json] = {}
+        assume_validated = False
         for step_name in self._resolved_workflow.step_order:
             step = self._resolved_workflow.steps[step_name]
             input_metadata = (
@@ -256,8 +263,9 @@ class WorkflowHandler:
             transformed_metadata[
                 step_name
             ] = step.transformation_handler.transform_metadata(
-                input_metadata, annotation=annotation
+                input_metadata, annotation=annotation, assume_validated=assume_validated
             )
+            assume_validated = True
 
         return {
             artifact_name: transformed_metadata[step_name]

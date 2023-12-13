@@ -38,7 +38,8 @@ def test_submission_current_status():
         id="testsubmission001",
         status_history=(
             StatusChange(
-                timestamp=now_as_utc(), new_status=SubmissionStatus.IN_REVIEW  # second
+                timestamp=now_as_utc(),
+                new_status=SubmissionStatus.IN_REVIEW,  # second
             ),
             StatusChange(
                 timestamp=now_as_utc() + timedelta(days=10),  # third
