@@ -16,6 +16,7 @@
 
 """Logic to validate submission metadata based on a LinkML model."""
 
+from functools import lru_cache
 from typing import Any
 
 from linkml_validator.models import ValidationMessage
@@ -45,6 +46,13 @@ class MetadataValidationError(InvalidMetadataError):
         super().__init__(message)
 
 
+@lru_cache
+def get_metadata_validator(model: MetadataModel):
+    """Create a validator for the given metadata model."""
+    with model.temporary_yaml_path() as model_path:
+        return Validator(schema=str(model_path))
+
+
 class MetadataValidator:
     """Validating metadata against a LinkML model."""
 
@@ -61,15 +69,15 @@ class MetadataValidator:
         Raises:
             ValidationError: When validation failed.
         """
-        with self._model.temporary_yaml_path() as model_path:
-            validator = Validator(schema=str(model_path))
-            validation_report = validator.validate(metadata, target_class="Submission")
+        validator = get_metadata_validator(self._model)
 
-            if not validation_report.valid:
-                issues = [
-                    message
-                    for result in validation_report.validation_results
-                    if not result.valid and result.validation_messages is not None
-                    for message in result.validation_messages
-                ]
-                raise MetadataValidationError(issues=issues)
+        validation_report = validator.validate(metadata, target_class="Submission")
+
+        if not validation_report.valid:
+            issues = [
+                message
+                for result in validation_report.validation_results
+                if not result.valid and result.validation_messages is not None
+                for message in result.validation_messages
+            ]
+            raise MetadataValidationError(issues=issues)

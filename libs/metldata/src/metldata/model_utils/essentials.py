@@ -136,6 +136,10 @@ class MetadataModel(SchemaDefinition):
             file.flush()
             yield Path(file.name)
 
+    def __hash__(self):
+        """Create hash for metadata model via the schema view."""
+        return hash(self.schema_view)
+
 
 class ExportableSchemaView(SchemaView):
     """Extend the SchemaView by adding a method for exporting a MetadataModel."""
