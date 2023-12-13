@@ -117,7 +117,8 @@ def _read_all_test_cases_for_a_transformation(
 
 
 def _read_all_test_cases(
-    *, transformations_by_name: dict[str, TransformationDefinition]
+    *,
+    transformations_by_name: dict[str, TransformationDefinition],
 ) -> list[TransformationTestCase]:
     """Read all test cases for the specified transformations."""
 

@@ -4,3 +4,4 @@
 
 # additional requirements can be listed here
 hexkit[test-mongodb]
+pytest-asyncio < 0.23.0

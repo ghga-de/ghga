@@ -139,7 +139,8 @@ def _read_all_test_cases_for_a_workflow(
 
 
 def _read_all_test_cases(
-    *, workflows_by_name: dict[str, WorkflowDefinition]
+    *,
+    workflows_by_name: dict[str, WorkflowDefinition],
 ) -> list[WorkflowTestCase]:
     """Read all test cases for the specified workflows."""
 

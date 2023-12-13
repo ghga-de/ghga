@@ -195,7 +195,7 @@ def lookup_anchor_point(
 
 
 def invert_anchor_points_by_target(
-    anchor_points_by_target: dict[str, AnchorPoint]
+    anchor_points_by_target: dict[str, AnchorPoint],
 ) -> dict[str, str]:
     """Convert the anchor points by target dict into an class by anchor point dict."""
     return {

@@ -183,7 +183,8 @@ def load_artifact_info(
 
 
 def get_artifact_info_dict(
-    *, artifact_infos: list[ArtifactInfo]
+    *,
+    artifact_infos: list[ArtifactInfo],
 ) -> dict[str, ArtifactInfo]:
     """Build a dictionary from artifact name to artifact info."""
     # check if artifact names are unique:
