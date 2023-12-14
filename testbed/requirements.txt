@@ -1,7 +1,7 @@
 # All your requirements go here. Please adapt as needed:
 
-ghga-connector==1.1.0
-ghga-datasteward-kit==1.1.0
+ghga-connector==1.1.1
+ghga-datasteward-kit==1.1.1
 
 ghga-event-schemas>=1.0
 ghga-service-commons[auth,crypt]>=1.1
@@ -13,7 +13,7 @@ crypt4gh==1.6
 
 pytest==7.4.3
 pytest-asyncio==0.21.1
-pytest-bdd==7.0.0
+pytest-bdd==7.0.1
 pytest-cov==4.1.0
 
 click>=8.1.7,<9
