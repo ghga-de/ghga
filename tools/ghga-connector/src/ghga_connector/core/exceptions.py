@@ -265,8 +265,15 @@ class MaxPartNoExceededError(RuntimeError):
 
 
 def raise_if_connection_failed(request_error: httpx.RequestError, url: str):
-    """Check if request exception is caused by hitting max retries and raise accordingly"""
-    if isinstance(request_error, (httpx.ConnectError, httpx.ConnectTimeout)):
+    """Check if request exception is caused by a connection error and raise accordingly.
+
+    This is usually a timeout (response takes too long or number of retries exceeded).
+    """
+    # Note that NetworkErrors and ProtocolErrors can also be caused by remote timeouts
+    if isinstance(
+        request_error,
+        (httpx.TimeoutException, httpx.NetworkError, httpx.ProtocolError),
+    ):
         connection_failure = str(request_error.args[0])
         raise ConnectionFailedError(url=url, reason=connection_failure)
 

@@ -37,7 +37,7 @@ from ghga_connector.core.message_display import AbstractMessageDisplay
 from ghga_connector.core.upload import run_upload
 
 
-async def upload(  # noqa C901, pylint: disable=too-many-statements,too-many-branches
+async def upload(  # noqa C901
     *,
     api_url: str,
     file_id: str,

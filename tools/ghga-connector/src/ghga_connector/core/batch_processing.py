@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Module for btach processing specific code"""
+"""Module for batch processing specific code"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -213,7 +213,7 @@ class StagingState:
 
 
 @dataclass
-class FileStager:  # pylint: disable=too-many-instance-attributes
+class FileStager:
     """Utility class to deal with file staging in batch processing."""
 
     message_display: AbstractMessageDisplay

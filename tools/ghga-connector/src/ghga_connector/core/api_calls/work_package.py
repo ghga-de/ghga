@@ -99,10 +99,8 @@ class WorkPackageAccessor:
                 base64.b64decode(token.split(".", 2)[1]).decode("utf-8")
             )["user_public_crypt4gh_key"] != base64.b64encode(
                 self.my_public_key
-            ).decode(
-                "ascii"
-            )
-        except Exception:  # pylint: disable=broad-exception-caught
+            ).decode("ascii")
+        except Exception:
             mismatch = False
         if mismatch:
             raise exceptions.PubKeyMismatchError()

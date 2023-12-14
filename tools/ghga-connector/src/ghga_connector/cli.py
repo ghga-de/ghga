@@ -55,9 +55,9 @@ class CLIMessageDisplay(core.AbstractMessageDisplay):
 
 
 def exception_hook(
-    type_: BaseException,  # pylint: disable=unused-argument
+    type_: BaseException,
     value: BaseException,
-    traceback: Union[TracebackType, None],  # pylint: disable=unused-argument
+    traceback: Union[TracebackType, None],
     message_display: CLIMessageDisplay,
 ):
     """When debug mode is NOT enabled, gets called to perform final error handling
@@ -131,7 +131,7 @@ if strtobool(os.getenv("UPLOAD_ENABLED") or "false"):
 
 
 @cli.command(no_args_is_help=True)
-def download(  # pylint: disable=too-many-arguments,too-many-locals
+def download(
     *,
     output_dir: Path = typer.Option(
         ..., help="The directory to put the downloaded files into."

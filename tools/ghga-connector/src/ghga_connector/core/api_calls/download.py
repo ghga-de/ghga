@@ -26,7 +26,7 @@ from requests.structures import CaseInsensitiveDict
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls.work_package import WorkPackageAccessor
 from ghga_connector.core.client import httpx_client
-from ghga_connector.core.constants import TIMEOUT
+from ghga_connector.core.constants import TIMEOUT, TIMEOUT_LONG
 from ghga_connector.core.http_translation import ResponseExceptionTranslator
 from ghga_connector.core.message_display import AbstractMessageDisplay
 
@@ -66,7 +66,9 @@ def get_download_url(
     # Make function call to get download url
     try:
         with httpx_client() as client:
-            response = client.get(url=url, headers=headers, timeout=TIMEOUT)
+            # us a longer timeout since this operation accesses the object storage
+            # where in some cases responses appear after a longer delay
+            response = client.get(url=url, headers=headers, timeout=TIMEOUT_LONG)
     except httpx.RequestError as request_error:
         exceptions.raise_if_connection_failed(request_error=request_error, url=url)
         raise exceptions.RequestFailedError(url=url) from request_error
@@ -186,7 +188,7 @@ def get_file_header_envelope(
         }
     )
 
-    # Make function call to get download url
+    # Make function call to get envelope
     try:
         with httpx_client() as client:
             response = client.get(url=url, headers=headers, timeout=TIMEOUT)
