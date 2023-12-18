@@ -21,7 +21,6 @@ from time import sleep
 from typing import Union
 
 import httpx
-from requests.structures import CaseInsensitiveDict
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls.work_package import WorkPackageAccessor
@@ -55,13 +54,11 @@ def get_download_url(
 
     # build url and headers
     url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}"
-    headers = CaseInsensitiveDict(
-        {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {decrypted_token}",
-            "Content-Type": "application/json",
-        }
-    )
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {decrypted_token}",
+        "Content-Type": "application/json",
+    }
 
     # Make function call to get download url
     try:
@@ -180,13 +177,11 @@ def get_file_header_envelope(
     # build url and headers
     url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}/envelopes"
 
-    headers = CaseInsensitiveDict(
-        {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {decrypted_token}",
-            "Content-Type": "application/json",
-        }
-    )
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {decrypted_token}",
+        "Content-Type": "application/json",
+    }
 
     # Make function call to get envelope
     try:
