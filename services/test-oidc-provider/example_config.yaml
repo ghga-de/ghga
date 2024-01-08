@@ -6,6 +6,7 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 docs_url: /docs
+generate_correlation_id: true
 host: 0.0.0.0
 issuer: https://op.test/
 log_level: info

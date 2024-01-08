@@ -45,14 +45,16 @@ class OidcProviderConfig(BaseSettings):
     """The configuration for a test OpenID Connect provider."""
 
     issuer: AnyHttpUrl = Field(
-        AnyHttpUrl("https://op.test"), description="test issuer URL"
+        default=AnyHttpUrl("https://op.test"), description="test issuer URL"
     )
     user_domain: str = Field(
-        "home.org", description="domain name of the home organization of the test users"
+        default="home.org",
+        description="domain name of the home organization of the test users",
     )
-    client_id: str = Field("test-client", description="test client ID")
+    client_id: str = Field(default="test-client", description="test client ID")
     valid_seconds: PositiveInt = Field(
-        60 * 60, description="default expiration time of access tokens in seconds"
+        default=60 * 60,
+        description="default expiration time of access tokens in seconds",
     )
 
 
@@ -179,7 +181,9 @@ class OidcProvider:
             "aud": [self.client_id],
         }
         token = sign_and_serialize_token(
-            claims, key=self.key, valid_seconds=valid_seconds  # pyright: ignore
+            claims,
+            key=self.key,
+            valid_seconds=valid_seconds,
         )
         self._add_user(token, user)
         self._add_cleanup_task(token, valid_seconds)

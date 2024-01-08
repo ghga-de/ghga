@@ -1,11 +1,10 @@
 [build-system]
-requires = ["setuptools>=67.7.2"]
+requires = [
+    "setuptools>=67.7.2",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "top"
-version = "1.0.0"
-description = "Test OpenID Connect provider"
 readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
@@ -22,10 +21,13 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
+name = "top"
+version = "1.1.0"
+description = "Test OpenID Connect provider"
 dependencies = [
-    "typer>=0.7.0",
-    "ghga-service-commons[api,auth]>=1.1.0",
-    "hexkit>=0.11.1",
+    "typer >= 0.9.0",
+    "ghga-service-commons[api,auth] >= 1.2.0",
+    "hexkit >= 1.1.0",
 ]
 
 [project.license]
@@ -38,4 +40,112 @@ Repository = "https://github.com/ghga-de/test-oidc-provider"
 top = "top.__main__:run"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = [
+    "src",
+]
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".devcontainer",
+    "__pycache__",
+    "build",
+    "dist",
+]
+ignore = [
+    "E",
+    "W",
+    "PLW",
+    "RUF001",
+    "RUF010",
+    "RUF012",
+    "N818",
+    "B008",
+    "PLR2004",
+    "D205",
+    "D400",
+    "D401",
+    "D107",
+    "D206",
+    "D300",
+]
+line-length = 88
+select = [
+    "C90",
+    "F",
+    "I",
+    "S",
+    "B",
+    "N",
+    "UP",
+    "PL",
+    "RUF",
+    "SIM",
+    "D",
+]
+fixable = [
+    "UP",
+    "I",
+    "D",
+]
+src = [
+    "src",
+    "tests",
+    "examples",
+    "scripts",
+]
+target-version = "py39"
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.ruff.per-file-ignores]
+"scripts/*" = [
+    "PL",
+    "S",
+    "SIM",
+    "D",
+]
+"tests/*" = [
+    "S",
+    "SIM",
+    "PLR",
+    "B011",
+]
+".devcontainer/*" = [
+    "S",
+    "SIM",
+    "D",
+]
+"examples/*" = [
+    "S",
+    "D",
+]
+"__init__.py" = [
+    "D",
+]
+
+[tool.ruff.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+disable_error_code = "import"
+show_error_codes = true
+exclude = [
+    "build/lib/",
+]
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+no_site_packages = false
+
+[tool.pytest.ini_options]
+minversion = "7.1"
+asyncio_mode = "strict"
+
+[tool.coverage.paths]
+source = [
+    "src",
+    "/workspace/src",
+    "**/lib/python*/site-packages",
+]

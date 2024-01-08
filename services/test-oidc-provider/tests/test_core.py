@@ -27,7 +27,7 @@ from top.core.oidc_provider import OidcProvider, OidcProviderConfig
 
 def test_create_default_op():
     """Create a default test OP."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
     assert provider.issuer == "https://op.test"
     assert provider.op_domain == "op.test"
@@ -58,7 +58,7 @@ def test_create_custom_op():
 
 def test_jwks():
     """Test getting the public key set."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
     jwks = provider.jwks
     assert isinstance(jwks, dict)
@@ -76,7 +76,7 @@ def test_jwks():
 
 def test_invalid_token():
     """Try to get a user with an invalid token."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
     with raises(KeyError):
         provider.user_info("bad")
@@ -85,10 +85,10 @@ def test_invalid_token():
 @mark.asyncio
 async def test_user_info_for_default_token():
     """Create a default access token for a dummy user."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="John Doe")  # type: ignore
+    login = LoginInfo(name="John Doe")
     token = provider.login(login)
     assert isinstance(token, str)
     assert len(provider.users) == 1
@@ -109,7 +109,7 @@ async def test_user_info_for_default_token():
 @mark.asyncio
 async def test_user_info_for_custom_token():
     """Create a custom access token for a dummy user."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
 
     login = LoginInfo(
@@ -147,7 +147,7 @@ async def test_user_info_for_default_token_of_custom_op():
     )
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="Frank Foo")  # type: ignore
+    login = LoginInfo(name="Frank Foo")
     token = provider.login(login)
     assert isinstance(token, str)
     assert len(provider.users) == 1
@@ -166,12 +166,12 @@ async def test_user_info_for_default_token_of_custom_op():
 @mark.asyncio
 async def test_user_infos_for_two_default_tokens():
     """Create two default access tokens for two dummy users."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="John Doe")  # type: ignore
+    login = LoginInfo(name="John Doe")
     token1 = provider.login(login)
-    login = LoginInfo(name="Dr. Jane Roe")  # type: ignore
+    login = LoginInfo(name="Dr. Jane Roe")
     token2 = provider.login(login)
     assert token1 != token2
     assert len(provider.users) == 2
@@ -190,10 +190,10 @@ async def test_user_infos_for_two_default_tokens():
 @mark.asyncio
 async def test_validate_default_tokens():
     """Create two access tokens and validate them."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="John Doe")  # type: ignore
+    login = LoginInfo(name="John Doe")
     token = provider.login(login)
     claims = provider.decode_and_validate_token(token)
     assert isinstance(claims, dict)
@@ -251,16 +251,16 @@ async def test_validate_default_tokens():
 @mark.asyncio
 async def test_expiration():
     """Check that tokens expire after the specified time."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
 
-    login = LoginInfo(name="Long John Silver")  # type: ignore
+    login = LoginInfo(name="Long John Silver")
     token1 = provider.login(login)
 
     user1 = provider.user_info(token1)
     assert user1.name == "Long John Silver"
 
-    login = LoginInfo(name="Short John Silver", valid_seconds=0.1)  # type: ignore
+    login = LoginInfo(name="Short John Silver", valid_seconds=0.1)
     token2 = provider.login(login)
 
     user2 = provider.user_info(token2)
@@ -286,12 +286,12 @@ async def test_expiration():
 @mark.asyncio
 async def test_more_expiring_tasks():
     """Check that multiple tokens expire after the specified time."""
-    config = OidcProviderConfig()  # type: ignore
+    config = OidcProviderConfig()
     provider = OidcProvider(config)
 
     def create_token(name: str, short=False) -> str:
         valid_seconds = 0.1 if short else None
-        login = LoginInfo(name=name, valid_seconds=valid_seconds)  # type: ignore
+        login = LoginInfo(name=name, valid_seconds=valid_seconds)
         return provider.login(login)
 
     tokens = [

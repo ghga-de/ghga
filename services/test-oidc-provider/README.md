@@ -1,5 +1,4 @@
-
-[![tests](https://github.com/ghga-de/test-oidc-provider/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/test-oidc-provider/actions/workflows/unit_and_int_tests.yaml)
+[![tests](https://github.com/ghga-de/test-oidc-provider/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/test-oidc-provider/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/test-oidc-provider/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/test-oidc-provider?branch=main)
 
 # Test Oidc Provider
@@ -8,11 +7,9 @@ Test OpenID Connect provider
 
 ## Description
 
-This repository contains a dummy OpenID Connect provider (OP)
-that can be user for testing purposes.
+<!-- Please provide a short overview of the features of this service. -->
 
-It provides the .well-known endpoint and the UserInfo endpoint,
-plus an endpoint that can be used by test applications to create access tokens.
+Here you should provide a short summary of the purpose of this microservice.
 
 
 ## Installation
@@ -21,13 +18,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/test-oidc-provider):
 ```bash
-docker pull ghga/test-oidc-provider:1.0.0
+docker pull ghga/test-oidc-provider:1.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/test-oidc-provider:1.0.0 .
+docker build -t ghga/test-oidc-provider:1.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -35,7 +32,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/test-oidc-provider:1.0.0 --help
+docker run -p 8080:8080 ghga/test-oidc-provider:1.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -151,6 +148,21 @@ The service requires the following configuration parameters:
 
   ```json
   []
+  ```
+
+
+- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+
+
+  Examples:
+
+  ```json
+  true
+  ```
+
+
+  ```json
+  false
   ```
 
 

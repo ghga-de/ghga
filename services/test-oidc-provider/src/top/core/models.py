@@ -36,11 +36,13 @@ __all__ = ["LoginInfo", "UserInfo", "OidcConfiguration"]
 class LoginInfo(BaseModel):
     """Data that is used to login as a user."""
 
-    sub: Optional[str] = Field(None, description="subject identifier")
-    email: Optional[EmailStr] = Field(None, description="e-mail address of the user")
+    sub: Optional[str] = Field(default=None, description="subject identifier")
+    email: Optional[EmailStr] = Field(
+        default=None, description="e-mail address of the user"
+    )
     name: str = Field(..., description="the full name of the user")
     valid_seconds: Optional[Union[PositiveInt, PositiveFloat]] = Field(
-        None, description="seconds until the login expires"
+        default=None, description="seconds until the login expires"
     )
 
 
@@ -56,40 +58,40 @@ class OidcConfiguration(BaseModel):
     """Data that is returned as OpenID Connect configuration."""
 
     version: str = Field(
-        __version__, description="Version of the test OpenID Connect Provider"
+        default=__version__, description="Version of the test OpenID Connect Provider"
     )
     issuer: AnyHttpUrl = Field(
-        AnyHttpUrl("https://op.test"),
+        default=AnyHttpUrl("https://op.test"),
         description="URL that the OP asserts as its Issuer Identifier",
     )
     jwks_uri: AnyHttpUrl = Field(
-        AnyHttpUrl("http://localhost:8080/jwks"),
+        default=AnyHttpUrl("http://localhost:8080/jwks"),
         description="URL of the OP's JSON Web Key Set document",
     )
     scopes_supported: list[str] = Field(
-        ["openid", "profile", "email"],
+        default=["openid", "profile", "email"],
         description="List of the OAuth 2.0 scope values that this server supports",
     )
     claims_supported: list[str] = Field(
-        ["sub", "name", "email"],
+        default=["sub", "name", "email"],
         description="List of the Claims that the OP can supply values for",
     )
     request_object_signing_alg_values_supported: list[str] = Field(
-        ["ES512"],
+        default=["ES512"],
         description="List of JWS signing algorithms"
         " supported by the OP for Request Objects",
     )
     userinfo_signing_alg_values_supported: list[str] = Field(
-        ["ES512"],
+        default=["ES512"],
         description="List of JWS signing algorithms"
         " supported by the OP for the UserInfo endpoint",
     )
     userinfo_endpoint: AnyHttpUrl = Field(
-        AnyHttpUrl("http://localhost:8080/userinfo"),
+        default=AnyHttpUrl("http://localhost:8080/userinfo"),
         description="URL of the OP's UserInfo Endpoint",
     )
     service_documentation: AnyHttpUrl = Field(
-        AnyHttpUrl("https://github.com/ghga-de/test-oidc-provider"),
+        default=AnyHttpUrl("https://github.com/ghga-de/test-oidc-provider"),
         description="URL of a page with information"
         " that developers might need to know when using the OP",
     )

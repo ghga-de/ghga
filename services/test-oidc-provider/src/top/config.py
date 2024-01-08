@@ -28,11 +28,13 @@ SERVICE_NAME = "top"
 class Config(ApiConfigBase, OidcProviderConfig):
     """Config parameters and their defaults."""
 
-    service_name: str = Field(SERVICE_NAME, description="Short name of this service")
+    service_name: str = Field(
+        default=SERVICE_NAME, description="Short name of this service"
+    )
     service_url: AnyHttpUrl = Field(
-        AnyHttpUrl("https://op.test"),
+        default=AnyHttpUrl("https://op.test"),
         description="External base URL of this service",
     )
 
 
-CONFIG = Config()  # type: ignore
+CONFIG = Config()

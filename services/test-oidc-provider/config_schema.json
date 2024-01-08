@@ -166,6 +166,16 @@
       ],
       "title": "Cors Allowed Headers"
     },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
+    },
     "service_name": {
       "default": "top",
       "description": "Short name of this service",

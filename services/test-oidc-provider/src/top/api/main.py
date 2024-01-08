@@ -17,7 +17,7 @@
 
 import logging
 from enum import Enum
-from typing import Union
+from typing import Annotated, Union
 
 from fastapi import FastAPI, HTTPException, Response, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -57,16 +57,17 @@ async def health():
 )
 async def get_openid_configuration() -> OidcConfiguration:
     """The OpenID discovery endpoint."""
-    service_url = str(CONFIG.service_url).rstrip("/")
-    root_path = str(CONFIG.api_root_path).strip("/") + "/"
-    root_url = service_url + root_path
+    root_url = str(CONFIG.service_url).rstrip("/") + "/"
+    root_path = str(CONFIG.api_root_path).strip("/")
+    if root_path:
+        root_url += root_path + "/"
     userinfo_endpoint = AnyHttpUrl(root_url + "userinfo")
     jwks_uri = AnyHttpUrl(root_url + "jwks")
     return OidcConfiguration(
         userinfo_endpoint=userinfo_endpoint,
         issuer=CONFIG.issuer,
         jwks_uri=jwks_uri,
-    )  # type: ignore
+    )
 
 
 @app.get(
@@ -128,7 +129,7 @@ async def login(login_info: LoginInfo) -> Response:
     },
 )
 async def get_userinfo(
-    credentials: HTTPAuthorizationCredentials = Security(HTTPBearer()),
+    credentials: Annotated[HTTPAuthorizationCredentials, Security(HTTPBearer())],
 ) -> UserInfo:
     """The UserInfo endpoint of the test OP."""
     token = credentials.credentials
