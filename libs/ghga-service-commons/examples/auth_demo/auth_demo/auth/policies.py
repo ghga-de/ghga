@@ -21,13 +21,11 @@ See the router.py module for how to use these policies in REST endpoints.
 
 from typing import Optional
 
-from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from auth_demo.auth.config import DemoAuthContext
-from auth_demo.container import Container  # type: ignore
-from ghga_service_commons.auth.context import AuthContextProtocol
+from auth_demo.dummies import AuthProviderDummy
 from ghga_service_commons.auth.policies import (
     get_auth_context_using_credentials,
     require_auth_context_using_credentials,
@@ -36,24 +34,18 @@ from ghga_service_commons.auth.policies import (
 __all__ = ["DemoAuthContext", "get_auth", "require_auth", "require_vip"]
 
 
-@inject
 async def get_auth_context(
+    auth_provider: AuthProviderDummy,
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
-    auth_provider: AuthContextProtocol[DemoAuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
 ) -> Optional[DemoAuthContext]:
     """Get an authentication and authorization context using FastAPI."""
     context = await get_auth_context_using_credentials(credentials, auth_provider)
     return context  # workaround mypy issue #12156
 
 
-@inject
 async def require_auth_context(
+    auth_provider: AuthProviderDummy,
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[DemoAuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
 ) -> DemoAuthContext:
     """Require an authentication and authorization context using FastAPI."""
     return await require_auth_context_using_credentials(credentials, auth_provider)
@@ -64,12 +56,9 @@ def check_vip(context: DemoAuthContext) -> bool:
     return context.is_vip
 
 
-@inject
 async def require_vip_context(
+    auth_provider: AuthProviderDummy,
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[DemoAuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
 ) -> DemoAuthContext:
     """Require a VIP authentication and authorization context using FastAPI."""
     return await require_auth_context_using_credentials(

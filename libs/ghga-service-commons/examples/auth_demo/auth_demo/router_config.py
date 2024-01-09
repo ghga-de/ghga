@@ -13,12 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""Logic for configuring the FastAPI app router"""
+
+from fastapi import FastAPI
+
+from auth_demo.config import Config
+from auth_demo.router import router
+from ghga_service_commons.api.api import configure_app
 
 
-"""Functionality building HTTP APIs using FastAPI."""
-
-from ghga_service_commons.api.api import (  # noqa: F401
-    ApiConfigBase,
-    configure_app,
-    run_server,
-)
+def get_configured_app(config: Config) -> FastAPI:
+    """Create and configure the FastAPI app."""
+    app = FastAPI()
+    app.include_router(router)
+    configure_app(app, config=config)
+    return app

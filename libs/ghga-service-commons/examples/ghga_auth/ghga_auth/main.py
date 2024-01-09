@@ -18,36 +18,16 @@
 
 import asyncio
 
-from fastapi import FastAPI
-
 from ghga_auth.config import Config
-from ghga_auth.container import Container  # type: ignore
-from ghga_auth.router import router
-from ghga_service_commons.api import configure_app, run_server
+from ghga_auth.inject import prepare_rest_app
+from ghga_service_commons.api import run_server
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
-
-
-def get_configured_container(config: Config) -> Container:
-    """Create and configure the DI container."""
-    container = Container()
-    container.config.load_config(config)
-    return container
-
-
-def get_configured_app(config: Config) -> FastAPI:
-    """Create and configure the FastAPI app."""
-    app = FastAPI()
-    app.include_router(router)
-    configure_app(app, config=config)
-    return app
 
 
 async def configure_and_run_server():
     """Run the HTTP API."""
     config = Config()  # pyright: ignore
-    async with get_configured_container(config) as container:
-        container.wire(modules=["ghga_auth.router"])
-        app = get_configured_app(config)
+    async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
 
 

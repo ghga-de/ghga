@@ -13,12 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""A collection of dependency dummies that are used in view definitions but need to be
+replaced at runtime by actual dependencies.
+"""
 
+from typing import Annotated
 
-"""Functionality building HTTP APIs using FastAPI."""
+from fastapi import Depends
 
-from ghga_service_commons.api.api import (  # noqa: F401
-    ApiConfigBase,
-    configure_app,
-    run_server,
-)
+from auth_demo.auth.config import DemoAuthContext
+from auth_demo.ports.hangout import HangoutPort
+from ghga_service_commons.api.di import DependencyDummy
+from ghga_service_commons.auth.context import AuthContextProtocol
+
+auth_provider_dummy = DependencyDummy("auth_provider")
+AuthProviderDummy = Annotated[
+    AuthContextProtocol[DemoAuthContext], Depends(auth_provider_dummy)
+]
+
+hangout_port = DependencyDummy("hangout_port")
+HangoutDummy = Annotated[HangoutPort, Depends(hangout_port)]

@@ -13,29 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""Logic for configuring the FastAPI app router"""
 
-# When mypy is started from pre-commit, it exits with an exception when analysing this
-# file without useful error message, thus ignoring.
-# (Please note this does not occur when running mypy directly.)
-#  type: ignore
-
-"""Module hosting the dependency injection container."""
-
-from hexkit.inject import ContainerBase, get_configurator, get_constructor
+from fastapi import FastAPI
 
 from ghga_auth.config import Config
-from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
+from ghga_auth.router import router
+from ghga_service_commons.api.api import configure_app
 
-__all__ = ["Container"]
 
-
-class Container(ContainerBase):
-    """DI Container."""
-
-    config = get_configurator(Config)
-
-    auth_provider = get_constructor(
-        GHGAAuthContextProvider,
-        config=config,
-        context_class=AuthContext,
-    )
+def get_configured_app(config: Config) -> FastAPI:
+    """Create and configure the FastAPI app."""
+    app = FastAPI()
+    app.include_router(router)
+    configure_app(app, config=config)
+    return app

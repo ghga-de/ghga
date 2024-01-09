@@ -18,21 +18,21 @@
 
 import asyncio
 
-from fastapi import FastAPI, status
+from fastapi import status
 from fastapi.testclient import TestClient
 from pytest import fixture
 
 from ghga_auth.config import AUTH_KEY_PAIR, Config
-from ghga_auth.main import get_configured_app, get_configured_container
+from ghga_auth.inject import prepare_rest_app
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 
 
-async def get_app() -> FastAPI:
+async def get_app():
     """Get the demo app."""
     config = Config()  # pyright: ignore
-    async with get_configured_container(config) as container:
-        container.wire(modules=["ghga_auth.policies"])
-        return get_configured_app(config)
+
+    async with prepare_rest_app(config=config) as app:
+        return app
 
 
 @fixture

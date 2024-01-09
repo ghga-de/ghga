@@ -22,12 +22,10 @@ See the router.py module for how to use these policies in REST endpoints.
 from functools import partial
 from typing import Optional
 
-from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ghga_auth.container import Container  # type: ignore
-from ghga_service_commons.auth.context import AuthContextProtocol
+from ghga_auth.dummies import AuthProviderDummy
 from ghga_service_commons.auth.ghga import AuthContext, has_role, is_active
 from ghga_service_commons.auth.policies import (
     get_auth_context_using_credentials,
@@ -37,35 +35,25 @@ from ghga_service_commons.auth.policies import (
 __all__ = ["AuthContext", "get_auth", "require_admin", "require_active", "require_auth"]
 
 
-@inject
 async def get_auth_context(
+    auth_provider: AuthProviderDummy,
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
-    auth_provider: AuthContextProtocol[AuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
 ) -> Optional[AuthContext]:
     """Get a GHGA authentication and authorization context using FastAPI."""
-    context = await get_auth_context_using_credentials(credentials, auth_provider)
-    return context  # workaround mypy issue #12156
+    return await get_auth_context_using_credentials(credentials, auth_provider)  # type: ignore
 
 
-@inject
 async def require_auth_context(
+    auth_provider: AuthProviderDummy,
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[AuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
 ) -> AuthContext:
     """Require a GHGA authentication and authorization context using FastAPI."""
     return await require_auth_context_using_credentials(credentials, auth_provider)
 
 
-@inject
 async def require_active_context(
+    auth_provider: AuthProviderDummy,
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[AuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
 ) -> AuthContext:
     """Require an active GHGA auth context using FastAPI."""
     return await require_auth_context_using_credentials(
@@ -76,12 +64,9 @@ async def require_active_context(
 is_admin = partial(has_role, role="admin")
 
 
-@inject
 async def require_admin_context(
+    auth_provider: AuthProviderDummy,
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-    auth_provider: AuthContextProtocol[AuthContext] = Depends(
-        Provide[Container.auth_provider]
-    ),
 ) -> AuthContext:
     """Require an active GHGA auth context with admin role using FastAPI."""
     return await require_auth_context_using_credentials(
