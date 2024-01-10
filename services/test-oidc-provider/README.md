@@ -18,13 +18,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/test-oidc-provider):
 ```bash
-docker pull ghga/test-oidc-provider:1.1.0
+docker pull ghga/test-oidc-provider:1.1.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/test-oidc-provider:1.1.0 .
+docker build -t ghga/test-oidc-provider:1.1.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -32,7 +32,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/test-oidc-provider:1.1.0 --help
+docker run -p 8080:8080 ghga/test-oidc-provider:1.1.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -49,6 +49,33 @@ top --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+
+- **`service_name`** *(string)*: Short name of this service. Default: `"top"`.
+
+- **`service_instance_id`** *(string)*: String that uniquely identifies this service instance in log messages. Default: `"default"`.
+
+- **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  "%(timestamp)s - %(service)s - %(level)s - %(message)s"
+  ```
+
+
+  ```json
+  "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+  ```
+
+
 - **`issuer`** *(string, format: uri)*: test issuer URL. Default: `"https://op.test/"`.
 
 - **`user_domain`** *(string)*: domain name of the home organization of the test users. Default: `"home.org"`.
@@ -60,8 +87,6 @@ The service requires the following configuration parameters:
 - **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
 - **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
-
-- **`log_level`** *(string)*: Controls the verbosity of the log. Must be one of: `["critical", "error", "warning", "info", "debug", "trace"]`. Default: `"info"`.
 
 - **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
@@ -165,8 +190,6 @@ The service requires the following configuration parameters:
   false
   ```
 
-
-- **`service_name`** *(string)*: Short name of this service. Default: `"top"`.
 
 - **`service_url`** *(string, format: uri)*: External base URL of this service. Default: `"https://op.test/"`.
 

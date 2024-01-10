@@ -17,6 +17,7 @@
 
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
 from pydantic import AnyHttpUrl, Field
 
 from top.core.oidc_provider import OidcProviderConfig
@@ -25,11 +26,17 @@ SERVICE_NAME = "top"
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, OidcProviderConfig):
+class Config(ApiConfigBase, OidcProviderConfig, LoggingConfig):
     """Config parameters and their defaults."""
 
     service_name: str = Field(
         default=SERVICE_NAME, description="Short name of this service"
+    )
+    service_instance_id: str = Field(
+        default="default",
+        description=(
+            "String that uniquely identifies this service instance in log messages"
+        ),
     )
     service_url: AnyHttpUrl = Field(
         default=AnyHttpUrl("https://op.test"),

@@ -2,6 +2,49 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "log_level": {
+      "default": "INFO",
+      "description": "The minimum log level to capture.",
+      "enum": [
+        "CRITICAL",
+        "ERROR",
+        "WARNING",
+        "INFO",
+        "DEBUG",
+        "TRACE"
+      ],
+      "title": "Log Level",
+      "type": "string"
+    },
+    "service_name": {
+      "default": "top",
+      "description": "Short name of this service",
+      "title": "Service Name",
+      "type": "string"
+    },
+    "service_instance_id": {
+      "default": "default",
+      "description": "String that uniquely identifies this service instance in log messages",
+      "title": "Service Instance Id",
+      "type": "string"
+    },
+    "log_format": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details",
+      "examples": [
+        "%(timestamp)s - %(service)s - %(level)s - %(message)s",
+        "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+      ],
+      "title": "Log Format"
+    },
     "issuer": {
       "default": "https://op.test/",
       "description": "test issuer URL",
@@ -40,20 +83,6 @@
       "description": "Port to expose the server on the specified host",
       "title": "Port",
       "type": "integer"
-    },
-    "log_level": {
-      "default": "info",
-      "description": "Controls the verbosity of the log.",
-      "enum": [
-        "critical",
-        "error",
-        "warning",
-        "info",
-        "debug",
-        "trace"
-      ],
-      "title": "Log Level",
-      "type": "string"
     },
     "auto_reload": {
       "default": false,
@@ -175,12 +204,6 @@
       ],
       "title": "Generate Correlation Id",
       "type": "boolean"
-    },
-    "service_name": {
-      "default": "top",
-      "description": "Short name of this service",
-      "title": "Service Name",
-      "type": "string"
     },
     "service_url": {
       "default": "https://op.test/",
