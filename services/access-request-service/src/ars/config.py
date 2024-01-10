@@ -18,18 +18,23 @@
 from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
+from pydantic import Field
 
 from ars.adapters.outbound.event_pub import NotificationEmitterConfig
 from ars.adapters.outbound.http import AccessGrantsConfig
 from ars.core.repository import AccessRequestConfig
 
+SERVICE_NAME = "ars"
 
-@config_from_yaml(prefix="ars")
+
+@config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     ApiConfigBase,
     AuthConfig,
+    LoggingConfig,
     MongoDbConfig,
     KafkaConfig,
     NotificationEmitterConfig,
@@ -38,12 +43,6 @@ class Config(
 ):
     """Config parameters and their defaults."""
 
-    service_name: str = "ars"
-    db_name: str = "access-requests"
-
-    notification_event_topic: str = "notifications"
-    notification_event_type: str = "notification"
-
-    access_upfront_max_days: int = 6 * 30
-    access_grant_min_days: int = 7
-    access_grant_max_days: int = 2 * 365
+    service_name: str = Field(
+        default=SERVICE_NAME, description="Short name of this service"
+    )

@@ -57,13 +57,16 @@ class AccessRequestConfig(BaseSettings):
     )
 
     access_upfront_max_days: int = Field(
-        ..., description="The maximum lead time in days to request access grants"
+        default=6 * 30,
+        description="The maximum lead time in days to request access grants",
     )
     access_grant_min_days: int = Field(
-        ..., description="The minimum number of days that the access will be granted"
+        default=7,
+        description="The minimum number of days that the access will be granted",
     )
     access_grant_max_days: int = Field(
-        ..., description="The maximum number of days that the access can be granted"
+        default=2 * 365,
+        description="The maximum number of days that the access can be granted",
     )
 
 

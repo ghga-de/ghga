@@ -18,9 +18,10 @@ cors_allowed_methods: []
 cors_allowed_origins: []
 data_steward_email: helpdesk@ghga.de
 db_connection_str: '**********'
-db_name: dev-db
+db_name: access-requests
 docs_url: /docs
 download_access_url: http://127.0.0.1:8080/download-access
+generate_correlation_id: true
 host: 127.0.0.1
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
@@ -29,11 +30,12 @@ kafka_ssl_cafile: ''
 kafka_ssl_certfile: ''
 kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
-log_level: info
+log_format: null
+log_level: INFO
 notification_event_topic: notifications
 notification_event_type: notification
 openapi_url: /openapi.json
 port: 8080
-service_instance_id: '001'
+service_instance_id: '1'
 service_name: ars
 workers: 1

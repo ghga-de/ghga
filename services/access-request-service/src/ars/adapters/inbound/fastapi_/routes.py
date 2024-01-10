@@ -17,7 +17,7 @@
 """Module containing the main FastAPI router and all route functions."""
 
 import logging
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Response
 from fastapi.exceptions import HTTPException
@@ -72,7 +72,7 @@ async def health():
 async def create_access_request(
     creation_data: AccessRequestCreationData,
     repository: dummies.AccessRequestRepoDummy,
-    auth_context: AuthContext = require_user_context,
+    auth_context: Annotated[AuthContext, require_user_context],
 ) -> str:
     """Create an access request"""
     try:
@@ -109,10 +109,10 @@ async def create_access_request(
 )
 async def get_access_requests(
     repository: dummies.AccessRequestRepoDummy,
+    auth_context: Annotated[AuthContext, require_user_context],
     dataset_id: Optional[str] = None,
     user_id: Optional[str] = None,
     status: Optional[AccessRequestStatus] = None,
-    auth_context: AuthContext = require_user_context,
 ) -> list[AccessRequest]:
     """Get access requests"""
     try:
@@ -150,7 +150,7 @@ async def patch_access_request(
     access_request_id: str,
     patch_data: AccessRequestPatchData,
     repository: dummies.AccessRequestRepoDummy,
-    auth_context: AuthContext = require_steward_context,
+    auth_context: Annotated[AuthContext, require_steward_context],
 ) -> Response:
     """Set the status of an access request"""
     status = patch_data.status

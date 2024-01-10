@@ -1,4 +1,3 @@
-
 [![tests](https://github.com/ghga-de/access-request-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/access-request-service/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/access-request-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/access-request-service?branch=main)
 
@@ -8,8 +7,9 @@ Access Request Service
 
 ## Description
 
-The access request service manages access requests and serves as a backend
-for the GHGA Data Portal.
+<!-- Please provide a short overview of the features of this service. -->
+
+Here you should provide a short summary of the purpose of this microservice.
 
 
 ## Installation
@@ -18,13 +18,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/access-request-service):
 ```bash
-docker pull ghga/access-request-service:1.0.0
+docker pull ghga/access-request-service:1.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/access-request-service:1.0.0 .
+docker build -t ghga/access-request-service:1.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -32,7 +32,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/access-request-service:1.0.0 --help
+docker run -p 8080:8080 ghga/access-request-service:1.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -57,11 +57,11 @@ The service requires the following configuration parameters:
 
     - *null*
 
-- **`access_upfront_max_days`** *(integer)*: Default: `180`.
+- **`access_upfront_max_days`** *(integer)*: The maximum lead time in days to request access grants. Default: `180`.
 
-- **`access_grant_min_days`** *(integer)*: Default: `7`.
+- **`access_grant_min_days`** *(integer)*: The minimum number of days that the access will be granted. Default: `7`.
 
-- **`access_grant_max_days`** *(integer)*: Default: `730`.
+- **`access_grant_max_days`** *(integer)*: The maximum number of days that the access can be granted. Default: `730`.
 
 - **`download_access_url`** *(string)*: URL pointing to the internal download access API.
 
@@ -73,13 +73,29 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`notification_event_topic`** *(string)*: Default: `"notifications"`.
+- **`notification_event_topic`** *(string)*: Name of the topic used for notification events.
 
-- **`notification_event_type`** *(string)*: Default: `"notification"`.
 
-- **`service_name`** *(string)*: Default: `"ars"`.
+  Examples:
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+  ```json
+  "notifications"
+  ```
+
+
+- **`notification_event_type`** *(string)*: The type used for notification events.
+
+
+  Examples:
+
+  ```json
+  "notification"
+  ```
+
+
+- **`service_name`** *(string)*: Short name of this service. Default: `"ars"`.
+
+- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
 
   Examples:
@@ -105,13 +121,28 @@ The service requires the following configuration parameters:
 
 - **`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
 
-- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
 
 - **`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
 - **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+
+- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+
+
+  Examples:
+
+  ```json
+  true
+  ```
+
+
+  ```json
+  false
+  ```
+
 
 - **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
@@ -123,7 +154,38 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Default: `"access-requests"`.
+- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+
+
+  Examples:
+
+  ```json
+  "my-database"
+  ```
+
+
+- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+
+- **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  "%(timestamp)s - %(service)s - %(level)s - %(message)s"
+  ```
+
+
+  ```json
+  "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+  ```
+
 
 - **`auth_key`** *(string)*: The GHGA internal public key for validating the token signature.
 
@@ -143,13 +205,11 @@ The service requires the following configuration parameters:
 
 - **`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
 
-  - **Additional Properties** *(string)*
+  - **Additional properties** *(string)*
 
 - **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
 - **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
-
-- **`log_level`** *(string)*: Controls the verbosity of the log. Must be one of: `["critical", "error", "warning", "info", "debug", "trace"]`. Default: `"info"`.
 
 - **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
@@ -268,6 +328,9 @@ of the pydantic documentation.
 An OpenAPI specification for this service can be found [here](./openapi.yaml).
 
 ## Architecture and Design:
+<!-- Please provide an overview of the architecture and design of the code base.
+Mention anything that deviates from the standard triple hexagonal architecture and
+the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
