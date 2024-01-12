@@ -15,6 +15,7 @@
 #
 """Top-level functionality for the microservice"""
 from ghga_service_commons.api import run_server
+from hexkit.log import configure_logging
 
 from mass.config import Config
 from mass.inject import prepare_event_subscriber, prepare_rest_app
@@ -23,6 +24,7 @@ from mass.inject import prepare_event_subscriber, prepare_rest_app
 async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()  # type: ignore [call-arg]
+    configure_logging(config=config)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -31,6 +33,7 @@ async def run_rest_app():
 async def consume_events(run_forever: bool = True):
     """Run the event consumer"""
     config = Config()  # type: ignore[call-arg]
+    configure_logging(config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)

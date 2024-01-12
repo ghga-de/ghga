@@ -30,7 +30,7 @@ QUERY_STRING = "Backrub"
 
 
 @pytest.mark.parametrize("create_index_manually", (False, True))
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_index_creation(joint_fixture: JointFixture, create_index_manually: bool):
     """Test the index creation function."""
     # indexes will have been created in fixture setup, so we actually need to del those

@@ -71,7 +71,7 @@ def multi_column_sort(
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_api_without_sort_parameters(joint_fixture: JointFixture):
     """Make sure default Pydantic model parameter works as expected"""
     search_parameters: JsonObject = {
@@ -88,7 +88,7 @@ async def test_api_without_sort_parameters(joint_fixture: JointFixture):
     assert results.hits == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_sort_with_id_not_last(joint_fixture: JointFixture):
     """Test sorting parameters that contain id_, but id_ is not final sorting field.
 
@@ -116,7 +116,7 @@ async def test_sort_with_id_not_last(joint_fixture: JointFixture):
     assert results.hits == multi_column_sort(results.hits, sorts_in_model_form)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_sort_with_params_but_not_id(joint_fixture: JointFixture):
     """Test supplying sorting parameters but omitting id_.
 
@@ -138,7 +138,7 @@ async def test_sort_with_params_but_not_id(joint_fixture: JointFixture):
     assert results.hits == multi_column_sort(results.hits, BASIC_SORT_PARAMETERS)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_sort_with_invalid_field(joint_fixture: JointFixture):
     """Test supplying an invalid field name as a sort field.
 
@@ -163,7 +163,7 @@ async def test_sort_with_invalid_field(joint_fixture: JointFixture):
 
 
 @pytest.mark.parametrize("order", [-7, 17, "some_string"])
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_sort_with_invalid_sort_order(joint_fixture: JointFixture, order):
     """Test supplying an invalid value for the sort order"""
     search_parameters: JsonObject = {
@@ -179,7 +179,7 @@ async def test_sort_with_invalid_sort_order(joint_fixture: JointFixture, order):
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_sort_with_invalid_field_and_sort_order(joint_fixture: JointFixture):
     """Test with both invalid field name and invalid sort order."""
     search_parameters: JsonObject = {
@@ -195,7 +195,7 @@ async def test_sort_with_invalid_field_and_sort_order(joint_fixture: JointFixtur
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_sort_with_duplicate_field(joint_fixture: JointFixture):
     """Supply sorting parameters with two instances of the same sort field.
 

@@ -29,7 +29,7 @@ from tests.fixtures.joint import JointFixture
         ("1HotelAlpha-id", False),  # this ID exists in the test data already
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_resource_upsert(
     joint_fixture: JointFixture, resource_id: str, is_insert: bool
 ):
@@ -84,7 +84,7 @@ async def test_resource_upsert(
     assert resource not in results_all.hits
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_resource_delete(joint_fixture: JointFixture):
     """Test resource deletion via event consumption"""
     # get all the documents in the collection

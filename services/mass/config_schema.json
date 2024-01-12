@@ -49,6 +49,50 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "log_level": {
+      "default": "INFO",
+      "description": "The minimum log level to capture.",
+      "enum": [
+        "CRITICAL",
+        "ERROR",
+        "WARNING",
+        "INFO",
+        "DEBUG",
+        "TRACE"
+      ],
+      "title": "Log Level",
+      "type": "string"
+    },
+    "service_name": {
+      "default": "mass",
+      "title": "Service Name",
+      "type": "string"
+    },
+    "service_instance_id": {
+      "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
+      "examples": [
+        "germany-bw-instance-001"
+      ],
+      "title": "Service Instance Id",
+      "type": "string"
+    },
+    "log_format": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details",
+      "examples": [
+        "%(timestamp)s - %(service)s - %(level)s - %(message)s",
+        "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+      ],
+      "title": "Log Format"
+    },
     "searchable_classes": {
       "additionalProperties": {
         "$ref": "#/$defs/SearchableClass"
@@ -81,19 +125,6 @@
       "title": "Resource Upsertion Event Type",
       "type": "string"
     },
-    "service_name": {
-      "default": "mass",
-      "title": "Service Name",
-      "type": "string"
-    },
-    "service_instance_id": {
-      "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
-      "examples": [
-        "germany-bw-instance-001"
-      ],
-      "title": "Service Instance Id",
-      "type": "string"
-    },
     "kafka_servers": {
       "description": "A list of connection strings to connect to Kafka bootstrap servers.",
       "examples": [
@@ -119,7 +150,7 @@
     },
     "kafka_ssl_cafile": {
       "default": "",
-      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL.",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
       "title": "Kafka Ssl Cafile",
       "type": "string"
     },
@@ -140,6 +171,16 @@
       "description": "Optional password to be used for the client private key.",
       "title": "Kafka Ssl Password",
       "type": "string"
+    },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
     },
     "db_connection_str": {
       "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
@@ -170,20 +211,6 @@
       "description": "Port to expose the server on the specified host",
       "title": "Port",
       "type": "integer"
-    },
-    "log_level": {
-      "default": "info",
-      "description": "Controls the verbosity of the log.",
-      "enum": [
-        "critical",
-        "error",
-        "warning",
-        "info",
-        "debug",
-        "trace"
-      ],
-      "title": "Log Level",
-      "type": "string"
     },
     "auto_reload": {
       "default": false,
@@ -298,11 +325,11 @@
     }
   },
   "required": [
+    "service_instance_id",
     "searchable_classes",
     "resource_change_event_topic",
     "resource_deletion_event_type",
     "resource_upsertion_event_type",
-    "service_instance_id",
     "kafka_servers",
     "db_connection_str",
     "db_name"
