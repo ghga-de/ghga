@@ -38,60 +38,45 @@ docker-compose up
 docker exec -it devcontainer_app_1 /bin/bash
 ```
 
-## Usage and Configuration
 
-The Archive Test Bed runs all fundamental user journeys supported by the GHGA Archive
-application. Essentially, data is uploaded first and then the same data is downloaded
-again. The tests start on an empty slate, and the state for the download tests is
-created via the upload tests. Therefore the proper order of execution is important,
-which is guaranteed by prefixing the features with numbers.
+## Overview
 
-The tests in the Archive Test Bed are written in BDD style and can be executed with
-[pytest](https://docs.pytest.org) via the
-[pytest-bdd](https://pytest-bdd.readthedocs.io) plugin.
-The feature files written in the Gherkin langue are inside in the `features` directory.
-As already mentioned, they are prefixed with numbers so that they run in the proper
-execution order. Each feature can contain several scenarios which run in the order in
-which they appear in the feature files. The corresponding step files can be found in
-the `steps` directory. Pytest fixtures are contained in the `fixtures` directory.
+The Archive Test Bed is designed for testing the GHGA Archive application through fundamental user journeys. It involves a sequence of actions where data is first uploaded and subsequently downloaded. The tests are executed starting from an empty state, with the download tests dependent on the setup created by the upload tests. This necessitates a specific order of execution, achieved by numerically prefixing the feature files.
 
-To run all tests in the Archive test bed, just run `pytest`. You can also run only
-certain steps, e.g. step 24, by running `pytest steps/test_24_*`.
+### Test Structure
 
-The Archive Test Bed supports two different modes of operation: black box testing
-and white box testing. In the black box testing mode, the application is only accessed
-using the official API via the API gateway. This can be used to test a deployment in a
-Kubernetes cluster. In the white box testing mode, the Archive Test Bed also accesses
-the foundational services (like S3, Kafka, Mongo, Vault) to test their expected states,
-including intermediate states.
+The tests are written in **Behavior-Driven Development (BDD) Style** and are executable using [pytest](https://docs.pytest.org) with the [pytest-bdd](https://pytest-bdd.readthedocs.io) plugin.
 
-The testbed can be configured using a YAML file or environment variables, which always
-take precedence. The black box testing mode is activated by setting `use_api_gateway`
-to `true` in the configuration, otherwise the white box testing mode is used.
+Located in the `features` directory, the **feature files** are numerically prefixed to ensure correct execution order. Each file contains multiple scenarios executed sequentially. Corresponding step definitions are found in the `steps` directory. Pytest fixtures are stored in the `fixtures` directory.
 
-The setting `use_auth_adapter` can be set to `false` if the auth adapter shall not be
-used to exchange external OIDC tokens with internal tokens. In black box testing mode,
-the auth adapter must always be used, because internal tokens cannot be set from
-outside. In order to provide the OIDC tokens, a test OIDC provider service is used.
+### Execution
 
-The Archive Test Bed memorizes the current state of the tests in a test database, which
-can be useful if you want to re-run tests starting with a certain step as a developer.
-If you set `keep_state_in_db` to `false`, then the state is stored in memory only.
-This is useful when black box tests are running automatically.
+- Use `pytest -v` to run all tests.
+- For specific steps, such as step 24, use `pytest steps/test_24_*`.
+- For specific group of tests, BDD tags (pytest markers) can also be used, e.g. `pytest -m browse and metadata`.
 
-The setting `auth_basic` can be used to pass additional basic authentication credentials
-which may be expected by the auth adapter. This can be only used with black box testing.
+### Modes of Operation
 
-The other configuration settings define the names of the databases, used API URLs
-and various secrets. If you are running the tests against a Kubernetes cluster, make
-sure that these settings match what is configured there. The secrets that are relevant
-here are stored in the settings `auth_basic`, `upload_token` and `fis_pubkey`.
-Also, the names of the buckets (`*_bucket`) and URLs (`*_url`) must match.
+- **Black Box Testing:** This mode involves accessing the application solely through the official API via the API gateway. It's suitable for testing deployments in Kubernetes clusters.
+    - Enable black box testing by setting `use_api_gateway` to `true`. Otherwise, white box testing is the default mode.
+- **White Box Testing:** Here, the Test Bed also accesses foundational services (e.g., S3, Kafka, Mongo, Vault) to verify their states, including intermediate ones.
 
-If you run the tests against the devcontainer and the services set up in
-`docker-compose.yml`, then the secrets will be created randomly before the containers
-are started, and saved in corresponding `.env` files in the `set_env.sh` script.
-These files are ignored in the repository.
+### Configuration
+
+The Archive Test Bed can be configured through either **YAML file** or **environment variables**, with environment variables having higher priority.
+
+- **Auth Adapter Settings:** The `use_auth_adapter` setting controls the usage of the auth adapter for token exchanges. It's mandatory in black box testing for external OIDC tokens.
+- **States:** The `keep_state_in_db` setting determines whether to store test states in a database or in memory, with the latter being default for automated black box tests.
+- **Additional Authentication:** The `auth_basic` setting is for passing basic authentication credentials, applicable only in black box testing.
+
+
+### Advanced Configuration
+
+When running the tests against a Kubernetes cluster, please ensure that names of databases, API URLs, and secrets match what is configured in the cluster.
+
+- Relevant settings include `auth_basic`, `upload_token`, and `fis_pubkey`. Bucket names (`*_bucket`) and URLs (`*_url`) must also be consistent.
+
+When running tests in a devcontainer with `docker-compose.yml`, **secrets are generated randomly and saved in `.env` files via the `set_env.sh` script**. These files are excluded from the repository.
 
 ## License
 
