@@ -15,6 +15,8 @@
 #
 """Top-level DI Container and consumer creation, entry point is consume_events()"""
 
+from hexkit.log import configure_logging
+
 from ns.config import Config
 from ns.inject import prepare_event_subscriber
 
@@ -22,6 +24,8 @@ from ns.inject import prepare_event_subscriber
 async def consume_events(run_forever: bool = True):
     """Start consuming events with kafka"""
     config = Config()  # type: ignore [call-arg]
+
+    configure_logging(config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)

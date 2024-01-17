@@ -15,14 +15,17 @@
 #
 
 """Contains the smtp client adapter"""
+import logging
 import smtplib
 import ssl
 from email.message import EmailMessage
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings
 
 from ns.ports.outbound.smtp_client import SmtpClientPort
+
+log = logging.getLogger(__name__)
 
 
 class SmtpClientConfig(BaseSettings):
@@ -31,7 +34,7 @@ class SmtpClientConfig(BaseSettings):
     smtp_host: str = Field(..., description="The mail server host to connect to")
     smtp_port: int = Field(..., description="The port for the mail server connection")
     login_user: str = Field(..., description="The login username or email")
-    login_password: str = Field(..., description="The login password")
+    login_password: SecretStr = Field(..., description="The login password")
     use_starttls: bool = Field(
         default=True, description="Boolean flag indicating the use of STARTTLS"
     )
@@ -57,13 +60,23 @@ class SmtpClient(SmtpClientPort):
                     context = ssl.create_default_context()
                     server.starttls(context=context)
                 try:
-                    server.login(self._config.login_user, self._config.login_password)
+                    server.login(
+                        self._config.login_user,
+                        self._config.login_password.get_secret_value(),
+                    )
                 except smtplib.SMTPAuthenticationError as err:
-                    raise self.FailedLoginError() from err
+                    login_error = self.FailedLoginError()
+                    log.critical(login_error)
+                    raise login_error from err
 
                 # check for a connection
                 if server.noop()[0] != 250:
-                    raise self.ConnectionError()
+                    connection_error = self.ConnectionError()
+                    log.critical(connection_error)
+                    raise connection_error
+
                 server.send_message(msg=message)
         except smtplib.SMTPException as exc:
-            raise self.GeneralSmtpException(error_info=exc.args[0]) from exc
+            error = self.GeneralSmtpException(error_info=exc.args[0])
+            log.error(error, extra={"error_info": exc.args[0]})
+            raise error from exc

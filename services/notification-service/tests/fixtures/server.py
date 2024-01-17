@@ -109,7 +109,7 @@ class DummyServer:
         """Assign config"""
         self._config = config
         self.login = self._config.login_user
-        self.password = self._config.login_password
+        self.password = self._config.login_password.get_secret_value()
 
     def _record_email(
         self, *, expected_email: EmailMessage, controller: Controller

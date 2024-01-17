@@ -16,15 +16,24 @@
 """Config Parameter Modeling and Parsing"""
 
 from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 
 from ns.adapters.inbound.akafka import EventSubTranslatorConfig
 from ns.adapters.outbound.smtp_client import SmtpClientConfig
 from ns.core.notifier import NotifierConfig
 
+SERVICE_NAME = "ns"
 
-@config_from_yaml(prefix="ns")
-class Config(KafkaConfig, EventSubTranslatorConfig, SmtpClientConfig, NotifierConfig):
+
+@config_from_yaml(prefix=SERVICE_NAME)
+class Config(
+    KafkaConfig,
+    EventSubTranslatorConfig,
+    SmtpClientConfig,
+    NotifierConfig,
+    LoggingConfig,
+):
     """Config parameters and their defaults."""
 
-    service_name: str = "ns"
+    service_name: str = SERVICE_NAME
