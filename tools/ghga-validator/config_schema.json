@@ -1,8 +1,0 @@
-{
-    "title": "ModSettings",
-    "description": "Modifies the original Settings class provided by the user",
-    "type": "object",
-    "properties": {},
-    "language": {},
-    "additionalProperties": false
-}

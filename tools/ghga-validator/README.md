@@ -75,7 +75,3 @@ if you update dependencies in the [`./setup.cfg`](./setup.cfg) or the
 ## License
 This repository is free to use and modify according to the
 [Apache 2.0 License](./LICENSE).
-
-## Readme Generation
-This readme is autogenerate, please see [`readme_generation.md`](./readme_generation.md)
-for details.
