@@ -35,14 +35,23 @@ from ghga_service_commons.api.mock_router import (  # noqa: F401
 from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from ghga_connector.cli import configure_upload, download
+from ghga_connector.cli import (
+    download,
+    init_message_display,
+    retrieve_upload_parameters,
+)
 from ghga_connector.core import exceptions, upload
 from ghga_connector.core.constants import DEFAULT_PART_SIZE
-from ghga_connector.core.file_operations import Crypt4GHEncryptor
+from ghga_connector.core.crypt import Crypt4GHEncryptor
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.app import router
-from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
+from tests.fixtures.s3 import (  # noqa: F401
+    S3Fixture,
+    get_big_s3_object,
+    reset_state,
+    s3_fixture,
+)
 from tests.fixtures.utils import PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, mock_wps_token
 
 URL_PATTERN = re.compile(r"^https?://127\.0\.0\.1.*")
@@ -103,7 +112,7 @@ async def test_multipart_download(
     big_object = await get_big_s3_object(s3_fixture, object_size=file_size)
 
     # The download function will ask the user for input.
-    monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
+    monkeypatch.setattr("ghga_connector.core.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
         Mock(return_value=dict(zip([big_object.object_id], [""]))),
@@ -175,7 +184,7 @@ async def test_multipart_download(
             False,
             False,
             "file_envelope_missing",
-            exceptions.FileNotRegisteredError,
+            exceptions.GetEnvelopeError,
             True,
         ),
     ],
@@ -203,7 +212,7 @@ async def test_download(
         monkeypatch.setenv(name, value)
 
     # The download function will ask the user for input.
-    monkeypatch.setattr("ghga_connector.core.main.get_wps_token", mock_wps_token)
+    monkeypatch.setattr("ghga_connector.core.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
         Mock(return_value=dict(zip([file.file_id], [""]))),
@@ -243,7 +252,7 @@ async def test_download(
     ):
         # needed to mock user input
         with patch(
-            "ghga_connector.core.batch_processing.CliInputHandler.get_input",
+            "ghga_connector.core.downloading.batch_processing.CliInputHandler.get_input",
             return_value="yes" if proceed_on_missing else "no",
         ):
             if file_name == "file_not_downloadable":
@@ -276,8 +285,8 @@ async def test_download(
                             my_private_key_path=Path(PRIVATE_KEY_FILE),
                         )
             else:
-                with pytest.raises(  # type: ignore
-                    expected_exception
+                with pytest.raises(
+                    expected_exception  # type: ignore
                 ) if expected_exception else nullcontext():
                     download(
                         output_dir=output_dir,
@@ -307,7 +316,7 @@ async def test_download(
     [
         (True, "file_uploadable", exceptions.ApiNotReachableError),
         (False, "file_uploadable", None),
-        (False, "file_not_uploadable", exceptions.FileNotRegisteredError),
+        (False, "file_not_uploadable", exceptions.StartUploadError),
         (False, "file_with_bad_path", exceptions.FileDoesNotExistError),
         (False, "encrypted_file", exceptions.FileAlreadyEncryptedError),
     ],
@@ -373,18 +382,20 @@ async def test_upload(
     )
 
     with patch("ghga_connector.cli.CONFIG", get_test_config()):
-        with pytest.raises(  # type: ignore
-            expected_exception
+        with pytest.raises(
+            expected_exception  # type: ignore
         ) if expected_exception else nullcontext():
-            ucs_api_url, server_pubkey, message_display = configure_upload(debug=True)
+            message_display = init_message_display(debug=True)
+            parameters = retrieve_upload_parameters()
             await upload(
-                api_url=ucs_api_url,
+                api_url=parameters.ucs_api_url,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
                 message_display=message_display,
-                server_public_key=server_pubkey,
+                server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
+                part_size=DEFAULT_PART_SIZE,
             )
 
             await s3_fixture.storage.complete_multipart_upload(
@@ -469,15 +480,17 @@ async def test_multipart_upload(
             "ghga_connector.cli.CONFIG",
             get_test_config(),
         ):
-            ucs_api_url, server_pubkey, message_display = configure_upload(debug=True)
+            message_display = init_message_display(debug=True)
+            parameters = retrieve_upload_parameters()
             await upload(
-                api_url=ucs_api_url,
+                api_url=parameters.ucs_api_url,
                 file_id=file_id,
                 file_path=Path(file.name),
                 message_display=message_display,
-                server_public_key=server_pubkey,
+                server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
+                part_size=DEFAULT_PART_SIZE,
             )
 
     # confirm upload

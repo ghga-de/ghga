@@ -12,11 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+"""Contains additional data structures needed by the upload code"""
 
-"""
-This sub-package contains the api calls, this service makes for various purposes
-"""
+from enum import Enum
 
-from .utils import check_url  # noqa: F401
-from .well_knowns import WKVSCaller  # noqa: F401
-from .work_package import WorkPackageAccessor  # noqa: F401
+
+class UploadStatus(str, Enum):
+    """Enum for the possible statuses of an upload attempt."""
+
+    ACCEPTED = "accepted"
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+    PENDING = "pending"
+    REJECTED = "rejected"
+    UPLOADED = "uploaded"

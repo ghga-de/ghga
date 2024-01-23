@@ -15,10 +15,12 @@
 
 """Fixtures for testing the storage DAO"""
 
+import asyncio
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
 import pytest_asyncio
 from ghga_service_commons.utils.temp_files import big_temp_file
 from hexkit.providers.s3 import S3Config, S3ObjectStorage
@@ -70,14 +72,14 @@ for file in state.FILES.values():
                 existing_buckets.append(storage_object.bucket_id)
             existing_objects.append(storage_object)
 
-existing_buckets_ = (
+EXISTING_BUCKETS_ = (
     DEFAULT_EXISTING_BUCKETS if existing_buckets is None else existing_buckets
 )
-non_existing_buckets_ = DEFAULT_NON_EXISTING_BUCKETS
-existing_objects_ = (
+NON_EXISTING_BUCKETS_ = DEFAULT_NON_EXISTING_BUCKETS
+EXISTING_OBJECTS_ = (
     DEFAULT_EXISTING_OBJECTS if existing_objects is None else existing_objects
 )
-non_existing_objects_ = DEFAULT_NON_EXISTING_OBJECTS
+NON_EXISTING_OBJECTS_ = DEFAULT_NON_EXISTING_OBJECTS
 
 
 class CachedFileObject(FileObject):
@@ -109,6 +111,29 @@ class S3Fixture:
     existing_objects: list[FileObject]
     non_existing_objects: list[FileObject]
 
+    async def reset_state(self):
+        """Reset to populated_fixture state"""
+        for bucket in self.existing_buckets:
+            await self.storage.delete_bucket(bucket_id=bucket, delete_content=True)
+        self.existing_buckets = EXISTING_BUCKETS_
+        self.non_existing_buckets = NON_EXISTING_BUCKETS_
+        self.existing_objects = EXISTING_OBJECTS_
+        self.non_existing_objects = NON_EXISTING_OBJECTS_
+
+        await populate_storage(
+            storage=self.storage,
+            bucket_fixtures=EXISTING_BUCKETS_,
+            object_fixtures=EXISTING_OBJECTS_,
+        )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def reset_state(s3_fixture: S3Fixture):
+    """Reset S3 state between tests"""
+    yield
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(s3_fixture.reset_state())
+
 
 async def populate_storage(
     storage: S3ObjectStorage,
@@ -134,31 +159,31 @@ async def populate_storage(
         )
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="session")
 async def s3_fixture() -> AsyncGenerator[S3Fixture, None]:
     """Pytest fixture for tests depending on the ObjectStorageS3 DAO."""
-    with LocalStackContainer(image="localstack/localstack:0.14.2").with_services(
+    with LocalStackContainer(image="localstack/localstack:0.14.5").with_services(
         "s3"
     ) as localstack:
         config = config_from_localstack_container(localstack)
         storage = S3ObjectStorage(config=config)
         await populate_storage(
             storage=storage,
-            bucket_fixtures=existing_buckets_,
-            object_fixtures=existing_objects_,
+            bucket_fixtures=EXISTING_BUCKETS_,
+            object_fixtures=EXISTING_OBJECTS_,
         )
 
-        assert not set(existing_buckets_) & set(  # nosec
-            non_existing_buckets_
+        assert not set(EXISTING_BUCKETS_) & set(  # nosec
+            NON_EXISTING_BUCKETS_
         ), "The existing and non existing bucket lists may not overlap"
 
         yield S3Fixture(
             config=config,
             storage=storage,
-            existing_buckets=existing_buckets_,
-            non_existing_buckets=non_existing_buckets_,
-            existing_objects=existing_objects_,
-            non_existing_objects=non_existing_objects_,
+            existing_buckets=EXISTING_BUCKETS_,
+            non_existing_buckets=NON_EXISTING_BUCKETS_,
+            existing_objects=EXISTING_OBJECTS_,
+            non_existing_objects=NON_EXISTING_OBJECTS_,
         )
 
 

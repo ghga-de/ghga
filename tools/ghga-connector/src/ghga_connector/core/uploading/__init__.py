@@ -12,11 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+"""This subpackage contains functionality to upload a file to GHGA"""
 
-"""
-This sub-package contains the api calls, this service makes for various purposes
-"""
 
-from .utils import check_url  # noqa: F401
-from .well_knowns import WKVSCaller  # noqa: F401
-from .work_package import WorkPackageAccessor  # noqa: F401
+from .api_calls import Uploader  # noqa: F401
+from .main import run_upload  # noqa: F401
+from .uploader import UploaderBase  # noqa: F401

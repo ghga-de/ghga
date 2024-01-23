@@ -16,7 +16,7 @@
 
 """
 Runs a small fastapi mock server for testing purposes.
-All mocks work correclty with file_id == "1".
+All mocks work correctly with file_id == "1".
 The drs3 mock sends back a "wait 1 minute" for file_id == "1m"
 All other file_ids will fail
 """
@@ -254,8 +254,8 @@ def ulc_get_files(file_id: str):
             md5_checksum="",
             size=0,
             grouping_label="inbox",
-            creation_date=now_as_utc().isoformat(),
-            update_date=now_as_utc().isoformat(),
+            creation_date=now_as_utc(),
+            update_date=now_as_utc(),
             format="",
             current_upload_id="pending",
         )

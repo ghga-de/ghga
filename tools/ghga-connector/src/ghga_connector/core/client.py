@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Handling session initialization for requests"""
+"""Handling session initialization for httpx"""
 
 from contextlib import asynccontextmanager, contextmanager
 

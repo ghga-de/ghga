@@ -25,7 +25,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from ghga_connector.core import WKVSCaller
-from ghga_connector.core.api_calls import Uploader, UploadStatus, WorkPackageAccessor
+from ghga_connector.core.api_calls import WorkPackageAccessor
 from ghga_connector.core.client import async_client
 from ghga_connector.core.exceptions import (
     CantChangeUploadStatusError,
@@ -36,6 +36,8 @@ from ghga_connector.core.exceptions import (
     UploadNotRegisteredError,
     WellKnownValueNotFound,
 )
+from ghga_connector.core.uploading import Uploader
+from ghga_connector.core.uploading.structs import UploadStatus
 from tests.fixtures.utils import mock_wps_token
 
 
@@ -83,14 +85,14 @@ async def test_patch_multipart_upload(
     elif expected_exception is None:
         httpx_mock.add_response(status_code=204)
 
-    with pytest.raises(  # type: ignore
-        expected_exception
+    with pytest.raises(
+        expected_exception  # type: ignore
     ) if expected_exception else nullcontext():
         async with async_client() as client:
             uploader = Uploader(
                 api_url=api_url, client=client, file_id="", public_key_path=Path("")
             )
-            uploader.upload_id = upload_id
+            uploader._upload_id = upload_id
 
             await uploader.patch_multipart_upload(upload_status=upload_status)
 
@@ -125,7 +127,7 @@ async def test_get_part_upload_urls(
         uploader = Uploader(
             api_url=api_url, client=client, file_id="", public_key_path=Path("")
         )
-        uploader.upload_id = upload_id
+        uploader._upload_id = upload_id
 
         part_upload_urls = uploader.get_part_upload_urls(
             get_url_func=get_url_func, from_part=from_part

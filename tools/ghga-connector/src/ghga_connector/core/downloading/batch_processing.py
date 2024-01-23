@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Module for batch processing specific code"""
+"""Module for batch processing related code"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -21,10 +21,12 @@ from pathlib import Path
 from time import sleep
 
 from ghga_connector.core import exceptions
-from ghga_connector.core.api_calls import (
-    WorkPackageAccessor,
-    check_url,
+from ghga_connector.core.api_calls import WorkPackageAccessor, check_url
+from ghga_connector.core.client import httpx_client
+from ghga_connector.core.downloading.api_calls import (
+    URLResponse,
     get_download_url,
+    get_file_authorization,
 )
 from ghga_connector.core.message_display import AbstractMessageDisplay
 
@@ -33,7 +35,7 @@ class InputHandler(ABC):
     """Abstract base for dealing with user input in batch processing"""
 
     @abstractmethod
-    def get_input(self, *, message: str):
+    def get_input(self, *, message: str) -> str:
         """Handle user input."""
 
     @abstractmethod
@@ -61,7 +63,7 @@ class BatchIoHandler(ABC):
         """Check for and return existing files in output location."""
 
     @abstractmethod
-    def get_input(self, *, message: str):
+    def get_input(self, *, message: str) -> str:
         """User input handling."""
 
     @abstractmethod
@@ -72,7 +74,7 @@ class BatchIoHandler(ABC):
 class CliInputHandler(InputHandler):
     """CLI relevant input handling"""
 
-    def get_input(self, *, message: str):
+    def get_input(self, *, message: str) -> str:
         """Simple user input handling."""
         return input(message)
 
@@ -118,7 +120,7 @@ class CliIoHandler(BatchIoHandler):
         """Check for and return existing files that would in output directory."""
         return self.output_handler.check_output(location=location)
 
-    def get_input(self, *, message: str):
+    def get_input(self, *, message: str) -> str:
         """Simple user input handling."""
         return self.input_handler.get_input(message=message)
 
@@ -190,10 +192,14 @@ class StagingState:
         remaining_unstaged = []
 
         for file_id in self.unstaged_files:
-            dl_url = get_download_url(
-                file_id=file_id, work_package_accessor=work_package_accessor
-            )
-            if dl_url[0]:
+            with httpx_client() as client:
+                url_and_headers = get_file_authorization(
+                    file_id=file_id, work_package_accessor=work_package_accessor
+                )
+                url_response = get_download_url(
+                    client=client, url_and_headers=url_and_headers
+                )
+            if isinstance(url_response, URLResponse):
                 self.staged_files.append(file_id)
             else:
                 remaining_unstaged.append(file_id)
@@ -230,9 +236,14 @@ class FileStager:
         unknown_ids = []
         for file_id in self.staging_parameters.file_ids_with_extension:
             try:
-                download_information = get_download_url(
-                    file_id=file_id, work_package_accessor=self.work_package_accessor
-                )
+                with httpx_client() as client:
+                    url_and_headers = get_file_authorization(
+                        file_id=file_id,
+                        work_package_accessor=self.work_package_accessor,
+                    )
+                    url_response = get_download_url(
+                        client=client, url_and_headers=url_and_headers
+                    )
             except exceptions.BadResponseCodeError as error:
                 if error.response_code == 404:
                     unknown_ids.append(file_id)
@@ -240,7 +251,7 @@ class FileStager:
                 raise error
 
             # split into already staged and not yet staged files
-            if download_information[0]:
+            if isinstance(url_response, URLResponse):
                 self.staging_state.add_staged(file_id=file_id)
             else:
                 self.staging_state.add_unstaged(file_id=file_id)

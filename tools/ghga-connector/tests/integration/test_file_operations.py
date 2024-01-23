@@ -18,16 +18,22 @@
 
 from collections.abc import Iterator
 from queue import Empty, Queue
-from typing import Any, Union
+from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
-from ghga_connector.core.file_operations import (
-    calc_part_ranges,
-    download_content_range,
-    download_file_parts,
+from ghga_connector.core.api_calls import WorkPackageAccessor
+from ghga_connector.core.client import httpx_client
+from ghga_connector.core.downloading import Downloader
+from ghga_connector.core.downloading.structs import URLResponse
+from ghga_connector.core.file_operations import calc_part_ranges
+from tests.fixtures.s3 import (  # noqa: F401
+    S3Fixture,
+    get_big_s3_object,
+    reset_state,
+    s3_fixture,
 )
-from tests.fixtures.s3 import S3Fixture, get_big_s3_object, s3_fixture  # noqa: F401
 
 
 @pytest.mark.parametrize(
@@ -59,7 +65,17 @@ async def test_download_content_range(
     queue: Queue = Queue(maxsize=10)
 
     # download content range with dedicated function:
-    download_content_range(download_url=download_url, start=start, end=end, queue=queue)
+    with httpx_client() as client:
+        # no work package accessor calls in download_content_range, just mock for correct type
+        dummy_accessor = Mock(spec=WorkPackageAccessor)
+        downloader = Downloader(
+            file_id=big_object.object_id,
+            work_package_accessor=dummy_accessor,
+            client=client,
+        )
+        downloader.download_content_range(
+            download_url=download_url, start=start, end=end, queue=queue
+        )
 
     obtained_start, obtained_bytes = queue.get()
 
@@ -71,7 +87,7 @@ async def test_download_content_range(
     "part_size",
     [5 * 1024 * 1024, 3 * 1024 * 1024, 1 * 1024 * 1024],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_download_file_parts(
     part_size: int,
     s3_fixture: S3Fixture,  # noqa: F811
@@ -86,37 +102,43 @@ async def test_download_file_parts(
         object_id=big_object.object_id, bucket_id=big_object.bucket_id
     )
 
-    def url_generator() -> (
-        Iterator[Union[tuple[None, None, int], tuple[str, int, None]]]
-    ):
+    def url_generator() -> Iterator[URLResponse]:
         while True:
-            yield download_url, 0, None
+            yield URLResponse(download_url=download_url, file_size=0)
 
-    download_urls = url_generator()
+    url_responses = url_generator()
 
     queue: Queue = Queue(maxsize=10)
 
     part_ranges = calc_part_ranges(part_size=part_size, total_file_size=total_file_size)
 
-    # prepare kwargs:
-    kwargs: dict[str, Any] = {
-        "download_urls": download_urls,
-        "queue": queue,
-        "part_ranges": part_ranges,
-        "max_concurrent_downloads": 5,
-    }
+    with httpx_client() as client:
+        # prepare kwargs:
+        kwargs: dict[str, Any] = {
+            "url_response": url_responses,
+            "queue": queue,
+            "part_ranges": part_ranges,
+            "max_concurrent_downloads": 5,
+        }
 
-    # download file parts with dedicated function:
-    download_file_parts(**kwargs)
+        # no work package accessor calls in download_file_parts, just mock for correct type
+        dummy_accessor = Mock(spec=WorkPackageAccessor)
+        downloader = Downloader(
+            file_id=big_object.object_id,
+            work_package_accessor=dummy_accessor,
+            client=client,
+        )
+        # download file parts with dedicated function:
+        downloader.download_file_parts(**kwargs)
 
-    obtained = 0
-    while obtained < len(expected_bytes):
-        try:
-            start, obtained_bytes = queue.get(block=False)
-        except Empty:
-            continue
-        obtained += len(obtained_bytes)
-        queue.task_done()
-        assert expected_bytes[start : start + part_size] == obtained_bytes
+        obtained = 0
+        while obtained < len(expected_bytes):
+            try:
+                start, obtained_bytes = queue.get(block=False)
+            except Empty:
+                continue
+            obtained += len(obtained_bytes)
+            queue.task_done()
+            assert expected_bytes[start : start + part_size] == obtained_bytes
 
-    assert obtained == len(expected_bytes)
+        assert obtained == len(expected_bytes)

@@ -28,16 +28,16 @@ class Config(BaseSettings):
     """Global Config Parameters"""
 
     max_retries: int = Field(
-        MAX_RETRIES, description="Number of times to retry failed API calls."
+        default=MAX_RETRIES, description="Number of times to retry failed API calls."
     )
     max_wait_time: int = Field(
-        MAX_WAIT_TIME,
+        default=MAX_WAIT_TIME,
         description="Maximal time in seconds to wait before quitting without a download.",
     )
     part_size: int = Field(
-        DEFAULT_PART_SIZE, description="The part size to use for download."
+        default=DEFAULT_PART_SIZE, description="The part size to use for download."
     )
     wkvs_api_url: str = Field(
-        "https://data.ghga.de/.well-known",
+        default="https://data.ghga.de/.well-known",
         description="URL to the root of the WKVS API. Should start with https://",
     )

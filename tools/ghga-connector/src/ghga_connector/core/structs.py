@@ -12,11 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+"""Module for reusable wrapper classes improving readability"""
+from dataclasses import dataclass
 
-"""
-This sub-package contains the api calls, this service makes for various purposes
-"""
 
-from .utils import check_url  # noqa: F401
-from .well_knowns import WKVSCaller  # noqa: F401
-from .work_package import WorkPackageAccessor  # noqa: F401
+@dataclass
+class PartRange:
+    """Container for inclusive download ranges"""
+
+    start: int
+    stop: int
