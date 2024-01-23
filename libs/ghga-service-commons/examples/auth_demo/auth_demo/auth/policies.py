@@ -19,7 +19,7 @@
 See the router.py module for how to use these policies in REST endpoints.
 """
 
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -31,7 +31,7 @@ from ghga_service_commons.auth.policies import (
     require_auth_context_using_credentials,
 )
 
-__all__ = ["DemoAuthContext", "get_auth", "require_auth", "require_vip"]
+__all__ = ["OptionalAuthContext", "UserAuthContext", "VipAuthContext"]
 
 
 async def get_auth_context(
@@ -67,10 +67,10 @@ async def require_vip_context(
 
 
 # policy for getting an auth token without requiring its existence
-get_auth = Security(get_auth_context)
+OptionalAuthContext = Annotated[Optional[DemoAuthContext], Security(get_auth_context)]
 
-# policy for requiring and getting an auth token
-require_auth = Security(require_auth_context)
+# policy for requiring and getting a user auth token
+UserAuthContext = Annotated[DemoAuthContext, Security(require_auth_context)]
 
-# policy fo requiring and getting an auth token with VIP status
-require_vip = Security(require_vip_context)
+# policy for requiring and getting a VIP user auth token
+VipAuthContext = Annotated[DemoAuthContext, Security(require_vip_context)]

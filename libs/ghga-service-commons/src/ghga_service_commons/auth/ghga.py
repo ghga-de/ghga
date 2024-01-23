@@ -29,18 +29,8 @@ __all__ = [
     "AcademicTitle",
     "AuthConfig",
     "AuthContext",
-    "UserStatus",
     "has_role",
-    "is_active",
 ]
-
-
-class UserStatus(str, Enum):
-    """User status."""
-
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    INVALID = "invalid"
 
 
 class AcademicTitle(str, Enum):
@@ -54,7 +44,7 @@ class AuthContext(BaseModel):
     """Auth context for all GHGA services."""
 
     name: str = Field(
-        ...,
+        default=...,
         title="Name",
         description="The full name of the user",
         examples=["John Doe"],
@@ -66,42 +56,27 @@ class AuthContext(BaseModel):
         examples=["user@home.org"],
     )
     title: Optional[AcademicTitle] = Field(
-        None,
+        default=None,
         title="Title",
         description="The academic title of the user",
         examples=["Dr."],
     )
-    iat: UTCDatetime = Field(..., title="Issued at")
-    exp: UTCDatetime = Field(..., title="Expiration time")
-    id: Optional[str] = Field(
-        None,
-        title="Internal ID",
-        description="The internal ID of the user (if existing)",
-    )
-    ext_id: Optional[str] = Field(
-        None,
-        title="External ID",
-        description="The external ID of the user (if required)",
+    iat: UTCDatetime = Field(default=..., title="Issued at")
+    exp: UTCDatetime = Field(default=..., title="Expiration time")
+    id: str = Field(
+        default=...,
+        title="User ID",
+        description="The internal ID of the authenticated user in GHGA",
     )
     role: Optional[str] = Field(
-        None, title="User role", description="Possible special role of the user in GHGA"
+        default=None,
+        title="User role",
+        description="Possible special role of the user in GHGA",
     )
-    status: Optional[UserStatus] = Field(
-        None,
-        title="User status",
-        description="The current registration status of the user",
-    )
-
-
-def is_active(context: AuthContext) -> bool:
-    """Check whether the given context has an active status."""
-    return context.status is UserStatus.ACTIVE
 
 
 def has_role(context: AuthContext, role: str) -> bool:
-    """Check whether the given context is active and has the given role."""
-    if not is_active(context):
-        return False
+    """Check whether the user with the given context has the given role."""
     user_role = context.role
     if user_role and "@" not in role:
         user_role = user_role.split("@", 1)[0]
@@ -112,21 +87,22 @@ class AuthConfig(JWTAuthConfig):
     """Config parameters and their defaults for the example auth context."""
 
     auth_key: str = Field(
-        ...,
+        default=...,
         title="Internal public key",
         description="The GHGA internal public key for validating the token signature.",
         examples=['{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}'],
     )
     auth_algs: list[str] = Field(
-        ["ES256"],
+        default=["ES256"],
         description="A list of all algorithms used for signing GHGA internal tokens.",
     )
     auth_check_claims: dict[str, Any] = Field(
-        dict.fromkeys("name email iat exp".split()),
+        default=dict.fromkeys("name email iat exp".split()),
         description="A dict of all GHGA internal claims that shall be verified.",
     )
     auth_map_claims: dict[str, str] = Field(
-        {}, description="A mapping of claims to attributes in the GHGA auth context."
+        default={},
+        description="A mapping of claims to attributes in the GHGA auth context.",
     )
 
 

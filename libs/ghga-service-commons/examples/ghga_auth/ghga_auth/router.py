@@ -16,40 +16,26 @@
 
 """FastAPI router for the GHGA auth example application."""
 
-from typing import Optional
-
 from fastapi import APIRouter
 
-from ghga_auth.policies import (
-    AuthContext,
-    get_auth,
-    require_active,
-    require_admin,
-    require_auth,
-)
+from ghga_auth.policies import AdminAuthContext, OptionalAuthContext, UserAuthContext
 
 router = APIRouter()
 
 
 @router.get("/get_auth")
-async def get_auth_route(context: Optional[AuthContext] = get_auth):
+async def get_auth_route(context: OptionalAuthContext):
     """Get and return auth context without requiring it."""
     return {"context": context.model_dump() if context else None}
 
 
 @router.get("/require_auth")
-async def require_auth_route(context: AuthContext = require_auth):
+async def require_auth_route(context: UserAuthContext):
     """Require and return auth context."""
     return {"context": context.model_dump()}
 
 
-@router.get("/require_active")
-async def require_active_route(context: AuthContext = require_active):
-    """Require and return active auth context."""
-    return {"context": context.model_dump()}
-
-
 @router.get("/require_admin")
-async def require_admin_route(context: AuthContext = require_admin):
-    """Require and return active auth context with admin role."""
+async def require_admin_route(context: AdminAuthContext):
+    """Require and return auth context with admin role."""
     return {"context": context.model_dump()}

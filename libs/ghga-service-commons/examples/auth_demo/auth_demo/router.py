@@ -16,11 +16,9 @@
 
 """FastAPI router for the example application."""
 
-from typing import Optional
-
 from fastapi import APIRouter
 
-from auth_demo.auth.policies import DemoAuthContext, get_auth, require_auth, require_vip
+from auth_demo.auth.policies import OptionalAuthContext, UserAuthContext, VipAuthContext
 from auth_demo.dummies import HangoutDummy
 from auth_demo.users import create_example_users
 
@@ -44,7 +42,7 @@ async def users():
 
 @router.get("/status")
 async def status(
-    auth_context: DemoAuthContext = get_auth,
+    auth_context: OptionalAuthContext,
 ):
     """This endpoint shows the current login status."""
     expires = str(auth_context.expires) if auth_context else None
@@ -54,7 +52,7 @@ async def status(
 @router.get("/reception")
 async def reception(
     hangout: HangoutDummy,
-    auth_context: Optional[DemoAuthContext] = get_auth,
+    auth_context: OptionalAuthContext,
 ):
     """This endpoint is freely available, but personalized."""
     name = auth_context.name if auth_context else None
@@ -64,7 +62,7 @@ async def reception(
 @router.get("/lobby")
 async def protected(
     hangout: HangoutDummy,
-    auth_context: DemoAuthContext = require_auth,
+    auth_context: UserAuthContext,
 ):
     """This endpoint requires authentication."""
     return {"message": await hangout.lobby(auth_context.name)}
@@ -73,7 +71,7 @@ async def protected(
 @router.get("/lounge")
 async def admin(
     hangout: HangoutDummy,
-    auth_context: DemoAuthContext = require_vip,
+    auth_context: VipAuthContext,
 ):
     """This endpoint requires VIP status."""
     return {"message": await hangout.lounge(auth_context.name)}
