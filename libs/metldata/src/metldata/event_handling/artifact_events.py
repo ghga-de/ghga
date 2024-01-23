@@ -32,7 +32,7 @@ class ArtifactEventConfig(BaseModel):
     )
 
     @field_validator("artifact_topic_prefix")
-    def artifact_topic_prefix_must_not_contain_dots(cls, value: str):
+    def artifact_topic_prefix_must_not_contain_dots(cls, value: str):  # noqa: N805
         """Validate that artifact topic prefix does not contain dots."""
         if "." in value:
             raise ValueError(f"Artifact topic prefix '{value}' must not contain dots.")

@@ -24,12 +24,10 @@ class FakeAccessionRegistry:
 
     def __init__(self):
         """Initialize with counter to generate predictable accessions."""
-
         self._counter = 1
 
     def get_accession(self, *, resource_type: str) -> str:
         """Generates and registers a new accession for a resource of the specified type."""
-
         accession = f"generated_{resource_type.lower()}_accession{self._counter}"
         self._counter += 1
 
@@ -38,7 +36,6 @@ class FakeAccessionRegistry:
 
 def test_generate_accession_map():
     """Test generating an accession map for a given content."""
-
     accession_registry = FakeAccessionRegistry()
     content = {
         "class1_anchor": [{"alias": "test_alias1"}],

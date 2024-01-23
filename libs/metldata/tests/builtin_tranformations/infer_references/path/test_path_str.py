@@ -54,7 +54,6 @@ from metldata.builtin_transformations.infer_references.path.path_str import (
 )
 def test_validate_path_str_characters(path_str: str, is_valid: bool):
     """Test the validate_path_str_characters method."""
-
     with nullcontext() if is_valid else pytest.raises(ValidationError):
         validate_path_str_characters(path_str)
 
@@ -82,7 +81,6 @@ def test_validate_path_str_characters(path_str: str, is_valid: bool):
 )
 def test_validate_path_str_format(path_str: str, is_valid: bool):
     """Test the validate_path_str_format method."""
-
     with nullcontext() if is_valid else pytest.raises(ValidationError):
         validate_path_str_format(path_str)
 
@@ -100,7 +98,6 @@ def test_validate_path_str_format(path_str: str, is_valid: bool):
 )
 def test_extract_first_element(path_str: str, expected_first_element: str):
     """Test the extract_first_element method."""
-
     observed_first_element = extract_first_element(path_str=path_str)
     assert observed_first_element == expected_first_element
 
@@ -118,7 +115,6 @@ def test_extract_first_element(path_str: str, expected_first_element: str):
 )
 def test_get_target_class(path_str: str, expected_target_class: str):
     """Test the get_target_class method."""
-
     observed_target_class = get_target_class(path_str=path_str)
     assert observed_target_class == expected_target_class
 
@@ -139,7 +135,6 @@ def test_split_first_element(
     path_str: str, expected_first_element: str, expected_remaining_path: Optional[str]
 ):
     """Test the split_first_element method."""
-
     observed_first_element, observed_remaining_path = split_first_element(
         path_str=path_str
     )
@@ -163,7 +158,6 @@ def test_split_first_element(
 )
 def test_get_string_elements(path_str: str, expected_elements: list[str]):
     """Test the get_string_elements method."""
-
     observed_elements = get_string_elements(path_str=path_str)
     assert observed_elements == expected_elements
 
@@ -180,7 +174,6 @@ def test_get_string_elements(path_str: str, expected_elements: list[str]):
 )
 def test_validate_string_element(string_element: str, is_valid: bool):
     """Test the validate_string_element method."""
-
     with nullcontext() if is_valid else pytest.raises(ValidationError):
         validate_string_element(string_element)
 
@@ -194,7 +187,6 @@ def test_validate_string_element(string_element: str, is_valid: bool):
 )
 def test_get_element_type(string_element: str, expected_type: ReferencePathElementType):
     """Test the get_element_type method."""
-
     observed_type = get_element_type(string_element=string_element)
     assert observed_type == expected_type
 
@@ -210,7 +202,6 @@ def test_get_element_components(
     string_element: str, expected_source: str, expected_slot: str, expected_target: str
 ):
     """Test the get_element_components method."""
-
     observed_source, observed_slot, observed_target = get_element_components(
         string_element=string_element
     )
@@ -246,7 +237,6 @@ def test_string_element_to_object(
     string_element: str, expected_object: ReferencePathElement
 ):
     """Test the string_element_to_object method."""
-
     observed_object = string_element_to_object(string_element)
     assert observed_object == expected_object
 
@@ -316,6 +306,5 @@ def test_path_str_to_object_elements(
     path_str: str, expected_elements: ReferencePathElement
 ):
     """Test the path_str_to_object_elements method."""
-
     observed_elements = path_str_to_object_elements(path_str)
     assert observed_elements == expected_elements

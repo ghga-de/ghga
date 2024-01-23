@@ -51,7 +51,6 @@ class FileSystemEventFixture:
         Raises:
             EventExpectationMismatch: If the expected events are not consumed.
         """
-
         topics = sorted({event.topic for event in expected_events})
         types = sorted({event.type_ for event in expected_events})
 
@@ -73,7 +72,6 @@ class FileSystemEventFixture:
 
     async def publish_events(self, events: list[Event]) -> None:
         """Publish a list of events."""
-
         for event in events:
             await self.publisher.publish(
                 topic=event.topic,
@@ -86,7 +84,6 @@ class FileSystemEventFixture:
 @pytest.fixture
 def file_system_event_fixture(tmp_path: Path) -> FileSystemEventFixture:
     """A fixture for handling events on the file system."""
-
     config = FileSystemEventConfig(
         event_store_path=tmp_path,
     )

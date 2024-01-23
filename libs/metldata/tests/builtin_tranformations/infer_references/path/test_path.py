@@ -119,7 +119,6 @@ def test_reference_path(
     expected_target: str,
 ):
     """Test the ReferencePath class."""
-
     observed_path = ReferencePath(path_str=path_str)
     assert observed_path.elements == expected_elements
     assert observed_path.source == expected_source

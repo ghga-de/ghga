@@ -39,7 +39,7 @@ class SlotMergeInstruction(BaseModel):
     )
 
     @model_validator(mode="before")
-    def validate_overlapping_slots(cls, values) -> dict:
+    def validate_overlapping_slots(cls, values) -> dict:  # noqa: N805
         """Validate that source and target slots do not overlap."""
         source_slots = set(values["source_slots"])
         target_slot = values["target_slot"]

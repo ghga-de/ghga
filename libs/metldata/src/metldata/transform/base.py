@@ -87,24 +87,24 @@ class MetadataTransformer(ABC, Generic[Config]):
 class TransformationDefinition(Generic[Config]):
     """A model for describing a transformation."""
 
-    config_cls: type[Config] = Field(
+    config_cls: type[Config] = Field(  # noqa: RUF009
         ..., description="The config model of the transformation."
     )
-    check_model_assumptions: Callable[[MetadataModel, Config], None] = Field(
+    check_model_assumptions: Callable[[MetadataModel, Config], None] = Field(  # noqa: RUF009
         ...,
         description=(
             "A function that checks the assumptions made about the input model."
             "Raises a MetadataModelAssumptionError if the assumptions are not met."
         ),
     )
-    transform_model: Callable[[MetadataModel, Config], MetadataModel] = Field(
+    transform_model: Callable[[MetadataModel, Config], MetadataModel] = Field(  # noqa: RUF009
         ...,
         description=(
             "A function to transform the model. Raises a"
             + " MetadataModelTransformationError if the transformation fails."
         ),
     )
-    metadata_transformer_factory: type[MetadataTransformer] = Field(
+    metadata_transformer_factory: type[MetadataTransformer] = Field(  # noqa: RUF009
         ...,
         description=(
             "A class for transforming metadata. Raises a MetadataTransformationError"
@@ -164,7 +164,8 @@ class WorkflowDefinition(BaseModel):
     # pylint: disable=no-self-argument
     @field_validator("steps", mode="after")
     def validate_step_references(
-        cls, steps: dict[str, WorkflowStep]
+        cls,  # noqa: N805
+        steps: dict[str, WorkflowStep],
     ) -> dict[str, WorkflowStep]:
         """Validate that workflow steps reference other existing steps as input.
         There should be exactly one step with input=None.
@@ -193,7 +194,7 @@ class WorkflowDefinition(BaseModel):
         return steps
 
     @model_validator(mode="after")
-    def validate_artifact_references(cls, values):
+    def validate_artifact_references(cls, values):  # noqa: N805
         """Validate that artifacts reference existing workflow steps."""
         steps = values.steps
         if steps is None:

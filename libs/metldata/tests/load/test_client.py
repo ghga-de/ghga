@@ -45,7 +45,6 @@ async def test_upload_artifacts_via_http_api(
     httpx_mock: HTTPXMock,
 ):
     """Test the happy path of using the upload_artifacts_via_http_api function."""
-
     token = "some-token"
     config = ArtifactLoaderClientConfig(
         artifact_types=list(EXAMPLE_ARTIFACTS.keys()),

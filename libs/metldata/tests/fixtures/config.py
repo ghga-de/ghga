@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Config fixture for testing"""
+
 from collections.abc import Generator
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
@@ -33,7 +35,6 @@ PREFIX_MAPPING = {
 @pytest.fixture
 def config_sub_fixture() -> Generator[SubmissionConfig, None, None]:
     """Generate a test config."""
-
     with TemporaryDirectory() as submission_store_dir:
         with NamedTemporaryFile() as accession_store_path:
             yield SubmissionConfig(  # type: ignore

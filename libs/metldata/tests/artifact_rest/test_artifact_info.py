@@ -25,7 +25,6 @@ from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 
 def test_subset_json_schema_for_class():
     """Test happy path of using subset_json_schema_for_class."""
-
     # a global schema that uses File and Dataset definitions on the top level:
     global_json_schema = {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -108,7 +107,6 @@ def test_subset_json_schema_for_class():
 
 def test_load_artifact_info():
     """Test happy path of using load_artifact_info."""
-
     expected_artifact_name = "test_artifact"
     expected_artifact_description = "This is a test artifact."
     expected_resource_class_names = {"File", "Dataset"}

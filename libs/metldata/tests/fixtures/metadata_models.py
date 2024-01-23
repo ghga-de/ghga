@@ -25,7 +25,6 @@ VALID_MINIMAL_MODEL_EXAMPLE_PATH = EXAMPLE_MODEL_DIR / "minimal_model.yaml"
 
 def _get_example_model(name: str) -> MetadataModel:
     """Get example model."""
-
     return MetadataModel.init_from_path(EXAMPLE_MODEL_DIR / f"{name}.yaml")
 
 

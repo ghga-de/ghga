@@ -76,7 +76,8 @@ class ArtifactInfo(BaseModel):
 
     @field_validator("resource_classes")
     def check_resource_class_names(
-        cls, value: dict[str, ArtifactResourceClass]
+        cls,  # noqa: N805
+        value: dict[str, ArtifactResourceClass],
     ) -> dict[str, ArtifactResourceClass]:
         """Check if the keys of the `resource_classes` dictionary correspond to the
         names of the metadata classes.

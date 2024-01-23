@@ -68,7 +68,6 @@ async def joint_fixture(
     mongodb_fixture: MongoDbFixture,  # noqa: F811
 ) -> JointFixture:
     """Get a tuple of a configured test client together with a corresponding token."""
-
     artifact_infos = [
         load_artifact_info(
             name=ARTIFACT_NAME,

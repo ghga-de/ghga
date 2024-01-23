@@ -80,7 +80,6 @@ def _read_test_case(
     case_name: str,
 ) -> WorkflowTestCase[Config]:
     """Read a test case for a workflow."""
-
     case_dir = BASE_DIR / "workflows" / workflow_name / case_name
     config_path = case_dir / "config.yaml"
     original_model_path = case_dir / "original_model.yaml"
@@ -124,7 +123,6 @@ def _read_all_test_cases_for_a_workflow(
     workflow_definition: WorkflowDefinition,
 ) -> list[WorkflowTestCase]:
     """Read all test cases for a workflow."""
-
     base_dir = BASE_DIR / "workflows" / workflow_name
     case_names = [path.name for path in base_dir.iterdir() if path.is_dir()]
 
@@ -143,7 +141,6 @@ def _read_all_test_cases(
     workflows_by_name: dict[str, WorkflowDefinition],
 ) -> list[WorkflowTestCase]:
     """Read all test cases for the specified workflows."""
-
     return [
         test_case
         for workflow_name, workflow_definition in workflows_by_name.items()

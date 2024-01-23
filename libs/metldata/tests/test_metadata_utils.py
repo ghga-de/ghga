@@ -33,7 +33,6 @@ from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 
 def test_lookup_resource_by_identifier_happy():
     """Test the happy path of using the lookup_resource_by_identifier function."""
-
     identifier = "test_sample_01_R1"
     resource_dict = convert_resource_list_to_dict(
         resources=VALID_MINIMAL_METADATA_EXAMPLE["files"], identifier_slot="alias"
@@ -55,8 +54,8 @@ def test_lookup_resource_by_identifier_happy():
 
 def test_lookup_resource_by_identifier_not_exist():
     """Test the using the lookup_resource_by_identifier function with an identifier
-    that does not exist."""
-
+    that does not exist.
+    """
     identifier = "non_existing_identifier"
 
     anchor_points_by_target = get_anchors_points_by_target(
@@ -94,7 +93,6 @@ EXAMPLE_ANCHOR_POINTS_BY_TARGET = {
 
 def test_get_resources_of_class_happy():
     """Test the happy path of using the get_resources_of_class function."""
-
     expected_resources = EXAMPLE_GLOBAL_METADATA["files"]
 
     observed_resources = get_resources_of_class(
@@ -108,7 +106,6 @@ def test_get_resources_of_class_happy():
 
 def test_update_resources_in_metadata_happy():
     """Test the happy path of using the update_resources_in_metadata function."""
-
     modified_resources = [
         {
             "alias": "test_sample_01_R1",

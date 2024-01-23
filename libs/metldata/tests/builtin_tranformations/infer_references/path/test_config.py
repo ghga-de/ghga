@@ -27,7 +27,6 @@ from metldata.builtin_transformations.infer_references.reference import (
 
 def test_config():
     """Test the ReferenceInferenceConfig class."""
-
     inferred_ref_map = {
         "class_a": {
             "class_d": {

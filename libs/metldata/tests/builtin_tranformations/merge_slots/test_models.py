@@ -24,8 +24,8 @@ from metldata.builtin_transformations.merge_slots.models import SlotMergeInstruc
 
 def test_slot_merge_instruction_overlap():
     """Test that an overlap in source and target slots fails with the expected
-    exception."""
-
+    exception.
+    """
     with pytest.raises(ValidationError):
         SlotMergeInstruction(  # type: ignore
             class_name="class_a",

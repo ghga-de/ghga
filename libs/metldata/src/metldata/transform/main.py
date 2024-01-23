@@ -66,7 +66,7 @@ async def run_workflow_on_all_source_events(
     *,
     event_config: TransformationEventHandlingConfig,
     workflow_definition: WorkflowDefinition,
-    worflow_config: WorkflowConfig,
+    workflow_config: WorkflowConfig,
     original_model: MetadataModel,
 ):
     """Run a subscriber to hand source events to a transformation workflow and
@@ -74,7 +74,7 @@ async def run_workflow_on_all_source_events(
     """
     workflow_handler = WorkflowHandler(
         workflow_definition=workflow_definition,
-        workflow_config=worflow_config,
+        workflow_config=workflow_config,
         original_model=original_model,
     )
     event_publisher = FileSystemEventPublisher(config=event_config)

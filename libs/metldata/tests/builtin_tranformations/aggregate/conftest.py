@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+"""Fixtures for aggregation tests"""
+
 from pathlib import Path
 
 import yaml
@@ -28,7 +31,8 @@ from metldata.model_utils.essentials import MetadataModel
 
 def load_yaml(path: Path) -> Json:
     """Loads yaml or json file from the specified sub-path of the tests/fixtures
-    directory and returns the contents as a dictionary."""
+    directory and returns the contents as a dictionary.
+    """
     with open(BASE_DIR.joinpath(path), encoding="utf8") as in_stream:
         return yaml.safe_load(in_stream)
 

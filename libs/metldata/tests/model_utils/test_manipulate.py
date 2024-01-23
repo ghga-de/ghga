@@ -34,7 +34,6 @@ from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 
 def test_add_slot_if_not_exists_exists():
     """Test add_slot_if_not_exists if the slot exists."""
-
     # try to change existing files slot to string:
     new_slot = SlotDefinition(name="files", range="string")
 
@@ -52,7 +51,6 @@ def test_add_slot_if_not_exists_exists():
 
 def test_add_slot_if_not_exists_not_exists():
     """Test add_slot_if_not_exists if the slot does not exist."""
-
     new_slot = SlotDefinition(name="test", range="string")
 
     original_model = VALID_MINIMAL_METADATA_MODEL
@@ -70,7 +68,6 @@ def test_add_slot_if_not_exists_not_exists():
 
 def test_upsert_class_slot_exists():
     """Test upsert_class_slot if the slot exists."""
-
     # change existing files slot to string in the Dataset class:
     class_name = "Dataset"
     new_slot = SlotDefinition(name="files", range="string")
@@ -95,7 +92,6 @@ def test_upsert_class_slot_exists():
 
 def test_upsert_class_slot_not_exists():
     """Test upsert_class_slot if the slot does not exists."""
-
     class_name = "Dataset"
     new_slot = SlotDefinition(name="test", range="string")
 
@@ -117,7 +113,6 @@ def test_upsert_class_slot_not_exists():
 
 def test_delete_class_slot_happy():
     """Test the happy path of using delete_class_slot."""
-
     class_name = "Dataset"
     slot_name = "files"
 
@@ -137,7 +132,6 @@ def test_delete_class_slot_happy():
 
 def test_delete_class_slot_class_not_exists():
     """Test delete_class_slot if the class does not exist."""
-
     class_name = "DoesNotExist"
     slot_name = "files"
 
@@ -152,7 +146,6 @@ def test_delete_class_slot_class_not_exists():
 
 def test_delete_class_slot_slot_not_exists():
     """Test delete_class_slot if the slot does not exist."""
-
     class_name = "Dataset"
     slot_name = "does_not_exist"
 
@@ -167,7 +160,6 @@ def test_delete_class_slot_slot_not_exists():
 
 def test_add_slot_usage_annotation():
     """Test the happy path of using add_slot_usage_annotation."""
-
     class_name = "Dataset"
     slot_name = "files"
     annotation_key = "usage"
@@ -196,7 +188,6 @@ def test_add_slot_usage_annotation():
 
 def test_disable_identifier_slot():
     """Test the happy path of using disable_identifier_slot."""
-
     class_name = "Dataset"
 
     original_model = VALID_MINIMAL_METADATA_MODEL

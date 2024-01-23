@@ -1,4 +1,3 @@
-
 [![tests](https://github.com/ghga-de/metldata/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/metldata/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/metldata/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/metldata?branch=main)
 
@@ -8,10 +7,6 @@ metldata - A framework for handling metadata based on ETL, CQRS, and event sourc
 
 ## Description
 
-<!-- Please provide a short overview of the features of this service.-->
-
-### Scope and Features:
-
 Metldata is a framework for handling the entire lifetime of metadata by addressing the
 a complex combination of challenges that makes it suitable especially for public
 archives for sensitive data:
@@ -19,16 +14,16 @@ archives for sensitive data:
 ![Schematic reprensentation of challenges.](./images/challenges.png)
 **Figure 1| Overview of the combination of challenges during metadata handling.**
 
-#### Immutability
+### Immutability
 It is guaranteed that data entries do not change over time making reproducibility
 possible without having to rely on local snapshots.
 
-#### Accessibility
+### Accessibility
 A stable accession is assigned to each resource. Together with the immutability
 property, this guarantees that you will always get the same data when querying with the
 same accession.
 
-#### Corrections, Improvements, Extensions
+### Corrections, Improvements, Extensions
 
 Even though data is stored in an immutable way, the metldata still allows for
 corrections, improvements, and extensions of submitted data. This is achieved my not
@@ -36,19 +31,19 @@ just storing the current state of a submission but by persisting a version histo
 Thereby, modifications are realized by issuing a new version of the submission without
 affecting the content of existing versions.
 
-#### Transparency
+### Transparency
 
 The version history not only resolved the conflict between immutability and the need to
 evolve and adapt data, it also make the changes transparent to user relying on the data.
 
-#### Multiple Representations
+### Multiple Representations
 
 Often, the requirements regarding the structure and content of data differs depending
 the use case and the audience. Metldata accounts for this by proving a configurable
 workflow engine for transforming submitted metadata into multiple representation of that
 data.
 
-#### GDPR Compliance
+### GDPR Compliance
 
 The GDPR gives data subjects the right to issue a request to delete data. Metldata
 complies with this demand. Thereby, only entire versions of a submission can be deleted.
@@ -63,13 +58,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/metldata):
 ```bash
-docker pull ghga/metldata:1.1.0
+docker pull ghga/metldata:1.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/metldata:1.1.0 .
+docker build -t ghga/metldata:1.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -77,7 +72,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/metldata:1.1.0 --help
+docker run -p 8080:8080 ghga/metldata:1.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -360,10 +355,6 @@ of the pydantic documentation.
 
 
 ## Architecture and Design:
-<!-- Please provide an overview of the architecture and design of the code base.
-Mention anything that deviates from the standard triple hexagonal architecture and
-the corresponding structure. -->
-
 The framework uses a combination of ETL, CQRS, and event sourcing. Currently it is
 designed to mostly run as a CLI application for managing metadata on the local file
 system. However, later, it will be translated into a microservice based-architecture.

@@ -45,7 +45,6 @@ def check_source_events(
         AssertionError: if it does not match the expectations.
         EventNotPublishedError: if the event was not yet published.
     """
-
     expected_events = [
         Event(
             topic=source_event_topic,
@@ -72,7 +71,6 @@ def test_happy(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test the happy path of publishing a submission."""
-
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
     event_publisher = SourceEventPublisher(config=config_sub_fixture, provider=provider)
 

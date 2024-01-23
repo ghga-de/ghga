@@ -34,8 +34,8 @@ async def load_example_artifact_resources(
     dao_factory: DaoFactoryProtocol,
 ) -> ArtifactDaoCollection:
     """Load the example artifact using the load_artifact_resources function and
-    returns a ArtifactDaoCollection for accessing the resources."""
-
+    returns a ArtifactDaoCollection for accessing the resources.
+    """
     # construct the dao collection:
     dao_collection = await ArtifactDaoCollection.construct(
         dao_factory=dao_factory,
@@ -57,7 +57,6 @@ async def test_load_artifact_resources(
     mongodb_fixture: MongoDbFixture,  # noqa: F811
 ):
     """Test happy path of using load_artifact_resources function."""
-
     dao_collection = await load_example_artifact_resources(
         dao_factory=mongodb_fixture.dao_factory,
     )

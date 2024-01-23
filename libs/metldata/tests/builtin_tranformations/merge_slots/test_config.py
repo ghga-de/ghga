@@ -80,6 +80,5 @@ from metldata.builtin_transformations.merge_slots.config import SlotMergingConfi
 )
 def test_slot_merging_config(merge_instructions: list, valid: bool):
     """Test that validation of SlotMergingConfig."""
-
     with nullcontext() if valid else pytest.raises(ValidationError):
         SlotMergingConfig(merge_instructions=merge_instructions)

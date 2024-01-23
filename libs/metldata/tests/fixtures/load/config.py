@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Config fixture for testing the loader"""
+
 from pathlib import Path
 from typing import Optional, Union
 
@@ -31,7 +33,8 @@ def get_config(
     default_config_yaml: Path = TEST_CONFIG_YAML,
 ) -> ArtifactLoaderAPIConfig:
     """Merges parameters from the default TEST_CONFIG_YAML with params inferred
-    from testcontainers."""
+    from testcontainers.
+    """
     sources_dict: dict[str, object] = {}
 
     if sources is not None:

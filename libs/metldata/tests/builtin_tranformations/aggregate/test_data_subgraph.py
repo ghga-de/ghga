@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+"""Test the data aggregation and subgraph"""
+
 from metldata.builtin_transformations.aggregate.cached_model import CachedMetadataModel
 from metldata.builtin_transformations.aggregate.data_subgraph import DataSubgraph
 

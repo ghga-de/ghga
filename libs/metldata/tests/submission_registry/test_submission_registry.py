@@ -43,7 +43,6 @@ def test_happy(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test the happy path of using the submission registry."""
-
     # inject dependencies:
     submission_store = SubmissionStore(config=config_sub_fixture)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
@@ -126,7 +125,6 @@ def test_failed_content_validation(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test that invalid content cannot be upserted."""
-
     # inject dependencies:
     submission_store = SubmissionStore(config=config_sub_fixture)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
@@ -166,7 +164,6 @@ def test_update_after_completion(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test no updates can be carried out after completion."""
-
     # inject dependencies:
     submission_store = SubmissionStore(config=config_sub_fixture)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)

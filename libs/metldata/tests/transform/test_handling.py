@@ -15,7 +15,8 @@
 #
 
 """Test the handling module. Only edge cases that are not covered by tests
-with builtin transformations are tested here."""
+with builtin transformations are tested here.
+"""
 
 import pytest
 

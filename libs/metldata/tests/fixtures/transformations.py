@@ -70,7 +70,6 @@ def _read_test_case(
     case_name: str,
 ) -> TransformationTestCase[Config]:
     """Read a test case for a transformation."""
-
     case_dir = BASE_DIR / "transformations" / transformation_name / case_name
     config_path = case_dir / "config.yaml"
     original_model_path = case_dir / "original_model.yaml"
@@ -102,7 +101,6 @@ def _read_all_test_cases_for_a_transformation(
     transformation_definition: TransformationDefinition,
 ) -> list[TransformationTestCase]:
     """Read all test cases for a transformation."""
-
     base_dir = BASE_DIR / "transformations" / transformation_name
     case_names = [path.name for path in base_dir.iterdir() if path.is_dir()]
 
@@ -121,7 +119,6 @@ def _read_all_test_cases(
     transformations_by_name: dict[str, TransformationDefinition],
 ) -> list[TransformationTestCase]:
     """Read all test cases for the specified transformations."""
-
     return [
         test_case
         for transformation_name, transformation_definition in transformations_by_name.items()

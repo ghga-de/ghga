@@ -38,10 +38,10 @@ class EmbeddingProfile(BaseModel):
     source_class: str = Field(
         ..., description="The class to which the this embedding profile applies."
     )
-    description: Optional[str] = Field(
+    description: Optional[str] = Field(  # noqa: UP007
         ..., description="Description of the transformed class with embeddings."
     )
-    embedded_references: dict[str, Union[str, EmbeddingProfile]] = Field(
+    embedded_references: dict[str, Union[str, EmbeddingProfile]] = Field(  # noqa: UP007
         ...,
         description=(
             "The references embedded into the target class."

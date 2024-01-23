@@ -34,7 +34,6 @@ def test_model_transformations(
     test_case: TransformationTestCase,
 ):
     """Test the happy path of transforming a model."""
-
     handler = TransformationHandler(
         transformation_definition=test_case.transformation_definition,
         transformation_config=test_case.config,
@@ -50,7 +49,6 @@ def test_metadata_transformations(
     test_case: TransformationTestCase,
 ):
     """Test the happy path of transforming metadata for a model."""
-
     handler = TransformationHandler(
         transformation_definition=test_case.transformation_definition,
         transformation_config=test_case.config,

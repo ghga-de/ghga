@@ -27,7 +27,6 @@ EXAMPLE_METADATA_DIR = BASE_DIR / "example_metadata"
 
 def _get_example_metadata(name: str) -> dict[str, Any]:
     """Get example metadata."""
-
     with open(EXAMPLE_METADATA_DIR / f"{name}.yaml") as file:
         return yaml.safe_load(file)
 

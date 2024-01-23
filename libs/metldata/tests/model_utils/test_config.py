@@ -35,7 +35,6 @@ from tests.fixtures.metadata_models import (
 )
 def test_config(model: MetadataModel, is_valid: bool):
     """Test with valid and invalid model."""
-
     with model.temporary_yaml_path() as model_path:
         with nullcontext() if is_valid else pytest.raises(MetadataModelAssumptionError):
             config = MetadataModelConfig(metadata_model_path=model_path)

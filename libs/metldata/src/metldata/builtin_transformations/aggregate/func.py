@@ -83,7 +83,7 @@ class StringListCopyAggregation(CopyAggregation):
     result_multivalued = True
 
     @classmethod
-    def func(cls, data: Iterable[Any]) -> list[str]:
+    def func(cls, data: Iterable[Any]) -> list[str]:  # noqa: D102
         return list[str](data)
 
 
@@ -96,7 +96,7 @@ class StringCopyAggregation(CopyAggregation):
     result_multivalued = False
 
     @classmethod
-    def func(cls, data: Iterable[Any]) -> str:
+    def func(cls, data: Iterable[Any]) -> str:  # noqa: D102
         return str(cls._extract_single_value(data=data))
 
 
@@ -109,7 +109,7 @@ class IntegerCopyAggregation(CopyAggregation):
     result_multivalued = False
 
     @classmethod
-    def func(cls, data: Iterable[Any]) -> int:
+    def func(cls, data: Iterable[Any]) -> int:  # noqa: D102
         return int(cls._extract_single_value(data=data))
 
 
@@ -124,7 +124,7 @@ class CountAggregation(AggregationFunction):
     result_multivalued = False
 
     @classmethod
-    def func(cls, data: Iterable[Any]) -> int:
+    def func(cls, data: Iterable[Any]) -> int:  # noqa: D102
         return sum(1 for _ in data)
 
 
@@ -139,7 +139,7 @@ class IntegerSumAggregation(AggregationFunction):
     result_multivalued = False
 
     @classmethod
-    def func(cls, data: Iterable[int]) -> int:
+    def func(cls, data: Iterable[int]) -> int:  # noqa: D102
         return sum(data)
 
 
@@ -164,7 +164,7 @@ class StringElementCountAggregation(ElementCountAggregation):
     )
 
     @classmethod
-    def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:
+    def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:  # noqa: D102
         return sorted(
             (
                 {"value": "unknown" if value is None else str(value), "count": count}
@@ -189,7 +189,7 @@ class IntegerElementCountAggregation(ElementCountAggregation):
     )
 
     @classmethod
-    def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:
+    def func(cls, data: Iterable[Any]) -> list[dict[str, Any]]:  # noqa: D102
         return sorted(
             (
                 {"value": int(value), "count": count}

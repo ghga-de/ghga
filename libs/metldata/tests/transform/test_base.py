@@ -102,8 +102,8 @@ def test_workflow_definition_invalid_artifacts():
 
 def test_workflow_definition_config_cls():
     """Test that the config_cls of the WorkflowDefinition generates a concatenated
-    config class correctly."""
-
+    config class correctly.
+    """
     config_fields = EXAMPLE_WORKFLOW_DEFINITION.config_cls.model_fields
 
     assert "infer_references" in config_fields
@@ -120,7 +120,6 @@ def test_workflow_definition_config_cls():
 
 def test_workflow_definition_step_order_happy():
     """Test that the step order is correctly inferred from the workflow definition."""
-
     workflow_definition = WorkflowDefinition(
         description="A workflow for testing.",
         steps={
@@ -169,7 +168,6 @@ def test_workflow_definition_step_order_happy():
 
 def test_workflow_definition_step_order_circular():
     """Test that the step order is correctly inferred from the workflow definition."""
-
     workflow_definition = WorkflowDefinition(
         description="A workflow for testing.",
         steps={

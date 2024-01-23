@@ -32,7 +32,8 @@ class ArtifactsRestConfig(BaseSettings):
 
     @field_validator("artifact_infos")
     def validate_artifact_info_names(
-        cls, value: list[ArtifactInfo]
+        cls,  # noqa: N805
+        value: list[ArtifactInfo],
     ) -> list[ArtifactInfo]:
         """Validate that artifact names are unique."""
         artifact_names = [artifact_info.name for artifact_info in value]

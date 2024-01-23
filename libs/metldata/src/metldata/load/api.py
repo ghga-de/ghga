@@ -70,7 +70,7 @@ class LoaderTokenAuthProvider(AuthContextProtocol[LoaderTokenAuthContext]):
         return LoaderTokenAuthContext(token=token)
 
 
-async def rest_api_factory(
+async def rest_api_factory(  # noqa: PLR0913
     *,
     artifact_infos: list[ArtifactInfo],
     primary_artifact_name: str,

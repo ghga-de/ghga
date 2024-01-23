@@ -31,7 +31,6 @@ def test_model_transform(
     test_case: WorkflowTestCase,
 ):
     """Test the happy path of transforming a model."""
-
     handler = WorkflowHandler(
         workflow_definition=test_case.workflow_definition,
         workflow_config=test_case.config,
@@ -48,7 +47,6 @@ def test_metadata_transform(
     test_case: WorkflowTestCase,
 ):
     """Test the happy path of transforming metadata for a model."""
-
     handler = WorkflowHandler(
         workflow_definition=test_case.workflow_definition,
         workflow_config=test_case.config,

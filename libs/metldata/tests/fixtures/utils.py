@@ -25,6 +25,5 @@ BASE_DIR = Path(__file__).parent.resolve()
 
 def read_yaml(path: Path) -> dict[str, Any]:
     """Read a YAML file."""
-
     with open(path, encoding="utf-8") as file:
         return yaml.safe_load(file)

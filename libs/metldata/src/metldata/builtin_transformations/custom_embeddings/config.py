@@ -55,7 +55,7 @@ class CustomEmbeddingConfig(BaseSettings):
     # pylint: disable=no-self-argument
     @field_validator("embedding_profiles")
     def check_embedding_profiles_unique(
-        cls,
+        cls,  # noqa: N805
         value: list[EmbeddingProfile],
     ) -> list[EmbeddingProfile]:
         """Check that names for embedded classes are unique among the embedding_profiles."""

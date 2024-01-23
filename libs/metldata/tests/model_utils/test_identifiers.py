@@ -22,7 +22,6 @@ from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 
 def test_get_class_identifiers_happy():
     """Test the happy path of using the get_class_identifiers function."""
-
     expected_identifiers = {"File": "alias", "Dataset": "alias"}
 
     observed_identifiers = get_class_identifiers(model=VALID_MINIMAL_METADATA_MODEL)

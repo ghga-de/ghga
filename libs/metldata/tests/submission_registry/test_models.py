@@ -29,7 +29,6 @@ from metldata.submission_registry.models import (
 
 def test_submission_current_status():
     """Test whether the current status property returns the latest status."""
-
     submission = Submission(
         title="test",
         description="test",

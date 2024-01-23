@@ -32,7 +32,6 @@ async def test_query_artifact_resource(
     mongodb_fixture: MongoDbFixture,  # noqa: F811
 ):
     """Test happy path of using the query_artifact_resource function."""
-
     # load example resources and prepare client:
     dao_collection = await load_example_artifact_resources(
         dao_factory=mongodb_fixture.dao_factory

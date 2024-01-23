@@ -25,7 +25,6 @@ def test_get_accession_happy(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Test the happy path of getting 10 accession for each resource type."""
-
     accession_store = AccessionStore(config=config_sub_fixture)
     accession_registry = AccessionRegistry(
         config=config_sub_fixture, accession_store=accession_store

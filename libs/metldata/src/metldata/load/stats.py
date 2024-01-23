@@ -60,6 +60,8 @@ async def create_stats_using_aggregator(
             collection_name=collection_name, pipeline=pipeline
         )
         if not result:
+            # Initialize with default values if not present
+            resource_stats[resource_class] = ResourceStats(count=0)
             continue
         resource_stats[resource_class] = cast(ResourceStats, result[0])
 

@@ -48,7 +48,8 @@ class SlotMergingConfig(BaseSettings):
 
     @field_validator("merge_instructions")
     def validate_merge_instructions(
-        cls, filtered_merge_instructions: list[SlotMergeInstruction]
+        cls,  # noqa: N805
+        filtered_merge_instructions: list[SlotMergeInstruction],
     ) -> list[SlotMergeInstruction]:
         """Validate that source and target slots do not overlap across merge
         instructions and that no target slot is reused for the same

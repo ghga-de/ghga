@@ -38,7 +38,6 @@ from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
 )
 def test_validate_against_model(metadata: dict[str, Any], is_valid: bool):
     """Test the validation of metadata against a model."""
-
     validator = MetadataValidator(model=VALID_MINIMAL_METADATA_MODEL)
 
     with nullcontext() if is_valid else pytest.raises(

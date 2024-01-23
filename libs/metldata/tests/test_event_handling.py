@@ -55,8 +55,8 @@ async def test_pub_sub_workflow(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test a publish subscribe workflow using the FileSystemEventPublisher and
-    FileSystemEventSubscriber."""
-
+    FileSystemEventSubscriber.
+    """
     # expected events to consume in topic1:
     expected_events = {
         ConsumedEvent(
@@ -105,8 +105,8 @@ async def test_pub_collect_workflow(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test a publish collect workflow using the FileSystemEventPublisher and
-    FileSystemEventCollector."""
-
+    FileSystemEventCollector.
+    """
     expected_events = EXAMPLE_EVENTS.copy()
     del expected_events[0]  # remove event with same key
 

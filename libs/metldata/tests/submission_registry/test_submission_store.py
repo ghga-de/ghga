@@ -44,8 +44,8 @@ EXAMPLE_SUBMISSION = Submission(
 
 def test_happy(config_sub_fixture: SubmissionConfig):  # noqa: F811
     """Test the happy path of inserting, querying, and updating a submission using
-    the submission store."""
-
+    the submission store.
+    """
     submission_store = SubmissionStore(config=config_sub_fixture)
 
     # make sure that sumbission does not exist:
@@ -87,7 +87,6 @@ def test_query_non_existing(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Test querying for a non-existing submission."""
-
     submission_store = SubmissionStore(config=config_sub_fixture)
 
     with pytest.raises(SubmissionStore.SubmissionDoesNotExistError):

@@ -16,6 +16,7 @@
 
 # pylint: disable=redefined-outer-name
 
+"""Test the model generation"""
 
 from pytest import raises
 
@@ -36,6 +37,7 @@ def test_valid_config(model_resolved_public, config):
 
 def test_invalid_config(empty_model, invalid_config):
     """Test whether an invalid config with conflicting output paths raises an
-    exception."""
+    exception.
+    """
     with raises(MetadataModelTransformationError):
         build_aggregation_model(model=empty_model, config=invalid_config)

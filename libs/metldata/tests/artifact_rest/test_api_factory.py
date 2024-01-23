@@ -42,7 +42,6 @@ async def get_example_app_client(
     artifact_infos: list[ArtifactInfo] = EXAMPLE_ARTIFACT_INFOS,
 ) -> httpx.AsyncClient:
     """Return a test client for a FastAPI generated using the artifact_rest_factory."""
-
     router = await rest_api_factory(
         artifact_infos=artifact_infos, dao_factory=dao_factory
     )
@@ -71,7 +70,6 @@ async def test_artifacts_info_endpoint(
     mongodb_fixture: MongoDbFixture,  # noqa: F811
 ):
     """Test happy path of using the artifacts info endpoint."""
-
     expected_infos = EXAMPLE_ARTIFACT_INFOS
 
     async with await get_example_app_client(
@@ -96,7 +94,6 @@ async def test_artifact_info_endpoint(
     mongodb_fixture: MongoDbFixture,  # noqa: F811
 ):
     """Test happy path of using the artifact info endpoint."""
-
     async with await get_example_app_client(
         dao_factory=mongodb_fixture.dao_factory
     ) as client:
@@ -111,7 +108,6 @@ async def test_get_artifact_resource_endpoint(
     mongodb_fixture: MongoDbFixture,  # noqa: F811
 ):
     """Test happy path of using the get artifact resource endpoint."""
-
     # load example resources and prepare client:
     await load_example_artifact_resources(dao_factory=mongodb_fixture.dao_factory)
 
@@ -143,7 +139,6 @@ async def test_get_stats_endpoint(
     mongodb_fixture: MongoDbFixture,  # noqa: F811
 ):
     """Test happy path of using the get stats endpoint."""
-
     # load example resources and prepare client:
     await load_example_artifact_resources(dao_factory=mongodb_fixture.dao_factory)
 

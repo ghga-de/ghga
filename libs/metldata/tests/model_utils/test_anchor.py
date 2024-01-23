@@ -51,7 +51,6 @@ EXAMPLE_ANCHOR_POINTS_BY_TARGET = {
 
 def test_get_anchor_points_happy():
     """Test the happy path of using the get_anchor_points function."""
-
     expected_anchor_points = EXAMPLE_ANCHOR_POINTS
 
     observed_anchor_points = get_anchor_points(model=VALID_MINIMAL_METADATA_MODEL)
@@ -62,14 +61,12 @@ def test_get_anchor_points_happy():
 @pytest.mark.parametrize("invalid_model", ANCHORS_INVALID_MODELS)
 def test_get_anchor_points_invalid(invalid_model: MetadataModel):
     """Test the get_anchor_points function for models with invalid anchor points."""
-
     with pytest.raises(InvalidAnchorPointError):
         _ = get_anchor_points(model=invalid_model)
 
 
 def test_get_anchor_points_by_target_happy():
     """Test the happy path of using the get_anchors_by_target function."""
-
     expected_anchor_points = EXAMPLE_ANCHOR_POINTS_BY_TARGET
 
     observed_anchor_points = get_anchors_points_by_target(
@@ -81,7 +78,6 @@ def test_get_anchor_points_by_target_happy():
 
 def test_filter_anchor_points_happy():
     """Test the happy path of using the filter_anchor_points function."""
-
     class_of_interest = "File"
     expected_anchor_points = {
         class_of_interest: EXAMPLE_ANCHOR_POINTS_BY_TARGET[class_of_interest],
@@ -97,7 +93,6 @@ def test_filter_anchor_points_happy():
 
 def test_filter_anchor_points_non_existing_class():
     """Test the happy path of using the filter_anchor_points function."""
-
     classes_of_interest = set(EXAMPLE_ANCHOR_POINTS_BY_TARGET.keys())
     classes_of_interest.add("NonExisting")
 
@@ -110,7 +105,6 @@ def test_filter_anchor_points_non_existing_class():
 
 def test_lookup_anchor_point_happy():
     """Test the happy path of using the lookup_anchor_point function."""
-
     class_name = "File"
     expected_anchor_point = EXAMPLE_ANCHOR_POINTS_BY_TARGET[class_name]
 
@@ -123,8 +117,8 @@ def test_lookup_anchor_point_happy():
 
 def test_lookup_anchor_point_not_found():
     """Test the using the lookup_anchor_point function with a class name that does
-    not exist."""
-
+    not exist.
+    """
     with pytest.raises(AnchorPointNotFoundError):
         _ = lookup_anchor_point(
             class_name="NonExisting",

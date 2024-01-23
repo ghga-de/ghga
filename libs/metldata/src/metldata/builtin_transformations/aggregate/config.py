@@ -38,7 +38,7 @@ class AggregationOperation(BaseModel):
     function: type[AggregationFunction]
 
     @model_validator(mode="before")
-    def lookup_operation(cls, values: dict) -> dict:
+    def lookup_operation(cls, values: dict) -> dict:  # noqa: N805
         """Replaces operation strings with operation types."""
         if "function" in values:
             values["function"] = transformation_by_name(values["function"])

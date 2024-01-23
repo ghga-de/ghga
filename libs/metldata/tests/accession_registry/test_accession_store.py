@@ -24,7 +24,6 @@ def test_accession_store_happy(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Test accession store happy path."""
-
     expected_accessions = ["accession001", "accession002"]
 
     accession_store = AccessionStore(config=config_sub_fixture)
@@ -42,7 +41,6 @@ def test_accession_store_unkown_accession(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Test accession store happy path."""
-
     unknown_accession = "accession003"
 
     accession_store = AccessionStore(config=config_sub_fixture)

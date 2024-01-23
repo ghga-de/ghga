@@ -106,7 +106,7 @@ class Submission(SubmissionHeader):
         return sorted_history[-1].new_status
 
     @field_validator("accession_map")
-    def check_accession_uniqueness(cls, value: AccessionMap) -> AccessionMap:
+    def check_accession_uniqueness(cls, value: AccessionMap) -> AccessionMap:  # noqa: N805
         """Check that no accessions are re-used accross classes."""
         total_resources = 0
         all_accessions: set[str] = set()

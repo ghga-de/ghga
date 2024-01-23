@@ -41,7 +41,7 @@ class ArtifactCollectorConfig(ArtifactEventConfig):
     )
 
     @field_validator("artifact_types")
-    def artifact_types_must_not_contain_dots(cls, value: list[str]):
+    def artifact_types_must_not_contain_dots(cls, value: list[str]):  # noqa: N805
         """Validate that artifact types do not contain dots."""
         for artifact_type in value:
             if "." in artifact_type:
