@@ -47,7 +47,7 @@ This epic covers the following user journeys:
 
 ## Additional Implementation Details:
 
-- \<List further implemenation details here. (Anything that might be relevant for defining and executing tasks.)>
+- \<List further implementation details here. (Anything that might be relevant for defining and executing tasks.)>
 
 
 ## Human Resource/Time Estimation:
