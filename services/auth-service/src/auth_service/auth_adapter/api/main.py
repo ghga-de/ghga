@@ -22,12 +22,12 @@ Note: If a path_prefix is used for the Emissary AuthService,
 then this must be also specified in the config setting api_root_path.
 """
 
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from ghga_service_commons.api import configure_app
 
-from auth_service.config import CONFIG, configure_logging
+from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 from auth_service.user_management.user_registry.deps import (
     Depends,
@@ -39,8 +39,6 @@ from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import TokenValidationError, UserInfoError, exchange_token
 from .basic import basic_auth
 from .headers import get_bearer_token
-
-configure_logging()
 
 app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
 configure_app(app, config=CONFIG)
@@ -65,7 +63,7 @@ def add_allowed_route(route: str, write: bool = False):
 
     @app.api_route(route, methods=methods)
     async def allowed_route(
-        response: Response, authorization: Optional[str] = Header(default=None)
+        response: Response, authorization: Annotated[Optional[str], Header()] = None
     ) -> dict:
         """Unprotected route."""
         if authorization:
@@ -89,10 +87,10 @@ async def ext_auth(  # noqa: PLR0913
     path: str,
     request: Request,
     response: Response,
-    authorization: Optional[str] = Header(default=None),
-    x_authorization: Optional[str] = Header(default=None),
-    user_dao: UserDao = Depends(get_user_dao),
-    claim_dao: ClaimDao = Depends(get_claim_dao),
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    authorization: Annotated[Optional[str], Header()] = None,
+    x_authorization: Annotated[Optional[str], Header()] = None,
     _basic_auth: None = basic_auth(app, config=CONFIG),
 ) -> dict:
     """Implements the ExtAuth protocol to authenticate users in the API gateway.

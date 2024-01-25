@@ -24,7 +24,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, status
 from ghga_service_commons.api import configure_app
 
-from auth_service.config import configure_logging
 from auth_service.deps import get_config
 from auth_service.user_management import (
     CONTACT,
@@ -41,8 +40,6 @@ from auth_service.user_management.claims_repository.router import (
     router as claims_router,
 )
 from auth_service.user_management.user_registry.router import router as users_router
-
-configure_logging()
 
 
 @asynccontextmanager

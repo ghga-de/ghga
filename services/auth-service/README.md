@@ -1,12 +1,13 @@
-
 [![tests](https://github.com/ghga-de/auth-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/auth-service/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/auth-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/auth-service?branch=main)
 
 # Auth Service
 
-Authentication service for the GHGA data portal used by the API gateway via the ExtAuth protocol
+Authentication adapter and services used for the GHGA data portal
 
 ## Description
+
+<!-- Please provide a short overview of the features of this service. -->
 
 This repository contains two services for the management, authentication and authorization of users of the GHGA data portal.
 
@@ -31,13 +32,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:1.0.0
+docker pull ghga/auth-service:1.0.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:1.0.0 .
+docker build -t ghga/auth-service:1.0.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -45,7 +46,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:1.0.0 --help
+docker run -p 8080:8080 ghga/auth-service:1.0.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -62,17 +63,35 @@ auth_service --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`service_name`** *(string)*: Default: `"auth_service"`.
+- **`service_name`** *(string)*: Short name of this service. Default: `"auth_service"`.
 
-- **`service_instance_id`** *(string)*: Default: `"1"`.
+- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
-- **`kafka_servers`** *(array)*: Default: `["kafka:9092"]`.
+
+  Examples:
+
+  ```json
+  "germany-bw-instance-001"
+  ```
+
+
+- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
+
+  Examples:
+
+  ```json
+  [
+      "localhost:9092"
+  ]
+  ```
+
+
 - **`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
 
-- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
 
 - **`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
 
@@ -80,11 +99,28 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
 
-- **`dataset_deletion_event_topic`** *(string)*: Default: `"metadata_datasets"`.
+- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
-- **`dataset_deletion_event_type`** *(string)*: Default: `"dataset_deleted"`.
 
-- **`auth_key`**: Default: `null`.
+  Examples:
+
+  ```json
+  true
+  ```
+
+
+  ```json
+  false
+  ```
+
+
+- **`dataset_deletion_event_topic`** *(string)*: the topic of the event announcing dataset deletions. Default: `"metadata_datasets"`.
+
+- **`dataset_deletion_event_type`** *(string)*: the type of the event announcing dataset deletions. Default: `"dataset_deleted"`.
+
+- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+
+- **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
 
   - **Any of**
 
@@ -92,21 +128,40 @@ The service requires the following configuration parameters:
 
     - *null*
 
-- **`auth_algs`** *(array)*: Default: `["ES256"]`.
+
+  Examples:
+
+  ```json
+  "%(timestamp)s - %(service)s - %(level)s - %(message)s"
+  ```
+
+
+  ```json
+  "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+  ```
+
+
+- **`auth_key`**: internal public key for user management (key pair for auth adapter). Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
+- **`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens. Default: `["ES256"]`.
 
   - **Items** *(string)*
 
-- **`auth_check_claims`** *(object)*: Default: `{"name": null, "email": null, "iat": null, "exp": null}`.
+- **`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{"name": null, "email": null, "iat": null, "exp": null}`.
 
-- **`auth_map_claims`** *(object)*: Can contain additional properties. Default: `{}`.
+- **`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
 
-  - **Additional Properties** *(string)*
+  - **Additional properties** *(string)*
 
 - **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
 - **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
-
-- **`log_level`** *(string)*: Must be one of: `["critical", "error", "warning", "info", "debug", "trace"]`. Default: `"debug"`.
 
 - **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
@@ -196,23 +251,11 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`run_auth_adapter`** *(boolean)*: Default: `false`.
+- **`run_auth_adapter`** *(boolean)*: Run as auth adapter. Default: `false`.
 
-- **`api_ext_path`** *(string)*: Default: `"/api/auth"`.
+- **`api_ext_path`** *(string)*: external API path for the user management as seen by the auth adapter. Default: `"/api/auth"`.
 
-- **`auth_ext_keys`**: Default: `null`.
-
-  - **Any of**
-
-    - *string*
-
-    - *null*
-
-- **`auth_ext_algs`** *(array)*: Default: `["RS256", "ES256"]`.
-
-  - **Items** *(string)*
-
-- **`basic_auth_credentials`**: Default: `null`.
+- **`auth_ext_keys`**: external public key set for auth adapter (not used for user management). Default: `null`.
 
   - **Any of**
 
@@ -220,21 +263,33 @@ The service requires the following configuration parameters:
 
     - *null*
 
-- **`basic_auth_realm`** *(string)*: Default: `"GHGA Data Portal"`.
-
-- **`allow_read_paths`** *(array)*: Default: `["/.well-known/*", "/service-logo.png"]`.
+- **`auth_ext_algs`** *(array)*: allowed algorithms for signing external tokens. Default: `["RS256", "ES256"]`.
 
   - **Items** *(string)*
 
-- **`allow_write_paths`** *(array)*: Default: `[]`.
+- **`basic_auth_credentials`**: credentials for basic authentication, separated by whitespace. Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
+- **`basic_auth_realm`** *(string)*: realm for basic authentication. Default: `"GHGA Data Portal"`.
+
+- **`allow_read_paths`** *(array)*: paths that are public or use their own authentication mechanism. Default: `["/.well-known/*", "/service-logo.png"]`.
 
   - **Items** *(string)*
 
-- **`include_apis`** *(array)*: Default: `["users"]`.
+- **`allow_write_paths`** *(array)*: paths for writing that use their own authentication mechanism. Default: `[]`.
+
+  - **Items** *(string)*
+
+- **`include_apis`** *(array)*: If not run as auth adapter, which APIs should be provided. If no APIs are specified, run the event consumer. Default: `["users"]`.
 
   - **Items** *(string)*: Must be one of: `["users", "claims"]`.
 
-- **`add_as_data_stewards`** *(array)*: Default: `[]`.
+- **`add_as_data_stewards`** *(array)*: a list of external IDs of data stewards or user objects to seed the claims repository with. Default: `[]`.
 
   - **Items**
 
@@ -244,9 +299,9 @@ The service requires the following configuration parameters:
 
       - *object*
 
-- **`oidc_authority_url`** *(string, format: uri)*: Default: `"https://proxy.aai.lifescience-ri.eu"`.
+- **`oidc_authority_url`** *(string, format: uri)*: external OIDC authority URL used by the auth adapter. Default: `"https://proxy.aai.lifescience-ri.eu"`.
 
-- **`oidc_userinfo_endpoint`**: Default: `"https://proxy.aai.lifescience-ri.eu/OIDC/userinfo"`.
+- **`oidc_userinfo_endpoint`**: external OIDC userinfo endpoint used by the auth adapter. Default: `"https://proxy.aai.lifescience-ri.eu/OIDC/userinfo"`.
 
   - **Any of**
 
@@ -254,17 +309,17 @@ The service requires the following configuration parameters:
 
     - *null*
 
-- **`oidc_client_id`** *(string)*: Default: `"ghga-data-portal"`.
+- **`oidc_client_id`** *(string)*: the registered OIDC client ID. Default: `"ghga-data-portal"`.
 
-- **`organization_url`** *(string, format: uri)*: Default: `"https://ghga.de"`.
+- **`organization_url`** *(string, format: uri)*: the URL used as source for internal claims. Default: `"https://ghga.de"`.
 
-- **`db_url`** *(string, format: password)*: Default: `"mongodb://mongodb:27017"`.
+- **`db_url`** *(string, format: password)*: MongoDB connection string. Default: `"mongodb://mongodb:27017"`.
 
-- **`db_name`** *(string)*: Default: `"user-management"`.
+- **`db_name`** *(string)*: Name of the MongoDB database. Default: `"user-management"`.
 
-- **`users_collection`** *(string)*: Default: `"users"`.
+- **`users_collection`** *(string)*: Name of the MongoDB collection for users. Default: `"users"`.
 
-- **`claims_collection`** *(string)*: Default: `"claims"`.
+- **`claims_collection`** *(string)*: Name of the MongoDB collection for claims. Default: `"claims"`.
 
 
 ### Usage:
@@ -295,9 +350,13 @@ of the pydantic documentation.
 An OpenAPI specification for this service can be found [here](./openapi.yaml).
 
 ## Architecture and Design:
-This repository contains Python-based services that are partially following the Triple Hexagonal Architecture pattern. The services use FastAPI and protocol/provider pairs provided by the [hexkit](https://github.com/ghga-de/hexkit) library.
+<!-- Please provide an overview of the architecture and design of the code base.
+Mention anything that deviates from the standard triple hexagonal architecture and
+the corresponding structure. -->
 
-This repository will be eventually refactored and split into three separate services.
+This is a Python-based service following the Triple Hexagonal Architecture pattern.
+It uses protocol/provider pairs and dependency injection mechanisms provided by the
+[hexkit](https://github.com/ghga-de/hexkit) library.
 
 
 ## Development

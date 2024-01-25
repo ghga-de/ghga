@@ -17,6 +17,7 @@
 """Routes for managing user claims"""
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
@@ -72,13 +73,16 @@ claim_not_found_error = HTTPException(
 )
 async def post_claim(
     claim_creation: ClaimCreation,
-    user_id: str = Path(
-        ...,
-        alias="user_id",
-        description="Internal ID of the user",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    claim_dao: ClaimDao = Depends(get_claim_dao),
+    user_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="user_id",
+            description="Internal ID of the user",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
 ) -> Claim:
     """Store a user claim"""
     if not await user_exists(user_id, user_dao):
@@ -117,13 +121,16 @@ async def post_claim(
     status_code=200,
 )
 async def get_claims(
-    user_id: str = Path(
-        ...,
-        alias="user_id",
-        description="Internal ID of the user",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    claim_dao: ClaimDao = Depends(get_claim_dao),
+    user_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="user_id",
+            description="Internal ID of the user",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
 ) -> list[Claim]:
     """Get all claims for a given user"""
     if not await user_exists(user_id, user_dao):
@@ -147,18 +154,24 @@ async def get_claims(
 )
 async def patch_user(
     claim_update: ClaimUpdate,
-    user_id: str = Path(
-        ...,
-        alias="user_id",
-        description="Internal user ID",
-    ),
-    claim_id: str = Path(
-        ...,
-        alias="claim_id",
-        description="Internal claim ID",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    claim_dao: ClaimDao = Depends(get_claim_dao),
+    user_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="user_id",
+            description="Internal user ID",
+        ),
+    ],
+    claim_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="claim_id",
+            description="Internal claim ID",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
 ) -> Response:
     """Revoke an existing user claim"""
     if not await user_exists(user_id, user_dao):
@@ -199,18 +212,24 @@ async def patch_user(
     status_code=201,
 )
 async def delete_claim(
-    user_id: str = Path(
-        ...,
-        alias="user_id",
-        description="Internal user ID",
-    ),
-    claim_id: str = Path(
-        ...,
-        alias="claim_id",
-        description="Internal claim ID",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    claim_dao: ClaimDao = Depends(get_claim_dao),
+    user_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="user_id",
+            description="Internal user ID",
+        ),
+    ],
+    claim_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="claim_id",
+            description="Internal claim ID",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
 ) -> Response:
     """Delete an existing user claim"""
     if not await user_exists(user_id, user_dao):
@@ -249,18 +268,24 @@ async def delete_claim(
 )
 async def grant_download_access(
     validity: ClaimValidity,
-    user_id: str = Path(
-        ...,
-        alias="user_id",
-        description="Internal ID of the user",
-    ),
-    dataset_id: str = Path(
-        ...,
-        alias="dataset_id",
-        description="Internal ID of the dataset",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    claim_dao: ClaimDao = Depends(get_claim_dao),
+    user_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="user_id",
+            description="Internal ID of the user",
+        ),
+    ],
+    dataset_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="dataset_id",
+            description="Internal ID of the dataset",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
     # internal service, authorization without token via service mesh
 ) -> Response:
     """Grant download access permission for a given dataset to a given user."""
@@ -290,18 +315,24 @@ async def grant_download_access(
     status_code=200,
 )
 async def check_download_access(
-    user_id: str = Path(
-        ...,
-        alias="user_id",
-        description="Internal ID of the user",
-    ),
-    dataset_id: str = Path(
-        ...,
-        alias="dataset_id",
-        description="Internal ID of the dataset",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    claim_dao: ClaimDao = Depends(get_claim_dao),
+    user_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="user_id",
+            description="Internal ID of the user",
+        ),
+    ],
+    dataset_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="dataset_id",
+            description="Internal ID of the dataset",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
     # internal service, authorization without token via service mesh
 ) -> bool:
     """Check download access permission for a given dataset by a given user"""
@@ -339,13 +370,16 @@ async def check_download_access(
     status_code=200,
 )
 async def get_datasets_with_download_access(
-    user_id: str = Path(
-        ...,
-        alias="user_id",
-        description="Internal ID of the user",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    claim_dao: ClaimDao = Depends(get_claim_dao),
+    user_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="user_id",
+            description="Internal ID of the user",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
     # internal service, authorization without token via service mesh
 ) -> list[str]:
     """Get list of all dataset IDs with download access permission for a given user"""

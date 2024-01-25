@@ -30,12 +30,12 @@ class EventSubTranslatorConfig(BaseSettings):
     """Configuration for the event subscriber."""
 
     dataset_deletion_event_topic: str = Field(
-        ...,
+        default=...,
         description="The name of the topic announcing dataset deletions",
         examples=["metadata_datasets"],
     )
     dataset_deletion_event_type: str = Field(
-        ...,
+        default=...,
         description="The type used for events announcing a dataset deletion",
         examples=["dataset_deleted"],
     )

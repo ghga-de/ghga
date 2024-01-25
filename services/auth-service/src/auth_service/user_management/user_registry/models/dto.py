@@ -98,19 +98,23 @@ class UserModifiableData(BaseDto):
     """User data that can be modified"""
 
     status: Optional[UserStatus] = Field(
-        None, description="Registration status of the user"
+        default=None, description="Registration status of the user"
     )
     title: Optional[AcademicTitle] = Field(
-        None, title="Academic title", description="Academic title of the user"
+        default=None, title="Academic title", description="Academic title of the user"
     )
 
 
 class UserAutomaticData(BaseModel):
     """User data that is automatically created except the ID"""
 
-    registration_date: UTCDatetime = Field(default=...)
+    registration_date: UTCDatetime = Field(
+        default=..., description="Date when the user was registered"
+    )
 
-    status_change: Optional[StatusChange] = None
+    status_change: Optional[StatusChange] = Field(
+        default=None, description="Last status change"
+    )
 
     active_submissions: list[str] = Field(
         default=[],

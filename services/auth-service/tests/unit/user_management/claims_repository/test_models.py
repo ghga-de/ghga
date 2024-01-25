@@ -35,7 +35,7 @@ def test_good_visa_type():
     """Test creating a visa with an existing type"""
     ClaimCreation(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value="https://foo.org",  # type: ignore
+        visa_value="https://foo.org",
         assertion_date=utc_datetime(2022, 9, 1, 12, 0),
         valid_from=utc_datetime(2022, 10, 1, 0, 0),
         valid_until=utc_datetime(2022, 10, 31, 23, 59),
@@ -92,7 +92,7 @@ def test_bad_visa_values(value):
     """Test creating an invalid visa value"""
     with raises(ValueError):
         ClaimCreation(
-            visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,  # type: ignore
+            visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
             visa_value=value,
             assertion_date=utc_datetime(2022, 9, 1, 12, 0),
             valid_from=utc_datetime(2022, 10, 1, 0, 0),
@@ -190,7 +190,7 @@ def test_validator_period(valid_from, valid_until):
     """Test the validator for valid_from and valid_until"""
     ClaimCreation(
         visa_type=VisaType.RESEARCHER_STATUS,
-        visa_value="foo@bar.org",  # type: ignore
+        visa_value="foo@bar.org",
         assertion_date=utc_datetime(2022, 9, 1, 12, 0),
         valid_from=valid_from,
         valid_until=valid_until,
@@ -200,7 +200,7 @@ def test_validator_period(valid_from, valid_until):
     with raises(ValueError, match="'valid_until' must be later than 'valid_from'"):
         ClaimCreation(
             visa_type=VisaType.RESEARCHER_STATUS,
-            visa_value="foo@bar.org",  # type: ignore
+            visa_value="foo@bar.org",
             assertion_date=utc_datetime(2022, 9, 1, 12, 0),
             valid_from=utc_datetime(2022, 10, 1),
             valid_until=valid_from,
@@ -210,7 +210,7 @@ def test_validator_period(valid_from, valid_until):
     with raises(ValueError, match="'valid_until' must be later than 'valid_from'"):
         ClaimCreation(
             visa_type=VisaType.RESEARCHER_STATUS,
-            visa_value="foo@bar.org",  # type: ignore
+            visa_value="foo@bar.org",
             assertion_date=utc_datetime(2022, 9, 1, 12, 0),
             valid_from=valid_from,
             valid_until=valid_from,

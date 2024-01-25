@@ -4,17 +4,24 @@
   "properties": {
     "service_name": {
       "default": "auth_service",
+      "description": "Short name of this service",
       "title": "Service Name",
       "type": "string"
     },
     "service_instance_id": {
-      "default": "1",
+      "description": "A string that uniquely identifies this instance across all instances of this service. This is included in log messages.",
+      "examples": [
+        "germany-bw-instance-001"
+      ],
       "title": "Service Instance Id",
       "type": "string"
     },
     "kafka_servers": {
-      "default": [
-        "kafka:9092"
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "examples": [
+        [
+          "localhost:9092"
+        ]
       ],
       "items": {
         "type": "string"
@@ -34,7 +41,7 @@
     },
     "kafka_ssl_cafile": {
       "default": "",
-      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL.",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
       "title": "Kafka Ssl Cafile",
       "type": "string"
     },
@@ -56,15 +63,58 @@
       "title": "Kafka Ssl Password",
       "type": "string"
     },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
+    },
     "dataset_deletion_event_topic": {
       "default": "metadata_datasets",
+      "description": "the topic of the event announcing dataset deletions",
       "title": "Dataset Deletion Event Topic",
       "type": "string"
     },
     "dataset_deletion_event_type": {
       "default": "dataset_deleted",
+      "description": "the type of the event announcing dataset deletions",
       "title": "Dataset Deletion Event Type",
       "type": "string"
+    },
+    "log_level": {
+      "default": "INFO",
+      "description": "The minimum log level to capture.",
+      "enum": [
+        "CRITICAL",
+        "ERROR",
+        "WARNING",
+        "INFO",
+        "DEBUG",
+        "TRACE"
+      ],
+      "title": "Log Level",
+      "type": "string"
+    },
+    "log_format": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details",
+      "examples": [
+        "%(timestamp)s - %(service)s - %(level)s - %(message)s",
+        "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+      ],
+      "title": "Log Format"
     },
     "auth_key": {
       "anyOf": [
@@ -76,12 +126,14 @@
         }
       ],
       "default": null,
+      "description": "internal public key for user management (key pair for auth adapter)",
       "title": "Auth Key"
     },
     "auth_algs": {
       "default": [
         "ES256"
       ],
+      "description": "A list of all algorithms used for signing GHGA internal tokens.",
       "items": {
         "type": "string"
       },
@@ -95,6 +147,7 @@
         "iat": null,
         "exp": null
       },
+      "description": "A dict of all GHGA internal claims that shall be verified.",
       "title": "Auth Check Claims",
       "type": "object"
     },
@@ -103,6 +156,7 @@
         "type": "string"
       },
       "default": {},
+      "description": "A mapping of claims to attributes in the GHGA auth context.",
       "title": "Auth Map Claims",
       "type": "object"
     },
@@ -117,19 +171,6 @@
       "description": "Port to expose the server on the specified host",
       "title": "Port",
       "type": "integer"
-    },
-    "log_level": {
-      "default": "debug",
-      "enum": [
-        "critical",
-        "error",
-        "warning",
-        "info",
-        "debug",
-        "trace"
-      ],
-      "title": "Log Level",
-      "type": "string"
     },
     "auto_reload": {
       "default": false,
@@ -244,11 +285,13 @@
     },
     "run_auth_adapter": {
       "default": false,
+      "description": "Run as auth adapter",
       "title": "Run Auth Adapter",
       "type": "boolean"
     },
     "api_ext_path": {
       "default": "/api/auth",
+      "description": "external API path for the user management as seen by the auth adapter",
       "title": "Api Ext Path",
       "type": "string"
     },
@@ -262,6 +305,7 @@
         }
       ],
       "default": null,
+      "description": "external public key set for auth adapter (not used for user management)",
       "title": "Auth Ext Keys"
     },
     "auth_ext_algs": {
@@ -269,6 +313,7 @@
         "RS256",
         "ES256"
       ],
+      "description": "allowed algorithms for signing external tokens",
       "items": {
         "type": "string"
       },
@@ -285,10 +330,12 @@
         }
       ],
       "default": null,
+      "description": "credentials for basic authentication, separated by whitespace",
       "title": "Basic Auth Credentials"
     },
     "basic_auth_realm": {
       "default": "GHGA Data Portal",
+      "description": "realm for basic authentication",
       "title": "Basic Auth Realm",
       "type": "string"
     },
@@ -297,6 +344,7 @@
         "/.well-known/*",
         "/service-logo.png"
       ],
+      "description": "paths that are public or use their own authentication mechanism",
       "items": {
         "type": "string"
       },
@@ -305,6 +353,7 @@
     },
     "allow_write_paths": {
       "default": [],
+      "description": "paths for writing that use their own authentication mechanism",
       "items": {
         "type": "string"
       },
@@ -315,6 +364,7 @@
       "default": [
         "users"
       ],
+      "description": "If not run as auth adapter, which APIs should be provided. If no APIs are specified, run the event consumer.",
       "items": {
         "enum": [
           "users",
@@ -327,6 +377,7 @@
     },
     "add_as_data_stewards": {
       "default": [],
+      "description": "a list of external IDs of data stewards or user objects to seed the claims repository with",
       "items": {
         "anyOf": [
           {
@@ -342,6 +393,7 @@
     },
     "oidc_authority_url": {
       "default": "https://proxy.aai.lifescience-ri.eu",
+      "description": "external OIDC authority URL used by the auth adapter",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
@@ -361,15 +413,18 @@
         }
       ],
       "default": "https://proxy.aai.lifescience-ri.eu/OIDC/userinfo",
+      "description": "external OIDC userinfo endpoint used by the auth adapter",
       "title": "Oidc Userinfo Endpoint"
     },
     "oidc_client_id": {
       "default": "ghga-data-portal",
+      "description": "the registered OIDC client ID",
       "title": "Oidc Client Id",
       "type": "string"
     },
     "organization_url": {
       "default": "https://ghga.de",
+      "description": "the URL used as source for internal claims",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
@@ -378,6 +433,7 @@
     },
     "db_url": {
       "default": "mongodb://mongodb:27017",
+      "description": "MongoDB connection string",
       "format": "password",
       "title": "Db Url",
       "type": "string",
@@ -385,20 +441,27 @@
     },
     "db_name": {
       "default": "user-management",
+      "description": "Name of the MongoDB database",
       "title": "Db Name",
       "type": "string"
     },
     "users_collection": {
       "default": "users",
+      "description": "Name of the MongoDB collection for users",
       "title": "Users Collection",
       "type": "string"
     },
     "claims_collection": {
       "default": "claims",
+      "description": "Name of the MongoDB collection for claims",
       "title": "Claims Collection",
       "type": "string"
     }
   },
+  "required": [
+    "service_instance_id",
+    "kafka_servers"
+  ],
   "title": "ModSettings",
   "type": "object"
 }

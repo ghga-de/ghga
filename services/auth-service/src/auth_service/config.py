@@ -15,113 +15,123 @@
 
 """Config Parameter Modeling and Parsing"""
 
-import logging.config
-from typing import Any, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
-from ghga_service_commons.api import ApiConfigBase, LogLevel
+from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
-from pydantic import HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 from auth_service.user_management.claims_repository.translators.akafka import (
     EventSubTranslatorConfig,
 )
 
-
-def configure_logging():
-    """Configure the application logging.
-
-    This must happen before the application is configured.
-    """
-    logging.config.dictConfig(
-        {
-            "version": 1,
-            "disable_existing_loggers": False,
-            "formatters": {
-                "default": {
-                    "()": "uvicorn.logging.DefaultFormatter",
-                    "fmt": "%(levelprefix)s %(asctime)s %(name)s: %(message)s",
-                    "datefmt": "%Y-%m-%d %H:%M:%S",
-                },
-            },
-            "handlers": {
-                "default": {
-                    "formatter": "default",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stderr",
-                },
-            },
-            "loggers": {
-                "auth_service": {
-                    "handlers": ["default"],
-                    "level": CONFIG.log_level.upper(),
-                },
-            },
-        }
-    )
+SERVICE_NAME = "auth_service"
 
 
-@config_from_yaml(prefix="auth_service")
-class Config(ApiConfigBase, AuthConfig, EventSubTranslatorConfig, KafkaConfig):
+@config_from_yaml(prefix=SERVICE_NAME)
+class Config(
+    ApiConfigBase, AuthConfig, LoggingConfig, EventSubTranslatorConfig, KafkaConfig
+):
     """Config parameters and their defaults."""
 
-    service_name: str = "auth_service"
-    log_level: LogLevel = "debug"
-
-    run_auth_adapter: bool = False
-
-    # external API path for the user management as seen by the auth adapter
-    api_ext_path: str = "/api/auth"
-
-    # internal public key for user management (key pair for auth adapter)
-    auth_key: Optional[str] = None
-    # allowed algorithms for signing internal tokens
-    auth_algs: list[str] = ["ES256"]
-    # internal claims that shall be verified
-    auth_check_claims: dict[str, Any] = dict.fromkeys("name email iat exp".split())
-    # mapping of claims to the internal auth context
-    auth_map_claims: dict[str, str] = {}
-    # external public key set for auth adapter (not used for user management)
-    auth_ext_keys: Optional[str] = None
-    # allowed algorithms for signing external tokens
-    auth_ext_algs: list[str] = ["RS256", "ES256"]
-    # credentials for basic authentication, separated by whitespace
-    basic_auth_credentials: Optional[str] = None
-    # realm for basic authentication
-    basic_auth_realm: str = "GHGA Data Portal"
-    # paths that are public or use their own authentication mechanism
-    allow_read_paths: list[str] = ["/.well-known/*", "/service-logo.png"]
-    # paths for writing that use their own authentication mechanism
-    allow_write_paths: list[str] = []
-
-    # if not run as auth adapter, which APIs should be provided
-    # if no APIs are specified, run the event consumer
-    include_apis: list[Literal["users", "claims"]] = ["users"]
-    # a list of external IDs of data stewards to seed the claims repository with
-    add_as_data_stewards: list[Union[str, dict]] = []
-
-    # expected external token content for validation in auth adapter
-    oidc_authority_url: HttpUrl = "https://proxy.aai.lifescience-ri.eu"  # type: ignore
-    oidc_userinfo_endpoint: Optional[HttpUrl] = (
-        oidc_authority_url + "/OIDC/userinfo"  # type: ignore
+    service_name: str = Field(
+        default=SERVICE_NAME, description="Short name of this service"
     )
-    oidc_client_id: str = "ghga-data-portal"
 
-    # the URL used as source for internal claims
-    organization_url: HttpUrl = "https://ghga.de"  # type: ignore
+    run_auth_adapter: bool = Field(default=False, description="Run as auth adapter")
 
-    db_url: SecretStr = "mongodb://mongodb:27017"  # type: ignore
-    db_name: str = "user-management"
-    users_collection: str = "users"
-    claims_collection: str = "claims"
+    auth_key: Optional[str] = Field(
+        default=None,
+        description="internal public key for user management"
+        " (key pair for auth adapter)",
+    )
 
-    service_instance_id: str = "1"
-    kafka_servers: list[str] = ["kafka:9092"]
+    api_ext_path: str = Field(
+        default="/api/auth",
+        description="external API path for the user management"
+        " as seen by the auth adapter",
+    )
 
-    # the topic and type of the event announcing dataset deletions
-    dataset_deletion_event_topic: str = "metadata_datasets"
-    dataset_deletion_event_type: str = "dataset_deleted"
+    auth_ext_keys: Optional[str] = Field(
+        default=None,
+        description="external public key set for auth adapter"
+        " (not used for user management)",
+    )
+    auth_ext_algs: list[str] = Field(
+        default=["RS256", "ES256"],
+        description="allowed algorithms for signing external tokens",
+    )
+
+    basic_auth_credentials: Optional[str] = Field(
+        default=None,
+        description="credentials for basic authentication, separated by whitespace",
+    )
+    basic_auth_realm: str = Field(
+        default="GHGA Data Portal", description="realm for basic authentication"
+    )
+
+    allow_read_paths: list[str] = Field(
+        default=["/.well-known/*", "/service-logo.png"],
+        description="paths that are public or use their own authentication mechanism",
+    )
+    allow_write_paths: list[str] = Field(
+        default=[],
+        description="paths for writing that use their own authentication mechanism",
+    )
+
+    include_apis: list[Literal["users", "claims"]] = Field(
+        default=["users"],
+        description="If not run as auth adapter, which APIs should be provided."
+        " If no APIs are specified, run the event consumer.",
+    )
+
+    add_as_data_stewards: list[Union[str, dict]] = Field(
+        default=[],
+        description="a list of external IDs of data stewards or user objects"
+        " to seed the claims repository with",
+    )
+
+    oidc_authority_url: HttpUrl = Field(
+        default="https://proxy.aai.lifescience-ri.eu",
+        description="external OIDC authority URL used by the auth adapter",
+    )
+    oidc_userinfo_endpoint: Optional[HttpUrl] = Field(
+        default="https://proxy.aai.lifescience-ri.eu/OIDC/userinfo",
+        description="external OIDC userinfo endpoint used by the auth adapter",
+    )
+    oidc_client_id: str = Field(
+        default="ghga-data-portal", description="the registered OIDC client ID"
+    )
+
+    organization_url: HttpUrl = Field(
+        default="https://ghga.de",
+        description="the URL used as source for internal claims",
+    )
+
+    db_url: SecretStr = Field(
+        default="mongodb://mongodb:27017", description="MongoDB connection string"
+    )
+    db_name: str = Field(
+        default="user-management", description="Name of the MongoDB database"
+    )
+    users_collection: str = Field(
+        default="users", description="Name of the MongoDB collection for users"
+    )
+    claims_collection: str = Field(
+        default="claims", description="Name of the MongoDB collection for claims"
+    )
+
+    dataset_deletion_event_topic: str = Field(
+        default="metadata_datasets",
+        description="the topic of the event announcing dataset deletions",
+    )
+    dataset_deletion_event_type: str = Field(
+        default="dataset_deleted",
+        description="the type of the event announcing dataset deletions",
+    )
 
 
 CONFIG = Config()  # pyright: ignore

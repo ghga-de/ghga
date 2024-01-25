@@ -124,10 +124,14 @@ class ClaimValidity(BaseDto):
     """Start and end dates for validating claims."""
 
     valid_from: UTCDatetime = Field(
-        ..., description="Start date of validity", examples=["2023-01-01T00:00:00Z"]
+        default=...,
+        description="Start date of validity",
+        examples=["2023-01-01T00:00:00Z"],
     )
     valid_until: UTCDatetime = Field(
-        ..., description="End date of validity", examples=["2023-12-31T23:59:59Z"]
+        default=...,
+        description="End date of validity",
+        examples=["2023-12-31T23:59:59Z"],
     )
 
     @field_validator("valid_until")
@@ -151,25 +155,25 @@ class ClaimCreation(ClaimValidity):
     )
 
     assertion_date: UTCDatetime = Field(
-        ...,
+        default=...,
         description="Date when the assertion was made",
         examples=["2022-11-30T12:00:00Z"],
     )
 
     source: HttpUrl = Field(
-        ..., description="Asserting organization", examples=["https://home.org"]
+        default=..., description="Asserting organization", examples=["https://home.org"]
     )  # organization making the assertion
     sub_source: Optional[HttpUrl] = Field(
-        None,
+        default=None,
         description="Asserting sub-organization",
         examples=["https://dac.home.org"],
     )  # e.g. DAC or Data Hub
     asserted_by: Optional[AuthorityLevel] = Field(
-        None, description="Authority level", examples=["so", "dac", "system"]
+        default=None, description="Authority level", examples=["so", "dac", "system"]
     )
 
     conditions: Optional[list[list[Condition]]] = Field(
-        None, description="Set of conditions"
+        default=None, description="Set of conditions"
     )  # nested list (first level OR, second level AND)
 
     @field_serializer("source", "sub_source", "visa_value")
@@ -185,7 +189,7 @@ class ClaimCreation(ClaimValidity):
 class ClaimUpdate(BaseDto):
     """A set of attributes that shall be updated in a claim."""
 
-    revocation_date: UTCDatetime = Field(..., description="Date of revocation")
+    revocation_date: UTCDatetime = Field(default=..., description="Date of revocation")
 
 
 class ClaimFullCreation(ClaimCreation):
@@ -196,10 +200,10 @@ class ClaimFullCreation(ClaimCreation):
     )
 
     creation_date: UTCDatetime = Field(
-        ..., description="Date of creation of this claim"
+        default=..., description="Date of creation of this claim"
     )
     revocation_date: Optional[UTCDatetime] = Field(
-        None, description="If revoked, date of revocation"
+        default=None, description="If revoked, date of revocation"
     )
 
 

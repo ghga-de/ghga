@@ -46,7 +46,7 @@ def test_is_valid_claim():
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.RESEARCHER_STATUS,
-        visa_value="https://home.org",  # type: ignore
+        visa_value="https://home.org",
         source="https://home.org",  # type: ignore
         assertion_date=utc_datetime(2022, 11, 1),
         valid_from=utc_datetime(2022, 11, 15),
@@ -70,7 +70,7 @@ def test_is_internal_claim():
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.GHGA_ROLE,
-        visa_value="data_steward@some.org",  # type: ignore
+        visa_value="data_steward@some.org",
         source=CONFIG.organization_url,
         assertion_date=utc_datetime(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,
@@ -106,7 +106,7 @@ def test_is_data_steward_claim():
         id="claim-id",
         user_id="user-id",
         visa_type=VisaType.GHGA_ROLE,
-        visa_value="data_steward@some.org",  # type: ignore
+        visa_value="data_steward@some.org",
         source=CONFIG.organization_url,
         assertion_date=utc_datetime(2022, 11, 1),
         asserted_by=AuthorityLevel.SYSTEM,

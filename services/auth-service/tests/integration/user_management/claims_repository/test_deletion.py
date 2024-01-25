@@ -81,8 +81,10 @@ async def test_deletion_handler(
         )
         await event_subscriber.run(forever=False)
         records = caplog.records
-        assert len(records) == 2, records
+        assert len(records) == 4, records
         messages = [record.message for record in records]
+        messages = [message for message in messages if "correlation" not in message]
+        assert len(messages) == 2, messages
         assert messages[0].startswith('Consuming event of type "dataset_deleted"')
         assert messages[1] == "Deleted 1 claims for dataset some-dataset-id"
         with raises(NoHitsFoundError):
@@ -93,7 +95,9 @@ async def test_deletion_handler(
             payload=payload, type_=event_type, topic=event_topic
         )
         await event_subscriber.run(forever=False)
-        assert len(records) == 2, records
+        assert len(records) == 4, records
         messages = [record.message for record in records]
+        messages = [message for message in messages if "correlation" not in message]
+        assert len(messages) == 2, messages
         assert messages[0].startswith('Consuming event of type "dataset_deleted"')
         assert messages[1] == "Deleted 0 claims for dataset some-dataset-id"

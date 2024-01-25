@@ -49,7 +49,7 @@ async def test_claim_creation(
     claim_data = ClaimFullCreation(
         user_id="some-internal-user-id",
         visa_type=VisaType.GHGA_ROLE,
-        visa_value="data-steward@ghga.de",  # type: ignore
+        visa_value="data-steward@ghga.de",
         assertion_date=utc_datetime(2022, 9, 1),
         valid_from=utc_datetime(2022, 10, 1),
         valid_until=utc_datetime(2022, 10, 31),

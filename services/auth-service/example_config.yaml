@@ -31,6 +31,7 @@ dataset_deletion_event_type: dataset_deleted
 db_name: user-management
 db_url: '**********'
 docs_url: /docs
+generate_correlation_id: true
 host: 0.0.0.0
 include_apis:
 - users
@@ -41,7 +42,8 @@ kafka_ssl_cafile: ''
 kafka_ssl_certfile: ''
 kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
-log_level: debug
+log_format: null
+log_level: DEBUG
 oidc_authority_url: https://proxy.aai.lifescience-ri.eu/
 oidc_client_id: ghga-data-portal
 oidc_userinfo_endpoint: https://proxy.aai.lifescience-ri.eu/OIDC/userinfo

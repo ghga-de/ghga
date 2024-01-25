@@ -17,6 +17,7 @@
 """Routes for managing users"""
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
@@ -73,8 +74,8 @@ INITIAL_USER_STATUS = UserStatus.ACTIVE
 )
 async def post_user(
     user_data: UserRegisteredData,
-    user_dao: UserDao = Depends(get_user_dao),
-    auth_context: AuthContext = require_auth,
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    auth_context: Annotated[AuthContext, require_auth],
 ) -> User:
     """Register a user"""
     ext_id = user_data.ext_id
@@ -126,13 +127,16 @@ async def post_user(
 )
 async def put_user(
     user_data: UserBasicData,
-    id_: str = Path(
-        ...,
-        alias="id",
-        description="Internal ID",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    auth_context: AuthContext = require_auth,
+    id_: Annotated[
+        str,
+        Path(
+            ...,
+            alias="id",
+            description="Internal ID",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    auth_context: Annotated[AuthContext, require_auth],
 ) -> Response:
     """Update a user"""
     # users can only update themselves,
@@ -178,13 +182,16 @@ async def put_user(
     status_code=200,
 )
 async def get_user(
-    id_: str = Path(
-        ...,
-        alias="id",
-        description="Internal ID or External (LS) ID",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    auth_context: AuthContext = require_auth,
+    id_: Annotated[
+        str,
+        Path(
+            ...,
+            alias="id",
+            description="Internal ID or External (LS) ID",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    auth_context: Annotated[AuthContext, require_auth],
 ) -> User:
     """Get user data"""
     # Only data steward can request other user accounts
@@ -233,13 +240,16 @@ async def get_user(
 )
 async def patch_user(
     user_data: UserModifiableData,
-    id_: str = Path(
-        ...,
-        alias="id",
-        description="Internal ID",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    auth_context: AuthContext = require_active,
+    id_: Annotated[
+        str,
+        Path(
+            ...,
+            alias="id",
+            description="Internal ID",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    auth_context: Annotated[AuthContext, require_active],
 ) -> Response:
     """Modify user data"""
     update_data = user_data.model_dump(exclude_unset=True)
@@ -296,13 +306,16 @@ async def patch_user(
     status_code=201,
 )
 async def delete_user(
-    id_: str = Path(
-        ...,
-        alias="id",
-        description="Internal ID",
-    ),
-    user_dao: UserDao = Depends(get_user_dao),
-    auth_context: AuthContext = require_steward,
+    id_: Annotated[
+        str,
+        Path(
+            ...,
+            alias="id",
+            description="Internal ID",
+        ),
+    ],
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    auth_context: Annotated[AuthContext, require_steward],
 ) -> Response:
     """Delete user"""
     if id_ == auth_context.id:
