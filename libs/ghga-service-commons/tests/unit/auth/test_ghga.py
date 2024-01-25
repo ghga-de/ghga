@@ -38,7 +38,7 @@ context_kwargs = {
 
 
 def test_create_auth_context():
-    """Test that a GHGA auth context can be crated."""
+    """Test that a GHGA auth context can be created."""
     context = AuthContext(**context_kwargs)  # type: ignore
     assert context.model_dump() == context.model_dump()
 
@@ -59,11 +59,12 @@ def test_has_role():
 
 
 def test_create_auth_config():
-    """Test that a GHGA auth config can be crated."""
+    """Test that a GHGA auth config can be created."""
     auth_key = generate_jwk().export(private_key=False)
     config = AuthConfig(auth_key=auth_key)  # pyright: ignore
     assert config.auth_algs == ["ES256"]
     assert config.auth_check_claims == {
+        "id": None,
         "name": None,
         "email": None,
         "iat": None,

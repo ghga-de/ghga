@@ -134,7 +134,7 @@ async def test_admin_context(jwt_auth):
 
 @mark.asyncio
 async def test_empty_token(jwt_auth):
-    """Test getting a auth context with empty token."""
+    """Test getting an auth context with empty token."""
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Empty token"
     with raises(expected_error, match=expected_message):
@@ -143,7 +143,7 @@ async def test_empty_token(jwt_auth):
 
 @mark.asyncio
 async def test_invalid_key(jwt_auth):
-    """Test getting a auth context with invalid signing key."""
+    """Test getting an auth context with invalid signing key."""
     token = create_token(modify=TokenModifier.BAD_KEY)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Verification failed"
@@ -153,7 +153,7 @@ async def test_invalid_key(jwt_auth):
 
 @mark.asyncio
 async def test_invalid_algorithm(jwt_auth):
-    """Test getting a auth context with invalid signature algorithm."""
+    """Test getting an auth context with invalid signature algorithm."""
     token = create_token(modify=TokenModifier.BAD_ALG)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: .*Algorithm not allowed"
@@ -163,7 +163,7 @@ async def test_invalid_algorithm(jwt_auth):
 
 @mark.asyncio
 async def test_corrupted_token(jwt_auth):
-    """Test getting a auth context with corrupted token."""
+    """Test getting an auth context with corrupted token."""
     token = create_token()
     last_chars = token[-3:]
     last_chars = "bar" if last_chars == "foo" else "foo"
@@ -186,7 +186,7 @@ async def test_expired_context(jwt_auth):
 
 @mark.asyncio
 async def test_missing_subject(jwt_auth):
-    """Test getting a auth context with missing claim."""
+    """Test getting an auth context with missing claim."""
     token = create_token(modify=TokenModifier.NO_SUB)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Claim sub is missing"
@@ -196,7 +196,7 @@ async def test_missing_subject(jwt_auth):
 
 @mark.asyncio
 async def test_invalid_subject(jwt_auth):
-    """Test getting a auth context with invalid claim."""
+    """Test getting an auth context with invalid claim."""
     token = create_token(modify=TokenModifier.BAD_SUB)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Claim .* not a String"
