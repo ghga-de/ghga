@@ -49,7 +49,7 @@ Then the MTS validates the metadata by making use of the GHGA Metadata Validator
 
 - If the validation passes, the prepared Submission JSON is sent back to the
 Data Submitter (1.2)
-- If the validation fails, then the Data Submitter is notified (1.2) along 
+- If the validation fails, then the Data Submitter is notified (1.2) along
 with the validation errors
 
 
