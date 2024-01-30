@@ -49,7 +49,8 @@ async def test_happy_retrieval(joint_fixture: JointFixture):  # noqa: F811
 )
 @pytest.mark.asyncio
 async def test_non_configured_value(
-    joint_fixture: JointFixture, value_name: str  # noqa: F811
+    joint_fixture: JointFixture,  # noqa: F811
+    value_name: str,
 ):
     """Test that we get an HTTP exception when requesting a non-configured value"""
     url = f"/values/{value_name}"

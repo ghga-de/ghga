@@ -2,3 +2,4 @@ crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
 wps_api_url: http://127.0.0.1
 dcs_api_url: http://127.0.0.1/download
 ucs_api_url: http://127.0.0.1/upload
+service_instance_id: "001"

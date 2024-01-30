@@ -16,6 +16,7 @@
 """Config Parameter Modeling and Parsing"""
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -35,7 +36,7 @@ class WellKnownConfig(BaseSettings):
 
 
 @config_from_yaml(prefix="wkvs")
-class Config(ApiConfigBase, WellKnownConfig):
+class Config(ApiConfigBase, WellKnownConfig, LoggingConfig):
     """Config parameters and their defaults."""
 
     service_name: str = "wkvs"

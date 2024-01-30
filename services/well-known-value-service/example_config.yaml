@@ -7,10 +7,13 @@ cors_allowed_origins: null
 crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
 dcs_api_url: http://127.0.0.1/download
 docs_url: /docs
+generate_correlation_id: true
 host: 127.0.0.1
-log_level: info
+log_format: null
+log_level: INFO
 openapi_url: /openapi.json
 port: 8080
+service_instance_id: '001'
 service_name: wkvs
 ucs_api_url: http://127.0.0.1/upload
 workers: 1

@@ -1,4 +1,3 @@
-
 [![tests](https://github.com/ghga-de/well-known-value-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/well-known-value-service/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/well-known-value-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/well-known-value-service?branch=main)
 
@@ -18,13 +17,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/well-known-value-service):
 ```bash
-docker pull ghga/well-known-value-service:1.0.1
+docker pull ghga/well-known-value-service:1.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/well-known-value-service:1.0.1 .
+docker build -t ghga/well-known-value-service:1.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -32,7 +31,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/well-known-value-service:1.0.1 --help
+docker run -p 8080:8080 ghga/well-known-value-service:1.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -49,6 +48,41 @@ wkvs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+
+- **`service_name`** *(string)*: Default: `"wkvs"`.
+
+- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
+
+
+  Examples:
+
+  ```json
+  "germany-bw-instance-001"
+  ```
+
+
+- **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  "%(timestamp)s - %(service)s - %(level)s - %(message)s"
+  ```
+
+
+  ```json
+  "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+  ```
+
+
 - **`crypt4gh_public_key`** *(string)*: The GHGA crypt4gh public key.
 
 - **`dcs_api_url`** *(string)*: URL to the root of the DRS-compatible DCS API.
@@ -60,8 +94,6 @@ The service requires the following configuration parameters:
 - **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
 - **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
-
-- **`log_level`** *(string)*: Controls the verbosity of the log. Must be one of: `["critical", "error", "warning", "info", "debug", "trace"]`. Default: `"info"`.
 
 - **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
@@ -151,7 +183,20 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`service_name`** *(string)*: Default: `"wkvs"`.
+- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+
+
+  Examples:
+
+  ```json
+  true
+  ```
+
+
+  ```json
+  false
+  ```
+
 
 
 ### Usage:
