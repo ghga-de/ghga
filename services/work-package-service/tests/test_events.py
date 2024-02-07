@@ -36,8 +36,11 @@ RETRY_INTERVAL = 0.05
 RETRIES = round(TIMEOUT / RETRY_INTERVAL)
 
 
-@mark.asyncio
-async def test_dataset_registration(consumer: Consumer):
+@mark.asyncio(scope="session")
+async def test_dataset_registration(
+    populate_db,
+    consumer: Consumer,
+):
     """Test the registration of a dataset announced as an event."""
     repository = consumer.work_package_repository
     dataset = await repository.get_dataset("some-dataset-id")
@@ -48,7 +51,7 @@ async def test_dataset_registration(consumer: Consumer):
         await repository.get_dataset("another-dataset-id")
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_dataset_insert_update_delete(
     config: Config, kafka_fixture: KafkaFixture, consumer: Consumer
 ):

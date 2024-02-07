@@ -1,8 +1,0 @@
-# requirements for development and testing this service
-
--r requirements-dev-common.in
-
-# additional requirements can be listed here
-pytest_asyncio>=0.21,<0.22
-pytest_httpx>=0.27.0
-testcontainers[kafka,mongo]>=3.7.1

@@ -21,6 +21,7 @@ db_connection_str: '**********'
 db_name: dev-db
 docs_url: /docs
 download_access_url: http://127.0.0.1:8080/download-access
+generate_correlation_id: true
 host: 127.0.0.1
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
@@ -29,7 +30,6 @@ kafka_ssl_cafile: ''
 kafka_ssl_certfile: ''
 kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
-log_level: info
 openapi_url: /openapi.json
 port: 8080
 service_instance_id: wps_1

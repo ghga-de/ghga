@@ -15,7 +15,6 @@
 
 """Fixtures that are used in both integration and unit tests"""
 
-import asyncio
 from collections.abc import AsyncGenerator
 from datetime import timedelta
 
@@ -26,7 +25,6 @@ from ghga_service_commons.utils.jwt_helpers import (
     sign_and_serialize_token,
 )
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest import fixture
@@ -38,7 +36,6 @@ from wps.core.repository import WorkPackageRepository
 from wps.inject import Consumer, prepare_consumer, prepare_rest_app
 
 from .access import AccessCheckMock
-from .datasets import DATASET_UPSERTION_EVENT
 
 __all__ = [
     "AUTH_CLAIMS",
@@ -97,7 +94,7 @@ def fixture_auth_context() -> AuthContext:
     return AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)  # pyright: ignore
 
 
-@async_fixture(name="config")
+@async_fixture(name="config", scope="session")
 async def fixture_config(
     kafka_fixture: KafkaFixture, mongodb_fixture: MongoDbFixture
 ) -> AsyncGenerator[Config, None]:
@@ -111,7 +108,7 @@ async def fixture_config(
     )
 
 
-@async_fixture(name="repository")
+@async_fixture(name="repository", scope="session")
 async def fixture_repository(
     config: Config, mongodb_fixture: MongoDbFixture
 ) -> WorkPackageRepository:
@@ -133,32 +130,18 @@ async def fixture_repository(
     )
 
 
-@async_fixture(name="consumer")
-async def fixture_consumer(
-    config: Config, kafka_fixture: KafkaFixture
-) -> AsyncGenerator[Consumer, None]:
+@async_fixture(name="consumer", scope="session")
+async def fixture_consumer(config: Config) -> AsyncGenerator[Consumer, None]:
     """Get test event subscriber for the work package service."""
-    # publish an event announcing a dataset
-    await kafka_fixture.publish_event(
-        payload=DATASET_UPSERTION_EVENT.model_dump(),
-        topic=config.dataset_change_event_topic,
-        type_=config.dataset_upsertion_event_type,
-        key="test-key-fixture",
-    )
     async with prepare_consumer(config=config) as consumer:
         # wait for event to be submitted and processed,
         # so that the database is populated with the published datasets
-        await asyncio.wait_for(consumer.event_subscriber.run(forever=False), timeout=10)
-        await asyncio.sleep(0.25)
         yield consumer
 
 
-@async_fixture(name="client")
-async def fixture_client(
-    config: Config, consumer: KafkaEventSubscriber
-) -> AsyncGenerator[AsyncTestClient, None]:
+@async_fixture(name="client", scope="session")
+async def fixture_client(config: Config) -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for the work package service."""
-    assert consumer  # we need the consumer only to populate the database
     async with prepare_rest_app(config=config) as app:
         async with AsyncTestClient(app=app) as client:
             yield client

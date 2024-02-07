@@ -46,7 +46,7 @@ CREATION_DATA = {
 TIMEOUT = 5
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
     response = await client.get("/health", timeout=TIMEOUT)
@@ -55,7 +55,7 @@ async def test_health_check(client: AsyncTestClient):
     assert response.json() == {"status": "OK"}
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_create_work_package_unauthorized(
     client: AsyncTestClient, bad_auth_headers: dict[str, str]
 ):
@@ -68,16 +68,19 @@ async def test_create_work_package_unauthorized(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_get_work_package_unauthorized(client: AsyncTestClient):
     """Test that getting a work package needs authorization."""
     response = await client.get("/work-packages/some-work-package-id")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_create_work_order_token(
-    client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
+    client: AsyncTestClient,
+    auth_headers: dict[str, str],
+    httpx_mock: HTTPXMock,
+    populate_db,
 ):
     """Test that work order tokens can be properly created."""
     # mock the access check for the test dataset
@@ -216,17 +219,16 @@ async def test_create_work_order_token(
     }
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_get_datasets_unauthenticated(client: AsyncTestClient):
     """Test that the list of accessible datasets cannot be fetched unauthenticated."""
     response = await client.get("/users/john-doe@ghga.de/datasets")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_get_datasets_for_another_user(
-    client: AsyncTestClient,
-    auth_headers: dict[str, str],
+    client: AsyncTestClient, auth_headers: dict[str, str]
 ):
     """Test that the list of accessible datasets for another user cannot be fetched."""
     response = await client.get(
@@ -235,9 +237,12 @@ async def test_get_datasets_for_another_user(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_get_datasets_when_none_authorized(
-    client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
+    client: AsyncTestClient,
+    auth_headers: dict[str, str],
+    httpx_mock: HTTPXMock,
+    populate_db,
 ):
     """Test that no datasets are fetched when none are accessible."""
     # mock the access check for the test dataset
@@ -260,9 +265,12 @@ async def test_get_datasets_when_none_authorized(
     assert response_data == []
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_get_datasets(
-    client: AsyncTestClient, auth_headers: dict[str, str], httpx_mock: HTTPXMock
+    client: AsyncTestClient,
+    auth_headers: dict[str, str],
+    httpx_mock: HTTPXMock,
+    populate_db,
 ):
     """Test that the list of accessible datasets can be fetched."""
     # mock the access check for the test dataset

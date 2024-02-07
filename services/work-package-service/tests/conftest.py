@@ -15,18 +15,44 @@
 #
 
 """Shared fixtures"""
+import asyncio
+from time import sleep
 
 import pytest
-from hexkit.providers.akafka.testutils import get_kafka_fixture
+from hexkit.providers.akafka.testutils import KafkaFixture, get_kafka_fixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture, get_mongodb_fixture
-from hexkit.providers.testing.utils import get_event_loop
 
-event_loop = get_event_loop("session")
+from tests.fixtures.datasets import DATASET_UPSERTION_EVENT
+
 kafka_fixture = get_kafka_fixture("session")
 mongodb_fixture = get_mongodb_fixture("session")
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="function")
 def reset_db(mongodb_fixture: MongoDbFixture):
     """Clear the database before tests."""
     mongodb_fixture.empty_collections()
+
+
+@pytest.fixture(scope="function")
+def populate_db(reset_db, consumer, config, kafka_fixture: KafkaFixture):
+    """Populate the database
+
+    Required for tests using the consumer or client fixtures.
+    """
+    loop = asyncio.get_event_loop()
+    # publish an event announcing a dataset
+    loop.run_until_complete(
+        kafka_fixture.publish_event(
+            payload=DATASET_UPSERTION_EVENT.model_dump(),
+            topic=config.dataset_change_event_topic,
+            type_=config.dataset_upsertion_event_type,
+            key="test-key-fixture",
+        )
+    )
+    # wait for event to be submitted and processed,
+    # so that the database is populated with the published datasets
+    loop.run_until_complete(
+        asyncio.wait_for(consumer.event_subscriber.run(forever=False), timeout=10)
+    )
+    sleep(0.25)

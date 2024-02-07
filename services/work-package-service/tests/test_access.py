@@ -27,7 +27,7 @@ from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
 DOWNLOAD_ACCESS_URL = "http://test-access:1234"
 
 
-@async_fixture(name="access_check")
+@async_fixture(name="access_check", scope="function")
 async def fixture_access_check() -> AsyncGenerator[AccessCheckAdapter, None]:
     """Get configured access test adapter."""
     config = AccessCheckConfig(download_access_url=DOWNLOAD_ACCESS_URL)

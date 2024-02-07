@@ -39,7 +39,7 @@ from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_work_package_and_token_creation(
     repository: WorkPackageRepository, auth_context: AuthContext
 ):
@@ -198,7 +198,7 @@ async def test_work_package_and_token_creation(
     }
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_checking_accessible_datasets(
     repository: WorkPackageRepository, auth_context: AuthContext
 ):
@@ -216,7 +216,7 @@ async def test_checking_accessible_datasets(
     assert await repository.get_datasets(auth_context=auth_context) == [DATASET]
 
 
-@mark.asyncio
+@mark.asyncio(scope="session")
 async def test_deletion_of_datasets(
     repository: WorkPackageRepository, auth_context: AuthContext
 ):
