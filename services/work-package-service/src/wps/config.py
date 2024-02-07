@@ -18,6 +18,7 @@
 from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 
@@ -25,8 +26,10 @@ from wps.adapters.inbound.event_sub import EventSubTranslatorConfig
 from wps.adapters.outbound.http import AccessCheckConfig
 from wps.core.repository import WorkPackageConfig
 
+SERVICE_NAME = "wps"
 
-@config_from_yaml(prefix="wps")
+
+@config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     ApiConfigBase,
     AuthConfig,
@@ -35,8 +38,9 @@ class Config(
     KafkaConfig,
     MongoDbConfig,
     WorkPackageConfig,
+    LoggingConfig,
 ):
     """Config parameters and their defaults."""
 
-    service_name: str = "wps"
+    service_name: str = SERVICE_NAME
     db_name: str = "work-packages"

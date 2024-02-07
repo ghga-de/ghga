@@ -30,6 +30,8 @@ kafka_ssl_cafile: ''
 kafka_ssl_certfile: ''
 kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
+log_format: null
+log_level: INFO
 openapi_url: /openapi.json
 port: 8080
 service_instance_id: wps_1

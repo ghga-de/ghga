@@ -16,6 +16,7 @@
 
 """KafkaEventSubscriber receiving events that announce datasets"""
 
+import logging
 from contextlib import suppress
 
 from ghga_event_schemas import pydantic_ as event_schemas
@@ -29,6 +30,8 @@ from wps.core.models import Dataset, DatasetFile, WorkType
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
 __all__ = ["EventSubTranslatorConfig", "EventSubTranslator"]
+
+log = logging.getLogger(__name__)
 
 
 class EventSubTranslatorConfig(BaseSettings):
@@ -83,6 +86,10 @@ class EventSubTranslator(EventSubscriberProtocol):
             stage = WorkType[validated_payload.stage.name]
         except KeyError:
             # stage does not correspond to a work type, ignore event
+            log.info(
+                "Ignoring dataset event with unknown stage %s",
+                validated_payload.stage.name,
+            )
             return
 
         files = [
