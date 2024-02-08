@@ -54,3 +54,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (44) [Common Wallaroo](./44-common-wallaroo/technical_specification.md): Choose frontend framework and component library
 - (45) [Topi Antelope](./45-topi-antelope/technical_specification.md): Structured Logging Tools
 - (46) [Sugar Ant](./46-sugar-ant/technical_specification.md): Integrate 2FA and IVA functionality
+- (47) [Bluestreak Cleaner Wrasse](./47-bluestreak-cleaner-wrasse/technical_specification.md): Automatically remove stale content from buckets
