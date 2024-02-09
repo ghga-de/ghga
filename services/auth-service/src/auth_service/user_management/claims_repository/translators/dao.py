@@ -17,6 +17,7 @@
 """Translation between general and claims specific DAOs."""
 
 from hexkit.protocols.dao import DaoFactoryProtocol
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 from ..models.dto import Claim as ClaimDto
@@ -29,7 +30,9 @@ __all__ = ["ClaimDaoFactory", "ClaimDaoFactoryConfig"]
 class ClaimDaoFactoryConfig(BaseSettings):
     """User claims DAO factory config parameters and their defaults."""
 
-    collection_name: str = "claims"
+    collection_name: str = Field(
+        default="claims", description="Name of the collection for user claims."
+    )
 
 
 class ClaimDaoFactory(ClaimDaoFactoryPort):

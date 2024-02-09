@@ -17,6 +17,7 @@
 """Translation between general and user specific DAOs."""
 
 from hexkit.protocols.dao import DaoFactoryProtocol
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 from ..models.dto import User as UserDto
@@ -29,7 +30,9 @@ __all__ = ["UserDaoFactory", "UserDaoFactoryConfig"]
 class UserDaoFactoryConfig(BaseSettings):
     """User DAO factory config parameters and their defaults."""
 
-    collection_name: str = "users"
+    collection_name: str = Field(
+        default="users", description="Name of the collection for users."
+    )
 
 
 class UserDaoFactory(UserDaoFactoryPort):

@@ -24,6 +24,7 @@ from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from pydantic import Field, HttpUrl, SecretStr
 
+from auth_service.auth_adapter.core.session_store import SessionConfig
 from auth_service.user_management.claims_repository.translators.akafka import (
     EventSubTranslatorConfig,
 )
@@ -33,7 +34,12 @@ SERVICE_NAME = "auth_service"
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
-    ApiConfigBase, AuthConfig, LoggingConfig, EventSubTranslatorConfig, KafkaConfig
+    ApiConfigBase,
+    AuthConfig,
+    SessionConfig,
+    LoggingConfig,
+    EventSubTranslatorConfig,
+    KafkaConfig,
 ):
     """Config parameters and their defaults."""
 

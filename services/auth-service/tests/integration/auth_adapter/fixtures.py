@@ -15,25 +15,26 @@
 
 """Fixtures for the auth adapter integration tests"""
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from importlib import reload
 from os import environ
 
-from fastapi.testclient import TestClient
+from ghga_service_commons.api.testing import AsyncTestClient
 from pytest import fixture
+from pytest_asyncio import fixture as async_fixture
 
 from auth_service import config
 from auth_service.auth_adapter.api import main
 
 
-@fixture(name="client")
-def fixture_client() -> Generator[TestClient, None, None]:
+@async_fixture(name="client")
+async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for the auth adapter"""
     environ["AUTH_SERVICE_ALLOW_READ_PATHS"] = '["/allowed/read/*", "/logo.png"]'
     environ["AUTH_SERVICE_ALLOW_WRITE_PATHS"] = '["/allowed/write/*"]'
     reload(config)
     reload(main)
-    with TestClient(main.app) as client:
+    async with AsyncTestClient(main.app) as client:
         yield client
     del environ["AUTH_SERVICE_ALLOW_READ_PATHS"]
     del environ["AUTH_SERVICE_ALLOW_WRITE_PATHS"]

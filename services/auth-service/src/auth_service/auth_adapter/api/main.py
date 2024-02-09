@@ -37,6 +37,7 @@ from auth_service.user_management.user_registry.deps import (
 
 from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import TokenValidationError, UserInfoError, exchange_token
+from ..deps import UserSession, UserSessionStore
 from .basic import basic_auth
 from .headers import get_bearer_token
 
@@ -80,6 +81,21 @@ def add_allowed_routes():
 
 
 add_allowed_routes()
+
+
+@app.post(
+    "/rpc/logout",
+    operation_id="logout",
+    tags=["users"],
+    summary="End user session",
+    description="Endpoint used when a user wants to log out.",
+    status_code=204,
+)
+async def logout(session_store: UserSessionStore, session: UserSession) -> Response:
+    """End the user session."""
+    if session:
+        await session_store.delete_session(session.session_id)
+    return Response(status_code=204)
 
 
 @app.api_route("/{path:path}", methods=ALL_METHODS)

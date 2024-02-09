@@ -20,9 +20,12 @@ from base64 import b64encode
 from typing import cast
 
 from fastapi import status
+from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from pytest import fixture
+from pytest import fixture, mark
+from pytest_httpx import HTTPXMock
 
+from auth_service.auth_adapter.api import main
 from auth_service.auth_adapter.api.headers import get_bearer_token
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
@@ -59,57 +62,64 @@ def non_mocked_hosts() -> list:
     return ["testserver"]
 
 
-def test_get_from_root(client):
+@mark.asyncio
+async def test_get_from_root(client: AsyncTestClient):
     """Test that a simple GET request passes."""
-    response = client.get("/")
+    response = await client.get("/")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
 
-def test_get_from_some_path(client):
+@mark.asyncio
+async def test_get_from_some_path(client: AsyncTestClient):
     """Test that a simple GET request passes."""
-    response = client.get("/some/path")
+    response = await client.get("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
 
-def test_get_from_some_path_with_query_parameters(client):
+@mark.asyncio
+async def test_get_from_some_path_with_query_parameters(client: AsyncTestClient):
     """Test that a simple GET request passes."""
-    response = client.get("/some/path?foo=1&bar=2")
+    response = await client.get("/some/path?foo=1&bar=2")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
 
-def test_patch_to_some_path(client):
+@mark.asyncio
+async def test_patch_to_some_path(client: AsyncTestClient):
     """Test that a PATCH request to a random path passes."""
-    response = client.patch("/some/path")
+    response = await client.patch("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
 
-def test_post_to_some_path(client):
+@mark.asyncio
+async def test_post_to_some_path(client: AsyncTestClient):
     """Test that a POST request to a random path passes."""
-    response = client.post("/some/path")
+    response = await client.post("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
 
-def test_delete_to_some_path(client):
+@mark.asyncio
+async def test_delete_to_some_path(client: AsyncTestClient):
     """Test that a DELETE request to a random path passes."""
-    response = client.delete("/some/path")
+    response = await client.delete("/some/path")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
 
-def test_basic_auth(with_basic_auth, client):
+@mark.asyncio
+async def test_basic_auth(with_basic_auth: str, client: AsyncTestClient):
     """Test that the root path can be protected with basic authentication."""
-    response = client.get("/")
+    response = await client.get("/")
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
@@ -117,7 +127,7 @@ def test_basic_auth(with_basic_auth, client):
 
     auth = b64encode(b"bad:credentials").decode("ASCII")
     auth = f"Basic {auth}"
-    response = client.get("/", headers={"Authorization": auth})
+    response = await client.get("/", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
@@ -125,17 +135,18 @@ def test_basic_auth(with_basic_auth, client):
 
     auth = b64encode(with_basic_auth.encode("UTF-8")).decode("ASCII")
     auth = f"Basic {auth}"
-    response = client.get("/", headers={"Authorization": auth})
+    response = await client.get("/", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
 
-def test_allowed_paths(with_basic_auth, client):
+@mark.asyncio
+async def test_allowed_paths(with_basic_auth: str, client: AsyncTestClient):
     """Test that allowed paths are excluded from authentication."""
     assert with_basic_auth
 
-    response = client.get(
+    response = await client.get(
         "/allowed/read/some/thing", headers={"Authorization": "Bearer foo"}
     )
     # access should be allowed without basic authentication
@@ -144,65 +155,67 @@ def test_allowed_paths(with_basic_auth, client):
     # and authorization headers should be passed through
     assert response.headers["Authorization"] == "Bearer foo"
 
-    response = client.head("/allowed/read/some/thing")
+    response = await client.head("/allowed/read/some/thing")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.options("/allowed/read/some/thing")
+    response = await client.options("/allowed/read/some/thing")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.post(
+    response = await client.post(
         "/allowed/write/some/thing", headers={"Authorization": "Bearer bar"}
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
     assert response.headers["Authorization"] == "Bearer bar"
 
-    response = client.patch("/allowed/write/some/thing")
+    response = await client.patch("/allowed/write/some/thing")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.delete("/allowed/write/some/thing")
+    response = await client.delete("/allowed/write/some/thing")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.post("/allowed/read/some/thing")
+    response = await client.post("/allowed/read/some/thing")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.text == "GHGA Data Portal: Not authenticated"
 
-    response = client.delete("/allowed/read/some/thing")
+    response = await client.delete("/allowed/read/some/thing")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    response = client.get("/allowed/write/some/thing")
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.text == "GHGA Data Portal: Not authenticated"
-
-    response = client.options("/allowed/write/some/thing")
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-    response = client.post("/not-allowed/some/thing")
+    response = await client.get("/allowed/write/some/thing")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.text == "GHGA Data Portal: Not authenticated"
 
+    response = await client.options("/allowed/write/some/thing")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-def test_basic_auth_service_logo(with_basic_auth, client):
+    response = await client.post("/not-allowed/some/thing")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.text == "GHGA Data Portal: Not authenticated"
+
+
+@mark.asyncio
+async def test_basic_auth_service_logo(with_basic_auth: str, client: AsyncTestClient):
     """Test that fetching the service logo is excluded from authentication."""
     assert with_basic_auth
 
-    response = client.get("/logo.png")
+    response = await client.get("/logo.png")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.head("/logo.png")
+    response = await client.head("/logo.png")
     assert response.status_code == status.HTTP_200_OK
 
-    response = client.get("/image.png")
+    response = await client.get("/image.png")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    response = client.head("/image.png")
+    response = await client.head("/image.png")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-def test_does_not_authorize_invalid_users(client):
+@mark.asyncio
+async def test_does_not_authorize_invalid_users(client: AsyncTestClient):
     """Test that unauthenticated or invalid users are not authorized."""
     # User without Authorization token
-    response = client.get("/some/path")
+    response = await client.get("/some/path")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
@@ -212,7 +225,7 @@ def test_does_not_authorize_invalid_users(client):
     assert "X-Authorization" not in headers
 
     # User with empty Authorization token
-    response = client.get("/some/path", headers={"Authorization": ""})
+    response = await client.get("/some/path", headers={"Authorization": ""})
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
@@ -222,7 +235,7 @@ def test_does_not_authorize_invalid_users(client):
     assert "X-Authorization" not in headers
 
     # User with non-bearer Authorization token
-    response = client.get("/some/path", headers={"Authorization": "Foo bar"})
+    response = await client.get("/some/path", headers={"Authorization": "Foo bar"})
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
@@ -232,7 +245,7 @@ def test_does_not_authorize_invalid_users(client):
     assert "X-Authorization" not in headers
 
     # User with empty bearer Authorization token
-    response = client.get("/some/path", headers={"Authorization": "Bearer"})
+    response = await client.get("/some/path", headers={"Authorization": "Bearer"})
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
 
@@ -242,7 +255,9 @@ def test_does_not_authorize_invalid_users(client):
     assert "X-Authorization" not in headers
 
     # User with invalid bearer Authorization token
-    response = client.get("/some/path", headers={"Authorization": "Bearer invalid"})
+    response = await client.get(
+        "/some/path", headers={"Authorization": "Bearer invalid"}
+    )
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid access token"}
@@ -252,8 +267,10 @@ def test_does_not_authorize_invalid_users(client):
     assert "X-Authorization" not in headers
 
     # User with invalid bearer X-Authorization token
-    response = client.get("/some/path", headers={"Authorization": "Bearer invalid"})
-    response = client.get(
+    response = await client.get(
+        "/some/path", headers={"Authorization": "Bearer invalid"}
+    )
+    response = await client.get(
         "/some/path",
         headers={"Authorization": "Basic invalid", "X-Authorization": "Bearer invalid"},
     )
@@ -266,17 +283,20 @@ def test_does_not_authorize_invalid_users(client):
     assert "X-Authorization" not in headers
 
 
-def test_token_exchange_for_unknown_user(client, httpx_mock):
+@mark.asyncio
+async def test_token_exchange_for_unknown_user(
+    client: AsyncTestClient, httpx_mock: HTTPXMock
+):
     """Test the token exchange for authenticated but unknown users."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     user_dao = DummyUserDao(ext_id="not.john@aai.org")
-    client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     auth = f"Bearer {create_access_token()}"
 
     # does not get internal token for GET request to random path
-    response = client.get("/some/path", headers={"Authorization": auth})
+    response = await client.get("/some/path", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -286,7 +306,7 @@ def test_token_exchange_for_unknown_user(client, httpx_mock):
     assert "X-Authorization" not in headers
 
     # does not get internal token for POST request to random path
-    response = client.post("/some/path", headers={"Authorization": auth})
+    response = await client.post("/some/path", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -296,7 +316,7 @@ def test_token_exchange_for_unknown_user(client, httpx_mock):
     assert "X-Authorization" not in headers
 
     # does not get internal token for GET request to users
-    response = client.get(USERS_PATH, headers={"Authorization": auth})
+    response = await client.get(USERS_PATH, headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -306,7 +326,7 @@ def test_token_exchange_for_unknown_user(client, httpx_mock):
     assert "X-Authorization" not in headers
 
     # does not get internal token for GET request to users with internal ID
-    response = client.get(
+    response = await client.get(
         f"{USERS_PATH}/some-internal-id", headers={"Authorization": auth}
     )
 
@@ -318,7 +338,7 @@ def test_token_exchange_for_unknown_user(client, httpx_mock):
     assert "X-Authorization" not in headers
 
     # gets internal token for GET request to users with external ID
-    response = client.get(
+    response = await client.get(
         f"{USERS_PATH}/someone@aai.org", headers={"Authorization": auth}
     )
 
@@ -345,7 +365,7 @@ def test_token_exchange_for_unknown_user(client, httpx_mock):
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
     # gets internal token for POST request to users
-    response = client.post(USERS_PATH, headers={"Authorization": auth})
+    response = await client.post(USERS_PATH, headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -370,12 +390,15 @@ def test_token_exchange_for_unknown_user(client, httpx_mock):
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
 
-def test_token_exchange_for_known_user(client, httpx_mock):
+@mark.asyncio
+async def test_token_exchange_for_known_user(
+    client: AsyncTestClient, httpx_mock: HTTPXMock
+):
     """Test the token exchange for authenticated and registered users."""
     user_dao: UserDao = cast(UserDao, DummyUserDao())
-    client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
     claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
-    client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
+    main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
     user = user_dao.user  # pyright: ignore
 
     assert user.status is UserStatus.ACTIVE
@@ -386,7 +409,7 @@ def test_token_exchange_for_known_user(client, httpx_mock):
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     auth = f"Bearer {create_access_token()}"
-    response = client.get("/some/path", headers={"Authorization": auth})
+    response = await client.get("/some/path", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -419,7 +442,7 @@ def test_token_exchange_for_known_user(client, httpx_mock):
     )
 
     auth = f"Bearer {create_access_token()}"
-    response = client.get("/some/path", headers={"Authorization": auth})
+    response = await client.get("/some/path", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -452,7 +475,7 @@ def test_token_exchange_for_known_user(client, httpx_mock):
     )
 
     auth = f"Bearer {create_access_token()}"
-    response = client.get("/some/path", headers={"Authorization": auth})
+    response = await client.get("/some/path", headers={"Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -485,17 +508,20 @@ def test_token_exchange_for_known_user(client, httpx_mock):
     assert user.status_change is None
 
 
-def test_token_exchange_with_x_token(client, httpx_mock):
+@mark.asyncio
+async def test_token_exchange_with_x_token(
+    client: AsyncTestClient, httpx_mock: HTTPXMock
+):
     """Test that the external access token can be passed in separate header."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     user_dao = DummyUserDao(ext_id="not.john@aai.org")
-    client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     auth = f"Bearer {create_access_token()}"
 
     # send access token to some path in X-Authorization header
-    response = client.get("/some/path", headers={"X-Authorization": auth})
+    response = await client.get("/some/path", headers={"X-Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -505,7 +531,7 @@ def test_token_exchange_with_x_token(client, httpx_mock):
     assert "X-Authorization" not in headers
 
     # send access token in POST request to users to get the internal token
-    response = client.post(USERS_PATH, headers={"X-Authorization": auth})
+    response = await client.post(USERS_PATH, headers={"X-Authorization": auth})
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {}
@@ -530,19 +556,22 @@ def test_token_exchange_with_x_token(client, httpx_mock):
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
 
 
-def test_token_exchange_for_known_data_steward(client, httpx_mock):
+@mark.asyncio
+async def test_token_exchange_for_known_data_steward(
+    client: AsyncTestClient, httpx_mock: HTTPXMock
+):
     """Test the token exchange for an authenticated data steward."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     # add a dummy user who is a data steward
     user_dao: UserDao = cast(UserDao, DummyUserDao(id_="james@ghga.de", title="Dr."))
-    client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
     claim_dao: ClaimDao = cast(ClaimDao, DummyClaimDao())
-    client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
+    main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
     user = user_dao.user  # pyright: ignore
 
     auth = f"Bearer {create_access_token()}"
-    response = client.get("/some/path", headers={"Authorization": auth})
+    response = await client.get("/some/path", headers={"Authorization": auth})
     assert response.status_code == status.HTTP_200_OK
 
     headers = response.headers

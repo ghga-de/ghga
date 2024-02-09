@@ -44,6 +44,7 @@ kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
 log_format: null
 log_level: DEBUG
+max_lifetime_seconds: 43200
 oidc_authority_url: https://proxy.aai.lifescience-ri.eu/
 oidc_client_id: ghga-data-portal
 oidc_userinfo_endpoint: https://proxy.aai.lifescience-ri.eu/OIDC/userinfo
@@ -53,5 +54,7 @@ port: 8080
 run_auth_adapter: false
 service_instance_id: '1'
 service_name: auth_service
+session_id_bytes: 24
+timeout_seconds: 3600
 users_collection: users
 workers: 1
