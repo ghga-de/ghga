@@ -1,0 +1,57 @@
+# Default values for mongodb-s3-backup.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: ghga/mongodb-s3-backup
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: 0.0.0-0d12d65e82f75915823ae146d420df99ca79258b
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+restartPolicy: Never
+schedule: "5 * * * *"
+
+# Are passed as environment variables to the Pod
+env_vars: 
+  S3CMD_BUCKET_LOCATION: eu-west-1
+  S3CMD_CHECK_SSL_CERTIFICATE: "True"
+  S3CMD_CHECK_SSL_HOSTNAME: "True"
+  S3CMD_GPG_COMMAND: /usr/bin/gpg
+  S3CMD_HOST_BASE: https://localstack:4566
+  S3CMD_HOST_BUCKET: https://localstack:4566/%(bucket)
+  S3CMD_PATH_PREFIX: backups/
+  S3CMD_BUCKET_NAME: backup-bucket
+  MONGODB_SERVICE_NAME: mongodb
