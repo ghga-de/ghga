@@ -25,11 +25,12 @@ from fixtures.config import Config
 from fixtures.connector import ConnectorFixture, connector_fixture
 from fixtures.dsk import DskFixture, dsk_fixture
 from fixtures.file import batch_file_fixture, file_fixture
-from fixtures.http import HttpClient, Response, http_fixture
+from fixtures.http_req import HttpClient, Response, http_fixture
 from fixtures.kafka import KafkaFixture, kafka_fixture
 from fixtures.mongo import MongoFixture, mongo_fixture
 from fixtures.s3 import S3Fixture, s3_fixture
 from fixtures.state import StateStorage, state_fixture
+from fixtures.vault import VaultFixture, vault_fixture
 
 __all__ = [
     "auth_fixture",
@@ -49,6 +50,7 @@ __all__ = [
     "JointFixture",
     "Response",
     "StateStorage",
+    "vault_fixture",
 ]
 
 event_loop = get_event_loop(scope="session")
@@ -66,6 +68,7 @@ class JointFixture(NamedTuple):
     dsk: DskFixture
     connector: ConnectorFixture
     state: StateStorage
+    vault: VaultFixture
 
 
 @fixture(name="config", scope="session")  # pyright: ignore
@@ -86,7 +89,10 @@ def joint_fixture(
     dsk: DskFixture,
     connector: ConnectorFixture,
     state: StateStorage,
+    vault: VaultFixture,
 ) -> JointFixture:
     """A fixture that collects all fixtures for integration testing."""
 
-    return JointFixture(config, http, kafka, mongo, s3, auth, dsk, connector, state)
+    return JointFixture(
+        config, http, kafka, mongo, s3, auth, dsk, connector, state, vault
+    )

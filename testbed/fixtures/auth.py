@@ -24,7 +24,7 @@ from jwcrypto import jwk
 from pytest import fixture
 
 from .config import Config
-from .http import HttpClient
+from .http_req import HttpClient
 
 __all__ = ["auth_fixture"]
 

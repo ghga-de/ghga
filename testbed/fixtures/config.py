@@ -161,6 +161,11 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     # dcs
     dcs_url: str = "http://dcs:8080"
 
+    # vault
+    vault_url: str = "http://vault:8200"
+    vault_token: str = "dev-token"
+    vault_path: str = "ekss"
+
     @model_validator(mode="after")
     def check_operation_modes(self):
         """Check that operation modes are not conflicting."""

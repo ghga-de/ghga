@@ -31,6 +31,7 @@ from fixtures import (  # noqa: RUF100
     Response,
     S3Fixture,
     StateStorage,
+    VaultFixture,
     auth_fixture,
     batch_file_fixture,
     config_fixture,
@@ -44,6 +45,7 @@ from fixtures import (  # noqa: RUF100
     mongo_fixture,
     s3_fixture,
     state_fixture,
+    vault_fixture,
 )
 from pytest_bdd import (  # noqa: RUF100
     given,

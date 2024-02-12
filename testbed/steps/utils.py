@@ -15,6 +15,7 @@
 
 """Utilities used in step functions"""
 
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -23,6 +24,7 @@ from fixtures.utils import calculate_checksum, write_data_to_yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig
 from ghga_datasteward_kit.loading import LoadConfig
 from hexkit.custom_types import JsonObject
+from hexkit.providers.s3.testutils import FileObject
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
 FILE_OVERVIEW_KEYS = {
@@ -161,3 +163,15 @@ def get_dataset_overview(content: dict) -> dict:
                 }
     simplified["files"] = files
     return simplified
+
+
+def get_secret_ids(file_metadata_dir: Path, file_objects: list[FileObject]) -> set[str]:
+    """Returns secret ids of the ingested files using their file metadata"""
+    secret_ids = set()
+    for file_object in file_objects:
+        metadata_file_path = file_metadata_dir / f"{file_object.object_id}.json"
+        secret_id = json.loads(metadata_file_path.read_text())[
+            "Symmetric file encryption secret ID"
+        ]
+        secret_ids.add(secret_id)
+    return secret_ids
