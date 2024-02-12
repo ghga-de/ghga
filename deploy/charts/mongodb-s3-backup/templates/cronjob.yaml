@@ -19,6 +19,7 @@ spec:
             {{- toYaml . | nindent 8 }}
           {{- end }}
         spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
           containers:
             - name: {{ .Chart.Name }}
               imagePullPolicy: {{ .Values.image.pullPolicy }} 

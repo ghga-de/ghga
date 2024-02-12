@@ -6,7 +6,7 @@ image:
   repository: ghga/mongodb-s3-backup
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: 0.0.0-0d12d65e82f75915823ae146d420df99ca79258b
+  tag: 0.0.0-a917c5042b56f0448552c6a02b5ce2f12eb8547a
 
 imagePullSecrets: []
 nameOverride: ""
@@ -55,3 +55,7 @@ env_vars:
   S3CMD_PATH_PREFIX: backups/
   S3CMD_BUCKET_NAME: backup-bucket
   MONGODB_SERVICE_NAME: mongodb
+
+serviceAccount:
+  enabled: true
+  name: mongodb-s3-backup
