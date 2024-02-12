@@ -59,3 +59,5 @@ env_vars:
 serviceAccount:
   enabled: true
   name: mongodb-s3-backup
+
+runCommands: /home/appuser/env_to_file.sh S3CMD_ ~/.s3cfg "[default]"; /home/appuser/run.sh
