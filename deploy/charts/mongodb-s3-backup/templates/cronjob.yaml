@@ -8,7 +8,7 @@ metadata:
     configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }} 
 spec:
   schedule: {{ .Values.schedule }}
-  successfulJobsHistoryLimit: 0 
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
   jobTemplate:
     spec:
       template:

@@ -42,7 +42,8 @@ resources: {}
   #   memory: 128Mi
 
 restartPolicy: Never
-schedule: "5 * * * *"
+schedule: "0 3 * * *"
+successfulJobsHistoryLimit: 5
 
 # Are passed as environment variables to the Pod
 env_vars: 
@@ -60,4 +61,4 @@ serviceAccount:
   enabled: true
   name: mongodb-s3-backup
 
-runCommands: /home/appuser/env_to_file.sh S3CMD_ ~/.s3cfg "[default]"; /home/appuser/run.sh
+runCommands: /home/appuser/run.sh
