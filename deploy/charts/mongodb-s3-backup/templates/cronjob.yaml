@@ -25,10 +25,6 @@ spec:
               imagePullPolicy: {{ .Values.image.pullPolicy }} 
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
               {{- include "ghga-common.command-args" (list .Values.runCommands )  | nindent 14 }}
-              ports:
-                - name: http
-                  containerPort: {{ .Values.service.port }}
-                  protocol: TCP
               envFrom:
                 - configMapRef:
                     name: {{ include "mongodb-s3-backup.fullname" . }}
