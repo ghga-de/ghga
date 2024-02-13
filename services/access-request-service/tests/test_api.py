@@ -165,11 +165,13 @@ async def test_create_access_request_unauthorized(
     # test without authentication
     response = await client.post("/access-requests", json=CREATION_DATA)
     assert response.status_code == 403
+
     # test with inactive user
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe_inactive
     )
     assert response.status_code == 403
+
     # test creating an access request for another user
     response = await client.post(
         "/access-requests",

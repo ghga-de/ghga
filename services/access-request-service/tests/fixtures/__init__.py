@@ -68,20 +68,6 @@ def headers_for_token(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-@fixture(name="auth_headers_doe")
-def fixture_auth_headers_doe() -> dict[str, str]:
-    """Get auth headers for a user requesting access"""
-    token = sign_and_serialize_token(AUTH_CLAIMS_DOE, AUTH_KEY_PAIR)
-    return headers_for_token(token)
-
-
-@fixture(name="auth_headers_steward")
-def fixture_auth_headers_steward() -> dict[str, str]:
-    """Get auth headers for a data steward granting access"""
-    token = sign_and_serialize_token(AUTH_CLAIMS_STEWARD, AUTH_KEY_PAIR)
-    return headers_for_token(token)
-
-
 @fixture(name="auth_headers_doe_inactive")
 def fixture_auth_headers_doe_inactive() -> dict[str, str]:
     """Get auth headers for an inactive user requesting access"""
@@ -95,6 +81,20 @@ def fixture_auth_headers_steward_inactive() -> dict[str, str]:
     """Get auth headers for an inactive data steward granting access"""
     claims_inactive = {**AUTH_CLAIMS_STEWARD, "status": "inactive"}
     token = sign_and_serialize_token(claims_inactive, AUTH_KEY_PAIR)
+    return headers_for_token(token)
+
+
+@fixture(name="auth_headers_doe")
+def fixture_auth_headers_doe() -> dict[str, str]:
+    """Get auth headers for a user requesting access"""
+    token = sign_and_serialize_token(AUTH_CLAIMS_DOE, AUTH_KEY_PAIR)
+    return headers_for_token(token)
+
+
+@fixture(name="auth_headers_steward")
+def fixture_auth_headers_steward() -> dict[str, str]:
+    """Get auth headers for a data steward granting access"""
+    token = sign_and_serialize_token(AUTH_CLAIMS_STEWARD, AUTH_KEY_PAIR)
     return headers_for_token(token)
 
 
