@@ -52,7 +52,8 @@ async def test_middleware(
     config = ApiConfigBase(generate_correlation_id=generate_correlation_id)  # type: ignore
     configure_app(app, config)
 
-    app.get("/")(lambda: "some response")  # dummy endpoint to get a 200 status code
+    # dummy endpoint to get a 200 status code
+    app.get("/")(lambda: "some response")
 
     async with AsyncTestClient(app=app) as rest_client:
         response = await rest_client.get(

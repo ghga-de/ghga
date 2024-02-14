@@ -67,7 +67,7 @@ class ApiConfigBase(BaseSettings):
     )
     workers: int = Field(1, description="Number of workers processes to run.")
     api_root_path: str = Field(
-        "/",
+        "",
         description=(
             "Root path at which the API is reachable."
             + " This is relative to the specified host and port."
