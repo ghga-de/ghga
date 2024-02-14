@@ -50,10 +50,67 @@ The Auth Adapter creates an auth session and tracks users as soon as they have l
 
 Instead of converting the OIDC access token to our internal auth token, the Auth Adapter should now convert the content of the user session into the internal auth token. The internal auth token will change a bit, as outlined in a section below.
 
-The Auth Adapter must also be extended with a mechanism that prevents "session riding" attacks, using the "Cookie-to-header token" method. Thereby, the first request that creates the session responds not only with the session cookie, but also with a "CSRF cookie" which must be a unique and unpredictable string, either as a random string or derived from the session token via HMAC and an application secret. Contrary to the session cookie, the CSRF cookie must not set the "HttpOnly" flag, because it must be read by JavaScript running in the frontend so that it can be passed in the request
-header as a CSRF token for each request to the backend. The Auth Adapter needs to compare the CSRF token with the unique string set in the CSRF cookie.
+The Auth Adapter must also be extended with a mechanism that prevents "session riding" attacks, using the "Cookie-to-header token" method. Thereby, the first request that creates the session responds not only with the session cookie, but also with a "CSRF cookie" which must be a unique and unpredictable string, either as a random string or derived from the session token via HMAC and an application secret. Contrary to the session cookie, the CSRF cookie must not set the "HttpOnly" flag, because it must be read by JavaScript running in the frontend so that it can be passed in the request header as a CSRF token for each request to the backend. The Auth Adapter needs to compare the CSRF token with the unique string set in the CSRF cookie.
+
+The following endpoints will be implemented in the Auth Adapter for managing sessions. These endpoints are not proxied by the API gateway, but respond directly back to the client.
+
+- `POST /rpc/login` - *creates or gets the user session*
+  - request body: empty
+  - auth header: optionally, the OIDC access token
+  - response status:
+    - `204 No Content`: session exists or has been created
+    - `401 Unauthorized`: invalid access token or CSRF code
+  - response header:
+    - `X-Session`: JSON-encoded client session object
+      (contains all properties that are relevant for the client)
+
+If a user session already exists, this endpoint simply returns the existing session. This is used to request the current session state by the frontend when the page is loaded. If no user session exists, the authorization header is inspected. If a valid OIDC access token is found, the user data is fetched from the userinfo endpoint of the OIDC provider. A new session is created based on that user information. Also, a CSRF token is created and added to the session. The session starts with the state `needs-registration` or higher depending on the state of user registration in the database. This is used after the user logged in via OIDC on the client.
+
+Note that this method does not return the status code `200 OK` because this cannot be directly passed back to the client via the ExtAuth protocol, since it would be interpreted as a successful authentication and the request would be proxied. Therefore, the response status code `204 No Content` is used and the session is passed back in the response header instead of the response body.
+
+- `POST /rpc/logout` - *removes the user session*
+  - request body: empty
+  - response status:
+    - `204 No Content`: session exists or has been created
+    - `401 Unauthorized`: already logged out or invalid CSRF code
+
+This endpoint simply removes the auth session that is tracked in the Auth Adapter, thereby effectively logging the user out.
+
+When an auth session already exists and any other request is made, the expiration date of the session should be automatically extended. The timeout for auth sessions and their maximum duration should be made configurable.
 
 See also: [ADR: user session management](https://github.com/ghga-de/adrs/blob/main/docs/adrs/adr004_user_session_management.md)
+
+### Session states
+
+The session should have a state attribute that can have the following values:
+
+- **none**
+  There is no session yet, or the user has logged out.
+  Set as default and via `POST /rpc/logout`.
+- **identified** (frontend only)
+  The user has logged in via LS Login. External ID, name and email are known.
+- **needs-registration**
+  The user still needs to register with GHGA.
+  Set via `POST /rpc/login`.
+- **needs-re-registration**
+  The user is registered, but needs to confirm a name or email change.
+  Set via `update_session()`.
+- **registered**
+  The user is registered with GHGA, but does not have a 2nd factor.
+  Set via `update_session()`.
+- **needs-totp-token** (frontend only)
+  The user needs to create a TOTP token in the next step.
+- **new-totp-token**
+  A TOTP token for the user was created, but is not yet confirmed by the user.
+  Set via `POST /totp-token`.
+- **has-totp-token**
+  The user has installed a TOTP token and it was confirmed to be working.
+- **lost-totp-token** (frontend only)
+- Set via `update_session()`.
+  The user indicated that the TOTP token was lost and needs to be re-generated.
+- **authenticated**
+  The user is fully authenticated with two factors.
+  Set via `POST /rpv/verify-totp`.
 
 ### TOTP Management
 
@@ -79,10 +136,6 @@ As a side effect of this endpoint, all existing IVAs associated with this user m
 
 The QR code should be created in the frontend, e.g. using `react-qr-code` or the `qr-code` web component. If during implementation there are any issues with this approach, it can alternatively also be created in the backend, e.g. using the `segno` library.
 
-- `OPTIONS /rpc/verify-token` - *checks the existence of a TOTP token*
-
-This endpoint first verifies that the user has a valid auth session, i.e. has been successfully logged in via LS Login and is a registered user. If this is the case, it then checks whether the user has already created an active TOTP token. A response HTTP header `Allow: OPTIONS, POST` is returned in this case or `Allow: OPTIONS` in all other cases. In any case an empty response with the HTTP status `204 No Content` will be returned (not `200 Ok` because that can not be returned using ExtAuth).
-
 - `POST /rpc/verify-totp` - *verifies a one-time password*
   - request body:
     - `user_id`: string (the registered User ID)
@@ -90,14 +143,7 @@ This endpoint first verifies that the user has a valid auth session, i.e. has be
 
 This endpoint first verifies that the user has a valid auth session, i.e. has been successfully logged in via LS Login. It then verifies that the session refers to an already registered user, and that the user has the same user ID as specified in the request body. Next, it verifies that this user has already created a TOTP token. Finally, it verifies the given one-time password in `totp` using the current time and a configurable time window. If all verification steps succeed, the token is activated, and the HTTP status `204 No Content` is send in an empty response. Otherwise, if the one-time password could be verified, it responds with the HTTP status `401 Unauthorized`.
 
-- `POST /rpc/logout` - *removes the user session*
-  - request body: empty
-
-This endpoint simply removes the auth session that is tracked in the Auth Adapter, thereby effectively logging the user out. Returns an empty response with the HTTPS status `204 No Content`.
-
-Note that none of these endpoints yields the HTTP status code `200 OK` so that the responses can be returned using the ExtAuth protocol. This particular status code could not be used here because it would indicate a successful authentication, i.e. the response would be ignored and the request would be passed on by the API gateway.
-
-The auth session should be created when the endpoint `GET /users/{ext_id}` is called with an external user ID in the path that corresponds to the access token from LS Login in the Authorization header. This endpoint is called by the frontend after the OIDC flow in order to check whether the user is already registered, and therefore indicates a user login. When an auth session already exists and any other request is made, the expiration date of the session should be automatically extended. The timeout for auth sessions and their maximum duration should be made configurable.
+Note again that these endpoints do not respond with the HTTP status code `200 OK` so that the responses are returned directly to the client.
 
 The application logic for the TOTP related endpoints should be implemented in the TOTP Management module. This module should also implement rate limiting and replay attack prevention.
 
@@ -199,17 +245,17 @@ The `PATCH /access-requests/{access_request_id}` endpoint that is used to allow 
 
 ### Internal Auth Token
 
-Until now, an internal auth token was created and passed by the Auth Adapter via the API gateway after the user was successfully authenticated via LS Login. The token contained an additional `status` enum (active, inactive, invalid). It could contain the internal or external user id in the fields `id` and `ext_id`.
+Until now, an internal auth token was created and passed by the Auth Adapter via the API gateway after the user was successfully authenticated via LS Login. The token contained an additional `state` enum (active, inactive, invalid). It could contain the internal or external user id in the fields `id` and `ext_id`.
 
 In the new implementation, we change the internal auth token as follows:
 
 The internal auth token will be only created and passed on by the Auth Adapter if the user is fully authenticated, i.e. logged in via LS Login and the second factor has been validated.
 
-The `status` field will be removed from the auth token. The existence of the token always implies that the user account is active and not invalid.
+The `state` field will be removed from the auth token. The existence of the token always implies that the user account is active and not invalid.
 
 The `ext_id` field will be removed from the auth token. There are only two exceptional cases where it is needed, and in theses cases it can be stored in the `id` field instead. The `id` field will also be made mandatory and required to be a non-empty string.
 
-There are only the following three exceptions where the auth token will be also added by the Auth Adapter if the user is only logged in via LS Login:
+There are only the following two exceptions where the auth token will be also added by the Auth Adapter if the user is only logged in via LS Login:
 
 - `POST /users`
   - used to self-register a user
@@ -218,9 +264,6 @@ There are only the following three exceptions where the auth token will be also 
    when requested by users to confirm a name an email change
   - the user must be already registered
   - the `id` field of the auth context will contain the internal id of the user, and it must correspond to the `user_id` in the path
-- `GET /users/{ext_id}`
-  - when requested by users to check their own registered data
-  - the `id` field of the auth context will contain the external id, not the internal id, and it must correspond to the `ext_id` in the path
 
 ### Service Commons Library
 
@@ -258,49 +301,37 @@ The `AccessRequest` model must be extended to also include an optional `iva_id` 
 
 ### Login Flow in the Frontend
 
-The frontend keeps the state of the current user in the session storage. The state in the frontend can be one of the following stages:
+The frontend keeps the state of the current user in the session storage. The state in the frontend can be in one of the stages already listed above.
 
-- `unauthenticated`
-- `identified` (logged in via LS Login)
-- `needs-registration`
-- `needs-reregistration`
-- `registered`
-- `needs-totp-token`
-- `lost-totp-token`
-- `has-totp-token`
-- `authenticated` (fully logged in with TOTP)
-
-The user starts in the state `unauthenticated`. Only when the last stage has been reached, the user is considered fully authenticated.
+The user starts with an empty client session (state is `null`). Only when the last stage of the two factor authentication process has been reached, the user is considered fully authenticated.
 
 To initiate the authentication process, the user must first log in via LS Login and the OIDC flow must have been completed, at the end of which the frontend receives an OIDC access token. After that, the state is moved to `identified`.
 
 Now let's assume the user is in the state `identified`.
 
-The frontend then requests the user data from the user management service using the `GET /users/{ext_id}` endpoint, passing the LS Login ID and the access token. On the backend side, this will create an auth session as side effect.
+The frontend then requests the user data from the user management service using the `POST /rpc/login` endpoint, passing the the OIDC access token. On the backend side, this will create an auth session, of which a view with the relevant fields is passed back to the frontend via the `X-Session` header.
 
-If the user is already registered, the frontend gets the internal user ID and the user info (particularly, the name and email) in the response, and the state is set to `registered`.
+The state from the backend is now used as frontend session state, and depending on the state, the user can be redirected to a different route.
 
 If the user is not yet registered, the state is set to `needs-registration` and the frontend asks the user to register.
 
-If the user info from LS Login does not match the registered user info, the user will not be considered valid by the backend, the state is set to `needs-reregistration`, and the frontend should show a message accordingly, asking the user to confirm and thereby re-register.
+If the user info from LS Login does not match the registered user info, the user will not be considered valid by the backend, the state is set to `needs-re-registration`, and the frontend should show a message accordingly, asking the user to confirm and thereby re-register.
 
 TODO: Should we send a notification to a data steward in this case, or maybe even invalidate existing TOTP tokens and IVAs?
 
-If the state is `needs-registration` or `needs-reregistration`, the user is requested to newly register or confirm the changed user data. Registration of users has already been implemented in the frontend and in the backend and does not need to be changed. After registration, the frontend also gets the user info from the backend and stores it in the session storage.
+If the state is `needs-registration` or `needs-re-registration`, the user is requested to newly register or confirm the changed user data. Registration of users has already been implemented in the frontend and in the backend and does not need to be changed. After registration, the frontend also gets the user info from the backend and stores it in the session storage.
 
- We now assume the user is in the state `registered`, and the frontend therefore knows the internal user ID and the user info by looking it up in the session storage. But it does not know yet know whether the user already created a TOTP token as second factor.
+If the session state is `registered`, the user will be shown the registered data (maye with an option to change them via re-registration) and informed that a second factor needs to be created. If the user confirms, the state progresses to `needs-totp-token`.
 
-Therefore, the frontend checks whether the user already created a TOTP token using the `OPTIONS /rpc/verify/totp-token` endpoint. If this returns "POST" as allowed method, the user is moved to the `has-totp-token` state, otherwise to the `needs-totp-token` state.
-
-Let's assume the user is in the `needs-totp-token` or `lost-totp-token` state. The frontend then uses the `POST /totp-token` endpoint to create a provisioning URI, whereby the `force` flag should be set if and only if the user is in the state `lost-totp-token`. The frontend then presents the returned URI in form of a QR code to the user and asks the user to scan the QR code using an authenticator app. It should also show a button or link to display the secret as text as fallback for manually entering the secret.
+The frontend then uses the `POST /totp-token` endpoint to create a provisioning URL, presents it in form of a QR code to the user and asks the user to scan the QR code using an authenticator app. It should also show a button or link to display the secret as text as fallback for manually entering the secret and as backup code.
 
 The frontend should recommend using Aegis (for Android) or 2FAS (for Android and iOS) as authenticator apps. The authenticators provided by Microsoft and Google (both are available for Android and iOS) can also be mentioned, since some users may already have them installed. However, the Google authenticator should not be explicitly recommended, since it does not require unlocking the phone and therefore is less secure. The also popular Authy should not be recommend at all, since it stores the secrets in the cloud and does not provide a means for the user to retrieve them, which makes it impossible to migrate them to another app.
 
 On the same page, the frontend also asks the user to enter the one-time password (six-digit code) shown in the authenticator app to validate the creation of the second factor in a text input field.
 
-Now let's assume the user is in the `has-totp-token` state. In that case, a similar text input field should be presented to the user, asking them to enter the one-time-password (six-digit code) shown in the authenticator app for authentication.
+If the session has the `has-totp-token` state, a similar text input field should be presented to the user, asking them to enter the one-time-password (six-digit code) shown in the authenticator app for authentication.
 
-The user is also shown a link that allows re-creating the second factor. This link can be used in the case they lost the phone with the authenticator app and do not have a backup of the secrets. Following the link, after a warning that all independent verification addresses will be invalidated, the user state should be set to `lost-topt-token`.
+The user is also shown a link that allows re-creating the second factor. This link can be used in the case they lost the phone with the authenticator app and do not have a backup of the secrets. Following the link, after a warning that all independent verification addresses will be invalidated, the user state should be set to `lost-topt-token`. In that case, the `POST /totp-token` endpoint should be called with the `force` flag to overwrite an existing TOTP token.
 
 When the user submits the one-time-password, the frontend uses the `POST /rpc/verify-totp` endpoint to check its validity.
 
@@ -331,7 +362,7 @@ For existing IVAs, their state and the number of bound datasets should be displa
 Each existing IVA in the state `unverified` should have a button "request verification". Each IVA in the state `code-transmitted` should have a button
 "enter verification code".
 
-After clicking "request verification", the state of the IVA should be moved from `unverified` to `code_requested`, a confirmation email should be sent to the user and a notification email sho0uld be sent to a data steward.
+After clicking "request verification", the state of the IVA should be moved from `unverified` to `code_requested`, a confirmation email should be sent to the user and a notification email should be sent to a data steward.
 
 After clicking "verify", the verification code should be requested from the user via an input field, and the state of the IVA should be moved from `code-transmitted` to `verified`. If this does not succeed, a corresponding error message must be shown to the user. After three failed attempts or when the verification code expired, users should be informed that they need to re-request the verification because the verification code expired.
 
