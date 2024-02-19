@@ -24,6 +24,13 @@ from pytest import fixture, mark, raises
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
 from auth_service.auth_adapter.core.session_store import Session, SessionConfig
 
+USER_KWARGS = dict(
+    user_id="some-user-id", user_name="John Doe", user_email="john@home.org"
+)
+USER2_KWARGS = dict(
+    user_id="another-user-id", user_name="Jane Roe", user_email="jane@home.org"
+)
+
 
 class MemorySessionStoreWithControlledTime(MemorySessionStore):
     """A memory session store with a fixed session creation time."""
@@ -64,7 +71,7 @@ def store():
 @mark.asyncio
 async def test_create_session(store):
     """Test creating a session."""
-    session = await store.create_session()
+    session = await store.create_session(**USER_KWARGS)
     assert await store.get_size() == 1
     assert isinstance(session, Session)
     assert session.session_id
@@ -74,31 +81,37 @@ async def test_create_session(store):
 
 
 @mark.asyncio
+async def test_create_session_with_session_id(store):
+    """Test that a session cannot be created with a given session ID."""
+    with raises(ValueError):
+        await store.create_session(session_id="some-session-id", **USER_KWARGS)
+
+
+@mark.asyncio
 async def test_create_session_with_bad_generator():
     """Test saving a session with a bad session generator."""
     bad_store = MemorySessionStoreWithBadIdGenerator(config=SessionConfig())
     for i in range(3):
-        session = await bad_store.create_session()
+        session = await bad_store.create_session(**USER_KWARGS)
         assert await bad_store.get_size() == i + 1
         assert isinstance(session, Session)
         assert session.session_id.startswith("id")
         assert session.created == session.last_used
 
     with raises(RuntimeError, match="Could not create a new session"):
-        session = await bad_store.create_session()
+        session = await bad_store.create_session(**USER_KWARGS)
     assert await bad_store.get_size() == 3
 
 
 @mark.asyncio
 async def test_save_session(store):
     """Test saving a session."""
-    session = store._create_session()
-    created = session.created
-    assert session.last_used == created
-    store.sleep(1)
-    assert store.now == session.created + timedelta(seconds=1)
+    session = store._create_session(**USER_KWARGS)
     await store.save_session(session)
-    assert session.created == created
+    assert session.user_id == USER_KWARGS["user_id"]
+    assert session.user_name == USER_KWARGS["user_name"]
+    assert session.user_email == USER_KWARGS["user_email"]
+    assert session.created == store.now
     assert session.last_used == store.now
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is session
@@ -107,20 +120,21 @@ async def test_save_session(store):
 @mark.asyncio
 async def test_update_session(store):
     """Test updating a session."""
-    session = await store.create_session()
+    session = await store.create_session(**USER_KWARGS)
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is session
-    assert session.user_id is None
-    session = session.model_copy(update={"user_id": "some-user-id"})
+    assert session.user_id == "some-user-id"
+    session = session.model_copy(update={"user_id": "another-user-id"})
     await store.save_session(session)
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is session
+    assert session.user_id == "another-user-id"
 
 
 @mark.asyncio
 async def test_get_session(store):
     """Test getting a session."""
-    session = await store.create_session()
+    session = await store.create_session(**USER_KWARGS)
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is session
 
@@ -128,10 +142,12 @@ async def test_get_session(store):
 @mark.asyncio
 async def test_get_invalid_session(store):
     """Test getting an invalid session."""
-    session = await store.create_session()
+    session = await store.create_session(**USER_KWARGS)
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is session
-    session.created -= timedelta(seconds=1.5 * store.config.max_lifetime_seconds)
+    session.created -= timedelta(
+        seconds=1.5 * store.config.session_max_lifetime_seconds
+    )
     assert await store.get_session(session.session_id) is None
     assert await store.get_size() == 0
 
@@ -139,7 +155,7 @@ async def test_get_invalid_session(store):
 @mark.asyncio
 async def test_delete_session(store):
     """Test deleting a session."""
-    session = await store.create_session()
+    session = await store.create_session(**USER_KWARGS)
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is not None
     await store.delete_session(session.session_id)
@@ -153,12 +169,12 @@ async def test_delete_session(store):
 @mark.asyncio
 async def test_crud_two_sessions(store):
     """Test creating, getting, updating and deleting two different sessions."""
-    session1 = await store.create_session()
-    session2 = await store.create_session()
+    session1 = await store.create_session(**USER_KWARGS)
+    session2 = await store.create_session(**USER2_KWARGS)
     assert await store.get_size() == 2
     assert await store.get_session(session1.session_id) is session1
     assert await store.get_session(session2.session_id) is session2
-    session3 = session2.model_copy(update={"name": "updated"})
+    session3 = session2.model_copy(update={"user_name": "Johanna Roe"})
     await store.save_session(session3)
     assert await store.get_size() == 2
     assert await store.get_session(session1.session_id) is session1
@@ -178,18 +194,25 @@ async def test_get_size(store):
     """Test determining the size of the session store."""
     assert await store.get_size() == 0
     for i in range(10):
-        await store.create_session()
+        await store.create_session(
+            user_id="some-user-id", user_name="John Doe", user_email="john@home.org"
+        )
         assert await store.get_size() == i + 1
 
 
 @mark.asyncio
 async def test_session_sweeper(store):
     """Test sweeping the session store."""
-    sessions = [await store.create_session() for _ in range(10)]
+    sessions = [
+        await store.create_session(
+            user_id="some-user-id", user_name="John Doe", user_email="john@home.org"
+        )
+        for _ in range(10)
+    ]
     assert await store.get_size() == 10
     await store.sweep()
     assert await store.get_size() == 10
-    long_time = timedelta(seconds=1.5 * store.config.max_lifetime_seconds)
+    long_time = timedelta(seconds=1.5 * store.config.session_max_lifetime_seconds)
     for i, session in enumerate(sessions):
         if i % 2:
             session.created -= long_time

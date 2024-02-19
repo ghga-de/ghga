@@ -4,7 +4,7 @@ allow_read_paths:
 - /service-logo.png
 allow_write_paths: []
 api_ext_path: /api/auth
-api_root_path: /
+api_root_path: ''
 auth_algs:
 - ES256
 auth_check_claims:
@@ -26,6 +26,7 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+csrf_token_bytes: 24
 dataset_deletion_event_topic: metadata_datasets
 dataset_deletion_event_type: dataset_deleted
 db_name: user-management
@@ -44,7 +45,6 @@ kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
 log_format: null
 log_level: DEBUG
-max_lifetime_seconds: 43200
 oidc_authority_url: https://proxy.aai.lifescience-ri.eu/
 oidc_client_id: ghga-data-portal
 oidc_userinfo_endpoint: https://proxy.aai.lifescience-ri.eu/OIDC/userinfo
@@ -55,6 +55,7 @@ run_auth_adapter: false
 service_instance_id: '1'
 service_name: auth_service
 session_id_bytes: 24
-timeout_seconds: 3600
+session_max_lifetime_seconds: 43200
+session_timeout_seconds: 3600
 users_collection: users
 workers: 1

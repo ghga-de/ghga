@@ -19,7 +19,7 @@
 import json
 import logging
 from functools import cached_property, lru_cache
-from typing import Any, Optional, Union
+from typing import Any, NamedTuple, Optional, Union
 from urllib.parse import urlparse
 
 import httpx
@@ -34,7 +34,7 @@ from auth_service.user_management.claims_repository.deps import ClaimDao
 from auth_service.user_management.user_registry.deps import Depends, UserDao
 from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
-__all__ = ["exchange_token", "jwt_config"]
+__all__ = ["exchange_token", "get_user_info", "jwt_config"]
 
 log = logging.getLogger(__name__)
 
@@ -383,3 +383,30 @@ def sign_and_encode_token(
         return token.serialize(compact=True)
     except (JWException, UnicodeEncodeError, KeyError, TypeError, ValueError) as exc:
         raise TokenSigningError(f"Could not sign token: {exc}") from exc
+
+
+class UserInfo(NamedTuple):
+    """A named tuple for OIDC userinfo claims."""
+
+    sub: str
+    name: str
+    email: str
+
+
+def get_user_info(access_token: Optional[str]):
+    """Get the user info from the OIDC access token.
+
+    Raises a UserInfoError in case the user info cannot be retrieved.
+    """
+    if not access_token:
+        raise UserInfoError("No access token provided")
+    try:
+        at_claims = decode_and_validate_token(access_token)
+    except TokenValidationError as error:
+        raise UserInfoError(f"Access token error: {error}") from error
+    _assert_at_claims_not_empty(at_claims)
+    ui_claims = fetch_user_info(access_token)
+    _assert_ui_claims_not_empty(ui_claims)
+    if ui_claims["sub"] != at_claims["sub"]:
+        raise UserInfoError("Subject in userinfo differs from access token")
+    return UserInfo(ui_claims["sub"], ui_claims["name"], ui_claims["email"])

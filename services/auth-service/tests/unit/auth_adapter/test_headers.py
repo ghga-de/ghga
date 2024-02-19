@@ -14,9 +14,14 @@
 # limitations under the License.
 #
 
-"""Unit tests for the auth adapter API"""
+"""Unit tests for the request and response header utilities."""
 
-from auth_service.auth_adapter.api.headers import get_bearer_token
+from ghga_service_commons.utils.utc_dates import now_as_utc
+
+from auth_service.auth_adapter.api.headers import get_bearer_token, session_to_header
+from auth_service.auth_adapter.core.session_store import Session
+
+NOW = now_as_utc()
 
 
 def test_get_bearer_token_no_headers():
@@ -46,3 +51,37 @@ def test_get_bearer_token_multiple_header():
     assert get_bearer_token("Bearer foo-bar", None) == "foo-bar"
     assert get_bearer_token("Bearer foo-bar", "Basic foo:bar") == "foo-bar"
     assert get_bearer_token("Basic foo:bar", "Bearer foo-bar") == "foo-bar"
+
+
+def test_session_to_header_ascii():
+    """Test that a session with ascii values is properly converted to a header."""
+    session = Session(
+        session_id="some-session-id",
+        user_id="some-user-id",
+        user_name="John Doe",
+        user_email="john@home.org",
+        csrf_token="some-csrf-token",
+        created=NOW,
+        last_used=NOW,
+    )
+    assert session_to_header(session) == (
+        '{"userId":"some-user-id","name":"John Doe","email":"john@home.org",'
+        '"state":"NeedsRegistration","csrf":"some-csrf-token"}'
+    )
+
+
+def test_session_to_header_non_ascii():
+    """Test that a session with non-ascii values is properly converted to a header."""
+    session = Session(
+        session_id="a-session-id",
+        user_id="a-user-id",
+        user_name="Svante Pääbo",
+        user_email="svante@home.se",
+        csrf_token="a-csrf-token",
+        created=NOW,
+        last_used=NOW,
+    )
+    assert session_to_header(session) == (
+        '{"userId":"a-user-id","name":"Svante Pääbo","email":"svante@home.se",'
+        '"state":"NeedsRegistration","csrf":"a-csrf-token"}'
+    )

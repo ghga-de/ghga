@@ -118,17 +118,23 @@
     },
     "session_id_bytes": {
       "default": 24,
-      "description": "Number of bytes to be used for the session ID.",
+      "description": "Number of bytes to be used for a session ID.",
       "title": "Session ID size",
       "type": "integer"
     },
-    "timeout_seconds": {
+    "csrf_token_bytes": {
+      "default": 24,
+      "description": "Number of bytes to be used for a CSRF token.",
+      "title": "CSRF token size",
+      "type": "integer"
+    },
+    "session_timeout_seconds": {
       "default": 3600,
       "description": "Session timeout in seconds",
       "title": "Session timeout",
       "type": "integer"
     },
-    "max_lifetime_seconds": {
+    "session_max_lifetime_seconds": {
       "default": 43200,
       "description": "Maximum lifetime of a session in seconds",
       "title": "Max. session duration",
@@ -203,7 +209,7 @@
       "type": "integer"
     },
     "api_root_path": {
-      "default": "/",
+      "default": "",
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "title": "Api Root Path",
       "type": "string"

@@ -33,23 +33,51 @@
 """Managing user sessions that keep track of authentication state."""
 
 import secrets
+from enum import Enum
 from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
-from pydantic import Field
+from pydantic import EmailStr, Field
 from pydantic_settings import BaseSettings
 
+from auth_service.user_management.user_registry.models.dto import User
+
 from ..ports.session_store import BaseSession, SessionStorePort
+
+
+class SessionState(str, Enum):
+    """The state of a user session."""
+
+    NEEDS_REGISTRATION = "NeedsRegistration"
+    NEEDS_RE_REGISTRATION = "NeedsReRegistration"
+    REGISTERED = "Registered"
+    NEW_TOTP_TOKEN = "NewTotpToken"  # noqa: S105
+    HAS_TOTP_TOKEN = "HasTotpToken"  # noqa: S105
+    AUTHENTICATED = "Authenticated"
 
 
 class Session(BaseSession):
     """Model for storing user sessions."""
 
-    user_id: Optional[str] = Field(
-        default=None, description="the internal ID of the associated user"
+    user_id: str = Field(
+        default=...,
+        description="internal ID of the associated user,"
+        " or external ID if the user is not registered yet",
     )
-    created: UTCDatetime = Field(description="Time when the session was created")
-    last_used: UTCDatetime = Field(description="Time when the session was last used")
+    user_name: str = Field(default=..., description="the full name of the user")
+    user_email: EmailStr = Field(
+        default=..., description="the email address of the user"
+    )
+    user_title: Optional[str] = Field(
+        default=None, description="optional academic title of the user"
+    )
+    state: SessionState = Field(
+        default=SessionState.NEEDS_REGISTRATION,
+        description="the authentication state of the user session",
+    )
+    csrf_token: str = Field(default=..., description="the CSRF token for the session")
+    created: UTCDatetime = Field(description="time when the session was created")
+    last_used: UTCDatetime = Field(description="time when the session was last used")
 
 
 class SessionConfig(BaseSettings):
@@ -58,14 +86,19 @@ class SessionConfig(BaseSettings):
     session_id_bytes: int = Field(
         default=24,
         title="Session ID size",
-        description="Number of bytes to be used for the session ID.",
+        description="Number of bytes to be used for a session ID.",
     )
-    timeout_seconds: int = Field(
+    csrf_token_bytes: int = Field(
+        default=24,
+        title="CSRF token size",
+        description="Number of bytes to be used for a CSRF token.",
+    )
+    session_timeout_seconds: int = Field(
         default=1 * 60 * 60,
         title="Session timeout",
         description="Session timeout in seconds",
     )
-    max_lifetime_seconds: int = Field(
+    session_max_lifetime_seconds: int = Field(
         default=12 * 60 * 60,
         title="Max. session duration",
         description="Maximum lifetime of a session in seconds",
@@ -94,17 +127,74 @@ class SessionStore(SessionStorePort[Session]):
         """Generate a random session ID."""
         return secrets.token_urlsafe(self.config.session_id_bytes)
 
-    def _create_session(self) -> Session:
-        """Create a new session without saving it."""
+    def _generate_csrf_token(self) -> str:
+        """Generate a random CSRF token."""
+        return secrets.token_urlsafe(self.config.csrf_token_bytes)
+
+    def _create_session(
+        self,
+        user_id: str,
+        user_name: str,
+        user_email: str,
+        user_title: Optional[str] = None,
+    ) -> Session:
+        """Create a new user session without saving it."""
         session_id = self._generate_session_id()
+        csrf_token = self._generate_csrf_token()
         created = self._now()
-        return Session(session_id=session_id, created=created, last_used=created)
+        return Session(
+            session_id=session_id,
+            user_id=user_id,
+            user_name=user_name,
+            user_email=user_email,
+            user_title=user_title,
+            csrf_token=csrf_token,
+            created=created,
+            last_used=created,
+        )
 
     def _validate_session(self, session: Session) -> bool:
         """Validate a session."""
         config = self.config
         now = self._now()
         return (
-            0 <= (now - session.created).seconds < config.max_lifetime_seconds
-            and 0 <= (now - session.last_used).seconds < config.timeout_seconds
+            0 <= (now - session.created).seconds < config.session_max_lifetime_seconds
+            and 0 <= (now - session.last_used).seconds < config.session_timeout_seconds
         )
+
+    @staticmethod
+    def _check_re_registration(session: Session, user: User) -> bool:
+        """Check if the user needs to re-register."""
+        return (
+            not user
+            or session.user_id != user.id
+            or session.user_name != user.name
+            or session.user_email != user.email
+        )
+
+    @staticmethod
+    def _check_has_totp_token(user: User) -> bool:
+        """Check if the user has a TOTP token."""
+        return "2nd" in user.name  # TODO: dummy-code, change for real implementation!
+
+    async def _update_session(
+        self, session: Session, user: Optional[User] = None
+    ) -> None:
+        """Update the given user session."""
+        if user is not None:
+            if session.state is SessionState.NEEDS_REGISTRATION:
+                session.user_id = user.id
+                session.state = SessionState.NEEDS_RE_REGISTRATION
+            if (
+                session.state is SessionState.NEEDS_RE_REGISTRATION
+                and not self._check_re_registration(session, user)
+            ):
+                session.user_name = user.name
+                session.user_email = user.email
+                session.user_title = user.title
+                session.state = SessionState.REGISTERED
+            if session.state is SessionState.REGISTERED and self._check_has_totp_token(
+                user
+            ):
+                session.state = SessionState.HAS_TOTP_TOKEN
+        session.last_used = self._now()

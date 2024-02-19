@@ -38,7 +38,7 @@ def test_add_non_existing_data_steward(caplog):
             add_as_data_stewards=[
                 {
                     "name": "John Doe",
-                    "email": "doe@home.org",
+                    "email": "john@home.org",
                     "ext_id": "id-of-john-doe@ls.org",
                 },
                 "id-of-jane-roe@ls.org",
@@ -69,7 +69,7 @@ def test_add_non_existing_data_steward(caplog):
     assert len(users) == 1
     user = users[0]
     assert user["name"] == "John Doe"
-    assert user["email"] == "doe@home.org"
+    assert user["email"] == "john@home.org"
     assert user["title"] is None
     assert user["ext_id"] == "id-of-john-doe@ls.org"
     assert user["status"] == "active"

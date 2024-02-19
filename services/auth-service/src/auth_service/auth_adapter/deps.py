@@ -43,12 +43,10 @@ async def get_session_store(
 
 async def get_session(
     store: Annotated[SessionStorePort[Session], Depends(get_session_store)],
-    ghga_data_portal_sid: Annotated[Optional[str], Cookie()] = None,
+    session: Annotated[Optional[str], Cookie()] = None,
 ) -> Optional[Session]:
     """Get the current session."""
-    return (
-        await store.get_session(ghga_data_portal_sid) if ghga_data_portal_sid else None
-    )
+    return await store.get_session(session) if session else None
 
 
 UserSessionStore = Annotated[SessionStorePort[Session], Depends(get_session_store)]

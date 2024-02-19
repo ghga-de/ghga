@@ -332,7 +332,7 @@ def test_check_download_access(client_with_db):
     # post valid access permission for some-dataset-id
 
     claim_data: dict[str, Any] = DATASET_CLAIM_DATA.copy()
-    current_timestamp = now_as_utc().timestamp()
+    current_timestamp = int(now_as_utc().timestamp())
     claim_data["valid_from"] = current_timestamp
     claim_data["valid_until"] = current_timestamp + 60
 
@@ -407,7 +407,7 @@ def test_get_datasets_with_download_access(client_with_db):
     # post valid access permission for some-dataset-id
 
     claim_data: dict[str, Any] = DATASET_CLAIM_DATA.copy()
-    current_timestamp = now_as_utc().timestamp()
+    current_timestamp = int(now_as_utc().timestamp())
     claim_data["valid_from"] = current_timestamp
     claim_data["valid_until"] = current_timestamp + 60
 

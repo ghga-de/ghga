@@ -15,9 +15,12 @@
 
 """Manage request and response headers"""
 
+import json
 from typing import Optional
 
-__all__ = ["get_bearer_token"]
+from ..core.session_store import Session
+
+__all__ = ["get_bearer_token", "session_to_header"]
 
 
 def get_bearer_token(*header_values: Optional[str]) -> Optional[str]:
@@ -32,3 +35,17 @@ def get_bearer_token(*header_values: Optional[str]) -> Optional[str]:
         if header_value and header_value.startswith("Bearer "):
             return header_value.removeprefix("Bearer ")
     return None
+
+
+def session_to_header(session: Session) -> str:
+    """Serialize a session to a response header value to be used by the frontend."""
+    session_dict = {
+        "userId": session.user_id,
+        "name": session.user_name,
+        "email": session.user_email,
+        "state": session.state.value,
+        "csrf": session.csrf_token,
+    }
+    if session.user_title:
+        session_dict["title"] = session.user_title
+    return json.dumps(session_dict, ensure_ascii=False, separators=(",", ":"))

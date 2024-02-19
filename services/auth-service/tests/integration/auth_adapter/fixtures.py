@@ -23,13 +23,13 @@ from ghga_service_commons.api.testing import AsyncTestClient
 from pytest import fixture
 from pytest_asyncio import fixture as async_fixture
 
-from auth_service import config
-from auth_service.auth_adapter.api import main
-
 
 @async_fixture(name="client")
 async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for the auth adapter"""
+    from auth_service import config
+    from auth_service.auth_adapter.api import main
+
     environ["AUTH_SERVICE_ALLOW_READ_PATHS"] = '["/allowed/read/*", "/logo.png"]'
     environ["AUTH_SERVICE_ALLOW_WRITE_PATHS"] = '["/allowed/write/*"]'
     reload(config)
@@ -45,6 +45,9 @@ async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
 @fixture(name="with_basic_auth")
 def fixture_with_basic_auth() -> Generator[str, None, None]:
     """Run test with Basic authentication"""
+    from auth_service import config
+    from auth_service.auth_adapter.api import main
+
     user, pwd = "testuser", "testpwd"
     credentials = f"{user}:{pwd}"
     environ["AUTH_SERVICE_BASIC_AUTH_CREDENTIALS"] = credentials

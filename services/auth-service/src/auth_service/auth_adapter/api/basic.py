@@ -23,7 +23,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from ...config import Config
 
-__all__ = ["basic_auth"]
+__all__ = ["get_basic_auth_dependency"]
 
 
 def get_allowed_credentials(config: Config) -> list[HTTPBasicCredentials]:
@@ -47,8 +47,8 @@ def get_allowed_credentials(config: Config) -> list[HTTPBasicCredentials]:
     return allowed_credentials
 
 
-def basic_auth(app: FastAPI, config: Config):
-    """Inject Basic authentication if this is configured."""
+def get_basic_auth_dependency(app: FastAPI, config: Config):
+    """Get dependency for Basic authentication if this is configured."""
     allowed_credentials = get_allowed_credentials(config)
     if not allowed_credentials:
         return None
