@@ -1,17 +1,15 @@
 [build-system]
-requires = ["setuptools>=67.7.2"]
+requires = [
+    "setuptools>=67.7.2",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "schemapack"
-version = "1.0.0"
-description = "Make your JSON Schemas sociable and create linked data model."
 readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
 requires-python = ">=3.9"
-license = { text = "Apache 2.0" }
 classifiers = [
     "Development Status :: 1 - Planning",
     "Operating System :: POSIX :: Linux",
@@ -23,6 +21,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
+name = "schemapack"
+version = "1.0.0"
+description = "Make your JSON Schemas sociable and create linked data model."
 dependencies = [
     "pydantic >=2, <3",
     "pydantic_settings >=2, <3",
@@ -31,5 +32,121 @@ dependencies = [
     "immutabledict >=3.0.0, <4",
 ]
 
+[project.license]
+text = "Apache 2.0"
+
+[project.urls]
+Repository = "https://github.com/ghga-de/schemapack"
+
 [tool.setuptools.packages.find]
-where = ["src"]
+where = [
+    "src",
+]
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".devcontainer",
+    "__pycache__",
+    "build",
+    "dist",
+]
+line-length = 88
+src = [
+    "src",
+    "tests",
+    "examples",
+    "scripts",
+]
+target-version = "py39"
+
+[tool.ruff.lint]
+fixable = [
+    "UP",
+    "I",
+    "D",
+]
+ignore = [
+    "E",
+    "W",
+    "PLW",
+    "RUF001",
+    "RUF010",
+    "RUF012",
+    "N818",
+    "B008",
+    "PLR2004",
+    "D205",
+    "D400",
+    "D401",
+    "D107",
+    "D206",
+    "D300",
+]
+select = [
+    "C90",
+    "F",
+    "I",
+    "S",
+    "B",
+    "N",
+    "UP",
+    "PL",
+    "RUF",
+    "SIM",
+    "D",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = [
+    "PL",
+    "S",
+    "SIM",
+    "D",
+]
+"tests/*" = [
+    "S",
+    "SIM",
+    "PLR",
+    "B011",
+]
+".devcontainer/*" = [
+    "S",
+    "SIM",
+    "D",
+]
+"examples/*" = [
+    "S",
+    "D",
+]
+"__init__.py" = [
+    "D",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+disable_error_code = "import"
+show_error_codes = true
+exclude = [
+    "build/lib/",
+]
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+no_site_packages = false
+
+[tool.pytest.ini_options]
+minversion = "7.1"
+asyncio_mode = "strict"
+
+[tool.coverage.paths]
+source = [
+    "src",
+    "/workspace/src",
+    "**/lib/python*/site-packages",
+]
