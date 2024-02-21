@@ -85,3 +85,22 @@ def test_session_to_header_non_ascii():
         '{"userId":"a-user-id","name":"Svante Pääbo","email":"svante@home.se",'
         '"state":"NeedsRegistration","csrf":"a-csrf-token"}'
     )
+
+
+def test_session_to_header_with_optional_properties():
+    """Test that the optional properties of a session can also be converted."""
+    session = Session(
+        session_id="some-session-id",
+        user_id="some-user-id",
+        user_name="John Doe",
+        user_email="john@home.org",
+        user_title="Dr.",
+        csrf_token="some-csrf-token",
+        created=NOW,
+        last_used=NOW,
+    )
+    assert session_to_header(session, lambda _session: (42, 144)) == (
+        '{"userId":"some-user-id","name":"John Doe","email":"john@home.org",'
+        '"state":"NeedsRegistration","csrf":"some-csrf-token",'
+        '"title":"Dr.","timeout":42,"extends":144}'
+    )

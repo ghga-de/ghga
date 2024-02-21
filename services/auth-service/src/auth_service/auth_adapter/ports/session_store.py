@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Managing user sessions that keep track of authentication state."""
+"""Port for managing user sessions that keep track of authentication state."""
 
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Optional, TypeVar
@@ -77,4 +77,9 @@ class SessionStorePort(ABC, Generic[T]):
     @abstractmethod
     async def sweep(self) -> None:
         """Remove all invalid sessions from the store."""
+        ...
+
+    @abstractmethod
+    def timeouts(self, session: T) -> tuple[int, int]:
+        """Get the soft and hard expiration times of the given session in seconds."""
         ...

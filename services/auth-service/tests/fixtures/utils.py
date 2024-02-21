@@ -16,6 +16,7 @@
 """Utils for testing"""
 
 import json
+import re
 from collections.abc import AsyncIterator, Mapping
 from datetime import timedelta
 from pathlib import Path
@@ -28,6 +29,7 @@ from hexkit.config import config_from_yaml
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
 
+from auth_service.auth_adapter.core.session_store import Session
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.models.dto import (
     AuthorityLevel,
@@ -37,6 +39,14 @@ from auth_service.user_management.claims_repository.models.dto import (
 from auth_service.user_management.user_registry.models.dto import User
 
 BASE_DIR = Path(__file__).parent.resolve()
+
+RE_USER_INFO_URL = re.compile(".*/userinfo$")
+
+USER_INFO = {
+    "name": "John Doe",
+    "email": "john@home.org",
+    "sub": "john@aai.org",
+}
 
 
 @config_from_yaml(prefix="test_auth_service")
@@ -175,6 +185,14 @@ def get_claims_from_token(token: str, key: Optional[jwk.JWK] = None) -> dict[str
     claims = json.loads(jwt.JWT(jwt=token, key=key).claims)
     assert isinstance(claims, dict)
     return claims
+
+
+def headers_for_session(session: Session) -> dict[str, str]:
+    """Get proper headers for the given session."""
+    return {
+        "X-CSRF-Token": session.csrf_token,
+        "Cookie": f"session={session.session_id}",
+    }
 
 
 def request_with_authorization(token: str = "") -> Request:

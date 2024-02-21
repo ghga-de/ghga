@@ -264,11 +264,13 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
     store = CoreSessionStore(config=config)
     now = store._now()
     before = now - timedelta(seconds=10)
+    # TODO: wait for proper implementation of _check_has_totp_token
+    # then use the proper field instead of the user name
     session = Session(
         session_id="test",
         state=original_state,
         user_id="some-user-id",
-        user_name="John Doe 2nd",  # TODO: replace dummy indicator
+        user_name="John Doe with TOTP",
         user_email="john@home.org",
         csrf_token="some-csrf-token",
         created=before,
@@ -277,7 +279,7 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
     user = User(
         id="some-user-id",
         ext_id="some-ext-id@home.org",
-        name="John Doe 2nd",  # TODO: replace dummy indicator
+        name="John Doe with TOTP",
         email="john@home.org",
         status=UserStatus.ACTIVE,
         registration_date=before,
@@ -287,3 +289,22 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
     assert session.created == before
     assert session.last_used == now
     assert session.state is SessionState.HAS_TOTP_TOKEN
+
+
+def test_timeouts():
+    """Test getting the session timeouts."""
+    config = SessionConfig()
+    store = CoreSessionStore(config=config)
+    now = store._now()
+    session = Session(
+        session_id="test",
+        user_id="some-user-id",
+        user_name="John Doe",
+        user_email="john@home.org",
+        csrf_token="some-csrf-token",
+        created=now - timedelta(seconds=2 * 60 * 60),
+        last_used=now - timedelta(seconds=20 * 60),
+    )
+    assert store.timeouts(session) == (40 * 60, 10 * 60 * 60)
+    session.created = now - timedelta(seconds=12 * 60 * 60 - 10 * 60)
+    assert store.timeouts(session) == (10 * 60, 10 * 60)

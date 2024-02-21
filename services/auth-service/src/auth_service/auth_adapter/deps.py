@@ -24,11 +24,19 @@ from auth_service.deps import Depends, get_config
 
 from .adapters.memory_session_store import MemorySessionStore
 from .core.session_store import Session, SessionConfig
+from .core.totp import TOTPConfig, TOTPHandler, TOTPToken
 from .ports.session_store import SessionStorePort
+from .ports.totp import TOTPHandlerPort
 
-__all__ = ["get_session_store", "get_session", "UserSessionStore", "UserSession"]
+__all__ = [
+    "get_session_store",
+    "get_session",
+    "SessionStoreDependency",
+    "SessionDependency",
+]
 
 _session_store = None
+_totp_handler = None
 
 
 async def get_session_store(
@@ -49,6 +57,20 @@ async def get_session(
     return await store.get_session(session) if session else None
 
 
-UserSessionStore = Annotated[SessionStorePort[Session], Depends(get_session_store)]
+async def get_totp_handler(
+    config: Annotated[TOTPConfig, Depends(get_config)],
+) -> TOTPHandlerPort[TOTPToken]:
+    """Get the TOTP handler."""
+    global _totp_handler
+    if not _totp_handler:
+        _totp_handler = TOTPHandler(config=config)
+    return _totp_handler
 
-UserSession = Annotated[Optional[Session], Depends(get_session)]
+
+SessionStoreDependency = Annotated[
+    SessionStorePort[Session], Depends(get_session_store)
+]
+
+SessionDependency = Annotated[Optional[Session], Depends(get_session)]
+
+TOTPHandlerDependency = Annotated[TOTPHandlerPort[TOTPToken], Depends(get_totp_handler)]

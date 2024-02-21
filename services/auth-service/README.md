@@ -141,6 +141,48 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`totp_issuer`** *(string)*: Issuer name for TOTP provisioning URIs. Default: `"GHGA"`.
+
+- **`totp_image`**: URL of the PNG image provided in the TOTP provisioning URIs. Default: `null`.
+
+  - **Any of**
+
+    - *string, format: uri*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  "https://www.ghga.de/logo.png"
+  ```
+
+
+- **`totp_algorithm`**: Hash algorithm used for TOTP code generation. Default: `"sha1"`.
+
+  - **All of**
+
+    - : Refer to *[#/$defs/TOTPAlgorithm](#%24defs/TOTPAlgorithm)*.
+
+- **`totp_digits`** *(integer)*: Number of digits used for the TOTP code. Minimum: `6`. Maximum: `12`. Default: `6`.
+
+- **`totp_interval`** *(integer)*: Time interval in seconds for generating TOTP codes. Minimum: `10`. Maximum: `300`. Default: `30`.
+
+- **`totp_tolerance`** *(integer)*: Number of intervals to check before and after the current time. Minimum: `0`. Maximum: `10`. Default: `1`.
+
+- **`totp_attempts`** *(integer)*: Maximum number of attempts to verify a TOTP code. Minimum: `1`. Maximum: `10`. Default: `3`.
+
+- **`totp_secret_size`** *(integer)*: Size of the Base32 encoded TOTP secrets. Minimum: `24`. Maximum: `256`. Default: `32`.
+
+- **`totp_encryption_key`**: Base64 encoded key used to encrypt TOTP secrets. Default: `null`.
+
+  - **Any of**
+
+    - *string, format: password*
+
+    - *null*
+
 - **`session_id_bytes`** *(integer)*: Number of bytes to be used for a session ID. Default: `24`.
 
 - **`csrf_token_bytes`** *(integer)*: Number of bytes to be used for a CSRF token. Default: `24`.
@@ -328,6 +370,11 @@ The service requires the following configuration parameters:
 - **`users_collection`** *(string)*: Name of the MongoDB collection for users. Default: `"users"`.
 
 - **`claims_collection`** *(string)*: Name of the MongoDB collection for claims. Default: `"claims"`.
+
+## Definitions
+
+
+- <a id="%24defs/TOTPAlgorithm"></a>**`TOTPAlgorithm`** *(string)*: Hash algorithm used for TOTP code generation. Must be one of: `["sha1", "sha256", "sha512"]`.
 
 
 ### Usage:

@@ -43,6 +43,7 @@ from pydantic_settings import BaseSettings
 from auth_service.user_management.user_registry.models.dto import User
 
 from ..ports.session_store import BaseSession, SessionStorePort
+from .totp import TOTPToken
 
 
 class SessionState(str, Enum):
@@ -76,6 +77,9 @@ class Session(BaseSession):
         description="the authentication state of the user session",
     )
     csrf_token: str = Field(default=..., description="the CSRF token for the session")
+    totp_token: Optional[TOTPToken] = Field(
+        default=None, description="the TOTP token of the user if available"
+    )
     created: UTCDatetime = Field(description="time when the session was created")
     last_used: UTCDatetime = Field(description="time when the session was last used")
 
@@ -175,7 +179,9 @@ class SessionStore(SessionStorePort[Session]):
     @staticmethod
     def _check_has_totp_token(user: User) -> bool:
         """Check if the user has a TOTP token."""
-        return "2nd" in user.name  # TODO: dummy-code, change for real implementation!
+        # TODO: dummy-code, change for real implementation
+        # currently we do not yet store the TOTP token in the user object
+        return "with TOTP" in user.name
 
     async def _update_session(
         self, session: Session, user: Optional[User] = None
@@ -198,3 +204,16 @@ class SessionStore(SessionStorePort[Session]):
             ):
                 session.state = SessionState.HAS_TOTP_TOKEN
         session.last_used = self._now()
+
+    def timeouts(self, session: Session) -> tuple[int, int]:
+        """Get the soft and hard timeouts of the given session in seconds."""
+        now = self._now().timestamp()
+        timeout_soft = self.config.session_timeout_seconds
+        timeout_hard = self.config.session_max_lifetime_seconds
+        last_used = session.last_used.timestamp()
+        created = session.created.timestamp()
+        timeout_soft = max(0, int(last_used + timeout_soft - now + 0.5))
+        timeout_hard = max(0, int(created + timeout_hard - now + 0.5))
+        if timeout_soft > timeout_hard:
+            timeout_soft = timeout_hard
+        return (timeout_soft, timeout_hard)

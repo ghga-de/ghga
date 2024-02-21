@@ -25,6 +25,7 @@ from hexkit.providers.akafka import KafkaConfig
 from pydantic import Field, HttpUrl, SecretStr
 
 from auth_service.auth_adapter.core.session_store import SessionConfig
+from auth_service.auth_adapter.core.totp import TOTPConfig
 from auth_service.user_management.claims_repository.translators.akafka import (
     EventSubTranslatorConfig,
 )
@@ -37,6 +38,7 @@ class Config(
     ApiConfigBase,
     AuthConfig,
     SessionConfig,
+    TOTPConfig,
     LoggingConfig,
     EventSubTranslatorConfig,
     KafkaConfig,

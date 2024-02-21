@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 
-"""Test handling user sessions."""
+"""Test handling user sessions in the auth adapter."""
 
 import json
-import re
+from typing import Union
 
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -26,33 +26,18 @@ from pytest import mark
 from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.api import main
-from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.deps import get_session_store
 from auth_service.config import CONFIG
 from auth_service.user_management.user_registry.deps import get_user_dao
 
 from ...fixtures.utils import (
+    RE_USER_INFO_URL,
+    USER_INFO,
     DummyUserDao,
     create_access_token,
+    headers_for_session,
 )
-from .fixtures import (  # noqa: F401
-    fixture_client,
-)
-
-USER_INFO = {
-    "name": "John Doe",
-    "email": "john@home.org",
-    "sub": "john@aai.org",
-}
-RE_USER_INFO_URL = re.compile(".*/userinfo$")
-
-
-def headers_for_session(session: Session) -> dict[str, str]:
-    """Get proper headers for the given session."""
-    return {
-        "X-CSRF-Token": session.csrf_token,
-        "Cookie": f"session={session.session_id}",
-    }
+from .fixtures import fixture_client  # noqa: F401
 
 
 def expected_set_cookie(session_id: str) -> str:
@@ -60,7 +45,9 @@ def expected_set_cookie(session_id: str) -> str:
     return f"session={session_id}; HttpOnly; Path=/; SameSite=lax; Secure"
 
 
-def assert_session_header(response: Response, expected: dict[str, str]) -> None:
+def assert_session_header(
+    response: Response, expected: dict[str, Union[str, int]]
+) -> None:
     """Assert that the response session header is as expected."""
     session_header = response.headers.get("X-Session")
     assert session_header
@@ -69,6 +56,12 @@ def assert_session_header(response: Response, expected: dict[str, str]) -> None:
     csrf_token = session.pop("csrf", None)
     assert len(csrf_token) == 32
     assert csrf_token.replace("-", "").replace("_", "").isalnum()
+    timeout = session.pop("timeout", None)
+    assert isinstance(timeout, int)
+    assert timeout == 60 * 60
+    extends = session.pop("extends", None)
+    assert isinstance(extends, int)
+    assert extends == 12 * 60 * 60
     assert session == expected
 
 
@@ -112,6 +105,7 @@ async def test_logout_with_invalid_csrf_token(client: AsyncTestClient):
     assert await store.get_session(session.session_id)
     response = await client.post("/rpc/logout", headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "X-CSRF-Token" not in response.headers
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
     assert await store.get_session(session.session_id) == original_session
 
@@ -359,6 +353,7 @@ async def test_login_with_cookie_and_invalid_csrf_token(client: AsyncTestClient)
     headers["X-CSRF-Token"] += "-invalidated"
     response = await client.post("/rpc/login", headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "X-CSRF-Token" not in response.headers
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
 
     assert await store.get_session(session.session_id) == original_session

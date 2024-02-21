@@ -57,5 +57,14 @@ service_name: auth_service
 session_id_bytes: 24
 session_max_lifetime_seconds: 43200
 session_timeout_seconds: 3600
+totp_algorithm: sha1
+totp_attempts: 3
+totp_digits: 6
+totp_encryption_key: null
+totp_image: null
+totp_interval: 30
+totp_issuer: GHGA
+totp_secret_size: 32
+totp_tolerance: 1
 users_collection: users
 workers: 1

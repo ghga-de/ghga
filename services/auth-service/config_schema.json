@@ -1,4 +1,16 @@
 {
+  "$defs": {
+    "TOTPAlgorithm": {
+      "description": "Hash algorithm used for TOTP code generation",
+      "enum": [
+        "sha1",
+        "sha256",
+        "sha512"
+      ],
+      "title": "TOTPAlgorithm",
+      "type": "string"
+    }
+  },
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
@@ -115,6 +127,94 @@
         "%(asctime)s - Severity: %(levelno)s - %(msg)s"
       ],
       "title": "Log Format"
+    },
+    "totp_issuer": {
+      "default": "GHGA",
+      "description": "Issuer name for TOTP provisioning URIs",
+      "title": "Totp Issuer",
+      "type": "string"
+    },
+    "totp_image": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "URL of the PNG image provided in the TOTP provisioning URIs",
+      "examples": [
+        "https://www.ghga.de/logo.png"
+      ],
+      "title": "Totp Image"
+    },
+    "totp_algorithm": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/TOTPAlgorithm"
+        }
+      ],
+      "default": "sha1",
+      "description": "Hash algorithm used for TOTP code generation"
+    },
+    "totp_digits": {
+      "default": 6,
+      "description": "Number of digits used for the TOTP code",
+      "maximum": 12,
+      "minimum": 6,
+      "title": "Totp Digits",
+      "type": "integer"
+    },
+    "totp_interval": {
+      "default": 30,
+      "description": "Time interval in seconds for generating TOTP codes",
+      "maximum": 300,
+      "minimum": 10,
+      "title": "Totp Interval",
+      "type": "integer"
+    },
+    "totp_tolerance": {
+      "default": 1,
+      "description": "Number of intervals to check before and after the current time",
+      "maximum": 10,
+      "minimum": 0,
+      "title": "Totp Tolerance",
+      "type": "integer"
+    },
+    "totp_attempts": {
+      "default": 3,
+      "description": "Maximum number of attempts to verify a TOTP code",
+      "maximum": 10,
+      "minimum": 1,
+      "title": "Totp Attempts",
+      "type": "integer"
+    },
+    "totp_secret_size": {
+      "default": 32,
+      "description": "Size of the Base32 encoded TOTP secrets",
+      "maximum": 256,
+      "minimum": 24,
+      "title": "Totp Secret Size",
+      "type": "integer"
+    },
+    "totp_encryption_key": {
+      "anyOf": [
+        {
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Base64 encoded key used to encrypt TOTP secrets",
+      "title": "Totp Encryption Key"
     },
     "session_id_bytes": {
       "default": 24,

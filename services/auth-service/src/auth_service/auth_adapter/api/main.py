@@ -27,6 +27,7 @@ from typing import Annotated, Optional
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from ghga_service_commons.api import configure_app
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
+from pydantic import SecretStr
 
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
@@ -44,9 +45,10 @@ from ..core.auth import (
     get_user_info,
 )
 from ..core.session_store import SessionState
-from ..deps import UserSession, UserSessionStore
+from ..deps import SessionDependency, SessionStoreDependency, TOTPHandlerDependency
 from .basic import get_basic_auth_dependency
 from .csrf import check_csrf
+from .dto import CreateTOTPToken, TOTPTokenResponse
 from .headers import get_bearer_token, session_to_header
 
 app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
@@ -100,8 +102,8 @@ add_allowed_routes()
     status_code=204,
 )
 async def login(  # noqa: PLR0913
-    session_store: UserSessionStore,
-    session: UserSession,
+    session_store: SessionStoreDependency,
+    session: SessionDependency,
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     authorization: Annotated[Optional[str], Header()] = None,
     x_authorization: Annotated[Optional[str], Header()] = None,
@@ -135,7 +137,9 @@ async def login(  # noqa: PLR0913
             user = None  # user has been deleted
     await session_store.save_session(session, user=user)
     response = Response(status_code=204)
-    response.headers["X-Session"] = session_to_header(session)
+    response.headers["X-Session"] = session_to_header(
+        session, timeouts=session_store.timeouts
+    )
     if session_created:
         response.set_cookie(
             key="session",  # the name of the cookie
@@ -156,8 +160,8 @@ async def login(  # noqa: PLR0913
     status_code=204,
 )
 async def logout(
-    session_store: UserSessionStore,
-    session: UserSession,
+    session_store: SessionStoreDependency,
+    session: SessionDependency,
     x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """End the user session."""
@@ -165,6 +169,50 @@ async def logout(
         check_csrf("POST", x_csrf_token, session)
         await session_store.delete_session(session.session_id)
     return Response(status_code=204)
+
+
+@app.post(
+    "/totp-token",
+    operation_id="create_new_totp_token",
+    tags=["totp"],
+    summary="Create a new TOTP token",
+    description="Endpoint used to create or replace a TOTP token.",
+    status_code=201,
+)
+async def create_new_totp_token(
+    creation_info: CreateTOTPToken,
+    session_store: SessionStoreDependency,
+    session: SessionDependency,
+    totp_handler: TOTPHandlerDependency,
+    x_csrf_token: Annotated[Optional[str], Header()] = None,
+) -> TOTPTokenResponse:
+    """Create a new TOTP token or replace an existing one."""
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
+        )
+    if not session.user_id or session.user_id != creation_info.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
+        )
+    check_csrf("POST", x_csrf_token, session)
+    state = session.state
+    if not (
+        state in (SessionState.REGISTERED, SessionState.NEW_TOTP_TOKEN)
+        or (
+            state in (SessionState.HAS_TOTP_TOKEN, SessionState.AUTHENTICATED)
+            and creation_info.force
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Cannot create TOTP token at this point",
+        )
+    session.totp_token = totp_handler.generate_token()
+    session.state = SessionState.NEW_TOTP_TOKEN
+    await session_store.save_session(session)
+    uri = totp_handler.get_provisioning_uri(session.totp_token, name=session.user_name)
+    return TOTPTokenResponse(uri=SecretStr(uri))
 
 
 basic_auth_dependency = get_basic_auth_dependency(app, CONFIG)
