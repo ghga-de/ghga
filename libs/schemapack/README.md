@@ -1,4 +1,4 @@
-![tests](https://github.com/ghga-de/schemapack/actions/workflows/unit_and_int_tests.yaml/badge.svg)
+![tests](https://github.com/ghga-de/schemapack/actions/workflows/tests.yaml/badge.svg)
 [![PyPI version shields.io](https://img.shields.io/pypi/v/schemapack.svg)](https://pypi.python.org/pypi/schemapack/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/schemapack.svg)](https://pypi.python.org/pypi/schemapack/)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/schemapack/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/schemapack?branch=main)
