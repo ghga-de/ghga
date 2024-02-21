@@ -161,6 +161,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     # dcs
     dcs_url: str = "http://dcs:8080"
 
+    # data portal ui
+    data_portal_ui_url: str = "http://data-portal-ui:8080"
+
     # vault
     vault_url: str = "http://vault:8200"
     vault_token: str = "dev-token"
