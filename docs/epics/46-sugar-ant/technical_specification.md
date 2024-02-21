@@ -33,6 +33,7 @@ Some changes have been specified as optional in the sections below.
 - support for multiple TOTP tokens
 - support for other kinds of 2FA factors
 - integration tests (extending the Archive Test Bed)
+- auditing of all related security-critical events
 
 ## Implementation Details
 
@@ -132,7 +133,7 @@ This endpoint first verifies that the user has a valid auth session, i.e. has be
 
 The implementation only supports a single TOTP token per user. If an activated token (a TOTP token that has already been successfully validated at least once) already exists and the `force` flag is set to `true`, then the existing TOTP token will be replaced by the newly created one.
 
-As a side effect of this endpoint, all existing IVAs associated with this user must be set back to "unverified", as required in the white paper for 2FA and IVAs.
+As a side effect of this endpoint, when a user's TOTP token is replaced, all existing IVAs associated with this user must be set back to "unverified", as required in the white paper for 2FA and IVAs. Also, a notification should be sent to the user so that they can notice if someone else got hold of their first factor and is trying to use it to re-establish the second factor. This and some of the other security-critical events mentioned in this spec should later also be recorded in an audit log.
 
 The QR code should be created in the frontend, e.g. using `react-qr-code` or the `qr-code` web component. If during implementation there are any issues with this approach, it can alternatively also be created in the backend, e.g. using the `segno` library.
 
