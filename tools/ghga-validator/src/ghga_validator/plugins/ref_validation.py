@@ -20,7 +20,7 @@ from numbers import Number
 from typing import Union
 
 from ghga_validator.core.models import ValidationMessage, ValidationResult
-from ghga_validator.linkml.object_iterator import ObjectIterator
+from ghga_validator.my_linkml.object_iterator import ObjectIterator
 from ghga_validator.plugins.base_plugin import ValidationPlugin
 from ghga_validator.schema_utils import get_range_class
 from ghga_validator.utils import path_as_string

@@ -24,10 +24,10 @@ from .fixtures.utils import BASE_DIR
 
 def test_validate_unique_id():
     """Test UniqueIdentifierValidationPlugin"""
-    schema = BASE_DIR / "schemas" / "example_schema.yaml"
+    schema = BASE_DIR / "schemas" / "advance_model.yaml"
     file = BASE_DIR / "data" / "example_data_not_unique_id.json"
     report = BASE_DIR / "tmp.json"
-    target_class = "TextAnalysis"
+    target_class = "Submission"
 
     assert validate_json_file(file, schema, report, str(target_class)) is False
     if os.path.exists(report):

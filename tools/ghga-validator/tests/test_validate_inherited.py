@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test structural validation using JSON schema"""
+"""Test data validation when inherited classes are used"""
 
 import os
 
@@ -22,13 +22,14 @@ from ghga_validator.cli import validate_json_file
 from .fixtures.utils import BASE_DIR
 
 
-def test_validate_json_file_schema():
-    """Test GHGAJsonSchemaValidationPlugin"""
-    schema = BASE_DIR / "schemas" / "advance_model.yaml"
-    file = BASE_DIR / "data" / "example_data_wrong_json_schema.json"
+def test_validate_inherited():
+    """Test data validation when inherited classes are used"""
+    schema = BASE_DIR / "schemas" / "model_with_inherited_classes.yaml"
+    file = BASE_DIR / "data" / "example_data_with_inherited_classes.json"
     report = BASE_DIR / "tmp.json"
     target_class = "Submission"
 
-    assert validate_json_file(file, schema, report, str(target_class)) is False
+    assert validate_json_file(file, schema, report, str(target_class)) is True
+
     if os.path.exists(report):
         os.remove(report)

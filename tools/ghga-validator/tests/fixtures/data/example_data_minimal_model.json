@@ -1,0 +1,23 @@
+{
+  "submissions": [
+    {
+      "datasets": [
+        {
+          "alias": "test_dataset_01",
+          "files": [
+            "test_sample_01_R1"
+          ]
+        }
+      ],
+      "files": [
+        {
+          "alias": "test_sample_01_R1",
+          "checksum": "1c8aed294d5dec3740a175f6b655725fa668bfe41311e74f7ca9d85c91371b4e",
+          "filename": "test_sample_01_R1.fastq",
+          "format": "fastq",
+          "size": 299943
+        }
+      ]
+    }
+  ]
+}

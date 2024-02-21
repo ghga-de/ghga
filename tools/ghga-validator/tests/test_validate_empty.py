@@ -24,10 +24,10 @@ from .fixtures.utils import BASE_DIR
 
 def test_validate_empty():
     """Test validating empty data"""
-    schema = BASE_DIR / "schemas" / "example_schema.yaml"
+    schema = BASE_DIR / "schemas" / "minimal_model_required_false.yaml"
     file = BASE_DIR / "data" / "example_data_empty.json"
     report = BASE_DIR / "tmp.json"
-    target_class = "TextAnalysis"
+    target_class = "Submission"
 
     assert validate_json_file(file, schema, report, str(target_class)) is True
     if os.path.exists(report):

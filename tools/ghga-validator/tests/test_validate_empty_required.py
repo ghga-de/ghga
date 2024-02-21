@@ -24,10 +24,10 @@ from .fixtures.utils import BASE_DIR
 
 def test_validate_empty_required():
     """Test validating empty data when there are required fields defined in schema"""
-    schema = BASE_DIR / "schemas" / "example_schema_required.yaml"
+    schema = BASE_DIR / "schemas" / "minimal_model.yaml"
     file = BASE_DIR / "data" / "example_data_empty.json"
     report = BASE_DIR / "tmp.json"
-    target_class = "TextAnalysis"
+    target_class = "Submission"
 
     assert validate_json_file(file, schema, report, str(target_class)) is False
     if os.path.exists(report):
