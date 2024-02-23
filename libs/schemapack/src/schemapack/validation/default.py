@@ -26,7 +26,6 @@ from schemapack.validation.plugins import (
     ContentSchemaValidationPlugin,
     DuplicateForeignIdValidationPlugin,
     ForeignIdValidationPlugin,
-    IdFromContentValidationPlugin,
     MissingClassSlotValidationPlugin,
     MissingRelationValidationPlugin,
     OneToManyOverlapValidationPlugin,
@@ -45,7 +44,6 @@ DEFAULT_CLASS_PLUGIN_REGISTRY: list[type[ClassValidationPlugin]] = [
 ]
 DEFAULT_RESOURCE_PLUGIN_REGISTRY: list[type[ResourceValidationPlugin]] = [
     ContentSchemaValidationPlugin,
-    IdFromContentValidationPlugin,
     ForeignIdValidationPlugin,
     MissingRelationValidationPlugin,
     UnknownRelationValidationPlugin,

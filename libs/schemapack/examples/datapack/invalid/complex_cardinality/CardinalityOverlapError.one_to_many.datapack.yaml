@@ -3,8 +3,7 @@ datapack: 0.1.0
 resources:
   A:
     a1:
-      content:
-        alias: a1
+      content: {}
       relations:
         many_to_many:
           - b1
@@ -15,8 +14,7 @@ resources:
         many_to_one: b1
         one_to_one: b1
     a2:
-      content:
-        alias: a2
+      content: {}
       relations:
         many_to_many: []
         one_to_many:
@@ -25,8 +23,6 @@ resources:
         one_to_one: b2
   B:
     b1:
-      content:
-        alias: b1
+      content: {}
     b2:
-      content:
-        alias: b2
+      content: {}

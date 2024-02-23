@@ -7,31 +7,26 @@ resources:
   SomeClass:
     # one group of resources:
     a:
-      content:
-        alias: a
+      content: {}
       relations:
         some_relation:
           - b
     b:
-      content:
-        alias: b
+      content: {}
       relations:
         some_relation:
           - c
     c:
-      content:
-        alias: c
+      content: {}
       relations:
         some_relation: []
     # another group of resources:
     d:
-      content:
-        alias: d
+      content: {}
       relations:
         some_relation:
           - e
     e:
-      content:
-        alias: e
+      content: {}
       relations:
         some_relation: []

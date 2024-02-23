@@ -3,21 +3,18 @@ resources:
   File:
     example_file_a:
       content:
-        alias: example_file_a
         filename: example_file_a.fastq
         format: FASTQ
         checksum: 1a5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92b8
         size: 12321
     example_file_b:
       content:
-        alias: example_file_b
         filename: example_file_b.fastq
         format: FASTQ
         checksum: 2b5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92c9
         size: 12314
     example_file_c:
       content:
-        alias: example_file_c
         filename: example_file_c.fastq
         format: FASTQ
         checksum: a9c24870071da03f78515e6197048f3a2172e90e597e9250cd01a0cb8f0986ed
@@ -25,7 +22,6 @@ resources:
   Dataset:
     example_dataset_1:
       content:
-        alias: example_dataset_1
         dac_contact: dac@example.org
       relations:
         files:
@@ -33,7 +29,6 @@ resources:
           - example_file_b
     example_dataset_2:
       content:
-        alias: example_dataset_2
         dac_contact: dac@example.org
       relations:
         files:

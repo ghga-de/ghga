@@ -1,0 +1,6 @@
+# A collision between the ID property and the content properties:
+schemapack: 0.2.0
+classes:
+  File:
+    id_property: filename # <-
+    content: ../../content_schemas/File.schema.json

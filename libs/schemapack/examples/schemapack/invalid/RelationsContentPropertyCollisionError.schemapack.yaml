@@ -1,4 +1,4 @@
-# there is little value in a schemapack without relations but it is syntactically valid
+# A collision between relations and content properties:
 schemapack: 0.2.0
 classes:
   File:
@@ -7,3 +7,7 @@ classes:
   Dataset:
     id_property: alias
     content: ../../content_schemas/Dataset.schema.json
+    relations:
+      dac_contact: # <-
+        to: File
+        cardinality: many_to_many

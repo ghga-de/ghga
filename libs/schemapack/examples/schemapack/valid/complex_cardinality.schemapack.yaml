@@ -1,10 +1,9 @@
 # a simple schemapack without a root class
-schemapack: 0.1.0
+schemapack: 0.2.0
 classes:
   A:
-    id:
-      from_content: alias
-    content: ../../content_schemas/AnyAliasedObject.schema.json
+    id_property: alias
+    content: ../../content_schemas/AnyObject.schema.json
     relations:
       many_to_many:
         to: B
@@ -19,6 +18,5 @@ classes:
         to: B
         cardinality: one_to_one
   B:
-    id:
-      from_content: alias
-    content: ../../content_schemas/AnyAliasedObject.schema.json
+    id_property: alias
+    content: ../../content_schemas/AnyObject.schema.json

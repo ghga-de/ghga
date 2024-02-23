@@ -4,20 +4,17 @@ datapack: 0.1.0
 resources:
   SomeClass:
     a:
-      content:
-        alias: a
+      content: {}
       relations:
         some_relation:
           - b
     b:
-      content:
-        alias: b
+      content: {}
       relations:
         some_relation:
           - c
     c:
-      content:
-        alias: c
+      content: {}
       relations:
         some_relation: []
 root:

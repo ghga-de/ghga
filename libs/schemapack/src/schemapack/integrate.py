@@ -86,7 +86,9 @@ def integrate(  # noqa: PLR0912,C901
     except KeyError as error:
         raise ValidationAssumptionError(context="class lookup") from error
 
-    integrated_object: JsonObjectCompatible = {}
+    integrated_object: JsonObjectCompatible = {
+        root_class_definition.id_property: root_resource_id
+    }
     integrated_object.update(root_resource.content)
 
     for relation_name, foreign_ids in root_resource.relations.items():

@@ -1,13 +1,13 @@
-# A foreign ID in a relation is used more than once:
+# Using a non-string value as resource identifier:
 datapack: 0.1.0
 resources:
   File:
-    example_file_a:
+    1234: # <-
       content:
         filename: example_file_a.fastq
         format: FASTQ
         checksum: 1a5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92b8
-        size: 12321
+        size: 1234
   Dataset:
     example_dataset:
       content:
@@ -15,4 +15,3 @@ resources:
       relations:
         files:
           - example_file_a
-          - example_file_a # <-

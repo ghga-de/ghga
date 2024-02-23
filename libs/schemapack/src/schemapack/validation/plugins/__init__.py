@@ -29,9 +29,6 @@ from schemapack.validation.plugins.duplicate_foreign_id import (
 from schemapack.validation.plugins.foreign_id import (
     ForeignIdValidationPlugin,  # noqa: F401
 )
-from schemapack.validation.plugins.id_from_content import (
-    IdFromContentValidationPlugin,  # noqa: F401
-)
 from schemapack.validation.plugins.missing_class import (
     MissingClassSlotValidationPlugin,  # noqa: F401
 )

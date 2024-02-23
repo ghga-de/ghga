@@ -41,7 +41,7 @@ from schemapack.utils import (
     read_json_or_yaml,
 )
 
-SupportedSchemaPackVersions = Literal["0.1.0"]
+SupportedSchemaPackVersions = Literal["0.2.0"]
 SUPPORTED_SCHEMA_PACK_VERSIONS = typing.get_args(SupportedSchemaPackVersions)
 
 
@@ -70,20 +70,6 @@ class FrozenBaseModel(BaseModel):
     """A BaseModel that cannot be changed after initialization."""
 
     model_config = ConfigDict(frozen=True, use_enum_values=True, extra="forbid")
-
-
-class IdField(FrozenBaseModel):
-    """A model for describing a schemapack ID field definition."""
-
-    # currently only IDs that are inherited from a field of the content schema are
-    # supported
-
-    from_content: str = Field(
-        ...,
-        description=(
-            "The name of the property from the content schema to be used as ID field."
-        ),
-    )
 
 
 class ContentSchema(FrozenBaseModel):
@@ -156,7 +142,14 @@ class Relation(FrozenBaseModel):
 class ClassDefinition(FrozenBaseModel):
     """A model for describing a schemapack class definition."""
 
-    id: IdField
+    id_property: str = Field(
+        description=(
+            "A name that can be used for the ID property. It may not collide"
+            + " with content or relations properties."
+            + "This name e.g. relavant for specifying the ID property in a"
+            + " denormalized representation."
+        ),
+    )
     content: ContentSchema
     relations: FrozenDict[str, Relation] = Field(
         FrozenDict(),
@@ -262,33 +255,48 @@ class ClassDefinition(FrozenBaseModel):
         return v
 
     @model_validator(mode="after")
-    def id_from_content_validator(self) -> "ClassDefinition":
-        """Validate that the from_content property of the id field is part of the
-        content schema.
-        """
-        if self.id.from_content not in self.content.properties:
+    def relation_content_property_collisions(self) -> "ClassDefinition":
+        """Check for collisions between relations and content properties."""
+        collisions = self.content.properties.intersection(set(self.relations))
+
+        if collisions:
             raise PydanticCustomError(
-                "IdNotInContentSchemaError",
+                "RelationsContentPropertyCollisionError",
                 (
-                    "The ID property '{id_property}' is not part of the content schema"
-                    + " which contains only the following properties: {content_properties}"
+                    "The following properties occur both in the content and the"
+                    + " relations: {collisions}"
                 ),
                 {
-                    "id_property": self.id.from_content,
-                    "content_properties": self.content.properties,
+                    "number": len(collisions),
+                    "collisions": collisions,
                 },
             )
-        if self.id.from_content not in self.content.json_schema_dict.get(
-            "required", []
-        ):
+
+        return self
+
+    @model_validator(mode="after")
+    def id_content_property_collisions(self) -> "ClassDefinition":
+        """Check for collisions between the id property and content properties."""
+        if self.id_property in self.content.properties:
             raise PydanticCustomError(
-                "IdNotRequiredError",
-                (
-                    "The ID property '{id_property}' is not required in the content"
-                    + " schema. It must be marked as required."
-                ),
+                "IdContentPropertyCollisionError",
+                ("The id property '{id_property}' also occurs in the content."),
                 {
-                    "id_property": self.id.from_content,
+                    "id_property": self.id_property,
+                },
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def id_relations_property_collisions(self) -> "ClassDefinition":
+        """Check for collisions between the id property and relations properties."""
+        if self.id_property in self.relations:
+            raise PydanticCustomError(
+                "IdRelationsPropertyCollisionError",
+                ("The id property '{id_property}' also occurs in the relations."),
+                {
+                    "id_property": self.id_property,
                 },
             )
 

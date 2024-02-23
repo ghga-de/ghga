@@ -5,7 +5,6 @@ resources:
   Dataset:
     example_dataset:
       content:
-        alias: example_dataset
         dac_contact: dac@example.org
       relations:
         files:

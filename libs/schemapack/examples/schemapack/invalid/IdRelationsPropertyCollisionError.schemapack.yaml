@@ -1,9 +1,13 @@
-# there is little value in a schemapack without relations but it is syntactically valid
+# A collision between id_property and relations properties:
 schemapack: 0.2.0
 classes:
   File:
     id_property: alias
     content: ../../content_schemas/File.schema.json
   Dataset:
-    id_property: alias
+    id_property: files # <-
     content: ../../content_schemas/Dataset.schema.json
+    relations:
+      files:
+        to: File
+        cardinality: many_to_many

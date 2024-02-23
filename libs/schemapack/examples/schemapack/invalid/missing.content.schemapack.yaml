@@ -1,6 +1,5 @@
-schemapack: 0.1.0
+schemapack: 0.2.0
 classes:
   Dataset:
-    id:
-      from_content: alias
+    id_property: alias
     # every class must have a content schema, this one does not
