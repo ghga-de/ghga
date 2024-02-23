@@ -1,5 +1,5 @@
 # This datapack contains a file that is in relation to itself:
-# (This is valid, but no integration can be performed.)
+# (This is valid, but no denomalization can be performed.)
 datapack: 0.1.0
 resources:
   SomeClass:

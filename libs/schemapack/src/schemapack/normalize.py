@@ -29,7 +29,7 @@ from schemapack.spec.schemapack import SchemaPack
 JsonObjectCompatible: TypeAlias = dict[str, object]
 
 
-def integrate(  # noqa: PLR0912,C901
+def denormalize(  # noqa: PLR0912,C901
     *,
     datapack: DataPack,
     schemapack: SchemaPack,
@@ -43,7 +43,7 @@ def integrate(  # noqa: PLR0912,C901
 
     Args:
         datapack:
-            The datapack to be integrated. Must be rooted.
+            The datapack to be denormalized. Must be rooted.
         schemapack:
             The schemapack to be used for looking up the classes of relations.
         _resource_blacklist:
@@ -98,10 +98,10 @@ def integrate(  # noqa: PLR0912,C901
             + " spec validation."
         )
 
-    integrated_object: JsonObjectCompatible = {
+    denormalized_object: JsonObjectCompatible = {
         root_class_definition.id_property: root_resource_id
     }
-    integrated_object.update(root_resource.content)
+    denormalized_object.update(root_resource.content)
 
     for relation_name, target_ids in root_resource.relations.items():
         try:
@@ -112,7 +112,7 @@ def integrate(  # noqa: PLR0912,C901
         target_class_name = relation_definition.targetClass
 
         if isinstance(target_ids, list):
-            integrated_object[relation_name] = []
+            denormalized_object[relation_name] = []
 
             for target_id in target_ids:
                 if (
@@ -120,12 +120,12 @@ def integrate(  # noqa: PLR0912,C901
                     and target_id in resource_blacklist[target_class_name]
                 ):
                     raise CircularRelationError(
-                        "Cannot perform integration of datapack with circular relations."
+                        "Cannot perform denomalization of datapack with circular relations."
                         + " The circular relation involved the resource with id"
                         + f" {target_id} of class {target_class_name}."
                     )
 
-                target_resource = integrate(
+                target_resource = denormalize(
                     datapack=datapack,
                     schemapack=schemapack,
                     _resource_blacklist=resource_blacklist,
@@ -133,10 +133,10 @@ def integrate(  # noqa: PLR0912,C901
                     _alt_root_resource_id=target_id,
                 )
 
-                integrated_object[relation_name].append(target_resource)  # type: ignore
+                denormalized_object[relation_name].append(target_resource)  # type: ignore
 
         elif isinstance(target_ids, str):
-            integrated_object[relation_name] = integrate(
+            denormalized_object[relation_name] = denormalize(
                 datapack=datapack,
                 schemapack=schemapack,
                 _resource_blacklist=resource_blacklist,
@@ -145,6 +145,6 @@ def integrate(  # noqa: PLR0912,C901
             )
 
         else:
-            integrated_object[relation_name] = None
+            denormalized_object[relation_name] = None
 
-    return integrated_object
+    return denormalized_object

@@ -27,11 +27,11 @@ INVALID_SCHEMAPACK_DIR = SCHEMAPACK_DIR / "invalid"
 DATAPACK_DIR = EXAMPLES_DIR / "datapack"
 VALID_DATAPACK_DIR = DATAPACK_DIR / "valid"
 INVALID_DATAPACK_DIR = DATAPACK_DIR / "invalid"
-INTEGRATIONS_DIR = EXAMPLES_DIR / "integrations"
+DENORMALIZED_DIR = EXAMPLES_DIR / "denormalized"
 
 schemapack_suffix = ".schemapack.yaml"
 datapack_suffix = ".datapack.yaml"
-integration_suffix = ".integration.yaml"
+denomalizated_suffix = ".denomalizated.yaml"
 
 
 def list_examples_in_dir(dir: Path, *, suffix: str) -> dict[str, Path]:
@@ -92,13 +92,13 @@ VALID_DATAPACK_PATHS = list_datapacks_in_dir(VALID_DATAPACK_DIR)
 INVALID_DATAPACK_PATHS = list_datapacks_in_dir(INVALID_DATAPACK_DIR)
 
 
-def list_integrations_in_dir(dir: Path) -> dict[str, Path]:
-    """List all integration example files in the given dir.
+def list_denormalized_in_dir(dir: Path) -> dict[str, Path]:
+    """List all denomalizated example files in the given dir.
 
     Returns:
         A dict of {example_name: path}.
     """
-    return list_examples_in_nested_dir(dir, suffix=integration_suffix)
+    return list_examples_in_nested_dir(dir, suffix=denomalizated_suffix)
 
 
-INTEGRATIONS_PATHS = list_integrations_in_dir(INTEGRATIONS_DIR)
+DENORMALIZED_PATHS = list_denormalized_in_dir(DENORMALIZED_DIR)

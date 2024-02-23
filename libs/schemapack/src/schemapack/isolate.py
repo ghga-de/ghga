@@ -169,7 +169,7 @@ def downscope_datapack(
     return datapack.model_copy(update={"resources": resources})
 
 
-def isolate_datapack(
+def isolate_resource(
     *,
     datapack: DataPack,
     class_name: ClassName,
@@ -196,7 +196,7 @@ def isolate_datapack(
     return rooted_datapack
 
 
-def isolate_schemapack(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPack:
+def isolate_class(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPack:
     """Return a copy of the provided schemapack that is rooted to the specified class."""
     return schemapack.model_copy(update={"root_class": class_name})
 
@@ -215,8 +215,8 @@ def isolate(
     Returns:
         A tuple containing both the rooted schemapack and the rooted datapack.
     """
-    rooted_schemapack = isolate_schemapack(class_name=class_name, schemapack=schemapack)
-    rooted_datapack = isolate_datapack(
+    rooted_schemapack = isolate_class(class_name=class_name, schemapack=schemapack)
+    rooted_datapack = isolate_resource(
         datapack=datapack,
         class_name=class_name,
         resource_id=resource_id,

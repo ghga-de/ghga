@@ -14,38 +14,38 @@
 # limitations under the License.
 #
 
-"""Test the integrate module."""
+"""Test the normalize module."""
 
 from pathlib import Path
 
 import pytest
 
 from schemapack.exceptions import CircularRelationError
-from schemapack.integrate import integrate
 from schemapack.load import load_datapack, load_schemapack
+from schemapack.normalize import denormalize
 from schemapack.utils import read_json_or_yaml
 from tests.fixtures.examples import (
-    INTEGRATIONS_PATHS,
+    DENORMALIZED_PATHS,
     VALID_DATAPACK_PATHS,
     VALID_SCHEMAPACK_PATHS,
 )
 
 
 @pytest.mark.parametrize(
-    "name, expected_integration_path",
-    INTEGRATIONS_PATHS.items(),
-    ids=INTEGRATIONS_PATHS.keys(),
+    "name, expected_denomalizated_path",
+    DENORMALIZED_PATHS.items(),
+    ids=DENORMALIZED_PATHS.keys(),
 )
-def test_integrate(name: str, expected_integration_path: Path):
-    """Test the integrate function with valid datapacks."""
+def test_denormalize(name: str, expected_denomalizated_path: Path):
+    """Test the denormalize function with valid datapacks."""
     schemapack_name = name.split(".")[0]
     schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS[schemapack_name])
     datapack = load_datapack(VALID_DATAPACK_PATHS[name])
-    expected_integration = read_json_or_yaml(expected_integration_path)
+    expected_denomalizated = read_json_or_yaml(expected_denomalizated_path)
 
-    integration = integrate(datapack=datapack, schemapack=schemapack)
+    denomalizated = denormalize(datapack=datapack, schemapack=schemapack)
 
-    assert integration == expected_integration
+    assert denomalizated == expected_denomalizated
 
 
 @pytest.mark.parametrize(
@@ -55,11 +55,11 @@ def test_integrate(name: str, expected_integration_path: Path):
         "self_relation_rooted.rooted_circular_self_relations",
     ],
 )
-def test_integrate_circular_relation(name: str):
-    """Test the integrate function fails on datapacks with circular relations."""
+def test_denormalize_circular_relation(name: str):
+    """Test the denormalize function fails on datapacks with circular relations."""
     schemapack_name = name.split(".")[0]
     schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS[schemapack_name])
     datapack = load_datapack(VALID_DATAPACK_PATHS[name])
 
     with pytest.raises(CircularRelationError):
-        _ = integrate(datapack=datapack, schemapack=schemapack)
+        _ = denormalize(datapack=datapack, schemapack=schemapack)
