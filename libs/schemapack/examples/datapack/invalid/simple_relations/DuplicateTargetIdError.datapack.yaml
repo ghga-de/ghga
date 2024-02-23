@@ -1,4 +1,4 @@
-# A foreign ID in a relation is used more than once:
+# A target ID in a relation is used more than once:
 datapack: 0.1.0
 resources:
   File:

@@ -49,16 +49,49 @@ class Resource(NoExtraBaseModel):
         ),
     )
 
-    relations: dict[RelationName, Union[ResourceId, list[ResourceId]]] = Field(
+    relations: dict[
+        RelationName, Union[Optional[ResourceId], list[ResourceId]]
+    ] = Field(
         {},
         description=(
             "A dictionary containing the relations of the resource to other resources."
             + " Each key correspond to the name of a relation property as per the"
-            + " schemapack definition. Each value is either a single resource ID (in"
-            + " case of many_to_one or one_to_one relations) or a list or resource IDs"
-            + " (in case of one_to_many or many_to_many relations)."
+            + " schemapack definition. Each value could be one of the following types"
+            + " depending on the corresponding schemapack definition:"
+            + " (1) a id of a single target resource (multiple.target is False),"
+            + " (2) None (multiple.target and mandatory.target are both False),"
+            + " (3) a list of ids of target resources (multiple.target is True),"
+            + " (4) an empty list (multiple.target is True and mandatory.target is"
+            + " False)."
         ),
     )
+
+    def get_target_id_list(
+        self, relation_name: RelationName, do_not_raise: bool = False
+    ) -> list[ResourceId]:
+        """Get the target ids for the given relation always represented as a list.
+        This is even the case if the actual value in the relations dict is a single
+        string (translated into a list of length one) or None (translated into an
+        empty list). If do_not_raise is True, the method will return an empty list
+        even if the relation name does not exist in the relations dict.
+
+        Raises:
+            KeyError:
+                If the given relation name does not exist in the relations dict and
+                do_not_raise is False.
+        """
+        try:
+            targets = self.relations[relation_name]
+        except KeyError:
+            if do_not_raise:
+                return []
+            raise
+
+        if targets is None:
+            return []
+        if isinstance(targets, list):
+            return targets
+        return [targets]
 
 
 class DataPack(NoExtraBaseModel):

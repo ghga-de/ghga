@@ -6,7 +6,12 @@ classes:
     content: ../../content_schemas/AnyObject.schema.json
     relations:
       some_relation:
-        to: SomeClass # <-
-        cardinality: many_to_many
+        targetClass: SomeClass # <-
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: true
         lookup: in_document
 root_class: SomeClass

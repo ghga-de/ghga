@@ -9,6 +9,11 @@ classes:
     content: ../../content_schemas/Dataset.schema.json
     relations:
       files:
-        to: File
-        cardinality: many_to_many
+        targetClass: File
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true
         additional_attribute: is_not_allowed # <-

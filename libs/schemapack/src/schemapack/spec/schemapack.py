@@ -45,20 +45,8 @@ SupportedSchemaPackVersions = Literal["0.2.0"]
 SUPPORTED_SCHEMA_PACK_VERSIONS = typing.get_args(SupportedSchemaPackVersions)
 
 
-class Cardinality(str, Enum):
-    """Cardinality of a relation.
-    Read as `{this class}_to_{foreign class}`. I.e. MANY_TO_ONE means that this class
-    may have many instances that point to the same foreign class instance.
-    """
-
-    ONE_TO_ONE = "one_to_one"
-    ONE_TO_MANY = "one_to_many"
-    MANY_TO_ONE = "many_to_one"
-    MANY_TO_MANY = "many_to_many"
-
-
 class RelationLookupMethod(str, Enum):
-    """The method used to lookup the foreign class instance(s) referenced in a
+    """The method used to lookup the target class instance(s) referenced in a
     relation.
     """
 
@@ -118,24 +106,92 @@ class ContentSchema(FrozenBaseModel):
         return self
 
 
+class MandatoryRelationSpec(FrozenBaseModel):
+    """A model for describing the modality of a relation. It describes the minimum
+    number of instances the origin and the target end must contribute to the relation.
+    """
+
+    origin: bool = Field(
+        ...,
+        description=(
+            "If true, the origin must participate in the relation."
+            + " I.e. every instance of the target class must be connected to at least"
+            + " one instance of the origin class trough this relation."
+            + " If false, the participation of the origin is optional."
+            + " I.e. an instance of the target class may be connected to zero or more"
+            + " instances of the origin class trough this relation."
+        ),
+    )
+    target: bool = Field(
+        ...,
+        description=(
+            "If true, the target must participate in the relation."
+            + " I.e. every instance of the origin class must be connected to at least"
+            + " one instance of the target class trough this relation."
+            + " If false, the participation of the target is optional."
+            + " I.e. an instance of the origin class may be connected to zero or more"
+            + " instances of the target class trough this relation."
+        ),
+    )
+
+
+class MultipleRelationSpec(FrozenBaseModel):
+    """A model for describing the cardinality of a relation. It describes the maximum
+    number of instances the origin and the target end may contribute to the relation.
+
+    For instance, if the origin is `True` and target is `False`, the origin may
+    contribute multiple instances to the relation, while the target may at most
+    contribute a single instance to the relation. This is equivalent to a 'many-to-one'
+    """
+
+    origin: bool = Field(
+        ...,
+        description=(
+            "If true, the origin may contribute multiple instances to the relation."
+            + " This is equivalent to a 'many-to-*' cardinality."
+            + " If false, the origin may at most contribute a single instance to the"
+            + " relation. This is equivalent to a 'one-to-*' cardinality."
+        ),
+    )
+    target: bool = Field(
+        ...,
+        description=(
+            "If true, the target may contribute multiple instances to the relation."
+            + " This is equivalent to a '*-to-many' cardinality."
+            + " If false, the target may at most contribute a single instance to the"
+            + " relation. This is equivalent to a '*-to-one' cardinality."
+        ),
+    )
+
+
 class Relation(FrozenBaseModel):
     """A model for describing a schemapack relation definition."""
 
-    cardinality: Cardinality = Field(
+    targetClass: str = Field(  # noqa: N815 - align with the schemapack naming scheme
+        ...,
+        description="The name of the target class.",
+    )
+    mandatory: MandatoryRelationSpec = Field(
         ...,
         description=(
-            "The cardinality of the relation. Read as `{this class}_to_{foreign class}`."
-            + " I.e. MANY_TO_ONE means that this class may have many instances that"
-            + " point to the same foreign class instance."
+            "The modality of the relation. It describes the minimum number of instances"
+            + " the origin and the target end must contribute to the relation."
+        ),
+    )
+    multiple: MultipleRelationSpec = Field(
+        ...,
+        description=(
+            "The cardinality of the relation. It describes the maximum number of"
+            + " instances the origin and the target end may contribute to the relation."
+            + " For instance, if the origin is `True` and target is `False`, the origin"
+            + " may contribute multiple instances to the relation, while the target may"
+            + " at most contribute a single instance to the relation."
+            + " This is equivalent to a 'many-to-one' cardinality."
         ),
     )
     lookup: RelationLookupMethod = Field(
         RelationLookupMethod.IN_DOCUMENT,
-        description="The method used to lookup the foreign class instance(s).",
-    )
-    to: str = Field(
-        ...,
-        description="The name of the foreign class.",
+        description="The method used to lookup the target class instance(s).",
     )
 
 
@@ -400,7 +456,7 @@ class SchemaPack(FrozenBaseModel):
 
         for class_name, class_definition in self.classes.items():
             for relation_name, relation in class_definition.relations.items():
-                if relation.to not in self.classes:
+                if relation.targetClass not in self.classes:
                     invalid_relations.append(f"{class_name}.{relation_name}")
 
         if invalid_relations:

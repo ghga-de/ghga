@@ -17,42 +17,66 @@
 """Built-In Validation Plugins"""
 
 # shortcuts:
-from schemapack.validation.plugins.cardinality_plural import (
-    CardinalityPluralityValidationPlugin,  # noqa: F401
-)
 from schemapack.validation.plugins.content_schema import (
-    ContentSchemaValidationPlugin,  # noqa: F401
+    ContentSchemaValidationPlugin,
 )
-from schemapack.validation.plugins.duplicate_foreign_id import (
-    DuplicateForeignIdValidationPlugin,  # noqa: F401
+from schemapack.validation.plugins.duplicate_target_id import (
+    DuplicateTargetIdValidationPlugin,
 )
 from schemapack.validation.plugins.expected_root import (
-    ExpectedRootValidationPlugin,  # noqa: F401
-)
-from schemapack.validation.plugins.foreign_id import (
-    ForeignIdValidationPlugin,  # noqa: F401
+    ExpectedRootValidationPlugin,
 )
 from schemapack.validation.plugins.missing_class import (
-    MissingClassSlotValidationPlugin,  # noqa: F401
+    MissingClassSlotValidationPlugin,
+)
+from schemapack.validation.plugins.missing_origin import (
+    MissingMandatoryOriginValidationPlugin,
 )
 from schemapack.validation.plugins.missing_relations import (
-    MissingRelationValidationPlugin,  # noqa: F401
+    MissingRelationValidationPlugin,
+)
+from schemapack.validation.plugins.missing_target import (
+    MissingMandatoryTargetValidationPlugin,
+)
+from schemapack.validation.plugins.multiple_target import (
+    MultipleTargetValidationPlugin,
 )
 from schemapack.validation.plugins.one_to_many_overlap import (
-    OneToManyOverlapValidationPlugin,  # noqa: F401
+    OneToManyOverlapValidationPlugin,
 )
 from schemapack.validation.plugins.one_to_one_overlap import (
-    OneToOneOverlapValidationPlugin,  # noqa: F401
+    OneToOneOverlapValidationPlugin,
+)
+from schemapack.validation.plugins.target_id import (
+    TargetIdValidationPlugin,
 )
 from schemapack.validation.plugins.unexpected_root import (
-    UnexpectedRootValidationPlugin,  # noqa: F401
+    UnexpectedRootValidationPlugin,
 )
 from schemapack.validation.plugins.unknown_class import (
-    UnknownClassSlotValidationPlugin,  # noqa: F401
+    UnknownClassSlotValidationPlugin,
 )
 from schemapack.validation.plugins.unknown_relations import (
-    UnknownRelationValidationPlugin,  # noqa: F401
+    UnknownRelationValidationPlugin,
 )
 from schemapack.validation.plugins.unkown_root_resource import (
-    UnkownRootResourceValidationPlugin,  # noqa: F401
+    UnkownRootResourceValidationPlugin,
 )
+
+__all__ = [
+    "ContentSchemaValidationPlugin",
+    "DuplicateTargetIdValidationPlugin",
+    "ExpectedRootValidationPlugin",
+    "MissingClassSlotValidationPlugin",
+    "MissingRelationValidationPlugin",
+    "MissingMandatoryTargetValidationPlugin",
+    "MultipleTargetValidationPlugin",
+    "OneToManyOverlapValidationPlugin",
+    "OneToOneOverlapValidationPlugin",
+    "TargetIdValidationPlugin",
+    "UnexpectedRootValidationPlugin",
+    "UnknownClassSlotValidationPlugin",
+    "UnknownRelationValidationPlugin",
+    "UnkownRootResourceValidationPlugin",
+    "MissingMandatoryOriginValidationPlugin",
+]

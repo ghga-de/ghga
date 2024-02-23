@@ -22,9 +22,10 @@ from schemapack.spec.schemapack import ClassDefinition
 from schemapack.validation.base import ResourceValidationPlugin
 
 
-class CardinalityPluralityValidationPlugin(ResourceValidationPlugin):
+class MultipleTargetValidationPlugin(ResourceValidationPlugin):
     """A resource-scoped validation plugin validating the plurality of relations,
-    i.e. *_to_many relations must be lists, *_to_one relations must be single values.
+    i.e. *_to_many (multiple.target is True) relations must be lists and *_to_one
+    (multiple.target is False) relations must be single values.
     This only applies to schemapack classes with relations.
     """
 
@@ -55,9 +56,7 @@ class CardinalityPluralityValidationPlugin(ResourceValidationPlugin):
             is_list = isinstance(relation, list)
 
             try:
-                expected_list = self._relations[relation_name].cardinality.endswith(
-                    "to_many"
-                )
+                expected_list = self._relations[relation_name].multiple.target
             except KeyError:
                 # Unknown relations are handled in a different plugin:
                 continue
@@ -69,7 +68,7 @@ class CardinalityPluralityValidationPlugin(ResourceValidationPlugin):
             raise ValidationPluginError(
                 type_="CardinalityPluralityError",
                 message=(
-                    "Expected a single foreign ID but got a list, or vise versa, for"
+                    "Expected a single target ID but got a list, or vise versa, for"
                     " the following relation propertie(s): "
                     + ", ".join(wrong_relations)
                 ),

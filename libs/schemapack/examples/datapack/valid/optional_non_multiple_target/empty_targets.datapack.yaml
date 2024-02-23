@@ -1,0 +1,10 @@
+# A origin resource references no target resources for a relation that is defined
+# optional at the target end:
+datapack: 0.1.0
+resources:
+  A:
+    a1:
+      content: {}
+      relations:
+        b: null # <-
+  B: {}

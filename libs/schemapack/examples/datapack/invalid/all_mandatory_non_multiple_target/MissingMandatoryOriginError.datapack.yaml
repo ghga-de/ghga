@@ -1,0 +1,14 @@
+# One target resource is not referenced by any origin resource through a relation that
+# is mandatory at the origin end:
+datapack: 0.1.0
+resources:
+  A:
+    a1:
+      content: {}
+      relations:
+        b: b1
+  B:
+    b1:
+      content: {}
+    b2: # <-
+      content: {}

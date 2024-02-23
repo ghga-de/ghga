@@ -21,7 +21,7 @@ from collections.abc import Mapping
 
 from schemapack.exceptions import ValidationPluginError
 from schemapack.spec.datapack import DataPack, Resource, ResourceId
-from schemapack.spec.schemapack import Cardinality, ClassDefinition
+from schemapack.spec.schemapack import ClassDefinition
 from schemapack.validation.base import ClassValidationPlugin
 
 
@@ -39,7 +39,7 @@ class OneToOneOverlapValidationPlugin(ClassValidationPlugin):
         Returns: True if this plugin is relevant for the given class definition.
         """
         return any(
-            relation.cardinality == Cardinality.ONE_TO_ONE
+            not relation.multiple.origin and not relation.multiple.target
             for relation in class_.relations.values()
         )
 
@@ -48,7 +48,7 @@ class OneToOneOverlapValidationPlugin(ClassValidationPlugin):
         self._relations_of_interest = [
             name
             for name, relation in class_.relations.items()
-            if relation.cardinality == Cardinality.ONE_TO_ONE
+            if not relation.multiple.origin and not relation.multiple.target
         ]
 
     def validate(
@@ -60,40 +60,42 @@ class OneToOneOverlapValidationPlugin(ClassValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        # Contains all overlapping foreign ids (values) per relation (keys) if any
+        # Contains all overlapping target ids (values) per relation (keys) if any
         # overlaps are found for that relation:
         overlapping_ids_by_relation: dict[str, list[str]] = {}
 
         for relation_name in self._relations_of_interest:
-            foreign_ids: list[str] = []
+            target_ids: list[str] = []
 
             for resource in class_resources.values():
-                foreign_id = resource.relations.get(relation_name)
-
-                if not foreign_id:
+                try:
+                    target_id = resource.relations[relation_name]
+                except KeyError:
                     # This is an error, however, it needs to be handled by a different
                     # validation plugin
                     continue
 
-                if not isinstance(foreign_id, str):
+                if isinstance(target_id, list):
                     # This is an error, however, it needs to be handled by a different
                     # validation plugin
                     continue
 
-                foreign_ids.append(foreign_id)
+                if not target_id:
+                    # This is OK (at least assuming mandatory.target is False)
+                    continue
 
-            duplicate_foreign_ids = [
-                k for k, v in Counter(foreign_ids).items() if v > 1
-            ]
+                target_ids.append(target_id)
 
-            if duplicate_foreign_ids:
-                overlapping_ids_by_relation[relation_name] = duplicate_foreign_ids
+            duplicate_target_ids = [k for k, v in Counter(target_ids).items() if v > 1]
+
+            if duplicate_target_ids:
+                overlapping_ids_by_relation[relation_name] = duplicate_target_ids
 
         if overlapping_ids_by_relation:
             raise ValidationPluginError(
                 type_="CardinalityOverlapError",
                 message=(
-                    "Found overlapping foreign IDs for the following one_to_one"
+                    "Found overlapping target IDs for the following one_to_one"
                     + " relations:"
                     + ", ".join(overlapping_ids_by_relation.keys())
                 ),

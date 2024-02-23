@@ -1,4 +1,4 @@
-# a simple schemapack without a root class
+# a schemapack illustrating all possible cardinalities:
 schemapack: 0.2.0
 classes:
   A:
@@ -6,17 +6,37 @@ classes:
     content: ../../content_schemas/AnyObject.schema.json
     relations:
       many_to_many:
-        to: B
-        cardinality: many_to_many
+        targetClass: B
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: true
       one_to_many:
-        to: B
-        cardinality: one_to_many
+        targetClass: B
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: false
+          target: true
       many_to_one:
-        to: B
-        cardinality: many_to_one
+        targetClass: B
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: false
       one_to_one:
-        to: B
-        cardinality: one_to_one
+        targetClass: B
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: false
+          target: false
   B:
     id_property: alias
     content: ../../content_schemas/AnyObject.schema.json

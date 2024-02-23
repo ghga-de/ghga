@@ -1,17 +1,18 @@
-# Refering to a non-existing class as root:
+# a schemapack with a many-to-one relation that is mandatory at both ends:
 schemapack: 0.2.0
 classes:
-  SomeClass:
+  A:
     id_property: alias
     content: ../../content_schemas/AnyObject.schema.json
     relations:
-      some_relation:
-        targetClass: SomeClass
+      b:
+        targetClass: B
         mandatory:
           origin: true
           target: true
         multiple:
           origin: true
-          target: true
-        lookup: in_document
-root_class: NonExistingClass # <-
+          target: false
+  B:
+    id_property: alias
+    content: ../../content_schemas/AnyObject.schema.json

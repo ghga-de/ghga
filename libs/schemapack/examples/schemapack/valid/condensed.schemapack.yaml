@@ -36,5 +36,10 @@ classes:
 
     relations:
       files:
-        to: File
-        cardinality: many_to_many
+        targetClass: File
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true

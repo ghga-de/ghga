@@ -84,29 +84,37 @@ def identify_dependencies(
 
     dependencies_by_class: dict[ClassName, set[ResourceId]] = defaultdict(set)
 
-    for relation_name, foreign_ids in target_resource.relations.items():
-        if isinstance(foreign_ids, str):
-            foreign_ids = [foreign_ids]
+    for relation_name in target_resource.relations:
+        try:
+            target_class_name = target_class_definition.relations[
+                relation_name
+            ].targetClass
+        except KeyError as error:
+            raise ValidationAssumptionError(
+                context="relation resolution in schemapack"
+            ) from error
 
         try:
-            foreign_class_name = target_class_definition.relations[relation_name].to
+            target_ids = target_resource.get_target_id_list(relation_name)
         except KeyError as error:
-            raise ValidationAssumptionError(context="relation resolution") from error
+            raise ValidationAssumptionError(
+                context="relation resolution in datapack"
+            ) from error
 
-        for foreign_id in foreign_ids:
+        for target_id in target_ids:
             if (
-                foreign_class_name in resource_blacklist
-                and foreign_id in resource_blacklist[foreign_class_name]
+                target_class_name in resource_blacklist
+                and target_id in resource_blacklist[target_class_name]
             ):
                 continue
 
-            dependencies_by_class[foreign_class_name].add(foreign_id)
+            dependencies_by_class[target_class_name].add(target_id)
 
-            # Recursively add dependencies of this foreign resource:
+            # Recursively add dependencies of this target resource:
             nested_dependencies = identify_dependencies(
                 datapack=datapack,
-                class_name=foreign_class_name,
-                resource_id=foreign_id,
+                class_name=target_class_name,
+                resource_id=target_id,
                 schemapack=schemapack,
                 _resource_blacklist=resource_blacklist,
             )

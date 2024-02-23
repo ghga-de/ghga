@@ -103,43 +103,48 @@ def integrate(  # noqa: PLR0912,C901
     }
     integrated_object.update(root_resource.content)
 
-    for relation_name, foreign_ids in root_resource.relations.items():
-        if isinstance(foreign_ids, str):
-            foreign_ids = [foreign_ids]
-
+    for relation_name, target_ids in root_resource.relations.items():
         try:
             relation_definition = root_class_definition.relations[relation_name]
         except KeyError as error:
             raise ValidationAssumptionError(context="relation resolution") from error
 
-        foreign_class_name = relation_definition.to
+        target_class_name = relation_definition.targetClass
 
-        is_plural = relation_definition.cardinality.endswith("to_many")
-        if is_plural:
+        if isinstance(target_ids, list):
             integrated_object[relation_name] = []
 
-        for foreign_id in foreign_ids:
-            if (
-                foreign_class_name in resource_blacklist
-                and foreign_id in resource_blacklist[foreign_class_name]
-            ):
-                raise CircularRelationError(
-                    "Cannot perform integration of datapack with circular relations."
-                    + " The circular relation involved the resource with id"
-                    + f" {foreign_id} of class {foreign_class_name}."
+            for target_id in target_ids:
+                if (
+                    target_class_name in resource_blacklist
+                    and target_id in resource_blacklist[target_class_name]
+                ):
+                    raise CircularRelationError(
+                        "Cannot perform integration of datapack with circular relations."
+                        + " The circular relation involved the resource with id"
+                        + f" {target_id} of class {target_class_name}."
+                    )
+
+                target_resource = integrate(
+                    datapack=datapack,
+                    schemapack=schemapack,
+                    _resource_blacklist=resource_blacklist,
+                    _alt_root_class_name=target_class_name,
+                    _alt_root_resource_id=target_id,
                 )
 
-            foreign_resource = integrate(
+                integrated_object[relation_name].append(target_resource)  # type: ignore
+
+        elif isinstance(target_ids, str):
+            integrated_object[relation_name] = integrate(
                 datapack=datapack,
                 schemapack=schemapack,
                 _resource_blacklist=resource_blacklist,
-                _alt_root_class_name=foreign_class_name,
-                _alt_root_resource_id=foreign_id,
+                _alt_root_class_name=target_class_name,
+                _alt_root_resource_id=target_ids,
             )
 
-            if is_plural:
-                integrated_object[relation_name].append(foreign_resource)  # type: ignore
-            else:
-                integrated_object[relation_name] = foreign_resource
+        else:
+            integrated_object[relation_name] = None
 
     return integrated_object

@@ -8,5 +8,8 @@ classes:
     content: ../../content_schemas/Dataset.schema.json
     relations:
       files:
-        to: File
-        cardinality: not_valid # <-
+        targetClass: File
+        mandatory:
+          origin: true
+          target: true
+        # every relation multiple defined

@@ -22,15 +22,17 @@ from schemapack.validation.base import (
     ResourceValidationPlugin,
 )
 from schemapack.validation.plugins import (
-    CardinalityPluralityValidationPlugin,
     ContentSchemaValidationPlugin,
-    DuplicateForeignIdValidationPlugin,
+    DuplicateTargetIdValidationPlugin,
     ExpectedRootValidationPlugin,
-    ForeignIdValidationPlugin,
     MissingClassSlotValidationPlugin,
+    MissingMandatoryOriginValidationPlugin,
+    MissingMandatoryTargetValidationPlugin,
     MissingRelationValidationPlugin,
+    MultipleTargetValidationPlugin,
     OneToManyOverlapValidationPlugin,
     OneToOneOverlapValidationPlugin,
+    TargetIdValidationPlugin,
     UnexpectedRootValidationPlugin,
     UnknownClassSlotValidationPlugin,
     UnknownRelationValidationPlugin,
@@ -47,12 +49,14 @@ DEFAULT_GLOBAL_PLUGIN_REGISTRY: list[type[GlobalValidationPlugin]] = [
 DEFAULT_CLASS_PLUGIN_REGISTRY: list[type[ClassValidationPlugin]] = [
     OneToOneOverlapValidationPlugin,
     OneToManyOverlapValidationPlugin,
+    MissingMandatoryOriginValidationPlugin,
 ]
 DEFAULT_RESOURCE_PLUGIN_REGISTRY: list[type[ResourceValidationPlugin]] = [
     ContentSchemaValidationPlugin,
-    ForeignIdValidationPlugin,
+    TargetIdValidationPlugin,
     MissingRelationValidationPlugin,
     UnknownRelationValidationPlugin,
-    CardinalityPluralityValidationPlugin,
-    DuplicateForeignIdValidationPlugin,
+    MultipleTargetValidationPlugin,
+    DuplicateTargetIdValidationPlugin,
+    MissingMandatoryTargetValidationPlugin,
 ]
