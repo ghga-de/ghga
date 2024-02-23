@@ -1,5 +1,6 @@
 schemapack: 0.2.0
 classes:
   Dataset:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/Invalid.schema.json # <-

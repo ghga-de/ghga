@@ -1,5 +1,5 @@
 schemapack: 0.2.0
 classes:
   Dataset:
-    # every class must have an id_property, this one does not
+    id: {} # every class must have an id propertyName, this one does not
     content: ../../content_schemas/Dataset.schema.json

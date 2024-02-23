@@ -1,8 +1,9 @@
-# a schemapack illustrating all possible cardinalities:
 schemapack: 0.2.0
+description: a schemapack illustrating all possible cardinalities
 classes:
   A:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/AnyObject.schema.json
     relations:
       many_to_many:
@@ -38,5 +39,6 @@ classes:
           origin: false
           target: false
   B:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/AnyObject.schema.json

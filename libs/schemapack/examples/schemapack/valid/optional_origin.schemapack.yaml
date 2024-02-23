@@ -1,8 +1,9 @@
-# a schemapack with a many-to-many relation that is optional at the origin end:
 schemapack: 0.2.0
+description: a schemapack with a many-to-many relation that is optional at the origin end
 classes:
   A:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/AnyObject.schema.json
     relations:
       b:
@@ -14,5 +15,6 @@ classes:
           origin: true
           target: true
   B:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/AnyObject.schema.json

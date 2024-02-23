@@ -1,9 +1,11 @@
-# there is little value in a schemapack without relations but it is syntactically valid
 schemapack: 0.2.0
+description: there is little value in a schemapack without relations but it is syntactically valid
 classes:
   File:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/File.schema.json
   Dataset:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/Dataset.schema.json

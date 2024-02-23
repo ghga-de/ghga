@@ -1,8 +1,9 @@
-# a simple schemapack with a root class with the content schemas being embedded
 schemapack: 0.2.0
+description: A simple schemapack
 classes:
   File:
-    id_property: alias
+    id:
+      propertyName: alias
     content:
       "$schema": "http://json-schema.org/draft-07/schema#"
       additionalProperties: false
@@ -24,7 +25,8 @@ classes:
         - size
       type: object
   Dataset:
-    id_property: alias
+    id:
+      propertyName: alias
     content:
       "$schema": "http://json-schema.org/draft-07/schema#"
       additionalProperties: false

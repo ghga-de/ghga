@@ -99,7 +99,7 @@ def denormalize(  # noqa: PLR0912,C901
         )
 
     denormalized_object: JsonObjectCompatible = {
-        root_class_definition.id_property: root_resource_id
+        root_class_definition.id.propertyName: root_resource_id
     }
     denormalized_object.update(root_resource.content)
 

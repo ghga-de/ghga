@@ -1,6 +1,7 @@
-# a version that is not known to the tooling
-schemapack: 0.2.0-not-supported # <-
+schemapack: 0.1.111223124 # <-
+description: a version that is not known to the tooling-not-supported # <-
 classes:
   Dataset:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/Dataset.schema.json

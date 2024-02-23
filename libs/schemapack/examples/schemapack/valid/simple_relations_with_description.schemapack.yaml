@@ -1,17 +1,23 @@
 schemapack: 0.2.0
+description: A simple schemapack
 classes:
   File:
     id:
       propertyName: alias
+      description: The alias of the file.
     content: ../../content_schemas/File.schema.json
   Dataset:
     id:
       propertyName: alias
+      description: The alias of the Dataset.
     content: ../../content_schemas/Dataset.schema.json
     relations:
       files:
         targetClass: File
-        # every relation mandatory defined
+        description: The files in the dataset.
+        mandatory:
+          origin: true
+          target: true
         multiple:
           origin: true
           target: true

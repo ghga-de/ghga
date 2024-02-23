@@ -167,6 +167,10 @@ class MultipleRelationSpec(FrozenBaseModel):
 class Relation(FrozenBaseModel):
     """A model for describing a schemapack relation definition."""
 
+    description: Optional[str] = Field(
+        None,
+        description="A description of the relation.",
+    )
     targetClass: str = Field(  # noqa: N815 - align with the schemapack naming scheme
         ...,
         description="The name of the target class.",
@@ -195,16 +199,34 @@ class Relation(FrozenBaseModel):
     )
 
 
-class ClassDefinition(FrozenBaseModel):
-    """A model for describing a schemapack class definition."""
+class IDSpec(FrozenBaseModel):
+    """A model for describing the ID property of a class definition."""
 
-    id_property: str = Field(
+    propertyName: str = Field(  # noqa: N815 - align with the schemapack naming scheme
+        ...,
         description=(
-            "A name that can be used for the ID property. It may not collide"
-            + " with content or relations properties."
+            "The name of the ID property. It must not collide with content or relations"
+            + " properties."
             + "This name e.g. relavant for specifying the ID property in a"
             + " denormalized representation."
         ),
+    )
+    description: Optional[str] = Field(
+        None,
+        description="A description of the ID property.",
+    )
+
+
+class ClassDefinition(FrozenBaseModel):
+    """A model for describing a schemapack class definition."""
+
+    description: Optional[str] = Field(
+        None,
+        description=("A description of the class definition."),
+    )
+    id: IDSpec = Field(
+        ...,
+        description="The ID property of the class definition.",
     )
     content: ContentSchema
     relations: FrozenDict[str, Relation] = Field(
@@ -333,12 +355,12 @@ class ClassDefinition(FrozenBaseModel):
     @model_validator(mode="after")
     def id_content_property_collisions(self) -> "ClassDefinition":
         """Check for collisions between the id property and content properties."""
-        if self.id_property in self.content.properties:
+        if self.id.propertyName in self.content.properties:
             raise PydanticCustomError(
                 "IdContentPropertyCollisionError",
                 ("The id property '{id_property}' also occurs in the content."),
                 {
-                    "id_property": self.id_property,
+                    "id_property": self.id.propertyName,
                 },
             )
 
@@ -347,12 +369,12 @@ class ClassDefinition(FrozenBaseModel):
     @model_validator(mode="after")
     def id_relations_property_collisions(self) -> "ClassDefinition":
         """Check for collisions between the id property and relations properties."""
-        if self.id_property in self.relations:
+        if self.id.propertyName in self.relations:
             raise PydanticCustomError(
                 "IdRelationsPropertyCollisionError",
                 ("The id property '{id_property}' also occurs in the relations."),
                 {
-                    "id_property": self.id_property,
+                    "id_property": self.id.propertyName,
                 },
             )
 
@@ -369,6 +391,10 @@ class SchemaPack(FrozenBaseModel):
             + " a schemapack definition and (2) it specifies the used version of the"
             + " schemapack specification."
         ),
+    )
+    description: Optional[str] = Field(
+        None,
+        description=("A description of the schemapack definition."),
     )
     classes: FrozenDict[str, ClassDefinition] = Field(
         ...,

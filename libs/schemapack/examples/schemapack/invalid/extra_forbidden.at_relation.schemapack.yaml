@@ -1,11 +1,13 @@
-# attributes that are not part of the schemapack spec are not allowed:
 schemapack: 0.2.0
+description: attributes that are not part of the schemapack spec are not allowed
 classes:
   File:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/File.schema.json
   Dataset:
-    id_property: alias
+    id:
+      propertyName: alias
     content: ../../content_schemas/Dataset.schema.json
     relations:
       files:
