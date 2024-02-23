@@ -1,0 +1,14 @@
+# The corresponding schemapack expects a root but no root resource is defined:
+datapack: 0.1.0
+resources:
+  SomeClass:
+    a:
+      content: {}
+      relations:
+        some_relation:
+          - b
+    b:
+      content: {}
+      relations:
+        some_relation:
+          - a

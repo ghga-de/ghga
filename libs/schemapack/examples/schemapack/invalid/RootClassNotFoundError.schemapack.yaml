@@ -1,0 +1,12 @@
+# Refering to a non-existing class as root:
+schemapack: 0.2.0
+classes:
+  SomeClass:
+    id_property: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      some_relation:
+        to: SomeClass
+        cardinality: many_to_many
+        lookup: in_document
+root_class: NonExistingClass # <-

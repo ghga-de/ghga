@@ -68,11 +68,14 @@ def integrate(  # noqa: PLR0912,C901
         schemapack.exceptions.CircularRelationError:
             If a circular relation is detected.
     """
-    if not datapack.root:
+    if not datapack.root_resource:
         raise ValueError("Datapack must be rooted.")
 
-    root_class_name = _alt_root_class_name or datapack.root.class_name
-    root_resource_id = _alt_root_resource_id or datapack.root.resource_id
+    if not schemapack.root_class:
+        raise ValueError("Schemapack must be rooted.")
+
+    root_class_name = _alt_root_class_name or schemapack.root_class
+    root_resource_id = _alt_root_resource_id or datapack.root_resource
 
     resource_blacklist: dict[ClassName, set[ResourceId]] = defaultdict(set)
     resource_blacklist[root_class_name].add(root_resource_id)
@@ -80,11 +83,20 @@ def integrate(  # noqa: PLR0912,C901
         for class_name, resource_ids in _resource_blacklist.items():
             resource_blacklist[class_name].update(resource_ids)
 
-    root_resource = datapack.resources[root_class_name][root_resource_id]
-    try:
-        root_class_definition = schemapack.classes[root_class_name]
-    except KeyError as error:
-        raise ValidationAssumptionError(context="class lookup") from error
+    root_class_resources = datapack.resources.get(root_class_name)
+    if not root_class_resources:
+        raise ValidationAssumptionError(context="root class lookup")
+
+    root_resource = root_class_resources.get(root_resource_id)
+    if not root_resource:
+        raise ValidationAssumptionError(context="root resource lookup")
+
+    root_class_definition = schemapack.classes.get(root_class_name)
+    if not root_class_definition:
+        raise RuntimeError(
+            "This is a bug and should not happen. It should be caught by the schemapack"
+            + " spec validation."
+        )
 
     integrated_object: JsonObjectCompatible = {
         root_class_definition.id_property: root_resource_id

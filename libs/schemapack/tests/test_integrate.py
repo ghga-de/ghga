@@ -51,8 +51,8 @@ def test_integrate(name: str, expected_integration_path: Path):
 @pytest.mark.parametrize(
     "name",
     [
-        "self_relation.rooted_circular_relations",
-        "self_relation.rooted_circular_self_relations",
+        "self_relation_rooted.rooted_circular_relations",
+        "self_relation_rooted.rooted_circular_self_relations",
     ],
 )
 def test_integrate_circular_relation(name: str):

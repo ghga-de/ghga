@@ -17,6 +17,4 @@ resources:
       content: {}
       relations:
         some_relation: []
-root:
-  class_name: SomeClass
-  resource_id: a
+root_resource: a

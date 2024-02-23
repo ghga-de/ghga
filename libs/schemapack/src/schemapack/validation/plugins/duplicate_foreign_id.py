@@ -57,7 +57,7 @@ class DuplicateForeignIdValidationPlugin(ResourceValidationPlugin):
         provided for resolving relations to resources of other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         # Contains all duplicate foreign ids (values) per relation (keys) if any
         # overlaps are found for that relation:

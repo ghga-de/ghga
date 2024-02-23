@@ -21,7 +21,7 @@ import typing
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Literal, Union
+from typing import Any, Literal, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -323,6 +323,17 @@ class SchemaPack(FrozenBaseModel):
         min_length=1,
     )
 
+    root_class: Optional[str] = Field(
+        None,
+        description=(
+            "Optionally, define the name of a class that should acting as the root of"
+            + " the schemapack."
+            + " Corresponding datapacks must define a root resource of this class."
+            + "If not specified , i.e. set to None (the default), the datapack must no"
+            + " specify a root resource."
+        ),
+    )
+
     @model_validator(mode="before")
     @classmethod
     def check_schemapack_field_exists(cls, data: Any) -> Any:
@@ -402,6 +413,20 @@ class SchemaPack(FrozenBaseModel):
                 {
                     "number": len(invalid_relations),
                     "invalid_relations": invalid_relations,
+                },
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def root_in_classes(self) -> "SchemaPack":
+        """Check that the specified root exists in the defined classes."""
+        if self.root_class and self.root_class not in self.classes:
+            raise PydanticCustomError(
+                "RootClassNotFoundError",
+                ("The specified root class '{self.root_class}' does not exist."),
+                {
+                    "root_class": self.root_class,
                 },
             )
 

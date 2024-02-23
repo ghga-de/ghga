@@ -26,7 +26,6 @@ from schemapack.spec.datapack import (
     DataPack,
     Resource,
     ResourceId,
-    RootResource,
 )
 from schemapack.spec.schemapack import SchemaPack
 
@@ -162,7 +161,7 @@ def downscope_datapack(
     return datapack.model_copy(update={"resources": resources})
 
 
-def isolate(
+def isolate_datapack(
     *,
     datapack: DataPack,
     class_name: ClassName,
@@ -172,6 +171,10 @@ def isolate(
     """Isolate a resource from a non-rooted datapack to created a rooted datapack. I.e.
     the resulting datapack will only contain resources referenced by the root resource
     as well as the root resource itself.
+
+    Please note:
+        The returned rooted datapack will not be compatible anymore with the original
+        non-rooted schemapack.
     """
     dependency_map = identify_dependencies(
         datapack=datapack,
@@ -181,5 +184,34 @@ def isolate(
         include_target=True,
     )
     rooted_datapack = downscope_datapack(datapack=datapack, resource_map=dependency_map)
-    rooted_datapack.root = RootResource(class_name=class_name, resource_id=resource_id)
+    rooted_datapack.root_resource = resource_id
     return rooted_datapack
+
+
+def isolate_schemapack(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPack:
+    """Return a copy of the provided schemapack that is rooted to the specified class."""
+    return schemapack.model_copy(update={"root_class": class_name})
+
+
+def isolate(
+    *,
+    class_name: ClassName,
+    resource_id: ResourceId,
+    schemapack: SchemaPack,
+    datapack: DataPack,
+) -> tuple[SchemaPack, DataPack]:
+    """Create copies of the provided schemapacks and datapacks that are rooted towards
+    the specified class and resource. I.e. the resulting datapack will only contain
+    resources referenced by the root resource as well as the root resource itself.
+
+    Returns:
+        A tuple containing both the rooted schemapack and the rooted datapack.
+    """
+    rooted_schemapack = isolate_schemapack(class_name=class_name, schemapack=schemapack)
+    rooted_datapack = isolate_datapack(
+        datapack=datapack,
+        class_name=class_name,
+        resource_id=resource_id,
+        schemapack=schemapack,
+    )
+    return rooted_schemapack, rooted_datapack

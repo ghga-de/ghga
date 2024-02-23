@@ -22,6 +22,4 @@ resources:
         files:
           - example_file_a
           - example_file_b
-root:
-  class_name: Dataset
-  resource_id: example_dataset_1
+root_resource: example_dataset_1

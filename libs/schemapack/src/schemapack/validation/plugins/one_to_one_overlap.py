@@ -26,7 +26,7 @@ from schemapack.validation.base import ClassValidationPlugin
 
 
 class OneToOneOverlapValidationPlugin(ClassValidationPlugin):
-    """A resource-scoped validation plugin validating that no overlap in one_to_one
+    """A class-scoped validation plugin validating that no overlap in one_to_one
     relations exists across resources of a schemapack class.
     This only applies to schemapack classes with one_to_one relations.
     """
@@ -58,7 +58,7 @@ class OneToOneOverlapValidationPlugin(ClassValidationPlugin):
         for resolving relations to other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         # Contains all overlapping foreign ids (values) per relation (keys) if any
         # overlaps are found for that relation:

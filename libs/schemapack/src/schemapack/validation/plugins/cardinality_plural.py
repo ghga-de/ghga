@@ -48,7 +48,7 @@ class CardinalityPluralityValidationPlugin(ResourceValidationPlugin):
         provided for resolving relations to resources of other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         wrong_relations: list[str] = []
         for relation_name, relation in resource.relations.items():

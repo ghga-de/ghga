@@ -23,7 +23,7 @@ from schemapack.validation.base import GlobalValidationPlugin
 
 
 class MissingClassSlotValidationPlugin(GlobalValidationPlugin):
-    """A resource-scoped validation plugin validating that a datapack has a slot for
+    """A global-scoped validation plugin validating that a datapack has a slot for
     each class defined in the provided schemapack.
     """
 
@@ -44,7 +44,7 @@ class MissingClassSlotValidationPlugin(GlobalValidationPlugin):
         """Validate the entire datapack.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         missing_classes = [
             class_ for class_ in self._classes if class_ not in datapack.resources

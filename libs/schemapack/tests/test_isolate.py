@@ -16,8 +16,6 @@
 
 """Test the isolate module."""
 
-from pathlib import Path
-
 import pytest
 
 from schemapack.isolate import isolate
@@ -27,42 +25,37 @@ from tests.fixtures.examples import VALID_DATAPACK_PATHS, VALID_SCHEMAPACK_PATHS
 
 
 @pytest.mark.parametrize(
-    "schemapack_path, non_rooted_datapack_path, resource_class, resource_id, rooted_datapack_path",
+    "datapack_name, resource_class, resource_id, rooted_datapack_name",
     [
         (
-            VALID_SCHEMAPACK_PATHS["self_relation"],
-            VALID_DATAPACK_PATHS["self_relation.multiple_relation_groups"],
+            "self_relation.multiple_relation_groups",
             "SomeClass",
             "a",
-            VALID_DATAPACK_PATHS["self_relation.rooted_nested_relations"],
+            "self_relation_rooted.rooted_nested_relations",
         ),
         (
-            VALID_SCHEMAPACK_PATHS["simple_relations"],
-            VALID_DATAPACK_PATHS["simple_relations.non_rooted"],
+            "simple_relations.simple_resources",
             "Dataset",
             "example_dataset_1",
-            VALID_DATAPACK_PATHS["simple_relations.rooted"],
+            "simple_relations_rooted.rooted_simple_resources",
         ),
         (
-            VALID_SCHEMAPACK_PATHS["self_relation"],
-            VALID_DATAPACK_PATHS["self_relation.circular_relations"],
+            "self_relation.circular_relations",
             "SomeClass",
             "a",
-            VALID_DATAPACK_PATHS["self_relation.rooted_circular_relations"],
+            "self_relation_rooted.rooted_circular_relations",
         ),
         (
-            VALID_SCHEMAPACK_PATHS["self_relation"],
-            VALID_DATAPACK_PATHS["self_relation.circular_self_relations"],
+            "self_relation.circular_self_relations",
             "SomeClass",
             "a",
-            VALID_DATAPACK_PATHS["self_relation.rooted_circular_self_relations"],
+            "self_relation_rooted.rooted_circular_self_relations",
         ),
         (
-            VALID_SCHEMAPACK_PATHS["complex_cardinality"],
-            VALID_DATAPACK_PATHS["complex_cardinality.all_cardinalities"],
+            "complex_cardinality.all_cardinalities",
             "A",
             "a1",
-            VALID_DATAPACK_PATHS["complex_cardinality.rooted_all_cardinalities"],
+            "complex_cardinality_rooted.rooted_all_cardinalities",
         ),
     ],
     ids=[
@@ -74,22 +67,30 @@ from tests.fixtures.examples import VALID_DATAPACK_PATHS, VALID_SCHEMAPACK_PATHS
     ],
 )
 def test_isolate(
-    schemapack_path: Path,
-    non_rooted_datapack_path: Path,
+    datapack_name: str,
     resource_class: ClassName,
     resource_id: ResourceId,
-    rooted_datapack_path: Path,
+    rooted_datapack_name: str,
 ):
     """Test the isolate function."""
-    schemapack = load_schemapack(schemapack_path)
-    non_rooted_datapack = load_datapack(non_rooted_datapack_path)
-    expected_rooted_datapack = load_datapack(rooted_datapack_path)
+    datapack_path = VALID_DATAPACK_PATHS[datapack_name]
+    expected_rooted_datapack_path = VALID_DATAPACK_PATHS[rooted_datapack_name]
+    schemapack_name = datapack_name.split(".")[0]
+    schemapack_path = VALID_SCHEMAPACK_PATHS[schemapack_name]
+    rooted_schempack_name = rooted_datapack_name.split(".")[0]
+    expected_rooted_schemapack_path = VALID_SCHEMAPACK_PATHS[rooted_schempack_name]
 
-    rooted_datapack = isolate(
-        datapack=non_rooted_datapack,
+    datapack = load_datapack(datapack_path)
+    expected_rooted_datapack = load_datapack(expected_rooted_datapack_path)
+    schemapack = load_schemapack(schemapack_path)
+    expected_rooted_schemapack = load_schemapack(expected_rooted_schemapack_path)
+
+    rooted_schemapack, rooted_datapack = isolate(
         class_name=resource_class,
         resource_id=resource_id,
         schemapack=schemapack,
+        datapack=datapack,
     )
 
+    assert rooted_schemapack == expected_rooted_schemapack
     assert rooted_datapack == expected_rooted_datapack

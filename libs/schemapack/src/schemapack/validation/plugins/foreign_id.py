@@ -48,7 +48,7 @@ class ForeignIdValidationPlugin(ResourceValidationPlugin):
         provided for resolving relations to resources of other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         non_found_foreign_ids: dict[str, str] = {}  # foreign_id -> relation_name
         for relation_name, relation in self._relations.items():

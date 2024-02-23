@@ -1,4 +1,4 @@
-# a simple schemapack with no root class
+# a simple schemapack with a root class
 schemapack: 0.2.0
 classes:
   File:
@@ -11,3 +11,4 @@ classes:
       files:
         to: File
         cardinality: many_to_many
+root_class: Dataset

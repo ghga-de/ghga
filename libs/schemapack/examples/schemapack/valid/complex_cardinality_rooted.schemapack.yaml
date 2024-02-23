@@ -1,0 +1,23 @@
+# a simple schemapack without a root class
+schemapack: 0.2.0
+classes:
+  A:
+    id_property: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      many_to_many:
+        to: B
+        cardinality: many_to_many
+      one_to_many:
+        to: B
+        cardinality: one_to_many
+      many_to_one:
+        to: B
+        cardinality: many_to_one
+      one_to_one:
+        to: B
+        cardinality: one_to_one
+  B:
+    id_property: alias
+    content: ../../content_schemas/AnyObject.schema.json
+root_class: A

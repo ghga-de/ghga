@@ -48,7 +48,7 @@ class MissingRelationValidationPlugin(ResourceValidationPlugin):
         provided for resolving relations to resources of other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         missing_relations = [
             relation

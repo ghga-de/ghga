@@ -22,9 +22,10 @@ from schemapack.spec.schemapack import SchemaPack
 from schemapack.validation.base import GlobalValidationPlugin
 
 
-class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
-    """A global-scoped validation plugin validating that a datapack only contains
-    slots for classes defined in the provided schemapack.
+class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
+    """A global-scoped validation plugin validating that a datapack has no root resource
+    defined.
+    This plugin is only relvant if the schemapack has no root class defined.
     """
 
     @staticmethod
@@ -34,11 +35,11 @@ class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
 
         Returns: True if this plugin is relevant for the given class definition.
         """
-        return True
+        return not bool(schemapack.root_class)
 
     def __init__(self, *, schemapack: SchemaPack):
         """This plugin is configured with the entire schemapack."""
-        self._classes = set(schemapack.classes)
+        # there is nothing to do
 
     def validate(self, *, datapack: DataPack):
         """Validate the entire datapack.
@@ -46,18 +47,11 @@ class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        unknown_classes = [
-            class_ for class_ in datapack.resources if class_ not in self._classes
-        ]
-
-        if unknown_classes:
+        if datapack.root_resource:
             raise ValidationPluginError(
-                type_="UnknownClassSlotError",
+                type_="UnexpectedRootResourceError",
                 message=(
-                    "Found slot(s) for class(es) not defined in the schemapack:"
-                    + ", ".join(unknown_classes)
+                    "The schemapack has no root class defined but the datapack "
+                    "specifies a root resource."
                 ),
-                details={
-                    "unknown_classes": unknown_classes,
-                },
             )
