@@ -20,17 +20,26 @@ from typing import Annotated, Optional
 
 from fastapi import Cookie
 
-from auth_service.deps import Depends, get_config
+from auth_service.deps import (
+    Depends,
+    MongoDbDaoFactory,
+    get_config,
+    get_mongodb_dao_factory,
+)
+from auth_service.user_management.user_registry.translators.dao import UserDaoConfig
 
 from .adapters.memory_session_store import MemorySessionStore
 from .core.session_store import Session, SessionConfig
 from .core.totp import TOTPConfig, TOTPHandler, TOTPToken
+from .ports.dao import UserTokenDao
 from .ports.session_store import SessionStorePort
 from .ports.totp import TOTPHandlerPort
+from .translators.dao import UserTokenDaoFactory
 
 __all__ = [
     "get_session_store",
     "get_session",
+    "get_user_token_dao",
     "SessionStoreDependency",
     "SessionDependency",
 ]
@@ -65,6 +74,21 @@ async def get_totp_handler(
     if not _totp_handler:
         _totp_handler = TOTPHandler(config=config)
     return _totp_handler
+
+
+def get_user_token_dao_factory(
+    config: UserDaoConfig = Depends(get_config),
+    dao_factory: MongoDbDaoFactory = Depends(get_mongodb_dao_factory),
+) -> UserTokenDaoFactory:
+    """Get a user token DAO factory."""
+    return UserTokenDaoFactory(config=config, dao_factory=dao_factory)
+
+
+async def get_user_token_dao(
+    dao_factory: UserTokenDaoFactory = Depends(get_user_token_dao_factory),
+) -> UserTokenDao:
+    """Get user token data access object."""
+    return await dao_factory.get_user_token_dao()
 
 
 SessionStoreDependency = Annotated[

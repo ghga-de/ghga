@@ -19,6 +19,7 @@
 import asyncio
 import logging
 
+from pydantic import SecretStr
 from testcontainers.mongodb import MongoDbContainer
 
 from auth_service.config import Config
@@ -30,9 +31,8 @@ from auth_service.user_management.claims_repository.core.seed import (
 def test_add_non_existing_data_steward(caplog):
     """Test that non-existing data stewards can be added in the configuration."""
     with MongoDbContainer() as mongodb:
-        connection_url = mongodb.get_connection_url()
         config = Config(
-            db_url=connection_url,
+            db_connection_str=SecretStr(mongodb.get_connection_url()),
             db_name="test-claims-repository",
             include_apis=["claims"],
             add_as_data_stewards=[

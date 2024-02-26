@@ -100,8 +100,7 @@ def test_default_parameters(totp_handler: TOTPHandler):
 def test_generate_token(totp_handler: TOTPHandler):
     """Test generating a TOTP token."""
     token = totp_handler.generate_token()
-    secret = token.secret.get_secret_value()
-    decoded_secret = base64.b64decode(secret)
+    decoded_secret = base64.b64decode(token.encrypted_secret)
     assert len(decoded_secret) == 72
     assert token.counter == -1
     assert token.attempts == -1
@@ -148,14 +147,14 @@ def test_verify_code_with_valid_code(totp_handler: TOTPHandler):
 def test_token_object_is_modified(totp_handler: TOTPHandler):
     """Test modification of token object after verification."""
     token = totp_handler.generate_token()
-    secret = token.secret
+    secret = token.encrypted_secret
     assert token.attempts == -1
     assert token.counter == -1
     token.attempts = 1
     token.counter = 0
     for_time = now_as_utc()
     verified = totp_handler.verify_code(token, "123456", for_time)
-    assert token.secret == secret
+    assert token.encrypted_secret == secret
     expected_attempts = -1 if verified else 1
     assert token.attempts == expected_attempts
     assert token.counter > 0

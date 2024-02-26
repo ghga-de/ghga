@@ -14,27 +14,11 @@
 # limitations under the License.
 #
 
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
-# for the German Human Genome-Phenome Archive (GHGA)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
 """Managing user sessions that keep track of authentication state."""
 
 import secrets
 from enum import Enum
-from typing import Optional
+from typing import Optional, Protocol
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import EmailStr, Field
@@ -109,6 +93,14 @@ class SessionConfig(BaseSettings):
     )
 
 
+class AsyncUserPredicate(Protocol):
+    """An async predicate function for users."""
+
+    async def __call__(self, user: User) -> bool:
+        """Call the predicate function."""
+        ...
+
+
 class SessionStore(SessionStorePort[Session]):
     """A store for user sessions that is independent of the storage mechanism."""
 
@@ -176,15 +168,11 @@ class SessionStore(SessionStorePort[Session]):
             or session.user_email != user.email
         )
 
-    @staticmethod
-    def _check_has_totp_token(user: User) -> bool:
-        """Check if the user has a TOTP token."""
-        # TODO: dummy-code, change for real implementation
-        # currently we do not yet store the TOTP token in the user object
-        return "with TOTP" in user.name
-
     async def _update_session(
-        self, session: Session, user: Optional[User] = None
+        self,
+        session: Session,
+        user: Optional[User] = None,
+        has_totp_token: Optional[AsyncUserPredicate] = None,
     ) -> None:
         """Update the given user session."""
         if user is not None:
@@ -199,8 +187,10 @@ class SessionStore(SessionStorePort[Session]):
                 session.user_email = user.email
                 session.user_title = user.title
                 session.state = SessionState.REGISTERED
-            if session.state is SessionState.REGISTERED and self._check_has_totp_token(
-                user
+            if (
+                session.state is SessionState.REGISTERED
+                and has_totp_token
+                and await has_totp_token(user)
             ):
                 session.state = SessionState.HAS_TOTP_TOKEN
         session.last_used = self._now()

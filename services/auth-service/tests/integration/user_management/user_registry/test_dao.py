@@ -25,7 +25,6 @@ from pytest import mark
 from auth_service.user_management.user_registry.deps import (
     get_config,
     get_user_dao_factory,
-    get_user_dao_factory_config,
 )
 from auth_service.user_management.user_registry.models.dto import (
     AcademicTitle,
@@ -42,10 +41,8 @@ async def test_user_creation(
     mongodb_fixture,  # noqa: F811
 ):
     """Test creating a new user"""
-    config = get_config()
-    user_dao_factory_config = get_user_dao_factory_config(config=config)
     user_dao_factory = get_user_dao_factory(
-        config=user_dao_factory_config, dao_factory=mongodb_fixture.dao_factory
+        config=get_config(), dao_factory=mongodb_fixture.dao_factory
     )
     user_dao = await user_dao_factory.get_user_dao()
 

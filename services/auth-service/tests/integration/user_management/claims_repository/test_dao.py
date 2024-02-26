@@ -24,7 +24,6 @@ from pytest import mark
 
 from auth_service.user_management.claims_repository.deps import (
     get_claim_dao_factory,
-    get_claim_dao_factory_config,
     get_config,
 )
 from auth_service.user_management.claims_repository.models.dto import (
@@ -39,10 +38,8 @@ async def test_claim_creation(
     mongodb_fixture,  # noqa: F811
 ):
     """Test creating a new user claim"""
-    config = get_config()
-    claim_dao_factory_config = get_claim_dao_factory_config(config=config)
     claim_dao_factory = get_claim_dao_factory(
-        config=claim_dao_factory_config, dao_factory=mongodb_fixture.dao_factory
+        config=get_config(), dao_factory=mongodb_fixture.dao_factory
     )
     claim_dao = await claim_dao_factory.get_claim_dao()
 

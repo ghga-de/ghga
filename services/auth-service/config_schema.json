@@ -14,6 +14,18 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "dataset_deletion_event_topic": {
+      "default": "metadata_datasets",
+      "description": "the topic of the event announcing dataset deletions",
+      "title": "Dataset Deletion Event Topic",
+      "type": "string"
+    },
+    "dataset_deletion_event_type": {
+      "default": "dataset_deleted",
+      "description": "the type of the event announcing dataset deletions",
+      "title": "Dataset Deletion Event Type",
+      "type": "string"
+    },
     "service_name": {
       "default": "auth_service",
       "description": "Short name of this service",
@@ -85,16 +97,43 @@
       "title": "Generate Correlation Id",
       "type": "boolean"
     },
-    "dataset_deletion_event_topic": {
-      "default": "metadata_datasets",
-      "description": "the topic of the event announcing dataset deletions",
-      "title": "Dataset Deletion Event Topic",
+    "claims_collection": {
+      "default": "claims",
+      "description": "Name of the collection for user claims",
+      "title": "Claims Collection",
       "type": "string"
     },
-    "dataset_deletion_event_type": {
-      "default": "dataset_deleted",
-      "description": "the type of the event announcing dataset deletions",
-      "title": "Dataset Deletion Event Type",
+    "users_collection": {
+      "default": "users",
+      "description": "Name of the collection for users",
+      "title": "Users Collection",
+      "type": "string"
+    },
+    "user_tokens_collection": {
+      "default": "user_tokens",
+      "description": "Name of the collection for user tokens",
+      "title": "User Tokens Collection",
+      "type": "string"
+    },
+    "db_connection_str": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "password",
+      "title": "Db Connection Str",
+      "type": "string",
+      "writeOnly": true
+    },
+    "db_name": {
+      "default": "auth-db",
+      "description": "the name of the database located on the MongoDB server",
+      "examples": [
+        "auth-db",
+        "user-management",
+        "users-and-claims"
+      ],
+      "title": "Db Name",
       "type": "string"
     },
     "log_level": {
@@ -554,37 +593,12 @@
       "minLength": 1,
       "title": "Organization Url",
       "type": "string"
-    },
-    "db_url": {
-      "default": "mongodb://mongodb:27017",
-      "description": "MongoDB connection string",
-      "format": "password",
-      "title": "Db Url",
-      "type": "string",
-      "writeOnly": true
-    },
-    "db_name": {
-      "default": "user-management",
-      "description": "Name of the MongoDB database",
-      "title": "Db Name",
-      "type": "string"
-    },
-    "users_collection": {
-      "default": "users",
-      "description": "Name of the MongoDB collection for users",
-      "title": "Users Collection",
-      "type": "string"
-    },
-    "claims_collection": {
-      "default": "claims",
-      "description": "Name of the MongoDB collection for claims",
-      "title": "Claims Collection",
-      "type": "string"
     }
   },
   "required": [
     "service_instance_id",
-    "kafka_servers"
+    "kafka_servers",
+    "db_connection_str"
   ],
   "title": "ModSettings",
   "type": "object"

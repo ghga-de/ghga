@@ -147,6 +147,10 @@ no_site_packages = false
 [tool.pytest.ini_options]
 minversion = "7.1"
 asyncio_mode = "strict"
+testpaths = [
+    "tests/unit",
+    "tests/integration",
+]
 
 [tool.coverage.paths]
 source = [

@@ -36,6 +36,7 @@ from auth_service.user_management.user_registry.deps import (
     UserDao,
     get_user_dao,
 )
+from auth_service.user_management.user_registry.models.dto import User
 
 from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import (
@@ -45,10 +46,17 @@ from ..core.auth import (
     get_user_info,
 )
 from ..core.session_store import SessionState
-from ..deps import SessionDependency, SessionStoreDependency, TOTPHandlerDependency
+from ..deps import (
+    SessionDependency,
+    SessionStoreDependency,
+    TOTPHandlerDependency,
+    UserTokenDao,
+    get_user_token_dao,
+)
+from ..ports.dao import UserToken
 from .basic import get_basic_auth_dependency
 from .csrf import check_csrf
-from .dto import CreateTOTPToken, TOTPTokenResponse
+from .dto import CreateTOTPToken, TOTPTokenResponse, VerifyTOTP
 from .headers import get_bearer_token, session_to_header
 
 app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
@@ -105,6 +113,7 @@ async def login(  # noqa: PLR0913
     session_store: SessionStoreDependency,
     session: SessionDependency,
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
     authorization: Annotated[Optional[str], Header()] = None,
     x_authorization: Annotated[Optional[str], Header()] = None,
     x_csrf_token: Annotated[Optional[str], Header()] = None,
@@ -135,7 +144,16 @@ async def login(  # noqa: PLR0913
             user = await user_dao.get_by_id(session.user_id)
         except ResourceNotFoundError:
             user = None  # user has been deleted
-    await session_store.save_session(session, user=user)
+
+    async def has_totp_token(user: User) -> bool:
+        try:
+            _ = await token_dao.get_by_id(user.id)
+        except ResourceNotFoundError:
+            return False
+        return True
+
+    await session_store.save_session(session, user=user, has_totp_token=has_totp_token)
+
     response = Response(status_code=204)
     response.headers["X-Session"] = session_to_header(
         session, timeouts=session_store.timeouts
@@ -213,6 +231,60 @@ async def create_new_totp_token(
     await session_store.save_session(session)
     uri = totp_handler.get_provisioning_uri(session.totp_token, name=session.user_name)
     return TOTPTokenResponse(uri=SecretStr(uri))
+
+
+@app.post(
+    "/rpc/verify-totp",
+    operation_id="verify_totp",
+    tags=["totp"],
+    summary="Verify a TOTP code",
+    description="Endpoint used to verify a TOTP code.",
+    status_code=204,
+)
+async def verify_totp(  # noqa: PLR0913
+    verification_info: VerifyTOTP,
+    session_store: SessionStoreDependency,
+    session: SessionDependency,
+    totp_handler: TOTPHandlerDependency,
+    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
+    x_csrf_token: Annotated[Optional[str], Header()] = None,
+) -> Response:
+    """Verify a TOTP token."""
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
+        )
+    if not session.user_id or session.user_id != verification_info.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
+        )
+    check_csrf("POST", x_csrf_token, session)
+    totp = verification_info.totp
+    if session.state == SessionState.NEW_TOTP_TOKEN:
+        # get not yet verified TOTP token from the session
+        totp_token = session.totp_token
+    else:
+        # get verified TOTP token from the database
+        user = await user_dao.get_by_id(verification_info.user_id)
+        user_token = await token_dao.get_by_id(user.id) if user and user.id else None
+        totp_token = user_token.totp_token if user_token else None
+    if not totp_token or not totp or not totp_handler.verify_code(totp_token, totp):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code"
+        )
+    if session.state == SessionState.NEW_TOTP_TOKEN:
+        # TODO: this operation must also delete all IVAs of the user
+        # store token in the database
+        user_token = UserToken(
+            user_id=session.user_id,
+            totp_token=totp_token,
+        )
+        await token_dao.upsert(user_token)
+    session.state = SessionState.AUTHENTICATED
+    session.totp_token = None  # remove verified TOTP token from the session
+    await session_store.save_session(session)
+    return Response(status_code=204)
 
 
 basic_auth_dependency = get_basic_auth_dependency(app, CONFIG)

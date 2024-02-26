@@ -17,7 +17,7 @@
 
 from pydantic import BaseModel, Field, SecretStr, field_serializer
 
-__all__ = ["CreateTOTPToken", "TOTPTokenResponse"]
+__all__ = ["CreateTOTPToken", "TOTPTokenResponse", "VerifyTOTP"]
 
 
 class BaseDto(BaseModel):
@@ -42,3 +42,10 @@ class TOTPTokenResponse(BaseDto):
     def dump_secret(self, v):
         """Serialize the provisioning URI to a string."""
         return v.get_secret_value()
+
+
+class VerifyTOTP(BaseDto):
+    """Request model for verifying a TOTP code."""
+
+    user_id: str = Field(default=..., title="User ID")
+    totp: str = Field(default=..., title="the TOTP code to verify")

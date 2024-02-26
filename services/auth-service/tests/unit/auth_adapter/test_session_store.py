@@ -264,13 +264,11 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
     store = CoreSessionStore(config=config)
     now = store._now()
     before = now - timedelta(seconds=10)
-    # TODO: wait for proper implementation of _check_has_totp_token
-    # then use the proper field instead of the user name
     session = Session(
         session_id="test",
         state=original_state,
         user_id="some-user-id",
-        user_name="John Doe with TOTP",
+        user_name="John Doe",
         user_email="john@home.org",
         csrf_token="some-csrf-token",
         created=before,
@@ -279,12 +277,16 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
     user = User(
         id="some-user-id",
         ext_id="some-ext-id@home.org",
-        name="John Doe with TOTP",
+        name="John Doe",
         email="john@home.org",
         status=UserStatus.ACTIVE,
         registration_date=before,
     )
-    await store.save_session(session, user=user)
+
+    async def has_totp_token(user: User) -> bool:
+        return True
+
+    await store.save_session(session, user=user, has_totp_token=has_totp_token)
     assert store.saved_session is session
     assert session.created == before
     assert session.last_used == now

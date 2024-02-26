@@ -16,7 +16,6 @@
 """FastAPI dependencies for the user registry"""
 
 from auth_service.deps import (
-    Config,
     Depends,
     MongoDbDaoFactory,
     get_config,
@@ -24,20 +23,13 @@ from auth_service.deps import (
 )
 
 from .ports.dao import UserDao
-from .translators.dao import UserDaoFactory, UserDaoFactoryConfig
+from .translators.dao import UserDaoConfig, UserDaoFactory
 
 __all__ = ["get_user_dao", "UserDao"]
 
 
-def get_user_dao_factory_config(
-    config: Config = Depends(get_config),
-) -> UserDaoFactoryConfig:
-    """Get user DAO factory config."""
-    return UserDaoFactoryConfig(collection_name=config.users_collection)
-
-
 def get_user_dao_factory(
-    config: UserDaoFactoryConfig = Depends(get_user_dao_factory_config),
+    config: UserDaoConfig = Depends(get_config),
     dao_factory: MongoDbDaoFactory = Depends(get_mongodb_dao_factory),
 ) -> UserDaoFactory:
     """Get user DAO factory."""

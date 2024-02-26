@@ -63,6 +63,10 @@ auth_service --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`dataset_deletion_event_topic`** *(string)*: the topic of the event announcing dataset deletions. Default: `"metadata_datasets"`.
+
+- **`dataset_deletion_event_type`** *(string)*: the type of the event announcing dataset deletions. Default: `"dataset_deleted"`.
+
 - **`service_name`** *(string)*: Short name of this service. Default: `"auth_service"`.
 
 - **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
@@ -114,9 +118,41 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_deletion_event_topic`** *(string)*: the topic of the event announcing dataset deletions. Default: `"metadata_datasets"`.
+- **`claims_collection`** *(string)*: Name of the collection for user claims. Default: `"claims"`.
 
-- **`dataset_deletion_event_type`** *(string)*: the type of the event announcing dataset deletions. Default: `"dataset_deleted"`.
+- **`users_collection`** *(string)*: Name of the collection for users. Default: `"users"`.
+
+- **`user_tokens_collection`** *(string)*: Name of the collection for user tokens. Default: `"user_tokens"`.
+
+- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+
+
+  Examples:
+
+  ```json
+  "mongodb://localhost:27017"
+  ```
+
+
+- **`db_name`** *(string)*: the name of the database located on the MongoDB server. Default: `"auth-db"`.
+
+
+  Examples:
+
+  ```json
+  "auth-db"
+  ```
+
+
+  ```json
+  "user-management"
+  ```
+
+
+  ```json
+  "users-and-claims"
+  ```
+
 
 - **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
@@ -362,14 +398,6 @@ The service requires the following configuration parameters:
 - **`oidc_client_id`** *(string)*: the registered OIDC client ID. Default: `"ghga-data-portal"`.
 
 - **`organization_url`** *(string, format: uri)*: the URL used as source for internal claims. Default: `"https://ghga.de"`.
-
-- **`db_url`** *(string, format: password)*: MongoDB connection string. Default: `"mongodb://mongodb:27017"`.
-
-- **`db_name`** *(string)*: Name of the MongoDB database. Default: `"user-management"`.
-
-- **`users_collection`** *(string)*: Name of the MongoDB collection for users. Default: `"users"`.
-
-- **`claims_collection`** *(string)*: Name of the MongoDB collection for claims. Default: `"claims"`.
 
 ## Definitions
 

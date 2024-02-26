@@ -23,7 +23,7 @@ from ghga_service_commons.api import run_server
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from hexkit.providers.akafka.provider import KafkaEventSubscriber
 
-from auth_service.deps import get_mongodb_config, get_mongodb_dao_factory
+from auth_service.deps import get_mongodb_dao_factory
 from auth_service.user_management.claims_repository.core.deletion import (
     DatasetDeletionHandler,
     DatasetDeletionPort,
@@ -31,7 +31,6 @@ from auth_service.user_management.claims_repository.core.deletion import (
 from auth_service.user_management.claims_repository.deps import (
     ClaimDao,
     get_claim_dao_factory,
-    get_claim_dao_factory_config,
 )
 from auth_service.user_management.claims_repository.translators.akafka import (
     EventSubTranslator,
@@ -44,12 +43,8 @@ async def get_claim_dao(
     config: Config,
 ) -> ClaimDao:
     """Get an event handler for dataset deletion events."""
-    claim_dao_factory_config = get_claim_dao_factory_config(config=config)
-    db_config = get_mongodb_config(config=config)
-    dao_factory = get_mongodb_dao_factory(config=db_config)
-    claim_dao_factory = get_claim_dao_factory(
-        config=claim_dao_factory_config, dao_factory=dao_factory
-    )
+    dao_factory = get_mongodb_dao_factory(config=config)
+    claim_dao_factory = get_claim_dao_factory(config=config, dao_factory=dao_factory)
     return await claim_dao_factory.get_claim_dao()
 
 

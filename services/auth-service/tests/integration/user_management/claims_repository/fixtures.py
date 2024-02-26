@@ -21,11 +21,12 @@ from collections.abc import Generator
 from fastapi.testclient import TestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
+from pydantic import SecretStr
 from pytest import fixture
 from testcontainers.mongodb import MongoDbContainer
 
 from auth_service.config import Config
-from auth_service.deps import get_config, get_mongodb_config, get_mongodb_dao_factory
+from auth_service.deps import get_config, get_mongodb_dao_factory
 from auth_service.user_management.api.main import app
 from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
@@ -54,7 +55,7 @@ add_as_data_stewards = [data_steward.ext_id]
 
 async def seed_database(config: Config) -> None:
     """Seed the database with a dummy user that will become a data steward."""
-    user_dao = await get_mongodb_dao_factory(config=get_mongodb_config(config)).get_dao(
+    user_dao = await get_mongodb_dao_factory(config=config).get_dao(
         name=config.users_collection,
         dto_model=User,
         id_field="id",
@@ -77,9 +78,8 @@ def fixture_client_with_db(
     mongodb: MongoDbContainer,
 ) -> Generator[TestClient, None, None]:
     """Get a test client for the claims repository with a test database."""
-    connection_url = mongodb.get_connection_url()
     config = Config(
-        db_url=connection_url,
+        db_connection_str=SecretStr(mongodb.get_connection_url()),
         db_name="test-claims-repository",
         include_apis=["claims"],
         add_as_data_stewards=add_as_data_stewards,  # type: ignore

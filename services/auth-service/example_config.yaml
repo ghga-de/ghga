@@ -29,8 +29,8 @@ cors_allowed_origins: null
 csrf_token_bytes: 24
 dataset_deletion_event_topic: metadata_datasets
 dataset_deletion_event_type: dataset_deleted
-db_name: user-management
-db_url: '**********'
+db_connection_str: '**********'
+db_name: dev-db
 docs_url: /docs
 generate_correlation_id: true
 host: 0.0.0.0
@@ -66,5 +66,6 @@ totp_interval: 30
 totp_issuer: GHGA
 totp_secret_size: 32
 totp_tolerance: 1
+user_tokens_collection: user_tokens
 users_collection: users
 workers: 1

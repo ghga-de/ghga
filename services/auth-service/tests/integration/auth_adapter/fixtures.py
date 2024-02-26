@@ -25,6 +25,7 @@ from typing import NamedTuple, Optional
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import SecretStr
 from pytest import fixture
 from pytest_asyncio import fixture as async_fixture
@@ -32,6 +33,8 @@ from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.core.totp import TOTPHandler
+from auth_service.auth_adapter.deps import get_user_token_dao
+from auth_service.auth_adapter.ports.dao import UserToken
 from auth_service.deps import Config, get_config
 from auth_service.user_management.user_registry.deps import get_user_dao
 
@@ -44,6 +47,25 @@ from ...fixtures.utils import (
 )
 
 totp_encryption_key = TOTPHandler.random_encryption_key()
+
+
+class DummyUserTokenDao:
+    """Dummy UserTokenDao for testing."""
+
+    def __init__(self):
+        """Initialize the dummy UserTokenDao"""
+        self.user_tokens = {}
+
+    async def get_by_id(self, id_: str) -> UserToken:
+        """Get the user token via the ID."""
+        try:
+            return self.user_tokens[id_]
+        except KeyError as error:
+            raise ResourceNotFoundError(id_=id_) from error
+
+    async def upsert(self, dto: UserToken) -> None:
+        """Upsert a user token."""
+        self.user_tokens[dto.user_id] = dto
 
 
 @async_fixture(name="client")
@@ -67,6 +89,7 @@ class ClientWithSession(NamedTuple):
 
     client: AsyncTestClient
     session: Session
+    user_token_dao: DummyUserTokenDao
 
 
 _map_session_dict_to_object = {
@@ -104,7 +127,9 @@ async def query_new_session(
     last_used = now - timedelta(seconds=session_dict.pop("timeout", 0))
     created = last_used - timedelta(seconds=session_dict.pop("extends", 0))
     session_dict.update(last_used=last_used, created=created)
-    return Session(session_id=session_id, **session_dict)
+    session = Session(session_id=session_id, **session_dict)
+    assert session.totp_token is None  # should never be passed to the client
+    return session
 
 
 @async_fixture(name="client_with_session")
@@ -118,13 +143,11 @@ async def fixture_client_with_session(
 
     user_dao = DummyUserDao()
     main.app.dependency_overrides[get_user_dao] = lambda: user_dao
-
-    auth = f"Bearer {create_access_token()}"
-    response = await client.post("/rpc/login", headers={"Authorization": auth})
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    user_token_dao = DummyUserTokenDao()
+    main.app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
 
     session = await query_new_session(client)
-    yield ClientWithSession(client, session)
+    yield ClientWithSession(client, session, user_token_dao)
 
 
 @fixture(name="with_basic_auth")

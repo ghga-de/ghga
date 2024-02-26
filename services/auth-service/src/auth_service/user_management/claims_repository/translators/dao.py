@@ -24,14 +24,14 @@ from ..models.dto import Claim as ClaimDto
 from ..models.dto import ClaimFullCreation as ClaimCreationDto
 from ..ports.dao import ClaimDao, ClaimDaoFactoryPort
 
-__all__ = ["ClaimDaoFactory", "ClaimDaoFactoryConfig"]
+__all__ = ["ClaimDaoFactory", "ClaimDaoConfig"]
 
 
-class ClaimDaoFactoryConfig(BaseSettings):
-    """User claims DAO factory config parameters and their defaults."""
+class ClaimDaoConfig(BaseSettings):
+    """User claims DAO config parameters and their defaults."""
 
-    collection_name: str = Field(
-        default="claims", description="Name of the collection for user claims."
+    claims_collection: str = Field(
+        default="claims", description="Name of the collection for user claims"
     )
 
 
@@ -39,16 +39,16 @@ class ClaimDaoFactory(ClaimDaoFactoryPort):
     """Translation between ClaimsDaoFactoryPort and DaoFactoryProtocol."""
 
     def __init__(
-        self, *, config: ClaimDaoFactoryConfig, dao_factory: DaoFactoryProtocol
+        self, *, config: ClaimDaoConfig, dao_factory: DaoFactoryProtocol
     ) -> None:
-        """Configure with provider for the the DaoFactoryProtocol"""
-        self._collection_name = config.collection_name
+        """Configure with provider for the DaoFactoryProtocol"""
+        self._collection = config.claims_collection
         self._dao_factory = dao_factory
 
     async def get_claim_dao(self) -> ClaimDao:
         """Construct a DAO for interacting with user claims data in a database."""
         return await self._dao_factory.get_dao(
-            name=self._collection_name,
+            name=self._collection,
             dto_model=ClaimDto,
             id_field="id",
             dto_creation_model=ClaimCreationDto,

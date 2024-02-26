@@ -18,6 +18,7 @@
 from collections.abc import Generator
 
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from pytest import fixture
 from testcontainers.mongodb import MongoDbContainer
 
@@ -48,9 +49,8 @@ def fixture_client_with_db(
     mongodb: MongoDbContainer,
 ) -> Generator[TestClient, None, None]:
     """Get a test client for the user registry with a test database."""
-    connection_url = mongodb.get_connection_url()
     config = Config(
-        db_url=connection_url,
+        db_connection_str=SecretStr(mongodb.get_connection_url()),
         db_name="test-user-registry",
         include_apis=["users"],
     )  # pyright: ignore

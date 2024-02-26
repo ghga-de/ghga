@@ -14,26 +14,40 @@
 # limitations under the License.
 #
 
-"""DAOs that are used as part of the outbound port for the user management."""
+"""DAOs that are used as part of the outbound port for the auth adapter."""
 
 from abc import ABC, abstractmethod
 
-from hexkit.protocols.dao import DaoSurrogateId
+from hexkit.protocols.dao import DaoNaturalId
+from pydantic import BaseModel, Field
 from typing_extensions import TypeAlias  # in typing only since Python 3.10
 
-from ..models.dto import User as UserDto
-from ..models.dto import UserData as UserCreationDto
+from ..core.totp import TOTPToken
 
-__all__ = ["UserDao", "UserDaoFactoryPort"]
-
-
-UserDao: TypeAlias = DaoSurrogateId[UserDto, UserCreationDto]
+__all__ = ["UserToken", "UserTokenDaoFactoryPort"]
 
 
-class UserDaoFactoryPort(ABC):
-    """Port that provides a factory for user data access objects."""
+class UserToken(BaseModel):
+    """Model for a TOTP token bound to a user
+
+    For security reasons, we store the TOTP tokens in a separate collection.
+    """
+
+    user_id: str = Field(
+        default=..., description="The user ID of the user who owns the TOTP token"
+    )
+    totp_token: TOTPToken = Field(default=..., description="The TOTP token of the user")
+
+    model_config = {"extra": "forbid", "frozen": True}
+
+
+UserTokenDao: TypeAlias = DaoNaturalId[UserToken]
+
+
+class UserTokenDaoFactoryPort(ABC):
+    """Port that provides a factory for user TOTP token data access objects."""
 
     @abstractmethod
-    async def get_user_dao(self) -> UserDao:
+    async def get_user_token_dao(self) -> UserTokenDao:
         """Construct a DAO for interacting with user data in a database."""
         ...

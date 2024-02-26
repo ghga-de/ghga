@@ -113,7 +113,9 @@ class TOTPConfig(BaseSettings):
 class TOTPToken(BaseModel):
     """A TOTP token"""
 
-    secret: SecretStr = Field(
+    # note: not using SecretStr here because the secret is encrypted
+    # and we need to store it in the database as a string
+    encrypted_secret: str = Field(
         default=...,
         description="Base64 encoded encrypted TOTP secret"
         " which is itself Base32 encoded",
@@ -166,7 +168,7 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
 
     def get_secret(self, token: TOTPToken) -> str:
         """Get the decrypted Base32 encoded secret from a TOTP token."""
-        encrypted_secret = base64.b64decode(token.secret.get_secret_value())
+        encrypted_secret = base64.b64decode(token.encrypted_secret)
         return self._secret_box.decrypt(encrypted_secret).decode("ascii")
 
     def get_provisioning_uri(self, token: TOTPToken, name: Optional[str]) -> str:
@@ -185,9 +187,9 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
         """Generate a TOTP token."""
         nonce = nacl.utils.random(self._secret_box.NONCE_SIZE)
         decrypted_secret = pyotp.random_base32(self.secret_size).encode("ascii")
-        encrypted_secret = self._secret_box.encrypt(decrypted_secret, nonce)
-        encrypted_secret_str = base64.b64encode(encrypted_secret).decode("ascii")
-        return TOTPToken(secret=SecretStr(encrypted_secret_str))
+        encrypted_secret_bytes = self._secret_box.encrypt(decrypted_secret, nonce)
+        encrypted_secret = base64.b64encode(encrypted_secret_bytes).decode("ascii")
+        return TOTPToken(encrypted_secret=encrypted_secret)
 
     def generate_code(
         self,

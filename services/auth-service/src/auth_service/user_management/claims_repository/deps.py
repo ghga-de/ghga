@@ -16,7 +16,6 @@
 """FastAPI dependencies for the claims repository"""
 
 from auth_service.deps import (
-    Config,
     Depends,
     MongoDbDaoFactory,
     get_config,
@@ -24,20 +23,13 @@ from auth_service.deps import (
 )
 
 from .ports.dao import ClaimDao
-from .translators.dao import ClaimDaoFactory, ClaimDaoFactoryConfig
+from .translators.dao import ClaimDaoConfig, ClaimDaoFactory
 
 __all__ = ["get_claim_dao", "ClaimDao"]
 
 
-def get_claim_dao_factory_config(
-    config: Config = Depends(get_config),
-) -> ClaimDaoFactoryConfig:
-    """Get claim DAO factory config."""
-    return ClaimDaoFactoryConfig(collection_name=config.claims_collection)
-
-
 def get_claim_dao_factory(
-    config: ClaimDaoFactoryConfig = Depends(get_claim_dao_factory_config),
+    config: ClaimDaoConfig = Depends(get_config),
     dao_factory: MongoDbDaoFactory = Depends(get_mongodb_dao_factory),
 ) -> ClaimDaoFactory:
     """Get claim DAO factory."""

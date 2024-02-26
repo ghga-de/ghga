@@ -23,7 +23,6 @@ from .config import CONFIG, Config
 __all__ = [
     "Depends",
     "get_config",
-    "get_mongodb_config",
     "get_mongodb_dao_factory",
     "Config",
 ]
@@ -34,13 +33,8 @@ def get_config() -> Config:
     return CONFIG
 
 
-def get_mongodb_config(config: Config = Depends(get_config)) -> MongoDbConfig:
-    """Get MongoDB configuration."""
-    return MongoDbConfig(db_connection_str=config.db_url, db_name=config.db_name)
-
-
 def get_mongodb_dao_factory(
-    config: MongoDbConfig = Depends(get_mongodb_config),
+    config: MongoDbConfig = Depends(get_config),
 ) -> MongoDbDaoFactory:
     """Get MongoDB DAO factory."""
     return MongoDbDaoFactory(config=config)

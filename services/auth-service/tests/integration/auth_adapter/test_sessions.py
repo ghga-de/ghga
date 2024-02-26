@@ -26,7 +26,7 @@ from pytest import mark
 from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.api import main
-from auth_service.auth_adapter.deps import get_session_store
+from auth_service.auth_adapter.deps import get_session_store, get_user_token_dao
 from auth_service.config import CONFIG
 from auth_service.user_management.user_registry.deps import get_user_dao
 
@@ -37,12 +37,20 @@ from ...fixtures.utils import (
     create_access_token,
     headers_for_session,
 )
-from .fixtures import fixture_client  # noqa: F401
+from .fixtures import DummyUserTokenDao, fixture_client  # noqa: F401
 
 
 def expected_set_cookie(session_id: str) -> str:
     """Get the expected Set-Cookie header for the auth session cookie."""
     return f"session={session_id}; HttpOnly; Path=/; SameSite=lax; Secure"
+
+
+def setup_daos(**user_args: str) -> None:
+    """Setup the dummy DAOs for the tests."""
+    user_dao = DummyUserDao(**user_args)
+    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    user_token_dao = DummyUserTokenDao()
+    main.app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
 
 
 def assert_session_header(
@@ -120,8 +128,7 @@ async def test_login_with_unregistered_user(
     """Test that a login request can create a new session for an unregistered user."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    user_dao = DummyUserDao(ext_id="not.john@aai.org")
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    setup_daos(ext_id="not.john@aai.org")
 
     auth = f"Bearer {create_access_token()}"
     response = await client.post("/rpc/login", headers={"Authorization": auth})
@@ -152,8 +159,7 @@ async def test_login_with_invalid_userinfo(
     bad_user_info = {**USER_INFO, "sub": "not.john@aai.org"}
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=bad_user_info)
 
-    user_dao = DummyUserDao(ext_id="not.john@aai.org")
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    setup_daos(ext_id="not.john@aai.org")
 
     auth = f"Bearer {create_access_token()}"
     response = await client.post("/rpc/login", headers={"Authorization": auth})
@@ -173,8 +179,7 @@ async def test_login_with_registered_user(
     """Test that a login request can create a new session for a registered user."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    user_dao = DummyUserDao(ext_id="john@aai.org")
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    setup_daos()
 
     auth = f"Bearer {create_access_token()}"
     response = await client.post("/rpc/login", headers={"Authorization": auth})
@@ -205,8 +210,7 @@ async def test_login_with_registered_user_and_name_change(
     changed_user_info = {**USER_INFO, "name": "John Doe Jr."}
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=changed_user_info)
 
-    user_dao = DummyUserDao(ext_id="john@aai.org")
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    setup_daos()
 
     auth = f"Bearer {create_access_token()}"
     response = await client.post("/rpc/login", headers={"Authorization": auth})
@@ -236,8 +240,7 @@ async def test_login_with_registered_user_with_title(
     """Test a login request for a user when a title was entered."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    user_dao = DummyUserDao(ext_id="john@aai.org", title="Dr.")
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    setup_daos(title="Dr.")
 
     auth = f"Bearer {create_access_token()}"
     response = await client.post("/rpc/login", headers={"Authorization": auth})
@@ -289,8 +292,7 @@ async def test_login_with_invalid_access_token(client: AsyncTestClient):
 @mark.asyncio
 async def test_login_with_cookie_and_unregistered_user(client: AsyncTestClient):
     """Test login request with session cookie for an unregistered user."""
-    user_dao = DummyUserDao(ext_id="not.john@aai.org")
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    setup_daos(ext_id="not.john@aai.org")
 
     store = await get_session_store(config=CONFIG)
     session = await store.create_session(
@@ -316,8 +318,7 @@ async def test_login_with_cookie_and_unregistered_user(client: AsyncTestClient):
 @mark.asyncio
 async def test_login_with_cookie_and_registered_user(client: AsyncTestClient):
     """Test login request with session cookie for a registered user."""
-    user_dao = DummyUserDao(ext_id="john@aai.org")
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    setup_daos()
 
     store = await get_session_store(config=CONFIG)
     session_dict = await store.create_session(

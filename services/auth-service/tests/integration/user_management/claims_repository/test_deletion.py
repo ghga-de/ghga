@@ -22,6 +22,7 @@ from datetime import timedelta
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError
 from hexkit.providers.akafka.testutils import KafkaFixture, kafka_fixture  # noqa: F401
+from pydantic import SecretStr
 from pytest import LogCaptureFixture, mark, raises
 
 from auth_service.__main__ import get_claim_dao, prepare_event_subscriber
@@ -44,7 +45,7 @@ async def test_deletion_handler(
     """Test the dataset deletion handler"""
     config = CONFIG.model_copy(
         update={
-            "db_url": mongodb.get_connection_url(),
+            "db_connection_str": SecretStr(mongodb.get_connection_url()),
             "kafka_servers": kafka_fixture.kafka_servers,
         }
     )
