@@ -28,9 +28,10 @@ from typing_extensions import TypeAlias
 SupportedDataPackVersions = Literal["0.2.0"]
 SUPPORTED_DATA_PACK_VERSIONS = typing.get_args(SupportedDataPackVersions)
 
-ClassName: TypeAlias = str
-ResourceId: TypeAlias = str
-RelationName: TypeAlias = str
+NonEmptyStr: TypeAlias = Annotated[str, Field(..., min_length=1)]
+ClassName: TypeAlias = NonEmptyStr
+ResourceId: TypeAlias = NonEmptyStr
+RelationName: TypeAlias = NonEmptyStr
 
 
 def validate_duplicate_target_ids(iterable: Iterable) -> Any:
@@ -63,7 +64,7 @@ def validate_duplicate_target_ids(iterable: Iterable) -> Any:
     return iterable
 
 
-ResourceIdSet = Annotated[
+ResourceIdSet: TypeAlias = Annotated[
     set[str],
     # Upon serialization, assert that the provided sequence does not contain duplicates:
     BeforeValidator(validate_duplicate_target_ids),
