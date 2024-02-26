@@ -20,9 +20,6 @@
 from schemapack.validation.plugins.content_schema import (
     ContentSchemaValidationPlugin,
 )
-from schemapack.validation.plugins.duplicate_target_id import (
-    DuplicateTargetIdValidationPlugin,
-)
 from schemapack.validation.plugins.expected_root import (
     ExpectedRootValidationPlugin,
 )
@@ -42,10 +39,7 @@ from schemapack.validation.plugins.multiple_target import (
     MultipleTargetValidationPlugin,
 )
 from schemapack.validation.plugins.one_to_many_overlap import (
-    OneToManyOverlapValidationPlugin,
-)
-from schemapack.validation.plugins.one_to_one_overlap import (
-    OneToOneOverlapValidationPlugin,
+    TargetOverlapValidationPlugin,
 )
 from schemapack.validation.plugins.target_id import (
     TargetIdValidationPlugin,
@@ -65,14 +59,12 @@ from schemapack.validation.plugins.unkown_root_resource import (
 
 __all__ = [
     "ContentSchemaValidationPlugin",
-    "DuplicateTargetIdValidationPlugin",
     "ExpectedRootValidationPlugin",
     "MissingClassSlotValidationPlugin",
     "MissingRelationValidationPlugin",
     "MissingMandatoryTargetValidationPlugin",
     "MultipleTargetValidationPlugin",
-    "OneToManyOverlapValidationPlugin",
-    "OneToOneOverlapValidationPlugin",
+    "TargetOverlapValidationPlugin",
     "TargetIdValidationPlugin",
     "UnexpectedRootValidationPlugin",
     "UnknownClassSlotValidationPlugin",

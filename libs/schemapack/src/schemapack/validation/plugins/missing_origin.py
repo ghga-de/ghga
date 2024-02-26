@@ -65,7 +65,7 @@ class MissingMandatoryOriginValidationPlugin(ClassValidationPlugin):
             referenced_target_ids = {
                 target_id
                 for resource in class_resources.values()
-                for target_id in resource.get_target_id_list(
+                for target_id in resource.get_target_id_set(
                     relation_name, do_not_raise=True
                 )
             }

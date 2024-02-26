@@ -50,11 +50,11 @@ class MissingRelationValidationPlugin(ResourceValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        missing_relations = [
+        missing_relations = {
             relation
             for relation in self._expected_relations
             if relation not in resource.relations
-        ]
+        }
 
         if missing_relations:
             raise ValidationPluginError(
@@ -65,6 +65,6 @@ class MissingRelationValidationPlugin(ResourceValidationPlugin):
                 ),
                 details={
                     "missing_relations": missing_relations,
-                    "existing_relations": list(resource.relations),
+                    "existing_relations": set(resource.relations),
                 },
             )

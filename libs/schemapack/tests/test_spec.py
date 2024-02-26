@@ -17,7 +17,13 @@
 """Tests the models module."""
 
 
+import json
+
 from schemapack.load import load_schemapack
+from schemapack.spec.datapack import (
+    SUPPORTED_DATA_PACK_VERSIONS,
+    DataPack,
+)
 from schemapack.utils import FrozenDict
 from tests.fixtures.examples import VALID_SCHEMAPACK_PATHS
 
@@ -58,3 +64,34 @@ def test_comparison_and_hashing_different():
 
     assert hash(schemapack) != hash(schemapack_modified)
     assert schemapack != schemapack_modified
+
+
+def test_datapack_target_id_ordering_upon_dump():
+    """Test that target_ids of a resource relation are sorted (i.e. the output is
+    predictable) when serializing a datapack.
+    """
+    unsorted_target_ids = ["c", "a", "b"]
+    sorted_target_ids = sorted(unsorted_target_ids)
+
+    datapack = DataPack.model_validate(
+        {
+            "datapack": SUPPORTED_DATA_PACK_VERSIONS[-1],
+            "resources": {
+                "TestClass": {
+                    "test_resource": {
+                        "content": {},
+                        "relations": {"test_relations": unsorted_target_ids},
+                    }
+                }
+            },
+        }
+    )
+
+    serialize_datapack = json.loads(datapack.model_dump_json())
+
+    assert (
+        serialize_datapack["resources"]["TestClass"]["test_resource"]["relations"][
+            "test_relations"
+        ]
+        == sorted_target_ids
+    )

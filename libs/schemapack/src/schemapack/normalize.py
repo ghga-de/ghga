@@ -111,10 +111,13 @@ def denormalize(  # noqa: PLR0912,C901
 
         target_class_name = relation_definition.targetClass
 
-        if isinstance(target_ids, list):
+        if isinstance(target_ids, set):
             denormalized_object[relation_name] = []
 
-            for target_id in target_ids:
+            # make the output predictable:
+            sorted_target_ids = sorted(target_ids)
+
+            for target_id in sorted_target_ids:
                 if (
                     target_class_name in resource_blacklist
                     and target_id in resource_blacklist[target_class_name]

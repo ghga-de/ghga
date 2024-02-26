@@ -95,7 +95,7 @@ def identify_dependencies(
             ) from error
 
         try:
-            target_ids = target_resource.get_target_id_list(relation_name)
+            target_ids = target_resource.get_target_id_set(relation_name)
         except KeyError as error:
             raise ValidationAssumptionError(
                 context="relation resolution in datapack"

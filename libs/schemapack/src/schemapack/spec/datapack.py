@@ -17,9 +17,12 @@
 """Models for describing and working with datapack definitions."""
 
 import typing
-from typing import Any, Literal, Optional, Union
+from collections import Counter
+from collections.abc import Iterable
+from typing import Annotated, Any, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, WrapSerializer
+from pydantic_core import PydanticCustomError
 from typing_extensions import TypeAlias
 
 SupportedDataPackVersions = Literal["0.1.0"]
@@ -28,6 +31,45 @@ SUPPORTED_DATA_PACK_VERSIONS = typing.get_args(SupportedDataPackVersions)
 ClassName: TypeAlias = str
 ResourceId: TypeAlias = str
 RelationName: TypeAlias = str
+
+
+def validate_duplicate_target_ids(iterable: Iterable) -> Any:
+    """Checks that the given iterable of target IDs does not contain duplicates. If it
+    does, a PydanticCustomError with name "DuplicateTargetIdError" is raised. Otherwise,
+    the given iterable is returned.
+    """
+    if isinstance(iterable, set):
+        return iterable
+
+    try:
+        target_id_list = list(iterable)
+    except TypeError as error:
+        raise PydanticCustomError(
+            "TargetIdsParsingError",
+            "The provided object is not iterable.",
+            {"iterable": iterable},
+        ) from error
+
+    counter = Counter(target_id_list)
+    duplicates = {k for k, v in counter.items() if v > 1}
+
+    if duplicates:
+        raise PydanticCustomError(
+            "DuplicateTargetIdError",
+            "The given sequence of target ids contain duplicates: {duplicates}",
+            {"duplicates": duplicates},
+        )
+
+    return iterable
+
+
+ResourceIdSet = Annotated[
+    set[str],
+    # Upon serialization, assert that the provided sequence does not contain duplicates:
+    BeforeValidator(validate_duplicate_target_ids),
+    # Upon serialization, produce predictablily sorted lists:
+    WrapSerializer(lambda v, next_: sorted(next_(v))),
+]
 
 
 class NoExtraBaseModel(BaseModel):
@@ -49,9 +91,7 @@ class Resource(NoExtraBaseModel):
         ),
     )
 
-    relations: dict[
-        RelationName, Union[Optional[ResourceId], list[ResourceId]]
-    ] = Field(
+    relations: dict[RelationName, Union[Optional[ResourceId], ResourceIdSet]] = Field(
         {},
         description=(
             "A dictionary containing the relations of the resource to other resources."
@@ -60,19 +100,19 @@ class Resource(NoExtraBaseModel):
             + " depending on the corresponding schemapack definition:"
             + " (1) a id of a single target resource (multiple.target is False),"
             + " (2) None (multiple.target and mandatory.target are both False),"
-            + " (3) a list of ids of target resources (multiple.target is True),"
-            + " (4) an empty list (multiple.target is True and mandatory.target is"
+            + " (3) a set of ids of target resources (multiple.target is True),"
+            + " (4) an empty set (multiple.target is True and mandatory.target is"
             + " False)."
         ),
     )
 
-    def get_target_id_list(
+    def get_target_id_set(
         self, relation_name: RelationName, do_not_raise: bool = False
-    ) -> list[ResourceId]:
-        """Get the target ids for the given relation always represented as a list.
+    ) -> set[ResourceId]:
+        """Get the target ids for the given relation always represented as a set.
         This is even the case if the actual value in the relations dict is a single
         string (translated into a list of length one) or None (translated into an
-        empty list). If do_not_raise is True, the method will return an empty list
+        empty set). If do_not_raise is True, the method will return an empty set
         even if the relation name does not exist in the relations dict.
 
         Raises:
@@ -84,14 +124,14 @@ class Resource(NoExtraBaseModel):
             targets = self.relations[relation_name]
         except KeyError:
             if do_not_raise:
-                return []
+                return set()
             raise
 
         if targets is None:
-            return []
-        if isinstance(targets, list):
+            return set()
+        if isinstance(targets, set):
             return targets
-        return [targets]
+        return {targets}
 
 
 class DataPack(NoExtraBaseModel):

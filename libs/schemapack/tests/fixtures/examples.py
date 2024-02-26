@@ -31,7 +31,7 @@ DENORMALIZED_DIR = EXAMPLES_DIR / "denormalized"
 
 schemapack_suffix = ".schemapack.yaml"
 datapack_suffix = ".datapack.yaml"
-denomalizated_suffix = ".denomalizated.yaml"
+denomalizated_suffix = ".denormalized.yaml"
 
 
 def list_examples_in_dir(dir: Path, *, suffix: str) -> dict[str, Path]:

@@ -477,13 +477,13 @@ class SchemaPack(FrozenBaseModel):
     @model_validator(mode="after")
     def relation_to_class_validation(self) -> "SchemaPack":
         """Validate that all relations point to existing classes."""
-        # store invalid relations as a list of strings ({class_name}.{relation_name}):
-        invalid_relations: list[str] = []
+        # store invalid relations as a set of strings ({class_name}.{relation_name}):
+        invalid_relations: set[str] = set()
 
         for class_name, class_definition in self.classes.items():
             for relation_name, relation in class_definition.relations.items():
                 if relation.targetClass not in self.classes:
-                    invalid_relations.append(f"{class_name}.{relation_name}")
+                    invalid_relations.add(f"{class_name}.{relation_name}")
 
         if invalid_relations:
             raise PydanticCustomError(

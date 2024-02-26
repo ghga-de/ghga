@@ -24,7 +24,7 @@ from schemapack.validation.base import ResourceValidationPlugin
 
 class MultipleTargetValidationPlugin(ResourceValidationPlugin):
     """A resource-scoped validation plugin validating the plurality of relations,
-    i.e. *_to_many (multiple.target is True) relations must be lists and *_to_one
+    i.e. *_to_many (multiple.target is True) relations must be sets and *_to_one
     (multiple.target is False) relations must be single values.
     This only applies to schemapack classes with relations.
     """
@@ -51,24 +51,24 @@ class MultipleTargetValidationPlugin(ResourceValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        wrong_relations: list[str] = []
+        wrong_relations: set[str] = set()
         for relation_name, relation in resource.relations.items():
-            is_list = isinstance(relation, list)
+            is_set = isinstance(relation, set)
 
             try:
-                expected_list = self._relations[relation_name].multiple.target
+                expected_set = self._relations[relation_name].multiple.target
             except KeyError:
                 # Unknown relations are handled in a different plugin:
                 continue
 
-            if is_list != expected_list:
-                wrong_relations.append(relation_name)
+            if is_set != expected_set:
+                wrong_relations.add(relation_name)
 
         if wrong_relations:
             raise ValidationPluginError(
                 type_="CardinalityPluralityError",
                 message=(
-                    "Expected a single target ID but got a list, or vise versa, for"
+                    "Expected a single target ID but got a set, or vise versa, for"
                     " the following relation propertie(s): "
                     + ", ".join(wrong_relations)
                 ),
