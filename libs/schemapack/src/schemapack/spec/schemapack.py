@@ -18,7 +18,6 @@
 
 import json
 import typing
-from enum import Enum
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
@@ -43,15 +42,6 @@ from schemapack.utils import (
 
 SupportedSchemaPackVersions = Literal["0.2.0"]
 SUPPORTED_SCHEMA_PACK_VERSIONS = typing.get_args(SupportedSchemaPackVersions)
-
-
-class RelationLookupMethod(str, Enum):
-    """The method used to lookup the target class instance(s) referenced in a
-    relation.
-    """
-
-    # currently only one method is supported
-    IN_DOCUMENT = "in_document"
 
 
 class FrozenBaseModel(BaseModel):
@@ -192,10 +182,6 @@ class Relation(FrozenBaseModel):
             + " at most contribute a single instance to the relation."
             + " This is equivalent to a 'many-to-one' cardinality."
         ),
-    )
-    lookup: RelationLookupMethod = Field(
-        RelationLookupMethod.IN_DOCUMENT,
-        description="The method used to lookup the target class instance(s).",
     )
 
 

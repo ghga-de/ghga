@@ -2,7 +2,7 @@
 # within the group but not across groups. Rooting to a specific resource would result
 # in the deletion of unrelated resources.
 # (Same as ./nested_relations.datapack.yaml, but with a additional unrelated resources.)
-datapack: 0.1.0
+datapack: 0.2.0
 resources:
   SomeClass:
     # one group of resources:

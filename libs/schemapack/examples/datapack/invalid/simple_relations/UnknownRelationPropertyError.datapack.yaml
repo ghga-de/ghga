@@ -1,5 +1,5 @@
 # Contains a relation property that does not exist according to the schemapack:
-datapack: 0.1.0
+datapack: 0.2.0
 resources:
   File:
     example_file_a:

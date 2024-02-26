@@ -1,5 +1,5 @@
 # One relation points to a non-existing resource:
-datapack: 0.1.0
+datapack: 0.2.0
 resources:
   File: {}
   Dataset:

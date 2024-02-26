@@ -14,4 +14,3 @@ classes:
         multiple:
           origin: true
           target: true
-        lookup: in_document

@@ -25,7 +25,7 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, WrapSerializ
 from pydantic_core import PydanticCustomError
 from typing_extensions import TypeAlias
 
-SupportedDataPackVersions = Literal["0.1.0"]
+SupportedDataPackVersions = Literal["0.2.0"]
 SUPPORTED_DATA_PACK_VERSIONS = typing.get_args(SupportedDataPackVersions)
 
 ClassName: TypeAlias = str
