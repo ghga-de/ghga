@@ -63,7 +63,7 @@ parameters:
     host: "0.0.0.0"
     kafka_servers:
     - kafka-kafka-bootstrap:9092
-    log_level: info
+
     notification_event_topic: notifications
     notification_event_type: notification
     openapi_url: /openapi.json

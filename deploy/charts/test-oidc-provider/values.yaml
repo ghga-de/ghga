@@ -45,7 +45,7 @@ parameters:
     docs_url: /docs
     host: 0.0.0.0
     issuer: https://op.test
-    log_level: info
+
     openapi_url: /openapi.json
     port: 8080
     service_name: top
