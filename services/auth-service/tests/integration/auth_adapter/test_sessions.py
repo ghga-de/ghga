@@ -78,7 +78,7 @@ async def test_logout(client: AsyncTestClient):
     """Test that a logout request removes the user session."""
     store = await get_session_store(config=CONFIG)
     session = await store.create_session(
-        user_id="john@ghga.de", user_name="John Doe", user_email="john@home.org"
+        ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
     )
     assert await store.get_session(session.session_id)
     headers = headers_for_session(session)
@@ -105,7 +105,7 @@ async def test_logout_with_invalid_csrf_token(client: AsyncTestClient):
     """Test that a logout request with an invalid CSRF token fails."""
     store = await get_session_store(config=CONFIG)
     session = await store.create_session(
-        user_id="john@ghga.de", user_name="John Doe", user_email="john@home.org"
+        ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
     )
     original_session = session.model_copy()
     headers = headers_for_session(session)
@@ -143,7 +143,7 @@ async def test_login_with_unregistered_user(
     assert_session_header(
         response,
         {
-            "userId": "john@aai.org",
+            "ext_id": "john@aai.org",
             "name": "John Doe",
             "email": "john@home.org",
             "state": "NeedsRegistration",
@@ -194,7 +194,8 @@ async def test_login_with_registered_user(
     assert_session_header(
         response,
         {
-            "userId": "john@ghga.de",
+            "id": "john@ghga.de",
+            "ext_id": "john@aai.org",
             "name": "John Doe",
             "email": "john@home.org",
             "state": "Registered",
@@ -225,7 +226,8 @@ async def test_login_with_registered_user_and_name_change(
     assert_session_header(
         response,
         {
-            "userId": "john@ghga.de",
+            "id": "john@ghga.de",
+            "ext_id": "john@aai.org",
             "name": "John Doe Jr.",
             "email": "john@home.org",
             "state": "NeedsReRegistration",
@@ -255,7 +257,8 @@ async def test_login_with_registered_user_with_title(
     assert_session_header(
         response,
         {
-            "userId": "john@ghga.de",
+            "id": "john@ghga.de",
+            "ext_id": "john@aai.org",
             "name": "John Doe",
             "email": "john@home.org",
             "title": "Dr.",
@@ -296,7 +299,7 @@ async def test_login_with_cookie_and_unregistered_user(client: AsyncTestClient):
 
     store = await get_session_store(config=CONFIG)
     session = await store.create_session(
-        user_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
+        ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
     )
     assert await store.get_session(session.session_id)
     headers = headers_for_session(session)
@@ -307,7 +310,7 @@ async def test_login_with_cookie_and_unregistered_user(client: AsyncTestClient):
     assert_session_header(
         response,
         {
-            "userId": "john@aai.org",
+            "ext_id": "john@aai.org",
             "name": "John Doe",
             "email": "john@home.org",
             "state": "NeedsRegistration",
@@ -322,7 +325,10 @@ async def test_login_with_cookie_and_registered_user(client: AsyncTestClient):
 
     store = await get_session_store(config=CONFIG)
     session_dict = await store.create_session(
-        user_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
+        ext_id="john@aai.org",
+        user_id="john@ghga.de",
+        user_name="John Doe",
+        user_email="john@home.org",
     )
     assert await store.get_session(session_dict.session_id)
     headers = headers_for_session(session_dict)
@@ -333,7 +339,8 @@ async def test_login_with_cookie_and_registered_user(client: AsyncTestClient):
     assert_session_header(
         response,
         {
-            "userId": "john@ghga.de",
+            "id": "john@ghga.de",
+            "ext_id": "john@aai.org",
             "name": "John Doe",
             "email": "john@home.org",
             "state": "Registered",
@@ -346,7 +353,7 @@ async def test_login_with_cookie_and_invalid_csrf_token(client: AsyncTestClient)
     """Test login request with session cookie and invalid CSRF token."""
     store = await get_session_store(config=CONFIG)
     session = await store.create_session(
-        user_id="john@ghga.de", user_name="John Doe", user_email="john@home.org"
+        ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
     )
     original_session = session.model_copy()
     assert await store.get_session(session.session_id)

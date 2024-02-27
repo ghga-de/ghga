@@ -44,28 +44,31 @@ class SessionState(str, Enum):
 class Session(BaseSession):
     """Model for storing user sessions."""
 
-    user_id: str = Field(
+    ext_id: str = Field(
         default=...,
-        description="internal ID of the associated user,"
-        " or external ID if the user is not registered yet",
+        description="External ID of the associated user",
     )
-    user_name: str = Field(default=..., description="the full name of the user")
+    user_id: Optional[str] = Field(
+        default=None,
+        description="Internal ID of the associated user, if registered",
+    )
+    user_name: str = Field(default=..., description="The full name of the user")
     user_email: EmailStr = Field(
-        default=..., description="the email address of the user"
+        default=..., description="The email address of the user"
     )
     user_title: Optional[str] = Field(
-        default=None, description="optional academic title of the user"
+        default=None, description="Optional academic title of the user"
     )
     state: SessionState = Field(
         default=SessionState.NEEDS_REGISTRATION,
-        description="the authentication state of the user session",
+        description="The authentication state of the user session",
     )
-    csrf_token: str = Field(default=..., description="the CSRF token for the session")
+    csrf_token: str = Field(default=..., description="The CSRF token for the session")
     totp_token: Optional[TOTPToken] = Field(
-        default=None, description="the TOTP token of the user if available"
+        default=None, description="The TOTP token of the user if available"
     )
-    created: UTCDatetime = Field(description="time when the session was created")
-    last_used: UTCDatetime = Field(description="time when the session was last used")
+    created: UTCDatetime = Field(description="Time when the session was created")
+    last_used: UTCDatetime = Field(description="Time when the session was last used")
 
 
 class SessionConfig(BaseSettings):
@@ -127,11 +130,12 @@ class SessionStore(SessionStorePort[Session]):
         """Generate a random CSRF token."""
         return secrets.token_urlsafe(self.config.csrf_token_bytes)
 
-    def _create_session(
+    def _create_session(  # noqa: PLR0913
         self,
-        user_id: str,
+        ext_id: str,
         user_name: str,
         user_email: str,
+        user_id: Optional[str] = None,
         user_title: Optional[str] = None,
     ) -> Session:
         """Create a new user session without saving it."""
@@ -140,6 +144,7 @@ class SessionStore(SessionStorePort[Session]):
         created = self._now()
         return Session(
             session_id=session_id,
+            ext_id=ext_id,
             user_id=user_id,
             user_name=user_name,
             user_email=user_email,
@@ -164,6 +169,7 @@ class SessionStore(SessionStorePort[Session]):
         return (
             not user
             or session.user_id != user.id
+            or session.ext_id != user.ext_id
             or session.user_name != user.name
             or session.user_email != user.email
         )
@@ -175,7 +181,7 @@ class SessionStore(SessionStorePort[Session]):
         has_totp_token: Optional[AsyncUserPredicate] = None,
     ) -> None:
         """Update the given user session."""
-        if user is not None:
+        if user is not None and user.ext_id == session.ext_id:
             if session.state is SessionState.NEEDS_REGISTRATION:
                 session.user_id = user.id
                 session.state = SessionState.NEEDS_RE_REGISTRATION

@@ -125,25 +125,25 @@ async def login(  # noqa: PLR0913
     else:
         access_token = get_bearer_token(authorization, x_authorization)
         try:
-            user_id, user_name, user_email = get_user_info(access_token)
+            ext_id, user_name, user_email = get_user_info(access_token)
         except UserInfoError as error:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)
             ) from error
         session = await session_store.create_session(
-            user_id=user_id, user_name=user_name, user_email=user_email
+            ext_id=ext_id, user_name=user_name, user_email=user_email
         )
         session_created = True
-    if session.state == SessionState.NEEDS_REGISTRATION:
-        try:
-            user = await user_dao.find_one(mapping={"ext_id": session.user_id})
-        except NoHitsFoundError:
-            user = None  # user is not yet registered
-    else:
+    if session.user_id:
         try:
             user = await user_dao.get_by_id(session.user_id)
         except ResourceNotFoundError:
             user = None  # user has been deleted
+    else:
+        try:
+            user = await user_dao.find_one(mapping={"ext_id": session.ext_id})
+        except NoHitsFoundError:
+            user = None  # user is not yet registered
 
     async def has_totp_token(user: User) -> bool:
         try:

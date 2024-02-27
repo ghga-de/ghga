@@ -25,10 +25,10 @@ from auth_service.auth_adapter.adapters.memory_session_store import MemorySessio
 from auth_service.auth_adapter.core.session_store import Session, SessionConfig
 
 USER_KWARGS = dict(
-    user_id="some-user-id", user_name="John Doe", user_email="john@home.org"
+    ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
 )
 USER2_KWARGS = dict(
-    user_id="another-user-id", user_name="Jane Roe", user_email="jane@home.org"
+    ext_id="jane@aai.org", user_name="Jane Roe", user_email="jane@home.org"
 )
 
 
@@ -108,9 +108,10 @@ async def test_save_session(store):
     """Test saving a session."""
     session = store._create_session(**USER_KWARGS)
     await store.save_session(session)
-    assert session.user_id == USER_KWARGS["user_id"]
+    assert session.ext_id == USER_KWARGS["ext_id"]
     assert session.user_name == USER_KWARGS["user_name"]
     assert session.user_email == USER_KWARGS["user_email"]
+    assert session.user_id is None
     assert session.created == store.now
     assert session.last_used == store.now
     assert await store.get_size() == 1
@@ -123,12 +124,12 @@ async def test_update_session(store):
     session = await store.create_session(**USER_KWARGS)
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is session
-    assert session.user_id == "some-user-id"
-    session = session.model_copy(update={"user_id": "another-user-id"})
+    assert session.ext_id == "john@aai.org"
+    session = session.model_copy(update={"user_email": "john@elsewhere.org"})
     await store.save_session(session)
     assert await store.get_size() == 1
     assert await store.get_session(session.session_id) is session
-    assert session.user_id == "another-user-id"
+    assert session.user_email == "john@elsewhere.org"
 
 
 @mark.asyncio
@@ -195,7 +196,7 @@ async def test_get_size(store):
     assert await store.get_size() == 0
     for i in range(10):
         await store.create_session(
-            user_id="some-user-id", user_name="John Doe", user_email="john@home.org"
+            ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
         )
         assert await store.get_size() == i + 1
 
@@ -205,7 +206,7 @@ async def test_session_sweeper(store):
     """Test sweeping the session store."""
     sessions = [
         await store.create_session(
-            user_id="some-user-id", user_name="John Doe", user_email="john@home.org"
+            ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
         )
         for _ in range(10)
     ]

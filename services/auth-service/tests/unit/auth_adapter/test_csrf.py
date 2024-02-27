@@ -28,10 +28,10 @@ EXPECTED_ERROR_MESSAGE = "Invalid or missing CSRF token"
 
 SESSION = Session(
     session_id="some-session-id",
-    csrf_token="some-csrf-token",
-    user_id="some-user-id",
+    ext_id="john@aai.org",
     user_name="John Doe",
     user_email="john@home.org",
+    csrf_token="some-csrf-token",
     created=NOW,
     last_used=NOW,
 )

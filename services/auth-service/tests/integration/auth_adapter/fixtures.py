@@ -93,9 +93,11 @@ class ClientWithSession(NamedTuple):
 
 
 _map_session_dict_to_object = {
-    "userId": "user_id",
+    "ext_id": "ext_id",
+    "id": "user_id",
     "name": "user_name",
     "email": "user_email",
+    "title": "user_title",
     "csrf": "csrf_token",
 }
 

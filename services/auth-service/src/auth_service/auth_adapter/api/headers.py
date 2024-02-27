@@ -42,12 +42,14 @@ def session_to_header(
 ) -> str:
     """Serialize a session to a response header value to be used by the frontend."""
     session_dict: dict[str, Union[str, int]] = {
-        "userId": session.user_id,
+        "ext_id": session.ext_id,
         "name": session.user_name,
         "email": session.user_email,
         "state": session.state.value,
         "csrf": session.csrf_token,
     }
+    if session.user_id:
+        session_dict["id"] = session.user_id
     if session.user_title:
         session_dict["title"] = session.user_title
     if timeouts:

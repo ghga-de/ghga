@@ -57,6 +57,7 @@ def test_session_to_header_ascii():
     """Test that a session with ascii values is properly converted to a header."""
     session = Session(
         session_id="some-session-id",
+        ext_id="john@aai.org",
         user_id="some-user-id",
         user_name="John Doe",
         user_email="john@home.org",
@@ -65,8 +66,8 @@ def test_session_to_header_ascii():
         last_used=NOW,
     )
     assert session_to_header(session) == (
-        '{"userId":"some-user-id","name":"John Doe","email":"john@home.org",'
-        '"state":"NeedsRegistration","csrf":"some-csrf-token"}'
+        '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
+        '"state":"NeedsRegistration","csrf":"some-csrf-token","id":"some-user-id"}'
     )
 
 
@@ -74,6 +75,7 @@ def test_session_to_header_non_ascii():
     """Test that a session with non-ascii values is properly converted to a header."""
     session = Session(
         session_id="a-session-id",
+        ext_id="john@aai.org",
         user_id="a-user-id",
         user_name="Svante Pääbo",
         user_email="svante@home.se",
@@ -82,8 +84,25 @@ def test_session_to_header_non_ascii():
         last_used=NOW,
     )
     assert session_to_header(session) == (
-        '{"userId":"a-user-id","name":"Svante Pääbo","email":"svante@home.se",'
-        '"state":"NeedsRegistration","csrf":"a-csrf-token"}'
+        '{"ext_id":"john@aai.org","name":"Svante Pääbo","email":"svante@home.se",'
+        '"state":"NeedsRegistration","csrf":"a-csrf-token","id":"a-user-id"}'
+    )
+
+
+def test_session_to_header_without_optional_properties():
+    """Test that optional properties are omitted when converted."""
+    session = Session(
+        session_id="some-session-id",
+        ext_id="john@aai.org",
+        user_name="John Doe",
+        user_email="john@home.org",
+        csrf_token="some-csrf-token",
+        created=NOW,
+        last_used=NOW,
+    )
+    assert session_to_header(session) == (
+        '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
+        '"state":"NeedsRegistration","csrf":"some-csrf-token"}'
     )
 
 
@@ -91,6 +110,7 @@ def test_session_to_header_with_optional_properties():
     """Test that the optional properties of a session can also be converted."""
     session = Session(
         session_id="some-session-id",
+        ext_id="john@aai.org",
         user_id="some-user-id",
         user_name="John Doe",
         user_email="john@home.org",
@@ -100,7 +120,7 @@ def test_session_to_header_with_optional_properties():
         last_used=NOW,
     )
     assert session_to_header(session, lambda _session: (42, 144)) == (
-        '{"userId":"some-user-id","name":"John Doe","email":"john@home.org",'
+        '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
         '"state":"NeedsRegistration","csrf":"some-csrf-token",'
-        '"title":"Dr.","timeout":42,"extends":144}'
+        '"id":"some-user-id","title":"Dr.","timeout":42,"extends":144}'
     )
