@@ -1,32 +1,14 @@
-# General-Purpose Python Template
+[![tests](https://github.com/kerstenbreuer/arctictypes/actions/workflows/tests.yaml/badge.svg)](https://github.com/kerstenbreuer/arctictypes/actions/workflows/tests.yaml)
 
-This is a general-purpose template for python packages and applications.
+# artictypes
 
-It features:
-
-- A [devcontainer](https://containers.dev/)-based fully-configured development environment for vscode
-- Tight linting and formatting using [Ruff](https://docs.astral.sh/ruff/)
-- Static type checking using [mypy](https://www.mypy-lang.org/)
-- Security scanning using [bandit](https://bandit.readthedocs.io/en/latest/)
-- A structure for automated tests using [pytest](https://docs.pytest.org/en/7.4.x/)
-- Dependency locking using [pip-tools](https://github.com/jazzband/pip-tools)
-- Git hooks checking linting and formatting before committing using [pre-commit](https://pre-commit.com/)
-- GitHub Actions for automating or checking all of the above
-
-Here the intro to the template stops and the actual template for the readme of the microservice starts:
-
----
-[![tests](https://github.com/kerstenbreuer/python-template/actions/workflows/tests.yaml/badge.svg)](https://github.com/kerstenbreuer/python-template/actions/workflows/tests.yaml)
-
-# My Custom App
-
-My-Custom-App - a short description
+Deep frozen data structures for Python.
 
 ## Description
 
 <!-- Please provide a short overview of the features of this service. -->
 
-Here you should provide a short summary of the purpose of this microservice.
+Coming soon.
 
 ## Development
 

@@ -12,40 +12,31 @@ authors = [
 requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 1 - Planning",
-    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License",
-    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "my_custom_app"
+name = "arctictypes"
 version = "0.1.0"
-description = "my_custom_app - a short description"
+description = "arctictypes - deep frozen data structures for Python."
 dependencies = [
-    "typer >= 0.9.0",
-    "pydantic >= 2.5.3",
-    "fastapi >= 0.109.0",
-    "PyYaml >= 6.0.1",
-    "boto3 >= 1.34.23",
-    "kafka-python >= 2.0.2",
-    "aiokafka >= 0.10.0",
-    "pymongo >= 4.6.1",
-    "motor >= 3.3.2",
-    "sqlalchemy >= 2.0.25",
-    "psycopg2 >= 2.9.9",
+    "immutabledict >=4, <5"
+]
+
+[project.optional-dependencies]
+pydantic = [
+    "pydantic >=2, <3"
 ]
 
 [project.license]
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/kerstenbreuer/app"
-
-[project.scripts]
-my_custom_app = "my_custom_app.__main__:run"
+Repository = "https://github.com/kerstenbreuer/arctictypes"
 
 [tool.setuptools.packages.find]
 where = [
