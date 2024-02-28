@@ -12,7 +12,7 @@ class SimpleToken(NamedTuple):
     hash: str
 
 
-def generate_simple_token(length: int =32) -> SimpleToken:
+def generate_simple_token(length: int = 32) -> SimpleToken:
     """Generate a random simple token of the given length."""
 
     token = token_urlsafe(length)

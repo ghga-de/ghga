@@ -66,9 +66,9 @@ def refresh_all_keys():
 
 
 @app.command()
-def generate_test_keys(num_jwk: int =1, num_c4gh: int =1, num_tokens: int = 1):
+def generate_test_keys(num_jwk: int = 1, num_c4gh: int = 1, num_tokens: int = 1):
     """Generate and print cryptographic values for testing.
-    
+
     You can specify any number of JSON Web Keys, Crypt4GH keys
     and simple tokens that shall be generated and printed out.
     """

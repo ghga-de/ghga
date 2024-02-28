@@ -1,57 +1,31 @@
 """Vault management"""
 
-import os
-
 import hvac
 from hvac.api.auth_methods import Kubernetes
 
-DEFAULT_ADDR = "http://localhost:8200"
-DEFAULT_NAMESPACE = "vault"
-DEFAULT_TOKEN = "dev-token"
-DEFAULT_KEY = "data"
+from .config import Config
 
-PATH_INT_PRIVATE = "auth/priv/int"
-PATH_INT_PUBLIC = "auth/pub/int"
-PATH_EXT_PUBLIC = "auth/pub/ext"
-PATH_WPS_PRIVATE = "auth/priv/wps"
-PATH_WPS_PUBLIC = "auth/pub/wps"
-
-VERIFY_WRITE = True  # read back from vault and compare
-SHOW_EXTERNAL_KEYS = True  # print public key set
-
-SSL_VERIFY = False  # could also be path to the certificate
-TIMEOUT = 15  # timeout in seconds
-
-SA_TOKEN_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/token'
-
-def env(name: str, default=None) -> str:
-    """Get an environment variable"""
-    return os.environ.get(name, default)
-
-
-def is_dev():
-    """Check whether this is the dev environment"""
-    return env("VAULT_TOKEN") == "dev-token"
+# Load configuration
+config = Config()
 
 
 def get_vault() -> hvac.Client:
     """Get HashiCorp Vault client."""
-    url = env("VAULT_ADDR", DEFAULT_ADDR)
-    namespace = env("VAULT_NAMESPACE", DEFAULT_NAMESPACE)
-
-    role = env("AUTH_KM_KUBE_ROLE")
+    url = config.vault_addr
+    namespace = config.vault_namespace
+    role = config.kube_role
     if role:
-        jwt = open(SA_TOKEN_PATH).read()
+        jwt = open(config.sa_token_path).read()
         token = None
     else:
         jwt = None
-        token = env("VAULT_TOKEN", DEFAULT_TOKEN)
+        token = config.token
 
     client = hvac.Client(
         url=url,
         token=token,
-        verify=SSL_VERIFY,
-        timeout=TIMEOUT,
+        verify=config.ssl_verify,
+        timeout=config.timeout,
         namespace=namespace,
     )
 
@@ -64,13 +38,16 @@ def get_vault() -> hvac.Client:
 def store_in_vault(path: str, value: str):
     """Store a string value under they given path."""
     vault = get_vault()
-
     create_response = vault.secrets.kv.create_or_update_secret(
-        path=path, secret={DEFAULT_KEY: value}
+        path=path,
+        secret={config.secret_key_name: value},
+        mount_point=config.mount_point,
     )
-    if VERIFY_WRITE:
-        read_response = vault.secrets.kv.read_secret_version(path=path)
-        read_value = read_response["data"]["data"][DEFAULT_KEY]
+    if config.verify_write:
+        read_response = vault.secrets.kv.read_secret_version(
+            path=path, mount_point=config.mount_point
+        )
+        read_value = read_response["data"]["data"][config.secret_key_name]
         if read_value != value:
             print("ERROR: Could not read back the stored value.")
             print("Create response:", create_response)
@@ -80,26 +57,26 @@ def store_in_vault(path: str, value: str):
 
 def store_private_int_key(key: str):
     """Store the private internal auth key as JSON value."""
-    return store_in_vault(PATH_INT_PRIVATE, key)
+    return store_in_vault(config.path_int_private, key)
 
 
 def store_public_int_key(key: str):
     """Store the public internal auth key as JSON value."""
-    return store_in_vault(PATH_INT_PUBLIC, key)
+    return store_in_vault(config.path_int_public, key)
 
 
 def store_public_ext_key(key: str):
     """Store the public external (OIDC) auth key set as JSON value."""
-    if SHOW_EXTERNAL_KEYS:
+    if config.show_external_keys:
         print("External auth key set:", key)
-    return store_in_vault(PATH_EXT_PUBLIC, key)
+    return store_in_vault(config.path_ext_public, key)
 
 
 def store_private_wps_key(key: str):
     """Store the private work package signing key as JSON value."""
-    return store_in_vault(PATH_WPS_PRIVATE, key)
+    return store_in_vault(config.path_wps_private, key)
 
 
 def store_public_wps_key(key: str):
     """Store the public work package validation key as JSON value."""
-    return store_in_vault(PATH_WPS_PUBLIC, key)
+    return store_in_vault(config.path_wps_public, key)
