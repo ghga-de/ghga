@@ -51,7 +51,7 @@ The Auth Adapter creates an auth session and tracks users as soon as they have l
 
 Instead of converting the OIDC access token to our internal auth token, the Auth Adapter should now convert the content of the user session into the internal auth token. The internal auth token will change a bit, as outlined in a section below.
 
-The Auth Adapter must also be extended with a mechanism that prevents "session riding" attacks, using the "Cookie-to-header token" method. Thereby, the first request that creates the session responds not only with the session cookie, but also with a "CSRF cookie" which must be a unique and unpredictable string, either as a random string or derived from the session token via HMAC and an application secret. Contrary to the session cookie, the CSRF cookie must not set the "HttpOnly" flag, because it must be read by JavaScript running in the frontend so that it can be passed in the request header as a CSRF token for each request to the backend. The Auth Adapter needs to compare the CSRF token with the unique string set in the CSRF cookie.
+The Auth Adapter must also be extended with a mechanism that prevents "session riding" attacks using CSRF tokens. Thereby, the first request that creates the session responds also creates a CSRF token, which should be a unique and unpredictable string stored as part of the session. Contrary to the session cookie, the CSRF token must be made known to the frontend application, so that it can be passed in the request header as a CSRF token for each request to the backend. The Auth Adapter needs to compare the CSRF token with the unique string stored in the backend session.
 
 The following endpoints will be implemented in the Auth Adapter for managing sessions. These endpoints are not proxied by the API gateway, but respond directly back to the client.
 
@@ -133,7 +133,7 @@ This endpoint first verifies that the user has a valid auth session, i.e. has be
 
 The implementation only supports a single TOTP token per user. If an activated token (a TOTP token that has already been successfully validated at least once) already exists and the `force` flag is set to `true`, then the existing TOTP token will be replaced by the newly created one.
 
-As a side effect of this endpoint, when a user's TOTP token is replaced, all existing IVAs associated with this user must be set back to "unverified", as required in the white paper for 2FA and IVAs. Also, a notification should be sent to the user so that they can notice if someone else got hold of their first factor and is trying to use it to re-establish the second factor. This and some of the other security-critical events mentioned in this spec should later also be recorded in an audit log.
+As a side effect of this endpoint, when a user's TOTP token is replaced, all existing IVAs associated with this user must be set back to "unverified", as required in the white paper for 2FA and IVAs. Also, a notification should be sent to the user so that they can notice if someone else got hold of their first factor and is trying to use it to re-establish the second factor. This assumes that the user is also notified using their existing email address if someone tries to re-register with a changed email address using the first factor. These and some of the other security-critical events mentioned in this spec should later also be recorded in an audit log.
 
 The QR code should be created in the frontend, e.g. using `react-qr-code` or the `qr-code` web component. If during implementation there are any issues with this approach, it can alternatively also be created in the backend, e.g. using the `segno` library.
 
@@ -272,6 +272,39 @@ The `ghga-service-commons` library must be changed to reflect the changes in the
 
 ### Backend Models
 
+A new `TOTPToken` model must be created that includes all attributes required to operate a TOTP token, like the OTP secret key that it is based upon (details will be defined during implementation).
+
+The `TOTPToken`s will be managed by the Auth Adapter, as explained above.
+
+The Auth Adapter should store user sessiosn using a `Session` that should have the following fields:
+
+- `session_id`: string (the unique ID of the session)
+- `ext_id`: string (external user ID)
+- `user_id`: optional string (internal user ID, if registered)
+- `user_name`: string (full name of the user)
+- `user_email`: string (email address of the user)
+- `user_title`: optional string (academic title of the user)
+- `role`: optional string (role of the user)
+- `state`: enum (see section on Session states)
+- `csrf_token`: string (the CSRF token for the session)
+- `totp_token`: TOTPToken (the TOTP token object of the user, if created)
+- `created`: timestamp (when the session was created)
+- `last_used`: timestamp (when the session was last used)
+
+The backed user session can be requested by the frontend using the `/rpc/login` endpoint mentioned above, which returns it serialized to an `X-Session`, which should have the following fields:
+
+- `ext_id` = `Session.ext_id`
+- `id` = `Session.user_id` (if set)
+- `name` = `Session.user_name`
+- `email` = `Session.user_email`
+- `state` = `Session.state`
+- `role` = `Session.role` (if set)
+- `csrf` = `Session.csrf_token`
+- `timeout` = number of seconds until the session times out if not used
+- `extends` = number of seconds that the session can still be extended
+
+Note that the Session ID and the TOTP token are not part of this structure. The Session ID is passed only in the auth cookie and should not be visible to the client so that it can not leak outside. The TOTP token is returned only in the provisioning URI by the `/totp-token` endpoint. It should only be used to setup the authenticator app, but it should not be used or stored on the client side otherwise.
+
 A new `IVA` (independent verification address) model must be added to the User Management service:
 
 - `id`: string (unique internal id)
@@ -293,10 +326,6 @@ After three failed attempts or when the `last_changed` field indicates that the 
 The `state` transitions from `unverified` (after creation), over `code_requested` (user requested a verification), `code_created` (a verification code has been created) and `code_transmitted` (the verification code has been transmitted to the user) to `verified` (the user confirmed the receipt of the verification code by returning it properly).
 
 The `Claims` model must be extended so that claims in addition to referencing a user, it can optionally also reference an `IVA` via an additional property `iva_id`.
-
-A new `TOTPToken` model must be created that includes all attributes required to operate a TOTP token, like the OTP secret key that it is based upon (details will be defined during implementation).
-
-The `TOTPToken`s will be managed by the Auth Adapter, as explained above.
 
 The `AccessRequest` model must be extended to also include an optional `iva_id` field referencing an IVA that is used to verify the corresponding access grant. This field will be initially set to `None`, and it will be set after access has been allowed.
 
@@ -332,7 +361,7 @@ On the same page, the frontend also asks the user to enter the one-time password
 
 If the session has the `has-totp-token` state, a similar text input field should be presented to the user, asking them to enter the one-time-password (six-digit code) shown in the authenticator app for authentication.
 
-The user is also shown a link that allows re-creating the second factor. This link can be used in the case they lost the phone with the authenticator app and do not have a backup of the secrets. Following the link, after a warning that all independent verification addresses will be invalidated, the user state should be set to `lost-topt-token`. In that case, the `POST /totp-token` endpoint should be called with the `force` flag to overwrite an existing TOTP token.
+The user is also shown a link that allows re-creating the second factor. This link can be used in the case they lost the phone with the authenticator app and do not have a backup of the secrets. Following the link, after a warning that all independent verification addresses will be invalidated, the user state should be set to `lost-totp-token`. In that case, the `POST /totp-token` endpoint should be called with the `force` flag to overwrite an existing TOTP token.
 
 When the user submits the one-time-password, the frontend uses the `POST /rpc/verify-totp` endpoint to check its validity.
 
