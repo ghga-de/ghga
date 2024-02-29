@@ -5,18 +5,21 @@ image:
   name: "ghga/auth-km-jobs"
   tag: "0.0.0-31c85112c3f666abf8ff8633adff437bf04b716d"
 cronSchedule: ""
-vault:
-  token: ""
-  address: https://hashicorp-vault.vault:8200
-  namespace: vault
-  kubeRole: auth-km-jobs-role
+
 serviceAccount:
   enabled: true
-  name: auth-km-job
+  name: auth-km-jobs
 
 service:
-  keyType: ""
+  keyType: "internal"
   runCommands:
     internal: run refresh-int-keys
     external: run refresh-ext-keys
     wps: run refresh-wps-keys
+
+envPrefix: auth_km_jobs
+envVars:
+  token: "" 
+  vault_addr: https://hashicorp-vault.vault:8200
+  vault_namespace: vault
+  kube_role: auth-km-jobs-role
