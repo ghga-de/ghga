@@ -57,26 +57,26 @@ def store_in_vault(path: str, value: str):
 
 def store_private_int_key(key: str):
     """Store the private internal auth key as JSON value."""
-    return store_in_vault(config.path_int_private, key)
+    return store_in_vault(config.path_prefix + config.path_int_private, key)
 
 
 def store_public_int_key(key: str):
     """Store the public internal auth key as JSON value."""
-    return store_in_vault(config.path_int_public, key)
+    return store_in_vault(config.path_prefix + config.path_int_public, key)
 
 
 def store_public_ext_key(key: str):
     """Store the public external (OIDC) auth key set as JSON value."""
     if config.show_external_keys:
         print("External auth key set:", key)
-    return store_in_vault(config.path_ext_public, key)
+    return store_in_vault(config.path_prefix + config.path_ext_public, key)
 
 
 def store_private_wps_key(key: str):
     """Store the private work package signing key as JSON value."""
-    return store_in_vault(config.path_wps_private, key)
+    return store_in_vault(config.path_prefix + config.path_wps_private, key)
 
 
 def store_public_wps_key(key: str):
     """Store the public work package validation key as JSON value."""
-    return store_in_vault(config.path_wps_public, key)
+    return store_in_vault(config.path_prefix + config.path_wps_public, key)

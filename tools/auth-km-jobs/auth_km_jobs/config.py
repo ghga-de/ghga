@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, validator
 from typing import Optional
 
 
@@ -50,10 +50,14 @@ class Config(BaseSettings):
         "https://proxy.aai.lifescience-ri.eu/", description="OIDC authority URL."
     )
     discovery_url: str = Field(
-        f"https://proxy.aai.lifescience-ri.eu/.well-known/openid-configuration",
+        "https://proxy.aai.lifescience-ri.eu/.well-known/openid-configuration",
         description="OIDC discovery URL.",
     )
     timeout: int = Field(30, description="Timeout in seconds.")
+
+    @validator("path_prefix")
+    def ensure_slash_prefix(cls, v):
+        return v.rstrip("/") + "/"
 
     class Config:
         env_prefix = "AUTH_KM_JOBS_"  # Prefix for environment variables
