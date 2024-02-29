@@ -28,7 +28,11 @@ from auth_service.auth_adapter.core.session_store import (
     SessionState,
     SessionStore,
 )
-from auth_service.user_management.user_registry.models.dto import User, UserStatus
+from auth_service.user_management.user_registry.models.dto import (
+    AcademicTitle,
+    User,
+    UserStatus,
+)
 
 
 class CoreSessionStore(SessionStore):
@@ -252,6 +256,64 @@ async def test_update_session_with_user_to_registered(original_state: SessionSta
     assert session.created == before
     assert session.last_used == now
     assert session.user_id == "some-user-id"
+    assert session.user_name == "John Doe"
+    assert session.user_title is None
+    assert session.role is None
+    assert session.state is SessionState.REGISTERED
+
+
+@mark.asyncio
+@mark.parametrize(
+    "original_state",
+    [
+        SessionState.NEEDS_REGISTRATION,
+        SessionState.NEEDS_RE_REGISTRATION,
+        SessionState.REGISTERED,
+    ],
+)
+async def test_update_session_with_data_steward_to_registered(
+    original_state: SessionState,
+):
+    """Test updating a session to the registered state with data steward role."""
+    config = SessionConfig()
+    store = CoreSessionStore(config=config)
+    now = store._now()
+    before = now - timedelta(seconds=10)
+    session = Session(
+        session_id="test",
+        state=original_state,
+        ext_id="some-ext-id@home.org",
+        user_id=None
+        if original_state is SessionState.NEEDS_REGISTRATION
+        else "some-user-id",
+        user_name="John Doe",
+        user_email="john@home.org",
+        csrf_token="some-csrf-token",
+        created=before,
+        last_used=before,
+    )
+    user = User(
+        id="some-user-id",
+        ext_id="some-ext-id@home.org",
+        name="John Doe",
+        title=AcademicTitle.DR,
+        email="john@home.org",
+        status=UserStatus.ACTIVE,
+        registration_date=before,
+    )
+
+    async def _is_data_steward(user: User) -> bool:
+        return True
+
+    await store.save_session(session, user=user, is_data_steward=_is_data_steward)
+    assert store.saved_session is session
+    assert session.created == before
+    assert session.last_used == now
+    assert session.user_id == "some-user-id"
+    assert session.user_name == "John Doe"
+    if original_state is not SessionState.REGISTERED:
+        assert session.user_title == "Dr."
+        assert session.role == "data_steward"
     assert session.state is SessionState.REGISTERED
 
 
@@ -293,10 +355,10 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
         registration_date=before,
     )
 
-    async def has_totp_token(user: User) -> bool:
+    async def _has_totp_token(user: User) -> bool:
         return True
 
-    await store.save_session(session, user=user, has_totp_token=has_totp_token)
+    await store.save_session(session, user=user, has_totp_token=_has_totp_token)
     assert store.saved_session is session
     assert session.created == before
     assert session.last_used == now

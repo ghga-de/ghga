@@ -77,7 +77,7 @@ async def post_user(
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     auth_context: Annotated[AuthContext, require_auth],
 ) -> User:
-    """Register a user"""
+    """Register a user."""
     ext_id = user_data.ext_id
     # users can only register themselves
     if ext_id != auth_context.ext_id:
@@ -138,7 +138,7 @@ async def put_user(
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     auth_context: Annotated[AuthContext, require_auth],
 ) -> Response:
-    """Update a user"""
+    """Update a user."""
     # users can only update themselves,
     # invalid users are allowed to update themselves in order to become valid again
     if not (
@@ -193,7 +193,7 @@ async def get_user(
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     auth_context: Annotated[AuthContext, require_auth],
 ) -> User:
-    """Get user data"""
+    """Get user data."""
     # Only data steward can request other user accounts
     if not (
         is_steward(auth_context)
@@ -251,7 +251,7 @@ async def patch_user(
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     auth_context: Annotated[AuthContext, require_active],
 ) -> Response:
-    """Modify user data"""
+    """Modify user data."""
     update_data = user_data.model_dump(exclude_unset=True)
     # Everybody is allowed to modify their own data except the status,
     # but only data stewards are allowed to modify other accounts
@@ -317,7 +317,7 @@ async def delete_user(
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     auth_context: Annotated[AuthContext, require_steward],
 ) -> Response:
-    """Delete user"""
+    """Delete user."""
     if id_ == auth_context.id:
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this user."

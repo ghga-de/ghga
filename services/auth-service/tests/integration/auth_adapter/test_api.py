@@ -27,6 +27,7 @@ from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.api import main
 from auth_service.auth_adapter.api.headers import get_bearer_token
+from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 from auth_service.user_management.user_registry.deps import UserDao, get_user_dao
@@ -37,10 +38,15 @@ from ...fixtures.utils import (
     DummyUserDao,
     create_access_token,
     get_claims_from_token,
+    headers_for_session,
 )
 from .fixtures import (  # noqa: F401
+    ClientWithSession,
+    DummyUserTokenDao,
     fixture_client,
+    fixture_client_with_session,
     fixture_with_basic_auth,
+    query_new_session,
 )
 
 API_EXT_PATH = CONFIG.api_ext_path.strip("/")
@@ -593,3 +599,173 @@ async def test_token_exchange_for_known_data_steward(
 
     # check that the data steward role appears in the token
     assert claims["role"] == "data_steward"
+
+
+@mark.asyncio
+async def test_post_user_without_session(client: AsyncTestClient):
+    """Test authentication for user registration without a session."""
+    response = await client.post("/users")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not logged in"}
+
+
+@mark.asyncio
+async def test_post_user_with_session_and_invalid_csrf(
+    client_with_session: ClientWithSession,
+):
+    """Test user registration with session and invalid CSRF token."""
+    client, session = client_with_session[:2]
+    session.csrf_token = "invalid"
+    response = await client.post("/users", headers=headers_for_session(session))
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid or missing CSRF token"}
+
+
+@mark.asyncio
+async def test_post_user_with_session(client: AsyncTestClient, httpx_mock: HTTPXMock):
+    """Test user registration with session and valid CSRF token."""
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+
+    user_dao = DummyUserDao(ext_id="not.john@aai.org")
+    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+
+    session = await query_new_session(client)
+    assert not session.user_id
+
+    response = await client.post("/users", headers=headers_for_session(session))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert not response.text
+    authorization = response.headers["Authorization"]
+    assert authorization
+
+    internal_token = get_bearer_token(authorization)
+    assert internal_token
+
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"id", "name", "email", "title", "exp", "iat", "role"}
+
+    assert set(claims) == expected_claims
+    assert claims["id"] == "john@aai.org"
+    assert claims["name"] == "John Doe"
+    assert claims["email"] == "john@home.org"
+    assert claims["title"] is None
+    assert claims["role"] is None
+
+    iat = claims["iat"]
+    assert isinstance(iat, int)
+    assert 0 <= now_as_utc().timestamp() - iat < 5
+    exp = claims["exp"]
+    assert isinstance(exp, int)
+    assert 0 <= exp - iat - 3600 < 2
+
+
+@mark.asyncio
+async def test_put_user_without_session(client: AsyncTestClient):
+    """Test authentication for user update without a session."""
+    response = await client.put("/users/some-internal-id")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not logged in"}
+
+
+@mark.asyncio
+async def test_put_user_with_session_and_wrong_user_id(
+    client_with_session: ClientWithSession,
+):
+    """Test user update with session and wrong user ID."""
+    client, session = client_with_session[:2]
+    response = await client.put(
+        "/users/jane@ghga.de", headers=headers_for_session(session)
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not registered"}
+
+
+@mark.asyncio
+async def test_put_user_with_session_and_invalid_csrf(
+    client_with_session: ClientWithSession,
+):
+    """Test user update with session and invalid CSRF token."""
+    client, session = client_with_session[:2]
+    session.csrf_token = "invalid"
+    response = await client.put(
+        "/users/john@ghga.de", headers=headers_for_session(session)
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid or missing CSRF token"}
+
+
+@mark.asyncio
+async def test_put_unregistered_user_with_session(
+    client: AsyncTestClient,
+    httpx_mock: HTTPXMock,
+):
+    """Test updating an unregistered user with session."""
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+
+    user_dao = DummyUserDao(ext_id="not.john@aai.org")
+    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+
+    session = await query_new_session(client)
+    assert not session.user_id
+
+    response = await client.put(
+        "/users/john@ghga.de", headers=headers_for_session(session)
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not registered"}
+
+
+@mark.asyncio
+async def test_put_registered_user_with_session(
+    client: AsyncTestClient, httpx_mock: HTTPXMock
+):
+    """Test updating a registered user with session."""
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+
+    user_dao = DummyUserDao()
+    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    user_token_dao = DummyUserTokenDao()
+    main.app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
+    claim_dao = DummyClaimDao()
+    main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
+
+    session = await query_new_session(client)
+    assert session.user_id == "john@ghga.de"
+
+    response = await client.put(
+        "/users/john@ghga.de", headers=headers_for_session(session)
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert not response.text
+    authorization = response.headers["Authorization"]
+    assert authorization
+
+    internal_token = get_bearer_token(authorization)
+    assert internal_token
+
+    claims = get_claims_from_token(internal_token)
+    assert isinstance(claims, dict)
+    expected_claims = {"id", "name", "email", "title", "exp", "iat", "role"}
+
+    assert set(claims) == expected_claims
+    assert claims["id"] == "john@ghga.de"
+    assert claims["name"] == "John Doe"
+    assert claims["email"] == "john@home.org"
+    assert claims["title"] is None
+    assert claims["role"] is None
+
+    iat = claims["iat"]
+    assert isinstance(iat, int)
+    assert 0 <= now_as_utc().timestamp() - iat < 5
+    exp = claims["exp"]
+    assert isinstance(exp, int)
+    assert 0 <= exp - iat - 3600 < 2

@@ -24,19 +24,20 @@ then this must be also specified in the config setting api_root_path.
 
 from typing import Annotated, Optional
 
-from fastapi import FastAPI, Header, HTTPException, Request, Response, status
+from fastapi import FastAPI, Header, HTTPException, Path, Request, Response, status
 from ghga_service_commons.api import configure_app
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import SecretStr
 
 from auth_service.config import CONFIG
+from auth_service.user_management.claims_repository.core.utils import is_data_steward
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 from auth_service.user_management.user_registry.deps import (
     Depends,
     UserDao,
     get_user_dao,
 )
-from auth_service.user_management.user_registry.models.dto import User
+from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
 from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import (
@@ -44,6 +45,7 @@ from ..core.auth import (
     UserInfoError,
     exchange_token,
     get_user_info,
+    internal_token_from_session,
 )
 from ..core.session_store import SessionState
 from ..deps import (
@@ -109,11 +111,12 @@ add_allowed_routes()
     description="Endpoint used when a user wants to log in.",
     status_code=204,
 )
-async def login(  # noqa: PLR0913
+async def login(  # noqa: C901, PLR0913
     session_store: SessionStoreDependency,
     session: SessionDependency,
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
     authorization: Annotated[Optional[str], Header()] = None,
     x_authorization: Annotated[Optional[str], Header()] = None,
     x_csrf_token: Annotated[Optional[str], Header()] = None,
@@ -145,14 +148,30 @@ async def login(  # noqa: PLR0913
         except NoHitsFoundError:
             user = None  # user is not yet registered
 
-    async def has_totp_token(user: User) -> bool:
+    if user and user.status is not UserStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is disabled",
+        )
+
+    async def _is_data_steward(user: User) -> bool:
+        """Check whether the given user is a data steward."""
+        return await is_data_steward(user.id, claim_dao=claim_dao)
+
+    async def _has_totp_token(user: User) -> bool:
+        """Check whether the given user has a TOTP token."""
         try:
             _ = await token_dao.get_by_id(user.id)
         except ResourceNotFoundError:
             return False
         return True
 
-    await session_store.save_session(session, user=user, has_totp_token=has_totp_token)
+    await session_store.save_session(
+        session,
+        user=user,
+        is_data_steward=_is_data_steward,
+        has_totp_token=_has_totp_token,
+    )
 
     response = Response(status_code=204)
     response.headers["X-Session"] = session_to_header(
@@ -187,6 +206,68 @@ async def logout(
         check_csrf("POST", x_csrf_token, session)
         await session_store.delete_session(session.session_id)
     return Response(status_code=204)
+
+
+@app.post(
+    "/users",
+    operation_id="post_user",
+    tags=["users"],
+    summary="Register a user",
+    description="Authenticate the endpoint used to register a new user.",
+    status_code=200,
+)
+async def post_user(
+    session: SessionDependency,
+    x_csrf_token: Annotated[Optional[str], Header()] = None,
+) -> Response:
+    """Register a user."""
+    response = Response(status_code=200)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
+        )
+    check_csrf("POST", x_csrf_token, session)
+    internal_token = internal_token_from_session(session)
+    authorization = f"Bearer {internal_token}"
+    response.headers["Authorization"] = authorization
+    return response
+
+
+@app.put(
+    "/users/{id}",
+    operation_id="post_user",
+    tags=["users"],
+    summary="Update a user",
+    description="Authenticate the endpoint used to update an existing user.",
+    status_code=200,
+)
+async def put_user(
+    id_: Annotated[
+        str,
+        Path(
+            ...,
+            alias="id",
+            description="Internal ID",
+        ),
+    ],
+    session: SessionDependency,
+    x_csrf_token: Annotated[Optional[str], Header()] = None,
+) -> Response:
+    """Update a user."""
+    response = Response(status_code=200)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
+        )
+    if not session.user_id or id_ != session.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
+        )
+    check_csrf("PUT", x_csrf_token, session)
+    internal_token = internal_token_from_session(session)
+    authorization = f"Bearer {internal_token}"
+    response.headers["Authorization"] = authorization
+    return response
 
 
 @app.post(

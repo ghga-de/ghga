@@ -18,6 +18,7 @@
 
 import json
 import logging
+import time
 from functools import cached_property, lru_cache
 from typing import Any, NamedTuple, Optional, Union
 from urllib.parse import urlparse
@@ -34,11 +35,14 @@ from auth_service.user_management.claims_repository.deps import ClaimDao
 from auth_service.user_management.user_registry.deps import Depends, UserDao
 from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
-__all__ = ["exchange_token", "get_user_info", "jwt_config"]
+from .session_store import Session
+
+__all__ = ["get_user_info", "internal_token_from_session", "jwt_config"]
 
 log = logging.getLogger(__name__)
 
 TIMEOUT = 30  # network timeout in seconds
+IAT_LIFETIME = 60 * 60  # validity of internal access token in seconds
 
 
 class AuthAdapterError(Exception):
@@ -410,3 +414,23 @@ def get_user_info(access_token: Optional[str]):
     if ui_claims["sub"] != at_claims["sub"]:
         raise UserInfoError("Subject in userinfo differs from access token")
     return UserInfo(ui_claims["sub"], ui_claims["name"], ui_claims["email"])
+
+
+def internal_token_from_session(session: Session) -> str:
+    """Create an internal access token from the given session."""
+    issued_at = time.time()
+    iat = int(issued_at)
+    expires = issued_at + IAT_LIFETIME
+    exp = int(expires)
+    if exp != expires:
+        exp += 1
+    claims = {
+        "name": session.user_name,
+        "email": session.user_email,
+        "title": session.user_title,
+        "role": session.role,
+        "id": session.user_id or session.ext_id,
+        "iat": iat,
+        "exp": exp,
+    }
+    return sign_and_encode_token(claims)

@@ -28,11 +28,14 @@ from pytest_httpx import HTTPXMock
 from auth_service.auth_adapter.api import main
 from auth_service.auth_adapter.deps import get_session_store, get_user_token_dao
 from auth_service.config import CONFIG
+from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import get_user_dao
+from auth_service.user_management.user_registry.models.dto import UserStatus
 
 from ...fixtures.utils import (
     RE_USER_INFO_URL,
     USER_INFO,
+    DummyClaimDao,
     DummyUserDao,
     create_access_token,
     headers_for_session,
@@ -51,6 +54,8 @@ def setup_daos(**user_args: str) -> None:
     main.app.dependency_overrides[get_user_dao] = lambda: user_dao
     user_token_dao = DummyUserTokenDao()
     main.app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
+    claim_dao = DummyClaimDao()
+    main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
 
 def assert_session_header(
@@ -268,6 +273,21 @@ async def test_login_with_registered_user_with_title(
 
 
 @mark.asyncio
+async def test_login_with_deactivated_user(
+    client: AsyncTestClient, httpx_mock: HTTPXMock
+):
+    """Test that a login request can create a new session for a registered user."""
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+
+    setup_daos(status=UserStatus.INACTIVE)
+
+    auth = f"Bearer {create_access_token()}"
+    response = await client.post("/rpc/login", headers={"Authorization": auth})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "User account is disabled"}
+
+
+@mark.asyncio
 async def test_login_without_access_token(client: AsyncTestClient):
     """Test that a login request without an access token fails."""
     response = await client.post("/rpc/login")
@@ -344,6 +364,44 @@ async def test_login_with_cookie_and_registered_user(client: AsyncTestClient):
             "name": "John Doe",
             "email": "john@home.org",
             "state": "Registered",
+        },
+    )
+
+
+@mark.asyncio
+async def test_login_with_cookie_and_registered_data_steward(client: AsyncTestClient):
+    """Test login request with session cookie for a registered data steward."""
+    setup_daos(
+        id_="james@ghga.de",
+        ext_id="james@aai.org",
+        name="James Steward",
+        email="james@home.org",
+        title="Dr.",
+    )
+
+    store = await get_session_store(config=CONFIG)
+    session_dict = await store.create_session(
+        ext_id="james@aai.org",
+        user_id="james@ghga.de",
+        user_name="James Steward",
+        user_email="james@home.org",
+    )
+    assert await store.get_session(session_dict.session_id)
+    headers = headers_for_session(session_dict)
+    response = await client.post("/rpc/login", headers=headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    assert "session" not in response.cookies
+    assert_session_header(
+        response,
+        {
+            "id": "james@ghga.de",
+            "ext_id": "james@aai.org",
+            "name": "James Steward",
+            "email": "james@home.org",
+            "state": "Registered",
+            "title": "Dr.",
+            "role": "data_steward",
         },
     )
 

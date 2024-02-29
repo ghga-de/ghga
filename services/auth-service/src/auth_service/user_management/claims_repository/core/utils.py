@@ -16,7 +16,7 @@
 
 """Core utilities for the Claims Repository."""
 
-from typing import Callable
+from typing import Callable, Optional
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
@@ -30,7 +30,7 @@ from .claims import is_data_steward_claim, is_valid_claim
 __all__ = ["user_exists", "is_data_steward"]
 
 
-async def user_exists(user_id: str, user_dao: UserDao) -> bool:
+async def user_exists(user_id: str, *, user_dao: UserDao) -> bool:
     """Check whether the user with the given id exists."""
     try:
         await user_dao.get_by_id(user_id)
@@ -41,12 +41,16 @@ async def user_exists(user_id: str, user_dao: UserDao) -> bool:
 
 async def is_data_steward(
     user_id: str,
-    user_dao: UserDao,
+    *,
     claim_dao: ClaimDao,
+    user_dao: Optional[UserDao] = None,
     now: Callable[[], UTCDatetime] = now_as_utc,
 ):
-    """Check whether the user with the given ID is a data steward."""
-    if not await user_exists(user_id, user_dao=user_dao):
+    """Check whether the user with the given ID is a data steward.
+
+    If no User DAO is provided, the user is assumed to exist.
+    """
+    if user_dao and not await user_exists(user_id, user_dao=user_dao):
         return False
     async for claim in claim_dao.find_all(
         mapping={"user_id": user_id, "visa_type": VisaType.GHGA_ROLE}

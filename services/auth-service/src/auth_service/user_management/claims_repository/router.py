@@ -85,7 +85,7 @@ async def post_claim(
     claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
 ) -> Claim:
     """Store a user claim"""
-    if not await user_exists(user_id, user_dao):
+    if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
     current_date = now_as_utc()
@@ -133,7 +133,7 @@ async def get_claims(
     claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
 ) -> list[Claim]:
     """Get all claims for a given user"""
-    if not await user_exists(user_id, user_dao):
+    if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
     return [claim async for claim in claim_dao.find_all(mapping={"user_id": user_id})]
@@ -174,7 +174,7 @@ async def patch_user(
     claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
 ) -> Response:
     """Revoke an existing user claim"""
-    if not await user_exists(user_id, user_dao):
+    if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
     try:
@@ -232,7 +232,7 @@ async def delete_claim(
     claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
 ) -> Response:
     """Delete an existing user claim"""
-    if not await user_exists(user_id, user_dao):
+    if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
     try:
@@ -289,7 +289,7 @@ async def grant_download_access(
     # internal service, authorization without token via service mesh
 ) -> Response:
     """Grant download access permission for a given dataset to a given user."""
-    if not await user_exists(user_id, user_dao):
+    if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
     claim = create_controlled_access_claim(
@@ -336,7 +336,7 @@ async def check_download_access(
     # internal service, authorization without token via service mesh
 ) -> bool:
     """Check download access permission for a given dataset by a given user"""
-    if not await user_exists(user_id, user_dao):
+    if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
     # run through all controlled access grants for the user
@@ -383,7 +383,7 @@ async def get_datasets_with_download_access(
     # internal service, authorization without token via service mesh
 ) -> list[str]:
     """Get list of all dataset IDs with download access permission for a given user"""
-    if not await user_exists(user_id, user_dao):
+    if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
     # fetch all valid controlled access grants for the user

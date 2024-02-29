@@ -26,6 +26,7 @@ from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
+from httpx import Response
 from pydantic import SecretStr
 from pytest import fixture
 from pytest_asyncio import fixture as async_fixture
@@ -36,11 +37,13 @@ from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.auth_adapter.ports.dao import UserToken
 from auth_service.deps import Config, get_config
+from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import get_user_dao
 
 from ...fixtures.utils import (
     RE_USER_INFO_URL,
     USER_INFO,
+    DummyClaimDao,
     DummyUserDao,
     create_access_token,
     headers_for_session,
@@ -98,8 +101,30 @@ _map_session_dict_to_object = {
     "name": "user_name",
     "email": "user_email",
     "title": "user_title",
+    "role": "role",
     "csrf": "csrf_token",
 }
+
+
+def session_from_response(
+    response: Response, session_id: Optional[str] = None
+) -> Session:
+    """Get a session object from the response."""
+    if not session_id:
+        session_id = response.cookies.get("session")
+        assert session_id
+    session_header = response.headers.get("X-Session")
+    assert session_header
+    session_dict = json.loads(session_header)
+    for key, attr in _map_session_dict_to_object.items():
+        session_dict[attr] = session_dict.pop(key, None)
+    now = now_as_utc()
+    last_used = now - timedelta(seconds=session_dict.pop("timeout", 0))
+    created = last_used - timedelta(seconds=session_dict.pop("extends", 0))
+    session_dict.update(last_used=last_used, created=created)
+    session = Session(session_id=session_id, **session_dict)
+    assert session.totp_token is None  # should never be passed to the client
+    return session
 
 
 async def query_new_session(
@@ -147,6 +172,8 @@ async def fixture_client_with_session(
     main.app.dependency_overrides[get_user_dao] = lambda: user_dao
     user_token_dao = DummyUserTokenDao()
     main.app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
+    claim_dao = DummyClaimDao()
+    main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
     session = await query_new_session(client)
     yield ClientWithSession(client, session, user_token_dao)

@@ -33,7 +33,7 @@ from .fixtures import (  # noqa: F401
 
 ROLE_CLAIM_DATA = {
     "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
-    "visa_value": "data-steward@ghga.de",
+    "visa_value": "data_steward@ghga.de",
     "valid_from": "2022-10-01T12:00:00Z",
     "valid_until": "2022-10-31T12:00:00Z",
     "assertion_date": "2022-09-01T12:00:00Z",

@@ -115,6 +115,7 @@ def test_session_to_header_with_optional_properties():
         user_name="John Doe",
         user_email="john@home.org",
         user_title="Dr.",
+        role="data_steward@ghga.de",
         csrf_token="some-csrf-token",
         created=NOW,
         last_used=NOW,
@@ -122,5 +123,6 @@ def test_session_to_header_with_optional_properties():
     assert session_to_header(session, lambda _session: (42, 144)) == (
         '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
         '"state":"NeedsRegistration","csrf":"some-csrf-token",'
-        '"id":"some-user-id","title":"Dr.","timeout":42,"extends":144}'
+        '"id":"some-user-id","title":"Dr.","role":"data_steward@ghga.de",'
+        '"timeout":42,"extends":144}'
     )
