@@ -3,7 +3,7 @@ command: []
 args: []
 image:
   name: "ghga/auth-km-jobs"
-  tag: "0.0.0-33-ebaf642-main"
+  tag: "0.0.0-31c85112c3f666abf8ff8633adff437bf04b716d"
 cronSchedule: ""
 vault:
   token: ""
