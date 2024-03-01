@@ -21,7 +21,7 @@ then this must be also specified in the config setting api_root_path.
 
 from typing import Annotated, Optional
 
-from fastapi import FastAPI, Header, HTTPException, Path, Request, Response, status
+from fastapi import FastAPI, Header, HTTPException, Path, Response, status
 from ghga_service_commons.api import configure_app
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import SecretStr
@@ -52,7 +52,6 @@ from ..deps import (
 )
 from ..ports.dao import UserToken
 from .basic import get_basic_auth_dependency
-from .csrf import check_csrf
 from .dto import CreateTOTPToken, TOTPTokenResponse, VerifyTOTP
 from .headers import get_bearer_token, session_to_header
 
@@ -115,10 +114,8 @@ async def login(  # noqa: C901, PLR0913
     claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
     authorization: Annotated[Optional[str], Header()] = None,
     x_authorization: Annotated[Optional[str], Header()] = None,
-    x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """Create a new or get an existing user session."""
-    check_csrf("POST", x_csrf_token, session)
     if session:
         session_created = False
     else:
@@ -195,11 +192,9 @@ async def login(  # noqa: C901, PLR0913
 async def logout(
     session_store: SessionStoreDependency,
     session: SessionDependency,
-    x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """End the user session."""
     if session:
-        check_csrf("POST", x_csrf_token, session)
         await session_store.delete_session(session.session_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -215,14 +210,12 @@ async def logout(
 async def post_user(
     session_store: SessionStoreDependency,
     session: SessionDependency,
-    x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """Register a user."""
     if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
         )
-    check_csrf("POST", x_csrf_token, session)
     await session_store.save_session(session)
     internal_token = internal_token_from_session(session)
     authorization = f"Bearer {internal_token}"
@@ -250,7 +243,6 @@ async def put_user(
     ],
     session_store: SessionStoreDependency,
     session: SessionDependency,
-    x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """Update a user."""
     if not session:
@@ -261,7 +253,6 @@ async def put_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
         )
-    check_csrf("PUT", x_csrf_token, session)
     await session_store.save_session(session)
     internal_token = internal_token_from_session(session)
     authorization = f"Bearer {internal_token}"
@@ -283,7 +274,6 @@ async def create_new_totp_token(
     session_store: SessionStoreDependency,
     session: SessionDependency,
     totp_handler: TOTPHandlerDependency,
-    x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> TOTPTokenResponse:
     """Create a new TOTP token or replace an existing one."""
     if not session:
@@ -294,7 +284,6 @@ async def create_new_totp_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
         )
-    check_csrf("POST", x_csrf_token, session)
     state = session.state
     if not (
         state in (SessionState.REGISTERED, SessionState.NEW_TOTP_TOKEN)
@@ -329,7 +318,6 @@ async def verify_totp(  # noqa: PLR0913
     totp_handler: TOTPHandlerDependency,
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
-    x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """Verify a TOTP token."""
     if not session:
@@ -340,7 +328,6 @@ async def verify_totp(  # noqa: PLR0913
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
         )
-    check_csrf("POST", x_csrf_token, session)
     totp = verification_info.totp
     if session.state == SessionState.NEW_TOTP_TOKEN:
         # get not yet verified TOTP token from the session
@@ -379,24 +366,19 @@ basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else 
     status_code=status.HTTP_200_OK,
 )
 async def ext_auth(
-    request: Request,
     session_store: SessionStoreDependency,
     session: SessionDependency,
-    x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """Implements the ExtAuth protocol to authenticate users via the API gateway.
 
     If a user session exists and is two-factor-authenticated, then an internal
     authentication token will be added to the response.
     """
-    if not session or session.state is not SessionState.AUTHENTICATED:
-        if session:
-            await session_store.save_session(session)
-        return Response(status_code=status.HTTP_200_OK)
-    check_csrf(request.method, x_csrf_token, session)
-    await session_store.save_session(session)
-    internal_token = internal_token_from_session(session)
-    authorization = f"Bearer {internal_token}"
-    return Response(
-        status_code=status.HTTP_200_OK, headers={"Authorization": authorization}
-    )
+    headers = {}
+    if session:
+        await session_store.save_session(session)
+        if session.state is SessionState.AUTHENTICATED:
+            internal_token = internal_token_from_session(session)
+            authorization = f"Bearer {internal_token}"
+            headers["Authorization"] = authorization
+    return Response(status_code=status.HTTP_200_OK, headers=headers)

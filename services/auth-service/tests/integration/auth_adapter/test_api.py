@@ -92,6 +92,13 @@ def assert_has_authorization_header(response, session):
     assert 0 <= claims["exp"] - claims["iat"] - 3600 < 2
 
 
+def assert_is_authorization_error(response, message: str):
+    """Check that the response is a CSRF error."""
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "Authorization" not in response.headers
+    assert response.json() == {"detail": message}
+
+
 @mark.asyncio
 async def test_get_from_root(client: AsyncTestClient):
     """Test that a simple GET request passes."""
@@ -253,9 +260,7 @@ async def test_basic_auth_service_logo(with_basic_auth: str, client: AsyncTestCl
 async def test_post_user_without_session(client: AsyncTestClient):
     """Test authentication for user registration without a session."""
     response = await client.post("/users")
-
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Not logged in"}
+    assert_is_authorization_error(response, "Not logged in")
 
 
 @mark.asyncio
@@ -266,9 +271,7 @@ async def test_post_user_with_session_and_invalid_csrf(
     client, session = client_with_session[:2]
     session.csrf_token = "invalid"
     response = await client.post("/users", headers=headers_for_session(session))
-
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or missing CSRF token"}
+    assert_is_authorization_error(response, "Invalid or missing CSRF token")
 
 
 @mark.asyncio
@@ -315,9 +318,7 @@ async def test_post_user_with_session(client: AsyncTestClient, httpx_mock: HTTPX
 async def test_put_user_without_session(client: AsyncTestClient):
     """Test authentication for user update without a session."""
     response = await client.put("/users/some-internal-id")
-
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Not logged in"}
+    assert_is_authorization_error(response, "Not logged in")
 
 
 @mark.asyncio
@@ -329,9 +330,7 @@ async def test_put_user_with_session_and_wrong_user_id(
     response = await client.put(
         "/users/jane@ghga.de", headers=headers_for_session(session)
     )
-
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Not registered"}
+    assert_is_authorization_error(response, "Not registered")
 
 
 @mark.asyncio
@@ -344,9 +343,7 @@ async def test_put_user_with_session_and_invalid_csrf(
     response = await client.put(
         "/users/john@ghga.de", headers=headers_for_session(session)
     )
-
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or missing CSRF token"}
+    assert_is_authorization_error(response, "Invalid or missing CSRF token")
 
 
 @mark.asyncio
@@ -366,9 +363,7 @@ async def test_put_unregistered_user_with_session(
     response = await client.put(
         "/users/john@ghga.de", headers=headers_for_session(session)
     )
-
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Not registered"}
+    assert_is_authorization_error(response, "Not registered")
 
 
 @mark.asyncio
@@ -434,12 +429,14 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     # this should pass through without yielding an authorization header
     assert response.status_code == status.HTTP_200_OK
     assert "Authorization" not in response.headers
-    # also try a post request to a random path, without a CSRF token
-    response = await client.post("/some/path", headers=without_csrf)
-    # this should also pass through without yielding an authorization header
-    # (the CSRF token is irrelevant here since the session is not yet used)
+    # also try a post request to a random path, with the proper CSRF token
+    response = await client.post("/some/path", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     assert "Authorization" not in response.headers
+    # however, a post request without a CSRF token should fail
+    # even if this is not critical here, since we are not yet fully unauthenticated
+    response = await client.post("/some/path", headers=without_csrf)
+    assert_is_authorization_error(response, "Invalid or missing CSRF token")
 
     # create second factor and authenticate with that
     response = await client.post(
@@ -469,24 +466,21 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
 
     # make a post request to a random path, without the CSRF token
     response = await client.post("/some/path", headers=without_csrf)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or missing CSRF token"}
+    assert_is_authorization_error(response, "Invalid or missing CSRF token")
     # make a post request to a random path, with the CSRF token
     response = await client.post("/some/path", headers=headers)
     assert_has_authorization_header(response, session)
 
     # make a put request to a random path, without the CSRF token
     response = await client.put("/some/path", headers=without_csrf)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or missing CSRF token"}
+    assert_is_authorization_error(response, "Invalid or missing CSRF token")
     # make a put request to a random path, with the CSRF token
     response = await client.put("/some/path", headers=headers)
     assert_has_authorization_header(response, session)
 
     # make a delete request to a random path, without the CSRF token
     response = await client.delete("/some/path", headers=without_csrf)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or missing CSRF token"}
+    assert_is_authorization_error(response, "Invalid or missing CSRF token")
     # make a delete request to a random path, with the CSRF token
     response = await client.delete("/some/path", headers=headers)
     assert_has_authorization_header(response, session)

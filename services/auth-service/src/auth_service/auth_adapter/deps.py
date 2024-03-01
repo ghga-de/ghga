@@ -18,7 +18,7 @@
 
 from typing import Annotated, Optional
 
-from fastapi import Cookie
+from fastapi import HTTPException, Request, status
 
 from auth_service.deps import (
     Depends,
@@ -44,6 +44,10 @@ __all__ = [
     "SessionDependency",
 ]
 
+SESSION_COOKIE = "session"
+CSRF_TOKEN_HEADER = "X-CSRF-Token"  # noqa: S105
+WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
 _session_store = None
 _totp_handler = None
 
@@ -60,10 +64,27 @@ async def get_session_store(
 
 async def get_session(
     store: Annotated[SessionStorePort[Session], Depends(get_session_store)],
-    session: Annotated[Optional[str], Cookie()] = None,
+    request: Request,
 ) -> Optional[Session]:
-    """Get the current session."""
-    return await store.get_session(session) if session else None
+    """Get the current session.
+
+    Also checks the CSRF token if this is a write request.
+    """
+    session_id = request.cookies.get(SESSION_COOKIE)
+    if not session_id:
+        return None
+    session = await store.get_session(session_id)
+    if not session:
+        return None
+    method = request.method
+    if method in WRITE_METHODS:
+        csrf_token = request.headers.get(CSRF_TOKEN_HEADER)
+        if not csrf_token or csrf_token != session.csrf_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or missing CSRF token",
+            )
+    return session
 
 
 async def get_totp_handler(
