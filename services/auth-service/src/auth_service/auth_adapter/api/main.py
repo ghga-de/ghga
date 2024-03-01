@@ -13,10 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Module containing the main FastAPI router and (optionally) top-level API endpoints.
-Additional endpoints might be structured in dedicated modules
-(each of them having a sub-router).
+"""FastAPI router and endpoints for authentication via ExtAuth protocol.
 
 Note: If a path_prefix is used for the Emissary AuthService,
 then this must be also specified in the config setting api_root_path.
@@ -41,9 +38,7 @@ from auth_service.user_management.user_registry.models.dto import User, UserStat
 
 from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import (
-    TokenValidationError,
     UserInfoError,
-    exchange_token,
     get_user_info,
     internal_token_from_session,
 )
@@ -84,12 +79,13 @@ def add_allowed_route(route: str, write: bool = False):
 
     @app.api_route(route, methods=methods)
     async def allowed_route(
-        response: Response, authorization: Annotated[Optional[str], Header()] = None
-    ) -> dict:
+        authorization: Annotated[Optional[str], Header()] = None,
+    ) -> Response:
         """Unprotected route."""
+        headers: dict[str, str] = {}
         if authorization:
-            response.headers["Authorization"] = authorization
-        return {}
+            headers["Authorization"] = authorization
+        return Response(status_code=status.HTTP_200_OK, headers=headers)
 
 
 def add_allowed_routes():
@@ -108,8 +104,8 @@ add_allowed_routes()
     operation_id="login",
     tags=["users"],
     summary="Create or get user session",
-    description="Endpoint used when a user wants to log in.",
-    status_code=204,
+    description="Endpoint used when a user wants to log in",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 async def login(  # noqa: C901, PLR0913
     session_store: SessionStoreDependency,
@@ -173,7 +169,7 @@ async def login(  # noqa: C901, PLR0913
         has_totp_token=_has_totp_token,
     )
 
-    response = Response(status_code=204)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
     response.headers["X-Session"] = session_to_header(
         session, timeouts=session_store.timeouts
     )
@@ -193,8 +189,8 @@ async def login(  # noqa: C901, PLR0913
     operation_id="logout",
     tags=["users"],
     summary="End user session",
-    description="Endpoint used when a user wants to log out.",
-    status_code=204,
+    description="Endpoint used when a user wants to log out",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 async def logout(
     session_store: SessionStoreDependency,
@@ -205,7 +201,7 @@ async def logout(
     if session:
         check_csrf("POST", x_csrf_token, session)
         await session_store.delete_session(session.session_id)
-    return Response(status_code=204)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.post(
@@ -213,33 +209,35 @@ async def logout(
     operation_id="post_user",
     tags=["users"],
     summary="Register a user",
-    description="Authenticate the endpoint used to register a new user.",
-    status_code=200,
+    description="Handle the endpoint to register a new user",
+    status_code=status.HTTP_200_OK,
 )
 async def post_user(
+    session_store: SessionStoreDependency,
     session: SessionDependency,
     x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """Register a user."""
-    response = Response(status_code=200)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
         )
     check_csrf("POST", x_csrf_token, session)
+    await session_store.save_session(session)
     internal_token = internal_token_from_session(session)
     authorization = f"Bearer {internal_token}"
-    response.headers["Authorization"] = authorization
-    return response
+    return Response(
+        status_code=status.HTTP_200_OK, headers={"Authorization": authorization}
+    )
 
 
 @app.put(
     "/users/{id}",
-    operation_id="post_user",
+    operation_id="put_user",
     tags=["users"],
     summary="Update a user",
-    description="Authenticate the endpoint used to update an existing user.",
-    status_code=200,
+    description="Handle the endpoint to update an existing user",
+    status_code=status.HTTP_200_OK,
 )
 async def put_user(
     id_: Annotated[
@@ -250,11 +248,11 @@ async def put_user(
             description="Internal ID",
         ),
     ],
+    session_store: SessionStoreDependency,
     session: SessionDependency,
     x_csrf_token: Annotated[Optional[str], Header()] = None,
 ) -> Response:
     """Update a user."""
-    response = Response(status_code=200)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
@@ -264,10 +262,12 @@ async def put_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
         )
     check_csrf("PUT", x_csrf_token, session)
+    await session_store.save_session(session)
     internal_token = internal_token_from_session(session)
     authorization = f"Bearer {internal_token}"
-    response.headers["Authorization"] = authorization
-    return response
+    return Response(
+        status_code=status.HTTP_200_OK, headers={"Authorization": authorization}
+    )
 
 
 @app.post(
@@ -275,8 +275,8 @@ async def put_user(
     operation_id="create_new_totp_token",
     tags=["totp"],
     summary="Create a new TOTP token",
-    description="Endpoint used to create or replace a TOTP token.",
-    status_code=201,
+    description="Endpoint used to create or replace a TOTP token",
+    status_code=status.HTTP_201_CREATED,
 )
 async def create_new_totp_token(
     creation_info: CreateTOTPToken,
@@ -319,8 +319,8 @@ async def create_new_totp_token(
     operation_id="verify_totp",
     tags=["totp"],
     summary="Verify a TOTP code",
-    description="Endpoint used to verify a TOTP code.",
-    status_code=204,
+    description="Endpoint used to verify a TOTP code",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 async def verify_totp(  # noqa: PLR0913
     verification_info: VerifyTOTP,
@@ -365,7 +365,7 @@ async def verify_totp(  # noqa: PLR0913
     session.state = SessionState.AUTHENTICATED
     session.totp_token = None  # remove verified TOTP token from the session
     await session_store.save_session(session)
-    return Response(status_code=204)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 basic_auth_dependency = get_basic_auth_dependency(app, CONFIG)
@@ -373,53 +373,30 @@ basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else 
 
 
 @app.api_route(
-    "/{path:path}", methods=ALL_METHODS, dependencies=basic_auth_dependencies
+    "/{path:path}",
+    methods=ALL_METHODS,
+    dependencies=basic_auth_dependencies,
+    status_code=status.HTTP_200_OK,
 )
-async def ext_auth(  # noqa: PLR0913
-    path: str,
+async def ext_auth(
     request: Request,
-    response: Response,
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
-    authorization: Annotated[Optional[str], Header()] = None,
-    x_authorization: Annotated[Optional[str], Header()] = None,
-) -> dict:
-    """Implements the ExtAuth protocol to authenticate users in the API gateway.
+    session_store: SessionStoreDependency,
+    session: SessionDependency,
+    x_csrf_token: Annotated[Optional[str], Header()] = None,
+) -> Response:
+    """Implements the ExtAuth protocol to authenticate users via the API gateway.
 
-    A valid external access token will be replaced with a corresponding internal token.
-    If the access token does not exist or is invalid, no internal token will be placed,
-    but the status will still be returned as OK so that all requests can pass.
+    If a user session exists and is two-factor-authenticated, then an internal
+    authentication token will be added to the response.
     """
-    access_token = get_bearer_token(authorization, x_authorization)
-    if access_token:
-        # check whether the external id is of interest and only pass it on in that case
-        pass_sub = path_needs_ext_info(path, request.method)
-        try:
-            internal_token = await exchange_token(
-                access_token, pass_sub=pass_sub, user_dao=user_dao, claim_dao=claim_dao
-            )
-        except TokenValidationError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token"
-            ) from exc
-        except UserInfoError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Error in user info"
-            ) from exc
-    else:
-        internal_token = ""  # nosec
-    # since ExtAuth cannot delete a header, we set it to an empty string if invalid
-    authorization = f"Bearer {internal_token}" if internal_token else ""
-    response.headers["Authorization"] = authorization
-    return {}
-
-
-def path_needs_ext_info(path: str, method: str) -> bool:
-    """Check whether the given request path and method need external user info."""
-    if API_EXT_PATH:
-        if not path.startswith(API_EXT_PATH):
-            return False
-        path = path[len(API_EXT_PATH) :]
-    return (method == "POST" and path == "users") or (
-        method == "GET" and path.startswith("users/") and "@" in path
+    if not session or session.state is not SessionState.AUTHENTICATED:
+        if session:
+            await session_store.save_session(session)
+        return Response(status_code=status.HTTP_200_OK)
+    check_csrf(request.method, x_csrf_token, session)
+    await session_store.save_session(session)
+    internal_token = internal_token_from_session(session)
+    authorization = f"Bearer {internal_token}"
+    return Response(
+        status_code=status.HTTP_200_OK, headers={"Authorization": authorization}
     )

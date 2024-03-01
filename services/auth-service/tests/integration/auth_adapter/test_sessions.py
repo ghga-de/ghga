@@ -144,7 +144,7 @@ async def test_login_with_unregistered_user(
     session_dict = await store.get_session(session_id)
     assert session_dict
     assert response.cookies.get("session") == session_id
-    assert response.headers.get("set-cookie") == expected_set_cookie(session_id)
+    assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
         response,
         {
@@ -195,7 +195,7 @@ async def test_login_with_registered_user(
     session_dict = await store.get_session(session_id)
     assert session_dict
     assert response.cookies.get("session") == session_id
-    assert response.headers.get("set-cookie") == expected_set_cookie(session_id)
+    assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
         response,
         {
@@ -227,7 +227,7 @@ async def test_login_with_registered_user_and_name_change(
     session_dict = await store.get_session(session_id)
     assert session_dict
     assert response.cookies.get("session") == session_id
-    assert response.headers.get("set-cookie") == expected_set_cookie(session_id)
+    assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
         response,
         {
@@ -258,7 +258,7 @@ async def test_login_with_registered_user_with_title(
     session_dict = await store.get_session(session_id)
     assert session_dict
     assert response.cookies.get("session") == session_id
-    assert response.headers.get("set-cookie") == expected_set_cookie(session_id)
+    assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
         response,
         {
@@ -276,7 +276,7 @@ async def test_login_with_registered_user_with_title(
 async def test_login_with_deactivated_user(
     client: AsyncTestClient, httpx_mock: HTTPXMock
 ):
-    """Test that a login request can create a new session for a registered user."""
+    """Test that a login request for a registered deactivated user fails."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     setup_daos(status=UserStatus.INACTIVE)

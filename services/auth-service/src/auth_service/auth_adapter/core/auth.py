@@ -25,15 +25,10 @@ from urllib.parse import urlparse
 
 import httpx
 from fastapi import status
-from hexkit.protocols.dao import NoHitsFoundError
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
 
 from auth_service.config import CONFIG, Config
-from auth_service.user_management.claims_repository.core.utils import is_data_steward
-from auth_service.user_management.claims_repository.deps import ClaimDao
-from auth_service.user_management.user_registry.deps import Depends, UserDao
-from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
 from .session_store import Session
 
@@ -59,10 +54,6 @@ class TokenSigningError(AuthAdapterError):
 
 class TokenValidationError(AuthAdapterError):
     """Error when validating JWTs."""
-
-
-class UserDataMismatchError(AuthAdapterError):
-    """Raised when user claims do not match the registered user data."""
 
 
 class UserInfoError(AuthAdapterError):
@@ -167,12 +158,6 @@ class JWTConfig:
         "name": None,
         "email": None,
     }
-    # the claims that are copied from the external access token to the internal token
-    copy_at_claims = ("iat", "exp")
-    # the claims that are copied from the external userinfo to the internal token
-    copy_ui_claims = ("name", "email")
-    # the key under which the subject is copied from the external token
-    copy_sub_as = "ext_id"
     # the URL of the userinfo endpoint
     userinfo_endpoint: str
 
@@ -238,7 +223,7 @@ jwt_config = JWTConfig()
 
 
 @lru_cache(maxsize=1024)
-def fetch_user_info(access_token: str) -> dict[str, Any]:
+def _fetch_user_info(access_token: str) -> dict[str, Any]:
     """Fetch info for the given access token from the userinfo endpoint."""
     response = httpx.get(
         jwt_config.userinfo_endpoint,
@@ -247,76 +232,6 @@ def fetch_user_info(access_token: str) -> dict[str, Any]:
     if response.status_code != status.HTTP_200_OK:
         raise UserInfoError(f"Cannot request userinfo: {response.reason_phrase}")
     return response.json()
-
-
-def _user_data_matches(user: User, external_claims: dict[str, Any]) -> bool:
-    """Check whether the registered user data matches with the external claims."""
-    get = external_claims.get
-    return user.name == get("name") and user.email == get("email")
-
-
-async def exchange_token(
-    external_token: str,
-    pass_sub: bool = False,
-    user_dao: UserDao = Depends(),
-    claim_dao: ClaimDao = Depends(),
-) -> Optional[str]:
-    """Exchange the external token against an internal token.
-
-    If the provided external token is valid, a corresponding internal token
-    will be returned.
-
-    The internal token will contain relevant claims from the access token and
-    the user info as configured.
-
-    If the user is already registered, the user id, status and title will be
-    included in the internal token as well.
-
-    If name or email do not match with the external userinfo, the user status
-    will appear as "invalid" in the internal token, but the actual status
-    will not  be changed in the user registry.
-
-    If the user is not yet registered, and pass_sub is set, then the sub claim
-    will be included in the internal token as "ext_id", otherwise the value None
-    will be returned instead of a token.
-    If the user has a special internal role, this is passed as the "role"
-    claim of the internal token.
-
-    If the external token is invalid, a TokenValidationError is raised.
-    If the user info cannot be requested, a UserInfoError is raised.
-    If the internal token cannot be signed, a TokenSigningError is raised.
-    """
-    at_claims = decode_and_validate_token(external_token)
-    _assert_at_claims_not_empty(at_claims)
-    sub = at_claims["sub"]
-    try:
-        user = await user_dao.find_one(mapping={"ext_id": sub})
-    except NoHitsFoundError:
-        # user is not yet registered
-        if not pass_sub:
-            return None
-        user = None
-    ui_claims = fetch_user_info(external_token)
-    _assert_ui_claims_not_empty(ui_claims)
-    if ui_claims["sub"] != sub:
-        raise UserInfoError("Subject in userinfo differs from access token.")
-    copy_claims = jwt_config.copy_at_claims
-    internal_claims = {claim: at_claims[claim] for claim in copy_claims}
-    copy_claims = jwt_config.copy_ui_claims
-    internal_claims.update({claim: ui_claims[claim] for claim in copy_claims})
-    if user:
-        # user already exists in the registry
-        user_status = (
-            user.status if _user_data_matches(user, ui_claims) else UserStatus.INVALID
-        )
-        internal_claims.update(id=user.id, status=user_status, title=user.title)
-        if user_status is UserStatus.ACTIVE and await is_data_steward(
-            user.id, user_dao=user_dao, claim_dao=claim_dao
-        ):
-            internal_claims.update(role="data_steward")
-    if pass_sub:
-        internal_claims[jwt_config.copy_sub_as] = sub
-    return sign_and_encode_token(internal_claims)
 
 
 def _assert_at_claims_not_empty(at_claims: dict[str, Any]) -> None:
@@ -406,10 +321,10 @@ def get_user_info(access_token: Optional[str]):
         raise UserInfoError("No access token provided")
     try:
         at_claims = decode_and_validate_token(access_token)
+        _assert_at_claims_not_empty(at_claims)
     except TokenValidationError as error:
         raise UserInfoError(f"Access token error: {error}") from error
-    _assert_at_claims_not_empty(at_claims)
-    ui_claims = fetch_user_info(access_token)
+    ui_claims = _fetch_user_info(access_token)
     _assert_ui_claims_not_empty(ui_claims)
     if ui_claims["sub"] != at_claims["sub"]:
         raise UserInfoError("Subject in userinfo differs from access token")
