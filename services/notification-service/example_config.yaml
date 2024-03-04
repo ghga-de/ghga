@@ -1,3 +1,5 @@
+db_connection_str: '**********'
+db_name: dev_db
 from_address: test@test.com
 generate_correlation_id: true
 html_email_template: '<!DOCTYPE html><html><head></head><body style="color: #00393f;padding:

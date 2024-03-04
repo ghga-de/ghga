@@ -64,6 +64,26 @@ ns --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+
+
+  Examples:
+
+  ```json
+  "mongodb://localhost:27017"
+  ```
+
+
+- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+
+
+  Examples:
+
+  ```json
+  "my-database"
+  ```
+
+
 - **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
 - **`service_name`** *(string)*: Default: `"ns"`.

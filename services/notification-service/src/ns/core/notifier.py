@@ -15,15 +15,19 @@
 #
 """Contains the concrete implementation of a NotifierPort"""
 import logging
+from contextlib import suppress
 from email.message import EmailMessage
 from enum import Enum
+from hashlib import sha256
 from string import Template
 
 from ghga_event_schemas import pydantic_ as event_schemas
 from pydantic import EmailStr, Field
 from pydantic_settings import BaseSettings
 
+from ns.core import models
 from ns.ports.inbound.notifier import NotifierPort
+from ns.ports.outbound.dao import NotificationRecordDaoPort, ResourceNotFoundError
 from ns.ports.outbound.smtp_client import SmtpClientPort
 
 log = logging.getLogger(__name__)
@@ -51,16 +55,64 @@ class NotifierConfig(BaseSettings):
 class Notifier(NotifierPort):
     """Implementation of the Notifier Port"""
 
-    def __init__(self, *, config: NotifierConfig, smtp_client: SmtpClientPort):
+    def __init__(
+        self,
+        *,
+        config: NotifierConfig,
+        smtp_client: SmtpClientPort,
+        notification_record_dao: NotificationRecordDaoPort,
+    ):
         """Initialize the Notifier with configuration and smtp client"""
         self._config = config
         self._smtp_client = smtp_client
+        self._notification_record_dao = notification_record_dao
+
+    def _create_notification_record(
+        self, *, notification: event_schemas.Notification
+    ) -> models.NotificationRecord:
+        """Creates a notification record from a notification event"""
+        hash_sum = sha256(notification.model_dump_json().encode("utf-8")).hexdigest()
+        return models.NotificationRecord(hash_sum=hash_sum, sent=False)
+
+    async def _has_been_sent(self, *, hash_sum: str) -> bool:
+        """Check whether the notification has been sent already.
+
+        Returns:
+        - `False` if the notification **has not** been sent yet.
+        - `True` if the notification **has** already been sent.
+        """
+        with suppress(ResourceNotFoundError):
+            record = await self._notification_record_dao.get_by_id(id_=hash_sum)
+            return record.sent
+        return False
+
+    async def _register_new_notification(
+        self, *, notification_record: models.NotificationRecord
+    ):
+        """Registers a new notification in the database"""
+        await self._notification_record_dao.upsert(dto=notification_record)
 
     async def send_notification(self, *, notification: event_schemas.Notification):
         """Sends notifications based on the channel info provided (e.g. email addresses)"""
-        if len(notification.recipient_email) > 0:
-            message = self._construct_email(notification=notification)
-            self._smtp_client.send_email_message(message)
+        # Generate sha-256 hash of the notification payload
+        notification_record = self._create_notification_record(
+            notification=notification
+        )
+
+        # Abort if the notification has been sent already
+        if await self._has_been_sent(hash_sum=notification_record.hash_sum):
+            log.info("Notification already sent, skipping.")
+            return
+
+        # Add the notification to the database (with sent=False)
+        await self._register_new_notification(notification_record=notification_record)
+
+        message = self._construct_email(notification=notification)
+        self._smtp_client.send_email_message(message)
+
+        # update the notification record to show that the notification has been sent.
+        notification_record.sent = True
+        await self._notification_record_dao.update(dto=notification_record)
 
     def _construct_email(
         self, *, notification: event_schemas.Notification

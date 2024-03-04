@@ -22,8 +22,10 @@ from typing import Optional
 
 from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka.provider import KafkaEventSubscriber
+from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 
 from ns.adapters.inbound.akafka import EventSubTranslator
+from ns.adapters.outbound.dao import notification_record_dao_factory
 from ns.adapters.outbound.smtp_client import SmtpClient
 from ns.config import Config
 from ns.core.notifier import Notifier
@@ -34,7 +36,15 @@ from ns.ports.inbound.notifier import NotifierPort
 async def prepare_core(*, config: Config) -> AsyncGenerator[NotifierPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     smtp_client = SmtpClient(config=config)
-    notifier = Notifier(config=config, smtp_client=smtp_client)
+    dao_factory = MongoDbDaoFactory(config=config)
+    notification_record_dao = await notification_record_dao_factory(
+        dao_factory=dao_factory
+    )
+    notifier = Notifier(
+        config=config,
+        smtp_client=smtp_client,
+        notification_record_dao=notification_record_dao,
+    )
     yield notifier
 
 

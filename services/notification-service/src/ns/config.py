@@ -18,6 +18,7 @@
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.mongodb.provider import MongoDbConfig
 
 from ns.adapters.inbound.akafka import EventSubTranslatorConfig
 from ns.adapters.outbound.smtp_client import SmtpClientConfig
@@ -33,6 +34,7 @@ class Config(
     SmtpClientConfig,
     NotifierConfig,
     LoggingConfig,
+    MongoDbConfig,
 ):
     """Config parameters and their defaults."""
 

@@ -18,32 +18,39 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+from hexkit.custom_types import PytestScope
 from hexkit.providers.akafka import KafkaEventSubscriber
-from hexkit.providers.akafka.testutils import KafkaFixture, kafka_fixture  # noqa: F401
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from ns.config import Config
 from ns.inject import prepare_core, prepare_event_subscriber
-from tests.fixtures.config import get_config
+from ns.ports.inbound.notifier import NotifierPort
+from tests.fixtures.config import SMTP_TEST_CONFIG, get_config
 
 
 @dataclass
 class JointFixture:
-    """returned by joint_fixture"""
+    """Returned by joint_fixture_function"""
 
     config: Config
     kafka: KafkaFixture
+    mongodb: MongoDbFixture
     event_subscriber: KafkaEventSubscriber
+    notifier: NotifierPort
 
 
-@pytest_asyncio.fixture
-async def joint_fixture(
-    kafka_fixture: KafkaFixture,  # noqa: F811
+async def joint_fixture_function(
+    kafka_fixture: KafkaFixture,
+    mongodb_fixture: MongoDbFixture,
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for integration testing"""
     # merge configs from different sources with the default one:
-    config = get_config(sources=[kafka_fixture.config])
+    config = get_config(
+        sources=[kafka_fixture.config, mongodb_fixture.config, SMTP_TEST_CONFIG]
+    )
 
-    # create a DI container instance:translators
+    # prepare the core and the event subscriber
     async with prepare_core(config=config) as notifier:
         async with prepare_event_subscriber(
             config=config, notifier_override=notifier
@@ -51,5 +58,12 @@ async def joint_fixture(
             yield JointFixture(
                 config=config,
                 kafka=kafka_fixture,
+                mongodb=mongodb_fixture,
                 event_subscriber=event_subscriber,
+                notifier=notifier,
             )
+
+
+def get_joint_fixture(scope: PytestScope = "function"):
+    """Produce a joint fixture with desired scope"""
+    return pytest_asyncio.fixture(joint_fixture_function, scope=scope)

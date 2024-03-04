@@ -2,6 +2,24 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "db_connection_str": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "password",
+      "title": "Db Connection Str",
+      "type": "string",
+      "writeOnly": true
+    },
+    "db_name": {
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
+      "title": "Db Name",
+      "type": "string"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -165,6 +183,8 @@
     }
   },
   "required": [
+    "db_connection_str",
+    "db_name",
     "service_instance_id",
     "plaintext_email_template",
     "html_email_template",

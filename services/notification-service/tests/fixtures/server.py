@@ -92,9 +92,10 @@ class EmailRecorder:
         try:
             self._controller.start()
 
-        except RuntimeError as err:
-            self._controller.stop()
-            raise RuntimeError(err.args[0]) from err
+        except RuntimeError:
+            if self._controller.loop.is_running():
+                self._controller.stop()
+            raise
 
     async def __aexit__(self, *args):
         """Async context manager exit method"""

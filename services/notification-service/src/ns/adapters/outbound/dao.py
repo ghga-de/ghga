@@ -14,17 +14,20 @@
 # limitations under the License.
 #
 
-notification_event_topic: notifications
-notification_event_type: notification
-service_instance_id: "001"
-kafka_servers: ["kafka:9092"]
-plaintext_email_template: "Dear $recipient_name,\n\n$plaintext_body\n\nWarm regards,\n\nThe GHGA Team"
-html_email_template: '<!DOCTYPE html><html><head></head><body style="color: #00393f;padding: 12px;"><h2>Dear $recipient_name,</h2><p>$plaintext_body</p><p>Warm regards,</p><h3>The GHGA Team</h3></body></html>'
-smtp_host: 127.0.0.1
-smtp_port: 587
-login_user: "test@test.com"
-login_password: test
-use_starttls: false
-from_address: "test@test.com"
-db_connection_str: "mongodb://mongodb:27017"
-db_name: "dev_db"
+"""DAO translator constructor"""
+
+from hexkit.protocols.dao import DaoFactoryProtocol
+
+from ns.core import models
+from ns.ports.outbound.dao import NotificationRecordDaoPort
+
+
+async def notification_record_dao_factory(
+    *, dao_factory: DaoFactoryProtocol
+) -> NotificationRecordDaoPort:
+    """Construct a NotificationRecordDaoPort from the provided dao_factory"""
+    return await dao_factory.get_dao(
+        name="notification_records",
+        dto_model=models.NotificationRecord,
+        id_field="hash_sum",
+    )

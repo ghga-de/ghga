@@ -14,17 +14,14 @@
 # limitations under the License.
 #
 
-notification_event_topic: notifications
-notification_event_type: notification
-service_instance_id: "001"
-kafka_servers: ["kafka:9092"]
-plaintext_email_template: "Dear $recipient_name,\n\n$plaintext_body\n\nWarm regards,\n\nThe GHGA Team"
-html_email_template: '<!DOCTYPE html><html><head></head><body style="color: #00393f;padding: 12px;"><h2>Dear $recipient_name,</h2><p>$plaintext_body</p><p>Warm regards,</p><h3>The GHGA Team</h3></body></html>'
-smtp_host: 127.0.0.1
-smtp_port: 587
-login_user: "test@test.com"
-login_password: test
-use_starttls: false
-from_address: "test@test.com"
-db_connection_str: "mongodb://mongodb:27017"
-db_name: "dev_db"
+"""Defines the NotificationRecordDao, which manages notification records."""
+
+from hexkit.protocols.dao import (  # noqa: F401
+    DaoNaturalId,
+    ResourceNotFoundError,
+)
+from typing_extensions import TypeAlias
+
+from ns.core import models
+
+NotificationRecordDaoPort: TypeAlias = DaoNaturalId[models.NotificationRecord]

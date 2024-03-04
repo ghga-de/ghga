@@ -13,18 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""Contains models for the notification service."""
 
-notification_event_topic: notifications
-notification_event_type: notification
-service_instance_id: "001"
-kafka_servers: ["kafka:9092"]
-plaintext_email_template: "Dear $recipient_name,\n\n$plaintext_body\n\nWarm regards,\n\nThe GHGA Team"
-html_email_template: '<!DOCTYPE html><html><head></head><body style="color: #00393f;padding: 12px;"><h2>Dear $recipient_name,</h2><p>$plaintext_body</p><p>Warm regards,</p><h3>The GHGA Team</h3></body></html>'
-smtp_host: 127.0.0.1
-smtp_port: 587
-login_user: "test@test.com"
-login_password: test
-use_starttls: false
-from_address: "test@test.com"
-db_connection_str: "mongodb://mongodb:27017"
-db_name: "dev_db"
+from pydantic import BaseModel, Field
+
+
+class NotificationRecord(BaseModel):
+    """Model for tracking which notifications have been sent.
+
+    The hash sum is used to identify the notification event content and the sent flag
+    indicates if the notification has been sent.
+    """
+
+    hash_sum: str = Field(..., description="Hash sum of notification event")
+    sent: bool = Field(
+        ..., description="Flag indicating if the notification has been sent"
+    )
