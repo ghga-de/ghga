@@ -37,10 +37,11 @@ from ...fixtures.utils import (
     USER_INFO,
     DummyClaimDao,
     DummyUserDao,
+    DummyUserTokenDao,
     create_access_token,
     headers_for_session,
 )
-from .fixtures import DummyUserTokenDao, fixture_client  # noqa: F401
+from .fixtures import fixture_client  # noqa: F401
 
 
 def expected_set_cookie(session_id: str) -> str:

@@ -224,12 +224,20 @@
       "title": "Totp Tolerance",
       "type": "integer"
     },
-    "totp_attempts": {
+    "totp_attempts_per_code": {
       "default": 3,
-      "description": "Maximum number of attempts to verify a TOTP code",
+      "description": "Maximum number of attempts to verify an individual TOTP code",
       "maximum": 10,
       "minimum": 1,
-      "title": "Totp Attempts",
+      "title": "Totp Attempts Per Code",
+      "type": "integer"
+    },
+    "totp_max_failed_attempts": {
+      "default": 10,
+      "description": "Maximum number of consecutive failed attempts to verify TOTP codes",
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Totp Max Failed Attempts",
       "type": "integer"
     },
     "totp_secret_size": {

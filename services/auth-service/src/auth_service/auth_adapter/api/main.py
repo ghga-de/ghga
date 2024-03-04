@@ -34,7 +34,10 @@ from auth_service.user_management.user_registry.deps import (
     UserDao,
     get_user_dao,
 )
-from auth_service.user_management.user_registry.models.dto import User, UserStatus
+from auth_service.user_management.user_registry.models.dto import (
+    User,
+    UserStatus,
+)
 
 from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import (
@@ -43,6 +46,7 @@ from ..core.auth import (
     internal_token_from_session,
 )
 from ..core.session_store import SessionState
+from ..core.verify_totp import verify_totp
 from ..deps import (
     SessionDependency,
     SessionStoreDependency,
@@ -50,7 +54,6 @@ from ..deps import (
     UserTokenDao,
     get_user_token_dao,
 )
-from ..ports.dao import UserToken
 from .basic import get_basic_auth_dependency
 from .dto import CreateTOTPToken, TOTPTokenResponse, VerifyTOTP
 from .headers import get_bearer_token, session_to_header
@@ -311,7 +314,7 @@ async def create_new_totp_token(
     description="Endpoint used to verify a TOTP code",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def verify_totp(  # noqa: PLR0913
+async def rpc_verify_totp(  # noqa: PLR0913
     verification_info: VerifyTOTP,
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -328,30 +331,17 @@ async def verify_totp(  # noqa: PLR0913
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
         )
-    totp = verification_info.totp
-    if session.state == SessionState.NEW_TOTP_TOKEN:
-        # get not yet verified TOTP token from the session
-        totp_token = session.totp_token
-    else:
-        # get verified TOTP token from the database
-        user = await user_dao.get_by_id(verification_info.user_id)
-        user_token = await token_dao.get_by_id(user.id) if user and user.id else None
-        totp_token = user_token.totp_token if user_token else None
-    if not totp_token or not totp or not totp_handler.verify_code(totp_token, totp):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code"
-        )
-    if session.state == SessionState.NEW_TOTP_TOKEN:
-        # TODO: this operation must also delete all IVAs of the user
-        # store token in the database
-        user_token = UserToken(
-            user_id=session.user_id,
-            totp_token=totp_token,
-        )
-        await token_dao.upsert(user_token)
-    session.state = SessionState.AUTHENTICATED
-    session.totp_token = None  # remove verified TOTP token from the session
-    await session_store.save_session(session)
+
+    await verify_totp(
+        verification_info.totp,
+        verification_info.user_id,
+        session_store=session_store,
+        session=session,
+        totp_handler=totp_handler,
+        user_dao=user_dao,
+        token_dao=token_dao,
+    )
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

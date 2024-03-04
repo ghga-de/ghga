@@ -207,7 +207,9 @@ The service requires the following configuration parameters:
 
 - **`totp_tolerance`** *(integer)*: Number of intervals to check before and after the current time. Minimum: `0`. Maximum: `10`. Default: `1`.
 
-- **`totp_attempts`** *(integer)*: Maximum number of attempts to verify a TOTP code. Minimum: `1`. Maximum: `10`. Default: `3`.
+- **`totp_attempts_per_code`** *(integer)*: Maximum number of attempts to verify an individual TOTP code. Minimum: `1`. Maximum: `10`. Default: `3`.
+
+- **`totp_max_failed_attempts`** *(integer)*: Maximum number of consecutive failed attempts to verify TOTP codes. Minimum: `1`. Maximum: `100`. Default: `10`.
 
 - **`totp_secret_size`** *(integer)*: Size of the Base32 encoded TOTP secrets. Minimum: `24`. Maximum: `256`. Default: `32`.
 

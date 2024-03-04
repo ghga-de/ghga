@@ -73,3 +73,12 @@ class TOTPHandlerPort(ABC, Generic[T]):
         been changed and the token should be saved back to the database.
         """
         ...
+
+    @abstractmethod
+    def is_invalid(self, token: T) -> bool:
+        """Check if a token has become invalid."""
+        ...
+
+    @abstractmethod
+    def reset(self, token: T) -> None:
+        """Reset a token that has become invalid."""

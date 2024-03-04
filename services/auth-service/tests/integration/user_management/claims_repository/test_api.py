@@ -279,8 +279,8 @@ def test_grant_download_access(client_with_db):
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
-    current_date = now_as_utc()
-    current_year = current_date.year
+    current_datetime = now_as_utc()
+    current_year = current_datetime.year
     validity = {
         "valid_from": f"{current_year - 1}-01-01T00:00:00Z",
         "valid_until": f"{current_year + 1}-12-31T23:59:59Z",
@@ -304,7 +304,7 @@ def test_grant_download_access(client_with_db):
     assert creation_date
     assert claim_data.pop("assertion_date") == creation_date
     creation_datetime = datetime.fromisoformat(creation_date.replace("Z", "+00:00"))
-    assert 0 <= (creation_datetime - current_date).seconds < 5
+    assert 0 <= (creation_datetime - current_datetime).total_seconds() < 5
 
     assert claim_data == {
         "asserted_by": "dac",

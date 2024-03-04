@@ -30,6 +30,7 @@ from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
 
 from auth_service.auth_adapter.core.session_store import Session
+from auth_service.auth_adapter.ports.dao import UserToken
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.models.dto import (
     AuthorityLevel,
@@ -244,6 +245,29 @@ class DummyUserDao:
         """Update the dummy user."""
         if user.id == self.user.id:
             self.user = user
+
+
+class DummyUserTokenDao:
+    """Dummy UserTokenDao for testing."""
+
+    def __init__(self):
+        """Initialize the dummy UserTokenDao"""
+        self.user_tokens = {}
+
+    async def get_by_id(self, id_: str) -> UserToken:
+        """Get the user token via the ID."""
+        try:
+            return self.user_tokens[id_]
+        except KeyError as error:
+            raise ResourceNotFoundError(id_=id_) from error
+
+    async def update(self, dto: UserToken) -> None:
+        """Update a user token."""
+        self.user_tokens[dto.user_id] = dto
+
+    async def upsert(self, dto: UserToken) -> None:
+        """Upsert a user token."""
+        self.user_tokens[dto.user_id] = dto
 
 
 class DummyClaimDao:

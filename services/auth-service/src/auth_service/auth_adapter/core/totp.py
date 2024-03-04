@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""TOTP (Time-based One-Time Password) functionality."""
+"""Base TOTP (Time-based One-Time Password) functionality."""
 
 import base64
 import hashlib
@@ -88,14 +88,23 @@ class TOTPConfig(BaseSettings):
             description="Number of intervals to check before and after the current time",
         ),
     ] = 1
-    totp_attempts: Annotated[
+    totp_attempts_per_code: Annotated[
         int,
         Field(
             ge=1,
             le=10,
-            description="Maximum number of attempts to verify a TOTP code",
+            description="Maximum number of attempts to verify an individual TOTP code",
         ),
     ] = 3
+    totp_max_failed_attempts: Annotated[
+        int,
+        Field(
+            ge=1,
+            le=100,
+            description="Maximum number of consecutive failed attempts"
+            " to verify TOTP codes",
+        ),
+    ] = 10
     totp_secret_size: Annotated[
         int,
         Field(
@@ -120,13 +129,18 @@ class TOTPToken(BaseModel):
         description="Base64 encoded encrypted TOTP secret"
         " which is itself Base32 encoded",
     )
-    counter: int = Field(
+    last_counter: int = Field(
         default=-1, description="Last used counter for TOTP generation"
     )
-    attempts: int = Field(
+    counter_attempts: int = Field(
         default=-1,
-        description="Number of attempts to verify the TOTP."
-        " 0 means no attempts so far, -1 means successful verification.",
+        description="Number of attempts to verify the TOTP for the current counter"
+        " (0 means no attempts so far, -1 means successful verification)",
+    )
+    total_attempts: int = Field(
+        default=0,
+        description="Number of total consecutive failed attempts to verify the TOTP"
+        " (0 means no attempts so far, -1 means successful verification)",
     )
 
     model_config = {"extra": "forbid"}
@@ -151,7 +165,8 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
         self.digits = config.totp_digits
         self.interval = config.totp_interval
         self.tolerance = config.totp_tolerance
-        self.max_attempts = config.totp_attempts
+        self.max_counter_attempts = config.totp_attempts_per_code
+        self.max_total_attempts = config.totp_max_failed_attempts
         self.secret_size = config.totp_secret_size
         encryption_key = config.totp_encryption_key
         if not encryption_key:
@@ -220,34 +235,50 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
         If the return value is None, the usage parameters of the token have
         been changed and the token should be saved back to the database.
         """
+        if self.is_invalid(token):
+            # the maximum number of consecutive failed attempts has been reached
+            return None
         if not code or len(code) != self.digits or not code.isdigit():
             # totally invalid codes are rejected immediately,
             # and they don't increase the number of attempts
             return None
+        # get the current TOTP counter
+        if for_time is None:
+            for_time = now_as_utc()
         totp = pyotp.TOTP(
             self.get_secret(token),
             digest=self.digest,
             digits=self.digits,
             interval=self.interval,
         )
-        # get the current TOTP counter
-        if for_time is None:
-            for_time = now_as_utc()
         counter = totp.timecode(for_time)
-        if token.counter > counter:
+        if token.last_counter > counter:
             # token has been used in the future (should never happen)
             return None
-        if token.counter < counter:
+        if token.last_counter < counter:
             # first attempt with this counter
-            token.counter = counter
-            token.attempts = 0
-        elif not 0 <= token.attempts < self.max_attempts:
+            token.last_counter = counter
+            token.counter_attempts = 0
+        elif not 0 <= token.counter_attempts < self.max_counter_attempts:
             # token has already been verified (replay attack)
             # or has reached the maximum number of attempts (brute force attack)
             return None
         verified = totp.verify(code, for_time=for_time, valid_window=self.tolerance)
         if verified:
-            token.attempts = -1  # mark token as verified
+            token.counter_attempts = -1  # mark token as verified
+            token.total_attempts = 0  # reset the counter for failed attempts
         else:
-            token.attempts += 1  # memorize the number of attempts
+            # increase the number of failed attempts
+            token.counter_attempts += 1
+            token.total_attempts += 1
         return verified
+
+    def is_invalid(self, token: TOTPToken) -> bool:
+        """Check if a token is invalid due to too many consecutive failed attempts."""
+        return token.total_attempts >= self.max_total_attempts
+
+    def reset(self, token: TOTPToken) -> None:
+        """Reset a token that has become invalid due to too many failed attempts."""
+        token.last_counter = -1
+        token.counter_attempts = -1
+        token.total_attempts = 0

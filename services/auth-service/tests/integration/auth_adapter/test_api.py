@@ -36,12 +36,12 @@ from auth_service.user_management.user_registry.deps import get_user_dao
 from ...fixtures.utils import (
     DummyClaimDao,
     DummyUserDao,
+    DummyUserTokenDao,
     get_claims_from_token,
     headers_for_session,
 )
 from .fixtures import (  # noqa: F401
     ClientWithSession,
-    DummyUserTokenDao,
     fixture_client,
     fixture_client_with_session,
     fixture_with_basic_auth,

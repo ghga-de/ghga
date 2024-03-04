@@ -19,6 +19,7 @@
 import base64
 import hashlib
 from datetime import timedelta
+from random import randint
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import AnyUrl, SecretStr
@@ -54,7 +55,8 @@ def create_custom_totp_handler() -> TOTPHandler:
         totp_digits=8,
         totp_interval=20,
         totp_tolerance=0,
-        totp_attempts=1,
+        totp_attempts_per_code=1,
+        totp_max_failed_attempts=7,
         totp_secret_size=64,
         totp_encryption_key=SecretStr(encryption_key),
     )
@@ -62,19 +64,22 @@ def create_custom_totp_handler() -> TOTPHandler:
 
 
 def generate_invalid_codes(
-    totp_handler: TOTPHandler, token: TOTPToken, for_time: UTCDatetime, offset: int = 0
-):
-    """Generate a TOTP code that is invalid in the whole tolerance interval."""
-    code = totp_handler.generate_code(token, for_time, offset)
-    code_before = totp_handler.generate_code(token, for_time, offset - 1)
-    code_after = totp_handler.generate_code(token, for_time, offset + 1)
-
-    last_digits = {int(code[-1]), int(code_before[-1]), int(code_after[-1])}
-    invalid_last_digits = set(range(10)) - last_digits
-    return [
-        code[:-1] + str(invalid_last_digit)
-        for invalid_last_digit in invalid_last_digits
-    ]
+    totp_handler: TOTPHandler,
+    token: TOTPToken,
+    for_time: UTCDatetime,
+    num: int = 1,
+) -> list[str]:
+    """Generate TOTP codes that are invalid during the whole tolerance interval."""
+    generate_code = totp_handler.generate_code
+    valid_codes = {generate_code(token, for_time, offset) for offset in range(-1, 2)}
+    invalid_codes = []
+    for _ in range(10_000):
+        code = f"{randint(0, 999_999):06d}"
+        if code not in valid_codes:
+            invalid_codes.append(code)
+            if len(invalid_codes) >= num:
+                return invalid_codes
+    raise RuntimeError("Could not find an invalid TOTP code")
 
 
 def test_random_encryption_keys():
@@ -93,7 +98,8 @@ def test_default_parameters(totp_handler: TOTPHandler):
     assert totp_handler.digits == 6
     assert totp_handler.interval == 30
     assert totp_handler.tolerance == 1
-    assert totp_handler.max_attempts == 3
+    assert totp_handler.max_counter_attempts == 3
+    assert totp_handler.max_total_attempts == 10
     assert totp_handler.secret_size == 32
 
 
@@ -102,8 +108,8 @@ def test_generate_token(totp_handler: TOTPHandler):
     token = totp_handler.generate_token()
     decoded_secret = base64.b64decode(token.encrypted_secret)
     assert len(decoded_secret) == 72
-    assert token.counter == -1
-    assert token.attempts == -1
+    assert token.last_counter == -1
+    assert token.counter_attempts == -1
 
 
 def test_get_secret(totp_handler: TOTPHandler):
@@ -148,23 +154,23 @@ def test_token_object_is_modified(totp_handler: TOTPHandler):
     """Test modification of token object after verification."""
     token = totp_handler.generate_token()
     secret = token.encrypted_secret
-    assert token.attempts == -1
-    assert token.counter == -1
-    token.attempts = 1
-    token.counter = 0
+    assert token.counter_attempts == -1
+    assert token.last_counter == -1
+    token.counter_attempts = 1
+    token.last_counter = 0
     for_time = now_as_utc()
     verified = totp_handler.verify_code(token, "123456", for_time)
     assert token.encrypted_secret == secret
     expected_attempts = -1 if verified else 1
-    assert token.attempts == expected_attempts
-    assert token.counter > 0
+    assert token.counter_attempts == expected_attempts
+    assert token.last_counter > 0
 
 
 def test_verify_code_with_slightly_invalid_code(totp_handler: TOTPHandler):
     """Test verification of a slightly invalid TOTP code."""
     token = totp_handler.generate_token()
     for_time = now_as_utc()
-    code = generate_invalid_codes(totp_handler, token, for_time)[0]
+    code = generate_invalid_codes(totp_handler, token, for_time, 1)[0]
     assert totp_handler.verify_code(token, code, for_time) is False
 
 
@@ -185,11 +191,11 @@ def test_verify_code_with_slightly_invalid_code(totp_handler: TOTPHandler):
 def test_verify_code_with_totally_invalid_code(code: str, totp_handler: TOTPHandler):
     """Test verification of a totally invalid TOTP code."""
     token = totp_handler.generate_token()
-    assert token.attempts == -1
-    assert token.counter == -1
+    assert token.counter_attempts == -1
+    assert token.last_counter == -1
     assert totp_handler.verify_code(token, code) is None
-    assert token.attempts == -1
-    assert token.counter == -1
+    assert token.counter_attempts == -1
+    assert token.last_counter == -1
 
 
 def test_verification_with_time_in_the_past(totp_handler: TOTPHandler):
@@ -223,16 +229,35 @@ def test_replay_attack(totp_handler: TOTPHandler):
     assert totp_handler.verify_code(token, code, for_time) is None
 
 
-def test_brute_force_attack(totp_handler: TOTPHandler):
-    """Test that brute force attacks are rejected."""
+def test_rate_limiting_attack(totp_handler: TOTPHandler):
+    """Test that too many attempts for one counter are rejected."""
     for_time = now_as_utc()
     token = totp_handler.generate_token()
-    invalid_codes = generate_invalid_codes(totp_handler, token, for_time)
-    invalid_codes = invalid_codes[: totp_handler.max_attempts]
-    assert len(invalid_codes) == totp_handler.max_attempts
+    invalid_codes = generate_invalid_codes(
+        totp_handler, token, for_time, totp_handler.max_counter_attempts
+    )
     for code in invalid_codes:
+        assert not totp_handler.is_invalid(token)
         assert totp_handler.verify_code(token, code, for_time) is False
 
+    assert not totp_handler.is_invalid(token)
+    code = totp_handler.generate_code(token, for_time)
+    assert totp_handler.verify_code(token, code, for_time) is None
+
+
+def test_brute_force_attack(totp_handler: TOTPHandler):
+    """Test that too many failed attempts in a row are rejected."""
+    for_time = now_as_utc()
+    token = totp_handler.generate_token()
+    invalid_codes = generate_invalid_codes(
+        totp_handler, token, for_time, totp_handler.max_total_attempts
+    )
+    for code in invalid_codes:
+        assert not totp_handler.is_invalid(token)
+        assert totp_handler.verify_code(token, code, for_time) is False
+        token.counter_attempts = 0  # reset the counter for the current interval
+
+    assert totp_handler.is_invalid(token)
     code = totp_handler.generate_code(token, for_time)
     assert totp_handler.verify_code(token, code, for_time) is None
 
@@ -279,7 +304,8 @@ def test_custom_parameters(custom_totp_handler: TOTPHandler):
     assert handler.digits == 8
     assert handler.interval == 20
     assert handler.tolerance == 0
-    assert handler.max_attempts == 1
+    assert handler.max_counter_attempts == 1
+    assert handler.max_total_attempts == 7
     assert handler.secret_size == 64
 
 

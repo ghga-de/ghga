@@ -25,7 +25,6 @@ from typing import NamedTuple, Optional
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.protocols.dao import ResourceNotFoundError
 from httpx import Response
 from pydantic import SecretStr
 from pytest import fixture
@@ -35,7 +34,6 @@ from pytest_httpx import HTTPXMock
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.deps import get_user_token_dao
-from auth_service.auth_adapter.ports.dao import UserToken
 from auth_service.deps import Config, get_config
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import get_user_dao
@@ -45,30 +43,12 @@ from ...fixtures.utils import (
     USER_INFO,
     DummyClaimDao,
     DummyUserDao,
+    DummyUserTokenDao,
     create_access_token,
     headers_for_session,
 )
 
 totp_encryption_key = TOTPHandler.random_encryption_key()
-
-
-class DummyUserTokenDao:
-    """Dummy UserTokenDao for testing."""
-
-    def __init__(self):
-        """Initialize the dummy UserTokenDao"""
-        self.user_tokens = {}
-
-    async def get_by_id(self, id_: str) -> UserToken:
-        """Get the user token via the ID."""
-        try:
-            return self.user_tokens[id_]
-        except KeyError as error:
-            raise ResourceNotFoundError(id_=id_) from error
-
-    async def upsert(self, dto: UserToken) -> None:
-        """Upsert a user token."""
-        self.user_tokens[dto.user_id] = dto
 
 
 @async_fixture(name="client")
@@ -92,6 +72,7 @@ class ClientWithSession(NamedTuple):
 
     client: AsyncTestClient
     session: Session
+    user_dao: DummyUserDao
     user_token_dao: DummyUserTokenDao
 
 
@@ -176,7 +157,7 @@ async def fixture_client_with_session(
     main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
     session = await query_new_session(client)
-    yield ClientWithSession(client, session, user_token_dao)
+    yield ClientWithSession(client, session, user_dao, user_token_dao)
 
 
 @fixture(name="with_basic_auth")

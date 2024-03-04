@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Test handling TOTP in the auth adapter."""
+"""Test the base TOTP functionality."""
 
 from datetime import datetime
 from random import randint
@@ -24,9 +24,11 @@ from urllib.parse import parse_qs, urlparse
 import pyotp
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import mark
 
 from auth_service.auth_adapter.core.session_store import SessionState
+from auth_service.user_management.user_registry.models.dto import UserStatus
 
 from ...fixtures.utils import (  # noqa: F401
     RE_USER_INFO_URL,
@@ -56,14 +58,12 @@ def get_invalid_totp_code(secret: str, when: Optional[datetime] = None) -> str:
     """Generate an invalid TOTP code for the given secret."""
     if not when:
         when = datetime.utcnow()
-    codes: set[str] = set()
     # get the time codes for the tolerance interval
     # plus one more for possible timecode increment during the test
-    for offset in range(-1, 3):
-        codes.add(get_valid_totp_code(secret, when, offset))
+    valid_codes = {get_valid_totp_code(secret, when, offset) for offset in range(-1, 3)}
     for _ in range(10_000):
         code = f"{randint(0, 999_999):06d}"
-        if code not in codes:
+        if code not in valid_codes:
             return code
     raise RuntimeError("Could not find an invalid TOTP code")
 
@@ -207,7 +207,7 @@ async def test_verify_totp(
     client_with_session: ClientWithSession,
 ):
     """Test verification of TOTP tokens."""
-    client, session, user_token_dao = client_with_session
+    client, session, _user_dao, user_token_dao = client_with_session
     headers = headers_for_session(session)
     user_id = "john@ghga.de"
     assert session.state is SessionState.REGISTERED
@@ -249,11 +249,11 @@ async def test_verify_totp(
     assert user_token
     totp_token = user_token.totp_token
     assert len(totp_token.encrypted_secret) == 96
-    assert totp_token.counter
-    assert totp_token.attempts == -1  # verified
+    assert totp_token.last_counter
+    assert totp_token.counter_attempts == -1  # verified
 
     # decrease the TOTP counter so that we can re-login without waiting
-    totp_token.counter -= 1
+    totp_token.last_counter -= 1
 
     # logout and re-login
     response = await client.post("/rpc/logout", headers=headers)
@@ -286,11 +286,11 @@ async def test_verify_totp(
 
 
 @mark.asyncio
-async def test_brute_force_totp(
+async def test_rate_limiting_totp(
     client_with_session: ClientWithSession,
 ):
-    """Test that a bruce force attack fails."""
-    client, session, user_token_dao = client_with_session
+    """Test that the rate limiting for code verification works."""
+    client, session, _user_dao, user_token_dao = client_with_session
     headers = headers_for_session(session)
     user_id = "john@ghga.de"
     assert session.state is SessionState.REGISTERED
@@ -311,7 +311,7 @@ async def test_brute_force_totp(
     assert response.status_code == status.HTTP_204_NO_CONTENT
     # decrease the TOTP counter so that we can re-login without waiting
     totp_token = user_token_dao.user_tokens[user_id].totp_token
-    totp_token.counter -= 1
+    totp_token.last_counter -= 1
     # make 6 attempts with invalid TOTP codes
     # (we might get 3 extra attempts due to time code increment during the test)
     for _ in range(6):
@@ -331,7 +331,7 @@ async def test_brute_force_totp(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid TOTP code"}
     # reset the TOTP token to make sure it works again
-    totp_token.attempts = 0
+    totp_token.counter_attempts = 0
     response = await client.post(
         "/rpc/verify-totp",
         json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
@@ -342,11 +342,91 @@ async def test_brute_force_totp(
 
 
 @mark.asyncio
+async def test_total_limit_totp(
+    client_with_session: ClientWithSession,
+):
+    """Test that there is a total limit for code verification."""
+    client, session, user_dao, user_token_dao = client_with_session
+    headers = headers_for_session(session)
+
+    user = user_dao.user
+    assert user
+    user_id = user.id
+    assert user_id == "john@ghga.de"
+    assert user.status is UserStatus.ACTIVE
+    assert not user.status_change
+
+    # Check that the user is authorized
+    response = await client.post("/users", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert not response.text
+    assert "Authorization" in response.headers
+
+    assert session.state is SessionState.REGISTERED
+    # create a new TOTP token on the backend
+    response = await client.post(
+        "/totp-token", json={"user_id": user_id, "force": False}, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    uri = response.json()["uri"]
+    secret = parse_qs(urlparse(uri).query)["secret"][0]
+    session = await query_new_session(client, session)
+    assert session.state is SessionState.NEW_TOTP_TOKEN
+    response = await client.post(
+        "/rpc/verify-totp",
+        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    # decrease the TOTP counter so that we can re-login without waiting
+    totp_token = user_token_dao.user_tokens[user_id].totp_token
+    totp_token.last_counter -= 1
+
+    # make 10 attempts with invalid TOTP codes
+    for _ in range(10):
+        response = await client.post(
+            "/rpc/verify-totp",
+            json={"user_id": user_id, "totp": get_invalid_totp_code(secret)},
+            headers=headers,
+        )
+        assert response.json() == {"detail": "Invalid TOTP code"}
+        totp_token.counter_attempts = 0  # suppress rate limiting
+
+    # now the user should not be verified any more
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    response = await client.post(
+        "/rpc/verify-totp",
+        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Too many failed attempts"}
+
+    # check that the user account has been disabled
+    user = user_dao.user
+    assert user
+    assert user.status is UserStatus.INACTIVE
+    status_change = user.status_change
+    assert status_change
+    assert status_change.previous is UserStatus.ACTIVE
+    assert status_change.by == user_id
+    assert status_change.context == "Too many failed TOTP login attempts"
+    assert status_change.change_date
+    assert 0 <= (now_as_utc() - status_change.change_date).total_seconds() < 3
+
+    # check that the user is not authorized any more
+    response = await client.post("/users", headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not logged in"}
+    assert "Authorization" not in response.headers
+
+
+@mark.asyncio
 async def test_recreate_existing_totp_token(
     client_with_session: ClientWithSession,
 ):
     """Test that TOTP tokens can be recreated."""
-    client, session, user_token_dao = client_with_session
+    client, session = client_with_session[:2]
     headers = headers_for_session(session)
     user_id = "john@ghga.de"
     assert session.state is SessionState.REGISTERED
