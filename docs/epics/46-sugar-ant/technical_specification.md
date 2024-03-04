@@ -49,7 +49,7 @@ The store will be implemented in memory in the first implementation. Another typ
 
 The Auth Adapter creates an auth session and tracks users as soon as they have logged in via LS Login, but not earlier.
 
-Instead of converting the OIDC access token to our internal auth token, the Auth Adapter should now convert the content of the user session into the internal auth token. The internal auth token will change a bit, as outlined in a section below.
+Instead of converting the OIDC access token to our internal access token, the Auth Adapter should now convert the content of the user session into the internal access token. The internal access token will change a bit, as outlined in a section below.
 
 The Auth Adapter must also be extended with a mechanism that prevents "session riding" attacks using CSRF tokens. Thereby, the first request that creates the session responds also creates a CSRF token, which should be a unique and unpredictable string stored as part of the session. Contrary to the session cookie, the CSRF token must be made known to the frontend application, so that it can be passed in the request header as a CSRF token for each request to the backend. The Auth Adapter needs to compare the CSRF token with the unique string stored in the backend session.
 
@@ -244,19 +244,19 @@ The `AccessRequest` model should have a new optional `iva_id` field, as specifie
 
 The `PATCH /access-requests/{access_request_id}` endpoint that is used to allow or deny access requests must be extended so that it also accepts the corresponding `iva_id` in the body. The `iva_id` must then also be passed to the claims repository.
 
-### Internal Auth Token
+### Internal Access Token
 
-Until now, an internal auth token was created and passed by the Auth Adapter via the API gateway after the user was successfully authenticated via LS Login. The token contained an additional `state` enum (active, inactive, invalid). It could contain the internal or external user id in the fields `id` and `ext_id`.
+Until now, an internal access token was created and passed by the Auth Adapter via the API gateway after the user was successfully authenticated via LS Login. The token contained an additional `state` enum (active, inactive, invalid). It could contain the internal or external user id in the fields `id` and `ext_id`.
 
-In the new implementation, we change the internal auth token as follows:
+In the new implementation, we change the internal access token as follows:
 
-The internal auth token will be only created and passed on by the Auth Adapter if the user is fully authenticated, i.e. logged in via LS Login and the second factor has been validated.
+The internal access token will be only created and passed on by the Auth Adapter if the user is fully authenticated, i.e. logged in via LS Login and the second factor has been validated.
 
-The `state` field will be removed from the auth token. The existence of the token always implies that the user account is active and not invalid.
+The `state` field will be removed from the token. The existence of the token always implies that the user account is active and not invalid.
 
-The `ext_id` field will be removed from the auth token. There are only two exceptional cases where it is needed, and in theses cases it can be stored in the `id` field instead. The `id` field will also be made mandatory and required to be a non-empty string.
+The `ext_id` field will be removed from the token. There are only two exceptional cases where it is needed, and in theses cases it can be stored in the `id` field instead. The `id` field will also be made mandatory and required to be a non-empty string.
 
-There are only the following two exceptions where the auth token will be also added by the Auth Adapter if the user is only logged in via LS Login:
+There are only the following two exceptions where the token will be also added by the Auth Adapter if the user is only logged in via LS Login:
 
 - `POST /users`
   - used to self-register a user
@@ -268,7 +268,7 @@ There are only the following two exceptions where the auth token will be also ad
 
 ### Service Commons Library
 
-The `ghga-service-commons` library must be changed to reflect the changes in the internal auth token as outlined above.
+The `ghga-service-commons` library must be changed to reflect the changes in the internal access token as outlined above.
 
 ### Backend Models
 
@@ -276,7 +276,7 @@ A new `TOTPToken` model must be created that includes all attributes required to
 
 The `TOTPToken`s will be managed by the Auth Adapter, as explained above.
 
-The Auth Adapter should store user sessiosn using a `Session` that should have the following fields:
+The Auth Adapter should store user sessions using a `Session` model with the following fields:
 
 - `session_id`: string (the unique ID of the session)
 - `ext_id`: string (external user ID)
