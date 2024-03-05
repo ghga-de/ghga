@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 """Simple set of endpoints designed to test the MockRouter class."""
+
 import json
 
 import httpx

@@ -18,6 +18,8 @@
 
 from typing import cast
 
+from pydantic import Field
+
 from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
 from ghga_service_commons.utils.jwt_helpers import generate_jwk
@@ -31,4 +33,7 @@ AUTH_KEY_PAIR = generate_jwk()
 class Config(ApiConfigBase, AuthConfig):
     """Config parameters and their defaults."""
 
-    auth_key: str = cast(str, AUTH_KEY_PAIR.export(private_key=False))
+    auth_key: str = Field(
+        default=cast(str, AUTH_KEY_PAIR.export(private_key=False)),
+        description="The GHGA internal public key for validating the token signature.",
+    )

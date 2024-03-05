@@ -40,7 +40,8 @@ async def get_auth_context(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
 ) -> Optional[AuthContext]:
     """Get a GHGA authentication and authorization context using FastAPI."""
-    return await get_auth_context_using_credentials(credentials, auth_provider)  # type: ignore
+    context = await get_auth_context_using_credentials(credentials, auth_provider)
+    return context  # workaround mypy issue #12156
 
 
 async def require_auth_context(

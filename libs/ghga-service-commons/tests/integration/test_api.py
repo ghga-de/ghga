@@ -36,7 +36,7 @@ from tests.integration.fixtures.utils import find_free_port
 @pytest.mark.asyncio
 async def test_run_server():
     """Test the run_server wrapper function."""
-    config = ApiConfigBase()  # type: ignore
+    config = ApiConfigBase()
     config.port = find_free_port()
 
     process = multiprocessing.Process(

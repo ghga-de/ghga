@@ -16,7 +16,6 @@
 
 """Test the auth.ghga module."""
 
-
 from ghga_service_commons.auth.ghga import (
     AcademicTitle,
     AuthConfig,

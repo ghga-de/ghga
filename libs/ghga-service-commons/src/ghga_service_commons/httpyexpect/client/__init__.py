@@ -18,7 +18,6 @@
 exceptions.
 """
 
-
 # shortcuts:
 from ghga_service_commons.httpyexpect.client.custom_types import Response  # noqa: F401
 from ghga_service_commons.httpyexpect.client.mapping import (  # noqa: F401

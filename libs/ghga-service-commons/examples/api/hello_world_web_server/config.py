@@ -18,6 +18,7 @@
 from functools import lru_cache
 
 from hexkit.config import config_from_yaml
+from pydantic import Field
 
 from ghga_service_commons.api import ApiConfigBase
 
@@ -29,7 +30,9 @@ class Config(ApiConfigBase):
     # config parameter needed for the api server
     # are inherited from ApiConfigBase
 
-    greeting: str = "World"
+    greeting: str = Field(
+        default="World", description="Whom to greet in the application."
+    )
 
 
 @lru_cache

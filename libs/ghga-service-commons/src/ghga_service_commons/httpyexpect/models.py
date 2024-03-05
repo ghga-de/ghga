@@ -31,7 +31,7 @@ class HttpExceptionBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     data: dict[str, Any] = Field(
-        ...,
+        default=...,
         description=(
             "An object containing further details on the exception cause in a"
             + " machine readable way. All exceptions with the same exception_id should"
@@ -40,21 +40,21 @@ class HttpExceptionBody(BaseModel):
         ),
     )
     description: str = Field(
-        ...,
+        default=...,
         description=(
             "A human readable message to the client explaining the cause of the"
             + " exception."
         ),
     )
-    exception_id: Annotated[
-        str, StringConstraints(pattern=EXCEPTION_ID_PATTERN)
-    ] = Field(
-        ...,
-        description=(
-            "An identifier used to distinguish between different exception"
-            + " causes in a preferably fine-grained fashion. The distinction between"
-            + " causes should be made from the perspective of the server/service"
-            + " raising the exception (and not from the client perspective). Needs to"
-            + " be camel case formatted and 3-40 character in length."
-        ),
+    exception_id: Annotated[str, StringConstraints(pattern=EXCEPTION_ID_PATTERN)] = (
+        Field(
+            default=...,
+            description=(
+                "An identifier used to distinguish between different exception"
+                + " causes in a preferably fine-grained fashion. The distinction between"
+                + " causes should be made from the perspective of the server/service"
+                + " raising the exception (and not from the client perspective). Needs to"
+                + " be camel case formatted and 3-40 character in length."
+            ),
+        )
     )

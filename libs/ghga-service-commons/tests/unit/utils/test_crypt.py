@@ -16,7 +16,6 @@
 
 """Test the cryptographic utilities."""
 
-
 import base64
 
 from nacl.public import PrivateKey, PublicKey

@@ -16,7 +16,6 @@
 
 """General purpose validation logic used by both the client and server side."""
 
-
 import re
 from typing import Optional
 

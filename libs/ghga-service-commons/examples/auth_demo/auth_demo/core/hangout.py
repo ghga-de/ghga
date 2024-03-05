@@ -29,8 +29,8 @@ __all__ = ["Hangout", "HangoutConfig"]
 class HangoutConfig(BaseSettings):
     """Config parameters needed for the demo application."""
 
-    greeting: str = Field("Hello", description="How users shall be greeted")
-    treat: str = Field("beer", description="What VIPs should be offered")
+    greeting: str = Field(default="Hello", description="How users shall be greeted")
+    treat: str = Field(default="beer", description="What VIPs should be offered")
 
 
 class Hangout(HangoutPort):

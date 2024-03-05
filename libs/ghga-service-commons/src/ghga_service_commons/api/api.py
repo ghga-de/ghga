@@ -18,6 +18,7 @@
 Contains functionality for initializing, configuring, and running
 RESTful webapps with FastAPI.
 """
+
 import asyncio
 import logging
 from collections.abc import Sequence
@@ -54,44 +55,44 @@ class ApiConfigBase(BaseSettings):
     to run an API backend.
     """
 
-    host: str = Field("127.0.0.1", description="IP of the host.")
+    host: str = Field(default="127.0.0.1", description="IP of the host.")
     port: int = Field(
-        8080, description="Port to expose the server on the specified host"
+        default=8080, description="Port to expose the server on the specified host"
     )
     auto_reload: bool = Field(
-        False,
+        default=False,
         description=(
             "A development feature."
             + " Set to `True` to automatically reload the server upon code changes"
         ),
     )
-    workers: int = Field(1, description="Number of workers processes to run.")
+    workers: int = Field(default=1, description="Number of workers processes to run.")
     api_root_path: str = Field(
-        "",
+        default="",
         description=(
             "Root path at which the API is reachable."
             + " This is relative to the specified host and port."
         ),
     )
     openapi_url: str = Field(
-        "/openapi.json",
+        default="/openapi.json",
         description=(
             "Path to get the openapi specification in JSON format."
             + " This is relative to the specified host and port."
         ),
     )
     docs_url: str = Field(
-        "/docs",
+        default="/docs",
         description=(
             "Path to host the swagger documentation."
             + " This is relative to the specified host and port."
         ),
     )
 
-    # Starlettes defaults will only be overwritten if a
+    # Starlette's defaults will only be overwritten if a
     # non-None value is specified:
     cors_allowed_origins: Optional[Sequence[str]] = Field(
-        None,
+        default=None,
         examples=[["https://example.org", "https://www.example.org"]],
         description=(
             "A list of origins that should be permitted to make cross-origin requests."
@@ -100,7 +101,7 @@ class ApiConfigBase(BaseSettings):
         ),
     )
     cors_allow_credentials: Optional[bool] = Field(
-        None,
+        default=None,
         examples=[["https://example.org", "https://www.example.org"]],
         description=(
             "Indicate that cookies should be supported for cross-origin requests."
@@ -110,7 +111,7 @@ class ApiConfigBase(BaseSettings):
         ),
     )
     cors_allowed_methods: Optional[Sequence[str]] = Field(
-        None,
+        default=None,
         examples=[["*"]],
         description=(
             "A list of HTTP methods that should be allowed for cross-origin requests."
@@ -118,7 +119,7 @@ class ApiConfigBase(BaseSettings):
         ),
     )
     cors_allowed_headers: Optional[Sequence[str]] = Field(
-        None,
+        default=None,
         examples=[[]],
         description=(
             "A list of HTTP request headers that should be supported for cross-origin"
@@ -129,7 +130,7 @@ class ApiConfigBase(BaseSettings):
         ),
     )
     generate_correlation_id: bool = Field(
-        True,
+        default=True,
         examples=[True, False],
         description=(
             "A flag, which, if False, will result in an error when inbound requests don't"

@@ -38,21 +38,21 @@ class JWTAuthConfig(BaseSettings):
     """
 
     auth_key: str = Field(
-        ...,
+        default=...,
         examples=['{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}'],
         description="The public key for validating the token signature.",
     )
     auth_algs: list[str] = Field(
-        ["ES256", "RS256"],
+        default=["ES256", "RS256"],
         description="A list of all algorithms that can be used for signing tokens.",
     )
     auth_check_claims: dict[str, Any] = Field(
-        dict.fromkeys("name email iat exp".split()),
+        default=dict.fromkeys("name email iat exp".split()),
         description="A dict of all claims that shall be verified by the provider."
         + " A value of None means that the claim can have any value.",
     )
     auth_map_claims: dict[str, str] = Field(
-        {},
+        default={},
         description="A mapping of claims to attributes in the auth context."
         + " Only differently named attributes must be specified."
         + " The value None can be used to exclude claims from the auth context.",

@@ -30,9 +30,11 @@ from ghga_service_commons.utils.utc_dates import UTCDatetime
 class DemoAuthContext(BaseModel):
     """Example auth context."""
 
-    name: str = Field(..., description="The name of the user")
-    expires: UTCDatetime = Field(..., description="The expiration date of this context")
-    is_vip: bool = Field(False, description="Whether the user is a VIP")
+    name: str = Field(default=..., description="The name of the user")
+    expires: UTCDatetime = Field(
+        default=..., description="The expiration date of this context"
+    )
+    is_vip: bool = Field(default=False, description="Whether the user is a VIP")
 
 
 # create a key pair for signing and validating JSON web tokens
@@ -42,6 +44,18 @@ AUTH_KEY_PAIR = generate_jwk()
 class DemoAuthConfig(JWTAuthConfig):
     """Config parameters and their defaults for the example auth context."""
 
-    auth_key: str = cast(str, AUTH_KEY_PAIR.export(private_key=False))
-    auth_check_claims: dict[str, Any] = {"name": None, "exp": None}
-    auth_map_claims: dict[str, str] = {"exp": "expires"}
+    auth_key: str = Field(
+        default=cast(str, AUTH_KEY_PAIR.export(private_key=False)),
+        description="The public key for validating the token signature.",
+    )
+    auth_check_claims: dict[str, Any] = Field(
+        default={"name": None, "exp": None},
+        description="A dict of all claims that shall be verified by the provider."
+        + " A value of None means that the claim can have any value.",
+    )
+    auth_map_claims: dict[str, str] = Field(
+        default={"exp": "expires"},
+        description="A mapping of claims to attributes in the auth context."
+        + " Only differently named attributes must be specified."
+        + " The value None can be used to exclude claims from the auth context.",
+    )

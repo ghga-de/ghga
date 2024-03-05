@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 """Tests for the correlation ID functionality."""
+
 from fastapi import Request
 
 from ghga_service_commons.api.api import (

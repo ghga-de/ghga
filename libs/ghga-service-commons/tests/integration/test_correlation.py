@@ -49,7 +49,7 @@ async def test_middleware(
     """Test that the InvalidCorrelationIdErrors are returned as 400 status-code responses."""
     app = FastAPI()
 
-    config = ApiConfigBase(generate_correlation_id=generate_correlation_id)  # type: ignore
+    config = ApiConfigBase(generate_correlation_id=generate_correlation_id)
     configure_app(app, config)
 
     # dummy endpoint to get a 200 status code

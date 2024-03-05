@@ -16,7 +16,6 @@
 
 """Context manager utils"""
 
-
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import TypeVar

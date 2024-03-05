@@ -24,7 +24,7 @@ from auth_demo.core import Hangout, HangoutConfig
 @fixture
 def hangout() -> Hangout:
     """Provide demo application with default configuration."""
-    config = HangoutConfig()  # type: ignore
+    config = HangoutConfig()
     return Hangout(config=config)
 
 
