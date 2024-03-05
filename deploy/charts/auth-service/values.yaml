@@ -32,6 +32,8 @@ mapping:
   hostname: ""
   prefix: /
   rewrite: null
+  ambassador_id: null
+  timeout_ms: null
 
 parameters:
   default:

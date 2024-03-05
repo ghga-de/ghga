@@ -18,21 +18,6 @@ resources:
 
 config_prefix: ekss
 
-ingress:
-  enabled: false
-  annotations: {}
-  hostname: ""
-  prefix: /
-  tls:
-    enabled: false
-    secretName: ""
-
-mapping:
-  enabled: false
-  hostname: ""
-  prefix: /
-  rewrite: null
-
 parameters:
   default:
     api_root_path: /

@@ -19,7 +19,7 @@ service:
 
 envPrefix: auth_km_jobs
 envVars:
-  token: "" 
+  token: ""
   vault_addr: https://hashicorp-vault.vault:8200
   vault_namespace: vault
   kube_role: auth-km-jobs-role

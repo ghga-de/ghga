@@ -31,7 +31,8 @@ mapping:
   enabled: false
   hostname: ""
   prefix: /
-  rewrite: /
+  rewrite: null
+  ambassador_id: null
   timeout_ms: 600000
 
 parameters:
