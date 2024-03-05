@@ -18,10 +18,10 @@
 
 from typing import Optional
 
+import pytest
 from fastapi.exceptions import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from pytest import mark, raises
 from starlette.status import HTTP_403_FORBIDDEN
 
 from ghga_service_commons.auth.context import AuthContextProtocol
@@ -52,7 +52,7 @@ def dummy_predicate(context: DummyAuthContext) -> bool:
     return context.token == "foo"
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_auth_context_no_token():
     """Test passing no token to the get_auth_context function."""
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="")
@@ -61,7 +61,7 @@ async def test_get_auth_context_no_token():
     assert context is None
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_auth_context_with_token():
     """Test passing a token to the get_auth_context function."""
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="foo")
@@ -71,18 +71,18 @@ async def test_get_auth_context_with_token():
     assert context.token == "foo"
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_require_auth_context_no_token():
     """Test passing no token to the require_auth_context function."""
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="")
     auth_provider = DummyAuthProvider()
-    with raises(HTTPException) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await require_auth_context_using_credentials(credentials, auth_provider)
     assert exc_info.value.status_code == HTTP_403_FORBIDDEN
     assert exc_info.value.detail == "Not authenticated"
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_require_auth_context_with_token():
     """Test passing a token to the require_auth_context function."""
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="foo")
@@ -92,7 +92,7 @@ async def test_require_auth_context_with_token():
     assert context.token == "foo"
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_require_auth_context_with_happy_predicate():
     """Test the happy path of the require_auth_context function with a predicate."""
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="foo")
@@ -104,12 +104,12 @@ async def test_require_auth_context_with_happy_predicate():
     assert context.token == "foo"
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_require_auth_context_with_unhappy_predicate():
     """Test the unhappy path of the require_auth_context function with a predicate."""
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="bar")
     auth_provider = DummyAuthProvider()
-    with raises(HTTPException) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await require_auth_context_using_credentials(
             credentials, auth_provider, dummy_predicate
         )

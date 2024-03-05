@@ -20,9 +20,9 @@ from typing import Annotated
 
 import pytest
 from fastapi import Depends, FastAPI
-from fastapi.testclient import TestClient
 
 from ghga_service_commons.api.di import DependencyDummy
+from ghga_service_commons.api.testing import AsyncTestClient
 
 dummy_dependency = DependencyDummy("dummy")
 
@@ -32,23 +32,25 @@ def test_dependency_dummy_repr():
     assert repr(dummy_dependency) == "DependencyDummy('dummy')"
 
 
-def test_dependency_dummy_no_override():
+@pytest.mark.asyncio
+async def test_dependency_dummy_no_override():
     """Test that using a DependencyDummy in a FastAPI app raises an error if it is not
     overridden.
     """
     app = FastAPI()
 
     @app.get("/")
-    def get_dummy(dummy: Annotated[str, Depends(dummy_dependency)]):
+    async def get_dummy(dummy: Annotated[str, Depends(dummy_dependency)]):
         """Dummy view function that uses a DependencyDummy."""
         return dummy
 
-    client = TestClient(app)
+    client = AsyncTestClient(app)
     with pytest.raises(RuntimeError, match="'dummy' was not replaced"):
-        client.get("/")
+        await client.get("/")
 
 
-def test_dependency_dummy_override():
+@pytest.mark.asyncio
+async def test_dependency_dummy_override():
     """Test that using a DependencyDummy in a FastAPI app does not raise an error if it
     is overridden.
     """
@@ -57,13 +59,13 @@ def test_dependency_dummy_override():
     app = FastAPI()
 
     @app.get("/")
-    def get_dummy(dummy: Annotated[str, Depends(dummy_dependency)]):
+    async def get_dummy(dummy: Annotated[str, Depends(dummy_dependency)]):
         """Dummy view function that uses a DependencyDummy."""
         assert dummy is value
         return dummy
 
     app.dependency_overrides[dummy_dependency] = lambda: value
-    client = TestClient(app)
-    response = client.get("/")
+    client = AsyncTestClient(app)
+    response = await client.get("/")
 
     assert response.status_code == 200

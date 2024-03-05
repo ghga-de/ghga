@@ -18,8 +18,8 @@
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+import pytest
 from pydantic import BaseModel
-from pytest import mark, raises
 
 from ghga_service_commons.utils.utc_dates import (
     UTC,
@@ -29,7 +29,7 @@ from ghga_service_commons.utils.utc_dates import (
 )
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "value",
     [
         "2022-11-15 12:00:00",
@@ -48,11 +48,11 @@ def test_does_not_accept_naive_datetimes(value):
 
         d: UTCDatetime
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         Model(d=value)
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "value",
     [
         "2022-11-15T12:00:00+00:00",
@@ -76,7 +76,7 @@ def test_accept_aware_datetimes_in_utc(value):
     assert model.dt == model.du
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "value",
     [
         "2022-11-15T12:00:00+03:00",

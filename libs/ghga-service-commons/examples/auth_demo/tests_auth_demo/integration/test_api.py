@@ -18,12 +18,12 @@
 
 import asyncio
 
+import pytest
 from fastapi import FastAPI, status
-from fastapi.testclient import TestClient
-from pytest import fixture
 
 from auth_demo.config import Config
 from auth_demo.inject import prepare_rest_app
+from ghga_service_commons.api.testing import AsyncTestClient
 
 
 async def get_app() -> FastAPI:
@@ -33,10 +33,10 @@ async def get_app() -> FastAPI:
         return app
 
 
-@fixture
-def client() -> TestClient:
+@pytest.fixture
+def client() -> AsyncTestClient:
     """Get test client for the demo app."""
-    return TestClient(asyncio.run(get_app()))
+    return AsyncTestClient(asyncio.run(get_app()))
 
 
 def get_token(users: list[dict], name: str) -> str:
@@ -56,9 +56,10 @@ def get_token(users: list[dict], name: str) -> str:
     return token
 
 
-def test_index(client):
+@pytest.mark.asyncio
+async def test_index(client):
     """Test the index endpoint."""
-    response = client.get("/")
+    response = await client.get("/")
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()
@@ -67,9 +68,10 @@ def test_index(client):
     assert "reception" in res["endpoints"]
 
 
-def test_users(client):
+@pytest.mark.asyncio
+async def test_users(client):
     """Test the users endpoint."""
-    response = client.get("/users")
+    response = await client.get("/users")
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()
@@ -79,73 +81,83 @@ def test_users(client):
     assert get_token(users, "Ada")
 
 
-def test_status(client):
+@pytest.mark.asyncio
+async def test_status(client):
     """Test the status endpoint."""
-    response = client.get("/status")
+    response = await client.get("/status")
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()
     assert res == {"status": "logged out"}
 
-    response = client.get("/users")
+    response = await client.get("/users")
     token = get_token(response.json()["users"], "Grace")
 
-    response = client.get("/status", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get("/status", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()
     assert res["status"].startswith("logged in until")
 
 
-def test_reception(client):
+@pytest.mark.asyncio
+async def test_reception(client):
     """Test the reception endpoint."""
-    response = client.get("/reception")
+    response = await client.get("/reception")
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()
     assert res == {"message": "Hello, anonymous user!"}
 
-    response = client.get("/users")
+    response = await client.get("/users")
     token = get_token(response.json()["users"], "Grace")
 
-    response = client.get("/reception", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get(
+        "/reception", headers={"Authorization": f"Bearer {token}"}
+    )
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()
     assert res == {"message": "Hello, Grace Hopper!"}
 
 
-def test_lobby(client):
+@pytest.mark.asyncio
+async def test_lobby(client):
     """Test the lobby endpoint."""
-    response = client.get("/lobby")
+    response = await client.get("/lobby")
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authenticated"}
 
-    response = client.get("/users")
+    response = await client.get("/users")
     token = get_token(response.json()["users"], "Ada")
 
-    response = client.get("/lobby", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get("/lobby", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()
     assert res == {"message": "Hello, Ada Lovelace!"}
 
 
-def test_lounge(client):
+@pytest.mark.asyncio
+async def test_lounge(client):
     """Test the lounge endpoint."""
-    response = client.get("/lounge")
+    response = await client.get("/lounge")
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authenticated"}
 
-    response = client.get("/users")
+    response = await client.get("/users")
     token_ada = get_token(response.json()["users"], "Ada")
     token_grace = get_token(response.json()["users"], "Alan")
 
-    response = client.get("/lounge", headers={"Authorization": f"Bearer {token_ada}"})
+    response = await client.get(
+        "/lounge", headers={"Authorization": f"Bearer {token_ada}"}
+    )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authorized"}
 
-    response = client.get("/lounge", headers={"Authorization": f"Bearer {token_grace}"})
+    response = await client.get(
+        "/lounge", headers={"Authorization": f"Bearer {token_grace}"}
+    )
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()

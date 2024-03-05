@@ -18,12 +18,12 @@
 
 import asyncio
 
+import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
-from pytest import fixture
 
 from ghga_auth.config import AUTH_KEY_PAIR, Config
 from ghga_auth.inject import prepare_rest_app
+from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 
 
@@ -35,10 +35,10 @@ async def get_app():
         return app
 
 
-@fixture
-def client() -> TestClient:
+@pytest.fixture
+def client() -> AsyncTestClient:
     """Get test client for the demo app."""
-    return TestClient(asyncio.run(get_app()))
+    return AsyncTestClient(asyncio.run(get_app()))
 
 
 def get_headers(admin: bool = False) -> dict[str, str]:
@@ -55,9 +55,10 @@ def get_headers(admin: bool = False) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_get_auth_unauthenticated(client):
+@pytest.mark.asyncio
+async def test_get_auth_unauthenticated(client):
     """Test the get_auth endpoint unauthenticated."""
-    response = client.get("/get_auth")
+    response = await client.get("/get_auth")
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()
@@ -65,9 +66,10 @@ def test_get_auth_unauthenticated(client):
     assert res["context"] is None
 
 
-def test_get_auth_authenticated(client):
+@pytest.mark.asyncio
+async def test_get_auth_authenticated(client):
     """Test the get_auth endpoint authenticated."""
-    response = client.get("/get_auth", headers=get_headers())
+    response = await client.get("/get_auth", headers=get_headers())
     assert response.status_code == status.HTTP_200_OK
     res = response.json()
     assert isinstance(res, dict)
@@ -84,16 +86,18 @@ def test_get_auth_authenticated(client):
     }
 
 
-def test_require_auth_unauthenticated(client):
+@pytest.mark.asyncio
+async def test_require_auth_unauthenticated(client):
     """Test the require_auth endpoint unauthenticated."""
-    response = client.get("/require_auth")
+    response = await client.get("/require_auth")
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authenticated"}
 
 
-def test_require_auth_authenticated(client):
+@pytest.mark.asyncio
+async def test_require_auth_authenticated(client):
     """Test the require_auth endpoint authenticated."""
-    response = client.get("/require_auth", headers=get_headers())
+    response = await client.get("/require_auth", headers=get_headers())
     assert response.status_code == status.HTTP_200_OK
     res = response.json()
     assert isinstance(res, dict)
@@ -110,23 +114,26 @@ def test_require_auth_authenticated(client):
     }
 
 
-def test_require_admin_unauthenticated(client):
+@pytest.mark.asyncio
+async def test_require_admin_unauthenticated(client):
     """Test the require_admin endpoint unauthenticated."""
-    response = client.get("/require_admin")
+    response = await client.get("/require_admin")
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authenticated"}
 
 
-def test_require_admin_authenticated_but_not_admin(client):
+@pytest.mark.asyncio
+async def test_require_admin_authenticated_but_not_admin(client):
     """Test the require_admin endpoint authenticated, but not as admin."""
-    response = client.get("/require_admin", headers=get_headers())
+    response = await client.get("/require_admin", headers=get_headers())
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authorized"}
 
 
-def test_require_admin_authenticated_as_admin(client):
+@pytest.mark.asyncio
+async def test_require_admin_authenticated_as_admin(client):
     """Test the require_admin endpoint authenticated as admin."""
-    response = client.get("/require_admin", headers=get_headers(admin=True))
+    response = await client.get("/require_admin", headers=get_headers(admin=True))
     assert response.status_code == status.HTTP_200_OK
 
     res = response.json()

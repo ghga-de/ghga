@@ -16,14 +16,17 @@
 
 """Test the hello world app."""
 
-from fastapi.testclient import TestClient
+import pytest
 from hello_world_web_server.__main__ import app
 
-client = TestClient(app)
+from ghga_service_commons.api.testing import AsyncTestClient
+
+client = AsyncTestClient(app)
 
 
-def test_hello_world():
+@pytest.mark.asyncio
+async def test_hello_world():
     """Test that the hello world app works as expected."""
-    response = client.get("/")
+    response = await client.get("/")
     assert response.status_code == 200
     assert response.json() == "Hello World."

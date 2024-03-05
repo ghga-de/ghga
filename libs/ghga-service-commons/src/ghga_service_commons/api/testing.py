@@ -54,4 +54,6 @@ class AsyncTestClient(httpx.AsyncClient):
 
     def __init__(self, app: Callable[..., Any]):
         """Initialize with ASGI app."""
-        super().__init__(app=app, base_url="http://localhost:8080")
+        super().__init__(
+            transport=httpx.ASGITransport(app=app), base_url="http://localhost:8080"
+        )
