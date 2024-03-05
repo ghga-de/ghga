@@ -17,7 +17,7 @@
 """Functionality for testing FastAPI-based APIs."""
 
 import socket
-from typing import Any, Callable
+from typing import Any, Callable, Generic, TypeVar
 
 import httpx
 
@@ -29,7 +29,10 @@ def get_free_port() -> int:
     return int(sock.getsockname()[1])
 
 
-class AsyncTestClient(httpx.AsyncClient):
+TApp = TypeVar("TApp", bound=Callable[..., Any])
+
+
+class AsyncTestClient(httpx.AsyncClient, Generic[TApp]):
     """Client for testing ASGI apps in the context of a running async event loop.
 
     Usage: ```
@@ -52,8 +55,11 @@ class AsyncTestClient(httpx.AsyncClient):
     ```
     """
 
-    def __init__(self, app: Callable[..., Any]):
+    app: TApp
+
+    def __init__(self, app: TApp):
         """Initialize with ASGI app."""
+        self.app = app  # make the application available to tests as well
         super().__init__(
             transport=httpx.ASGITransport(app=app), base_url="http://localhost:8080"
         )
