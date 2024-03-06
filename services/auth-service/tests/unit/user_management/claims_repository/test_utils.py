@@ -29,8 +29,9 @@ from auth_service.user_management.user_registry.ports.dao import UserDao
 
 from ....fixtures.utils import DummyClaimDao, DummyUserDao
 
+pytestmark = mark.asyncio(scope="module")
 
-@mark.asyncio
+
 async def test_user_exists():
     """Test that existence of users can be checked."""
     user_dao = cast(UserDao, DummyUserDao(id_="some-internal-id"))
@@ -39,7 +40,6 @@ async def test_user_exists():
     assert await user_exists("other-internal-id", user_dao=user_dao) is False
 
 
-@mark.asyncio
 async def test_is_data_steward():
     """Test check that a user is a data steward."""
     claim_dao = DummyClaimDao()

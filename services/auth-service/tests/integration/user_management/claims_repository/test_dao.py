@@ -33,7 +33,7 @@ from auth_service.user_management.claims_repository.models.dto import (
 )
 
 
-@mark.asyncio
+@mark.asyncio()
 async def test_claim_creation(
     mongodb_fixture,  # noqa: F811
 ):

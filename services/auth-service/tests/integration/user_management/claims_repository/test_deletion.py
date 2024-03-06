@@ -36,7 +36,7 @@ from auth_service.user_management.claims_repository.models.dto import (
 from .fixtures import MongoDbContainer, fixture_mongodb  # noqa: F401
 
 
-@mark.asyncio
+@mark.asyncio()
 async def test_deletion_handler(
     kafka_fixture: KafkaFixture,  # noqa: F811
     mongodb: MongoDbContainer,

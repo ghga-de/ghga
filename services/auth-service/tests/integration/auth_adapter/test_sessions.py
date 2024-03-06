@@ -43,6 +43,8 @@ from ...fixtures.utils import (
 )
 from .fixtures import fixture_client  # noqa: F401
 
+pytestmark = mark.asyncio()
+
 
 def expected_set_cookie(session_id: str) -> str:
     """Get the expected Set-Cookie header for the auth session cookie."""
@@ -79,7 +81,6 @@ def assert_session_header(
     assert session == expected
 
 
-@mark.asyncio
 async def test_logout(client: AsyncTestClient):
     """Test that a logout request removes the user session."""
     store = await get_session_store(config=CONFIG)
@@ -96,7 +97,6 @@ async def test_logout(client: AsyncTestClient):
     assert "X-Session" not in response.headers
 
 
-@mark.asyncio
 async def test_logout_without_session(client: AsyncTestClient):
     """Test that a logout request without a session does not fail."""
     response = await client.post("/rpc/logout")
@@ -106,7 +106,6 @@ async def test_logout_without_session(client: AsyncTestClient):
     assert "X-Session" not in response.headers
 
 
-@mark.asyncio
 async def test_logout_with_invalid_csrf_token(client: AsyncTestClient):
     """Test that a logout request with an invalid CSRF token fails."""
     store = await get_session_store(config=CONFIG)
@@ -127,7 +126,6 @@ async def test_logout_with_invalid_csrf_token(client: AsyncTestClient):
     assert "X-Session" not in response.headers
 
 
-@mark.asyncio
 async def test_login_with_unregistered_user(
     client: AsyncTestClient, httpx_mock: HTTPXMock
 ):
@@ -157,7 +155,6 @@ async def test_login_with_unregistered_user(
     )
 
 
-@mark.asyncio
 async def test_login_with_invalid_userinfo(
     client: AsyncTestClient, httpx_mock: HTTPXMock
 ):
@@ -178,7 +175,6 @@ async def test_login_with_invalid_userinfo(
     assert "X-Session" not in response.headers
 
 
-@mark.asyncio
 async def test_login_with_registered_user(
     client: AsyncTestClient, httpx_mock: HTTPXMock
 ):
@@ -209,7 +205,6 @@ async def test_login_with_registered_user(
     )
 
 
-@mark.asyncio
 async def test_login_with_registered_user_and_name_change(
     client: AsyncTestClient, httpx_mock: HTTPXMock
 ):
@@ -241,7 +236,6 @@ async def test_login_with_registered_user_and_name_change(
     )
 
 
-@mark.asyncio
 async def test_login_with_registered_user_with_title(
     client: AsyncTestClient, httpx_mock: HTTPXMock
 ):
@@ -273,7 +267,6 @@ async def test_login_with_registered_user_with_title(
     )
 
 
-@mark.asyncio
 async def test_login_with_deactivated_user(
     client: AsyncTestClient, httpx_mock: HTTPXMock
 ):
@@ -288,7 +281,6 @@ async def test_login_with_deactivated_user(
     assert response.json() == {"detail": "User account is disabled"}
 
 
-@mark.asyncio
 async def test_login_without_access_token(client: AsyncTestClient):
     """Test that a login request without an access token fails."""
     response = await client.post("/rpc/login")
@@ -299,7 +291,6 @@ async def test_login_without_access_token(client: AsyncTestClient):
     assert "X-Session" not in response.headers
 
 
-@mark.asyncio
 async def test_login_with_invalid_access_token(client: AsyncTestClient):
     """Test that a login request with an invalid access token fails."""
     auth = "Bearer invalid"
@@ -313,7 +304,6 @@ async def test_login_with_invalid_access_token(client: AsyncTestClient):
     assert "X-Session" not in response.headers
 
 
-@mark.asyncio
 async def test_login_with_cookie_and_unregistered_user(client: AsyncTestClient):
     """Test login request with session cookie for an unregistered user."""
     setup_daos(ext_id="not.john@aai.org")
@@ -339,7 +329,6 @@ async def test_login_with_cookie_and_unregistered_user(client: AsyncTestClient):
     )
 
 
-@mark.asyncio
 async def test_login_with_cookie_and_registered_user(client: AsyncTestClient):
     """Test login request with session cookie for a registered user."""
     setup_daos()
@@ -369,7 +358,6 @@ async def test_login_with_cookie_and_registered_user(client: AsyncTestClient):
     )
 
 
-@mark.asyncio
 async def test_login_with_cookie_and_registered_data_steward(client: AsyncTestClient):
     """Test login request with session cookie for a registered data steward."""
     setup_daos(
@@ -407,7 +395,6 @@ async def test_login_with_cookie_and_registered_data_steward(client: AsyncTestCl
     )
 
 
-@mark.asyncio
 async def test_login_with_cookie_and_invalid_csrf_token(client: AsyncTestClient):
     """Test login request with session cookie and invalid CSRF token."""
     store = await get_session_store(config=CONFIG)

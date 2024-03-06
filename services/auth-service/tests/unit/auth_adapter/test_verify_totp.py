@@ -48,7 +48,6 @@ config = Config(
 )  # pyright: ignore
 
 
-@mark.asyncio
 @mark.parametrize(
     "totp_code",
     ["", "123456", "423715", "123123", "999999"],
@@ -63,6 +62,7 @@ config = Config(
         SessionState.AUTHENTICATED,
     ],
 )
+@mark.asyncio()
 async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa: C901
     """Test the verification of a TOTP code under various circumstances."""
     session_store = MemorySessionStore(config=config)

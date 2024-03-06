@@ -15,30 +15,32 @@
 
 """Fixtures for the claims repository integration tests"""
 
-import asyncio
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 
-from fastapi.testclient import TestClient
+from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import SecretStr
 from pytest import fixture
+from pytest_asyncio import fixture as async_fixture
 from testcontainers.mongodb import MongoDbContainer
 
 from auth_service.config import Config
 from auth_service.deps import get_config, get_mongodb_dao_factory
-from auth_service.user_management.api.main import app
+from auth_service.user_management.api.main import app, lifespan
 from auth_service.user_management.user_registry.models.dto import User, UserStatus
 
 
-@fixture(name="client")
-def fixture_client() -> TestClient:
+@async_fixture(name="client")
+async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
     """Get a test client for the claims repository."""
     config = Config(
         include_apis=["claims"],
     )  # pyright: ignore
     app.dependency_overrides[get_config] = lambda: config
-    return TestClient(app)
+    async with lifespan(app):
+        async with AsyncTestClient(app) as client:
+            yield client
 
 
 data_steward = User(
@@ -73,10 +75,10 @@ def fixture_mongodb() -> Generator[MongoDbContainer, None, None]:
         yield mongodb
 
 
-@fixture(name="client_with_db")
-def fixture_client_with_db(
+@async_fixture(name="client_with_db")
+async def fixture_client_with_db(
     mongodb: MongoDbContainer,
-) -> Generator[TestClient, None, None]:
+) -> AsyncGenerator[AsyncTestClient, None]:
     """Get a test client for the claims repository with a test database."""
     config = Config(
         db_connection_str=SecretStr(mongodb.get_connection_url()),
@@ -85,9 +87,9 @@ def fixture_client_with_db(
         add_as_data_stewards=add_as_data_stewards,  # type: ignore
     )  # pyright: ignore
     mongodb.get_connection_client().drop_database(config.db_name)
-    asyncio.run(seed_database(config))
-
+    await seed_database(config)
     app.dependency_overrides[get_config] = lambda: config
-    with TestClient(app) as client:
-        yield client
+    async with lifespan(app):
+        async with AsyncTestClient(app) as client:
+            yield client
     app.dependency_overrides.clear()

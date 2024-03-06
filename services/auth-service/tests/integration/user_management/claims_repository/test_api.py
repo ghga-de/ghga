@@ -21,6 +21,7 @@ from typing import Any
 
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from pytest import mark
 
 from auth_service.user_management.user_registry.deps import get_user_dao
 
@@ -30,6 +31,8 @@ from .fixtures import (  # noqa: F401
     fixture_client_with_db,
     fixture_mongodb,
 )
+
+pytestmark = mark.asyncio()
 
 ROLE_CLAIM_DATA = {
     "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
@@ -50,27 +53,29 @@ DATASET_CLAIM_DATA = {
 }
 
 
-def test_health_check(client):
+async def test_health_check(client):
     """Test that the health check endpoint works."""
-    response = client.get("/health")
+    response = await client.get("/health")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"status": "OK"}
 
 
-def test_get_from_a_random_path(client):
+async def test_get_from_a_random_path(client):
     """Test that a GET request to a random path raises a not found error."""
-    response = client.post("/some/random/path")
+    response = await client.post("/some/random/path")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_post_claim(client_with_db):
+async def test_post_claim(client_with_db):
     """Test that creating a user claim works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
-    response = client_with_db.post("/users/john@ghga.de/claims", json=ROLE_CLAIM_DATA)
+    response = await client_with_db.post(
+        "/users/john@ghga.de/claims", json=ROLE_CLAIM_DATA
+    )
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED, claim
@@ -88,12 +93,14 @@ def test_post_claim(client_with_db):
     assert claim == ROLE_CLAIM_DATA
 
     # test with non-existing user
-    response = client_with_db.post("/users/john@haag.de/claims", json=ROLE_CLAIM_DATA)
+    response = await client_with_db.post(
+        "/users/john@haag.de/claims", json=ROLE_CLAIM_DATA
+    )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
 
 
-def test_get_claims(client_with_db):
+async def test_get_claims(client_with_db):
     """Test that getting all claims of a user works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -110,11 +117,11 @@ def test_get_claims(client_with_db):
     }
     posted_claims = []
     for claim in (claim1, claim2):
-        response = client_with_db.post(f"/users/{user_id}/claims", json=claim)
+        response = await client_with_db.post(f"/users/{user_id}/claims", json=claim)
         assert response.status_code == status.HTTP_201_CREATED
         posted_claims.append(response.json())
 
-    response = client_with_db.get(f"/users/{user_id}/claims")
+    response = await client_with_db.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     requested_claims = response.json()
     requested_claims.sort(key=itemgetter("assertion_date"))
@@ -128,12 +135,12 @@ def test_get_claims(client_with_db):
     assert requested_claims[0]["visa_value"] != requested_claims[1]["visa_value"]
 
     # test with non-existing user
-    response = client_with_db.get("/users/john@haag.de/claims")
+    response = await client_with_db.get("/users/john@haag.de/claims")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
 
 
-def test_patch_claim(client_with_db):
+async def test_patch_claim(client_with_db):
     """Test that revoking a user claim works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -141,7 +148,9 @@ def test_patch_claim(client_with_db):
     user_id = "john@ghga.de"
 
     # post test claim
-    response = client_with_db.post(f"/users/{user_id}/claims", json=ROLE_CLAIM_DATA)
+    response = await client_with_db.post(
+        f"/users/{user_id}/claims", json=ROLE_CLAIM_DATA
+    )
     posted_claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -152,13 +161,13 @@ def test_patch_claim(client_with_db):
     # revoke test claim
     revocation_date = "2022-10-15T12:00:00Z"
     patch_data = {"revocation_date": revocation_date}
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been revoked
-    response = client_with_db.get(f"/users/{user_id}/claims")
+    response = await client_with_db.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -168,14 +177,14 @@ def test_patch_claim(client_with_db):
 
     # test without revocation date
     patch_data = {"revocation_date": None}  # type: ignore
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     # test with later revocation date
     patch_data = {"revocation_date": "2022-10-15T13:00:00Z"}
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -184,13 +193,13 @@ def test_patch_claim(client_with_db):
     # test with earlier revocation date
     revocation_date = "2022-10-15T11:00:00Z"
     patch_data = {"revocation_date": revocation_date}
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that revocation was advanced
-    response = client_with_db.get(f"/users/{user_id}/claims")
+    response = await client_with_db.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -199,20 +208,20 @@ def test_patch_claim(client_with_db):
     assert claim == posted_claim
 
     # test with non-existing user
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/john@haag.de/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
     # test with non-existing claim
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/{user_id}/claims/invalid-claim-id", json=patch_data
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user claim was not found."
 
 
-def test_delete_claim(client_with_db):
+async def test_delete_claim(client_with_db):
     """Test that deleting a user claim works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -224,7 +233,7 @@ def test_delete_claim(client_with_db):
     claim2 = ROLE_CLAIM_DATA.copy()
     claim2["visa_type"] = "ResearcherStatus"
     for claim in (claim1, claim2):
-        response = client_with_db.post(f"/users/{user_id}/claims", json=claim)
+        response = await client_with_db.post(f"/users/{user_id}/claims", json=claim)
         assert response.status_code == status.HTTP_201_CREATED
         claim_id = response.json()["id"]
         assert claim_id
@@ -232,21 +241,21 @@ def test_delete_claim(client_with_db):
 
     # test deletion of first claim with non-existing user
     claim_id = claim1["id"]
-    response = client_with_db.delete(f"/users/john@haag.de/claims/{claim_id}")
+    response = await client_with_db.delete(f"/users/john@haag.de/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
     # test that claims have been posted
-    response = client_with_db.get(f"/users/{user_id}/claims")
+    response = await client_with_db.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 2
 
     # delete first claim properly
-    response = client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been deleted
-    response = client_with_db.get(f"/users/{user_id}/claims")
+    response = await client_with_db.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -255,26 +264,26 @@ def test_delete_claim(client_with_db):
     assert claim["visa_type"] == "ResearcherStatus"
 
     # delete again
-    response = client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
     # delete second claim
     claim_id = claim2["id"]
-    response = client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been deleted
-    response = client_with_db.get(f"/users/{user_id}/claims")
+    response = await client_with_db.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 0
 
     # delete again
-    response = client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_grant_download_access(client_with_db):
+async def test_grant_download_access(client_with_db):
     """Test that granting access to a dataset works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -286,13 +295,13 @@ def test_grant_download_access(client_with_db):
         "valid_until": f"{current_year + 1}-12-31T23:59:59Z",
     }
 
-    response = client_with_db.post(
+    response = await client_with_db.post(
         "/download-access/users/john@ghga.de/datasets/some-dataset-id",
         json=validity,
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    response = client_with_db.get("/users/john@ghga.de/claims")
+    response = await client_with_db.get("/users/john@ghga.de/claims")
     assert response.status_code == status.HTTP_200_OK
     requested_claims = response.json()
 
@@ -319,12 +328,12 @@ def test_grant_download_access(client_with_db):
         "visa_value": DATASET_CLAIM_DATA["visa_value"],
     }
 
-    response = client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == ["some-dataset-id"]
 
 
-def test_check_download_access(client_with_db):
+async def test_check_download_access(client_with_db):
     """Test that checking download access for a single dataset works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
@@ -336,7 +345,7 @@ def test_check_download_access(client_with_db):
     claim_data["valid_from"] = current_timestamp
     claim_data["valid_until"] = current_timestamp + 60
 
-    response = client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -351,7 +360,7 @@ def test_check_download_access(client_with_db):
     claim_data["valid_from"] = current_timestamp - 60
     claim_data["valid_until"] = current_timestamp - 30
 
-    response = client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -362,7 +371,7 @@ def test_check_download_access(client_with_db):
 
     # check access for wrong user
 
-    response = client_with_db.get(
+    response = await client_with_db.get(
         "/download-access/users/jane@ghga.de/datasets/some-dataset-id"
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -370,7 +379,7 @@ def test_check_download_access(client_with_db):
 
     # check access for right user
 
-    response = client_with_db.get(
+    response = await client_with_db.get(
         "/download-access/users/john@ghga.de/datasets/some-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
@@ -378,7 +387,7 @@ def test_check_download_access(client_with_db):
 
     # check access when permission exists but is not valid any more
 
-    response = client_with_db.get(
+    response = await client_with_db.get(
         "/download-access/users/john@ghga.de/datasets/former-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
@@ -386,21 +395,21 @@ def test_check_download_access(client_with_db):
 
     # check access when dataset and permission does not exist
 
-    response = client_with_db.get(
+    response = await client_with_db.get(
         "/download-access/users/john@ghga.de/datasets/another-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() is False
 
 
-def test_get_datasets_with_download_access(client_with_db):
+async def test_get_datasets_with_download_access(client_with_db):
     """Test that getting all datasets with download access works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     # should not have downloadable datasets in the beginning
 
-    response = client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
@@ -411,7 +420,7 @@ def test_get_datasets_with_download_access(client_with_db):
     claim_data["valid_from"] = current_timestamp
     claim_data["valid_until"] = current_timestamp + 60
 
-    response = client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -424,7 +433,7 @@ def test_get_datasets_with_download_access(client_with_db):
 
     claim_data["visa_value"] = claim_data["visa_value"].replace("some", "another")
 
-    response = client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -439,7 +448,7 @@ def test_get_datasets_with_download_access(client_with_db):
     claim_data["valid_from"] = current_timestamp - 60
     claim_data["valid_until"] = current_timestamp - 30
 
-    response = client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -450,13 +459,13 @@ def test_get_datasets_with_download_access(client_with_db):
 
     # check access for wrong user
 
-    response = client_with_db.get("/download-access/users/jane@ghga.de/datasets")
+    response = await client_with_db.get("/download-access/users/jane@ghga.de/datasets")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
 
     # check access for right user
 
-    response = client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     dataset_ids = response.json()
 
@@ -464,9 +473,9 @@ def test_get_datasets_with_download_access(client_with_db):
     assert sorted(dataset_ids) == ["another-dataset-id", "some-dataset-id"]
 
 
-def test_get_claims_for_seeded_data_steward(client_with_db):
+async def test_get_claims_for_seeded_data_steward(client_with_db):
     """Test that the database is seeded with the configured data steward."""
-    response = client_with_db.get("/users/the-id-of-rod-steward/claims")
+    response = await client_with_db.get("/users/the-id-of-rod-steward/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1

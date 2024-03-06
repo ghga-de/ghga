@@ -44,6 +44,8 @@ from .fixtures import (  # noqa: F401
     query_new_session,
 )
 
+pytestmark = mark.asyncio()
+
 
 def get_valid_totp_code(
     secret: str, when: Optional[datetime] = None, offset: int = 0
@@ -68,7 +70,6 @@ def get_invalid_totp_code(secret: str, when: Optional[datetime] = None) -> str:
     raise RuntimeError("Could not find an invalid TOTP code")
 
 
-@mark.asyncio
 async def test_create_totp_token_without_session(client: AsyncTestClient):
     """Test that TOTP token creation without a session fails."""
     response = await client.post(
@@ -78,7 +79,6 @@ async def test_create_totp_token_without_session(client: AsyncTestClient):
     assert response.json() == {"detail": "Not logged in"}
 
 
-@mark.asyncio
 async def test_create_totp_token_without_body(
     client_with_session: ClientWithSession,
 ):
@@ -91,7 +91,6 @@ async def test_create_totp_token_without_body(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-@mark.asyncio
 async def test_create_totp_token_with_unregistered_user(
     client_with_session: ClientWithSession,
 ):
@@ -106,7 +105,6 @@ async def test_create_totp_token_with_unregistered_user(
     assert response.json() == {"detail": "Not registered"}
 
 
-@mark.asyncio
 async def test_create_totp_token_without_csrf_token(
     client_with_session: ClientWithSession,
 ):
@@ -123,7 +121,6 @@ async def test_create_totp_token_without_csrf_token(
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
 
 
-@mark.asyncio
 async def test_create_totp_token_with_registered_user(
     client_with_session: ClientWithSession,
 ):
@@ -147,7 +144,6 @@ async def test_create_totp_token_with_registered_user(
     assert session.state is SessionState.NEW_TOTP_TOKEN
 
 
-@mark.asyncio
 async def test_verify_totp_without_session(client: AsyncTestClient):
     """Test that TOTP verification without a session fails."""
     response = await client.post(
@@ -157,7 +153,6 @@ async def test_verify_totp_without_session(client: AsyncTestClient):
     assert response.json() == {"detail": "Not logged in"}
 
 
-@mark.asyncio
 async def test_verify_totp_without_body(
     client_with_session: ClientWithSession,
 ):
@@ -170,7 +165,6 @@ async def test_verify_totp_without_body(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-@mark.asyncio
 async def test_verify_totp_with_unregistered_user(
     client_with_session: ClientWithSession,
 ):
@@ -185,7 +179,6 @@ async def test_verify_totp_with_unregistered_user(
     assert response.json() == {"detail": "Not registered"}
 
 
-@mark.asyncio
 async def test_verify_totp_without_csrf_token(
     client_with_session: ClientWithSession,
 ):
@@ -202,7 +195,6 @@ async def test_verify_totp_without_csrf_token(
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
 
 
-@mark.asyncio
 async def test_verify_totp(
     client_with_session: ClientWithSession,
 ):
@@ -285,7 +277,6 @@ async def test_verify_totp(
     assert session.state is SessionState.AUTHENTICATED
 
 
-@mark.asyncio
 async def test_rate_limiting_totp(
     client_with_session: ClientWithSession,
 ):
@@ -341,7 +332,6 @@ async def test_rate_limiting_totp(
     assert not response.text
 
 
-@mark.asyncio
 async def test_total_limit_totp(
     client_with_session: ClientWithSession,
 ):
@@ -421,7 +411,6 @@ async def test_total_limit_totp(
     assert "Authorization" not in response.headers
 
 
-@mark.asyncio
 async def test_recreate_existing_totp_token(
     client_with_session: ClientWithSession,
 ):

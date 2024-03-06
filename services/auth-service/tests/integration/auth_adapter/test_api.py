@@ -49,6 +49,8 @@ from .fixtures import (  # noqa: F401
 )
 from .test_totp import get_valid_totp_code
 
+pytestmark = mark.asyncio()
+
 API_EXT_PATH = CONFIG.api_ext_path.strip("/")
 if API_EXT_PATH:
     API_EXT_PATH += "/"
@@ -99,7 +101,6 @@ def assert_is_authorization_error(response, message: str):
     assert response.json() == {"detail": message}
 
 
-@mark.asyncio
 async def test_get_from_root(client: AsyncTestClient):
     """Test that a simple GET request passes."""
     response = await client.get("/")
@@ -109,7 +110,6 @@ async def test_get_from_root(client: AsyncTestClient):
     assert "Authorization" not in response.headers
 
 
-@mark.asyncio
 async def test_get_from_some_path(client: AsyncTestClient):
     """Test that a simple GET request passes."""
     response = await client.get("/some/path")
@@ -119,7 +119,6 @@ async def test_get_from_some_path(client: AsyncTestClient):
     assert "Authorization" not in response.headers
 
 
-@mark.asyncio
 async def test_get_from_some_path_with_query_parameters(client: AsyncTestClient):
     """Test that a simple GET request passes."""
     response = await client.get("/some/path?foo=1&bar=2")
@@ -129,7 +128,6 @@ async def test_get_from_some_path_with_query_parameters(client: AsyncTestClient)
     assert "Authorization" not in response.headers
 
 
-@mark.asyncio
 async def test_patch_to_some_path(client: AsyncTestClient):
     """Test that a PATCH request to a random path passes."""
     response = await client.patch("/some/path")
@@ -139,7 +137,6 @@ async def test_patch_to_some_path(client: AsyncTestClient):
     assert "Authorization" not in response.headers
 
 
-@mark.asyncio
 async def test_post_to_some_path(client: AsyncTestClient):
     """Test that a POST request to a random path passes."""
     response = await client.post("/some/path")
@@ -149,7 +146,6 @@ async def test_post_to_some_path(client: AsyncTestClient):
     assert "Authorization" not in response.headers
 
 
-@mark.asyncio
 async def test_delete_to_some_path(client: AsyncTestClient):
     """Test that a DELETE request to a random path passes."""
     response = await client.delete("/some/path")
@@ -159,7 +155,6 @@ async def test_delete_to_some_path(client: AsyncTestClient):
     assert "Authorization" not in response.headers
 
 
-@mark.asyncio
 async def test_basic_auth(with_basic_auth: str, client: AsyncTestClient):
     """Test that the root path can be protected with basic authentication."""
     response = await client.get("/")
@@ -185,7 +180,6 @@ async def test_basic_auth(with_basic_auth: str, client: AsyncTestClient):
     assert "Authorization" not in response.headers
 
 
-@mark.asyncio
 async def test_allowed_paths(with_basic_auth: str, client: AsyncTestClient):
     """Test that allowed paths are excluded from authentication."""
     assert with_basic_auth
@@ -238,7 +232,6 @@ async def test_allowed_paths(with_basic_auth: str, client: AsyncTestClient):
     assert response.text == "GHGA Data Portal: Not authenticated"
 
 
-@mark.asyncio
 async def test_basic_auth_service_logo(with_basic_auth: str, client: AsyncTestClient):
     """Test that fetching the service logo is excluded from authentication."""
     assert with_basic_auth
@@ -256,14 +249,12 @@ async def test_basic_auth_service_logo(with_basic_auth: str, client: AsyncTestCl
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@mark.asyncio
 async def test_post_user_without_session(client: AsyncTestClient):
     """Test authentication for user registration without a session."""
     response = await client.post("/users")
     assert_is_authorization_error(response, "Not logged in")
 
 
-@mark.asyncio
 async def test_post_user_with_session_and_invalid_csrf(
     client_with_session: ClientWithSession,
 ):
@@ -274,7 +265,6 @@ async def test_post_user_with_session_and_invalid_csrf(
     assert_is_authorization_error(response, "Invalid or missing CSRF token")
 
 
-@mark.asyncio
 async def test_post_user_with_session(client: AsyncTestClient, httpx_mock: HTTPXMock):
     """Test user registration with session and valid CSRF token."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
@@ -314,14 +304,12 @@ async def test_post_user_with_session(client: AsyncTestClient, httpx_mock: HTTPX
     assert 0 <= exp - iat - 3600 < 2
 
 
-@mark.asyncio
 async def test_put_user_without_session(client: AsyncTestClient):
     """Test authentication for user update without a session."""
     response = await client.put("/users/some-internal-id")
     assert_is_authorization_error(response, "Not logged in")
 
 
-@mark.asyncio
 async def test_put_user_with_session_and_wrong_user_id(
     client_with_session: ClientWithSession,
 ):
@@ -333,7 +321,6 @@ async def test_put_user_with_session_and_wrong_user_id(
     assert_is_authorization_error(response, "Not registered")
 
 
-@mark.asyncio
 async def test_put_user_with_session_and_invalid_csrf(
     client_with_session: ClientWithSession,
 ):
@@ -346,7 +333,6 @@ async def test_put_user_with_session_and_invalid_csrf(
     assert_is_authorization_error(response, "Invalid or missing CSRF token")
 
 
-@mark.asyncio
 async def test_put_unregistered_user_with_session(
     client: AsyncTestClient,
     httpx_mock: HTTPXMock,
@@ -366,7 +352,6 @@ async def test_put_unregistered_user_with_session(
     assert_is_authorization_error(response, "Not registered")
 
 
-@mark.asyncio
 async def test_put_registered_user_with_session(
     client: AsyncTestClient, httpx_mock: HTTPXMock
 ):
@@ -414,7 +399,6 @@ async def test_put_registered_user_with_session(
     assert 0 <= exp - iat - 3600 < 2
 
 
-@mark.asyncio
 async def test_random_url_authenticated(client_with_session: ClientWithSession):
     """Test access via internal access token for authenticated users."""
     client, session = client_with_session[:2]

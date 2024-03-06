@@ -25,6 +25,8 @@ from auth_service.auth_adapter.adapters.memory_session_store import MemorySessio
 from auth_service.auth_adapter.deps import get_session
 from auth_service.config import CONFIG
 
+pytestmark = mark.asyncio(scope="module")
+
 SESSION_COOKIE = "session"
 CSRF_TOKEN_HEADER = "X-CSRF-Token"
 
@@ -91,21 +93,18 @@ async def assert_get_session(
         assert returned_session is expected_session
 
 
-@mark.asyncio
 @mark.parametrize("method", ALL_METHODS)
 async def test_get_session_without_cookie(method: str) -> None:
     """Test getting the session without a cookie."""
     await assert_get_session(method, with_cookie=False, expect_result=None)
 
 
-@mark.asyncio
 @mark.parametrize("method", ALL_METHODS)
 async def test_get_session_with_invalid_cookie(method: str) -> None:
     """Test getting the session wit an invalid cookie."""
     await assert_get_session(method, with_cookie="bad-cookie", expect_result=None)
 
 
-@mark.asyncio
 @mark.parametrize("method", ALL_METHODS)
 async def test_get_session_without_cookie_and_without_csrf_token(method: str) -> None:
     """Test getting the session without a cookie and without a CSRF token."""
@@ -114,7 +113,6 @@ async def test_get_session_without_cookie_and_without_csrf_token(method: str) ->
     )
 
 
-@mark.asyncio
 @mark.parametrize("method", ALL_METHODS)
 async def test_get_session_without_cookie_and_invalid_csrf_token(method: str) -> None:
     """Test getting the session without a cookie and an invalid CSRF token."""
@@ -123,42 +121,36 @@ async def test_get_session_without_cookie_and_invalid_csrf_token(method: str) ->
     )
 
 
-@mark.asyncio
 @mark.parametrize("method", UNCRITICAL_METHODS)
 async def test_get_session_uncritical_without_csrf_token(method: str) -> None:
     """Test getting the session with an uncritical method and no CSRF token."""
     await assert_get_session(method, with_csrf_token=False)
 
 
-@mark.asyncio
 @mark.parametrize("method", CRITICAL_METHODS)
 async def test_get_session_critical_method_without_csrf_token(method: str) -> None:
     """Test CSRF protection with a critical method and no CSRF token."""
     await assert_get_session(method, with_csrf_token=False, expect_result=False)
 
 
-@mark.asyncio
 @mark.parametrize("method", UNCRITICAL_METHODS)
 async def test_get_session_on_uncritical_method_with_invalid_token(method: str) -> None:
     """Test CSRF protection with a critical method and invalid CSRF token."""
     await assert_get_session(method, with_csrf_token="bad-token")
 
 
-@mark.asyncio
 @mark.parametrize("method", CRITICAL_METHODS)
 async def test_get_session_on_critical_method_with_invalid_token(method: str) -> None:
     """Test CSRF protection with a critical method and invalid CSRF token."""
     await assert_get_session(method, with_csrf_token="bad-token", expect_result=False)
 
 
-@mark.asyncio
 @mark.parametrize("method", UNCRITICAL_METHODS)
 async def test_get_session_on_uncritical_method_with_valid_token(method: str) -> None:
     """Test CSRF protection with an uncritical method and valid CSRF token."""
     await assert_get_session(method)
 
 
-@mark.asyncio
 @mark.parametrize("method", CRITICAL_METHODS)
 async def test_get_session_on_critical_method_with_valid_token(method: str) -> None:
     """Test CSRF protection with a critical method and a valid CSRF token."""

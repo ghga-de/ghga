@@ -27,7 +27,7 @@ from auth_service.user_management.claims_repository.core.deletion import (
 from ....fixtures.utils import DummyClaimDao
 
 
-@mark.asyncio
+@mark.asyncio()
 async def test_deletion_handler(caplog: LogCaptureFixture):
     """Test the dataset deletion handler"""
     caplog.set_level(logging.INFO)

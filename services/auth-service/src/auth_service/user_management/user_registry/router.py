@@ -23,17 +23,14 @@ from fastapi import APIRouter, Path, Response
 from fastapi.exceptions import HTTPException
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import (
-    MultipleHitsFoundError,
     NoHitsFoundError,
     ResourceNotFoundError,
 )
 
 from ..auth import (
-    AuthContext,
+    StewardAuthContext,
+    UserAuthContext,
     is_steward,
-    require_active,
-    require_auth,
-    require_steward,
 )
 from .deps import Depends, UserDao, get_user_dao
 from .models.dto import (
@@ -75,17 +72,17 @@ INITIAL_USER_STATUS = UserStatus.ACTIVE
 async def post_user(
     user_data: UserRegisteredData,
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    auth_context: Annotated[AuthContext, require_auth],
+    auth_context: UserAuthContext,
 ) -> User:
     """Register a user."""
     ext_id = user_data.ext_id
-    # users can only register themselves
-    if ext_id != auth_context.ext_id:
+    # note that the auth context contains the external ID for this endpoint (only)
+    if ext_id != auth_context.id:  # users can only register themselves
         raise HTTPException(status_code=403, detail="Not authorized to register user.")
-    if (
-        auth_context.id  # must not have been already registered
-        or user_data.name != auth_context.name  # specified name must match token
-        or user_data.email != auth_context.email  # specified email must match token
+    if not (
+        is_external_id(ext_id)
+        and user_data.name == auth_context.name  # specified name must match token
+        and user_data.email == auth_context.email  # specified email must match token
     ):
         raise HTTPException(status_code=422, detail="User cannot be registered.")
     try:
@@ -121,6 +118,7 @@ async def post_user(
     responses={
         204: {"description": "User was successfully updated."},
         403: {"description": "Not authorized to update user."},
+        404: {"description": "User does not exist."},
         422: {"description": "Validation error in submitted user data."},
     },
     status_code=204,
@@ -136,26 +134,24 @@ async def put_user(
         ),
     ],
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    auth_context: Annotated[AuthContext, require_auth],
+    auth_context: UserAuthContext,
 ) -> Response:
     """Update a user."""
-    # users can only update themselves,
-    # invalid users are allowed to update themselves in order to become valid again
+    if id_ != auth_context.id:  # users can only update themselves
+        raise HTTPException(status_code=403, detail="Not authorized to update user.")
     if not (
         is_internal_id(id_)
-        and id_ == auth_context.id
-        and auth_context.status in (UserStatus.ACTIVE, UserStatus.INVALID)
-    ):
-        raise HTTPException(status_code=403, detail="Not authorized to update user.")
-    if (
-        user_data.name != auth_context.name  # specified name must match token
-        or user_data.email != auth_context.email  # specified email must match token
+        and user_data.name == auth_context.name  # specified name must match token
+        and user_data.email == auth_context.email  # specified email must match token
     ):
         raise HTTPException(status_code=422, detail="User cannot be updated.")
     try:
         user = await user_dao.get_by_id(id_)
         user = user.model_copy(update=user_data.model_dump())
         await user_dao.update(user)
+    except ResourceNotFoundError as error:
+        log.error("Could not update user: %s", error)
+        raise HTTPException(status_code=404, detail="User does not exist.") from error
     except Exception as error:
         log.error("Could not update user: %s", error)
         raise HTTPException(
@@ -187,28 +183,22 @@ async def get_user(
         Path(
             ...,
             alias="id",
-            description="Internal ID or External (LS) ID",
+            description="Internal User ID",
         ),
     ],
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    auth_context: Annotated[AuthContext, require_auth],
+    auth_context: UserAuthContext,
 ) -> User:
     """Get user data."""
     # Only data steward can request other user accounts
-    if not (
-        is_steward(auth_context)
-        or (is_external_id(id_) and id_ == auth_context.ext_id)
-        or (is_internal_id(id_) and id_ == auth_context.id)
-    ):
+    if not (is_steward(auth_context) or id_ == auth_context.id):
         raise HTTPException(status_code=403, detail="Not authorized to request user.")
     try:
-        if is_external_id(id_):
-            user = await user_dao.find_one(mapping={"ext_id": id_})
-        elif is_internal_id(id_):
+        if is_internal_id(id_):
             user = await user_dao.get_by_id(id_)
         else:
             raise ResourceNotFoundError(id_=id_)
-    except (NoHitsFoundError, MultipleHitsFoundError, ResourceNotFoundError) as error:
+    except ResourceNotFoundError as error:
         raise HTTPException(
             status_code=404, detail="The user was not found."
         ) from error
@@ -249,7 +239,7 @@ async def patch_user(
         ),
     ],
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    auth_context: Annotated[AuthContext, require_active],
+    auth_context: UserAuthContext,
 ) -> Response:
     """Modify user data."""
     update_data = user_data.model_dump(exclude_unset=True)
@@ -315,7 +305,7 @@ async def delete_user(
         ),
     ],
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    auth_context: Annotated[AuthContext, require_steward],
+    auth_context: StewardAuthContext,
 ) -> Response:
     """Delete user."""
     if id_ == auth_context.id:

@@ -20,6 +20,7 @@ from typing import cast
 
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from pytest import mark
 
 from auth_service.user_management.user_registry.utils import is_internal_id
 
@@ -29,6 +30,9 @@ from .fixtures import (  # noqa: F401
     fixture_client_with_db,
     fixture_mongodb,
 )
+
+pytestmark = mark.asyncio()
+
 
 MIN_USER_DATA = {
     "ext_id": "max@ls.org",
@@ -42,6 +46,8 @@ OPT_USER_DATA = {
 
 MAX_USER_DATA = {**MIN_USER_DATA, **OPT_USER_DATA}
 
+DUMMY_USER_ID = "12345678-9012-3456-7890-123456789012"
+
 
 def seconds_passed(date_string: str) -> float:
     """Get number of seconds that have passed since the given date string."""
@@ -51,25 +57,27 @@ def seconds_passed(date_string: str) -> float:
     ).total_seconds()
 
 
-def test_health_check(client):
+async def test_health_check(client):
     """Test that the health check endpoint works."""
-    response = client.get("/health")
+    response = await client.get("/health")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"status": "OK"}
 
 
-def test_get_from_a_random_path(client):
+async def test_get_from_a_random_path(client):
     """Test that a GET request to a random path raises a not found error."""
-    response = client.post("/some/random/path")
+    response = await client.post("/some/random/path")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_post_user(client_with_db, user_headers):
+async def test_post_user(client_with_db, new_user_headers):
     """Test that registering a user works."""
     user_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
     user = response.json()
@@ -86,17 +94,21 @@ def test_post_user(client_with_db, user_headers):
 
     assert user == user_data
 
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
 
     assert response.status_code == status.HTTP_409_CONFLICT
     error = response.json()
     assert error == {"detail": "User was already registered."}
 
 
-def test_post_user_with_minimal_data(client_with_db, user_headers):
+async def test_post_user_with_minimal_data(client_with_db, new_user_headers):
     """Test that registering a user with minimal data works."""
     user_data = MIN_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
     user = response.json()
@@ -113,74 +125,91 @@ def test_post_user_with_minimal_data(client_with_db, user_headers):
 
     assert user == {**MIN_USER_DATA, **dict.fromkeys(OPT_USER_DATA)}
 
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
 
     assert response.status_code == status.HTTP_409_CONFLICT
     error = response.json()
     assert error == {"detail": "User was already registered."}
 
 
-def test_post_user_with_status(client_with_db, user_headers):
+async def test_post_user_with_status(client_with_db, new_user_headers):
     """Test that status field is rejected when registering a user."""
     user_data = {**MIN_USER_DATA, "status": "active"}
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-def test_post_user_with_different_name(client, user_headers):
+async def test_post_user_with_different_name(client, new_user_headers):
     """Test that registering a user with different name does not work."""
     user_data = {**MAX_USER_DATA, "name": "Max Liebermann"}
-    response = client.post("/users", json=user_data, headers=user_headers)
+    response = await client.post("/users", json=user_data, headers=new_user_headers)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
     assert error["detail"] == "User cannot be registered."
 
 
-def test_post_user_with_different_email(client, user_headers):
+async def test_post_user_with_different_email(client, new_user_headers):
     """Test that registering a user with different email does not work."""
     user_data = {**MAX_USER_DATA, "email": "max@fake.org"}
-    response = client.post("/users", json=user_data, headers=user_headers)
+    response = await client.post("/users", json=user_data, headers=new_user_headers)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
     assert error["detail"] == "User cannot be registered."
 
 
-def test_post_user_with_invalid_email(client, user_headers):
+async def test_post_user_with_invalid_email(client, new_user_headers):
     """Test that registering a user with invalid email does not work."""
     user_data = {**MAX_USER_DATA, "email": "invalid"}
-    response = client.post("/users", json=user_data, headers=user_headers)
+    response = await client.post("/users", json=user_data, headers=new_user_headers)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
-    assert "email address is not valid" in error["detail"][0]["msg"]
+    assert "The email address is not valid." in error["detail"][0]["msg"]
 
 
-def test_post_user_with_different_ext_id(client, user_headers):
+async def test_post_user_with_different_ext_id(client, new_user_headers):
     """Test that registering a user with a different external ID does not work."""
     user_data = {**MAX_USER_DATA, "ext_id": "frodo@ls.org"}
-    response = client.post("/users", json=user_data, headers=user_headers)
+    response = await client.post("/users", json=user_data, headers=new_user_headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error["detail"] == "Not authorized to register user."
 
 
-def test_post_user_unauthenticated(client_with_db):
+async def test_post_user_with_existing_user(client, user_headers):
+    """Test that registering a user with an internal ID does not work."""
+    # actually it's not even possible to specify an internal address here
+    user_data = {**MAX_USER_DATA, "ext_id": "max-internal"}
+    response = await client.post("/users", json=user_data, headers=user_headers)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    error = response.json()
+    assert "The email address is not valid." in error["detail"][0]["msg"]
+
+
+async def test_post_user_unauthenticated(client_with_db):
     """Test that registering a user without authentication does not work."""
-    response = client_with_db.post("/users", json=MAX_USER_DATA)
+    response = await client_with_db.post("/users", json=MAX_USER_DATA)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error["detail"] == "Not authenticated"
 
 
-def test_put_user(client_with_db, user_headers):
+async def test_put_user(client_with_db, new_user_headers):
     """Test that updating a user works."""
     old_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=old_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=old_data, headers=new_user_headers
+    )
     assert response.status_code == status.HTTP_201_CREATED
     id_ = response.json()["id"]
     assert is_internal_id(id_)
@@ -191,11 +220,11 @@ def test_put_user(client_with_db, user_headers):
 
     headers = get_headers_for(id=id_, name=new_data["name"], email=new_data["email"])
 
-    response = client_with_db.put(f"/users/{id_}", json=new_data, headers=headers)
+    response = await client_with_db.put(f"/users/{id_}", json=new_data, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
 
-    response = client_with_db.get(f"/users/{id_}", headers=headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
 
@@ -210,31 +239,54 @@ def test_put_user(client_with_db, user_headers):
     assert user == new_data
 
 
-def test_put_nonexisting_user(client_with_db):
-    """Test updating a non-existing user."""
+async def test_put_nonexisting_user_with_invalid_id(client_with_db):
+    """Test updating a non-existing user with an invalid user ID."""
     user_data = MAX_USER_DATA.copy()
     del user_data["ext_id"]
 
     id_ = "nonexisting-user-id"
+    assert not is_internal_id(id_)
     headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
 
-    response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response = await client_with_db.put(
+        f"/users/{id_}", json=user_data, headers=headers
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    error = response.json()
+    assert error["detail"] == "User cannot be updated."
 
 
-def test_put_user_with_too_much_data(client_with_db):
+async def test_put_nonexisting_user_with_valid_id(client_with_db):
+    """Test updating a non-existing user with a valid user ID."""
+    user_data = MAX_USER_DATA.copy()
+    del user_data["ext_id"]
+
+    id_ = DUMMY_USER_ID
+    headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
+
+    response = await client_with_db.put(
+        f"/users/{id_}", json=user_data, headers=headers
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    error = response.json()
+    assert error["detail"] == "User does not exist."
+
+
+async def test_put_user_with_too_much_data(client_with_db):
     """Test that updating a user with too much data does not work."""
     user_data = MAX_USER_DATA
     id_ = "nonexisting-user-id"
     headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
 
-    response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
+    response = await client_with_db.put(
+        f"/users/{id_}", json=user_data, headers=headers
+    )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
     assert "Extra inputs are not permitted" in error["detail"][0]["msg"]
 
 
-def test_put_user_with_invalid_data(client_with_db):
+async def test_put_user_with_invalid_data(client_with_db):
     """Test that updating a user with invalid email does not work."""
     user_data = MAX_USER_DATA.copy()
     del user_data["ext_id"]
@@ -243,144 +295,29 @@ def test_put_user_with_invalid_data(client_with_db):
 
     user_data["email"] = "invalid"
 
-    response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
+    response = await client_with_db.put(
+        f"/users/{id_}", json=user_data, headers=headers
+    )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
     assert "email address is not valid" in error["detail"][0]["msg"]
 
 
-def test_put_inactive_user(client_with_db, user_headers):
-    """Test updating an inactive user."""
-    user_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
-    assert response.status_code == status.HTTP_201_CREATED
-    id_ = response.json()["id"]
-    assert is_internal_id(id_)
-
-    user_data = user_data.copy()
-    del user_data["ext_id"]
-    headers = get_headers_for(
-        id=id_,
-        name=user_data["name"],
-        email=user_data["email"],
-        status="inactive",
-    )
-    response = client_with_db.put(f"/users/{id_}", json=user_data, headers=headers)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-def test_put_user_unauthenticated(client_with_db, user_headers):
+async def test_put_user_unauthenticated(client_with_db):
     """Test that updating a user without authentication does not work."""
-    response = client_with_db.put("/users/nonexisting-user-id", json=MAX_USER_DATA)
+    response = await client_with_db.put(
+        "/users/nonexisting-user-id", json=MAX_USER_DATA
+    )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error["detail"] == "Not authenticated"
 
 
-def test_get_non_existing_user(client_with_db, steward_headers):
+async def test_get_non_existing_user(client_with_db, steward_headers):
     """Test requesting a non-existing user."""
-    response = client_with_db.get("/users/bad@example.org", headers=steward_headers)
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    error = response.json()
-    assert error == {"detail": "The user was not found."}
-
-
-def test_get_different_user(client, user_headers):
-    """Test requesting a different user."""
-    response = client.get("/users/other@example.org", headers=user_headers)
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    error = response.json()
-    assert error == {"detail": "Not authorized to request user."}
-
-    response = client.get("/users/max-internal", headers=user_headers)
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    error = response.json()
-    assert error == {"detail": "Not authorized to request user."}
-
-
-def test_get_user_via_id(client_with_db, user_headers):
-    """Test that a registered user can be found via internal ID."""
-    user_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
-    assert response.status_code == status.HTTP_201_CREATED
-    expected_user = response.json()
-
-    id_ = expected_user["id"]
-    response = client_with_db.get(f"/users/{id_}", headers=user_headers)
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    error = response.json()
-    assert error == {"detail": "Not authorized to request user."}
-
-    headers = get_headers_for(id=id_, name="Max Headroom", email="max@example.org")
-    response = client_with_db.get(f"/users/{id_}", headers=headers)
-
-    assert response.status_code == status.HTTP_200_OK
-    user = response.json()
-
-    assert user == expected_user
-
-
-def test_get_user_via_ext_id(client_with_db, user_headers):
-    """Test that a registered user can be found via external ID."""
-    user_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
-    expected_user = response.json()
-    assert response.status_code == status.HTTP_201_CREATED
-
-    id_ = expected_user["ext_id"]
-    response = client_with_db.get(f"/users/{id_}", headers=user_headers)
-
-    assert response.status_code == status.HTTP_200_OK
-    user = response.json()
-
-    assert user == expected_user
-
-
-def test_get_different_user_as_data_steward(
-    client_with_db, user_headers, steward_headers
-):
-    """Test requesting a different user as a data steward."""
-    user_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
-    assert response.status_code == status.HTTP_201_CREATED
-    expected_user = response.json()
-
-    id_ = expected_user["ext_id"]
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
-
-    assert response.status_code == status.HTTP_200_OK
-    user = response.json()
-
-    assert user == expected_user
-
-    id_ = expected_user["id"]
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
-
-    assert response.status_code == status.HTTP_200_OK
-    user = response.json()
-
-    assert user == expected_user
-
-
-def test_get_user_unauthenticated(client):
-    """Test requesting a user without authentication."""
-    response = client.get("/users/bad@example.org")
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    error = response.json()
-    assert error == {"detail": "Not authenticated"}
-
-
-def test_patch_non_existing_user(client_with_db, steward_headers):
-    """Test modifying a non-existing user."""
-    update_data = {"title": "Prof."}
-    response = client_with_db.patch(
-        "/users/foo-bar-baz-qux", json=update_data, headers=steward_headers
+    response = await client_with_db.get(
+        f"/users/{DUMMY_USER_ID}", headers=steward_headers
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -388,10 +325,113 @@ def test_patch_non_existing_user(client_with_db, steward_headers):
     assert error == {"detail": "The user was not found."}
 
 
-def test_patch_user_as_data_steward(client_with_db, user_headers, steward_headers):
+async def test_get_different_user(client, user_headers):
+    """Test requesting a different user."""
+    response = await client.get("/users/fred-internal", headers=user_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized to request user."}
+
+
+async def test_get_user_via_id(client_with_db, new_user_headers, user_headers):
+    """Test that a registered user can be found via internal ID."""
+    user_data = MAX_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    expected_user = response.json()
+
+    id_ = expected_user["id"]
+    response = await client_with_db.get(f"/users/{id_}", headers=user_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized to request user."}
+
+    headers = get_headers_for(id=id_, name="Max Headroom", email="max@example.org")
+    response = await client_with_db.get(f"/users/{id_}", headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    user = response.json()
+
+    assert user == expected_user
+
+
+async def test_get_user_via_ext_id(client_with_db, new_user_headers, user_headers):
+    """Test that a registered user cannot be found via external ID."""
+    user_data = MAX_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    expected_user = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    id_ = expected_user["ext_id"]
+    response = await client_with_db.get(f"/users/{id_}", headers=new_user_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    error = response.json()
+    assert error == {"detail": "The user was not found."}
+
+    id_ = expected_user["ext_id"]
+    response = await client_with_db.get(f"/users/{id_}", headers=user_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized to request user."}
+
+
+async def test_get_different_user_as_data_steward(
+    client_with_db, new_user_headers, steward_headers
+):
+    """Test requesting a different user as a data steward."""
+    user_data = MAX_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    expected_user = response.json()
+
+    id_ = expected_user["id"]
+    response = await client_with_db.get(f"/users/{id_}", headers=steward_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    user = response.json()
+
+    assert user == expected_user
+
+
+async def test_get_user_unauthenticated(client):
+    """Test requesting a user without authentication."""
+    response = await client.get("/users/foo-bar-baz-qux")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authenticated"}
+
+
+async def test_patch_non_existing_user(client_with_db, steward_headers):
+    """Test modifying a non-existing user."""
+    update_data = {"title": "Prof."}
+    response = await client_with_db.patch(
+        f"/users/{DUMMY_USER_ID}", json=update_data, headers=steward_headers
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    error = response.json()
+    assert error == {"detail": "The user was not found."}
+
+
+async def test_patch_user_as_data_steward(
+    client_with_db, new_user_headers, steward_headers
+):
     """Test that a data steward can modify a registered user."""
     user_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
     expected_user = response.json()
     assert response.status_code == status.HTTP_201_CREATED
     id_ = expected_user["id"]
@@ -404,7 +444,7 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
     assert expected_user["title"] != update_data["title"]
     expected_user.update(update_data)
 
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/{id_}", json=update_data, headers=steward_headers
     )
 
@@ -412,7 +452,7 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
     assert not response.text
 
     # request user as data steward to check modification
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
 
@@ -427,7 +467,7 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
 
     # request user as same user
     headers = get_headers_for(id=id_, name="Max Headroom", email="max@example.org")
-    response = client_with_db.get(f"/users/{id_}", headers=headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
 
@@ -438,10 +478,12 @@ def test_patch_user_as_data_steward(client_with_db, user_headers, steward_header
     assert user == expected_user
 
 
-def test_patch_user_partially(client_with_db, user_headers, steward_headers):
+async def test_patch_user_partially(client_with_db, new_user_headers, steward_headers):
     """Test that a data steward can modify a registered user partially."""
     user_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
     assert response.status_code == status.HTTP_201_CREATED
     expected_user = response.json()
     id_ = expected_user["id"]
@@ -453,14 +495,14 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     assert expected_user["status"] != update_data["status"]
     expected_user.update(update_data)
 
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/{id_}", json=update_data, headers=steward_headers
     )
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
 
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
 
@@ -476,14 +518,14 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     assert expected_user["title"] != update_data["title"]
     expected_user.update(update_data)
 
-    response = client_with_db.patch(
+    response = await client_with_db.patch(
         f"/users/{id_}", json=update_data, headers=steward_headers
     )
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
 
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
 
@@ -492,10 +534,14 @@ def test_patch_user_partially(client_with_db, user_headers, steward_headers):
     assert user == expected_user
 
 
-def test_patch_user_as_same_user(client_with_db, user_headers, steward_headers):
+async def test_patch_user_as_same_user(
+    client_with_db, new_user_headers, steward_headers
+):
     """Test that users can modify their title, but not their status."""
     user_data = MAX_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
     assert response.status_code == status.HTTP_201_CREATED
     expected_user = response.json()
     id_ = expected_user["id"]
@@ -504,7 +550,9 @@ def test_patch_user_as_same_user(client_with_db, user_headers, steward_headers):
     update_data = {"status": "inactive"}
     assert expected_user["status"] != update_data["status"]
     headers = get_headers_for(id=id_, name="Max Headroom", email="max@example.org")
-    response = client_with_db.patch(f"/users/{id_}", json=update_data, headers=headers)
+    response = await client_with_db.patch(
+        f"/users/{id_}", json=update_data, headers=headers
+    )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error == {"detail": "Not authorized to make this modification."}
@@ -512,12 +560,14 @@ def test_patch_user_as_same_user(client_with_db, user_headers, steward_headers):
     headers = get_headers_for(
         id=id_, name="Max Headroom", email="max@example.org", role="data_steward"
     )
-    response = client_with_db.patch(f"/users/{id_}", json=update_data, headers=headers)
+    response = await client_with_db.patch(
+        f"/users/{id_}", json=update_data, headers=headers
+    )
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error == {"detail": "Not authorized to make this modification."}
 
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
     assert user == expected_user
@@ -527,21 +577,23 @@ def test_patch_user_as_same_user(client_with_db, user_headers, steward_headers):
     assert expected_user["title"] != update_data["title"]
     expected_user.update(update_data)
     headers = get_headers_for(id=id_, name="Max Headroom", email="max@example.org")
-    response = client_with_db.patch(f"/users/{id_}", json=update_data, headers=headers)
+    response = await client_with_db.patch(
+        f"/users/{id_}", json=update_data, headers=headers
+    )
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
 
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=steward_headers)
 
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
     assert user == expected_user
 
 
-def test_patch_different_user_as_normal_user(client, user_headers):
+async def test_patch_different_user_as_normal_user(client, user_headers):
     """Test that normal users cannot modify other users."""
     update_data = {"title": "Prof."}
-    response = client.patch(
+    response = await client.patch(
         "/users/somebody-else", json=update_data, headers=user_headers
     )
 
@@ -550,60 +602,66 @@ def test_patch_different_user_as_normal_user(client, user_headers):
     assert error == {"detail": "Not authorized to make this modification."}
 
 
-def test_patch_user_unauthenticated(client):
+async def test_patch_user_unauthenticated(client):
     """Test that modifying a user without authentication does not work."""
     update_data = {"title": "Prof."}
-    response = client.patch("/users/foo-bar-baz-qux", json=update_data)
+    response = await client.patch(f"/users/{DUMMY_USER_ID}", json=update_data)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error == {"detail": "Not authenticated"}
 
 
-def test_delete_non_existing_user(client, steward_headers):
+async def test_delete_non_existing_user(client_with_db, steward_headers):
     """Test deleting a non-existing user."""
-    response = client.delete("/users/foo-bar-baz-qux", headers=steward_headers)
+    response = await client_with_db.delete(
+        f"/users/{DUMMY_USER_ID}", headers=steward_headers
+    )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     error = response.json()
     assert error == {"detail": "The user was not found."}
 
 
-def test_delete_user_as_data_steward(client_with_db, user_headers, steward_headers):
+async def test_delete_user_as_data_steward(
+    client_with_db, new_user_headers, steward_headers
+):
     """Test that a registered user can be deleted by a data steward."""
     user_data = MIN_USER_DATA
-    response = client_with_db.post("/users", json=user_data, headers=user_headers)
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
     assert response.status_code == status.HTTP_201_CREATED
     expected_user = response.json()
     id_ = expected_user["id"]
 
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
     assert user["id"] == id_
 
-    response = client_with_db.delete(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.delete(f"/users/{id_}", headers=steward_headers)
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
 
-    response = client_with_db.get(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.get(f"/users/{id_}", headers=steward_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     error = response.json()
     assert error == {"detail": "The user was not found."}
 
-    response = client_with_db.delete(f"/users/{id_}", headers=steward_headers)
+    response = await client_with_db.delete(f"/users/{id_}", headers=steward_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     error = response.json()
     assert error == {"detail": "The user was not found."}
 
 
-def test_delete_user_as_same_user(client):
+async def test_delete_user_as_same_user(client):
     """Test that a registered user can be deleted by a data steward."""
     headers = get_headers_for(
         id="some-id", name="Max Headroom", email="max@example.org"
     )
-    response = client.delete("/users/some-id", headers=headers)
+    response = await client.delete("/users/some-id", headers=headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
@@ -613,16 +671,16 @@ def test_delete_user_as_same_user(client):
     headers = get_headers_for(
         id="some-id", name="Max Headroom", email="max@example.org", role="data_steward"
     )
-    response = client.delete("/users/some-id", headers=headers)
+    response = await client.delete("/users/some-id", headers=headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error == {"detail": "Not authorized to delete this user."}
 
 
-def test_delete_user_unauthenticated(client):
+async def test_delete_user_unauthenticated(client):
     """Test that deleting a user without authentication does not work."""
-    response = client.delete("/users/foo-bar-baz-qux")
+    response = await client.delete(f"/users/{DUMMY_USER_ID}")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()

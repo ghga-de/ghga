@@ -15,26 +15,29 @@
 
 """Fixtures for the user registry integration tests"""
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 
-from fastapi.testclient import TestClient
+from ghga_service_commons.api.testing import AsyncTestClient
 from pydantic import SecretStr
 from pytest import fixture
+from pytest_asyncio import fixture as async_fixture
 from testcontainers.mongodb import MongoDbContainer
 
 from auth_service.config import Config
 from auth_service.deps import get_config
-from auth_service.user_management.api.main import app
+from auth_service.user_management.api.main import app, lifespan
 
 
-@fixture(name="client")
-def fixture_client() -> TestClient:
+@async_fixture(name="client")
+async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
     """Get a test client for the user registry."""
     config = Config(
         include_apis=["users"],
     )  # pyright: ignore
     app.dependency_overrides[get_config] = lambda: config
-    return TestClient(app)
+    async with lifespan(app):
+        async with AsyncTestClient(app) as client:
+            yield client
 
 
 @fixture(name="mongodb", scope="session")
@@ -44,10 +47,10 @@ def fixture_mongodb() -> Generator[MongoDbContainer, None, None]:
         yield mongodb
 
 
-@fixture(name="client_with_db")
-def fixture_client_with_db(
+@async_fixture(name="client_with_db")
+async def fixture_client_with_db(
     mongodb: MongoDbContainer,
-) -> Generator[TestClient, None, None]:
+) -> AsyncGenerator[AsyncTestClient, None]:
     """Get a test client for the user registry with a test database."""
     config = Config(
         db_connection_str=SecretStr(mongodb.get_connection_url()),
@@ -56,6 +59,8 @@ def fixture_client_with_db(
     )  # pyright: ignore
     mongodb.get_connection_client().drop_database(config.db_name)
     app.dependency_overrides[get_config] = lambda: config
-    with TestClient(app) as client:
-        yield client
+    assert app.router.lifespan_context
+    async with lifespan(app):
+        async with AsyncTestClient(app) as client:
+            yield client
     app.dependency_overrides.clear()

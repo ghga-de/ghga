@@ -34,6 +34,8 @@ from auth_service.user_management.user_registry.models.dto import (
     UserStatus,
 )
 
+pytestmark = mark.asyncio(scope="module")
+
 
 class CoreSessionStore(SessionStore):
     """A core user session store for testing."""
@@ -71,7 +73,7 @@ class CoreSessionStore(SessionStore):
         raise NotImplementedError
 
 
-def test_create_session():
+async def test_create_session():
     """Test generation of sessions."""
     config = SessionConfig()
     session_id_bytes = config.session_id_bytes
@@ -117,7 +119,7 @@ def test_create_session():
     assert len(session_id_set & csrf_token_set) < len(session_ids) * 0.25
 
 
-def test_validate_session():
+async def test_validate_session():
     """Test validation of sessions."""
     config = SessionConfig()
     timeout_seconds = config.session_timeout_seconds
@@ -145,7 +147,6 @@ def test_validate_session():
     assert not validate(session)
 
 
-@mark.asyncio
 @mark.parametrize(
     "original_state",
     [
@@ -178,7 +179,6 @@ async def test_update_session_last_used_without_user(original_state: SessionStat
     assert session.last_used == now
 
 
-@mark.asyncio
 @mark.parametrize("changed_field", ["name", "email"])
 async def test_update_session_with_user_to_needs_re_registration(changed_field: str):
     """Test updating a session to the needs-re-registration state."""
@@ -215,7 +215,6 @@ async def test_update_session_with_user_to_needs_re_registration(changed_field: 
     assert session.state is SessionState.NEEDS_RE_REGISTRATION
 
 
-@mark.asyncio
 @mark.parametrize(
     "original_state",
     [
@@ -262,7 +261,6 @@ async def test_update_session_with_user_to_registered(original_state: SessionSta
     assert session.state is SessionState.REGISTERED
 
 
-@mark.asyncio
 @mark.parametrize(
     "original_state",
     [
@@ -317,7 +315,6 @@ async def test_update_session_with_data_steward_to_registered(
     assert session.state is SessionState.REGISTERED
 
 
-@mark.asyncio
 @mark.parametrize(
     "original_state",
     [
@@ -366,7 +363,7 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
     assert session.state is SessionState.HAS_TOTP_TOKEN
 
 
-def test_timeouts():
+async def test_timeouts():
     """Test getting the session timeouts."""
     config = SessionConfig()
     store = CoreSessionStore(config=config)

@@ -28,10 +28,18 @@ def config_for_user_registry() -> None:
 
 
 @fixture(autouse=True, scope="package")
-def user_headers() -> dict[str, str]:
-    """Get headers with authorization for an unregistered user."""
+def new_user_headers() -> dict[str, str]:
+    """Get headers with authorization for a new (unregistered) user."""
     return get_headers_for(
-        ext_id="max@ls.org", name="Max Headroom", email="max@example.org"
+        id="max@ls.org", name="Max Headroom", email="max@example.org"
+    )
+
+
+@fixture(autouse=True, scope="package")
+def user_headers() -> dict[str, str]:
+    """Get headers with authorization for an existing (registered) user."""
+    return get_headers_for(
+        id="max-internal", name="Max Headroom", email="max@example.org"
     )
 
 

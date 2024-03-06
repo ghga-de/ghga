@@ -32,7 +32,6 @@ class UserStatus(str, Enum):
 
     ACTIVE = "active"
     INACTIVE = "inactive"
-    INVALID = "invalid"
 
 
 class AcademicTitle(str, Enum):

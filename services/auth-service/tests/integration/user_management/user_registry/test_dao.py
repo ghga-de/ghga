@@ -36,7 +36,7 @@ from auth_service.user_management.user_registry.models.dto import (
 from auth_service.user_management.user_registry.utils import is_internal_id
 
 
-@mark.asyncio
+@mark.asyncio()
 async def test_user_creation(
     mongodb_fixture,  # noqa: F811
 ):
