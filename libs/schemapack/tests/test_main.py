@@ -23,7 +23,7 @@ import pytest
 from schemapack.exceptions import (
     BaseError,
     DataPackSpecError,
-    DecodeError,
+    ParsingError,
     ValidationError,
 )
 from schemapack.main import load_and_validate
@@ -60,7 +60,7 @@ def test_load_and_validate_invalid(name: str, path: Path):
     if error_type == "DataPackSpecError":
         assert isinstance(exception_info.value, DataPackSpecError)
     elif error_type == "DecodeError":
-        assert isinstance(exception_info.value, DecodeError)
+        assert isinstance(exception_info.value, ParsingError)
     else:
         assert isinstance(exception_info.value, ValidationError)
         error_records = exception_info.value.records

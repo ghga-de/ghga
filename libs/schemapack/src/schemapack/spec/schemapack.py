@@ -33,11 +33,11 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from schemapack.utils import (
-    DecodeError,
     FrozenDict,
     JsonSchemaError,
+    ParsingError,
     assert_valid_json_schema,
-    read_json_or_yaml,
+    read_json_or_yaml_mapping,
 )
 
 SupportedSchemaPackVersions = Literal["0.2.0"]
@@ -256,17 +256,14 @@ class ClassDefinition(FrozenBaseModel):
                 )
 
             try:
-                json_schema_dict = read_json_or_yaml(v)
-            except DecodeError as error:
+                json_schema_dict = read_json_or_yaml_mapping(v)
+            except ParsingError as error:
                 raise PydanticCustomError(
                     "InvalidContentSchemaError",
                     (
-                        "Content schema at the specified path could not be decoded"
-                        + " assuming {assumed_format} format."
+                        "Content schema at the specified path could not be parsed as"
+                        + " valid JSON or YAML."
                     ),
-                    {
-                        "assumed_format": error.assumed_format,
-                    },
                 ) from error
 
             return ContentSchema(json_schema=json.dumps(json_schema_dict))

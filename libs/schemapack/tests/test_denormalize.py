@@ -23,7 +23,7 @@ import pytest
 from schemapack.exceptions import CircularRelationError
 from schemapack.load import load_datapack, load_schemapack
 from schemapack.normalize import denormalize
-from schemapack.utils import read_json_or_yaml
+from schemapack.utils import read_json_or_yaml_mapping
 from tests.fixtures.examples import (
     DENORMALIZED_PATHS,
     VALID_DATAPACK_PATHS,
@@ -41,7 +41,7 @@ def test_denormalize(name: str, expected_denomalizated_path: Path):
     schemapack_name = name.split(".")[0]
     schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS[schemapack_name])
     datapack = load_datapack(VALID_DATAPACK_PATHS[name])
-    expected_denomalizated = read_json_or_yaml(expected_denomalizated_path)
+    expected_denomalizated = read_json_or_yaml_mapping(expected_denomalizated_path)
 
     denomalizated = denormalize(datapack=datapack, schemapack=schemapack)
 

@@ -33,45 +33,34 @@ from immutabledict import immutabledict
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import core_schema
 
-from schemapack.exceptions import DecodeError
+from schemapack.exceptions import ParsingError
 
 yaml = ruamel.yaml.YAML(typ="safe")
 
 
-def read_json_or_yaml(path: Path) -> dict:
-    """Read JSON or YAML data from file. The format is decided based on the file
-    extension. If the file extension is not recognized, YAML is assumed (as it is a
-    superset of JSON).
+def read_json_or_yaml_mapping(path: Path) -> dict:
+    """Reads a JSON object or YAML mapping from file.
 
     Raises:
-        DecodeError: If the file cannot be decoded as JSON or YAML.
+        ParsingError:
+            If the file cannot be decoded as JSON or YAML or does not contain a
+            JSON object or YAML Mapping. Please note, that this parser raise a
+            ParsingError for duplicate keys in both JSON objects and YAML mappings.
     """
     with path.open("r", encoding="utf-8") as file:
-        if path.suffix == ".json":
-            try:
-                data = json.load(file)
-            except json.JSONDecodeError as error:
-                raise DecodeError(
-                    path=path,
-                    assumed_format="JSON",
-                ) from error
-        else:
-            # Even if the file ending does not indicate YAML, we try to parse it as YAML
-            try:
-                data = yaml.load(file)
-            except ruamel.yaml.YAMLError as error:
-                raise DecodeError(
-                    path=path,
-                    assumed_format="YAML",
-                ) from error
+        try:
+            data = yaml.load(file)
+        except ruamel.yaml.YAMLError as error:
+            raise ParsingError(
+                f"The file at '{path}' could not be parsed as JSON or YAML."
+            ) from error
 
-        if not isinstance(data, dict):
-            raise DecodeError(
-                path=path,
-                assumed_format="JSON",
-            )
+    if not isinstance(data, dict):
+        raise ParsingError(
+            f"The file at '{path}' did not contain a JSON object or a YAML mapping."
+        )
 
-        return data
+    return data
 
 
 class JsonSchemaError(ValueError):

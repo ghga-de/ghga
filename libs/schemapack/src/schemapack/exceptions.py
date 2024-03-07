@@ -18,8 +18,7 @@
 
 from abc import ABC
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 import pydantic_core
 
@@ -28,16 +27,8 @@ class BaseError(ABC, Exception):
     """Base class for all schemapack errors."""
 
 
-class DecodeError(BaseError, ValueError):
-    """Raised when decoding JSON or YAML data fails."""
-
-    def __init__(self, path: Path, assumed_format: Literal["JSON", "YAML"]):
-        super().__init__(
-            f"The file at '{path}' could not be decoded assuming {assumed_format}"
-            + " format."
-        )
-        self.path = path
-        self.assumed_format = assumed_format
+class ParsingError(BaseError, ValueError):
+    """Raised when parsing JSON or YAML data fails."""
 
 
 class SpecError(BaseError, ValueError):

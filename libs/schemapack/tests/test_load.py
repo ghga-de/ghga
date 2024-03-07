@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from schemapack.exceptions import DataPackSpecError, DecodeError, SchemaPackSpecError
+from schemapack.exceptions import DataPackSpecError, ParsingError, SchemaPackSpecError
 from schemapack.load import load_datapack, load_schemapack
 from tests.fixtures.examples import (
     INVALID_DATAPACK_PATHS,
@@ -71,7 +71,7 @@ def test_load_datapack_invalid(name: str, path: Path):
     expected_error = (
         DataPackSpecError
         if error_type == "DataPackSpecError"
-        else DecodeError
+        else ParsingError
         if error_type == "DecodeError"
         else None
     )
