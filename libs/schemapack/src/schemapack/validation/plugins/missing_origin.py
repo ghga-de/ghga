@@ -29,7 +29,7 @@ class MissingMandatoryOriginValidationPlugin(ClassValidationPlugin):
     referenced by at least one origin resource for relations that are mandatory at the
     origin end.
 
-    This only aplies to schemapacks classes with relations that are mandatory at the
+    This only applies to schemapacks classes with relations that are mandatory at the
     origin end.
     """
 

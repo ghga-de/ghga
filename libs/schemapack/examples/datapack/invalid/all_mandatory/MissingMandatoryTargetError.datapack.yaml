@@ -1,4 +1,4 @@
-# A origin resource references no target resources through a relation that is defined
+# An origin resource references no target resources through a relation that is defined
 # mandatory at the target end:
 datapack: 0.2.0
 resources:

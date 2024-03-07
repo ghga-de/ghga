@@ -25,7 +25,7 @@ from schemapack.validation.base import GlobalValidationPlugin
 class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
     """A global-scoped validation plugin validating that a datapack has no root resource
     defined.
-    This plugin is only relvant if the schemapack has no root class defined.
+    This plugin is only relevant if the schemapack has no root class defined.
     """
 
     @staticmethod

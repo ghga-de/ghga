@@ -123,7 +123,7 @@ def denormalize(  # noqa: PLR0912,C901
                     and target_id in resource_blacklist[target_class_name]
                 ):
                     raise CircularRelationError(
-                        "Cannot perform denomalization of datapack with circular relations."
+                        "Cannot perform denormalization of datapack with circular relations."
                         + " The circular relation involved the resource with id"
                         + f" {target_id} of class {target_class_name}."
                     )

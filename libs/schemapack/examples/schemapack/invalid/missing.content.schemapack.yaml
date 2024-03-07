@@ -3,4 +3,3 @@ classes:
   Dataset:
     id:
       propertyName: alias
-    # every class must have a content schema, this one does not

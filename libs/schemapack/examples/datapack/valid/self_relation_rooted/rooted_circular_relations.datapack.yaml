@@ -1,5 +1,5 @@
 # This datapack has a circular relation between two resources:
-# (This is valid, but no denomalization can be performed.)
+# (This is valid, but no denormalization can be performed.)
 datapack: 0.2.0
 resources:
   SomeClass:

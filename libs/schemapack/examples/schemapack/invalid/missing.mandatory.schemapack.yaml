@@ -11,7 +11,7 @@ classes:
     relations:
       files:
         targetClass: File
-        # every relation mandatory defined
+        # <- missing mandatory definition
         multiple:
           origin: true
           target: true

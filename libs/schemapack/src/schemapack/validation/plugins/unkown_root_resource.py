@@ -26,7 +26,7 @@ from schemapack.validation.base import GlobalValidationPlugin
 
 class UnkownRootResourceValidationPlugin(GlobalValidationPlugin):
     """A global-scoped validation plugin validating that a datapack has a root resource.
-    This plugin is only relvant for the schemapack has a root class defined.
+    This plugin is only relevant for the schemapack has a root class defined.
     """
 
     @staticmethod
@@ -51,11 +51,11 @@ class UnkownRootResourceValidationPlugin(GlobalValidationPlugin):
         root_class_resources = datapack.resources.get(self._root_class)
 
         if not root_class_resources:
-            # This is a validation error but needs to be handeled elsewhere:
+            # This is a validation error but needs to be handled elsewhere:
             return
 
         if not datapack.root_resource:
-            # this is a validation error but needs to be handeled elsewhere:
+            # this is a validation error but needs to be handled elsewhere:
             return
 
         if datapack.root_resource not in root_class_resources:

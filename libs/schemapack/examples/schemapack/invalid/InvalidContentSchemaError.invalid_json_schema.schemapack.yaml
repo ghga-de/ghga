@@ -1,4 +1,5 @@
 schemapack: 0.2.0
+description:
 classes:
   Dataset:
     id:

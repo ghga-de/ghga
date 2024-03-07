@@ -24,7 +24,7 @@ from schemapack.validation.base import GlobalValidationPlugin
 
 class ExpectedRootValidationPlugin(GlobalValidationPlugin):
     """A global-scoped validation plugin validating that a datapack has a root resource.
-    This plugin is only relvant if the schemapack has a root class defined.
+    This plugin is only relevant if the schemapack has a root class defined.
     """
 
     @staticmethod

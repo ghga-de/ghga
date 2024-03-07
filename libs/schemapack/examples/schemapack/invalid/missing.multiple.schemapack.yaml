@@ -14,4 +14,4 @@ classes:
         mandatory:
           origin: true
           target: true
-        # every relation multiple defined
+        # <- missing multiple definition
