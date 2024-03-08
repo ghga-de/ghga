@@ -15,28 +15,37 @@
 
 """Config Parameter Modeling and Parsing."""
 
-from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
-from .models import SupportedLanguages
+from nos.translators.inbound.event_sub import EventSubTranslatorConfig
+from nos.translators.outbound.event_pub import NotificationEmitterConfig
 
-SERVICE_NAME: str = "my_microservice"  # Please adapt
+SERVICE_NAME: str = "nos"
 
 
-# Please adapt config prefix and remove unnecessary config bases:
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, LoggingConfig):
+class Config(
+    LoggingConfig,
+    KafkaConfig,
+    EventSubTranslatorConfig,
+    NotificationEmitterConfig,
+    MongoDbConfig,
+):
     """Config parameters and their defaults."""
 
     service_name: str = Field(
-        default=SERVICE_NAME, description="Short name of this service"
+        default=SERVICE_NAME,
+        description=(
+            "The Notification Orchestration Service controls the creation of"
+            + " notification events."
+        ),
     )
 
-    language: SupportedLanguages = Field(
-        default="Croatian", description="The language."
+    central_data_stewardship_email: str = Field(
+        default=...,
+        description="The email address of the central data steward.",
     )
-
-
-CONFIG = Config()

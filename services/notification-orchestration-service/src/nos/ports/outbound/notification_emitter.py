@@ -12,22 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package."""
+"""Outbound port for sending notifications."""
 
-import asyncio
+from abc import ABC, abstractmethod
 
-from ghga_service_commons.api import run_server
+from nos.core.notifications import Notification
 
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
-
-
-def run(config: Config = CONFIG):
-    """Run the service."""
-    # Please adapt to package name
-    asyncio.run(run_server(app="my_microservice.__main__:app", config=config))
+__all__ = ["NotificationEmitterPort"]
 
 
-if __name__ == "__main__":
-    run()
+class NotificationEmitterPort(ABC):
+    """Emits notification events."""
+
+    @abstractmethod
+    async def notify(
+        self, *, email: str, full_name: str, notification: Notification
+    ) -> None:
+        """Send notification to the specified email address."""
+        ...

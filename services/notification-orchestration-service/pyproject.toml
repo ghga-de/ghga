@@ -21,24 +21,24 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "my_microservice"
+name = "nos"
 version = "0.1.0"
-description = "My-Microservice - a short description"
+description = "The Notification Orchestration Service controls the creation of notification events."
 dependencies = [
     "typer >= 0.9.0",
-    "ghga-service-commons[api] >= 1.2.0",
-    "ghga-event-schemas >= 1.0.0",
-    "hexkit[akafka,s3,mongodb] >= 1.1.0",
+    "ghga-service-commons[api] >= 3.0.0",
+    "ghga-event-schemas >= 3.0.0",
+    "hexkit[akafka,s3,mongodb] >= 2.1.0",
 ]
 
 [project.license]
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/my-microservice"
+Repository = "https://github.com/ghga-de/notification-orchestration-service"
 
 [project.scripts]
-my-microservice = "my_microservice.__main__:run"
+nos = "nos.__main__:run"
 
 [tool.setuptools.packages.find]
 where = [

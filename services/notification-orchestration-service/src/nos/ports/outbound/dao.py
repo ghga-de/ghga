@@ -12,9 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Short description of package."""  # Please adapt to package
+"""DAO interface for accessing the database."""
 
-from importlib.metadata import version
+from hexkit.protocols.dao import DaoSurrogateId, ResourceNotFoundError
 
-__version__ = version(__package__)
+from nos.core import models
+
+__all__ = ["UserDaoPort", "ResourceNotFoundError"]
+
+# ports described by type aliases:
+UserDaoPort = DaoSurrogateId[models.User, models.UserData]

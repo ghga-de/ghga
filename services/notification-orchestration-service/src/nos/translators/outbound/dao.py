@@ -12,13 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Test dummy."""
+"""DAO translator constructor"""
 
-from my_microservice.core.greeting import generate_greeting
+from hexkit.protocols.dao import DaoFactoryProtocol
+
+from nos.core import models
+from nos.ports.outbound.dao import UserDaoPort
 
 
-def test_dummy():
-    """A very simple example test."""
-    greeting = generate_greeting("monde", "French", True)
-    assert greeting.message == "Salut monde!"
+async def user_dao_factory(*, dao_factory: DaoFactoryProtocol) -> UserDaoPort:
+    """Construct a UserDaoPort from the provided dao_factory"""
+    return await dao_factory.get_dao(
+        name="users",
+        dto_model=models.User,
+        id_field="id",
+        dto_creation_model=models.UserData,
+    )

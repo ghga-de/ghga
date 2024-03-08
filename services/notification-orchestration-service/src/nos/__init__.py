@@ -13,11 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""FastAPI dependencies (used with the `Depends` feature)."""
+"""The Notification Orchestration Service controls the creation of notification events."""
 
-from ..config import CONFIG
+from importlib.metadata import version
 
-
-def get_config():
-    """Get runtime configuration."""
-    return CONFIG
+__version__ = version(__package__)
