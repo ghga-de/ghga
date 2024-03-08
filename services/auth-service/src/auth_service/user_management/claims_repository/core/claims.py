@@ -22,7 +22,7 @@ from typing import Callable, Optional
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 from ....config import CONFIG
-from ..models.dto import AuthorityLevel, Claim, ClaimFullCreation, VisaType
+from ..models.claims import AuthorityLevel, Claim, ClaimFullCreation, VisaType
 
 __all__ = [
     "create_controlled_access_claim",

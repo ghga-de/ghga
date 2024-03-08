@@ -30,7 +30,7 @@ import nacl.utils
 # this library is very simple and could also implemented directly if necessary
 import pyotp
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
-from pydantic import AnyHttpUrl, BaseModel, Field, SecretStr
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings
 
 from ..ports.totp import TOTPHandlerPort
@@ -143,7 +143,7 @@ class TOTPToken(BaseModel):
         " (0 means no attempts so far, -1 means successful verification)",
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")
 
 
 class TOTPHandler(TOTPHandlerPort[TOTPToken]):

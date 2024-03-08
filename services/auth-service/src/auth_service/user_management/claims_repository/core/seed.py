@@ -35,13 +35,13 @@ from auth_service.user_management.claims_repository.deps import (
     get_claim_dao,
     get_claim_dao_factory,
 )
-from auth_service.user_management.claims_repository.models.dto import VisaType
+from auth_service.user_management.claims_repository.models.claims import VisaType
 from auth_service.user_management.user_registry.deps import (
     UserDao,
     get_user_dao,
     get_user_dao_factory,
 )
-from auth_service.user_management.user_registry.models.dto import (
+from auth_service.user_management.user_registry.models.users import (
     User,
     UserData,
     UserStatus,

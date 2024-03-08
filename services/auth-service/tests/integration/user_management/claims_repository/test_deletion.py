@@ -27,7 +27,7 @@ from pytest import LogCaptureFixture, mark, raises
 
 from auth_service.__main__ import get_claim_dao, prepare_event_subscriber
 from auth_service.config import CONFIG
-from auth_service.user_management.claims_repository.models.dto import (
+from auth_service.user_management.claims_repository.models.claims import (
     AuthorityLevel,
     Claim,
     VisaType,

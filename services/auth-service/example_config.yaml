@@ -37,6 +37,7 @@ generate_correlation_id: true
 host: 0.0.0.0
 include_apis:
 - users
+ivas_collection: ivas
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092

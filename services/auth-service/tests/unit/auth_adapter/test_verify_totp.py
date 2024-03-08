@@ -31,7 +31,7 @@ from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.core.verify_totp import verify_totp
 from auth_service.auth_adapter.ports.dao import UserToken, UserTokenDao
 from auth_service.config import Config
-from auth_service.user_management.user_registry.models.dto import UserStatus
+from auth_service.user_management.user_registry.models.users import UserStatus
 from auth_service.user_management.user_registry.ports.dao import UserDao
 
 from ...fixtures.utils import DummyUserDao, DummyUserTokenDao

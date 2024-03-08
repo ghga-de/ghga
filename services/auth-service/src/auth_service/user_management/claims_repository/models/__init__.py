@@ -16,3 +16,13 @@
 """
 This sub-package contains the models used in the claims repository service.
 """
+
+from pydantic import BaseModel, ConfigDict
+
+__all__ = ["BaseDto"]
+
+
+class BaseDto(BaseModel):
+    """Base model pre-configured for use as data transfer object."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)

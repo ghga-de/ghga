@@ -124,6 +124,8 @@ The service requires the following configuration parameters:
 
 - **`user_tokens_collection`** *(string)*: Name of the collection for user tokens. Default: `"user_tokens"`.
 
+- **`ivas_collection`** *(string)*: Name of the collection for IVAs. Default: `"ivas"`.
+
 - **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 

@@ -22,18 +22,18 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
 )
 from pytest import mark
 
+from auth_service.user_management.user_registry.core.registry import UserRegistry
 from auth_service.user_management.user_registry.deps import (
     get_config,
     get_user_dao_factory,
 )
-from auth_service.user_management.user_registry.models.dto import (
+from auth_service.user_management.user_registry.models.users import (
     AcademicTitle,
     StatusChange,
     User,
     UserData,
     UserStatus,
 )
-from auth_service.user_management.user_registry.utils import is_internal_id
 
 
 @mark.asyncio()
@@ -72,5 +72,5 @@ async def test_user_creation(
         assert user.title == user_data.title
         assert user.email == user_data.email
         assert user.registration_date == user_data.registration_date
-        assert is_internal_id(user.id)
+        assert UserRegistry.is_internal_user_id(user.id)
         assert user.status_change == user_data.status_change

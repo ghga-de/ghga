@@ -19,7 +19,7 @@
 from abc import ABC, abstractmethod
 
 from hexkit.protocols.dao import DaoNaturalId
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypeAlias  # in typing only since Python 3.10
 
 from ..core.totp import TOTPToken
@@ -38,7 +38,7 @@ class UserToken(BaseModel):
     )
     totp_token: TOTPToken = Field(default=..., description="The TOTP token of the user")
 
-    model_config = {"extra": "forbid", "frozen": True}
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 UserTokenDao: TypeAlias = DaoNaturalId[UserToken]

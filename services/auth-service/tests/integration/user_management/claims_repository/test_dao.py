@@ -26,7 +26,7 @@ from auth_service.user_management.claims_repository.deps import (
     get_claim_dao_factory,
     get_config,
 )
-from auth_service.user_management.claims_repository.models.dto import (
+from auth_service.user_management.claims_repository.models.claims import (
     Claim,
     ClaimFullCreation,
     VisaType,

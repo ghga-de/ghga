@@ -19,10 +19,11 @@ from datetime import datetime
 from typing import cast
 
 from fastapi import status
+from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import mark
 
-from auth_service.user_management.user_registry.utils import is_internal_id
+from auth_service.user_management.user_registry.core.registry import UserRegistry
 
 from ....fixtures.utils import get_headers_for
 from .fixtures import (  # noqa: F401
@@ -57,7 +58,7 @@ def seconds_passed(date_string: str) -> float:
     ).total_seconds()
 
 
-async def test_health_check(client):
+async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
     response = await client.get("/health")
 
@@ -65,14 +66,16 @@ async def test_health_check(client):
     assert response.json() == {"status": "OK"}
 
 
-async def test_get_from_a_random_path(client):
+async def test_get_from_a_random_path(client: AsyncTestClient):
     """Test that a GET request to a random path raises a not found error."""
     response = await client.post("/some/random/path")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_post_user(client_with_db, new_user_headers):
+async def test_post_user(
+    client_with_db: AsyncTestClient, new_user_headers: dict[str, str]
+):
     """Test that registering a user works."""
     user_data = MAX_USER_DATA
     response = await client_with_db.post(
@@ -83,7 +86,7 @@ async def test_post_user(client_with_db, new_user_headers):
     user = response.json()
 
     id_ = user.pop("id", None)
-    assert is_internal_id(id_)
+    assert UserRegistry.is_internal_user_id(id_)
 
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
@@ -103,7 +106,9 @@ async def test_post_user(client_with_db, new_user_headers):
     assert error == {"detail": "User was already registered."}
 
 
-async def test_post_user_with_minimal_data(client_with_db, new_user_headers):
+async def test_post_user_with_minimal_data(
+    client_with_db: AsyncTestClient, new_user_headers: dict[str, str]
+):
     """Test that registering a user with minimal data works."""
     user_data = MIN_USER_DATA
     response = await client_with_db.post(
@@ -114,7 +119,7 @@ async def test_post_user_with_minimal_data(client_with_db, new_user_headers):
     user = response.json()
 
     id_ = user.pop("id", None)
-    assert is_internal_id(id_)
+    assert UserRegistry.is_internal_user_id(id_)
 
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
@@ -134,7 +139,9 @@ async def test_post_user_with_minimal_data(client_with_db, new_user_headers):
     assert error == {"detail": "User was already registered."}
 
 
-async def test_post_user_with_status(client_with_db, new_user_headers):
+async def test_post_user_with_status(
+    client_with_db: AsyncTestClient, new_user_headers: dict[str, str]
+):
     """Test that status field is rejected when registering a user."""
     user_data = {**MIN_USER_DATA, "status": "active"}
     response = await client_with_db.post(
@@ -144,7 +151,9 @@ async def test_post_user_with_status(client_with_db, new_user_headers):
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-async def test_post_user_with_different_name(client, new_user_headers):
+async def test_post_user_with_different_name(
+    client: AsyncTestClient, new_user_headers: dict[str, str]
+):
     """Test that registering a user with different name does not work."""
     user_data = {**MAX_USER_DATA, "name": "Max Liebermann"}
     response = await client.post("/users", json=user_data, headers=new_user_headers)
@@ -154,7 +163,9 @@ async def test_post_user_with_different_name(client, new_user_headers):
     assert error["detail"] == "User cannot be registered."
 
 
-async def test_post_user_with_different_email(client, new_user_headers):
+async def test_post_user_with_different_email(
+    client: AsyncTestClient, new_user_headers: dict[str, str]
+):
     """Test that registering a user with different email does not work."""
     user_data = {**MAX_USER_DATA, "email": "max@fake.org"}
     response = await client.post("/users", json=user_data, headers=new_user_headers)
@@ -164,7 +175,9 @@ async def test_post_user_with_different_email(client, new_user_headers):
     assert error["detail"] == "User cannot be registered."
 
 
-async def test_post_user_with_invalid_email(client, new_user_headers):
+async def test_post_user_with_invalid_email(
+    client: AsyncTestClient, new_user_headers: dict[str, str]
+):
     """Test that registering a user with invalid email does not work."""
     user_data = {**MAX_USER_DATA, "email": "invalid"}
     response = await client.post("/users", json=user_data, headers=new_user_headers)
@@ -174,7 +187,9 @@ async def test_post_user_with_invalid_email(client, new_user_headers):
     assert "The email address is not valid." in error["detail"][0]["msg"]
 
 
-async def test_post_user_with_different_ext_id(client, new_user_headers):
+async def test_post_user_with_different_ext_id(
+    client: AsyncTestClient, new_user_headers: dict[str, str]
+):
     """Test that registering a user with a different external ID does not work."""
     user_data = {**MAX_USER_DATA, "ext_id": "frodo@ls.org"}
     response = await client.post("/users", json=user_data, headers=new_user_headers)
@@ -184,7 +199,9 @@ async def test_post_user_with_different_ext_id(client, new_user_headers):
     assert error["detail"] == "Not authorized to register user."
 
 
-async def test_post_user_with_existing_user(client, user_headers):
+async def test_post_user_with_existing_user(
+    client: AsyncTestClient, user_headers: dict[str, str]
+):
     """Test that registering a user with an internal ID does not work."""
     # actually it's not even possible to specify an internal address here
     user_data = {**MAX_USER_DATA, "ext_id": "max-internal"}
@@ -195,7 +212,7 @@ async def test_post_user_with_existing_user(client, user_headers):
     assert "The email address is not valid." in error["detail"][0]["msg"]
 
 
-async def test_post_user_unauthenticated(client_with_db):
+async def test_post_user_unauthenticated(client_with_db: AsyncTestClient):
     """Test that registering a user without authentication does not work."""
     response = await client_with_db.post("/users", json=MAX_USER_DATA)
 
@@ -204,7 +221,9 @@ async def test_post_user_unauthenticated(client_with_db):
     assert error["detail"] == "Not authenticated"
 
 
-async def test_put_user(client_with_db, new_user_headers):
+async def test_put_user(
+    client_with_db: AsyncTestClient, new_user_headers: dict[str, str]
+):
     """Test that updating a user works."""
     old_data = MAX_USER_DATA
     response = await client_with_db.post(
@@ -212,7 +231,7 @@ async def test_put_user(client_with_db, new_user_headers):
     )
     assert response.status_code == status.HTTP_201_CREATED
     id_ = response.json()["id"]
-    assert is_internal_id(id_)
+    assert UserRegistry.is_internal_user_id(id_)
 
     new_data = {"name": "Max Headhall", "email": "head@example.org", "title": "Prof."}
     for key, value in new_data.items():
@@ -239,13 +258,13 @@ async def test_put_user(client_with_db, new_user_headers):
     assert user == new_data
 
 
-async def test_put_nonexisting_user_with_invalid_id(client_with_db):
+async def test_put_non_existing_user_with_invalid_id(client_with_db: AsyncTestClient):
     """Test updating a non-existing user with an invalid user ID."""
     user_data = MAX_USER_DATA.copy()
     del user_data["ext_id"]
 
-    id_ = "nonexisting-user-id"
-    assert not is_internal_id(id_)
+    id_ = "non-existing-user-id"
+    assert not UserRegistry.is_internal_user_id(id_)
     headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
 
     response = await client_with_db.put(
@@ -256,7 +275,7 @@ async def test_put_nonexisting_user_with_invalid_id(client_with_db):
     assert error["detail"] == "User cannot be updated."
 
 
-async def test_put_nonexisting_user_with_valid_id(client_with_db):
+async def test_put_non_existing_user_with_valid_id(client_with_db: AsyncTestClient):
     """Test updating a non-existing user with a valid user ID."""
     user_data = MAX_USER_DATA.copy()
     del user_data["ext_id"]
@@ -272,10 +291,10 @@ async def test_put_nonexisting_user_with_valid_id(client_with_db):
     assert error["detail"] == "User does not exist."
 
 
-async def test_put_user_with_too_much_data(client_with_db):
+async def test_put_user_with_too_much_data(client_with_db: AsyncTestClient):
     """Test that updating a user with too much data does not work."""
     user_data = MAX_USER_DATA
-    id_ = "nonexisting-user-id"
+    id_ = "non-existing-user-id"
     headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
 
     response = await client_with_db.put(
@@ -286,11 +305,11 @@ async def test_put_user_with_too_much_data(client_with_db):
     assert "Extra inputs are not permitted" in error["detail"][0]["msg"]
 
 
-async def test_put_user_with_invalid_data(client_with_db):
+async def test_put_user_with_invalid_data(client_with_db: AsyncTestClient):
     """Test that updating a user with invalid email does not work."""
     user_data = MAX_USER_DATA.copy()
     del user_data["ext_id"]
-    id_ = "nonexisting-user-id"
+    id_ = "non-existing-user-id"
     headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
 
     user_data["email"] = "invalid"
@@ -303,10 +322,10 @@ async def test_put_user_with_invalid_data(client_with_db):
     assert "email address is not valid" in error["detail"][0]["msg"]
 
 
-async def test_put_user_unauthenticated(client_with_db):
+async def test_put_user_unauthenticated(client_with_db: AsyncTestClient):
     """Test that updating a user without authentication does not work."""
     response = await client_with_db.put(
-        "/users/nonexisting-user-id", json=MAX_USER_DATA
+        "/users/non-existing-user-id", json=MAX_USER_DATA
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -314,7 +333,9 @@ async def test_put_user_unauthenticated(client_with_db):
     assert error["detail"] == "Not authenticated"
 
 
-async def test_get_non_existing_user(client_with_db, steward_headers):
+async def test_get_non_existing_user(
+    client_with_db: AsyncTestClient, steward_headers: dict[str, str]
+):
     """Test requesting a non-existing user."""
     response = await client_with_db.get(
         f"/users/{DUMMY_USER_ID}", headers=steward_headers
@@ -325,7 +346,9 @@ async def test_get_non_existing_user(client_with_db, steward_headers):
     assert error == {"detail": "The user was not found."}
 
 
-async def test_get_different_user(client, user_headers):
+async def test_get_different_user(
+    client: AsyncTestClient, user_headers: dict[str, str]
+):
     """Test requesting a different user."""
     response = await client.get("/users/fred-internal", headers=user_headers)
 
@@ -334,7 +357,11 @@ async def test_get_different_user(client, user_headers):
     assert error == {"detail": "Not authorized to request user."}
 
 
-async def test_get_user_via_id(client_with_db, new_user_headers, user_headers):
+async def test_get_user_via_id(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    user_headers: dict[str, str],
+):
     """Test that a registered user can be found via internal ID."""
     user_data = MAX_USER_DATA
     response = await client_with_db.post(
@@ -359,7 +386,11 @@ async def test_get_user_via_id(client_with_db, new_user_headers, user_headers):
     assert user == expected_user
 
 
-async def test_get_user_via_ext_id(client_with_db, new_user_headers, user_headers):
+async def test_get_user_via_ext_id(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    user_headers: dict[str, str],
+):
     """Test that a registered user cannot be found via external ID."""
     user_data = MAX_USER_DATA
     response = await client_with_db.post(
@@ -384,7 +415,9 @@ async def test_get_user_via_ext_id(client_with_db, new_user_headers, user_header
 
 
 async def test_get_different_user_as_data_steward(
-    client_with_db, new_user_headers, steward_headers
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
 ):
     """Test requesting a different user as a data steward."""
     user_data = MAX_USER_DATA
@@ -403,7 +436,7 @@ async def test_get_different_user_as_data_steward(
     assert user == expected_user
 
 
-async def test_get_user_unauthenticated(client):
+async def test_get_user_unauthenticated(client: AsyncTestClient):
     """Test requesting a user without authentication."""
     response = await client.get("/users/foo-bar-baz-qux")
 
@@ -412,7 +445,9 @@ async def test_get_user_unauthenticated(client):
     assert error == {"detail": "Not authenticated"}
 
 
-async def test_patch_non_existing_user(client_with_db, steward_headers):
+async def test_patch_non_existing_user(
+    client_with_db: AsyncTestClient, steward_headers: dict[str, str]
+):
     """Test modifying a non-existing user."""
     update_data = {"title": "Prof."}
     response = await client_with_db.patch(
@@ -425,7 +460,9 @@ async def test_patch_non_existing_user(client_with_db, steward_headers):
 
 
 async def test_patch_user_as_data_steward(
-    client_with_db, new_user_headers, steward_headers
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
 ):
     """Test that a data steward can modify a registered user."""
     user_data = MAX_USER_DATA
@@ -478,7 +515,11 @@ async def test_patch_user_as_data_steward(
     assert user == expected_user
 
 
-async def test_patch_user_partially(client_with_db, new_user_headers, steward_headers):
+async def test_patch_user_partially(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
     """Test that a data steward can modify a registered user partially."""
     user_data = MAX_USER_DATA
     response = await client_with_db.post(
@@ -535,7 +576,9 @@ async def test_patch_user_partially(client_with_db, new_user_headers, steward_he
 
 
 async def test_patch_user_as_same_user(
-    client_with_db, new_user_headers, steward_headers
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
 ):
     """Test that users can modify their title, but not their status."""
     user_data = MAX_USER_DATA
@@ -590,7 +633,9 @@ async def test_patch_user_as_same_user(
     assert user == expected_user
 
 
-async def test_patch_different_user_as_normal_user(client, user_headers):
+async def test_patch_different_user_as_normal_user(
+    client: AsyncTestClient, user_headers: dict[str, str]
+):
     """Test that normal users cannot modify other users."""
     update_data = {"title": "Prof."}
     response = await client.patch(
@@ -602,7 +647,7 @@ async def test_patch_different_user_as_normal_user(client, user_headers):
     assert error == {"detail": "Not authorized to make this modification."}
 
 
-async def test_patch_user_unauthenticated(client):
+async def test_patch_user_unauthenticated(client: AsyncTestClient):
     """Test that modifying a user without authentication does not work."""
     update_data = {"title": "Prof."}
     response = await client.patch(f"/users/{DUMMY_USER_ID}", json=update_data)
@@ -612,7 +657,9 @@ async def test_patch_user_unauthenticated(client):
     assert error == {"detail": "Not authenticated"}
 
 
-async def test_delete_non_existing_user(client_with_db, steward_headers):
+async def test_delete_non_existing_user(
+    client_with_db: AsyncTestClient, steward_headers: dict[str, str]
+):
     """Test deleting a non-existing user."""
     response = await client_with_db.delete(
         f"/users/{DUMMY_USER_ID}", headers=steward_headers
@@ -624,7 +671,9 @@ async def test_delete_non_existing_user(client_with_db, steward_headers):
 
 
 async def test_delete_user_as_data_steward(
-    client_with_db, new_user_headers, steward_headers
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
 ):
     """Test that a registered user can be deleted by a data steward."""
     user_data = MIN_USER_DATA
@@ -656,7 +705,7 @@ async def test_delete_user_as_data_steward(
     assert error == {"detail": "The user was not found."}
 
 
-async def test_delete_user_as_same_user(client):
+async def test_delete_user_as_same_user(client: AsyncTestClient):
     """Test that a registered user can be deleted by a data steward."""
     headers = get_headers_for(
         id="some-id", name="Max Headroom", email="max@example.org"
@@ -678,10 +727,300 @@ async def test_delete_user_as_same_user(client):
     assert error == {"detail": "Not authorized to delete this user."}
 
 
-async def test_delete_user_unauthenticated(client):
+async def test_delete_user_unauthenticated(client: AsyncTestClient):
     """Test that deleting a user without authentication does not work."""
     response = await client.delete(f"/users/{DUMMY_USER_ID}")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error == {"detail": "Not authenticated"}
+
+
+async def test_crud_operations_for_ivas(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+):
+    """Test all CRUD operations for IVAs."""
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
+
+    # Create two IVAs
+    data = {"type": "Phone", "value": "123"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id = response.json()
+    assert isinstance(iva_id, dict)
+    assert list(iva_id) == ["id"]
+    iva_id_phone = iva_id["id"]
+    assert iva_id_phone
+
+    data = {"type": "Fax", "value": "456"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id = response.json()
+    assert isinstance(iva_id, dict)
+    assert list(iva_id) == ["id"]
+    iva_id_fax = iva_id["id"]
+    assert iva_id_fax
+
+    # Retrieve the IVAs
+    response = await client_with_db.get(f"/users/{user_id}/ivas", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 2
+
+    ivas.sort(key=lambda iva: iva["value"])
+    for iva in ivas:
+        for date_field in ("created", "changed"):
+            assert 0 <= seconds_passed(iva.pop(date_field)) <= 10
+    assert ivas == [
+        {
+            "id": iva_id_phone,
+            "type": "Phone",
+            "value": "123",
+            "state": "Unverified",
+        },
+        {
+            "id": iva_id_fax,
+            "type": "Fax",
+            "value": "456",
+            "state": "Unverified",
+        },
+    ]
+
+    # Delete one IVA
+    response = await client_with_db.delete(
+        f"/users/{user_id}/ivas/{iva_id_fax}", headers=headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    # Check that only the other IVA is left
+    response = await client_with_db.get(f"/users/{user_id}/ivas", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    assert ivas[0]["id"] == iva_id_phone
+
+    # Delete the remaining IVA
+    response = await client_with_db.delete(
+        f"/users/{user_id}/ivas/{iva_id_phone}", headers=headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    # Check that no IVA is left
+    response = await client_with_db.get(f"/users/{user_id}/ivas", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert not ivas
+
+
+async def test_crud_operations_for_ivas_as_data_steward(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test all CRUD operations for IVAs as a data steward."""
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    # Create an IVA
+    data = {"type": "Phone", "value": "123/456"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id_obj = response.json()
+    assert isinstance(iva_id_obj, dict)
+    assert list(iva_id_obj) == ["id"]
+    iva_id = iva_id_obj["id"]
+    assert iva_id
+
+    # Retrieve the IVA
+    response = await client_with_db.get(
+        f"/users/{user_id}/ivas", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+
+    iva = ivas[0]
+    for date_field in ("created", "changed"):
+        assert 0 <= seconds_passed(iva.pop(date_field)) <= 10
+    assert iva == {
+        "id": iva_id,
+        "type": "Phone",
+        "value": "123/456",
+        "state": "Unverified",
+    }
+
+    # Delete the IVA
+    response = await client_with_db.delete(
+        f"/users/{user_id}/ivas/{iva_id}", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    # Check that no IVA is left
+    response = await client_with_db.get(
+        f"/users/{user_id}/ivas", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert not ivas
+
+
+async def test_crud_operations_for_ivas_as_another_user(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test that all CRUD operations for IVAs with a different user fail."""
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    # Create an IVA
+    data = {"type": "InPerson", "value": "Hi there!"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=user_headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error["detail"] == "Not authorized to create this IVA."
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id = response.json()["id"]
+    assert iva_id
+
+    # Retrieve the IVA
+    response = await client_with_db.get(f"/users/{user_id}/ivas", headers=user_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error["detail"] == "Not authorized to request these IVAs."
+    response = await client_with_db.get(
+        f"/users/{user_id}/ivas", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    assert ivas[0]["id"] == iva_id
+
+    # Delete the IVA
+    response = await client_with_db.delete(
+        f"/users/{user_id}/ivas/{iva_id}", headers=user_headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error["detail"] == "Not authorized to delete this IVA."
+    response = await client_with_db.delete(
+        f"/users/{user_id}/ivas/{iva_id}", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # Check that no IVA is left
+    response = await client_with_db.get(f"/users/{user_id}/ivas", headers=user_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error["detail"] == "Not authorized to request these IVAs."
+    response = await client_with_db.get(
+        f"/users/{user_id}/ivas", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert not ivas
+
+
+async def test_create_iva_for_non_existing_user_as_data_steward(
+    client_with_db: AsyncTestClient,
+    steward_headers: dict[str, str],
+):
+    """Test creating an IVA for a non-existing user as a data steward."""
+    data = {"type": "InPerson", "value": "Hi there!"}
+    response = await client_with_db.post(
+        "/users/non-existing-user-id/ivas", json=data, headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    error = response.json()
+    assert error["detail"] == "The user was not found."
+
+
+async def test_get_ivas_for_non_existing_user_as_data_steward(
+    client_with_db: AsyncTestClient,
+    steward_headers: dict[str, str],
+):
+    """Test getting all IVAs of a non-existing user as a data steward."""
+    response = await client_with_db.get(
+        "/users/non-existing-user-id/ivas", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert not ivas
+
+
+async def test_deleting_iva_for_non_existing_user_as_data_steward(
+    client_with_db: AsyncTestClient,
+    steward_headers: dict[str, str],
+):
+    """Test deleting an IVA for a non-existing user as a data steward."""
+    response = await client_with_db.delete(
+        "/users/non-existing-user-id/ivas/non-existing-iva-id", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    error = response.json()
+    assert error["detail"] == "The IVA was not found."
+
+
+async def test_deleting_non_existing_iva_for_existing_user_as_data_steward(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test deleting a non-existing IVA for an existing user as a data steward."""
+    user_data = MIN_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user_id = response.json()["id"]
+    response = await client_with_db.delete(
+        f"/users/{user_id}/ivas/non-existing-iva-id", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    error = response.json()
+    assert error["detail"] == "The IVA was not found."

@@ -115,6 +115,12 @@
       "title": "User Tokens Collection",
       "type": "string"
     },
+    "ivas_collection": {
+      "default": "ivas",
+      "description": "Name of the collection for IVAs",
+      "title": "Ivas Collection",
+      "type": "string"
+    },
     "db_connection_str": {
       "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
       "examples": [

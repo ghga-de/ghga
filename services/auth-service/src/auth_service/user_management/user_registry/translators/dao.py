@@ -20,9 +20,11 @@ from hexkit.protocols.dao import DaoFactoryProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from ..models.dto import User as UserDto
-from ..models.dto import UserData as UserCreationDto
-from ..ports.dao import UserDao, UserDaoFactoryPort
+from ..models.ivas import Iva as IvaDto
+from ..models.ivas import IvaFullData as IvaCreationDto
+from ..models.users import User as UserDto
+from ..models.users import UserData as UserCreationDto
+from ..ports.dao import IvaDao, UserDao, UserDaoFactoryPort
 
 __all__ = ["UserDaoFactory", "UserDaoConfig"]
 
@@ -35,6 +37,9 @@ class UserDaoConfig(BaseSettings):
     )
     user_tokens_collection: str = Field(
         default="user_tokens", description="Name of the collection for user tokens"
+    )
+    ivas_collection: str = Field(
+        default="ivas", description="Name of the collection for IVAs"
     )
 
 
@@ -55,4 +60,13 @@ class UserDaoFactory(UserDaoFactoryPort):
             dto_model=UserDto,
             id_field="id",
             dto_creation_model=UserCreationDto,
+        )
+
+    async def get_iva_dao(self) -> IvaDao:
+        """Construct a DAO for interacting with IVA data in a database."""
+        return await self._dao_factory.get_dao(
+            name=self._collection,
+            dto_model=IvaDto,
+            id_field="id",
+            dto_creation_model=IvaCreationDto,
         )

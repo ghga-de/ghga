@@ -31,7 +31,7 @@ from auth_service.user_management.claims_repository.core.claims import (
     is_internal_claim,
     is_valid_claim,
 )
-from auth_service.user_management.claims_repository.models.dto import (
+from auth_service.user_management.claims_repository.models.claims import (
     AuthorityLevel,
     Claim,
     VisaType,

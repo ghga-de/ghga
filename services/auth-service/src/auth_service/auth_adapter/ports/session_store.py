@@ -19,7 +19,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BaseSession(BaseModel, ABC):
@@ -27,7 +27,7 @@ class BaseSession(BaseModel, ABC):
 
     session_id: str = Field(default=..., description="Unique session ID")
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")
 
 
 T = TypeVar("T", bound=BaseSession)

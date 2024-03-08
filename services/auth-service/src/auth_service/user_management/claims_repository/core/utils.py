@@ -24,7 +24,7 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from auth_service.user_management.user_registry.deps import UserDao
 
 from ..deps import ClaimDao
-from ..models.dto import VisaType
+from ..models.claims import VisaType
 from .claims import is_data_steward_claim, is_valid_claim
 
 __all__ = ["user_exists", "is_data_steward"]

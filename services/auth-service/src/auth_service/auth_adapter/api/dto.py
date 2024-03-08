@@ -15,7 +15,7 @@
 
 """DTOs used by the auth adapter API"""
 
-from pydantic import BaseModel, Field, SecretStr, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer
 
 __all__ = ["CreateTOTPToken", "TOTPTokenResponse", "VerifyTOTP"]
 
@@ -23,7 +23,7 @@ __all__ = ["CreateTOTPToken", "TOTPTokenResponse", "VerifyTOTP"]
 class BaseDto(BaseModel):
     """Base model pre-configured for use as Dto."""
 
-    model_config = {"extra": "forbid", "frozen": True}
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class CreateTOTPToken(BaseDto):

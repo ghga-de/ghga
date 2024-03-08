@@ -20,7 +20,7 @@ from fastapi import HTTPException, status
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 
-from auth_service.user_management.user_registry.models.dto import (
+from auth_service.user_management.user_registry.models.users import (
     StatusChange,
     UserStatus,
 )

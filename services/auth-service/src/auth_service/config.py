@@ -33,6 +33,7 @@ from auth_service.user_management.claims_repository.translators.akafka import (
 from auth_service.user_management.claims_repository.translators.dao import (
     ClaimDaoConfig,
 )
+from auth_service.user_management.user_registry.core.registry import UserRegistryConfig
 from auth_service.user_management.user_registry.translators.dao import UserDaoConfig
 
 SERVICE_NAME = "auth_service"
@@ -44,6 +45,7 @@ class Config(
     AuthConfig,
     SessionConfig,
     TOTPConfig,
+    UserRegistryConfig,
     LoggingConfig,
     MongoDbConfig,
     UserDaoConfig,

@@ -24,7 +24,7 @@ from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import EmailStr, Field
 from pydantic_settings import BaseSettings
 
-from auth_service.user_management.user_registry.models.dto import User
+from auth_service.user_management.user_registry.models.users import User
 
 from ..ports.session_store import BaseSession, SessionStorePort
 from .totp import TOTPToken
@@ -113,10 +113,7 @@ class SessionStore(SessionStorePort[Session]):
         *,
         config: SessionConfig,
     ):
-        """Create a session store.
-
-        Functions for creating and validating sessions must be provided.
-        """
+        """Create a session store."""
         self.config = config
 
     def _now(self) -> UTCDatetime:

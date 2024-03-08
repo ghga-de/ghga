@@ -34,7 +34,7 @@ from .core.claims import (
 )
 from .core.utils import user_exists
 from .deps import ClaimDao, Depends, get_claim_dao
-from .models.dto import (
+from .models.claims import (
     Claim,
     ClaimCreation,
     ClaimFullCreation,

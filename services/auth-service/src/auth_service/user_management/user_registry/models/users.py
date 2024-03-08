@@ -13,16 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""DTOs for the user management service
-
-Note: we currently use the DTOs also as the core entities.
-"""
+"""User model classes used as DTOs and core entities."""
 
 from enum import Enum
 from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import EmailStr, Field
+
+from . import BaseDto
 
 __all__ = ["User", "UserData", "UserStatus", "StatusChange"]
 
@@ -39,12 +38,6 @@ class AcademicTitle(str, Enum):
 
     DR = "Dr."
     PROF = "Prof."
-
-
-class BaseDto(BaseModel):
-    """Base model pre-configured for use as Dto."""
-
-    model_config = {"extra": "forbid", "frozen": True}
 
 
 class StatusChange(BaseDto):
@@ -104,7 +97,7 @@ class UserModifiableData(BaseDto):
     )
 
 
-class UserAutomaticData(BaseModel):
+class UserAutomaticData(BaseDto):
     """User data that is automatically created except the ID"""
 
     registration_date: UTCDatetime = Field(
@@ -136,4 +129,4 @@ class UserData(UserRegisteredData, UserAutomaticData):
 class User(UserData):
     """Complete user model with ID"""
 
-    id: str = Field(default=..., description="Internally used ID")  # actually UUID
+    id: str = Field(default=..., description="Internal user ID")  # actually UUID

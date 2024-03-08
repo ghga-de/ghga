@@ -21,8 +21,8 @@ from abc import ABC, abstractmethod
 from hexkit.protocols.dao import DaoSurrogateId
 from typing_extensions import TypeAlias  # in typing only since Python 3.10
 
-from ..models.dto import Claim as ClaimDto
-from ..models.dto import ClaimFullCreation as ClaimCreationDto
+from ..models.claims import Claim as ClaimDto
+from ..models.claims import ClaimFullCreation as ClaimCreationDto
 
 __all__ = ["ClaimDao", "ClaimDaoFactoryPort"]
 

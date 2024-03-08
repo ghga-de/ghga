@@ -21,19 +21,27 @@ from abc import ABC, abstractmethod
 from hexkit.protocols.dao import DaoSurrogateId
 from typing_extensions import TypeAlias  # in typing only since Python 3.10
 
-from ..models.dto import User as UserDto
-from ..models.dto import UserData as UserCreationDto
+from ..models.ivas import Iva as IvaDto
+from ..models.ivas import IvaFullData as IvaCreationDto
+from ..models.users import User as UserDto
+from ..models.users import UserData as UserCreationDto
 
-__all__ = ["UserDao", "UserDaoFactoryPort"]
+__all__ = ["IvaDao", "UserDao", "UserDaoFactoryPort"]
 
 
 UserDao: TypeAlias = DaoSurrogateId[UserDto, UserCreationDto]
+IvaDao: TypeAlias = DaoSurrogateId[IvaDto, IvaCreationDto]
 
 
 class UserDaoFactoryPort(ABC):
-    """Port that provides a factory for user data access objects."""
+    """Port that provides a factory for user related data access objects."""
 
     @abstractmethod
     async def get_user_dao(self) -> UserDao:
         """Construct a DAO for interacting with user data in a database."""
+        ...
+
+    @abstractmethod
+    async def get_iva_dao(self) -> IvaDao:
+        """Construct a DAO for interacting with IVA data in a database."""
         ...

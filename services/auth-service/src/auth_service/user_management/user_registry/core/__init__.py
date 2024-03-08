@@ -12,22 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Core utilities for the User Registry."""
-
-__all__ = ["is_internal_id", "is_external_id"]
-
-
-def is_internal_id(id_: str) -> bool:
-    """Check if the passed ID is an internal user id."""
-    if not id_ or not isinstance(id_, str):
-        return False
-    return len(id_) == 36 and id_.count("-") == 4 and "@" not in id_
-
-
-def is_external_id(id_: str) -> bool:
-    """Check if the passed ID is an external user id."""
-    if not id_ or not isinstance(id_, str):
-        return False
-    return len(id_) > 8 and id_.count("@") == 1
+"""Package for core business functions of the user registry."""

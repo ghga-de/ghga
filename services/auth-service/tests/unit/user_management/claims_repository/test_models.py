@@ -19,7 +19,7 @@
 from ghga_service_commons.utils.utc_dates import utc_datetime
 from pytest import mark, raises
 
-from auth_service.user_management.claims_repository.models.dto import (
+from auth_service.user_management.claims_repository.models.claims import (
     AuthorityLevel,
     ClaimCreation,
     ClaimMatch,

@@ -28,7 +28,7 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import mark
 
 from auth_service.auth_adapter.core.session_store import SessionState
-from auth_service.user_management.user_registry.models.dto import UserStatus
+from auth_service.user_management.user_registry.models.users import UserStatus
 
 from ...fixtures.utils import (  # noqa: F401
     RE_USER_INFO_URL,

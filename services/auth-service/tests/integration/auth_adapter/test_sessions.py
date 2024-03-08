@@ -30,7 +30,7 @@ from auth_service.auth_adapter.deps import get_session_store, get_user_token_dao
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import get_user_dao
-from auth_service.user_management.user_registry.models.dto import UserStatus
+from auth_service.user_management.user_registry.models.users import UserStatus
 
 from ...fixtures.utils import (
     RE_USER_INFO_URL,

@@ -22,10 +22,12 @@ from auth_service.deps import (
     get_mongodb_dao_factory,
 )
 
-from .ports.dao import UserDao
+from .core.registry import UserRegistry, UserRegistryConfig
+from .ports.dao import IvaDao, UserDao
+from .ports.registry import UserRegistryPort
 from .translators.dao import UserDaoConfig, UserDaoFactory
 
-__all__ = ["get_user_dao", "UserDao"]
+__all__ = ["get_user_dao", "IvaDao", "UserDao"]
 
 
 def get_user_dao_factory(
@@ -41,3 +43,22 @@ async def get_user_dao(
 ) -> UserDao:
     """Get user data access object."""
     return await dao_factory.get_user_dao()
+
+
+async def get_iva_dao(
+    dao_factory: UserDaoFactory = Depends(get_user_dao_factory),
+) -> IvaDao:
+    """Get IVA data access object."""
+    return await dao_factory.get_iva_dao()
+
+
+async def get_user_registry(
+    config: UserRegistryConfig = Depends(get_config),
+    dao_factory: UserDaoFactory = Depends(get_user_dao_factory),
+) -> UserRegistryPort:
+    """Get user registry."""
+    return UserRegistry(
+        config=config,
+        user_dao=await dao_factory.get_user_dao(),
+        iva_dao=await dao_factory.get_iva_dao(),
+    )

@@ -32,12 +32,13 @@ from jwcrypto import jwk, jwt
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.ports.dao import UserToken
 from auth_service.config import CONFIG
-from auth_service.user_management.claims_repository.models.dto import (
+from auth_service.user_management.claims_repository.models.claims import (
     AuthorityLevel,
     Claim,
     VisaType,
 )
-from auth_service.user_management.user_registry.models.dto import User
+from auth_service.user_management.user_registry.models.ivas import Iva, IvaFullData
+from auth_service.user_management.user_registry.models.users import User, UserData
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -205,6 +206,8 @@ def request_with_authorization(token: str = "") -> Request:
 class DummyUserDao:
     """UserDao that can retrieve one dummy user."""
 
+    user: User
+
     def __init__(
         self,
         id_="john@ghga.de",
@@ -241,14 +244,68 @@ class DummyUserDao:
             return user
         raise NoHitsFoundError(mapping=mapping)
 
+    async def insert(self, user: UserData) -> User:
+        """Insert the dummy user."""
+        user = User(id=user.ext_id.replace("@aai.org", "@ghga.de"), **user.model_dump())
+        self.user = user
+        return user
+
     async def update(self, user: User) -> None:
         """Update the dummy user."""
         if user.id == self.user.id:
             self.user = user
 
+    async def delete(self, id_: str) -> None:
+        """Update the dummy user."""
+        if id_ != self.user.id:
+            raise ResourceNotFoundError(id_=id_)
+        self.user = self.user.model_copy(update={"id": "deleted"})
+
+
+class DummyIvaDao:
+    """UserDao that can retrieve one dummy IVA."""
+
+    ivas: list[Iva]
+
+    def __init__(self, ivas: Optional[list[Iva]] = None):
+        """Initialize the dummy UserDao"""
+        self.ivas = ivas if ivas else []
+
+    async def get_by_id(self, id_: str) -> Iva:
+        """Get a dummy IVA via its ID."""
+        for iva in self.ivas:
+            if iva.id == id_:
+                return iva
+        raise ResourceNotFoundError(id_=id_)
+
+    async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[Iva]:
+        """Find all dummy IVAs."""
+        mapping = json.loads(json.dumps(mapping))
+        for iva in self.ivas:
+            data = iva.model_dump()
+            data["id_"] = data.pop("id")
+            for key in mapping:
+                if mapping[key] != data[key]:
+                    break
+            else:
+                yield iva
+
+    async def insert(self, iva: IvaFullData) -> Iva:
+        """Insert a dummy IVA."""
+        iva = Iva(id="new-iva", **iva.model_dump())
+        self.ivas.append(iva)
+        return iva
+
+    async def delete(self, *, id_: str) -> None:
+        """Delete a dummy IVA."""
+        iva = await self.get_by_id(id_)
+        self.ivas.remove(iva)
+
 
 class DummyUserTokenDao:
     """Dummy UserTokenDao for testing."""
+
+    user_tokens: dict[str, UserToken]
 
     def __init__(self):
         """Initialize the dummy UserTokenDao"""
@@ -272,6 +329,8 @@ class DummyUserTokenDao:
 
 class DummyClaimDao:
     """ClaimDao that can retrieve a dummy data steward claim."""
+
+    claims: list[Claim]
 
     def __init__(self, valid_date=now_as_utc()):
         """Initialize the dummy ClaimDao"""

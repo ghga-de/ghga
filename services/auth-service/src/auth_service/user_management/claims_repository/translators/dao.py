@@ -20,8 +20,8 @@ from hexkit.protocols.dao import DaoFactoryProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from ..models.dto import Claim as ClaimDto
-from ..models.dto import ClaimFullCreation as ClaimCreationDto
+from ..models.claims import Claim as ClaimDto
+from ..models.claims import ClaimFullCreation as ClaimCreationDto
 from ..ports.dao import ClaimDao, ClaimDaoFactoryPort
 
 __all__ = ["ClaimDaoFactory", "ClaimDaoConfig"]

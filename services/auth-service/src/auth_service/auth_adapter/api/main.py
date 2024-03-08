@@ -34,7 +34,7 @@ from auth_service.user_management.user_registry.deps import (
     UserDao,
     get_user_dao,
 )
-from auth_service.user_management.user_registry.models.dto import (
+from auth_service.user_management.user_registry.models.users import (
     User,
     UserStatus,
 )

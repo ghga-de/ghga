@@ -28,7 +28,7 @@ from testcontainers.mongodb import MongoDbContainer
 from auth_service.config import Config
 from auth_service.deps import get_config, get_mongodb_dao_factory
 from auth_service.user_management.api.main import app, lifespan
-from auth_service.user_management.user_registry.models.dto import User, UserStatus
+from auth_service.user_management.user_registry.models.users import User, UserStatus
 
 
 @async_fixture(name="client")
