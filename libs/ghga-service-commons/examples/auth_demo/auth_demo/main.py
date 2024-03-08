@@ -26,7 +26,7 @@ from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 
 async def configure_and_run_server():
     """Run the HTTP API."""
-    config = Config()  # pyright: ignore
+    config = Config()
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
 
