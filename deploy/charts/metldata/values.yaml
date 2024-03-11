@@ -33,7 +33,8 @@ mapping:
   prefix: /
   rewrite: null
   ambassador_id: null
-  timeout_ms: 600000
+  timeout_ms: null
+  timeout_ms_loadartifacts: 600000
 
 parameters:
   default:
