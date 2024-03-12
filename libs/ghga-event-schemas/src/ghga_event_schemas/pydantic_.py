@@ -392,6 +392,18 @@ class FileDeletionSuccess(FileDeletionRequested):
     model_config = ConfigDict(title="file_deletion_success")
 
 
+class UserID(BaseModel):
+    """Generic event payload to relay a user ID."""
+
+    user_id: str
+
+
+class AccessRequestDetails(UserID):
+    """Event used to convey the user ID and dataset ID of an access request."""
+
+    dataset_id: str
+
+
 # Lists event schemas (values) by event types (key):
 schema_registry: dict[str, type[BaseModel]] = {
     "metadata_dataset_deleted": MetadataDatasetID,
@@ -408,4 +420,6 @@ schema_registry: dict[str, type[BaseModel]] = {
     "notification": Notification,
     "searchable_resource_deleted": SearchableResourceInfo,
     "searchable_resource_upserted": SearchableResource,
+    "user_id": UserID,
+    "access_request_details": AccessRequestDetails,
 }
