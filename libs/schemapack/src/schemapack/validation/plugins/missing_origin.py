@@ -78,9 +78,9 @@ class MissingMandatoryOriginValidationPlugin(ClassValidationPlugin):
                 referenced_target_ids
             )
             if not_referenced_target_ids:
-                not_referenced_target_id_by_relation[
-                    relation_name
-                ] = not_referenced_target_ids
+                not_referenced_target_id_by_relation[relation_name] = (
+                    not_referenced_target_ids
+                )
 
         if any(not_referenced_target_id_by_relation.values()):
             raise ValidationPluginError(

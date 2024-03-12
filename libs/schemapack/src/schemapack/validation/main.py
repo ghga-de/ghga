@@ -55,15 +55,13 @@ def _create_global_plugins(
 @overload
 def _create_plugins_by_class(
     *, schemapack: SchemaPack, plugin_classes: list[type[ClassValidationPlugin]]
-) -> dict[str, list[ClassValidationPlugin]]:
-    ...
+) -> dict[str, list[ClassValidationPlugin]]: ...
 
 
 @overload
 def _create_plugins_by_class(
     *, schemapack: SchemaPack, plugin_classes: list[type[ResourceValidationPlugin]]
-) -> dict[str, list[ResourceValidationPlugin]]:
-    ...
+) -> dict[str, list[ResourceValidationPlugin]]: ...
 
 
 def _create_plugins_by_class(

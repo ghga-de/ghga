@@ -16,7 +16,6 @@
 
 """Tests the models module."""
 
-
 import json
 
 from schemapack.load import load_schemapack
