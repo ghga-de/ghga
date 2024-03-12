@@ -22,64 +22,45 @@ import typing
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Literal, TypeVar
+from typing import Any, TypeVar
 
 import jsonschema
 import jsonschema.exceptions
 import jsonschema.protocols
 import jsonschema.validators
-import yaml
+import ruamel.yaml
 from immutabledict import immutabledict
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import core_schema
 
+from schemapack.exceptions import ParsingError
 
-class DecodeError(ValueError):
-    """Raised when decoding JSON or YAML data fails."""
-
-    def __init__(self, path: Path, assumed_format: Literal["JSON", "YAML"]):
-        super().__init__(
-            f"The file at '{path}' could not be decoded assuming {assumed_format}"
-            + " format."
-        )
-        self.path = path
-        self.assumed_format = assumed_format
+yaml = ruamel.yaml.YAML(typ="safe")
 
 
-def read_json_or_yaml(path: Path) -> dict:
-    """Read JSON or YAML data from file. The format is decided based on the file
-    extension. If the file extension is not recognized, YAML is assumed (as it is a
-    superset of JSON).
+def read_json_or_yaml_mapping(path: Path) -> dict:
+    """Reads a JSON object or YAML mapping from file.
 
     Raises:
-        DecodeError: If the file cannot be decoded as JSON or YAML.
+        ParsingError:
+            If the file cannot be decoded as JSON or YAML or does not contain a
+            JSON object or YAML Mapping. Please note, that this parser raise a
+            ParsingError for duplicate keys in both JSON objects and YAML mappings.
     """
     with path.open("r", encoding="utf-8") as file:
-        if path.suffix == ".json":
-            try:
-                data = json.load(file)
-            except json.JSONDecodeError as error:
-                raise DecodeError(
-                    path=path,
-                    assumed_format="JSON",
-                ) from error
-        else:
-            # Even if the file ending does not indicate YAML, we try to parse it as YAML
-            try:
-                data = yaml.safe_load(file)
-            except yaml.YAMLError as error:
-                raise DecodeError(
-                    path=path,
-                    assumed_format="YAML",
-                ) from error
+        try:
+            data = yaml.load(file)
+        except ruamel.yaml.YAMLError as error:
+            raise ParsingError(
+                f"The file at '{path}' could not be parsed as JSON or YAML."
+            ) from error
 
-        if not isinstance(data, dict):
-            raise DecodeError(
-                path=path,
-                assumed_format="JSON",
-            )
+    if not isinstance(data, dict):
+        raise ParsingError(
+            f"The file at '{path}' did not contain a JSON object or a YAML mapping."
+        )
 
-        return data
+    return data
 
 
 class JsonSchemaError(ValueError):

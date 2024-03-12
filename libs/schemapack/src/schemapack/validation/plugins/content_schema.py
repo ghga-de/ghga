@@ -68,7 +68,7 @@ class ContentSchemaValidationPlugin(ResourceValidationPlugin):
         provided for resolving relations to resources of other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         try:
             self._json_schema_validator.validate(resource.content)

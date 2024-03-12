@@ -1,0 +1,45 @@
+schemapack: 0.2.0
+description: a schemapack illustrating all possible cardinalities
+classes:
+  A:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      many_to_many:
+        targetClass: B
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: true
+      one_to_many:
+        targetClass: B
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: false
+          target: true
+      many_to_one:
+        targetClass: B
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: false
+      one_to_one:
+        targetClass: B
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: false
+          target: false
+  B:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+root_class: A

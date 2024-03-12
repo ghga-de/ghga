@@ -1,10 +1,9 @@
 # Misses relations property defined in the schemapack:
-datapack: 0.1.0
+datapack: 0.2.0
 resources:
   File: {}
   Dataset:
     example_dataset:
       content:
-        alias: example_dataset
         dac_contact: dac@example.org
       relations: {} # should contain `files` property

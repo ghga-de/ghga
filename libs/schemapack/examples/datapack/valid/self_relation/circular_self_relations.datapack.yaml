@@ -1,11 +1,10 @@
-# This datapack contains a file that is in relation to itself:
-# (This is valid, but no integration can be performed.)
-datapack: 0.1.0
+# This datapack contains a resource that is in relation to itself:
+# (This is valid, but no denormalization can be performed.)
+datapack: 0.2.0
 resources:
   SomeClass:
     a:
-      content:
-        alias: a
+      content: {}
       relations:
         some_relation:
           - a # <-

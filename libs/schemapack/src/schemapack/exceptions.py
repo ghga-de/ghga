@@ -27,6 +27,10 @@ class BaseError(ABC, Exception):
     """Base class for all schemapack errors."""
 
 
+class ParsingError(BaseError, ValueError):
+    """Raised when parsing JSON or YAML data fails."""
+
+
 class SpecError(BaseError, ValueError):
     """An error indicating that an instance was not valid against the specification."""
 

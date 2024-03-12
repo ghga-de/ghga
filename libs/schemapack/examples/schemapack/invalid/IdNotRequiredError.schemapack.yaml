@@ -1,7 +1,0 @@
-# The id field is in the content schema, but not required.
-schemapack: 0.1.0
-classes:
-  Dataset:
-    id:
-      from_content: dac_contact # <-
-    content: ../../content_schemas/Dataset.schema.json

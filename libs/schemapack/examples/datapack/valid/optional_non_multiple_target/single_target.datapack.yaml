@@ -1,0 +1,12 @@
+# An origin resource references a single target resources even though the relation is
+# defined optional at the target end:
+datapack: 0.2.0
+resources:
+  A:
+    a1:
+      content: {}
+      relations:
+        b: b1
+  B:
+    b1:
+      content: {}

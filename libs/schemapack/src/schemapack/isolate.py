@@ -26,7 +26,6 @@ from schemapack.spec.datapack import (
     DataPack,
     Resource,
     ResourceId,
-    RootResource,
 )
 from schemapack.spec.schemapack import SchemaPack
 
@@ -85,29 +84,37 @@ def identify_dependencies(
 
     dependencies_by_class: dict[ClassName, set[ResourceId]] = defaultdict(set)
 
-    for relation_name, foreign_ids in target_resource.relations.items():
-        if isinstance(foreign_ids, str):
-            foreign_ids = [foreign_ids]
+    for relation_name in target_resource.relations:
+        try:
+            target_class_name = target_class_definition.relations[
+                relation_name
+            ].targetClass
+        except KeyError as error:
+            raise ValidationAssumptionError(
+                context="relation resolution in schemapack"
+            ) from error
 
         try:
-            foreign_class_name = target_class_definition.relations[relation_name].to
+            target_ids = target_resource.get_target_id_set(relation_name)
         except KeyError as error:
-            raise ValidationAssumptionError(context="relation resolution") from error
+            raise ValidationAssumptionError(
+                context="relation resolution in datapack"
+            ) from error
 
-        for foreign_id in foreign_ids:
+        for target_id in target_ids:
             if (
-                foreign_class_name in resource_blacklist
-                and foreign_id in resource_blacklist[foreign_class_name]
+                target_class_name in resource_blacklist
+                and target_id in resource_blacklist[target_class_name]
             ):
                 continue
 
-            dependencies_by_class[foreign_class_name].add(foreign_id)
+            dependencies_by_class[target_class_name].add(target_id)
 
-            # Recursively add dependencies of this foreign resource:
+            # Recursively add dependencies of this target resource:
             nested_dependencies = identify_dependencies(
                 datapack=datapack,
-                class_name=foreign_class_name,
-                resource_id=foreign_id,
+                class_name=target_class_name,
+                resource_id=target_id,
                 schemapack=schemapack,
                 _resource_blacklist=resource_blacklist,
             )
@@ -162,7 +169,7 @@ def downscope_datapack(
     return datapack.model_copy(update={"resources": resources})
 
 
-def isolate(
+def isolate_resource(
     *,
     datapack: DataPack,
     class_name: ClassName,
@@ -172,6 +179,10 @@ def isolate(
     """Isolate a resource from a non-rooted datapack to created a rooted datapack. I.e.
     the resulting datapack will only contain resources referenced by the root resource
     as well as the root resource itself.
+
+    Please note:
+        The returned rooted datapack will not be compatible anymore with the original
+        non-rooted schemapack.
     """
     dependency_map = identify_dependencies(
         datapack=datapack,
@@ -181,5 +192,34 @@ def isolate(
         include_target=True,
     )
     rooted_datapack = downscope_datapack(datapack=datapack, resource_map=dependency_map)
-    rooted_datapack.root = RootResource(class_name=class_name, resource_id=resource_id)
+    rooted_datapack.root_resource = resource_id
     return rooted_datapack
+
+
+def isolate_class(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPack:
+    """Return a copy of the provided schemapack that is rooted to the specified class."""
+    return schemapack.model_copy(update={"root_class": class_name})
+
+
+def isolate(
+    *,
+    class_name: ClassName,
+    resource_id: ResourceId,
+    schemapack: SchemaPack,
+    datapack: DataPack,
+) -> tuple[SchemaPack, DataPack]:
+    """Create copies of the provided schemapacks and datapacks that are rooted towards
+    the specified class and resource. I.e. the resulting datapack will only contain
+    resources referenced by the root resource as well as the root resource itself.
+
+    Returns:
+        A tuple containing both the rooted schemapack and the rooted datapack.
+    """
+    rooted_schemapack = isolate_class(class_name=class_name, schemapack=schemapack)
+    rooted_datapack = isolate_resource(
+        datapack=datapack,
+        class_name=class_name,
+        resource_id=resource_id,
+        schemapack=schemapack,
+    )
+    return rooted_schemapack, rooted_datapack

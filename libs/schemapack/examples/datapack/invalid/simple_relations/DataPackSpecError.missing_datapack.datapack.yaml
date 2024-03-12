@@ -4,7 +4,6 @@ resources:
   Dataset:
     example_dataset:
       content:
-        alias: example_dataset
         dac_contact: dac@example.org
         non_existing_property: "non_existing_value"
       relations:

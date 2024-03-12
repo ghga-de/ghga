@@ -1,15 +1,20 @@
-# a simple schemapack with a root class
-schemapack: 0.1.0
+schemapack: 0.2.0
+description: A simple schemapack # with no root class but with descriptions.
 classes:
   File:
     id:
-      from_content: alias
+      propertyName: alias
     content: ../../content_schemas/File.schema.json
   Dataset:
     id:
-      from_content: alias
+      propertyName: alias
     content: ../../content_schemas/Dataset.schema.json
     relations:
       files:
-        to: File
-        cardinality: many_to_many
+        targetClass: File
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true

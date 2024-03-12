@@ -1,0 +1,20 @@
+schemapack: 0.2.0
+description: A collision between relations and content properties
+classes:
+  File:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/File.schema.json
+  Dataset:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/Dataset.schema.json
+    relations:
+      dac_contact: # <-
+        targetClass: File
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true

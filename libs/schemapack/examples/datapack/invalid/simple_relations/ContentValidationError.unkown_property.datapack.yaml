@@ -1,12 +1,18 @@
 # Contains a content property that does not exist according to the content schema:
-datapack: 0.1.0
+datapack: 0.2.0
 resources:
-  File: {}
+  File:
+    example_file_a:
+      content:
+        filename: example_file_a.fastq
+        format: FASTQ
+        checksum: 1a5ac10ab42911dc0224172c118a326d9a4c03969112a2f3eb1ad971e96e92b8
+        size: 12321
   Dataset:
     example_dataset:
       content:
-        alias: example_dataset
         dac_contact: dac@example.org
         non_existing_property: "non_existing_value" # <-
       relations:
-        files: []
+        files:
+          - example_file_a

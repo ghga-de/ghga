@@ -1,8 +1,8 @@
-# attributes that are not part of the schemapack spec are not allowed:
-schemapack: 0.1.0
+schemapack: 0.2.0
+description: attributes that are not part of the schemapack spec are not allowed
 classes:
   Dataset:
     id:
-      from_content: alias
+      propertyName: alias
     content: ../../content_schemas/Dataset.schema.json
 additional_attribute: is_not_allowed # <-

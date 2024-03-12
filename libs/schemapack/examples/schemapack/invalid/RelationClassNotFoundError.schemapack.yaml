@@ -1,10 +1,15 @@
-schemapack: 0.1.0
+schemapack: 0.2.0
 classes:
   Dataset:
     id:
-      from_content: alias
+      propertyName: alias
     content: ../../content_schemas/Dataset.schema.json
     relations:
       files:
-        to: DoesNotExist # <-
-        cardinality: many_to_many
+        targetClass: DoesNotExist # <-
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true

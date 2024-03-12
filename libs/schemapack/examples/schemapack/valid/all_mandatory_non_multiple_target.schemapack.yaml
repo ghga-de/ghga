@@ -1,0 +1,20 @@
+schemapack: 0.2.0
+description: a schemapack with a many-to-one relation that is mandatory at both ends
+classes:
+  A:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      b:
+        targetClass: B
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: false
+  B:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json

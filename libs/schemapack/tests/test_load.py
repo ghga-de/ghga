@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from schemapack.exceptions import DataPackSpecError, SchemaPackSpecError
+from schemapack.exceptions import DataPackSpecError, ParsingError, SchemaPackSpecError
 from schemapack.load import load_datapack, load_schemapack
 from tests.fixtures.examples import (
     INVALID_DATAPACK_PATHS,
@@ -68,8 +68,13 @@ def test_load_datapack_valid(path: Path):
 def test_load_datapack_invalid(name: str, path: Path):
     """Test loading invalid datapacks."""
     error_type = name.split(".")[1]
-
-    with pytest.raises(
+    expected_error = (
         DataPackSpecError
-    ) if error_type == "DataPackSpecError" else nullcontext():
+        if error_type == "DataPackSpecError"
+        else ParsingError
+        if error_type == "ParsingError"
+        else None
+    )
+
+    with pytest.raises(expected_error) if expected_error else nullcontext():
         _ = load_datapack(path)

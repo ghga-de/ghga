@@ -18,10 +18,9 @@
 
 import json
 import typing
-from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Literal, Union
+from typing import Any, Literal, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -34,56 +33,21 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from schemapack.utils import (
-    DecodeError,
     FrozenDict,
     JsonSchemaError,
+    ParsingError,
     assert_valid_json_schema,
-    read_json_or_yaml,
+    read_json_or_yaml_mapping,
 )
 
-SupportedSchemaPackVersions = Literal["0.1.0"]
+SupportedSchemaPackVersions = Literal["0.2.0"]
 SUPPORTED_SCHEMA_PACK_VERSIONS = typing.get_args(SupportedSchemaPackVersions)
-
-
-class Cardinality(str, Enum):
-    """Cardinality of a relation.
-    Read as `{this class}_to_{foreign class}`. I.e. MANY_TO_ONE means that this class
-    may have many instances that point to the same foreign class instance.
-    """
-
-    ONE_TO_ONE = "one_to_one"
-    ONE_TO_MANY = "one_to_many"
-    MANY_TO_ONE = "many_to_one"
-    MANY_TO_MANY = "many_to_many"
-
-
-class RelationLookupMethod(str, Enum):
-    """The method used to lookup the foreign class instance(s) referenced in a
-    relation.
-    """
-
-    # currently only one method is supported
-    IN_DOCUMENT = "in_document"
 
 
 class FrozenBaseModel(BaseModel):
     """A BaseModel that cannot be changed after initialization."""
 
     model_config = ConfigDict(frozen=True, use_enum_values=True, extra="forbid")
-
-
-class IdField(FrozenBaseModel):
-    """A model for describing a schemapack ID field definition."""
-
-    # currently only IDs that are inherited from a field of the content schema are
-    # supported
-
-    from_content: str = Field(
-        ...,
-        description=(
-            "The name of the property from the content schema to be used as ID field."
-        ),
-    )
 
 
 class ContentSchema(FrozenBaseModel):
@@ -132,31 +96,124 @@ class ContentSchema(FrozenBaseModel):
         return self
 
 
+class MandatoryRelationSpec(FrozenBaseModel):
+    """A model for describing the modality of a relation. It describes the minimum
+    number of instances the origin and the target end must contribute to the relation.
+    """
+
+    origin: bool = Field(
+        ...,
+        description=(
+            "If true, the origin must participate in the relation."
+            + " I.e. every instance of the target class must be connected to at least"
+            + " one instance of the origin class trough this relation."
+            + " If false, the participation of the origin is optional."
+            + " I.e. an instance of the target class may be connected to zero or more"
+            + " instances of the origin class trough this relation."
+        ),
+    )
+    target: bool = Field(
+        ...,
+        description=(
+            "If true, the target must participate in the relation."
+            + " I.e. every instance of the origin class must be connected to at least"
+            + " one instance of the target class trough this relation."
+            + " If false, the participation of the target is optional."
+            + " I.e. an instance of the origin class may be connected to zero or more"
+            + " instances of the target class trough this relation."
+        ),
+    )
+
+
+class MultipleRelationSpec(FrozenBaseModel):
+    """A model for describing the cardinality of a relation. It describes the maximum
+    number of instances the origin and the target end may contribute to the relation.
+
+    For instance, if the origin is `True` and target is `False`, the origin may
+    contribute multiple instances to the relation, while the target may at most
+    contribute a single instance to the relation. This is equivalent to a 'many-to-one'
+    """
+
+    origin: bool = Field(
+        ...,
+        description=(
+            "If true, the origin may contribute multiple instances to the relation."
+            + " This is equivalent to a 'many-to-*' cardinality."
+            + " If false, the origin may at most contribute a single instance to the"
+            + " relation. This is equivalent to a 'one-to-*' cardinality."
+        ),
+    )
+    target: bool = Field(
+        ...,
+        description=(
+            "If true, the target may contribute multiple instances to the relation."
+            + " This is equivalent to a '*-to-many' cardinality."
+            + " If false, the target may at most contribute a single instance to the"
+            + " relation. This is equivalent to a '*-to-one' cardinality."
+        ),
+    )
+
+
 class Relation(FrozenBaseModel):
     """A model for describing a schemapack relation definition."""
 
-    cardinality: Cardinality = Field(
+    description: Optional[str] = Field(
+        None,
+        description="A description of the relation.",
+    )
+    targetClass: str = Field(  # noqa: N815 - align with the schemapack naming scheme
+        ...,
+        description="The name of the target class.",
+    )
+    mandatory: MandatoryRelationSpec = Field(
         ...,
         description=(
-            "The cardinality of the relation. Read as `{this class}_to_{foreign class}`."
-            + " I.e. MANY_TO_ONE means that this class may have many instances that"
-            + " point to the same foreign class instance."
+            "The modality of the relation. It describes the minimum number of instances"
+            + " the origin and the target end must contribute to the relation."
         ),
     )
-    lookup: RelationLookupMethod = Field(
-        RelationLookupMethod.IN_DOCUMENT,
-        description="The method used to lookup the foreign class instance(s).",
-    )
-    to: str = Field(
+    multiple: MultipleRelationSpec = Field(
         ...,
-        description="The name of the foreign class.",
+        description=(
+            "The cardinality of the relation. It describes the maximum number of"
+            + " instances the origin and the target end may contribute to the relation."
+            + " For instance, if the origin is `True` and target is `False`, the origin"
+            + " may contribute multiple instances to the relation, while the target may"
+            + " at most contribute a single instance to the relation."
+            + " This is equivalent to a 'many-to-one' cardinality."
+        ),
+    )
+
+
+class IDSpec(FrozenBaseModel):
+    """A model for describing the ID property of a class definition."""
+
+    propertyName: str = Field(  # noqa: N815 - align with the schemapack naming scheme
+        ...,
+        description=(
+            "The name of the ID property. It must not collide with content or relations"
+            + " properties."
+            + "This name e.g. relavant for specifying the ID property in a"
+            + " denormalized representation."
+        ),
+    )
+    description: Optional[str] = Field(
+        None,
+        description="A description of the ID property.",
     )
 
 
 class ClassDefinition(FrozenBaseModel):
     """A model for describing a schemapack class definition."""
 
-    id: IdField
+    description: Optional[str] = Field(
+        None,
+        description=("A description of the class definition."),
+    )
+    id: IDSpec = Field(
+        ...,
+        description="The ID property of the class definition.",
+    )
     content: ContentSchema
     relations: FrozenDict[str, Relation] = Field(
         FrozenDict(),
@@ -199,17 +256,14 @@ class ClassDefinition(FrozenBaseModel):
                 )
 
             try:
-                json_schema_dict = read_json_or_yaml(v)
-            except DecodeError as error:
+                json_schema_dict = read_json_or_yaml_mapping(v)
+            except ParsingError as error:
                 raise PydanticCustomError(
                     "InvalidContentSchemaError",
                     (
-                        "Content schema at the specified path could not be decoded"
-                        + " assuming {assumed_format} format."
+                        "Content schema at the specified path could not be parsed as"
+                        + " valid JSON or YAML."
                     ),
-                    {
-                        "assumed_format": error.assumed_format,
-                    },
                 ) from error
 
             return ContentSchema(json_schema=json.dumps(json_schema_dict))
@@ -262,33 +316,48 @@ class ClassDefinition(FrozenBaseModel):
         return v
 
     @model_validator(mode="after")
-    def id_from_content_validator(self) -> "ClassDefinition":
-        """Validate that the from_content property of the id field is part of the
-        content schema.
-        """
-        if self.id.from_content not in self.content.properties:
+    def relation_content_property_collisions(self) -> "ClassDefinition":
+        """Check for collisions between relations and content properties."""
+        collisions = self.content.properties.intersection(set(self.relations))
+
+        if collisions:
             raise PydanticCustomError(
-                "IdNotInContentSchemaError",
+                "RelationsContentPropertyCollisionError",
                 (
-                    "The ID property '{id_property}' is not part of the content schema"
-                    + " which contains only the following properties: {content_properties}"
+                    "The following properties occur both in the content and the"
+                    + " relations: {collisions}"
                 ),
                 {
-                    "id_property": self.id.from_content,
-                    "content_properties": self.content.properties,
+                    "number": len(collisions),
+                    "collisions": collisions,
                 },
             )
-        if self.id.from_content not in self.content.json_schema_dict.get(
-            "required", []
-        ):
+
+        return self
+
+    @model_validator(mode="after")
+    def id_content_property_collisions(self) -> "ClassDefinition":
+        """Check for collisions between the id property and content properties."""
+        if self.id.propertyName in self.content.properties:
             raise PydanticCustomError(
-                "IdNotRequiredError",
-                (
-                    "The ID property '{id_property}' is not required in the content"
-                    + " schema. It must be marked as required."
-                ),
+                "IdContentPropertyCollisionError",
+                ("The id property '{id_property}' also occurs in the content."),
                 {
-                    "id_property": self.id.from_content,
+                    "id_property": self.id.propertyName,
+                },
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def id_relations_property_collisions(self) -> "ClassDefinition":
+        """Check for collisions between the id property and relations properties."""
+        if self.id.propertyName in self.relations:
+            raise PydanticCustomError(
+                "IdRelationsPropertyCollisionError",
+                ("The id property '{id_property}' also occurs in the relations."),
+                {
+                    "id_property": self.id.propertyName,
                 },
             )
 
@@ -306,6 +375,10 @@ class SchemaPack(FrozenBaseModel):
             + " schemapack specification."
         ),
     )
+    description: Optional[str] = Field(
+        None,
+        description=("A description of the schemapack definition."),
+    )
     classes: FrozenDict[str, ClassDefinition] = Field(
         ...,
         description=(
@@ -313,6 +386,17 @@ class SchemaPack(FrozenBaseModel):
             + " PascalCase."
         ),
         min_length=1,
+    )
+
+    root_class: Optional[str] = Field(
+        None,
+        description=(
+            "Optionally, define the name of a class that should acting as the root of"
+            + " the schemapack."
+            + " Corresponding datapacks must define a root resource of this class."
+            + "If not specified , i.e. set to None (the default), the datapack must no"
+            + " specify a root resource."
+        ),
     )
 
     @model_validator(mode="before")
@@ -376,13 +460,13 @@ class SchemaPack(FrozenBaseModel):
     @model_validator(mode="after")
     def relation_to_class_validation(self) -> "SchemaPack":
         """Validate that all relations point to existing classes."""
-        # store invalid relations as a list of strings ({class_name}.{relation_name}):
-        invalid_relations: list[str] = []
+        # store invalid relations as a set of strings ({class_name}.{relation_name}):
+        invalid_relations: set[str] = set()
 
         for class_name, class_definition in self.classes.items():
             for relation_name, relation in class_definition.relations.items():
-                if relation.to not in self.classes:
-                    invalid_relations.append(f"{class_name}.{relation_name}")
+                if relation.targetClass not in self.classes:
+                    invalid_relations.add(f"{class_name}.{relation_name}")
 
         if invalid_relations:
             raise PydanticCustomError(
@@ -394,6 +478,20 @@ class SchemaPack(FrozenBaseModel):
                 {
                     "number": len(invalid_relations),
                     "invalid_relations": invalid_relations,
+                },
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def root_in_classes(self) -> "SchemaPack":
+        """Check that the specified root exists in the defined classes."""
+        if self.root_class and self.root_class not in self.classes:
+            raise PydanticCustomError(
+                "RootClassNotFoundError",
+                ("The specified root class '{self.root_class}' does not exist."),
+                {
+                    "root_class": self.root_class,
                 },
             )
 

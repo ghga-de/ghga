@@ -1,10 +1,9 @@
 # Contains all cardinality types:
-datapack: 0.1.0
+datapack: 0.2.0
 resources:
   A:
     a1:
-      content:
-        alias: a1
+      content: {}
       relations:
         many_to_many:
           - b1
@@ -15,8 +14,7 @@ resources:
         many_to_one: b1
         one_to_one: b1
     a2:
-      content:
-        alias: a2
+      content: {}
       relations:
         many_to_many:
           - b1 # may overlap with a1.relations.many_to_many
@@ -25,8 +23,7 @@ resources:
         many_to_one: b1 # may be the same as a1.relations.many_to_one
         one_to_one: b2 # must be different that the one_to_one relation of a1 and a3
     a3:
-      content:
-        alias: a3
+      content: {}
       relations:
         many_to_many: [] # may be empty
         one_to_many: [] # may be empty
@@ -34,11 +31,8 @@ resources:
         one_to_one: b3 # must be different that the one_to_one relation of a1 and a2
   B:
     b1:
-      content:
-        alias: b1
+      content: {}
     b2:
-      content:
-        alias: b2
+      content: {}
     b3:
-      content:
-        alias: b3
+      content: {}

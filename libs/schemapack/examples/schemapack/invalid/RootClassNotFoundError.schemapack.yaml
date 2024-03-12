@@ -1,0 +1,17 @@
+schemapack: 0.2.0
+description: Refering to a non-existing class as root
+classes:
+  SomeClass:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      some_relation:
+        targetClass: SomeClass
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true
+root_class: NonExistingClass # <-

@@ -23,12 +23,12 @@ import pydantic
 from schemapack.exceptions import DataPackSpecError, SchemaPackSpecError
 from schemapack.spec.datapack import DataPack
 from schemapack.spec.schemapack import SchemaPack
-from schemapack.utils import read_json_or_yaml, transient_directory_change
+from schemapack.utils import read_json_or_yaml_mapping, transient_directory_change
 
 
 def load_schemapack(path: Path):
     """Load a schemapack definition from a file."""
-    schemapack_dict = read_json_or_yaml(path)
+    schemapack_dict = read_json_or_yaml_mapping(path)
 
     with transient_directory_change(path.parent):
         try:
@@ -41,7 +41,7 @@ def load_schemapack(path: Path):
 
 def load_datapack(path: Path):
     """Load a datapack definition from a file."""
-    datapack_dict = read_json_or_yaml(path)
+    datapack_dict = read_json_or_yaml_mapping(path)
 
     try:
         return DataPack.model_validate(datapack_dict)

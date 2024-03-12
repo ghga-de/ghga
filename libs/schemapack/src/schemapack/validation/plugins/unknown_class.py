@@ -23,7 +23,7 @@ from schemapack.validation.base import GlobalValidationPlugin
 
 
 class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
-    """A resource-scoped validation plugin validating that a datapack only contains
+    """A global-scoped validation plugin validating that a datapack only contains
     slots for classes defined in the provided schemapack.
     """
 
@@ -44,7 +44,7 @@ class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
         """Validate the entire datapack.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         unknown_classes = [
             class_ for class_ in datapack.resources if class_ not in self._classes

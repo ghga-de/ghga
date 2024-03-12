@@ -48,13 +48,13 @@ class UnknownRelationValidationPlugin(ResourceValidationPlugin):
         provided for resolving relations to resources of other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        unknown_relations = [
+        unknown_relations = {
             relation
             for relation in resource.relations
             if relation not in self._expected_relations
-        ]
+        }
 
         if unknown_relations:
             raise ValidationPluginError(
@@ -65,6 +65,6 @@ class UnknownRelationValidationPlugin(ResourceValidationPlugin):
                 ),
                 details={
                     "unknown_relations": unknown_relations,
-                    "existing_relations": list(resource.relations),
+                    "existing_relations": set(resource.relations),
                 },
             )

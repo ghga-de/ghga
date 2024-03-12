@@ -1,0 +1,17 @@
+schemapack: 0.2.0
+description: A class referencing itself in a relation
+classes:
+  SomeClass:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      some_relation:
+        targetClass: SomeClass # <-
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: true
+root_class: SomeClass

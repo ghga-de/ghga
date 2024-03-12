@@ -17,31 +17,60 @@
 """Models for describing and working with datapack definitions."""
 
 import typing
-from typing import Any, Literal, Optional, Union
+from collections import Counter
+from collections.abc import Iterable
+from typing import Annotated, Any, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, WrapSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import TypeAlias
 
-SupportedDataPackVersions = Literal["0.1.0"]
+SupportedDataPackVersions = Literal["0.2.0"]
 SUPPORTED_DATA_PACK_VERSIONS = typing.get_args(SupportedDataPackVersions)
 
-ClassName: TypeAlias = str
-ResourceId: TypeAlias = str
-RelationName: TypeAlias = str
+NonEmptyStr: TypeAlias = Annotated[str, Field(..., min_length=1)]
+ClassName: TypeAlias = NonEmptyStr
+ResourceId: TypeAlias = NonEmptyStr
+RelationName: TypeAlias = NonEmptyStr
 
 
-class RootResource(BaseModel):
-    """A model for describing the root resource of a datapack."""
+def validate_duplicate_target_ids(iterable: Iterable) -> Any:
+    """Checks that the given iterable of target IDs does not contain duplicates. If it
+    does, a PydanticCustomError with name "DuplicateTargetIdError" is raised. Otherwise,
+    the given iterable is returned.
+    """
+    if isinstance(iterable, set):
+        return iterable
 
-    class_name: ClassName = Field(
-        ...,
-        description="The name of the class of the root resource.",
-    )
-    resource_id: ResourceId = Field(
-        ...,
-        description="The ID of the root resource.",
-    )
+    try:
+        target_id_list = list(iterable)
+    except TypeError as error:
+        raise PydanticCustomError(
+            "TargetIdsParsingError",
+            "The provided object is not iterable.",
+            {"iterable": iterable},
+        ) from error
+
+    counter = Counter(target_id_list)
+    duplicates = {k for k, v in counter.items() if v > 1}
+
+    if duplicates:
+        raise PydanticCustomError(
+            "DuplicateTargetIdError",
+            "The given sequence of target ids contain duplicates: {duplicates}",
+            {"duplicates": duplicates},
+        )
+
+    return iterable
+
+
+ResourceIdSet: TypeAlias = Annotated[
+    set[str],
+    # Upon serialization, assert that the provided sequence does not contain duplicates:
+    BeforeValidator(validate_duplicate_target_ids),
+    # Upon serialization, produce predictablily sorted lists:
+    WrapSerializer(lambda v, next_: sorted(next_(v))),
+]
 
 
 class NoExtraBaseModel(BaseModel):
@@ -63,16 +92,47 @@ class Resource(NoExtraBaseModel):
         ),
     )
 
-    relations: dict[RelationName, Union[ResourceId, list[ResourceId]]] = Field(
+    relations: dict[RelationName, Union[Optional[ResourceId], ResourceIdSet]] = Field(
         {},
         description=(
             "A dictionary containing the relations of the resource to other resources."
             + " Each key correspond to the name of a relation property as per the"
-            + " schemapack definition. Each value is either a single resource ID (in"
-            + " case of many_to_one or one_to_one relations) or a list or resource IDs"
-            + " (in case of one_to_many or many_to_many relations)."
+            + " schemapack definition. Each value could be one of the following types"
+            + " depending on the corresponding schemapack definition:"
+            + " (1) a id of a single target resource (multiple.target is False),"
+            + " (2) None (multiple.target and mandatory.target are both False),"
+            + " (3) a set of ids of target resources (multiple.target is True),"
+            + " (4) an empty set (multiple.target is True and mandatory.target is"
+            + " False)."
         ),
     )
+
+    def get_target_id_set(
+        self, relation_name: RelationName, do_not_raise: bool = False
+    ) -> set[ResourceId]:
+        """Get the target ids for the given relation always represented as a set.
+        This is even the case if the actual value in the relations dict is a single
+        string (translated into a list of length one) or None (translated into an
+        empty set). If do_not_raise is True, the method will return an empty set
+        even if the relation name does not exist in the relations dict.
+
+        Raises:
+            KeyError:
+                If the given relation name does not exist in the relations dict and
+                do_not_raise is False.
+        """
+        try:
+            targets = self.relations[relation_name]
+        except KeyError:
+            if do_not_raise:
+                return set()
+            raise
+
+        if targets is None:
+            return set()
+        if isinstance(targets, set):
+            return targets
+        return {targets}
 
 
 class DataPack(NoExtraBaseModel):
@@ -97,39 +157,14 @@ class DataPack(NoExtraBaseModel):
         ),
     )
 
-    root: Optional[RootResource] = Field(
+    root_resource: Optional[str] = Field(
         None,
         description=(
-            "Optionally, a datapack can be rooted to a specific resource. This means"
-            + " that the datapack must only contain resources references by the root"
-            + " resource as well as the root resource itself."
+            "Defines the id of the resource that should act as root. This means"
+            + " that, in addition to the root resource itself, the datapack must only"
+            + " contain resources that are direct or indirect (dependencies of"
+            + " dependencies) of the root resource."
+            + " Please note, the datapack must define a root resource if the"
+            + " corresponding schemapack defines a root class and vice versa."
         ),
     )
-
-    @model_validator(mode="after")
-    def check_root_existence(self) -> "DataPack":
-        """Make sure that the root resource exists in the datapack."""
-        if self.root:
-            if self.root.class_name not in self.resources:
-                raise PydanticCustomError(
-                    "RootClassNotFoundError",
-                    (
-                        "Root resource class '{class_name}' does not exist in"
-                        + " the datapack."
-                    ),
-                    {
-                        "class_name": self.root.class_name,
-                    },
-                )
-            if self.root.resource_id not in self.resources[self.root.class_name]:
-                raise PydanticCustomError(
-                    "RootResourceNotFoundError",
-                    (
-                        "Root resource with ID '{resource_id}' does not exist"
-                        + " in the datapack."
-                    ),
-                    {
-                        "resource_id": self.root.resource_id,
-                    },
-                )
-        return self

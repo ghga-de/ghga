@@ -55,7 +55,7 @@ class GlobalValidationPlugin(ABC):
         """Validate the entire datapack.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         raise NotImplementedError
 
@@ -89,7 +89,7 @@ class ClassValidationPlugin(ABC):
         for resolving relations to other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         raise NotImplementedError
 
@@ -123,6 +123,6 @@ class ResourceValidationPlugin(ABC):
         provided for resolving relations to resources of other classes.
 
         Raises:
-            schemapack.exceptions.DataValidationError: If validation fails.
+            schemapack.exceptions.ValidationPluginError: If validation fails.
         """
         raise NotImplementedError
