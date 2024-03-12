@@ -30,6 +30,8 @@ __all__ = [
     "IvaType",
     "IvaState",
     "IvaBasicData",
+    "IvaWithState",
+    "IvaVerificationCode",
     "IvaId",
     "IvaData",
     "IvaFullData",
@@ -53,7 +55,7 @@ class IvaState(str, Enum):
     CODE_REQUESTED = "CodeRequested"
     CODE_CREATED = "CodeCreated"
     CODE_TRANSMITTED = "CodeTransmitted"
-    CODE_VERIFIED = "CodeVerified"
+    VERIFIED = "Verified"
 
 
 class IvaBasicData(BaseDto):
@@ -71,12 +73,20 @@ class IvaWithState(IvaBasicData):
     )
 
 
+class IvaVerificationCode(BaseDto):
+    """Request and response model containing the verification code for an IVA."""
+
+    verification_code: str = Field(
+        default=..., description="The verification code for the IVA"
+    )
+
+
 class IvaInternalData(BaseDto):
     """Internal data of an IVA (not exposed via the API)"""
 
     user_id: str = Field(default=..., description="Internal user ID")
     verification_code_hash: Optional[str] = Field(
-        default=None, description="Hash of the verification code for the IVA"
+        default=None, description="Salted hash of the verification code for the IVA"
     )
     verification_attempts: int = Field(
         default=0,

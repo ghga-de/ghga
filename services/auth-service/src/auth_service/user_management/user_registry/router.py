@@ -27,7 +27,7 @@ from ..auth import (
     is_steward,
 )
 from .deps import Depends, get_user_registry
-from .models.ivas import IvaBasicData, IvaData, IvaId
+from .models.ivas import IvaBasicData, IvaData, IvaId, IvaVerificationCode
 from .models.users import (
     User,
     UserBasicData,
@@ -424,4 +424,232 @@ async def delete_iva(
         raise HTTPException(status_code=404, detail="The IVA was not found.") from error
     except user_registry.IvaDeletionError as error:
         raise HTTPException(status_code=500, detail="Cannot delete IVA") from error
+    return Response(status_code=204)
+
+
+@router.post(
+    "/rpc/ivas/{iva_id}/unverify",
+    operation_id="unverify_iva",
+    tags=["users"],
+    summary="Unverify an IVA",
+    description="Endpoint used to reset an IVA to the unverified state.",
+    responses={
+        204: {"description": "The state of the IVA has been reset to unverified."},
+        401: {"description": "Not authorized to unverify IVAs."},
+        404: {"description": "The IVA was not found."},
+    },
+    status_code=204,
+)
+async def unverify_iva(
+    iva_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="iva_id",
+            description="IVA ID",
+        ),
+    ],
+    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    auth_context: StewardAuthContext,
+) -> Response:
+    """Unverify the specified IVA."""
+    try:
+        await user_registry.unverify_iva(iva_id)
+    except user_registry.IvaDoesNotExistError as error:
+        raise HTTPException(status_code=404, detail="The IVA was not found.") from error
+    except user_registry.UserRegistryIvaError as error:
+        raise HTTPException(
+            status_code=500, detail="Cannot unverify the IVA"
+        ) from error
+    return Response(status_code=204)
+
+
+@router.post(
+    "/rpc/ivas/{iva_id}/request-code",
+    operation_id="request_code_for_iva",
+    tags=["users"],
+    summary="Request verification code for an IVA",
+    description="Endpoint used to request a verification code for a given IVA.",
+    responses={
+        204: {"description": "A verification code for the IVA has been requested."},
+        401: {"description": "Not authorized to request verification codes for IVAs."},
+        404: {"description": "The IVA was not found."},
+        409: {"description": "The IVA does not have the proper state."},
+    },
+    status_code=204,
+)
+async def request_code_for_iva(
+    iva_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="iva_id",
+            description="IVA ID",
+        ),
+    ],
+    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    auth_context: UserAuthContext,
+) -> Response:
+    """Request verification code for the specified IVA."""
+    try:
+        await user_registry.request_iva_verification_code(
+            iva_id, user_id=auth_context.id
+        )
+    except user_registry.IvaDoesNotExistError as error:
+        raise HTTPException(status_code=404, detail="The IVA was not found.") from error
+    except user_registry.IvaUnexpectedStateError as error:
+        raise HTTPException(
+            status_code=409, detail="The IVA does not have the proper state."
+        ) from error
+    except user_registry.UserRegistryIvaError as error:
+        raise HTTPException(
+            status_code=500, detail="Cannot request a verification code for the IVA"
+        ) from error
+    return Response(status_code=204)
+
+
+@router.post(
+    "/rpc/ivas/{iva_id}/create-code",
+    operation_id="create_code_for_iva",
+    tags=["users"],
+    summary="Create verification code for an IVA",
+    description="Endpoint used to create a verification code for a given IVA.",
+    responses={
+        201: {"description": "A verification code for the IVA has been created."},
+        401: {"description": "Not authorized to create verification codes for IVAs."},
+        404: {"description": "The IVA was not found."},
+        409: {"description": "The IVA does not have the proper state."},
+    },
+    status_code=201,
+)
+async def create_code_for_iva(
+    iva_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="iva_id",
+            description="IVA ID",
+        ),
+    ],
+    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    auth_context: StewardAuthContext,
+) -> IvaVerificationCode:
+    """Create a verification code for the specified IVA."""
+    try:
+        code = await user_registry.create_iva_verification_code(iva_id)
+    except user_registry.IvaDoesNotExistError as error:
+        raise HTTPException(status_code=404, detail="The IVA was not found.") from error
+    except user_registry.IvaUnexpectedStateError as error:
+        raise HTTPException(
+            status_code=409, detail="The IVA does not have the proper state."
+        ) from error
+    except user_registry.UserRegistryIvaError as error:
+        raise HTTPException(
+            status_code=500, detail="Cannot create a verification code for the IVA"
+        ) from error
+    return IvaVerificationCode(verification_code=code)
+
+
+@router.post(
+    "/rpc/ivas/{iva_id}/code-transmitted",
+    operation_id="code_transmitted_for_iva",
+    tags=["users"],
+    summary="Confirm verification code transmission for an IVA",
+    description="Endpoint used to confirm"
+    " that the verification code for an IVA has been transmitted.",
+    responses={
+        204: {"description": "The code has been confirmed as transmitted for the IVA."},
+        401: {
+            "description": "Not authorized to confirm"
+            " the transmission of verification codes for IVAs."
+        },
+        404: {"description": "The IVA was not found."},
+        409: {"description": "The IVA does not have the proper state."},
+    },
+    status_code=204,
+)
+async def confirm_code_for_iva_transmitted(
+    iva_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="iva_id",
+            description="IVA ID",
+        ),
+    ],
+    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    auth_context: StewardAuthContext,
+) -> Response:
+    """Confirm the transmission of a verification code for the specified IVA."""
+    try:
+        await user_registry.confirm_iva_code_transmission(iva_id)
+    except user_registry.IvaDoesNotExistError as error:
+        raise HTTPException(status_code=404, detail="The IVA was not found.") from error
+    except user_registry.IvaUnexpectedStateError as error:
+        raise HTTPException(
+            status_code=409, detail="The IVA does not have the proper state."
+        ) from error
+    except user_registry.UserRegistryIvaError as error:
+        raise HTTPException(
+            status_code=500,
+            detail="Cannot confirm the transmission of a verification code for the IVA",
+        ) from error
+    return Response(status_code=204)
+
+
+@router.post(
+    "/rpc/ivas/{iva_id}/validate-code",
+    operation_id="validate_code_for_iva",
+    tags=["users"],
+    summary="Validate the verification code for an IVA",
+    description="Endpoint used to validate the verification code for an IVA.",
+    responses={
+        204: {"description": "The IVA has been successfully verified."},
+        401: {"description": "Not authorized to validate verification codes for IVAs."},
+        403: {"description": "The submitted verification code was invalid."},
+        404: {"description": "The IVA was not found."},
+        409: {"description": "The IVA does not have the proper state."},
+        422: {"description": "Validation error in submitted verification data."},
+        429: {"description": "Too many attempts, IVA was reset to unverified state."},
+    },
+    status_code=204,
+)
+async def validate_code_for_iva(
+    iva_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="iva_id",
+            description="IVA ID",
+        ),
+    ],
+    data: IvaVerificationCode,
+    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    auth_context: UserAuthContext,
+) -> Response:
+    """Validate a verification code for the specified IVA."""
+    try:
+        verified = await user_registry.validate_iva_verification_code(
+            iva_id, code=data.verification_code, user_id=auth_context.id
+        )
+    except user_registry.IvaDoesNotExistError as error:
+        raise HTTPException(status_code=404, detail="The IVA was not found.") from error
+    except user_registry.IvaUnexpectedStateError as error:
+        raise HTTPException(
+            status_code=409, detail="The IVA does not have the proper state."
+        ) from error
+    except user_registry.IvaTooManyVerificationAttemptsError as error:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many attempts, IVA was reset to unverified state.",
+        ) from error
+    except user_registry.UserRegistryIvaError as error:
+        raise HTTPException(
+            status_code=500,
+            detail="Cannot validate the verification code for the IVA",
+        ) from error
+    if not verified:
+        raise HTTPException(
+            status_code=403, detail="The submitted verification code was invalid."
+        )
     return Response(status_code=204)

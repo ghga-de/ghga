@@ -16,9 +16,9 @@
 """Port for the core user registry."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
-from ..models.ivas import IvaBasicData, IvaData
+from ..models.ivas import Iva, IvaBasicData, IvaData, IvaState
 from ..models.users import User, UserBasicData, UserModifiableData, UserRegisteredData
 
 
@@ -31,32 +31,107 @@ class UserRegistryPort(ABC):
     class UserCreationError(UserRegistryError):
         """Raised when a user cannot be created in the database."""
 
+        def __init__(self, *, ext_id: str, details: Optional[str] = None):
+            message = f"Could not create user with external ID {ext_id}"
+            if details:
+                message += f": {details}"
+            super().__init__(message)
+
     class UserAlreadyExistsError(UserCreationError):
         """Raised when trying to create a that already exists."""
+
+        def __init__(self, *, ext_id: str):
+            super().__init__(ext_id=ext_id, details="user already exists")
 
     class UserRetrievalError(UserRegistryError):
         """Raised when a user cannot be retrieved from the database."""
 
+        def __init__(self, *, user_id: str):
+            message = f"Could not retrieve user with ID {user_id}"
+            super().__init__(message)
+
     class UserDoesNotExistError(UserRegistryError):
         """Raised when trying to access a non-existing user."""
+
+        def __init__(self, *, user_id: str):
+            message = f"User with ID {user_id} does not exist"
+            super().__init__(message)
 
     class UserUpdateError(UserRegistryError):
         """Raised when a user cannot be updated in the database."""
 
+        def __init__(self, *, user_id: str):
+            message = f"Could not update user with ID {user_id}"
+            super().__init__(message)
+
     class UserDeletionError(UserRegistryError):
         """Raised when a user cannot be deleted in the database."""
 
-    class IvaCreationError(UserRegistryError):
+        def __init__(self, *, user_id: str):
+            message = f"Could not delete user with ID {user_id}"
+            super().__init__(message)
+
+    class UserRegistryIvaError(UserRegistryError):
+        """Base class for IVA-related user registry errors."""
+
+    class IvaCreationError(UserRegistryIvaError):
         """Raised when an IVA cannot be created in the database."""
 
-    class IvaRetrievalError(UserRegistryError):
+        def __init__(self, *, user_id: str):
+            message = f"Could not create IVA for user with ID {user_id}"
+            super().__init__(message)
+
+    class IvaRetrievalError(UserRegistryIvaError):
         """Raised when IVAs cannot be retrieved from the database."""
 
-    class IvaDoesNotExistError(UserRegistryError):
+        def __init__(
+            self, *, iva_id: Optional[str] = None, user_id: Optional[str] = None
+        ):
+            message = "Could not retrieve IVA"
+            if iva_id:
+                message += f" with ID {iva_id}"
+            if user_id:
+                message += f" for user with ID {user_id}"
+            super().__init__(message)
+
+    class IvaDoesNotExistError(UserRegistryIvaError):
         """Raised when trying to access a non-existing IVA."""
 
-    class IvaDeletionError(UserRegistryError):
+        def __init__(self, *, iva_id: str, user_id: Optional[str] = None):
+            message = (
+                f"User with ID {user_id} does not have an IVA with ID {iva_id}"
+                if user_id
+                else f"IVA with ID {iva_id} does not exist"
+            )
+            super().__init__(message)
+
+    class IvaModificationError(UserRegistryIvaError):
+        """Raised when IVAs cannot be modified in the database."""
+
+        def __init__(self, *, iva_id: str):
+            message = f"Could not modify IVA with ID {iva_id}"
+            super().__init__(message)
+
+    class IvaDeletionError(UserRegistryIvaError):
         """Raised when IVAs cannot be deleted from the database."""
+
+        def __init__(self, *, iva_id: str):
+            message = f"Could not delete IVA with ID {iva_id}"
+            super().__init__(message)
+
+    class IvaUnexpectedStateError(UserRegistryIvaError):
+        """Raised when an IVA is in an unexpected state."""
+
+        def __init__(self, *, iva_id: str, state: IvaState):
+            message = f"IVA with ID {iva_id} has an unexpected state {state.name}"
+            super().__init__(message)
+
+    class IvaTooManyVerificationAttemptsError(UserRegistryIvaError):
+        """Raised when a verification code is verified too often."""
+
+        def __init__(self, *, iva_id: str):
+            message = f"Too many verification attempts for IVA with ID {iva_id}"
+            super().__init__(message)
 
     @staticmethod
     @abstractmethod
@@ -125,6 +200,15 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
+    async def get_iva(self, iva_id: str) -> Iva:
+        """Get the IVA with the given ID.
+
+        May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
+        or an IvaRetrievalError.
+        """
+        ...
+
+    @abstractmethod
     async def get_ivas(self, user_id: str) -> list[IvaData]:
         """Get all IVAs of a user.
 
@@ -135,11 +219,82 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
+    async def update_iva(self, iva: Iva, **update: Any) -> None:
+        """Update the IVA with the given data.
+
+        May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError
+        or an IvaModificationError.
+        """
+        ...
+
+    @abstractmethod
     async def delete_iva(self, iva_id: str, *, user_id: Optional[str] = None) -> None:
         """Delete the IVA with the ID.
 
-        If the user ID is given, the IVA is only deleted if it belongs to the user.
+        May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError
+        or an IvaDeletionError.
 
-        May raise an IvaDoesNotExistError or an IvaDeletionError.
+        If a user ID is specified, and the IVA does not belong to the user,
+        then an IvaDoesNotExistError is raised.
+        """
+        ...
+
+    @abstractmethod
+    async def unverify_iva(self, iva_id: str):
+        """Reset an IVA as being unverified.
+
+        May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
+        an IvaRetrievalError or an IvaModificationError.
+        """
+        ...
+
+    @abstractmethod
+    async def request_iva_verification_code(
+        self, iva_id: str, *, user_id: Optional[str] = None
+    ):
+        """Request a verification code for the IVA with the given ID.
+
+        May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
+        an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
+
+        If a user ID is specified, and the IVA does not belong to that user,
+        then an IvaDoesNotExistError is raised.
+        """
+        ...
+
+    @abstractmethod
+    async def create_iva_verification_code(self, iva_id: str) -> str:
+        """Create a verification code for the IVA with the given ID.
+
+        The code is returned as a string and its hash is stored in the database.
+
+        May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
+        an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
+        """
+        ...
+
+    @abstractmethod
+    async def confirm_iva_code_transmission(self, iva_id: str) -> None:
+        """Confirm the transmission of the verification code for the given IVA.
+
+        May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
+        an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
+        """
+        ...
+
+    @abstractmethod
+    async def validate_iva_verification_code(
+        self, iva_id: str, code: str, *, user_id: Optional[str] = None
+    ) -> bool:
+        """Validate a verification code for the given IVA.
+
+        Checks whether the given verification code matches the stored hash.
+
+        May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
+        an IvaIvaRetrievalError, an IvaUnexpectedStateError,
+        an IvaTooManyVerificationAttemptsError or an IvaModificationError.
+
+        If a user ID is specified, and the IVA does not belong to the user,
+        then an IvaDoesNotExistError is raised.
         """
         ...

@@ -49,6 +49,8 @@ MAX_USER_DATA = {**MIN_USER_DATA, **OPT_USER_DATA}
 
 DUMMY_USER_ID = "12345678-9012-3456-7890-123456789012"
 
+VERIFICATION_CODE_SIZE = 6  # the expected size of verification codes
+
 
 def seconds_passed(date_string: str) -> float:
     """Get number of seconds that have passed since the given date string."""
@@ -1024,3 +1026,321 @@ async def test_deleting_non_existing_iva_for_existing_user_as_data_steward(
     assert response.status_code == status.HTTP_404_NOT_FOUND
     error = response.json()
     assert error["detail"] == "The IVA was not found."
+
+
+async def test_happy_path_for_verifying_an_iva(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test the happy path for the creation and verification of an IVA."""
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
+
+    # Create an IVA
+    data = {"type": "Phone", "value": "123"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id = response.json()["id"]
+    assert iva_id
+
+    # Request code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/request-code", headers=headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    # Create code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/create-code", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    response_obj = response.json()
+    assert isinstance(response_obj, dict)
+    assert list(response_obj) == ["verification_code"]
+    code = response_obj["verification_code"]
+    assert isinstance(code, str)
+    assert code.isascii()
+    assert code.isalnum()
+    assert code.isupper()
+    assert len(code) == VERIFICATION_CODE_SIZE
+
+    # Transmit code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/code-transmitted", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    # Validate code
+    data = {"verification_code": code}
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    # Check that the IVA has really been verified
+    response = await client_with_db.get(f"/users/{user_id}/ivas", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    iva = ivas[0]
+    assert iva["id"] == iva_id
+    assert iva["type"] == "Phone"
+    assert iva["value"] == "123"
+    assert iva["state"] == "Verified"
+
+
+async def test_data_steward_iva_operations_without_authorization(
+    client_with_db: AsyncTestClient,
+    user_headers: dict[str, str],
+    new_user_headers: dict[str, str],
+):
+    """Test that IVA operations fail if the user is not authorized."""
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
+
+    # Create an IVA as the wrong user
+    data = {"type": "Phone", "value": "123"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=user_headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized to create this IVA."}
+
+    # Now create it as the proper user
+    data = {"type": "Phone", "value": "123"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id = response.json()["id"]
+    assert iva_id
+
+    # Create code as the user who is not a data steward
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/create-code", headers=headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized"}
+
+    # Transmit code as the user who is not a data steward
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/code-transmitted", headers=headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized"}
+
+    # Validate code as the wrong user
+    data = {"verification_code": "123456"}
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=user_headers
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    error = response.json()
+    assert error == {"detail": "The IVA was not found."}
+
+    # Validate code as the proper user, but code has not been requested
+    data = {"verification_code": "123456"}
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+    error = response.json()
+    assert error == {"detail": "The IVA does not have the proper state."}
+
+    # Unverify IVA as the user who is not a data steward
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/unverify", headers=headers
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized"}
+
+
+async def test_wrongly_verifying_a_few_times(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test that that a few failed attempts to verify an IVA are tolerated."""
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
+
+    # Create an IVA
+    data = {"type": "Phone", "value": "123"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id = response.json()["id"]
+    assert iva_id
+    # Request code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/request-code", headers=headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    # Create code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/create-code", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    code = response.json()["verification_code"]
+    assert code
+    assert isinstance(code, str)
+    assert code.isascii()
+    assert code.isalnum()
+    assert code.isupper()
+    assert len(code) == VERIFICATION_CODE_SIZE
+    # Transmit code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/code-transmitted", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    # Send wrong verification code 9 times
+    last_char_is_digit = code[-1].isdigit()
+    wrong_last_chars = "ABCDEFGHI" if last_char_is_digit else "123456789"
+    for i in range(9):
+        invalid_code = code[:-1] + wrong_last_chars[i]
+        data = {"verification_code": invalid_code}
+        response = await client_with_db.post(
+            f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        error = response.json()
+        assert error == {"detail": "The submitted verification code was invalid."}
+    # Now send right verification code, this time it should succeed
+    data = {"verification_code": code}
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # Check that the IVA has really been verified
+    response = await client_with_db.get(f"/users/{user_id}/ivas", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    iva = ivas[0]
+    assert iva["id"] == iva_id
+    assert iva["state"] == "Verified"
+
+
+async def test_wrongly_verifying_an_iva_too_often(
+    client_with_db: AsyncTestClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test that too many failed attempts to verify an IVA will reset it."""
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await client_with_db.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
+
+    # Create an IVA
+    data = {"type": "Phone", "value": "123"}
+    response = await client_with_db.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id = response.json()["id"]
+    assert iva_id
+    # Request code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/request-code", headers=headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    # Create code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/create-code", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    code = response.json()["verification_code"]
+    assert code
+    assert isinstance(code, str)
+    assert code.isascii()
+    assert code.isalnum()
+    assert code.isupper()
+    assert len(code) == VERIFICATION_CODE_SIZE
+    # Transmit code
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/code-transmitted", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    # Send wrong verification code 10 times
+    last_char_is_digit = code[-1].isdigit()
+    wrong_last_chars = "ABCDEFGHIJ" if last_char_is_digit else "0123456789"
+    for i in range(10):
+        invalid_code = code[:-1] + wrong_last_chars[i]
+        data = {"verification_code": invalid_code}
+        response = await client_with_db.post(
+            f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        error = response.json()
+        assert error == {"detail": "The submitted verification code was invalid."}
+    # Now send right verification code, but it's not accepted anymore
+    data = {"verification_code": code}
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    error = response.json()
+    assert error == {"detail": "Too many attempts, IVA was reset to unverified state."}
+    # Try yet another time, but the state has been reset now
+    data = {"verification_code": code}
+    response = await client_with_db.post(
+        f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+    error = response.json()
+    assert error == {"detail": "The IVA does not have the proper state."}
+
+    # Check that the IVA has really not been verified
+    response = await client_with_db.get(f"/users/{user_id}/ivas", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    iva = ivas[0]
+    assert iva["id"] == iva_id
+    assert iva["state"] == "Unverified"

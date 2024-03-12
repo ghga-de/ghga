@@ -296,6 +296,16 @@ class DummyIvaDao:
         self.ivas.append(iva)
         return iva
 
+    async def update(self, iva: Iva) -> None:
+        """Update a dummy IVA."""
+        iva_id = iva.id
+        for index, iva_at_index in enumerate(self.ivas):
+            if iva_at_index.id == iva_id:
+                self.ivas[index] = iva
+                break
+        else:
+            raise ResourceNotFoundError(id_=iva_id)
+
     async def delete(self, *, id_: str) -> None:
         """Delete a dummy IVA."""
         iva = await self.get_by_id(id_)

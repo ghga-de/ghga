@@ -416,6 +416,15 @@ components:
       - matches
       title: Condition
       type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
     Identity:
       additionalProperties: false
       description: A user identity based on an iss/sub pair
@@ -511,7 +520,7 @@ components:
       - CodeRequested
       - CodeCreated
       - CodeTransmitted
-      - CodeVerified
+      - Verified
       title: IvaState
       type: string
     IvaType:
@@ -523,6 +532,19 @@ components:
       - InPerson
       title: IvaType
       type: string
+    IvaVerificationCode:
+      additionalProperties: false
+      description: Request and response model containing the verification code for
+        an IVA.
+      properties:
+        verification_code:
+          description: The verification code for the IVA
+          title: Verification Code
+          type: string
+      required:
+      - verification_code
+      title: IvaVerificationCode
+      type: object
     MatchClaim:
       description: Possible visa claim names for conditions
       enum:
@@ -801,6 +823,27 @@ components:
       - inactive
       title: UserStatus
       type: string
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
     VisaType:
       description: Type of a visa
       enum:
@@ -950,6 +993,181 @@ paths:
       summary: health
       tags:
       - health
+  /rpc/ivas/{iva_id}/code-transmitted:
+    post:
+      description: Endpoint used to confirm that the verification code for an IVA
+        has been transmitted.
+      operationId: code_transmitted_for_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          title: Iva Id
+          type: string
+      responses:
+        '204':
+          description: The code has been confirmed as transmitted for the IVA.
+        '401':
+          description: Not authorized to confirm the transmission of verification
+            codes for IVAs.
+        '404':
+          description: The IVA was not found.
+        '409':
+          description: The IVA does not have the proper state.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Confirm verification code transmission for an IVA
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/create-code:
+    post:
+      description: Endpoint used to create a verification code for a given IVA.
+      operationId: create_code_for_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          title: Iva Id
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IvaVerificationCode'
+          description: A verification code for the IVA has been created.
+        '401':
+          description: Not authorized to create verification codes for IVAs.
+        '404':
+          description: The IVA was not found.
+        '409':
+          description: The IVA does not have the proper state.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Create verification code for an IVA
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/request-code:
+    post:
+      description: Endpoint used to request a verification code for a given IVA.
+      operationId: request_code_for_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          title: Iva Id
+          type: string
+      responses:
+        '204':
+          description: A verification code for the IVA has been requested.
+        '401':
+          description: Not authorized to request verification codes for IVAs.
+        '404':
+          description: The IVA was not found.
+        '409':
+          description: The IVA does not have the proper state.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Request verification code for an IVA
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/unverify:
+    post:
+      description: Endpoint used to reset an IVA to the unverified state.
+      operationId: unverify_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          title: Iva Id
+          type: string
+      responses:
+        '204':
+          description: The state of the IVA has been reset to unverified.
+        '401':
+          description: Not authorized to unverify IVAs.
+        '404':
+          description: The IVA was not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Unverify an IVA
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/validate-code:
+    post:
+      description: Endpoint used to validate the verification code for an IVA.
+      operationId: validate_code_for_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          title: Iva Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IvaVerificationCode'
+        required: true
+      responses:
+        '204':
+          description: The IVA has been successfully verified.
+        '401':
+          description: Not authorized to validate verification codes for IVAs.
+        '403':
+          description: The submitted verification code was invalid.
+        '404':
+          description: The IVA was not found.
+        '409':
+          description: The IVA does not have the proper state.
+        '422':
+          description: Validation error in submitted verification data.
+        '429':
+          description: Too many attempts, IVA was reset to unverified state.
+      security:
+      - HTTPBearer: []
+      summary: Validate the verification code for an IVA
+      tags:
+      - users
   /users:
     post:
       description: Endpoint used to register a new user. May only be performed by

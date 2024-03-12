@@ -173,6 +173,12 @@
       ],
       "title": "Log Format"
     },
+    "max_iva_verification_attempts": {
+      "default": 10,
+      "description": "Maximum number of verification attempts for an IVA",
+      "title": "Max Iva Verification Attempts",
+      "type": "integer"
+    },
     "totp_issuer": {
       "default": "GHGA",
       "description": "Issuer name for TOTP provisioning URIs",
