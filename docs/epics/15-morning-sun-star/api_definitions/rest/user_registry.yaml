@@ -7,14 +7,14 @@ info:
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/
-  contact: 
+  contact:
     url: https://www.ghga.de/about-us/contact
 
 servers:
   - url: https://api.server.test/v1
 
-tags: 
-  - name: users 
+tags:
+  - name: users
     description: User Data
 
 paths:
@@ -39,7 +39,7 @@ paths:
                   $ref: "#/components/schemas/LSID"
                 name:
                   $ref: "#/components/schemas/FullName"
-                title: 
+                title:
                   $ref: "#/components/schemas/AcademicTitle"
                 email:
                   $ref: "#/components/schemas/EMail"
@@ -131,7 +131,7 @@ paths:
               properties:
                 status:
                   $ref: "#/components/schemas/UserStatus"
-                title: 
+                title:
                   $ref: "#/components/schemas/AcademicTitle"
         required: true
       responses:
@@ -174,7 +174,7 @@ paths:
 components:
 
   schemas:
-  
+
     User:
       type: object
       title: User
@@ -187,7 +187,7 @@ components:
           $ref: "#/components/schemas/UserStatus"
         name:
           $ref: "#/components/schemas/FullName"
-        title: 
+        title:
           $ref: "#/components/schemas/AcademicTitle"
         email:
           $ref: "#/components/schemas/EMail"
@@ -275,7 +275,7 @@ components:
       type: object
 
   securitySchemes:
-    
+
     AuthToken:
       type: http
       scheme: bearer

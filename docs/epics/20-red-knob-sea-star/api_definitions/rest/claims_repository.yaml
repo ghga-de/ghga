@@ -7,7 +7,7 @@ info:
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/
-  contact: 
+  contact:
     url: https://www.ghga.de/about-us/contact
 
 servers:
@@ -382,7 +382,7 @@ components:
       description: Scope of the claim depending of the visa type
 
   securitySchemes:
-    
+
     AuthToken:
       type: http
       scheme: bearer
