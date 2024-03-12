@@ -72,7 +72,7 @@ def test_load_datapack_invalid(name: str, path: Path):
         DataPackSpecError
         if error_type == "DataPackSpecError"
         else ParsingError
-        if error_type == "DecodeError"
+        if error_type == "ParsingError"
         else None
     )
 

@@ -59,7 +59,7 @@ def test_load_and_validate_invalid(name: str, path: Path):
     # Either a DataPackSpecError or ValidationError is expected:
     if error_type == "DataPackSpecError":
         assert isinstance(exception_info.value, DataPackSpecError)
-    elif error_type == "DecodeError":
+    elif error_type == "ParsingError":
         assert isinstance(exception_info.value, ParsingError)
     else:
         assert isinstance(exception_info.value, ValidationError)
