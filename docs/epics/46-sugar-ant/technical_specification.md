@@ -180,17 +180,20 @@ Additionally, the following RPC-style endpoints will be added:
 - `POST /rpc/ivas/{iva_id}/unverify`
   - *invalidate the specified IVA*
   - auth header: internal token of a data steward
+  - response body: empty
   - response status:
     - `204 No Content`: state changed to `unverified`
-    - `401 Unauthorized`: auth error (e.g. not a data steward)
-  - *should also send a notification to the user*
+    - `401 Unauthorized`: auth error (not a data steward)
+    - `404 Not Found`: the IVA has not been found
 - `POST /rpc/ivas/{iva_id}/request-code`
   - *request the verification of the specified IVA*
   - auth header: internal token
   - response body: empty
-  - `200 No Content`: state has been changed to `code_requested`
-  - `400 Bad Request`: IVA did not have the state `unverified`
-  - `401 Unauthorized`: auth error (e.g. IVA not of current user)
+  - response status:
+    - `204 No Content`: state has been changed to `code_requested`
+    - `401 Unauthorized`: auth error (not authenticated)
+    - `404 Not Found`: the IVA has not been found or does not belong to the user
+    - `409 Conflict`: IVA did not have the state `unverified`
   - *should also send a notification to the user and a data steward*
 - `POST /rpc/ivas/{iva_id}/create-code`
   - *create verification for the specified IVA*
@@ -198,26 +201,34 @@ Additionally, the following RPC-style endpoints will be added:
   - response body:
     - `verification_code`: string (to be transmitted to the user)
   - response status:
-    - `200 OK`: state has been changed to `code_created`
-    - `401 Unauthorized`: auth error (e.g. not a data steward)
+    - `201 Created`: state changed to `code_created`, code returned in response
+    - `401 Unauthorized`: auth error (not a data steward)
+    - `404 Not Found`: the IVA has not been found
+    - `409 Conflict`: IVA did not have the state `code_requested` or `code_created`
 - `POST /rpc/ivas/{iva_id}/code-transmitted`
   - *confirm the transmission of the verification code for the specified IVA*
   - auth header: internal token of a data steward
+  - response body: empty
   - response status:
     - `204 No Content`: state has been changed to `code_transmitted`
-    - `400 Bad Request`: IVA did not have the state `code_created` or `code_transmitted`
-    - `401 Unauthorized`: auth error (e.g. not a data steward)
+    - `401 Unauthorized`: auth error (not a data steward)
+    - `404 Not Found`: the IVA has not been found
+    - `409 Conflict`: IVA did not have the state `code_created` or `code_transmitted`
   - *should also send a notification to the user*
-- `POST /rpc/ivas/{iva_id}/verify-code`
+- `POST /rpc/ivas/{iva_id}/validate-code`
   - *submit verification code for the specified IVA*
   - auth header: internal token
   - request body:
     - `verification_code`: string (that had been transmitted to the user)
+  - response body: empty
   - response status:
-    - `204 No Code`: verification code correct, IVA is now in state `verified`
-    - `400 Bad Request`: IVA did not have the state `code_transmitted`
-    - `401 Unauthorized`: auth error or verification code was wrong
-    - `429 Too Many Requests`: IVA has been reset to unverified
+    - `204 No Content`: verification code correct, IVA is now in state `verified`
+    - `401 Unauthorized`: auth error (not authenticated)
+    - `403 Forbidden`: verification code was wrong
+    - `404 Not Found`: the IVA has not been found or does not belong to the user
+    - `409 Conflict`: IVA did not have the state `code_transmitted`
+    - `422 Unprocessable content`: the request body is invalid
+    - `429 Too Many Requests`: too many attempts, IVA has been reset to unverified
   - *should also send a notification to the data steward*
 
 ### Claims Repository
@@ -412,7 +423,11 @@ The following flow diagram visualizes the login flow in the frontend.
 
 The following flow diagrams visualize the backend flows for the various routes that are handled by the Auth Adapter.
 
-Note that per the ExtAuth protocol, a response with a status code of "200 OK" means that the route is considered valid by the API gateway and forwarded to the corresponding micro service. Any other status code in the response causes the response to be directly passed back to the client.
+Note that per the [ExtAuth](https://www.getambassador.io/docs/edge-stack/latest/topics/running/services/ext-authz) protocol used by Envoy-based proxies like Emissary-ingress, a response with a status code of `200 OK` means that the route is considered valid by the API gateway and forwarded to the corresponding microservice. Any other status code in the response causes the response to be directly passed back to the client. We utilise this behavior to let the Auth Adapter carry out a dual role, by communicating directly with the client in order to establish user sessions and enroll TOTP, and also regulating access to the backend while exchanging authorization headers.
+
+The `http_auth_request_module` used by Nginx-based proxies like Ingress-Nginx for external authentication works in a slightly different way by interpreting all `2xx` response status codes as a signal to allow access to the backend. Responses with these status codes are not communicated back to the client. Therefore, the solution outlined here cannot be used with Nginx-based proxies.
+
+Also note that Emissary-ingress needs to be properly configured to pass all necessary headers to the Auth Adapter and allow it to modify some headers.
 
 ![Auth flow in the backend](./images/flow_backend.png)
 
