@@ -23,7 +23,7 @@ from typing import Callable, Optional
 
 from fastapi.exceptions import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
-from starlette.status import HTTP_403_FORBIDDEN
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 from ghga_service_commons.auth.context import AuthContext, AuthContextProtocol
 
@@ -48,7 +48,7 @@ async def get_auth_context_using_credentials(
         return await auth_provider.get_context(token)
     except auth_provider.AuthContextValidationError as error:
         raise HTTPException(
-            status_code=HTTP_403_FORBIDDEN,
+            status_code=HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
         ) from error
 
@@ -65,14 +65,16 @@ async def require_auth_context_using_credentials(
     """
     token = credentials.credentials if credentials else None
     if not token:
-        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Not authenticated")
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
     try:
         context = await auth_provider.get_context(token)
         if not context:
             raise auth_provider.AuthContextValidationError("Not authenticated")
     except auth_provider.AuthContextValidationError as error:
         raise HTTPException(
-            status_code=HTTP_403_FORBIDDEN,
+            status_code=HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
         ) from error
     if not predicate(context):
