@@ -54,7 +54,8 @@ INITIAL_USER_STATUS = UserStatus.ACTIVE
     " Data delivered by the OIDC provider may not be altered.",
     responses={
         201: {"model": User, "description": "User was successfully registered."},
-        403: {"description": "Not authorized to register user."},
+        401: {"description": "Not authorized to register users."},
+        403: {"description": "Not authorized to register this user."},
         409: {"description": "User was already registered."},
         422: {"description": "Validation error in submitted user data."},
     },
@@ -99,7 +100,8 @@ async def post_user(
     " Data delivered by the OIDC provider may not be altered.",
     responses={
         204: {"description": "User was successfully updated."},
-        403: {"description": "Not authorized to update user."},
+        401: {"description": "Not authorized to update users."},
+        403: {"description": "Not authorized to update this user."},
         404: {"description": "User does not exist."},
         422: {"description": "Validation error in submitted user data."},
     },
@@ -147,8 +149,8 @@ async def put_user(
     " Can only be performed by a data steward or the same user.",
     responses={
         200: {"model": User, "description": "Requested user has been found."},
-        401: {"description": "Not authorized to get user data."},
-        403: {"description": "Not authorized to request user."},
+        401: {"description": "Not authorized to request user data."},
+        403: {"description": "Not authorized to request data of this user."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user identification."},
     },
@@ -195,6 +197,7 @@ async def get_user(
     " Can only be performed by a data steward or the same user.",
     responses={
         204: {"description": "User data was successfully saved."},
+        401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to make this modification."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user data."},
@@ -253,6 +256,7 @@ async def patch_user(
     " Can only be performed by a data steward.",
     responses={
         204: {"description": "User data was successfully deleted."},
+        401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to delete this user."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user identification."},
@@ -435,7 +439,8 @@ async def delete_iva(
     description="Endpoint used to reset an IVA to the unverified state.",
     responses={
         204: {"description": "The state of the IVA has been reset to unverified."},
-        401: {"description": "Not authorized to unverify IVAs."},
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized to unverify IVAs."},
         404: {"description": "The IVA was not found."},
     },
     status_code=204,
@@ -516,7 +521,8 @@ async def request_code_for_iva(
     description="Endpoint used to create a verification code for a given IVA.",
     responses={
         201: {"description": "A verification code for the IVA has been created."},
-        401: {"description": "Not authorized to create verification codes for IVAs."},
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized to create verification codes for IVAs."},
         404: {"description": "The IVA was not found."},
         409: {"description": "The IVA does not have the proper state."},
     },
@@ -558,8 +564,12 @@ async def create_code_for_iva(
     description="Endpoint used to confirm"
     " that the verification code for an IVA has been transmitted.",
     responses={
-        204: {"description": "The code has been confirmed as transmitted for the IVA."},
-        401: {
+        204: {
+            "description": "The verification code for the IVA has been confirmed"
+            " as transmitted."
+        },
+        401: {"description": "Not authenticated."},
+        403: {
             "description": "Not authorized to confirm"
             " the transmission of verification codes for IVAs."
         },

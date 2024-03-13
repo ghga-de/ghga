@@ -1104,12 +1104,35 @@ async def test_happy_path_for_verifying_an_iva(
     assert iva["state"] == "Verified"
 
 
+async def test_user_iva_operations_without_authorization(
+    client_with_db: AsyncTestClient,
+):
+    """Test that IVA operations fail if the user is not authorized."""
+    # Request code
+    response = await client_with_db.post("/rpc/ivas/some-iva-id/request-code")
+    # Note: This should actually return status code 401.
+    # This is a known issue in FastAPI and should be fixed there,
+    # or a workaround should be implemented in service-commons.
+    # See https://github.com/tiangolo/fastapi/discussions/9130
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authenticated"}
+    # Validate code
+    data = {"verification_code": "123456"}
+    response = await client_with_db.post(
+        "/rpc/ivas/some-iva-id/validate-code", json=data
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authenticated"}
+
+
 async def test_data_steward_iva_operations_without_authorization(
     client_with_db: AsyncTestClient,
     user_headers: dict[str, str],
     new_user_headers: dict[str, str],
 ):
-    """Test that IVA operations fail if the user is not authorized."""
+    """Test that data steward IVA operations fail if the user is not a data steward."""
     # Create a user
     user_data = MIN_USER_DATA
     response = await client_with_db.post(

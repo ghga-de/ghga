@@ -1009,8 +1009,10 @@ paths:
           type: string
       responses:
         '204':
-          description: The code has been confirmed as transmitted for the IVA.
+          description: The verification code for the IVA has been confirmed as transmitted.
         '401':
+          description: Not authenticated.
+        '403':
           description: Not authorized to confirm the transmission of verification
             codes for IVAs.
         '404':
@@ -1049,6 +1051,8 @@ paths:
                 $ref: '#/components/schemas/IvaVerificationCode'
           description: A verification code for the IVA has been created.
         '401':
+          description: Not authenticated.
+        '403':
           description: Not authorized to create verification codes for IVAs.
         '404':
           description: The IVA was not found.
@@ -1115,6 +1119,8 @@ paths:
         '204':
           description: The state of the IVA has been reset to unverified.
         '401':
+          description: Not authenticated.
+        '403':
           description: Not authorized to unverify IVAs.
         '404':
           description: The IVA was not found.
@@ -1186,8 +1192,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/User-Input'
           description: User was successfully registered.
+        '401':
+          description: Not authorized to register users.
         '403':
-          description: Not authorized to register user.
+          description: Not authorized to register this user.
         '409':
           description: User was already registered.
         '422':
@@ -1219,6 +1227,8 @@ paths:
           description: Successful Response
         '204':
           description: User data was successfully deleted.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to delete this user.
         '404':
@@ -1251,9 +1261,9 @@ paths:
                 $ref: '#/components/schemas/User-Input'
           description: Requested user has been found.
         '401':
-          description: Not authorized to get user data.
+          description: Not authorized to request user data.
         '403':
-          description: Not authorized to request user.
+          description: Not authorized to request data of this user.
         '404':
           description: The user was not found.
         '422':
@@ -1290,6 +1300,8 @@ paths:
           description: Successful Response
         '204':
           description: User data was successfully saved.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to make this modification.
         '404':
@@ -1324,8 +1336,10 @@ paths:
       responses:
         '204':
           description: User was successfully updated.
+        '401':
+          description: Not authorized to update users.
         '403':
-          description: Not authorized to update user.
+          description: Not authorized to update this user.
         '404':
           description: User does not exist.
         '422':
