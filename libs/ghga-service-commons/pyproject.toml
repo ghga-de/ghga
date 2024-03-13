@@ -22,7 +22,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "3.1.0"
+version = "3.1.1"
 description = "A library that contains common functionality used in services of GHGA"
 dependencies = [
     "pydantic >=2, <3",

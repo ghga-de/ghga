@@ -42,7 +42,9 @@ from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
     configure_exception_handler,
 )
 
-CORRELATION_ID_HEADER_NAME = "X-Correlation-ID"
+# unofficial, but frequently used header name
+# that is also used by Envoy-based proxies like Emissary-ingress
+CORRELATION_ID_HEADER_NAME = "X-Request-Id"
 
 
 log = logging.getLogger(__name__)
