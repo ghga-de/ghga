@@ -18,9 +18,11 @@
 import json
 from typing import Callable, Optional, Union
 
+from fastapi import Request, Response, status
+
 from ..core.session_store import Session
 
-__all__ = ["get_bearer_token", "session_to_header"]
+__all__ = ["get_bearer_token", "session_to_header", "pass_auth_response"]
 
 
 def get_bearer_token(*header_values: Optional[str]) -> Optional[str]:
@@ -59,3 +61,23 @@ def session_to_header(
         session_dict["timeout"] = timeout_soft
         session_dict["extends"] = timeout_hard
     return json.dumps(session_dict, ensure_ascii=False, separators=(",", ":"))
+
+
+def pass_auth_response(
+    request: Request, authorization: Optional[str] = None
+) -> Response:
+    """Create a response for ExtAuth that signals that the request is authorized.
+
+    The Authorization header is set as specified.
+
+    All other headers that exist in the request and that should not be forwarded
+    to the backend, because they are only relevant for the auth adapter, are emptied.
+    """
+    headers: dict[str, str] = {}
+    for header in "Authorization", "X-Authorization", "Cookie", "X-CSRF-Token":
+        value = request.headers.get(header)
+        if value:
+            headers[header] = ""
+    if authorization:
+        headers["Authorization"] = authorization
+    return Response(status_code=status.HTTP_200_OK, headers=headers)

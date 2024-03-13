@@ -73,8 +73,15 @@ def non_mocked_hosts() -> list:
 def assert_has_authorization_header(response, session):
     """Check that the response contains the expected authorization header."""
     assert response.status_code == status.HTTP_200_OK
+
     assert not response.text
-    authorization = response.headers.get("Authorization")
+    headers = response.headers
+    assert not headers.get("Cookie")
+    assert not headers.get("X-Authorization")
+    assert not headers.get("X-CSRF-Token")
+    assert not headers.get("X-Session")
+
+    authorization = headers.get("Authorization")
     assert authorization
     internal_token = get_bearer_token(authorization)
     assert internal_token
@@ -177,7 +184,7 @@ async def test_basic_auth(with_basic_auth: str, client: AsyncTestClient):
 
     assert response.status_code == status.HTTP_200_OK
     assert not response.text
-    assert "Authorization" not in response.headers
+    assert response.headers["Authorization"] == ""
 
 
 async def test_allowed_paths(with_basic_auth: str, client: AsyncTestClient):
@@ -413,10 +420,20 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     # this should pass through without yielding an authorization header
     assert response.status_code == status.HTTP_200_OK
     assert "Authorization" not in response.headers
+    assert response.headers["X-CSRF-Token"] == ""
+    assert response.headers["Cookie"] == ""
+    response = await client.get("/some/path", headers=without_csrf)
+    assert response.status_code == status.HTTP_200_OK
+    assert "Authorization" not in response.headers
+    assert "X-CSRF-Token" not in response.headers
+    assert response.headers["Cookie"] == ""
+
     # also try a post request to a random path, with the proper CSRF token
     response = await client.post("/some/path", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     assert "Authorization" not in response.headers
+    assert response.headers["X-CSRF-Token"] == ""
+    assert response.headers["Cookie"] == ""
     # however, a post request without a CSRF token should fail
     # even if this is not critical here, since we are not yet fully unauthenticated
     response = await client.post("/some/path", headers=without_csrf)

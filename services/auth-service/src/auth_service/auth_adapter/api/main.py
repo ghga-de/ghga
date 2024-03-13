@@ -21,7 +21,7 @@ then this must be also specified in the config setting api_root_path.
 
 from typing import Annotated, Optional
 
-from fastapi import FastAPI, Header, HTTPException, Path, Response, status
+from fastapi import FastAPI, Header, HTTPException, Path, Request, Response, status
 from ghga_service_commons.api import configure_app
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import SecretStr
@@ -56,7 +56,7 @@ from ..deps import (
 )
 from .basic import get_basic_auth_dependency
 from .dto import CreateTOTPToken, TOTPTokenResponse, VerifyTOTP
-from .headers import get_bearer_token, session_to_header
+from .headers import get_bearer_token, pass_auth_response, session_to_header
 
 app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
 configure_app(app, config=CONFIG)
@@ -81,13 +81,11 @@ def add_allowed_route(route: str, write: bool = False):
 
     @app.api_route(route, methods=methods)
     async def allowed_route(
+        request: Request,
         authorization: Annotated[Optional[str], Header()] = None,
     ) -> Response:
         """Unprotected route."""
-        headers: dict[str, str] = {}
-        if authorization:
-            headers["Authorization"] = authorization
-        return Response(status_code=status.HTTP_200_OK, headers=headers)
+        return pass_auth_response(request, authorization)
 
 
 def add_allowed_routes():
@@ -211,6 +209,7 @@ async def logout(
     status_code=status.HTTP_200_OK,
 )
 async def post_user(
+    request: Request,
     session_store: SessionStoreDependency,
     session: SessionDependency,
 ) -> Response:
@@ -221,10 +220,7 @@ async def post_user(
         )
     await session_store.save_session(session)
     internal_token = internal_token_from_session(session)
-    authorization = f"Bearer {internal_token}"
-    return Response(
-        status_code=status.HTTP_200_OK, headers={"Authorization": authorization}
-    )
+    return pass_auth_response(request, f"Bearer {internal_token}")
 
 
 @app.put(
@@ -244,6 +240,7 @@ async def put_user(
             description="Internal ID",
         ),
     ],
+    request: Request,
     session_store: SessionStoreDependency,
     session: SessionDependency,
 ) -> Response:
@@ -258,10 +255,7 @@ async def put_user(
         )
     await session_store.save_session(session)
     internal_token = internal_token_from_session(session)
-    authorization = f"Bearer {internal_token}"
-    return Response(
-        status_code=status.HTTP_200_OK, headers={"Authorization": authorization}
-    )
+    return pass_auth_response(request, f"Bearer {internal_token}")
 
 
 @app.post(
@@ -356,6 +350,7 @@ basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else 
     status_code=status.HTTP_200_OK,
 )
 async def ext_auth(
+    request: Request,
     session_store: SessionStoreDependency,
     session: SessionDependency,
 ) -> Response:
@@ -364,11 +359,9 @@ async def ext_auth(
     If a user session exists and is two-factor-authenticated, then an internal
     authentication token will be added to the response.
     """
-    headers = {}
     if session:
         await session_store.save_session(session)
         if session.state is SessionState.AUTHENTICATED:
             internal_token = internal_token_from_session(session)
-            authorization = f"Bearer {internal_token}"
-            headers["Authorization"] = authorization
-    return Response(status_code=status.HTTP_200_OK, headers=headers)
+            return pass_auth_response(request, f"Bearer {internal_token}")
+    return pass_auth_response(request)

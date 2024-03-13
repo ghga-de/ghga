@@ -16,9 +16,17 @@
 
 """Unit tests for the request and response header utilities."""
 
+from typing import Optional
+
+import pytest
+from fastapi import Request, Response, status
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from auth_service.auth_adapter.api.headers import get_bearer_token, session_to_header
+from auth_service.auth_adapter.api.headers import (
+    get_bearer_token,
+    pass_auth_response,
+    session_to_header,
+)
 from auth_service.auth_adapter.core.session_store import Session
 
 NOW = now_as_utc()
@@ -126,3 +134,49 @@ def test_session_to_header_with_optional_properties():
         '"id":"some-user-id","title":"Dr.","role":"data_steward@ghga.de",'
         '"timeout":42,"extends":144}'
     )
+
+
+@pytest.mark.parametrize("authorization", [None, "", "changed auth token"])
+def test_pass_auth_response_with_request_headers(authorization: Optional[str]):
+    """Test that existing request headers are emptied with pass_auth_response."""
+    request = Request(
+        {
+            "type": "http",
+            "headers": [
+                (b"authorization", b"some auth token"),
+                (b"x-authorization", b"another auth token"),
+                (b"cookie", b"some cookie"),
+                (b"x-csrf-token", b"some csrf token"),
+                (b"x-extra-header", b"sommething extra"),
+            ],
+        }
+    )
+    response = pass_auth_response(request, authorization)
+    assert isinstance(response, Response)
+    assert response.status_code == status.HTTP_200_OK
+    assert not response.body
+    headers = response.headers
+    assert headers["Authorization"] == (authorization or "")
+    assert headers["X-Authorization"] == ""
+    assert headers["Cookie"] == ""
+    assert headers["X-CSRF-Token"] == ""
+    assert "X-Extra-Header" not in headers
+
+
+@pytest.mark.parametrize("authorization", [None, "", "changed auth token"])
+def test_pass_auth_response_without_request_headers(authorization: Optional[str]):
+    """Test that non existing headers are not emptied with pass_auth_response."""
+    request = Request({"type": "http", "headers": []})
+    response = pass_auth_response(request, authorization)
+    assert isinstance(response, Response)
+    assert response.status_code == status.HTTP_200_OK
+    assert not response.body
+    headers = response.headers
+    if authorization:
+        assert headers["Authorization"] == authorization
+    else:
+        assert "Authorization" not in headers
+    assert "X-Authorization" not in headers
+    assert "Cookie" not in headers
+    assert "X-CSRF-Token" not in headers
+    assert "X-Extra-Header" not in headers
