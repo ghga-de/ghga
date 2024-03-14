@@ -98,7 +98,11 @@ def is_data_steward_claim(claim: Claim) -> bool:
 
 
 def create_controlled_access_claim(
-    user_id: str, dataset_id: str, valid_from: UTCDatetime, valid_until: UTCDatetime
+    user_id: str,
+    iva_id: str,
+    dataset_id: str,
+    valid_from: UTCDatetime,
+    valid_until: UTCDatetime,
 ) -> ClaimFullCreation:
     """Create a claim for a controlled access grant."""
     creation_date = now_as_utc()
@@ -113,6 +117,7 @@ def create_controlled_access_claim(
         asserted_by=AuthorityLevel.DAC,
         conditions=None,
         user_id=user_id,
+        iva_id=iva_id,
         creation_date=creation_date,
         revocation_date=None,
     )

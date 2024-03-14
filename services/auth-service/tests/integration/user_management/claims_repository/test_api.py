@@ -23,9 +23,14 @@ from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import mark
 
-from auth_service.user_management.user_registry.deps import get_user_dao
+from auth_service.user_management.user_registry.deps import get_iva_dao, get_user_dao
+from auth_service.user_management.user_registry.models.ivas import (
+    Iva,
+    IvaState,
+    IvaType,
+)
 
-from ....fixtures.utils import DummyUserDao
+from ....fixtures.utils import DummyIvaDao, DummyUserDao
 from .fixtures import (  # noqa: F401
     fixture_client,
     fixture_client_with_db,
@@ -85,7 +90,9 @@ async def test_post_claim(client_with_db):
     assert len(claim_id) == 36
     assert claim_id.count("-") == 4
     assert claim.pop("user_id") == "john@ghga.de"
+    assert claim.pop("iva_id") is None
     assert claim.pop("sub_source") is None
+
     assert claim.pop("conditions") is None
     assert claim.pop("revocation_date") is None
     assert claim.pop("creation_date") is not None
@@ -287,16 +294,26 @@ async def test_grant_download_access(client_with_db):
     """Test that granting access to a dataset works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    now = now_as_utc()
+    iva = Iva(
+        id="some-iva-id",
+        user_id="john@ghga.de",
+        value="(0123)456789",
+        type=IvaType.PHONE,
+        state=IvaState.VERIFIED,
+        created=now,
+        changed=now,
+    )
+    iva_dao = DummyIvaDao([iva])
+    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
-    current_datetime = now_as_utc()
-    current_year = current_datetime.year
     validity = {
-        "valid_from": f"{current_year - 1}-01-01T00:00:00Z",
-        "valid_until": f"{current_year + 1}-12-31T23:59:59Z",
+        "valid_from": f"{now.year - 1}-01-01T00:00:00Z",
+        "valid_until": f"{now.year + 1}-12-31T23:59:59Z",
     }
 
     response = await client_with_db.post(
-        "/download-access/users/john@ghga.de/datasets/some-dataset-id",
+        "/download-access/users/john@ghga.de/ivas/some-iva-id/datasets/some-dataset-id",
         json=validity,
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -313,7 +330,7 @@ async def test_grant_download_access(client_with_db):
     assert creation_date
     assert claim_data.pop("assertion_date") == creation_date
     creation_datetime = datetime.fromisoformat(creation_date.replace("Z", "+00:00"))
-    assert 0 <= (creation_datetime - current_datetime).total_seconds() < 5
+    assert 0 <= (creation_datetime - now).total_seconds() < 5
 
     assert claim_data == {
         "asserted_by": "dac",
@@ -322,6 +339,7 @@ async def test_grant_download_access(client_with_db):
         "source": DATASET_CLAIM_DATA["source"],
         "sub_source": None,
         "user_id": "john@ghga.de",
+        "iva_id": "some-iva-id",
         "valid_from": validity["valid_from"],
         "valid_until": validity["valid_until"],
         "visa_type": DATASET_CLAIM_DATA["visa_type"],
@@ -333,17 +351,102 @@ async def test_grant_download_access(client_with_db):
     assert response.json() == ["some-dataset-id"]
 
 
+async def test_grant_download_access_with_unverified_iva(client_with_db):
+    """Test granting access to a dataset when the IVA is not yet verified."""
+    user_dao = DummyUserDao()
+    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    now = now_as_utc()
+    iva = Iva(
+        id="some-iva-id",
+        user_id="john@ghga.de",
+        value="(0123)456789",
+        type=IvaType.PHONE,
+        created=now,
+        changed=now,
+    )
+    iva_dao = DummyIvaDao([iva])
+    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+
+    validity = {
+        "valid_from": f"{now.year - 1}-01-01T00:00:00Z",
+        "valid_until": f"{now.year + 1}-12-31T23:59:59Z",
+    }
+
+    response = await client_with_db.post(
+        "/download-access/users/john@ghga.de/ivas/some-iva-id/datasets/some-dataset-id",
+        json=validity,
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    response = await client_with_db.get("/users/john@ghga.de/claims")
+    assert response.status_code == status.HTTP_200_OK
+    requested_claims = response.json()
+
+    assert len(requested_claims) == 1
+    claim_data = requested_claims[0]
+    assert claim_data["user_id"] == "john@ghga.de"
+    assert claim_data["iva_id"] == "some-iva-id"
+
+    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+
+async def test_grant_download_access_without_iva(client_with_db):
+    """Test granting access to a dataset when the IVA does not exist."""
+    user_dao = DummyUserDao()
+    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    iva_dao = DummyIvaDao()
+    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+
+    year = now_as_utc().year
+    validity = {
+        "valid_from": f"{year - 1}-01-01T00:00:00Z",
+        "valid_until": f"{year + 1}-12-31T23:59:59Z",
+    }
+
+    response = await client_with_db.post(
+        "/download-access/users/john@ghga.de/ivas/some-iva-id/datasets/some-dataset-id",
+        json=validity,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "The IVA was not found."
+
+    response = await client_with_db.get("/users/john@ghga.de/claims")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+
 async def test_check_download_access(client_with_db):
     """Test that checking download access for a single dataset works."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    now = now_as_utc()
+    iva = Iva(
+        id="some-iva-id",
+        user_id="john@ghga.de",
+        value="(0123)456789",
+        type=IvaType.PHONE,
+        state=IvaState.VERIFIED,
+        created=now,
+        changed=now,
+    )
+    iva_dao = DummyIvaDao([iva])
+    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
-    # post valid access permission for some-dataset-id
+    # post valid access permission for some-iva-id and some-dataset-id
 
-    claim_data: dict[str, Any] = DATASET_CLAIM_DATA.copy()
-    current_timestamp = int(now_as_utc().timestamp())
-    claim_data["valid_from"] = current_timestamp
-    claim_data["valid_until"] = current_timestamp + 60
+    current_timestamp = int(now.timestamp())
+    claim_data: dict[str, Any] = {
+        **DATASET_CLAIM_DATA,
+        "iva_id": "some-iva-id",
+        "valid_from": current_timestamp,
+        "valid_until": current_timestamp + 60,
+    }
 
     response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
 
@@ -402,23 +505,31 @@ async def test_check_download_access(client_with_db):
     assert response.json() is False
 
 
-async def test_get_datasets_with_download_access(client_with_db):
-    """Test that getting all datasets with download access works."""
+async def test_check_download_access_with_unverified_iva(client_with_db):
+    """Test checking download access for a single dataset with an unverified IVA."""
     user_dao = DummyUserDao()
     client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    now = now_as_utc()
+    iva = Iva(
+        id="some-iva-id",
+        user_id="john@ghga.de",
+        value="(0123)456789",
+        type=IvaType.PHONE,
+        created=now,
+        changed=now,
+    )
+    iva_dao = DummyIvaDao([iva])
+    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
-    # should not have downloadable datasets in the beginning
+    # post valid access permission for some-iva-id and some-dataset-id
 
-    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == []
-
-    # post valid access permission for some-dataset-id
-
-    claim_data: dict[str, Any] = DATASET_CLAIM_DATA.copy()
-    current_timestamp = int(now_as_utc().timestamp())
-    claim_data["valid_from"] = current_timestamp
-    claim_data["valid_until"] = current_timestamp + 60
+    current_timestamp = int(now.timestamp())
+    claim_data: dict[str, Any] = {
+        **DATASET_CLAIM_DATA,
+        "iva_id": "some-iva-id",
+        "valid_from": current_timestamp,
+        "valid_until": current_timestamp + 60,
+    }
 
     response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
 
@@ -429,42 +540,165 @@ async def test_get_datasets_with_download_access(client_with_db):
     assert claim["visa_value"] == "https://ghga.de/datasets/some-dataset-id"
     assert claim["user_id"] == "john@ghga.de"
 
-    # post valid access permission for another-dataset-id
+    # check that access is not given when the IVA is not verified
 
-    claim_data["visa_value"] = claim_data["visa_value"].replace("some", "another")
+    response = await client_with_db.get(
+        "/download-access/users/john@ghga.de/datasets/some-dataset-id"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() is False
 
-    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+
+async def test_get_datasets_with_download_access(client_with_db):
+    """Test that getting all datasets with download access works."""
+    user_dao = DummyUserDao()
+    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    now = now_as_utc()
+    unverified_iva = Iva(
+        id="unverified-iva-id",
+        user_id="john@ghga.de",
+        value="(0123)456789",
+        type=IvaType.PHONE,
+        created=now,
+        changed=now,
+    )
+    verified_iva = unverified_iva.model_copy(
+        update={"id": "verified-iva-id", "state": IvaState.VERIFIED}
+    )
+    iva_dao = DummyIvaDao([unverified_iva, verified_iva])
+    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+
+    # should not have downloadable datasets in the beginning
+
+    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+    # post valid access permission for some-dataset-id
+
+    current_timestamp = int(now.timestamp())
+    some_claim_data: dict[str, Any] = {
+        **DATASET_CLAIM_DATA,
+        "iva_id": "verified-iva-id",
+        "valid_from": current_timestamp,
+        "valid_until": current_timestamp + 60,
+    }
+
+    response = await client_with_db.post(
+        "/users/john@ghga.de/claims", json=some_claim_data
+    )
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
 
+    assert claim["user_id"] == "john@ghga.de"
+    assert claim["iva_id"] == "verified-iva-id"
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/some-dataset-id"
+
+    # post valid access permission for another-dataset-id
+
+    another_claim_data = {
+        **some_claim_data,
+        "visa_value": some_claim_data["visa_value"].replace("some", "another"),
+    }
+    response = await client_with_db.post(
+        "/users/john@ghga.de/claims", json=another_claim_data
+    )
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["user_id"] == "john@ghga.de"
+    assert claim["iva_id"] == "verified-iva-id"
     assert claim["visa_type"] == "ControlledAccessGrants"
     assert claim["visa_value"] == "https://ghga.de/datasets/another-dataset-id"
     assert claim["user_id"] == "john@ghga.de"
 
-    # post invalid access permission for former-dataset-id
+    # post valid access permission with unverified IVA for yet-another-dataset-id
 
-    claim_data["visa_value"] = claim_data["visa_value"].replace("another", "former")
-    claim_data["valid_from"] = current_timestamp - 60
-    claim_data["valid_until"] = current_timestamp - 30
+    yet_another_claim_data = {
+        **some_claim_data,
+        "iva_id": "unverified-iva-id",
+        "visa_value": some_claim_data["visa_value"].replace("some", "yet-another"),
+    }
 
-    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await client_with_db.post(
+        "/users/john@ghga.de/claims", json=yet_another_claim_data
+    )
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
 
+    assert claim["user_id"] == "john@ghga.de"
+    assert claim["iva_id"] == "unverified-iva-id"
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/yet-another-dataset-id"
+
+    # post valid access permission for different user for foreign-dataset-id
+
+    foreign_claim_data = {
+        **some_claim_data,
+        "visa_value": some_claim_data["visa_value"].replace("some", "foreign"),
+    }
+    user = user_dao.user
+    # pretend for the next query that Jane exists
+    user_dao.user = user.model_copy(update={"id": "jane@ghga.de"})
+    response = await client_with_db.post(
+        "/users/jane@ghga.de/claims", json=foreign_claim_data
+    )
+    user_dao.user = user
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["user_id"] == "jane@ghga.de"
+    assert claim["iva_id"] == "verified-iva-id"
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/foreign-dataset-id"
+
+    # post invalid access permission for former-dataset-id
+
+    former_claim_data = {
+        **some_claim_data,
+        "iva_id": "unverified-iva-id",
+        "valid_from": current_timestamp - 60,
+        "valid_until": current_timestamp - 30,
+        "visa_value": some_claim_data["visa_value"].replace("some", "former"),
+    }
+
+    response = await client_with_db.post(
+        "/users/john@ghga.de/claims", json=former_claim_data
+    )
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["user_id"] == "john@ghga.de"
+    assert claim["iva_id"] == "unverified-iva-id"
     assert claim["visa_type"] == "ControlledAccessGrants"
     assert claim["visa_value"] == "https://ghga.de/datasets/former-dataset-id"
-    assert claim["user_id"] == "john@ghga.de"
+
+    # get list of all claims
+
+    response = await client_with_db.get("/users/john@ghga.de/claims")
+    assert response.status_code == status.HTTP_200_OK
+    claims = response.json()
+    assert len(claims) == 4
+    dataset_ids = {claim["visa_value"].rsplit("/", 1)[-1] for claim in response.json()}
+    assert dataset_ids == {
+        "some-dataset-id",
+        "another-dataset-id",
+        "yet-another-dataset-id",
+        "former-dataset-id",
+    }
 
     # check access for wrong user
-
     response = await client_with_db.get("/download-access/users/jane@ghga.de/datasets")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
 
     # check access for right user
-
     response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     dataset_ids = response.json()
@@ -491,6 +725,7 @@ async def test_get_claims_for_seeded_data_steward(client_with_db):
         "conditions": None,
         "revocation_date": None,
         "user_id": "the-id-of-rod-steward",
+        "iva_id": None,
         "source": "https://ghga.de",
         "sub_source": None,
         "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",

@@ -31,7 +31,7 @@ Emissary-ingress does not forward all authorization headers by default, therefor
   - cookie
   - x-authorization
   - x-csrf-token
-  - x-session-header
+  - x-session
 ```
 
 The `x-authorization` header is only needed when an additional HTTP Basic Auth is used on top of the OIDC based authentication. Only the default `authorization` header actually needs to be modified by the Auth Adapter. However, for security purposes the Auth Adapter also empties the authorization headers that it consumes and evaluates itself and which are therefore not needed by the backend. Therefore, these are also specified as response headers.
@@ -49,13 +49,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:2.0.0-alpha.0
+docker pull ghga/auth-service:2.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:2.0.0-alpha.0 .
+docker build -t ghga/auth-service:2.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -63,7 +63,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:2.0.0-alpha.0 --help
+docker run -p 8080:8080 ghga/auth-service:2.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:

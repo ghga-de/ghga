@@ -139,6 +139,10 @@ class ClaimValidity(BaseDto):
 class ClaimCreation(ClaimValidity):
     """A claim made about a user with a user ID"""
 
+    iva_id: Optional[str] = Field(  # actually UUID
+        default=None, description="ID of an IVA associated with this claim"
+    )
+
     visa_type: VisaType = Field(default=..., examples=["AffiliationAndRole"])
     visa_value: Union[EmailStr, HttpUrl, list[Identity]] = Field(
         default=...,

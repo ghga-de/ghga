@@ -21,22 +21,53 @@ from typing import Callable, Optional
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 
-from auth_service.user_management.user_registry.deps import UserDao
+from auth_service.user_management.user_registry.deps import IvaDao, UserDao
+from auth_service.user_management.user_registry.models.ivas import IvaState
 
 from ..deps import ClaimDao
 from ..models.claims import VisaType
 from .claims import is_data_steward_claim, is_valid_claim
 
-__all__ = ["user_exists", "is_data_steward"]
+__all__ = ["user_exists", "iva_exists", "is_data_steward"]
 
 
 async def user_exists(user_id: str, *, user_dao: UserDao) -> bool:
-    """Check whether the user with the given id exists."""
+    """Check whether the user with the given ID exists."""
+    if not user_id:
+        return False
     try:
         await user_dao.get_by_id(user_id)
     except ResourceNotFoundError:
         return False
     return True
+
+
+async def iva_exists(
+    user_id: str, iva_id: str, *, user_dao: UserDao, iva_dao: IvaDao
+) -> bool:
+    """Check whether the specified user exists and has the specified IVA.
+
+    The IVA must exist and belong to the user, but does not need to be verified.
+    """
+    if not user_id or not iva_id:
+        return False
+    try:
+        await user_dao.get_by_id(user_id)
+        iva = await iva_dao.get_by_id(iva_id)
+    except ResourceNotFoundError:
+        return False
+    return iva.user_id == user_id
+
+
+async def iva_is_verified(user_id: str, iva_id: str, *, iva_dao: IvaDao) -> bool:
+    """Check that the specied IVA exists, belongs to the given user and is verified."""
+    if not user_id or not iva_id:
+        return False
+    try:
+        iva = await iva_dao.get_by_id(iva_id)
+    except ResourceNotFoundError:
+        return False
+    return iva.user_id == user_id and iva.state == IvaState.VERIFIED
 
 
 async def is_data_steward(

@@ -56,6 +56,12 @@ components:
           description: Internal claim ID
           title: Id
           type: string
+        iva_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of an IVA associated with this claim
+          title: Iva Id
         revocation_date:
           anyOf:
           - format: date-time
@@ -172,6 +178,12 @@ components:
           description: Internal claim ID
           title: Id
           type: string
+        iva_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of an IVA associated with this claim
+          title: Iva Id
         revocation_date:
           anyOf:
           - format: date-time
@@ -268,6 +280,12 @@ components:
           - type: 'null'
           description: Set of conditions
           title: Conditions
+        iva_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of an IVA associated with this claim
+          title: Iva Id
         source:
           description: Asserting organization
           examples:
@@ -867,7 +885,7 @@ info:
   license:
     name: Apache 2.0
   title: User Management API
-  version: 2.0.0a0
+  version: 2.0.0
 openapi: 3.1.0
 paths:
   /download-access/users/{user_id}/datasets:
@@ -938,25 +956,35 @@ paths:
       summary: Check download access permission for a dataset
       tags:
       - datasets
+  /download-access/users/{user_id}/ivas/{iva_id}/datasets/{dataset_id}:
     post:
       description: Endpoint to add a controlled access grant for a given dataset so
-        that it can be downloaded by the given user. For internal use only.
+        that it can be downloaded by the given user with the given IVA. For internal
+        use only.
       operationId: grant_download_access
       parameters:
-      - description: Internal ID of the user
+      - description: The internal ID of the user
         in: path
         name: user_id
         required: true
         schema:
-          description: Internal ID of the user
+          description: The internal ID of the user
           title: User Id
           type: string
-      - description: Internal ID of the dataset
+      - description: The ID of the IVA
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: The ID of the IVA
+          title: Iva Id
+          type: string
+      - description: The ID of the dataset
         in: path
         name: dataset_id
         required: true
         schema:
-          description: Internal ID of the dataset
+          description: The ID of the dataset
           title: Dataset Id
           type: string
       requestBody:
@@ -974,7 +1002,7 @@ paths:
         '204':
           description: Download access has been granted.
         '404':
-          description: The user or the dataset was not found.
+          description: The user or the IVA was not found.
         '422':
           description: Validation error in submitted user IDs.
       summary: Grant download access permission for a dataset

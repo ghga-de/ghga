@@ -18,18 +18,26 @@
 
 from typing import cast
 
-from pytest import mark
+import pytest
+from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from auth_service.user_management.claims_repository.core.utils import (
     is_data_steward,
+    iva_exists,
+    iva_is_verified,
     user_exists,
 )
 from auth_service.user_management.claims_repository.ports.dao import ClaimDao
-from auth_service.user_management.user_registry.ports.dao import UserDao
+from auth_service.user_management.user_registry.models.ivas import (
+    Iva,
+    IvaState,
+    IvaType,
+)
+from auth_service.user_management.user_registry.ports.dao import IvaDao, UserDao
 
-from ....fixtures.utils import DummyClaimDao, DummyUserDao
+from ....fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
 
-pytestmark = mark.asyncio(scope="module")
+pytestmark = pytest.mark.asyncio(scope="module")
 
 
 async def test_user_exists():
@@ -38,6 +46,80 @@ async def test_user_exists():
     assert await user_exists(None, user_dao=user_dao) is False  # type: ignore
     assert await user_exists("some-internal-id", user_dao=user_dao) is True
     assert await user_exists("other-internal-id", user_dao=user_dao) is False
+
+
+async def test_iva_exists():
+    """Test that existence of IVAs for users can be checked."""
+    user_id, iva_id = "some-user-id", "some-iva-id"
+    now = now_as_utc()
+    iva = Iva(
+        id=iva_id,
+        user_id=user_id,
+        value="123/456",
+        type=IvaType.PHONE,
+        created=now,
+        changed=now,
+    )
+    kwargs = {
+        "user_dao": cast(UserDao, DummyUserDao(id_=user_id)),
+        "iva_dao": cast(IvaDao, DummyIvaDao([iva])),
+    }
+
+    assert await iva_exists(None, None, **kwargs) is False  # type: ignore
+    assert await iva_exists(None, iva_id, **kwargs) is False  # type: ignore
+    assert await iva_exists(user_id, None, **kwargs) is False  # type: ignore
+    assert await iva_exists("other-user-id", iva_id, **kwargs) is False
+    assert await iva_exists(user_id, "other-iva-id", **kwargs) is False
+
+    assert await iva_exists(user_id, iva_id, **kwargs) is True
+
+
+async def test_iva_exists_when_it_belongs_to_a_different_user():
+    """Test that existence and ownership of IVAs for users are properly checked."""
+    user_id, iva_id = "some-user-id", "some-iva-id"
+    now = now_as_utc()
+    iva = Iva(
+        id=iva_id,
+        user_id="other-user-id",
+        value="123/456",
+        type=IvaType.PHONE,
+        created=now,
+        changed=now,
+    )
+    kwargs = {
+        "user_dao": cast(UserDao, DummyUserDao(id_=user_id)),
+        "iva_dao": cast(IvaDao, DummyIvaDao([iva])),
+    }
+
+    assert await iva_exists(user_id, iva_id, **kwargs) is False
+    assert await iva_exists("other-user-id", iva_id, **kwargs) is False
+
+
+@pytest.mark.parametrize("state", IvaState.__members__.values())
+async def test_iva_is_verified(state: IvaState):
+    """Test that existence of verified IVAs for users can be checked."""
+    user_id, iva_id = "some-user-id", "some-iva-id"
+    now = now_as_utc()
+    iva = Iva(
+        id=iva_id,
+        user_id=user_id,
+        value="123/456",
+        type=IvaType.PHONE,
+        state=state,
+        created=now,
+        changed=now,
+    )
+    kwargs = {
+        "iva_dao": cast(IvaDao, DummyIvaDao([iva])),
+    }
+
+    assert await iva_is_verified(None, None, **kwargs) is False  # type: ignore
+    assert await iva_is_verified(None, iva_id, **kwargs) is False  # type: ignore
+    assert await iva_is_verified(user_id, None, **kwargs) is False  # type: ignore
+    assert await iva_is_verified("other-user-id", iva_id, **kwargs) is False
+    assert await iva_is_verified(user_id, "other-iva-id", **kwargs) is False
+    expected_verified = state == IvaState.VERIFIED
+    assert await iva_is_verified(user_id, iva_id, **kwargs) is expected_verified
 
 
 async def test_is_data_steward():

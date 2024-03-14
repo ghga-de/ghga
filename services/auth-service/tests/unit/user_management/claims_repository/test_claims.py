@@ -133,11 +133,13 @@ def test_create_controlled_access_claim():
     current_year = now_as_utc().year
     created_claim = create_controlled_access_claim(
         user_id="some-user-id",
+        iva_id="some-iva-id",
         dataset_id="some-dataset-id",
         valid_from=utc_datetime(current_year - 1, 7, 1),
         valid_until=utc_datetime(current_year + 1, 6, 30),
     )
     assert created_claim.user_id == "some-user-id"
+    assert created_claim.iva_id == "some-iva-id"
     assert get_dataset_for_value(str(created_claim.visa_value)) == "some-dataset-id"
     full_claim = Claim(id="some-claim-id", **created_claim.model_dump())
     assert is_valid_claim(full_claim)
