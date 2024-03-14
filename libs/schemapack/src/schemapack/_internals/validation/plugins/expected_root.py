@@ -16,15 +16,15 @@
 
 """A validation plugin."""
 
+from schemapack._internals.validation.base import GlobalValidationPlugin
 from schemapack.exceptions import ValidationPluginError
 from schemapack.spec.datapack import DataPack
 from schemapack.spec.schemapack import SchemaPack
-from schemapack.validation.base import GlobalValidationPlugin
 
 
-class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
-    """A global-scoped validation plugin validating that a datapack only contains
-    slots for classes defined in the provided schemapack.
+class ExpectedRootValidationPlugin(GlobalValidationPlugin):
+    """A global-scoped validation plugin validating that a datapack has a root resource.
+    This plugin is only relevant if the schemapack has a root class defined.
     """
 
     @staticmethod
@@ -34,11 +34,11 @@ class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
 
         Returns: True if this plugin is relevant for the given class definition.
         """
-        return True
+        return bool(schemapack.root_class)
 
     def __init__(self, *, schemapack: SchemaPack):
         """This plugin is configured with the entire schemapack."""
-        self._classes = set(schemapack.classes)
+        # there is nothing to do
 
     def validate(self, *, datapack: DataPack):
         """Validate the entire datapack.
@@ -46,18 +46,11 @@ class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        unknown_classes = [
-            class_ for class_ in datapack.resources if class_ not in self._classes
-        ]
-
-        if unknown_classes:
+        if not datapack.root_resource:
             raise ValidationPluginError(
-                type_="UnknownClassSlotError",
+                type_="ExpectedRootResourceError",
                 message=(
-                    "Found slot(s) for class(es) not defined in the schemapack:"
-                    + ", ".join(unknown_classes)
+                    "The schemapack has a root class defined but the datapack is"
+                    "missing a root resource."
                 ),
-                details={
-                    "unknown_classes": unknown_classes,
-                },
             )

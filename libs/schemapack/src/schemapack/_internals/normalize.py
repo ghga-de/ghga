@@ -23,7 +23,8 @@ from typing import Optional
 from typing_extensions import TypeAlias
 
 from schemapack.exceptions import CircularRelationError, ValidationAssumptionError
-from schemapack.spec.datapack import ClassName, DataPack, ResourceId
+from schemapack.spec.custom_types import ClassName, ResourceId
+from schemapack.spec.datapack import DataPack
 from schemapack.spec.schemapack import SchemaPack
 
 JsonObjectCompatible: TypeAlias = dict[str, object]

@@ -14,7 +14,24 @@
 # limitations under the License.
 #
 
-"""Logic for validating a datapack against a schemapack."""
+"""Custom types annotations used for type hinting."""
 
-# shortcuts:
-from schemapack.validation.main import SchemaPackValidator  # noqa: F401
+from typing import Annotated as _Annotated
+
+from pydantic import Field as _Field
+from typing_extensions import TypeAlias as _TypeAlias
+
+__all__ = [
+    "ClassName",
+    "ResourceId",
+    "RelationPropertyName",
+    "ContentPropertyName",
+    "IdPropertyName",
+]
+
+_NonEmptyStr: _TypeAlias = _Annotated[str, _Field(..., min_length=1)]
+ClassName: _TypeAlias = _NonEmptyStr
+ResourceId: _TypeAlias = _NonEmptyStr
+RelationPropertyName: _TypeAlias = _NonEmptyStr
+ContentPropertyName: _TypeAlias = _NonEmptyStr
+IdPropertyName: _TypeAlias = _NonEmptyStr

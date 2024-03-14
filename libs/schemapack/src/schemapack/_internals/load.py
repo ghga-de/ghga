@@ -14,16 +14,20 @@
 # limitations under the License.
 #
 
-"""Loading schemapack and datapack definitions."""
+"""Loading schemapack and datapack definitions.
+
+Warning: This is an internal part of the library and might change without notice.
+"""
 
 from pathlib import Path
 
 import pydantic
 
+from schemapack._internals.utils import transient_directory_change
 from schemapack.exceptions import DataPackSpecError, SchemaPackSpecError
 from schemapack.spec.datapack import DataPack
 from schemapack.spec.schemapack import SchemaPack
-from schemapack.utils import read_json_or_yaml_mapping, transient_directory_change
+from schemapack.utils import read_json_or_yaml_mapping
 
 
 def load_schemapack(path: Path):

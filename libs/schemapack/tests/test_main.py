@@ -20,13 +20,13 @@ from pathlib import Path
 
 import pytest
 
+from schemapack import load_and_validate
 from schemapack.exceptions import (
     BaseError,
     DataPackSpecError,
     ParsingError,
     ValidationError,
 )
-from schemapack.main import load_and_validate
 from tests.fixtures.examples import (
     INVALID_DATAPACK_PATHS,
     VALID_DATAPACK_PATHS,

@@ -16,16 +16,15 @@
 
 """A validation plugin."""
 
+from schemapack._internals.validation.base import GlobalValidationPlugin
 from schemapack.exceptions import ValidationPluginError
 from schemapack.spec.datapack import DataPack
 from schemapack.spec.schemapack import SchemaPack
-from schemapack.validation.base import GlobalValidationPlugin
 
 
-class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
-    """A global-scoped validation plugin validating that a datapack has no root resource
-    defined.
-    This plugin is only relevant if the schemapack has no root class defined.
+class UnknownClassSlotValidationPlugin(GlobalValidationPlugin):
+    """A global-scoped validation plugin validating that a datapack only contains
+    slots for classes defined in the provided schemapack.
     """
 
     @staticmethod
@@ -35,11 +34,11 @@ class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
 
         Returns: True if this plugin is relevant for the given class definition.
         """
-        return not bool(schemapack.root_class)
+        return True
 
     def __init__(self, *, schemapack: SchemaPack):
         """This plugin is configured with the entire schemapack."""
-        # there is nothing to do
+        self._classes = set(schemapack.classes)
 
     def validate(self, *, datapack: DataPack):
         """Validate the entire datapack.
@@ -47,11 +46,18 @@ class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        if datapack.root_resource:
+        unknown_classes = [
+            class_ for class_ in datapack.resources if class_ not in self._classes
+        ]
+
+        if unknown_classes:
             raise ValidationPluginError(
-                type_="UnexpectedRootResourceError",
+                type_="UnknownClassSlotError",
                 message=(
-                    "The schemapack has no root class defined but the datapack "
-                    "specifies a root resource."
+                    "Found slot(s) for class(es) not defined in the schemapack:"
+                    + ", ".join(unknown_classes)
                 ),
+                details={
+                    "unknown_classes": unknown_classes,
+                },
             )

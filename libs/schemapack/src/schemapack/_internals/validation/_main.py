@@ -20,6 +20,16 @@ schemapack.
 
 from typing import Optional, Union, overload
 
+from schemapack._internals.validation.base import (
+    ClassValidationPlugin,
+    GlobalValidationPlugin,
+    ResourceValidationPlugin,
+)
+from schemapack._internals.validation.default import (
+    DEFAULT_CLASS_PLUGIN_REGISTRY,
+    DEFAULT_GLOBAL_PLUGIN_REGISTRY,
+    DEFAULT_RESOURCE_PLUGIN_REGISTRY,
+)
 from schemapack.exceptions import (
     ValidationError,
     ValidationErrorRecord,
@@ -27,16 +37,6 @@ from schemapack.exceptions import (
 )
 from schemapack.spec.datapack import DataPack
 from schemapack.spec.schemapack import SchemaPack
-from schemapack.validation.base import (
-    ClassValidationPlugin,
-    GlobalValidationPlugin,
-    ResourceValidationPlugin,
-)
-from schemapack.validation.default import (
-    DEFAULT_CLASS_PLUGIN_REGISTRY,
-    DEFAULT_GLOBAL_PLUGIN_REGISTRY,
-    DEFAULT_RESOURCE_PLUGIN_REGISTRY,
-)
 
 
 def _create_global_plugins(

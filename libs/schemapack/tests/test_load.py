@@ -20,8 +20,8 @@ from pathlib import Path
 
 import pytest
 
+from schemapack import load_datapack, load_schemapack
 from schemapack.exceptions import DataPackSpecError, ParsingError, SchemaPackSpecError
-from schemapack.load import load_datapack, load_schemapack
 from tests.fixtures.examples import (
     INVALID_DATAPACK_PATHS,
     INVALID_SCHEMAPACK_PATHS,

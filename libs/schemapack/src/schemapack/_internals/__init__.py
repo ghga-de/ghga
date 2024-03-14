@@ -14,28 +14,9 @@
 # limitations under the License.
 #
 
-"""Models representing the schemapack spec (part of the public API of this package)."""
+"""This subpackage contains implementation details that are not part of the public API
+of the package.
 
-from schemapack._internals.spec.schemapack import (
-    SUPPORTED_SCHEMA_PACK_VERSIONS,
-    ClassDefinition,
-    ContentSchema,
-    IDSpec,
-    MandatoryRelationSpec,
-    MultipleRelationSpec,
-    Relation,
-    SchemaPack,
-    SupportedSchemaPackVersions,
-)
-
-__all__ = [
-    "SUPPORTED_SCHEMA_PACK_VERSIONS",
-    "SchemaPack",
-    "ClassDefinition",
-    "ContentSchema",
-    "IDSpec",
-    "MandatoryRelationSpec",
-    "MultipleRelationSpec",
-    "Relation",
-    "SupportedSchemaPackVersions",
-]
+Warning: The content might change without notice in future releases (even in minors or
+patches).
+"""

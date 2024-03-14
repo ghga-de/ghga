@@ -14,28 +14,18 @@
 # limitations under the License.
 #
 
-"""Models representing the schemapack spec (part of the public API of this package)."""
+"""Logic for validating a datapack against a schemapack."""
 
-from schemapack._internals.spec.schemapack import (
-    SUPPORTED_SCHEMA_PACK_VERSIONS,
-    ClassDefinition,
-    ContentSchema,
-    IDSpec,
-    MandatoryRelationSpec,
-    MultipleRelationSpec,
-    Relation,
-    SchemaPack,
-    SupportedSchemaPackVersions,
+from ._main import SchemaPackValidator
+from .base import (
+    ClassValidationPlugin,
+    GlobalValidationPlugin,
+    ResourceValidationPlugin,
 )
 
 __all__ = [
-    "SUPPORTED_SCHEMA_PACK_VERSIONS",
-    "SchemaPack",
-    "ClassDefinition",
-    "ContentSchema",
-    "IDSpec",
-    "MandatoryRelationSpec",
-    "MultipleRelationSpec",
-    "Relation",
-    "SupportedSchemaPackVersions",
+    "SchemaPackValidator",
+    "GlobalValidationPlugin",
+    "ClassValidationPlugin",
+    "ResourceValidationPlugin",
 ]

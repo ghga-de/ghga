@@ -14,28 +14,20 @@
 # limitations under the License.
 #
 
-"""Models representing the schemapack spec (part of the public API of this package)."""
+"""Custom types annotations used for type hinting."""
 
-from schemapack._internals.spec.schemapack import (
-    SUPPORTED_SCHEMA_PACK_VERSIONS,
-    ClassDefinition,
-    ContentSchema,
-    IDSpec,
-    MandatoryRelationSpec,
-    MultipleRelationSpec,
-    Relation,
-    SchemaPack,
-    SupportedSchemaPackVersions,
+from schemapack._internals.spec.custom_types import (
+    ClassName,
+    ContentPropertyName,
+    IdPropertyName,
+    RelationPropertyName,
+    ResourceId,
 )
 
 __all__ = [
-    "SUPPORTED_SCHEMA_PACK_VERSIONS",
-    "SchemaPack",
-    "ClassDefinition",
-    "ContentSchema",
-    "IDSpec",
-    "MandatoryRelationSpec",
-    "MultipleRelationSpec",
-    "Relation",
-    "SupportedSchemaPackVersions",
+    "ClassName",
+    "ResourceId",
+    "RelationPropertyName",
+    "ContentPropertyName",
+    "IdPropertyName",
 ]

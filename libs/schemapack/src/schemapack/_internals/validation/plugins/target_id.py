@@ -16,17 +16,17 @@
 
 """A validation plugin."""
 
+from schemapack._internals.validation.base import ResourceValidationPlugin
 from schemapack.exceptions import ValidationPluginError
-from schemapack.spec.datapack import DataPack, Resource, ResourceId
+from schemapack.spec.custom_types import ResourceId
+from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import ClassDefinition
-from schemapack.validation.base import ResourceValidationPlugin
 
 
-class MultipleTargetValidationPlugin(ResourceValidationPlugin):
-    """A resource-scoped validation plugin validating the plurality of relations,
-    i.e. *_to_many (multiple.target is True) relations must be sets and *_to_one
-    (multiple.target is False) relations must be single values.
-    This only applies to schemapack classes with relations.
+class TargetIdValidationPlugin(ResourceValidationPlugin):
+    """A resource-scoped validation plugin validating that all relations of a given
+    resource point to existing target resources.
+    This plugin only applies if the schemapack class defines any relations.
     """
 
     @staticmethod
@@ -51,28 +51,27 @@ class MultipleTargetValidationPlugin(ResourceValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        wrong_relations: set[str] = set()
-        for relation_name, relation in resource.relations.items():
-            is_set = isinstance(relation, set)
+        non_found_target_ids: dict[str, str] = {}  # target_id -> relation_name
+        for relation_name, relation in self._relations.items():
+            target_ids = resource.get_target_id_set(relation_name, do_not_raise=True)
 
-            try:
-                expected_set = self._relations[relation_name].multiple.target
-            except KeyError:
-                # Unknown relations are handled in a different plugin:
-                continue
+            for target_id in target_ids:
+                if target_id not in datapack.resources.get(relation.targetClass, set()):
+                    non_found_target_ids[target_id] = relation_name
 
-            if is_set != expected_set:
-                wrong_relations.add(relation_name)
-
-        if wrong_relations:
+        if non_found_target_ids:
             raise ValidationPluginError(
-                type_="CardinalityPluralityError",
+                type_="TargetIdNotFoundError",
                 message=(
-                    "Expected a single target ID but got a set, or vise versa, for"
-                    " the following relation propertie(s): "
-                    + ", ".join(wrong_relations)
+                    "Did not find a target resource for the following ID(s) (relation"
+                    + " names): "
+                    + ", ".join(
+                        f"'{target_id}' ('{relation_name}')"
+                        for target_id, relation_name in non_found_target_ids.items()
+                    )
                 ),
                 details={
-                    "wrong_relations": wrong_relations,
+                    "non_found_target_ids": non_found_target_ids.keys(),
+                    "corresponding_relation_names": non_found_target_ids.values(),
                 },
             )

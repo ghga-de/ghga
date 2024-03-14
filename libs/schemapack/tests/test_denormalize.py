@@ -20,9 +20,8 @@ from pathlib import Path
 
 import pytest
 
+from schemapack import denormalize, load_datapack, load_schemapack
 from schemapack.exceptions import CircularRelationError
-from schemapack.load import load_datapack, load_schemapack
-from schemapack.normalize import denormalize
 from schemapack.utils import read_json_or_yaml_mapping
 from tests.fixtures.examples import (
     DENORMALIZED_PATHS,

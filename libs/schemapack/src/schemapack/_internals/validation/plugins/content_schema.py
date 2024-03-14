@@ -16,18 +16,34 @@
 
 """A validation plugin."""
 
+import json
+
+import jsonschema.exceptions
+import jsonschema.protocols
+import jsonschema.validators
+
+from schemapack._internals.validation.base import ResourceValidationPlugin
 from schemapack.exceptions import ValidationPluginError
-from schemapack.spec.datapack import DataPack, Resource, ResourceId
+from schemapack.spec.custom_types import ResourceId
+from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import ClassDefinition
-from schemapack.validation.base import ResourceValidationPlugin
 
 
-class MissingMandatoryTargetValidationPlugin(ResourceValidationPlugin):
-    """A resource-scoped validation plugin validating that every origin defines at least
-    one target resource for relations that are mandatory at the target end.
+def _get_json_schema_validator(schema_str: str) -> jsonschema.protocols.Validator:
+    """Get a JSON Schema validator for the given schema formatted as JSON string.
+    It is assumed that the schema has already been checked for validity against the
+    JSON Schema specs.
+    """
+    schema = json.loads(schema_str)
+    cls: type[jsonschema.protocols.Validator] = jsonschema.validators.validator_for(
+        schema
+    )
+    return cls(schema)
 
-    This only applies to schemapack classes with relations that are mandatory at the
-    target end.
+
+class ContentSchemaValidationPlugin(ResourceValidationPlugin):
+    """A resource-scoped validation plugin validating the content of one resource
+    against the content JSON Schema defined in the corresponding schemapack.
     """
 
     @staticmethod
@@ -37,15 +53,14 @@ class MissingMandatoryTargetValidationPlugin(ResourceValidationPlugin):
 
         Returns: True if this plugin is relevant for the given class definition.
         """
-        return any(relation.mandatory.target for relation in class_.relations.values())
+        # Is always relevant since all resources must have a content schema:
+        return True
 
     def __init__(self, *, class_: ClassDefinition):
         """This plugin is configured with one specific class definition of a schemapack."""
-        self._relations_of_interest = {
-            relation_name
-            for relation_name, relation in class_.relations.items()
-            if relation.mandatory.target
-        }
+        self._json_schema_validator = _get_json_schema_validator(
+            class_.content.json_schema
+        )
 
     def validate(
         self, *, resource: Resource, resource_id: ResourceId, datapack: DataPack
@@ -56,26 +71,9 @@ class MissingMandatoryTargetValidationPlugin(ResourceValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        relations_with_missing_targets: set[str] = set()
-
-        for relation_name in self._relations_of_interest:
-            try:
-                target_resource_ids = resource.relations[relation_name]
-            except KeyError:
-                # This is an error but needs to be handled by another validation plugin:
-                continue
-
-            if not target_resource_ids:
-                relations_with_missing_targets.add(relation_name)
-
-        if relations_with_missing_targets:
+        try:
+            self._json_schema_validator.validate(resource.content)
+        except jsonschema.exceptions.ValidationError as error:
             raise ValidationPluginError(
-                type_="MissingMandatoryTargetError",
-                message=(
-                    "No targets were defined for the following mandatory relations: "
-                    + ", ".join(relations_with_missing_targets)
-                ),
-                details={
-                    "relations_with_missing_targets": relations_with_missing_targets,
-                },
-            )
+                type_="ContentValidationError", message=error.message
+            ) from error

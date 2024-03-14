@@ -14,19 +14,18 @@
 # limitations under the License.
 #
 
-"""Logic to isolate a resource from a non-rooted datapack to create a rooted datapack."""
+"""Logic to isolate a resource from a non-rooted datapack to create a rooted datapack.
+
+Warning: This is an internal part of the library and might change without notice.
+"""
 
 from collections import defaultdict
 from collections.abc import Mapping
 from typing import Optional
 
 from schemapack.exceptions import ValidationAssumptionError
-from schemapack.spec.datapack import (
-    ClassName,
-    DataPack,
-    Resource,
-    ResourceId,
-)
+from schemapack.spec.custom_types import ClassName, ResourceId
+from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import SchemaPack
 
 

@@ -17,43 +17,43 @@
 """Built-In Validation Plugins"""
 
 # shortcuts:
-from schemapack.validation.plugins.content_schema import (
+from schemapack._internals.validation.plugins.content_schema import (
     ContentSchemaValidationPlugin,
 )
-from schemapack.validation.plugins.expected_root import (
+from schemapack._internals.validation.plugins.expected_root import (
     ExpectedRootValidationPlugin,
 )
-from schemapack.validation.plugins.missing_class import (
+from schemapack._internals.validation.plugins.missing_class import (
     MissingClassSlotValidationPlugin,
 )
-from schemapack.validation.plugins.missing_origin import (
+from schemapack._internals.validation.plugins.missing_origin import (
     MissingMandatoryOriginValidationPlugin,
 )
-from schemapack.validation.plugins.missing_relations import (
+from schemapack._internals.validation.plugins.missing_relations import (
     MissingRelationValidationPlugin,
 )
-from schemapack.validation.plugins.missing_target import (
+from schemapack._internals.validation.plugins.missing_target import (
     MissingMandatoryTargetValidationPlugin,
 )
-from schemapack.validation.plugins.multiple_target import (
+from schemapack._internals.validation.plugins.multiple_target import (
     MultipleTargetValidationPlugin,
 )
-from schemapack.validation.plugins.one_to_many_overlap import (
+from schemapack._internals.validation.plugins.one_to_many_overlap import (
     TargetOverlapValidationPlugin,
 )
-from schemapack.validation.plugins.target_id import (
+from schemapack._internals.validation.plugins.target_id import (
     TargetIdValidationPlugin,
 )
-from schemapack.validation.plugins.unexpected_root import (
+from schemapack._internals.validation.plugins.unexpected_root import (
     UnexpectedRootValidationPlugin,
 )
-from schemapack.validation.plugins.unknown_class import (
+from schemapack._internals.validation.plugins.unknown_class import (
     UnknownClassSlotValidationPlugin,
 )
-from schemapack.validation.plugins.unknown_relations import (
+from schemapack._internals.validation.plugins.unknown_relations import (
     UnknownRelationValidationPlugin,
 )
-from schemapack.validation.plugins.unkown_root_resource import (
+from schemapack._internals.validation.plugins.unkown_root_resource import (
     UnkownRootResourceValidationPlugin,
 )
 

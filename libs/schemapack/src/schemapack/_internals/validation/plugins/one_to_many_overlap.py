@@ -19,10 +19,11 @@
 from collections import Counter
 from collections.abc import Mapping
 
+from schemapack._internals.validation.base import ClassValidationPlugin
 from schemapack.exceptions import ValidationPluginError
-from schemapack.spec.datapack import DataPack, Resource, ResourceId
+from schemapack.spec.custom_types import ResourceId
+from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import ClassDefinition
-from schemapack.validation.base import ClassValidationPlugin
 
 
 class TargetOverlapValidationPlugin(ClassValidationPlugin):

@@ -19,7 +19,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 
-from schemapack.spec.datapack import DataPack, Resource, ResourceId
+from schemapack.spec.custom_types import ResourceId
+from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import ClassDefinition, SchemaPack
 
 

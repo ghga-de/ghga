@@ -18,7 +18,7 @@
 
 import json
 
-from schemapack.load import load_schemapack
+from schemapack import load_schemapack
 from schemapack.spec.datapack import (
     SUPPORTED_DATA_PACK_VERSIONS,
     DataPack,
