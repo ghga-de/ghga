@@ -12,10 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-"""Entrypoint of the package"""
+"""Setup for testing the access request service."""
 
-from ars.cli import cli
+import pytest
+from hexkit.providers.akafka.testutils import get_kafka_fixture
+from hexkit.providers.mongodb.testutils import get_mongodb_fixture
 
-if __name__ == "__main__":
-    cli()
+from .fixtures import JointFixture, get_joint_fixture
+
+
+@pytest.fixture(autouse=True)
+def reset_state(joint_fixture: JointFixture):
+    """Clear joint_fixture state before tests.
+
+    This is a function-level fixture because it needs to run in each test.
+    """
+    joint_fixture.mongodb.empty_collections()
+
+
+kafka_fixture = get_kafka_fixture("session")
+mongodb_fixture = get_mongodb_fixture("session")
+joint_fixture = get_joint_fixture("session")

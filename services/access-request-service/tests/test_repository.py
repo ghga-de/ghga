@@ -21,9 +21,9 @@ from datetime import timedelta
 from operator import attrgetter
 from typing import Any, NamedTuple, Optional
 
+import pytest
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext, UserStatus
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_datetime
-from pytest import mark, raises
 
 from ars.core.models import (
     AccessRequest,
@@ -35,6 +35,8 @@ from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
 from ars.ports.outbound.notification_emitter import NotificationEmitterPort
+
+pytestmark = pytest.mark.asyncio(scope="session")
 
 ONE_HOUR = timedelta(seconds=60 * 60)
 ONE_YEAR = timedelta(days=365)
@@ -270,7 +272,6 @@ repository = AccessRequestRepository(
 )
 
 
-@mark.asyncio
 async def test_can_create_request():
     """Test that users can create an access request for themselves"""
     access_starts = now_as_utc()
@@ -325,7 +326,6 @@ async def test_can_create_request():
     assert access_grants.last_grant == "nothing granted so far"
 
 
-@mark.asyncio
 async def test_cannot_create_request_for_somebody_else():
     """Test that users cannot create an access request for somebody else"""
     access_starts = now_as_utc()
@@ -338,11 +338,10 @@ async def test_cannot_create_request_for_somebody_else():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    with raises(repository.AccessRequestError, match="Not authorized"):
+    with pytest.raises(repository.AccessRequestError, match="Not authorized"):
         await repository.create(creation_data, auth_context=auth_context_doe)
 
 
-@mark.asyncio
 async def test_silently_correct_request_that_is_too_early():
     """Test that requests that are too early are silently corrected"""
     creation_date = now_as_utc()
@@ -369,7 +368,6 @@ async def test_silently_correct_request_that_is_too_early():
     assert notification_emitter.num_notifications == 2
 
 
-@mark.asyncio
 async def test_cannot_create_request_too_much_in_advance():
     """Test that users cannot create an access request too much in advance"""
     access_starts = now_as_utc() + 1.5 * ONE_YEAR
@@ -384,7 +382,7 @@ async def test_cannot_create_request_too_much_in_advance():
     )
     reset()
 
-    with raises(
+    with pytest.raises(
         repository.AccessRequestInvalidDuration, match="Access start date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
@@ -393,7 +391,6 @@ async def test_cannot_create_request_too_much_in_advance():
     assert notification_emitter.num_notifications == 0
 
 
-@mark.asyncio
 async def test_cannot_create_request_too_short():
     """Test that users cannot create an access request that is too short"""
     access_starts = now_as_utc()
@@ -408,7 +405,7 @@ async def test_cannot_create_request_too_short():
     )
     reset()
 
-    with raises(
+    with pytest.raises(
         repository.AccessRequestInvalidDuration, match="Access end date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
@@ -417,7 +414,6 @@ async def test_cannot_create_request_too_short():
     assert notification_emitter.num_notifications == 0
 
 
-@mark.asyncio
 async def test_cannot_create_request_too_long():
     """Test that users cannot create an access request that is too long"""
     access_starts = now_as_utc()
@@ -432,7 +428,7 @@ async def test_cannot_create_request_too_long():
     )
     reset()
 
-    with raises(
+    with pytest.raises(
         repository.AccessRequestInvalidDuration, match="Access end date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
@@ -441,7 +437,6 @@ async def test_cannot_create_request_too_long():
     assert notification_emitter.num_notifications == 0
 
 
-@mark.asyncio
 async def test_can_get_all_requests_as_data_steward():
     """Test that a data steward can get all requests."""
     requests = await repository.get(auth_context=auth_context_steward)
@@ -450,7 +445,6 @@ async def test_can_get_all_requests_as_data_steward():
     )
 
 
-@mark.asyncio
 async def test_can_get_all_own_requests_as_requester():
     """Test that requesters can get their own requests."""
     requests = await repository.get(auth_context=auth_context_doe)
@@ -466,16 +460,14 @@ async def test_can_get_all_own_requests_as_requester():
     )
 
 
-@mark.asyncio
 async def test_users_cannot_get_requests_of_other_users():
     """Test that non data stewards cannot get requests of others."""
-    with raises(repository.AccessRequestError, match="Not authorized"):
+    with pytest.raises(repository.AccessRequestError, match="Not authorized"):
         await repository.get(
             auth_context=auth_context_doe, user_id="id-of-jane-roe@ghga.de"
         )
 
 
-@mark.asyncio
 async def test_data_steward_can_get_requests_of_specific_user():
     """Test that data stewards can get requests of specific users."""
     requests = await repository.get(
@@ -489,7 +481,6 @@ async def test_data_steward_can_get_requests_of_specific_user():
     ]
 
 
-@mark.asyncio
 async def test_data_steward_can_get_requests_for_specific_dataset():
     """Test getting requests for a specific dataset."""
     requests = await repository.get(
@@ -503,7 +494,6 @@ async def test_data_steward_can_get_requests_for_specific_dataset():
     ]
 
 
-@mark.asyncio
 async def test_data_steward_can_get_pending_requests():
     """Test getting only the pending requests."""
     requests = await repository.get(
@@ -517,7 +507,6 @@ async def test_data_steward_can_get_pending_requests():
     ]
 
 
-@mark.asyncio
 async def test_filtering_using_multiple_criteria():
     """Test filtering using multiple criteria at the same time."""
     requests = await repository.get(
@@ -536,7 +525,6 @@ async def test_filtering_using_multiple_criteria():
     ]
 
 
-@mark.asyncio
 async def test_set_status_to_allowed():
     """Test setting the status of a request from pending to allowed."""
     original_request = await dao.get_by_id("request-id-4")
@@ -588,14 +576,13 @@ async def test_set_status_to_allowed():
     )
 
 
-@mark.asyncio
 async def test_set_status_to_allowed_with_error_when_granting_access():
     """Test setting the status of a request when granting fails."""
     original_request = await dao.get_by_id("request-id-4")
     reset()
     access_grants.simulate_error = True
 
-    with raises(
+    with pytest.raises(
         repository.AccessRequestError,
         match="Could not register the download access grant",
     ):
@@ -616,7 +603,6 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
     assert notification_emitter.num_notifications == 0
 
 
-@mark.asyncio
 async def test_set_status_to_allowed_when_it_is_already_allowed():
     """Test setting the status of a request to the same state."""
     request = await dao.get_by_id("request-id-1")
@@ -624,7 +610,9 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
 
     reset()
 
-    with raises(repository.AccessRequestError, match="Same status is already set"):
+    with pytest.raises(
+        repository.AccessRequestError, match="Same status is already set"
+    ):
         await repository.update(
             "request-id-1",
             status=AccessRequestStatus.ALLOWED,
@@ -637,7 +625,6 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
     assert access_grants.last_grant == "nothing granted so far"
 
 
-@mark.asyncio
 async def test_set_status_to_allowed_when_it_is_already_denied():
     """Test setting the status of a request to allowed that has already been denied."""
     request = await dao.get_by_id("request-id-3")
@@ -645,7 +632,9 @@ async def test_set_status_to_allowed_when_it_is_already_denied():
 
     reset()
 
-    with raises(repository.AccessRequestError, match="Status cannot be reverted"):
+    with pytest.raises(
+        repository.AccessRequestError, match="Status cannot be reverted"
+    ):
         await repository.update(
             "request-id-3",
             status=AccessRequestStatus.ALLOWED,
@@ -655,12 +644,11 @@ async def test_set_status_to_allowed_when_it_is_already_denied():
     assert access_grants.last_grant == "nothing granted so far"
 
 
-@mark.asyncio
 async def test_set_status_of_non_existing_request():
     """Test setting the status of a request that does not exist."""
     reset()
 
-    with raises(
+    with pytest.raises(
         repository.AccessRequestNotFoundError, match="Access request not found"
     ):
         await repository.update(
@@ -674,12 +662,11 @@ async def test_set_status_of_non_existing_request():
     assert access_grants.last_grant == "nothing granted so far"
 
 
-@mark.asyncio
 async def test_set_status_when_not_a_data_steward():
     """Test setting the status of a request when not being a data steward."""
     reset()
 
-    with raises(repository.AccessRequestError, match="Not authorized"):
+    with pytest.raises(repository.AccessRequestError, match="Not authorized"):
         await repository.update(
             "request-id-4",
             status=AccessRequestStatus.ALLOWED,

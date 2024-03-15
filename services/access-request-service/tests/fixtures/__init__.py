@@ -16,19 +16,21 @@
 """Fixtures that are used in both integration and unit tests"""
 
 from collections.abc import AsyncGenerator
+from typing import NamedTuple
 
+import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
     sign_and_serialize_token,
 )
+from hexkit.custom_types import PytestScope
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest import fixture
-from pytest_asyncio import fixture as async_fixture
 
 from ars.config import Config
-from ars.inject import prepare_rest_app
+from ars.inject import prepare_core, prepare_rest_app
 
 __all__ = [
     "AUTH_KEY_PAIR",
@@ -38,9 +40,9 @@ __all__ = [
     "fixture_auth_headers_steward",
     "fixture_auth_headers_doe_inactive",
     "fixture_auth_headers_steward_inactive",
-    "fixture_client",
+    "get_joint_fixture",
+    "JointFixture",
     "headers_for_token",
-    "non_mocked_hosts",
 ]
 
 
@@ -98,13 +100,22 @@ def fixture_auth_headers_steward() -> dict[str, str]:
     return headers_for_token(token)
 
 
-@async_fixture(name="client")
-async def fixture_client(
-    kafka_fixture: KafkaFixture,
-    mongodb_fixture: MongoDbFixture,
-) -> AsyncGenerator[AsyncTestClient, None]:
-    """Get test client for the access request service"""
+class JointFixture(NamedTuple):
+    """Joint fixture object."""
 
+    config: Config
+    kafka: KafkaFixture
+    mongodb: MongoDbFixture
+    rest_client: AsyncTestClient
+
+
+async def joint_fixture_function(
+    mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture
+) -> AsyncGenerator[JointFixture, None]:
+    """A fixture that embeds all other fixtures for API-level integration testing
+
+    **Do not call directly** Instead, use get_joint_fixture().
+    """
     config = Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
         download_access_url="http://access",
@@ -112,13 +123,19 @@ async def fixture_client(
         **kafka_fixture.config.model_dump(),
         **mongodb_fixture.config.model_dump(),
     )
+    async with prepare_core(config=config) as core:
+        async with (
+            prepare_rest_app(config=config, core_override=core) as app,
+        ):
+            async with AsyncTestClient(app=app) as rest_client:
+                yield JointFixture(
+                    config=config,
+                    kafka=kafka_fixture,
+                    mongodb=mongodb_fixture,
+                    rest_client=rest_client,
+                )
 
-    async with prepare_rest_app(config=config) as app:
-        async with AsyncTestClient(app=app) as client:
-            yield client
 
-
-@fixture
-def non_mocked_hosts() -> list[str]:
-    """Get hosts that are not mocked by pytest-httpx."""
-    return ["test", "localhost"]
+def get_joint_fixture(scope: PytestScope = "function"):
+    """Produce a joint fixture with desired scope"""
+    return pytest_asyncio.fixture(joint_fixture_function, scope=scope)

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Utils to configure the FastAPI app"""
+
 from typing import Any
 
 from fastapi import FastAPI

@@ -22,27 +22,20 @@ from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import NamedTuple, cast
 
-from ghga_service_commons.api.testing import AsyncTestClient
+import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.providers.akafka.testutils import (  # noqa: F401
-    KafkaFixture,
-    RecordedEvent,
-    kafka_fixture,
-)
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    mongodb_fixture,
-)
-from pytest import mark
+from hexkit.providers.akafka.testutils import RecordedEvent
 from pytest_httpx import HTTPXMock
 
 from .fixtures import (  # noqa: F401
+    JointFixture,
     fixture_auth_headers_doe,
     fixture_auth_headers_doe_inactive,
     fixture_auth_headers_steward,
     fixture_auth_headers_steward_inactive,
-    fixture_client,
-    non_mocked_hosts,
 )
+
+pytestmark = pytest.mark.asyncio(scope="session")
 
 DATE_NOW = now_as_utc()
 ONE_YEAR = timedelta(days=365)
@@ -109,24 +102,24 @@ def assert_recorded_events(
         assert re.search(expected.text, cast(str, got["plaintext_body"]))
 
 
-@mark.asyncio
-async def test_health_check(client: AsyncTestClient):
+async def test_health_check(joint_fixture: JointFixture):
     """Test that the health check endpoint works."""
-    response = await client.get("/health")
+    response = await joint_fixture.rest_client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "OK"}
 
 
-@mark.asyncio
 async def test_create_access_request(
-    client: AsyncTestClient,
-    auth_headers_doe: dict[str, str],
-    kafka_fixture: KafkaFixture,  # noqa: F811
+    joint_fixture: JointFixture, auth_headers_doe: dict[str, str]
 ):
     """Test that an active user can create an access request."""
-    async with kafka_fixture.record_events(in_topic="notifications") as recorder:
-        response = await client.post(
+    kafka = joint_fixture.kafka
+    topic = joint_fixture.config.notification_event_topic
+    async with kafka.record_events(in_topic=topic):
+        pass  # skip previous notifications
+    async with kafka.record_events(in_topic=topic) as recorder:
+        response = await joint_fixture.rest_client.post(
             "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
         )
 
@@ -155,13 +148,13 @@ async def test_create_access_request(
     )
 
 
-@mark.asyncio
 async def test_create_access_request_unauthorized(
-    client: AsyncTestClient,
+    joint_fixture: JointFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_doe_inactive: dict[str, str],
 ):
     """Test that creating an access request needs authorization."""
+    client = joint_fixture.rest_client
     # test without authentication
     response = await client.post("/access-requests", json=CREATION_DATA)
     assert response.status_code == 403
@@ -181,12 +174,11 @@ async def test_create_access_request_unauthorized(
     assert response.status_code == 403
 
 
-@mark.asyncio
 async def test_create_access_request_that_is_too_long(
-    client: AsyncTestClient, auth_headers_doe: dict[str, str]
+    joint_fixture: JointFixture, auth_headers_doe: dict[str, str]
 ):
     """Test that an access request that is too long cannot be created."""
-    response = await client.post(
+    response = await joint_fixture.rest_client.post(
         "/access-requests",
         json={
             **CREATION_DATA,
@@ -198,13 +190,13 @@ async def test_create_access_request_that_is_too_long(
     assert response.json()["detail"] == "Access end date is invalid"
 
 
-@mark.asyncio
 async def test_get_access_requests(
-    client: AsyncTestClient,
+    joint_fixture: JointFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
 ):
     """Test that users can get their access requests."""
+    client = joint_fixture.rest_client
     # create two access requests for different users
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -257,11 +249,11 @@ async def test_get_access_requests(
     assert request["status"] == "pending"
 
 
-@mark.asyncio
 async def test_get_access_requests_unauthorized(
-    client: AsyncTestClient, auth_headers_doe_inactive: dict[str, str]
+    joint_fixture: JointFixture, auth_headers_doe_inactive: dict[str, str]
 ):
     """Test that getting access requests needs authorization."""
+    client = joint_fixture.rest_client
     # test unauthenticated
     response = await client.get("/access-requests")
     assert response.status_code == 403
@@ -271,13 +263,13 @@ async def test_get_access_requests_unauthorized(
     assert response.status_code == 403
 
 
-@mark.asyncio
 async def test_filter_access_requests(
-    client: AsyncTestClient,
+    joint_fixture: JointFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
 ):
     """Test that when getting access requests these can be filtered."""
+    client = joint_fixture.rest_client
     # create an access request
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -341,12 +333,10 @@ async def test_filter_access_requests(
     assert len(response.json()) == 1
 
 
-@mark.asyncio
 async def test_patch_access_request(
-    client: AsyncTestClient,
+    joint_fixture: JointFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
-    kafka_fixture: KafkaFixture,  # noqa: F811
     httpx_mock: HTTPXMock,
 ):
     """Test that data stewards can change the status of access requests."""
@@ -357,6 +347,7 @@ async def test_patch_access_request(
         status_code=204,
     )
 
+    client = joint_fixture.rest_client
     # create access request as user
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -366,8 +357,12 @@ async def test_patch_access_request(
     assert_is_uuid(access_request_id)
 
     # set status to allowed as data steward
-    async with kafka_fixture.record_events(in_topic="notifications") as recorder:
-        response = await client.patch(
+    kafka = joint_fixture.kafka
+    topic = joint_fixture.config.notification_event_topic
+    async with kafka.record_events(in_topic=topic):
+        pass  # skip previous notifications
+    async with kafka.record_events(in_topic=topic) as recorder:
+        response = await joint_fixture.rest_client.patch(
             f"/access-requests/{access_request_id}",
             json={"status": "allowed"},
             headers=auth_headers_steward,
@@ -436,12 +431,12 @@ async def test_patch_access_request(
     assert request["changed_by"] == "id-of-rod-steward@ghga.de"  # can see internals
 
 
-@mark.asyncio
 async def test_must_be_data_steward_to_patch_access_request(
-    client: AsyncTestClient,
+    joint_fixture: JointFixture,
     auth_headers_doe: dict[str, str],
 ):
     """Test that only data stewards can change the status of access requests."""
+    client = joint_fixture.rest_client
     # create access request as user
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -465,13 +460,12 @@ async def test_must_be_data_steward_to_patch_access_request(
     assert response.status_code == 403
 
 
-@mark.asyncio
 async def test_patch_non_existing_access_request(
-    client: AsyncTestClient,
+    joint_fixture: JointFixture,
     auth_headers_steward: dict[str, str],
 ):
     """Test that data stewards get an error when patching non-existing requests."""
-    response = await client.patch(
+    response = await joint_fixture.rest_client.patch(
         "/access-requests/some-non-existing-request",
         json={"status": "allowed"},
         headers=auth_headers_steward,

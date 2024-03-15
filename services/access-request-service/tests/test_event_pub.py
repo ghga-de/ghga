@@ -18,14 +18,16 @@
 
 from typing import Any
 
+import pytest
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pytest import mark
 
 from ars.adapters.outbound.event_pub import (
     NotificationEmitter,
     NotificationEmitterConfig,
 )
+
+pytestmark = pytest.mark.asyncio(scope="session")
 
 dummy_config = NotificationEmitterConfig(
     notification_event_topic="dummy_topic", notification_event_type="dummy_type"
@@ -57,7 +59,6 @@ notification_emitter = NotificationEmitter(
 )
 
 
-@mark.asyncio
 async def test_sending_a_notification():
     """Test that a notification is translated properly."""
     await notification_emitter.notify(

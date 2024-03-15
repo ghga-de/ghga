@@ -20,12 +20,15 @@ import json
 from collections.abc import AsyncGenerator
 
 import httpx
+import pytest
 from ghga_service_commons.utils.utc_dates import utc_datetime
-from pytest import mark, raises
 from pytest_asyncio import fixture as async_fixture
 from pytest_httpx import HTTPXMock
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
+
+pytestmark = pytest.mark.asyncio(scope="session")
+
 
 DOWNLOAD_ACCESS_URL = "http://test-access:1234"
 
@@ -37,7 +40,7 @@ VALID_UNTIL = utc_datetime(2020, 12, 31, 23, 59)
 URL = f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets/{DATASET_ID}"
 
 
-@async_fixture(name="access_grant")
+@async_fixture(name="access_grant", scope="session")
 async def fixture_access_grant() -> AsyncGenerator[AccessGrantsAdapter, None]:
     """Get configured access grant test adapter."""
     config = AccessGrantsConfig(download_access_url=DOWNLOAD_ACCESS_URL)
@@ -45,7 +48,6 @@ async def fixture_access_grant() -> AsyncGenerator[AccessGrantsAdapter, None]:
         yield adapter
 
 
-@mark.asyncio
 async def test_grant_download_access(
     access_grant: AccessGrantsAdapter, httpx_mock: HTTPXMock
 ):
@@ -68,14 +70,13 @@ async def test_grant_download_access(
     }
 
 
-@mark.asyncio
 async def test_grant_download_access_with_invalid_dates(
     access_grant: AccessGrantsAdapter,
 ):
     """Test granting download access for invalid dates"""
     grant_access = access_grant.grant_download_access
 
-    with raises(
+    with pytest.raises(
         access_grant.AccessGrantsInvalidPeriodError, match="Invalid validity period"
     ):
         await grant_access(
@@ -86,7 +87,6 @@ async def test_grant_download_access_with_invalid_dates(
         )
 
 
-@mark.asyncio
 async def test_grant_download_access_with_server_error(
     access_grant: AccessGrantsAdapter, httpx_mock: HTTPXMock
 ):
@@ -94,7 +94,7 @@ async def test_grant_download_access_with_server_error(
     grant_access = access_grant.grant_download_access
     httpx_mock.add_response(method="POST", url=URL, status_code=500)
 
-    with raises(
+    with pytest.raises(
         access_grant.AccessGrantsError, match="Unexpected HTTP response status code 500"
     ):
         await grant_access(
@@ -105,7 +105,6 @@ async def test_grant_download_access_with_server_error(
         )
 
 
-@mark.asyncio
 async def test_grant_download_access_with_timeout(
     access_grant: AccessGrantsAdapter, httpx_mock: HTTPXMock
 ):
@@ -113,7 +112,9 @@ async def test_grant_download_access_with_timeout(
     grant_access = access_grant.grant_download_access
     httpx_mock.add_exception(httpx.ReadTimeout("Simulated network problem"))
 
-    with raises(access_grant.AccessGrantsError, match="Simulated network problem"):
+    with pytest.raises(
+        access_grant.AccessGrantsError, match="Simulated network problem"
+    ):
         await grant_access(
             user_id=USER_ID,
             dataset_id=DATASET_ID,
