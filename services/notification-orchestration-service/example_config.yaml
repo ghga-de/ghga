@@ -5,6 +5,8 @@ access_request_events_topic: access_request_events
 central_data_stewardship_email: test@test.abc
 db_connection_str: '**********'
 db_name: users
+file_registered_event_topic: internal_file_registry
+file_registered_event_type: file_registered
 generate_correlation_id: true
 kafka_security_protocol: PLAINTEXT
 kafka_servers:

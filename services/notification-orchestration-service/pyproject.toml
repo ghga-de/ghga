@@ -27,7 +27,7 @@ description = "The Notification Orchestration Service controls the creation of n
 dependencies = [
     "typer >= 0.9.0",
     "ghga-service-commons[api] >= 3.0.0",
-    "ghga-event-schemas >= 3.0.0",
+    "ghga-event-schemas >= 3.1.0",
     "hexkit[akafka,s3,mongodb] >= 2.1.0",
 ]
 

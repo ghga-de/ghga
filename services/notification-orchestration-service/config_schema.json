@@ -68,6 +68,22 @@
       "title": "Access Request Denied Type",
       "type": "string"
     },
+    "file_registered_event_topic": {
+      "description": "The name of the topic containing internal file registration events.",
+      "examples": [
+        "internal_file_registry"
+      ],
+      "title": "File Registered Event Topic",
+      "type": "string"
+    },
+    "file_registered_event_type": {
+      "description": "The type used for events detailing internally file registrations.",
+      "examples": [
+        "file_registered"
+      ],
+      "title": "File Registered Event Type",
+      "type": "string"
+    },
     "service_name": {
       "default": "nos",
       "description": "The Notification Orchestration Service controls the creation of notification events.",
@@ -185,6 +201,8 @@
     "access_request_created_type",
     "access_request_allowed_type",
     "access_request_denied_type",
+    "file_registered_event_topic",
+    "file_registered_event_type",
     "service_instance_id",
     "kafka_servers",
     "central_data_stewardship_email"

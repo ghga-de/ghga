@@ -18,12 +18,12 @@
 from typing import Any
 
 import pytest
-from ghga_event_schemas.pydantic_ import Notification
+from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from logot import Logot, logged
 
 from nos.core import notifications
-from nos.translators.inbound.event_sub import AccessRequestDetails
 from tests.conftest import TEST_USER
 from tests.fixtures.joint import JointFixture
 
@@ -32,7 +32,9 @@ DATASET_ID = "dataset1"
 
 def access_request_payload(user_id: str) -> dict[str, Any]:
     """Succinctly create the payload for an access request event."""
-    return AccessRequestDetails(user_id=user_id, dataset_id=DATASET_ID).model_dump()
+    return event_schemas.AccessRequestDetails(
+        user_id=user_id, dataset_id=DATASET_ID
+    ).model_dump()
 
 
 @pytest.mark.parametrize(
@@ -96,14 +98,14 @@ async def test_access_request(
 
     assert event_type_to_use
 
-    user_notification = Notification(
+    user_notification = event_schemas.Notification(
         recipient_email=joint_fixture.test_user.email,
         subject=user_notification_content.subject,
         recipient_name=joint_fixture.test_user.name,
         plaintext_body=user_notification_content.text.format(**user_kwargs),
     )
 
-    data_steward_notification = Notification(
+    data_steward_notification = event_schemas.Notification(
         recipient_email=joint_fixture.config.central_data_stewardship_email,
         subject=ds_notification_content.subject,
         recipient_name="Data Steward",
@@ -114,10 +116,12 @@ async def test_access_request(
         ExpectedEvent(
             payload=user_notification.model_dump(),
             type_=joint_fixture.config.notification_event_type,
+            key=joint_fixture.test_user.email,
         ),
         ExpectedEvent(
             payload=data_steward_notification.model_dump(),
             type_=joint_fixture.config.notification_event_type,
+            key=joint_fixture.config.central_data_stewardship_email,
         ),
     ]
 
@@ -172,3 +176,52 @@ async def test_missing_user_id(joint_fixture: JointFixture, logot: Logot):
                 + " the database."
             )
         )
+
+
+@pytest.mark.asyncio(scope="module")
+async def test_file_registered(joint_fixture: JointFixture):
+    """Test that the file registered events are translated into a notification."""
+    # Prepare triggering event (the file registration event).
+    # The only thing we care about is the file_id, so the rest can be blank.
+    trigger_event = event_schemas.FileInternallyRegistered(
+        upload_date=now_as_utc().isoformat(),
+        file_id=DATASET_ID,
+        object_id="",
+        bucket_id="",
+        s3_endpoint_alias="",
+        decrypted_size=0,
+        decryption_secret_id="",
+        content_offset=0,
+        encrypted_part_size=0,
+        encrypted_parts_md5=[""],
+        encrypted_parts_sha256=[""],
+        decrypted_sha256="",
+    )
+
+    # Publish the trigger event
+    await joint_fixture.kafka.publish_event(
+        payload=trigger_event.model_dump(),
+        type_=joint_fixture.config.file_registered_event_type,
+        topic=joint_fixture.config.file_registered_event_topic,
+    )
+
+    # Define the event that should be published by the NOS when the trigger is consumed
+    expected_notification = event_schemas.Notification(
+        recipient_email=joint_fixture.config.central_data_stewardship_email,
+        recipient_name="Data Steward",
+        subject="File upload completed",
+        plaintext_body=f"The file {DATASET_ID} has been successfully uploaded.",
+    )
+
+    expected_event = ExpectedEvent(
+        payload=expected_notification.model_dump(),
+        type_=joint_fixture.config.notification_event_type,
+        key=joint_fixture.config.central_data_stewardship_email,
+    )
+
+    # consume the event and verify that the expected event is published
+    async with joint_fixture.kafka.expect_events(
+        events=[expected_event],
+        in_topic=joint_fixture.config.notification_event_topic,
+    ):
+        await joint_fixture.event_subscriber.run(forever=False)

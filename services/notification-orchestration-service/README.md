@@ -131,6 +131,26 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`file_registered_event_topic`** *(string)*: The name of the topic containing internal file registration events.
+
+
+  Examples:
+
+  ```json
+  "internal_file_registry"
+  ```
+
+
+- **`file_registered_event_type`** *(string)*: The type used for events detailing internally file registrations.
+
+
+  Examples:
+
+  ```json
+  "file_registered"
+  ```
+
+
 - **`service_name`** *(string)*: The Notification Orchestration Service controls the creation of notification events. Default: `"nos"`.
 
 - **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.

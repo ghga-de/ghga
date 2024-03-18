@@ -121,3 +121,8 @@ The request by {full_user_name} to download the dataset
 and the access has not been granted.
 """,
 )
+
+FILE_REGISTERED_TO_DS = Notification(
+    "File upload completed",
+    "The file {file_id} has been successfully uploaded.",
+)
