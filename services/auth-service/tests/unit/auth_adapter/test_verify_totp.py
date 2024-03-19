@@ -31,10 +31,14 @@ from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.core.verify_totp import verify_totp
 from auth_service.auth_adapter.ports.dao import UserToken, UserTokenDao
 from auth_service.config import Config
+from auth_service.user_management.user_registry.models.ivas import IvaState
 from auth_service.user_management.user_registry.models.users import UserStatus
-from auth_service.user_management.user_registry.ports.dao import UserDao
 
-from ...fixtures.utils import DummyUserDao, DummyUserTokenDao
+from ...fixtures.utils import (
+    DummyUserDao,
+    DummyUserRegistry,
+    DummyUserTokenDao,
+)
 
 SESSION_ARGS = {
     "ext_id": "john@aai.org",
@@ -87,11 +91,18 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
     session.totp_token = totp_token
 
     user_dao = DummyUserDao()
-    user_id = user_dao.user.id
+
+    user_registry = DummyUserRegistry(config=config)
+    user_dao = user_registry.dummy_user_dao
+    iva_dao = user_registry.dummy_iva_dao
     user_token_dao = DummyUserTokenDao()
+
+    user_id = user_dao.user.id
     if user_has_token:
         assert totp_token
         await user_token_dao.upsert(UserToken(user_id=user_id, totp_token=totp_token))
+
+    user_registry.add_dummy_iva(state=IvaState.VERIFIED)
 
     if totp_token:
         if totp_code == "423715":
@@ -115,7 +126,7 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
             session_store=session_store,
             session=session,
             totp_handler=totp_handler,
-            user_dao=cast(UserDao, user_dao),
+            user_registry=user_registry,
             token_dao=cast(UserTokenDao, user_token_dao),
         )
     if should_verify:
@@ -166,3 +177,10 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         session_store.save_session.assert_awaited_once_with(session)
     else:
         session_store.save_session.assert_not_called()
+
+    iva_state = iva_dao.ivas[0].state
+    if should_verify is True and session_state is SessionState.NEW_TOTP_TOKEN:
+        # already verified IVA should have been reset
+        assert iva_state is IvaState.UNVERIFIED
+    else:
+        assert iva_state is IvaState.VERIFIED

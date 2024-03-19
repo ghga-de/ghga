@@ -20,11 +20,11 @@ import re
 from collections.abc import AsyncIterator, Mapping
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
 from fastapi import Request
 from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.utils.utc_dates import now_as_utc, utc_datetime
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_datetime
 from hexkit.config import config_from_yaml
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from jwcrypto import jwk, jwt
@@ -37,7 +37,18 @@ from auth_service.user_management.claims_repository.models.claims import (
     Claim,
     VisaType,
 )
-from auth_service.user_management.user_registry.models.ivas import Iva, IvaFullData
+from auth_service.user_management.user_registry.core.registry import (
+    IvaDao,
+    UserDao,
+    UserRegistry,
+    UserRegistryConfig,
+)
+from auth_service.user_management.user_registry.models.ivas import (
+    Iva,
+    IvaFullData,
+    IvaState,
+    IvaType,
+)
 from auth_service.user_management.user_registry.models.users import User, UserData
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -396,3 +407,63 @@ class DummyClaimDao:
         """Delete a dummy user claim."""
         claim = await self.get_by_id(id_)
         self.claims.remove(claim)
+
+
+class DummyUserRegistry(UserRegistry):
+    """A modified user registry for testing with the dummy DAOs."""
+
+    def __init__(self, *, config: UserRegistryConfig = CONFIG):
+        self.dummy_user_dao = DummyUserDao()
+        self.dummy_iva_dao = DummyIvaDao()
+        super().__init__(
+            config=config,
+            user_dao=cast(UserDao, self.dummy_user_dao),
+            iva_dao=cast(IvaDao, self.dummy_iva_dao),
+        )
+
+    @staticmethod
+    def is_internal_user_id(id_: str) -> bool:
+        """Check if the passed ID is an internal user id."""
+        return isinstance(id_, str) and id_.endswith("@ghga.de")
+
+    @staticmethod
+    def is_external_user_id(id_: str) -> bool:
+        """Check if the passed ID is an external user id."""
+        return isinstance(id_, str) and id_.endswith("@aai.org")
+
+    @property
+    def dummy_user(self) -> User:
+        """Get the dummy user."""
+        return self.dummy_user_dao.user
+
+    @property
+    def dummy_ivas(self) -> list[Iva]:
+        """Get the dummy IVAs."""
+        return self.dummy_iva_dao.ivas
+
+    def add_dummy_iva(
+        self,
+        id_: Optional[str] = None,
+        user_id: Optional[str] = None,
+        type_: IvaType = IvaType.PHONE,
+        value: str = "123456",
+        state: IvaState = IvaState.UNVERIFIED,
+        verification_code_hash: Optional[str] = None,
+        verification_attempts: int = 0,
+        created: Optional[UTCDatetime] = None,
+        changed: Optional[UTCDatetime] = None,
+    ):
+        """Add a dummy IVA with the specified data."""
+        self.dummy_ivas.append(
+            Iva(
+                id=id_ or f"iva-id-{len(self.dummy_ivas) + 1}",
+                state=state,
+                type=type_,
+                value=value,
+                user_id=user_id or self.dummy_user.id,
+                verification_code_hash=verification_code_hash,
+                verification_attempts=verification_attempts,
+                created=created or now_as_utc(),
+                changed=changed or now_as_utc(),
+            )
+        )

@@ -54,11 +54,8 @@ async def get_iva_dao(
 
 async def get_user_registry(
     config: UserRegistryConfig = Depends(get_config),
-    dao_factory: UserDaoFactory = Depends(get_user_dao_factory),
+    user_dao: UserDao = Depends(get_user_dao),
+    iva_dao: IvaDao = Depends(get_iva_dao),
 ) -> UserRegistryPort:
     """Get user registry."""
-    return UserRegistry(
-        config=config,
-        user_dao=await dao_factory.get_user_dao(),
-        iva_dao=await dao_factory.get_iva_dao(),
-    )
+    return UserRegistry(config=config, user_dao=user_dao, iva_dao=iva_dao)

@@ -36,13 +36,17 @@ from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.deps import Config, get_config
 from auth_service.user_management.claims_repository.deps import get_claim_dao
-from auth_service.user_management.user_registry.deps import get_user_dao
+from auth_service.user_management.user_registry.deps import (
+    get_iva_dao,
+    get_user_dao,
+    get_user_registry,
+)
 
 from ...fixtures.utils import (
     RE_USER_INFO_URL,
     USER_INFO,
     DummyClaimDao,
-    DummyUserDao,
+    DummyUserRegistry,
     DummyUserTokenDao,
     create_access_token,
     headers_for_session,
@@ -72,7 +76,7 @@ class ClientWithSession(NamedTuple):
 
     client: AsyncTestClient
     session: Session
-    user_dao: DummyUserDao
+    user_registry: DummyUserRegistry
     user_token_dao: DummyUserTokenDao
 
 
@@ -149,15 +153,22 @@ async def fixture_client_with_session(
 
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    user_dao = DummyUserDao()
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    user_registry = DummyUserRegistry()
+    user_dao = user_registry.dummy_user_dao
+    iva_dao = user_registry.dummy_iva_dao
     user_token_dao = DummyUserTokenDao()
-    main.app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
     claim_dao = DummyClaimDao()
-    main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
+
+    overrides = main.app.dependency_overrides
+    overrides[get_user_dao] = lambda: user_dao
+    overrides[get_iva_dao] = lambda: iva_dao
+    overrides[get_user_registry] = lambda: user_registry
+    overrides[get_user_token_dao] = lambda: user_token_dao
+    overrides[get_claim_dao] = lambda: claim_dao
 
     session = await query_new_session(client)
-    yield ClientWithSession(client, session, user_dao, user_token_dao)
+
+    yield ClientWithSession(client, session, user_registry, user_token_dao)
 
 
 @fixture(name="with_basic_auth")

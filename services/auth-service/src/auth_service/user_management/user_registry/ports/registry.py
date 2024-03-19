@@ -240,8 +240,10 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def unverify_iva(self, iva_id: str):
+    async def unverify_iva(self, iva_id: str, *, notify: bool = True):
         """Reset an IVA as being unverified.
+
+        Also notitfies the user if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError or an IvaModificationError.
@@ -250,14 +252,16 @@ class UserRegistryPort(ABC):
 
     @abstractmethod
     async def request_iva_verification_code(
-        self, iva_id: str, *, user_id: Optional[str] = None
+        self, iva_id: str, *, user_id: Optional[str] = None, notify: bool = True
     ):
         """Request a verification code for the IVA with the given ID.
+
+        Also notifies the user and a datasteward if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
 
-        If a user ID is specified, and the IVA does not belong to that user,
+        If a user ID is specified, and the IVA does not belong to the user,
         then an IvaDoesNotExistError is raised.
         """
         ...
@@ -274,8 +278,12 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def confirm_iva_code_transmission(self, iva_id: str) -> None:
+    async def confirm_iva_code_transmission(
+        self, iva_id: str, *, notify: bool = True
+    ) -> None:
         """Confirm the transmission of the verification code for the given IVA.
+
+        Also notifies the user if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
@@ -284,17 +292,34 @@ class UserRegistryPort(ABC):
 
     @abstractmethod
     async def validate_iva_verification_code(
-        self, iva_id: str, code: str, *, user_id: Optional[str] = None
+        self,
+        iva_id: str,
+        code: str,
+        *,
+        user_id: Optional[str] = None,
+        notify: bool = True,
     ) -> bool:
         """Validate a verification code for the given IVA.
+
+        Also notifies the dtata steward if not specified otherwise.
 
         Checks whether the given verification code matches the stored hash.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
-        an IvaIvaRetrievalError, an IvaUnexpectedStateError,
+        an IvaRetrievalError, an IvaUnexpectedStateError,
         an IvaTooManyVerificationAttemptsError or an IvaModificationError.
 
         If a user ID is specified, and the IVA does not belong to the user,
         then an IvaDoesNotExistError is raised.
+        """
+        ...
+
+    @abstractmethod
+    async def reset_verified_ivas(self, user_id: str, *, notify: bool = True) -> None:
+        """Reset all verified IVAs of the given user to the unverified state.
+
+        Also notifies the user if needed and not specified otherwise.
+
+        May raise an IvaRetrievalError or an IvaModificationError.
         """
         ...

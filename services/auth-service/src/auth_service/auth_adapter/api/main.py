@@ -32,7 +32,9 @@ from auth_service.user_management.claims_repository.deps import ClaimDao, get_cl
 from auth_service.user_management.user_registry.deps import (
     Depends,
     UserDao,
+    UserRegistryPort,
     get_user_dao,
+    get_user_registry,
 )
 from auth_service.user_management.user_registry.models.users import (
     User,
@@ -313,7 +315,7 @@ async def rpc_verify_totp(  # noqa: PLR0913
     session_store: SessionStoreDependency,
     session: SessionDependency,
     totp_handler: TOTPHandlerDependency,
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
+    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
     token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
 ) -> Response:
     """Verify a TOTP token."""
@@ -332,7 +334,7 @@ async def rpc_verify_totp(  # noqa: PLR0913
         session_store=session_store,
         session=session,
         totp_handler=totp_handler,
-        user_dao=user_dao,
+        user_registry=user_registry,
         token_dao=token_dao,
     )
 

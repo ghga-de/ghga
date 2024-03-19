@@ -278,8 +278,10 @@ class UserRegistry(UserRegistryPort):
             log.error("Could not delete IVA: %s", error)
             raise self.IvaDeletionError(iva_id=iva_id) from error
 
-    async def unverify_iva(self, iva_id: str):
+    async def unverify_iva(self, iva_id: str, *, notify: bool = True):
         """Reset an IVA as being unverified.
+
+        Also notitfies the user if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError or an IvaModificationError.
@@ -291,12 +293,15 @@ class UserRegistry(UserRegistryPort):
             verification_code_hash=None,
             verification_attempts=0,
         )
-        # TODO: should also send a notification to the user
+        if notify:
+            pass  # TODO: should also send a notification to the user
 
     async def request_iva_verification_code(
-        self, iva_id: str, *, user_id: Optional[str] = None
+        self, iva_id: str, *, user_id: Optional[str] = None, notify: bool = True
     ):
         """Request a verification code for the IVA with the given ID.
+
+        Also notifies the user and a datasteward if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
@@ -308,7 +313,8 @@ class UserRegistry(UserRegistryPort):
         if iva.state is not IvaState.UNVERIFIED:
             raise self.IvaUnexpectedStateError(iva_id=iva_id, state=iva.state)
         await self.update_iva(iva, state=IvaState.CODE_REQUESTED)
-        # TODO: should also send a notification to the user and a data steward
+        if notify:
+            pass  # TODO: should also send a notification to the user and a data steward
 
     async def create_iva_verification_code(self, iva_id: str) -> str:
         """Create a verification code for the IVA with the given ID.
@@ -330,8 +336,12 @@ class UserRegistry(UserRegistryPort):
         )
         return code
 
-    async def confirm_iva_code_transmission(self, iva_id: str) -> None:
+    async def confirm_iva_code_transmission(
+        self, iva_id: str, *, notify: bool = True
+    ) -> None:
         """Confirm the transmission of the verification code for the given IVA.
+
+        Also notifies the user if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
@@ -343,12 +353,20 @@ class UserRegistry(UserRegistryPort):
             iva,
             state=IvaState.CODE_TRANSMITTED,
         )
-        # TODO: should also send a notification to the user
+        if notify:
+            pass  # TODO: should also send a notification to the user
 
     async def validate_iva_verification_code(
-        self, iva_id: str, code: str, *, user_id: Optional[str] = None
+        self,
+        iva_id: str,
+        code: str,
+        *,
+        user_id: Optional[str] = None,
+        notify: bool = True,
     ) -> bool:
         """Validate a verification code for the given IVA.
+
+        Also notifies the dtata steward if not specified otherwise.
 
         Checks whether the given verification code matches the stored hash.
 
@@ -379,5 +397,23 @@ class UserRegistry(UserRegistryPort):
         await self.update_iva(iva, **change)
         if too_many:
             raise self.IvaTooManyVerificationAttemptsError(iva_id=iva_id)
-        # TODO: should also send a notification to the data steward
+        if notify:
+            pass  # TODO: should also send a notification to the data steward
         return validated
+
+    async def reset_verified_ivas(self, user_id: str, *, notify: bool = True) -> None:
+        """Reset all verified IVAs of the given user to the unverified state.
+
+        Also notifies the user if needed and not specified otherwise.
+
+        May raise an IvaRetrievalError or an IvaModificationError.
+        """
+        ivas = await self.get_ivas(user_id)
+        needed_reset = False
+        for iva in ivas:
+            if iva.state is IvaState.VERIFIED:
+                await self.unverify_iva(iva.id, notify=False)
+                needed_reset = True
+
+        if needed_reset and notify:
+            pass  # TODO: should also send a notification to the user
