@@ -274,7 +274,7 @@ async def delete_claim(
         404: {"description": "The user or the IVA was not found."},
         422: {"description": "Validation error in submitted user IDs."},
     },
-    status_code=200,
+    status_code=204,
 )
 async def grant_download_access(  # noqa: PLR0913
     validity: ClaimValidity,

@@ -32,10 +32,7 @@ from ghga_service_commons.auth.policies import (
 
 from auth_service.config import CONFIG
 
-__all__ = [
-    "UserAuthContext",
-    "StewardAuthContext",
-]
+__all__ = ["UserAuthContext", "StewardAuthContext"]
 
 
 auth_provider = GHGAAuthContextProvider(config=CONFIG, context_class=AuthContext)
@@ -54,7 +51,7 @@ is_steward = partial(has_role, role="data_steward")
 async def require_steward_context(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
 ) -> AuthContext:
-    """Require an active GHGA auth context with data steward role."""
+    """Require a GHGA auth context with data steward role."""
     return await require_auth_context_using_credentials(
         credentials, auth_provider, is_steward
     )

@@ -994,11 +994,6 @@ paths:
               $ref: '#/components/schemas/ClaimValidity'
         required: true
       responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
         '204':
           description: Download access has been granted.
         '404':
