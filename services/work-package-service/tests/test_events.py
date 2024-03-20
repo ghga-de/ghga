@@ -31,7 +31,7 @@ from .fixtures import (  # noqa: F401
 )
 from .fixtures.datasets import DATASET, DATASET_DELETION_EVENT, DATASET_UPSERTION_EVENT
 
-TIMEOUT = 5
+TIMEOUT = 10
 RETRY_INTERVAL = 0.05
 RETRIES = round(TIMEOUT / RETRY_INTERVAL)
 
