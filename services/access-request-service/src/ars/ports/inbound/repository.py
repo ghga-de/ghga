@@ -37,6 +37,9 @@ class AccessRequestRepositoryPort(ABC):
     class AccessRequestAuthorizationError(AccessRequestError):
         """Error that is raised when the user is not authorized."""
 
+    class AccessRequestMissingIva(AccessRequestError):
+        """Error raised when an IVA is needed, but not provided."""
+
     class AccessRequestInvalidState(AccessRequestError):
         """Error raised when the status for access is invalid."""
 
@@ -89,14 +92,18 @@ class AccessRequestRepositoryPort(ABC):
         *,
         status: AccessRequestStatus,
         auth_context: AuthContext,
+        iva_id: Optional[str] = None,
     ) -> None:
         """Update the status of the access request.
+
+        If the status is set to allowed, an IVA ID must be provided or already exist.
 
         Only data stewards may use this method.
 
         Raises:
         - `AccessRequestAuthorizationError` if the user is not authorized.
         - `AccessRequestNotFoundError` if the specified request was not found.
+        - `AccessRequestMissingIva` if an IVA is needed but not provided.
         - `AccessRequestInvalidState` error if the specified state is invalid.
         - `AccessRequestServerError` if the grant could not be registered.
         """

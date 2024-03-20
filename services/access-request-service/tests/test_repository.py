@@ -22,7 +22,7 @@ from operator import attrgetter
 from typing import Any, NamedTuple, Optional
 
 import pytest
-from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext, UserStatus
+from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_datetime
 
 from ars.core.models import (
@@ -49,11 +49,9 @@ auth_context_doe = AuthContext(
     name="John Doe",
     email="john@home.org",
     title=AcademicTitle.DR,
-    ext_id=None,
     role=None,
     iat=IAT,
     exp=EXP,
-    status=UserStatus.ACTIVE,
 )
 
 
@@ -62,11 +60,9 @@ auth_context_steward = AuthContext(
     name="Rod Steward",
     email="steward@ghga.de",
     title=None,
-    ext_id=None,
     role="data_steward@ghga.de",
     iat=IAT,
     exp=EXP,
-    status=UserStatus.ACTIVE,
 )
 
 
@@ -147,6 +143,21 @@ ACCESS_REQUESTS = [
         status=AccessRequestStatus.ALLOWED,
         status_changed=utc_datetime(2019, 12, 16, 12, 0),
         changed_by="id-of-rod-steward@ghga.de",
+    ),
+    AccessRequest(
+        id="request-id-6",
+        user_id="id-of-john-doe@ghga.de",
+        iva_id="iva-of-john",
+        dataset_id="yet-another-dataset",
+        email="me@john-doe.name",
+        request_text="Can I access yet another dataset using this IVA?",
+        access_starts=utc_datetime(2021, 6, 1, 0, 0),
+        access_ends=utc_datetime(2021, 12, 31, 23, 59),
+        full_user_name="Dr. John Doe",
+        request_created=utc_datetime(2021, 5, 9, 12, 0),
+        status=AccessRequestStatus.PENDING,
+        status_changed=None,
+        changed_by=None,
     ),
 ]
 
@@ -245,6 +256,7 @@ class AccessGrantsDummy(AccessGrantsPort):
     async def grant_download_access(
         self,
         user_id: str,
+        iva_id: str,
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
@@ -254,11 +266,12 @@ class AccessGrantsDummy(AccessGrantsPort):
             self.last_grant = f"to {user_id} for {dataset_id} failed"
             raise self.AccessGrantsError
         self.last_grant = (
-            f"to {user_id} for {dataset_id} from {valid_from} until {valid_until}"
+            f"to {user_id} with {iva_id}"
+            f" for {dataset_id} from {valid_from} until {valid_until}"
         )
 
 
-dao = AccessRequestDaoDummy()
+dao = AccessRequestDaoDummy()  # pyright: ignore
 event_publisher = EventPublisherDummy()
 access_grants = AccessGrantsDummy()
 
@@ -297,6 +310,7 @@ async def test_can_create_request():
 
     assert request.id == "newly-created-id"
     assert request.user_id == "id-of-john-doe@ghga.de"
+    assert request.iva_id is None
     assert request.dataset_id == "some-dataset"
     assert request.email == "me@john-doe.name"
     assert request.request_text == "Can I access some dataset?"
@@ -317,6 +331,30 @@ async def test_can_create_request():
     assert event_publisher.events == [expected_event]
 
     assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_can_create_request_with_an_iva():
+    """Test that users can create an access request already specifying an IVA"""
+    access_starts = now_as_utc()
+    access_ends = access_starts + ONE_YEAR
+    creation_data = AccessRequestCreationData(
+        user_id="id-of-john-doe@ghga.de",
+        iva_id="some-iva_id",
+        dataset_id="some-dataset",
+        email="me@john-doe.name",
+        request_text="Can I access some dataset?",
+        access_starts=access_starts,
+        access_ends=access_ends,
+    )
+
+    request = await repository.create(creation_data, auth_context=auth_context_doe)
+
+    assert request.id == "newly-created-id"
+    assert request.user_id == "id-of-john-doe@ghga.de"
+    assert request.iva_id == "some-iva_id"
+    assert request.dataset_id == "some-dataset"
+
+    assert dao.last_upsert == request
 
 
 async def test_cannot_create_request_for_somebody_else():
@@ -493,8 +531,8 @@ async def test_data_steward_can_get_pending_requests():
     requests = await repository.get(
         auth_context=auth_context_doe, status=AccessRequestStatus.PENDING
     )
-    assert len(requests) == 1
-    assert requests == [
+    assert len(requests) == 2
+    assert sorted(requests, key=lambda request: request.id) == [
         request
         for request in ACCESS_REQUESTS
         if request.status == AccessRequestStatus.PENDING
@@ -523,6 +561,7 @@ async def test_set_status_to_allowed():
     """Test setting the status of a request from pending to allowed."""
     original_request = await dao.get_by_id("request-id-4")
     original_dict = original_request.model_dump()
+    assert original_dict.pop("iva_id") is None
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
@@ -530,6 +569,45 @@ async def test_set_status_to_allowed():
 
     await repository.update(
         "request-id-4",
+        iva_id="some-iva",
+        status=AccessRequestStatus.ALLOWED,
+        auth_context=auth_context_steward,
+    )
+
+    changed_request = dao.last_upsert
+    assert changed_request is not None
+    changed_dict = changed_request.model_dump()
+    assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
+    assert changed_dict.pop("iva_id") == "some-iva"
+    status_changed = changed_dict.pop("status_changed")
+    assert status_changed is not None
+    assert 0 <= (now_as_utc() - status_changed).seconds < 5
+    assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
+    assert changed_dict == original_dict
+
+    expected_event = MockAccessRequestEvent(
+        changed_request.user_id, changed_request.dataset_id, "allowed"
+    )
+    assert event_publisher.events == [expected_event]
+
+    assert access_grants.last_grant == (
+        "to id-of-john-doe@ghga.de with some-iva for new-dataset"
+        " from 2021-01-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
+    )
+
+
+async def test_set_status_to_allowed_reusing_iva():
+    """Test setting the status of a request to allowed reusing the IVA."""
+    original_request = await dao.get_by_id("request-id-6")
+    original_dict = original_request.model_dump()
+    assert original_dict["iva_id"] == "iva-of-john"
+    assert original_dict.pop("status") == AccessRequestStatus.PENDING
+    assert original_dict.pop("status_changed") is None
+    assert original_dict.pop("changed_by") is None
+    reset()
+
+    await repository.update(
+        "request-id-6",
         status=AccessRequestStatus.ALLOWED,
         auth_context=auth_context_steward,
     )
@@ -549,10 +627,69 @@ async def test_set_status_to_allowed():
     )
     assert event_publisher.events == [expected_event]
 
-    assert (
-        access_grants.last_grant == "to id-of-john-doe@ghga.de for new-dataset"
-        " from 2021-01-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
+    assert access_grants.last_grant == (
+        "to id-of-john-doe@ghga.de with iva-of-john for yet-another-dataset"
+        " from 2021-06-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
     )
+
+
+async def test_set_status_to_allowed_overriding_iva():
+    """Test setting the status of a request to allowed overriding the IVA."""
+    original_request = await dao.get_by_id("request-id-6")
+    original_dict = original_request.model_dump()
+    assert original_dict.pop("iva_id") == "iva-of-john"
+    assert original_dict.pop("status") == AccessRequestStatus.PENDING
+    assert original_dict.pop("status_changed") is None
+    assert original_dict.pop("changed_by") is None
+    reset()
+
+    await repository.update(
+        "request-id-6",
+        iva_id="some-other-iva-of-john",
+        status=AccessRequestStatus.ALLOWED,
+        auth_context=auth_context_steward,
+    )
+
+    changed_request = dao.last_upsert
+    assert changed_request is not None
+    changed_dict = changed_request.model_dump()
+    assert changed_dict.pop("iva_id") == "some-other-iva-of-john"
+    assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
+    status_changed = changed_dict.pop("status_changed")
+    assert status_changed is not None
+    assert 0 <= (now_as_utc() - status_changed).seconds < 5
+    assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
+    assert changed_dict == original_dict
+
+    expected_event = MockAccessRequestEvent(
+        changed_request.user_id, changed_request.dataset_id, "allowed"
+    )
+    assert event_publisher.events == [expected_event]
+
+    assert access_grants.last_grant == (
+        "to id-of-john-doe@ghga.de with some-other-iva-of-john for yet-another-dataset"
+        " from 2021-06-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
+    )
+
+
+async def test_set_status_to_allowed_witout_iva():
+    """Test setting the status of a request from pending to allowed without any IVA."""
+    original_request = await dao.get_by_id("request-id-4")
+    original_dict = original_request.model_dump()
+    assert original_dict.pop("iva_id") is None
+    assert original_dict.pop("status") == AccessRequestStatus.PENDING
+    assert original_dict.pop("status_changed") is None
+    assert original_dict.pop("changed_by") is None
+    reset()
+
+    with pytest.raises(
+        repository.AccessRequestMissingIva, match="An IVA ID must be specified"
+    ):
+        await repository.update(
+            "request-id-4",
+            status=AccessRequestStatus.ALLOWED,
+            auth_context=auth_context_steward,
+        )
 
 
 async def test_set_status_to_allowed_with_error_when_granting_access():
@@ -562,11 +699,12 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
     access_grants.simulate_error = True
 
     with pytest.raises(
-        repository.AccessRequestError,
+        repository.AccessRequestServerError,
         match="Could not register the download access grant",
     ):
         await repository.update(
             "request-id-4",
+            iva_id="iva-id-1",
             status=AccessRequestStatus.ALLOWED,
             auth_context=auth_context_steward,
         )
@@ -594,6 +732,7 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
     ):
         await repository.update(
             "request-id-1",
+            iva_id="iva-id-1",
             status=AccessRequestStatus.ALLOWED,
             auth_context=auth_context_steward,
         )

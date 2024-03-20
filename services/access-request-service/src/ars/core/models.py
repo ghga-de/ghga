@@ -49,8 +49,15 @@ class AccessRequestStatus(str, Enum):
 class AccessRequestCreationData(BaseDto):
     """All data necessary to create an access request."""
 
-    user_id: str
-    dataset_id: str
+    user_id: str = Field(default=..., description="ID of the user who requests access")
+    iva_id: Optional[str] = Field(
+        default=None,
+        description="ID of the IVA to be used for this request,"
+        " but this can also be specified later",
+    )
+    dataset_id: str = Field(
+        default=..., description="ID of the dataset for which access is requested"
+    )
     email: str = Field(
         default=..., description="Contact e-mail address of the requester"
     )
@@ -91,6 +98,10 @@ class AccessRequestData(AccessRequestCreationData):
 class AccessRequestPatchData(BaseDto):
     """All data that describes an access request patch."""
 
+    iva_id: Optional[str] = Field(
+        default=None,
+        description="ID of the IVA to be used for this request",
+    )
     status: AccessRequestStatus = Field(
         default=...,
         description="The new status of this access request",

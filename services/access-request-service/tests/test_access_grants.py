@@ -33,11 +33,12 @@ pytestmark = pytest.mark.asyncio(scope="session")
 DOWNLOAD_ACCESS_URL = "http://test-access:1234"
 
 USER_ID = "some-user-id"
+IVA_ID = "some-iva-id"
 DATASET_ID = "some-dataset-id"
 VALID_FROM = utc_datetime(2020, 1, 1, 0, 0)
 VALID_UNTIL = utc_datetime(2020, 12, 31, 23, 59)
 
-URL = f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets/{DATASET_ID}"
+URL = f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/ivas/{IVA_ID}/datasets/{DATASET_ID}"
 
 
 @async_fixture(name="access_grant", scope="session")
@@ -57,6 +58,7 @@ async def test_grant_download_access(
 
     await grant_access(
         user_id=USER_ID,
+        iva_id=IVA_ID,
         dataset_id=DATASET_ID,
         valid_from=VALID_FROM,
         valid_until=VALID_UNTIL,
@@ -81,6 +83,7 @@ async def test_grant_download_access_with_invalid_dates(
     ):
         await grant_access(
             user_id=USER_ID,
+            iva_id=IVA_ID,
             dataset_id=DATASET_ID,
             valid_from=VALID_UNTIL,
             valid_until=VALID_FROM,
@@ -99,6 +102,7 @@ async def test_grant_download_access_with_server_error(
     ):
         await grant_access(
             user_id=USER_ID,
+            iva_id=IVA_ID,
             dataset_id=DATASET_ID,
             valid_from=VALID_FROM,
             valid_until=VALID_UNTIL,
@@ -117,6 +121,7 @@ async def test_grant_download_access_with_timeout(
     ):
         await grant_access(
             user_id=USER_ID,
+            iva_id=IVA_ID,
             dataset_id=DATASET_ID,
             valid_from=VALID_FROM,
             valid_until=VALID_UNTIL,

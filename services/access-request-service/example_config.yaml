@@ -12,6 +12,7 @@ auth_check_claims:
   email: null
   exp: null
   iat: null
+  id: null
   name: null
 auth_key: '{}'
 auth_map_claims: {}

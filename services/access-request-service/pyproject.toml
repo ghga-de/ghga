@@ -26,8 +26,8 @@ version = "2.0.0"
 description = "Access Request Service"
 dependencies = [
     "ghga-event-schemas~=3.1.0",
-    "ghga-service-commons[api,auth]>=2.0.0, <3",
-    "hexkit[mongodb,akafka]>=2.1.0",
+    "ghga-service-commons[api,auth]>=3.1.1",
+    "hexkit[mongodb,akafka]>=2.1.1",
     "httpx>=0.27.0",
     "typer>=0.9.0",
 ]

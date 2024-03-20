@@ -18,4 +18,4 @@
 
 __all__ = ["DATA_STEWARD_ROLE"]
 
-DATA_STEWARD_ROLE = "data_steward"
+DATA_STEWARD_ROLE: str = "data_steward"

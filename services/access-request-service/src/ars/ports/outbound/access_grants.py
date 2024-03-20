@@ -33,12 +33,13 @@ class AccessGrantsPort(ABC):
         """Raised when there was an error in the validity period."""
 
     @abstractmethod
-    async def grant_download_access(
+    async def grant_download_access(  # noqa: PLR0913
         self,
         user_id: str,
+        iva_id: str,
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
     ) -> None:
-        """Grant download access to a user for a given dataset and duration."""
+        """Grant download access to a given user with an IVA for a given dataset."""
         ...

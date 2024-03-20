@@ -21,44 +21,42 @@ from typing import Annotated
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from ghga_service_commons.auth.ghga import AuthContext, has_role, is_active
+from ghga_service_commons.auth.ghga import AuthContext, has_role
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
 
 from ars.adapters.inbound.fastapi_ import dummies
 from ars.core.roles import DATA_STEWARD_ROLE
 
-__all__ = ["require_user_context", "require_steward_context"]
+__all__ = ["UserAuthContext", "StewardAuthContext"]
 
 
-async def _require_user_context(
+async def require_auth_context(
     credentials: Annotated[
         HTTPAuthorizationCredentials, Depends(HTTPBearer(auto_error=True))
     ],
     auth_provider: dummies.AuthProviderDummy,
 ) -> AuthContext:
-    """Require an active GHGA auth context using FastAPI."""
-    return await require_auth_context_using_credentials(
-        credentials, auth_provider, is_active
-    )
+    """Require a GHGA authentication and authorization context."""
+    return await require_auth_context_using_credentials(credentials, auth_provider)
 
 
 is_steward = partial(has_role, role=DATA_STEWARD_ROLE)
 
 
-async def _require_steward_context(
+async def require_steward_context(
     credentials: Annotated[
         HTTPAuthorizationCredentials, Depends(HTTPBearer(auto_error=True))
     ],
     auth_provider: dummies.AuthProviderDummy,
 ) -> AuthContext:
-    """Require an active GHGA auth context of a data steward using FastAPI."""
+    """Require a GHGA auth context with data steward role."""
     return await require_auth_context_using_credentials(
         credentials, auth_provider, is_steward
     )
 
 
-# policy for requiring an active user auth context
-require_user_context = Security(_require_user_context)
+# policy for requiring and getting an auth context
+UserAuthContext = Annotated[AuthContext, Security(require_auth_context)]
 
-# policy for requiring an active data steward auth context
-require_steward_context = Security(_require_steward_context)
+# policy for requiring and getting an auth context with data steward role
+StewardAuthContext = Annotated[AuthContext, Security(require_steward_context)]

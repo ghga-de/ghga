@@ -26,9 +26,7 @@ from pytest_httpx import HTTPXMock
 from tests.fixtures import (  # noqa: F401
     JointFixture,
     fixture_auth_headers_doe,
-    fixture_auth_headers_doe_inactive,
     fixture_auth_headers_steward,
-    fixture_auth_headers_steward_inactive,
 )
 
 pytestmark = pytest.mark.asyncio(scope="session")
@@ -39,6 +37,7 @@ ONE_YEAR = timedelta(days=365)
 CREATION_DATA = {
     "user_id": "id-of-john-doe@ghga.de",
     "dataset_id": "some-dataset",
+    "iva_id": "some-iva",
     "email": "me@john-doe.name",
     "request_text": "Can I access some dataset?",
     "access_starts": DATE_NOW.isoformat(),
@@ -110,20 +109,12 @@ async def test_create_access_request(
 
 
 async def test_create_access_request_unauthorized(
-    joint_fixture: JointFixture,
-    auth_headers_doe: dict[str, str],
-    auth_headers_doe_inactive: dict[str, str],
+    joint_fixture: JointFixture, auth_headers_doe: dict[str, str]
 ):
     """Test that creating an access request needs authorization."""
     client = joint_fixture.rest_client
     # test without authentication
     response = await client.post("/access-requests", json=CREATION_DATA)
-    assert response.status_code == 403
-
-    # test with inactive user
-    response = await client.post(
-        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe_inactive
-    )
     assert response.status_code == 403
 
     # test creating an access request for another user
@@ -186,6 +177,7 @@ async def test_get_access_requests(
     request = requests[0]
     assert request["id"] == access_request_id
     assert request["user_id"] == "id-of-john-doe@ghga.de"
+    assert request["iva_id"] == "some-iva"
     assert request["dataset_id"] == "some-dataset"
     assert request["status"] == "pending"
 
@@ -210,17 +202,11 @@ async def test_get_access_requests(
     assert request["status"] == "pending"
 
 
-async def test_get_access_requests_unauthorized(
-    joint_fixture: JointFixture, auth_headers_doe_inactive: dict[str, str]
-):
+async def test_get_access_requests_unauthorized(joint_fixture: JointFixture):
     """Test that getting access requests needs authorization."""
     client = joint_fixture.rest_client
     # test unauthenticated
     response = await client.get("/access-requests")
-    assert response.status_code == 403
-
-    # test with inactive user
-    response = await client.get("/access-requests", headers=auth_headers_doe_inactive)
     assert response.status_code == 403
 
 
@@ -301,10 +287,11 @@ async def test_patch_access_request(
     httpx_mock: HTTPXMock,
 ):
     """Test that data stewards can change the status of access requests."""
-    # mock setting the the access grant
+    # mock setting the access grant
     httpx_mock.add_response(
         method="POST",
-        url="http://access/users/id-of-john-doe@ghga.de/datasets/some-dataset",
+        url="http://access/users/id-of-john-doe@ghga.de"
+        "/ivas/some-iva/datasets/some-dataset",
         status_code=204,
     )
 
@@ -363,6 +350,7 @@ async def test_patch_access_request(
     request = requests[0]
     assert request["id"] == access_request_id
     assert request["user_id"] == "id-of-john-doe@ghga.de"
+    assert request["iva_id"] == "some-iva"
     assert request["dataset_id"] == "some-dataset"
     assert request["status"] == "allowed"
     assert request["status_changed"]
@@ -379,10 +367,62 @@ async def test_patch_access_request(
     request = requests[0]
     assert request["id"] == access_request_id
     assert request["user_id"] == "id-of-john-doe@ghga.de"
+    assert request["iva_id"] == "some-iva"
     assert request["dataset_id"] == "some-dataset"
     assert request["status"] == "allowed"
     assert request["status_changed"]
     assert request["changed_by"] == "id-of-rod-steward@ghga.de"  # can see internals
+
+
+async def test_patch_access_request_with_another_iva(
+    joint_fixture: JointFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+    httpx_mock: HTTPXMock,
+):
+    """Test that data stewards can change the status and IVA of access requests."""
+    # mock setting the access grant
+    httpx_mock.add_response(
+        method="POST",
+        url="http://access/users/id-of-john-doe@ghga.de"
+        "/ivas/another-iva/datasets/some-dataset",
+        status_code=204,
+    )
+
+    client = joint_fixture.rest_client
+    # create access request as user
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+    assert_is_uuid(access_request_id)
+
+    # set status to allowed as data steward
+    response = await joint_fixture.rest_client.patch(
+        f"/access-requests/{access_request_id}",
+        json={"iva_id": "another-iva", "status": "allowed"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 204
+
+    # get request back as user
+    response = await client.get("/access-requests", headers=auth_headers_doe)
+
+    assert response.status_code == 200
+    requests = response.json()
+
+    assert isinstance(requests, list)
+    assert len(requests) == 1
+    request = requests[0]
+    assert request["id"] == access_request_id
+    assert request["user_id"] == "id-of-john-doe@ghga.de"
+    # make sure that the IVA has been changed
+    assert request["iva_id"] == "another-iva"
+    assert request["dataset_id"] == "some-dataset"
+    assert request["status"] == "allowed"
+    assert request["status_changed"]
+    assert request["changed_by"] is None
 
 
 async def test_must_be_data_steward_to_patch_access_request(

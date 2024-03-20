@@ -211,7 +211,7 @@ The service requires the following configuration parameters:
 
   - **Items** *(string)*
 
-- **`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{"name": null, "email": null, "iat": null, "exp": null}`.
+- **`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{"id": null, "name": null, "email": null, "iat": null, "exp": null}`.
 
 - **`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
 

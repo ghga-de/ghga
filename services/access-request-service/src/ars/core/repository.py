@@ -18,7 +18,7 @@
 
 from datetime import timedelta
 from operator import attrgetter
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from ghga_service_commons.auth.ghga import AuthContext, has_role
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -165,20 +165,24 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         return requests
 
-    async def update(
+    async def update(  # noqa: C901
         self,
         access_request_id: str,
         *,
         status: AccessRequestStatus,
         auth_context: AuthContext,
+        iva_id: Optional[str] = None,
     ) -> None:
         """Update the status of the access request.
+
+        If the status is set to allowed, an IVA ID must be provided or already exist.
 
         Only data stewards may use this method.
 
         Raises:
         - `AccessRequestAuthorizationError` if the user is not authorized.
         - `AccessRequestNotFoundError` if the specified request was not found.
+        - `AccessRequestMissingIva` if an IVA is needed but not provided.
         - `AccessRequestInvalidState` error if the specified state is invalid.
         - `AccessRequestServerError` if the grant could not be registered.
         """
@@ -194,9 +198,14 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             raise self.AccessRequestInvalidState("Same status is already set")
         if request.status != AccessRequestStatus.PENDING:
             raise self.AccessRequestInvalidState("Status cannot be reverted")
+        if not iva_id:
+            iva_id = request.iva_id
+        if status == AccessRequestStatus.ALLOWED and not iva_id:
+            raise self.AccessRequestMissingIva("An IVA ID must be specified")
 
         modified_request = request.model_copy(
             update={
+                "iva_id": iva_id,
                 "status": status,
                 "status_changed": now_as_utc(),
                 "changed_by": user_id,
@@ -210,6 +219,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             try:
                 await self._access_grants.grant_download_access(
                     user_id=request.user_id,
+                    iva_id=cast(str, iva_id),  # has already been checked above
                     dataset_id=request.dataset_id,
                     valid_from=request.access_starts,
                     valid_until=request.access_ends,

@@ -79,15 +79,16 @@ class AccessGrantsAdapter(AccessGrantsPort):
         async with httpx.AsyncClient() as client:
             yield cls(config=config, client=client)
 
-    async def grant_download_access(
+    async def grant_download_access(  # noqa: PLR0913
         self,
         user_id: str,
+        iva_id: str,
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
     ) -> None:
-        """Grant download access to a user for a given dataset and duration."""
-        url = f"{self._url}/users/{user_id}/datasets/{dataset_id}"
+        """Grant download access to a given user with an IVA for a given dataset."""
+        url = f"{self._url}/users/{user_id}/ivas/{iva_id}/datasets/{dataset_id}"
         try:
             validity = ClaimValidity(valid_from=valid_from, valid_until=valid_until)
         except ValueError as error:

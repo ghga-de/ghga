@@ -21,6 +21,7 @@ components:
           description: The ID of the data steward who made the status change
           title: Changed By
         dataset_id:
+          description: ID of the dataset for which access is requested
           title: Dataset Id
           type: string
         email:
@@ -35,6 +36,13 @@ components:
           description: ID of the access request
           title: Id
           type: string
+        iva_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of the IVA to be used for this request, but this can also
+            be specified later
+          title: Iva Id
         request_created:
           description: Creation date of the access request
           format: date-time
@@ -57,6 +65,7 @@ components:
           description: Last change date of the status of this request
           title: Status Changed
         user_id:
+          description: ID of the user who requests access
           title: User Id
           type: string
       required:
@@ -86,17 +95,26 @@ components:
           title: Access Starts
           type: string
         dataset_id:
+          description: ID of the dataset for which access is requested
           title: Dataset Id
           type: string
         email:
           description: Contact e-mail address of the requester
           title: Email
           type: string
+        iva_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of the IVA to be used for this request, but this can also
+            be specified later
+          title: Iva Id
         request_text:
           description: Text note submitted with the request
           title: Request Text
           type: string
         user_id:
+          description: ID of the user who requests access
           title: User Id
           type: string
       required:
@@ -112,6 +130,12 @@ components:
       additionalProperties: false
       description: All data that describes an access request patch.
       properties:
+        iva_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of the IVA to be used for this request
+          title: Iva Id
         status:
           allOf:
           - $ref: '#/components/schemas/AccessRequestStatus'
