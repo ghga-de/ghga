@@ -21,20 +21,15 @@ Warning: This is an internal part of the library and might change without notice
 
 import json
 import os
-import typing
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, TypeVar
 
 import jsonschema
 import jsonschema.exceptions
 import jsonschema.protocols
 import jsonschema.validators
 import ruamel.yaml
-from immutabledict import immutabledict
-from pydantic import GetCoreSchemaHandler
-from pydantic_core import core_schema
 
 from schemapack.exceptions import ParsingError
 
@@ -98,33 +93,3 @@ def transient_directory_change(path: Path):
         yield
     finally:
         os.chdir(original_cwd)
-
-
-_K = TypeVar("_K")
-_V_co = TypeVar("_V_co", covariant=True)
-
-
-class FrozenDict(immutabledict[_K, _V_co]):
-    """A pydantic-comatible wrapper around immutabledict."""
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source: Any, handler: GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
-        """Get the pydantic core schema for this type."""
-        # Validate the type against a dict:
-        # (this will have the side effect of converting the instance to dict even if it
-        # is already an immutabledict or a FrozenDict)
-        args = typing.get_args(source)
-        if not args:
-            dict_schema = handler.generate_schema(dict)
-        elif len(args) == 2:
-            dict_schema = handler.generate_schema(dict[args[0], args[1]])  # type: ignore
-        else:
-            raise TypeError(
-                "Expected exactly two (or no) type arguments for FrozenDict, got"
-                + f" {len(args)}"
-            )
-
-        # Uses cls as validator function to convert the dict to a FrozenDict:
-        return core_schema.no_info_after_validator_function(cls, dict_schema)

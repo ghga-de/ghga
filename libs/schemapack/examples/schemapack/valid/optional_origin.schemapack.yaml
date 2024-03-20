@@ -1,4 +1,4 @@
-schemapack: 0.2.0
+schemapack: 0.3.0
 description: a schemapack with a many-to-many relation that is optional at the origin end
 classes:
   A:

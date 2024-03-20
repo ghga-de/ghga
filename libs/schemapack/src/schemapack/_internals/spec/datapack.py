@@ -30,7 +30,7 @@ from typing_extensions import TypeAlias
 
 from ...spec.custom_types import ClassName, RelationPropertyName, ResourceId
 
-SupportedDataPackVersions = Literal["0.2.0"]
+SupportedDataPackVersions = Literal["0.3.0"]
 SUPPORTED_DATA_PACK_VERSIONS = typing.get_args(SupportedDataPackVersions)
 
 
@@ -159,7 +159,7 @@ class DataPack(_NoExtraBaseModel):
         ),
     )
 
-    root_resource: Optional[str] = Field(
+    rootResource: Optional[str] = Field(  # noqa: N815 - following JSON conventions
         None,
         description=(
             "Defines the id of the resource that should act as root. This means"

@@ -1,4 +1,4 @@
-schemapack: 0.2.0
+schemapack: 0.3.0
 description: A collision between relations and content properties
 classes:
   File:

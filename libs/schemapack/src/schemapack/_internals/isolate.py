@@ -191,13 +191,13 @@ def isolate_resource(
         include_target=True,
     )
     rooted_datapack = downscope_datapack(datapack=datapack, resource_map=dependency_map)
-    rooted_datapack.root_resource = resource_id
+    rooted_datapack.rootResource = resource_id
     return rooted_datapack
 
 
 def isolate_class(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPack:
     """Return a copy of the provided schemapack that is rooted to the specified class."""
-    return schemapack.model_copy(update={"root_class": class_name})
+    return schemapack.model_copy(update={"rootClass": class_name})
 
 
 def isolate(

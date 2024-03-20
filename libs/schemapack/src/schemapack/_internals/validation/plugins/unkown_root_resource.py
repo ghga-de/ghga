@@ -36,11 +36,11 @@ class UnkownRootResourceValidationPlugin(GlobalValidationPlugin):
 
         Returns: True if this plugin is relevant for the given class definition.
         """
-        return bool(schemapack.root_class)
+        return bool(schemapack.rootClass)
 
     def __init__(self, *, schemapack: SchemaPack):
         """This plugin is configured with the entire schemapack."""
-        self._root_class = cast(str, schemapack.root_class)
+        self._root_class = cast(str, schemapack.rootClass)
 
     def validate(self, *, datapack: DataPack):
         """Validate the entire datapack.
@@ -54,11 +54,11 @@ class UnkownRootResourceValidationPlugin(GlobalValidationPlugin):
             # This is a validation error but needs to be handled elsewhere:
             return
 
-        if not datapack.root_resource:
+        if not datapack.rootResource:
             # this is a validation error but needs to be handled elsewhere:
             return
 
-        if datapack.root_resource not in root_class_resources:
+        if datapack.rootResource not in root_class_resources:
             raise ValidationPluginError(
                 type_="UnkownRootResourceError",
                 message=(
@@ -66,7 +66,7 @@ class UnkownRootResourceValidationPlugin(GlobalValidationPlugin):
                     + " '{root_class}' does not exist."
                 ),
                 details={
-                    "root_resource": datapack.root_resource,
-                    "root_class": self._root_class,
+                    "rootResource": datapack.rootResource,
+                    "rootClass": self._root_class,
                 },
             )

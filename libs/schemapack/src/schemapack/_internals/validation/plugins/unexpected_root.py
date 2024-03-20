@@ -35,7 +35,7 @@ class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
 
         Returns: True if this plugin is relevant for the given class definition.
         """
-        return not bool(schemapack.root_class)
+        return not bool(schemapack.rootClass)
 
     def __init__(self, *, schemapack: SchemaPack):
         """This plugin is configured with the entire schemapack."""
@@ -47,7 +47,7 @@ class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        if datapack.root_resource:
+        if datapack.rootResource:
             raise ValidationPluginError(
                 type_="UnexpectedRootResourceError",
                 message=(

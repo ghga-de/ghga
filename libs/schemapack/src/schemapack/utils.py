@@ -17,6 +17,6 @@
 
 """Utility functions."""
 
-from schemapack._internals.utils import FrozenDict, read_json_or_yaml_mapping
+from schemapack._internals.utils import read_json_or_yaml_mapping
 
-__all__ = ["read_json_or_yaml_mapping", "FrozenDict"]
+__all__ = ["read_json_or_yaml_mapping"]

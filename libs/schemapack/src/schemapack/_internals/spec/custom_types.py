@@ -16,8 +16,12 @@
 
 """Custom types annotations used for type hinting."""
 
+from collections.abc import Mapping
 from typing import Annotated as _Annotated
+from typing import TypeVar
 
+from immutabledict import immutabledict
+from pydantic import AfterValidator, PlainSerializer
 from pydantic import Field as _Field
 from typing_extensions import TypeAlias as _TypeAlias
 
@@ -35,3 +39,11 @@ ResourceId: _TypeAlias = _NonEmptyStr
 RelationPropertyName: _TypeAlias = _NonEmptyStr
 ContentPropertyName: _TypeAlias = _NonEmptyStr
 IdPropertyName: _TypeAlias = _NonEmptyStr
+
+_K = TypeVar("_K")
+_V_co = TypeVar("_V_co", covariant=True)
+FrozenDict = _Annotated[
+    Mapping[_K, _V_co],
+    AfterValidator(lambda x: immutabledict(x)),
+    PlainSerializer(lambda x: dict(x)),
+]

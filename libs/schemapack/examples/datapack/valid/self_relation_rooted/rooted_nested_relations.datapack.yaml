@@ -1,6 +1,6 @@
 # Nested relations between resources of the same type:
 # (Same as ./multiple_relation_groups.datapack.yaml, but rooted to example_file_a)
-datapack: 0.2.0
+datapack: 0.3.0
 resources:
   SomeClass:
     a:
@@ -17,4 +17,4 @@ resources:
       content: {}
       relations:
         some_relation: []
-root_resource: a
+rootResource: a

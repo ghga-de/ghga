@@ -69,14 +69,14 @@ def denormalize(  # noqa: PLR0912,C901
         schemapack.exceptions.CircularRelationError:
             If a circular relation is detected.
     """
-    if not datapack.root_resource:
+    if not datapack.rootResource:
         raise ValueError("Datapack must be rooted.")
 
-    if not schemapack.root_class:
+    if not schemapack.rootClass:
         raise ValueError("Schemapack must be rooted.")
 
-    root_class_name = _alt_root_class_name or schemapack.root_class
-    root_resource_id = _alt_root_resource_id or datapack.root_resource
+    root_class_name = _alt_root_class_name or schemapack.rootClass
+    root_resource_id = _alt_root_resource_id or datapack.rootResource
 
     resource_blacklist: dict[ClassName, set[ResourceId]] = defaultdict(set)
     resource_blacklist[root_class_name].add(root_resource_id)

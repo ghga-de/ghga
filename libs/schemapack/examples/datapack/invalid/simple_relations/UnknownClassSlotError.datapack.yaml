@@ -1,5 +1,5 @@
 # Contains a slot for a class that does not exist in the schemapack:
-datapack: 0.2.0
+datapack: 0.3.0
 resources:
   File: {}
   Dataset:

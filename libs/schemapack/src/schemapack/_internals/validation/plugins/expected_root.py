@@ -34,7 +34,7 @@ class ExpectedRootValidationPlugin(GlobalValidationPlugin):
 
         Returns: True if this plugin is relevant for the given class definition.
         """
-        return bool(schemapack.root_class)
+        return bool(schemapack.rootClass)
 
     def __init__(self, *, schemapack: SchemaPack):
         """This plugin is configured with the entire schemapack."""
@@ -46,7 +46,7 @@ class ExpectedRootValidationPlugin(GlobalValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
-        if not datapack.root_resource:
+        if not datapack.rootResource:
             raise ValidationPluginError(
                 type_="ExpectedRootResourceError",
                 message=(

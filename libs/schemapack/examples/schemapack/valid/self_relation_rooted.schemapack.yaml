@@ -1,4 +1,4 @@
-schemapack: 0.2.0
+schemapack: 0.3.0
 description: A class referencing itself in a relation
 classes:
   SomeClass:
@@ -14,4 +14,4 @@ classes:
         multiple:
           origin: true
           target: true
-root_class: SomeClass
+rootClass: SomeClass

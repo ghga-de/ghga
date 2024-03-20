@@ -1,5 +1,5 @@
 # A content property has the wrong type according to the content schema:
-datapack: 0.2.0
+datapack: 0.3.0
 resources:
   File:
     example_file_a:
