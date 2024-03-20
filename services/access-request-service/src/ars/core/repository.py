@@ -22,7 +22,7 @@ from typing import Any, Optional
 
 from ghga_service_commons.auth.ghga import AuthContext, has_role
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from pydantic import EmailStr, Field
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 from ars.core.models import (
@@ -31,30 +31,17 @@ from ars.core.models import (
     AccessRequestData,
     AccessRequestStatus,
 )
-from ars.core.notifications import (
-    REQUEST_ALLOWED_CONFIRMATION,
-    REQUEST_ALLOWED_NOTIFICATION,
-    REQUEST_CREATED_CONFIRMATION,
-    REQUEST_CREATED_NOTIFICATION,
-    REQUEST_DENIED_CONFIRMATION,
-    REQUEST_DENIED_NOTIFICATION,
-    Notification,
-)
 from ars.core.roles import DATA_STEWARD_ROLE
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
 from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
-from ars.ports.outbound.notification_emitter import NotificationEmitterPort
+from ars.ports.outbound.event_pub import EventPublisherPort
 
 __all__ = ["AccessRequestConfig", "AccessRequestRepository"]
 
 
 class AccessRequestConfig(BaseSettings):
     """Config parameters needed for the AccessRequestRepository."""
-
-    data_steward_email: Optional[EmailStr] = Field(
-        ..., description="An email address that can be used to notify data stewards"
-    )
 
     access_upfront_max_days: int = Field(
         default=6 * 30,
@@ -78,16 +65,15 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         *,
         config: AccessRequestConfig,
         access_request_dao: AccessRequestDaoPort,
-        notification_emitter: NotificationEmitterPort,
+        event_publisher: EventPublisherPort,
         access_grants: AccessGrantsPort,
     ):
         """Initialize with specific configuration and outbound adapter."""
         self._max_lead_time = timedelta(days=config.access_upfront_max_days)
         self._min_duration = timedelta(days=config.access_grant_min_days)
         self._max_duration = timedelta(days=config.access_grant_max_days)
-        self._data_steward_email = config.data_steward_email
         self._dao = access_request_dao
-        self._notification_emitter = notification_emitter
+        self._event_publisher = event_publisher
         self._access_grants = access_grants
 
     async def create(
@@ -99,8 +85,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         Users may only create access requests for themselves.
 
-        Raises an AccessRequestAuthorizationError if the user is not authorized.
-        Raises an AccessRequestInvalidDuration error if the dates are invalid.
+        Raises:
+        - `AccessRequestAuthorizationError` if the user is not authorized.
+        - `AccessRequestInvalidDuration` error if the dates are invalid.
         """
         user_id = auth_context.id
         if not user_id or creation_data.user_id != user_id:
@@ -133,22 +120,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         request = await self._dao.insert(access_request_data)
 
-        # notify data steward
-        data_steward_email = self._data_steward_email
-        if data_steward_email:
-            await self._notify(
-                recipient_email=data_steward_email,
-                recipient_name="Data Steward",
-                request=request,
-                notification=REQUEST_CREATED_CONFIRMATION,
-            )
-        # notify requester
-        await self._notify(
-            recipient_email=access_request_data.email,
-            recipient_name=full_user_name,
-            request=request,
-            notification=REQUEST_CREATED_NOTIFICATION,
-        )
+        await self._event_publisher.publish_request_created(request=request)
 
         return request
 
@@ -164,7 +136,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         Only data stewards may list requests created by other users.
 
-        Raises an AccessRequestAuthorizationError if the user is not authorized.
+        Raises an `AccessRequestAuthorizationError` if the user is not authorized.
         """
         if not auth_context.id:
             raise self.AccessRequestAuthorizationError("Not authorized")
@@ -204,10 +176,11 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         Only data stewards may use this method.
 
-        Raises an AccessRequestAuthorizationError if the user is not authorized.
-        raises an AccessRequestNotFoundError if the specified request was not found.
-        raises an AccessRequestInvalidState error is the specified state is invalid.
-        Raises an AccessRequestServerError if the grant could not be registered.
+        Raises:
+        - `AccessRequestAuthorizationError` if the user is not authorized.
+        - `AccessRequestNotFoundError` if the specified request was not found.
+        - `AccessRequestInvalidState` error if the specified state is invalid.
+        - `AccessRequestServerError` if the grant could not be registered.
         """
         user_id = auth_context.id
         if not user_id or not has_role(auth_context, DATA_STEWARD_ROLE):
@@ -248,43 +221,13 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                     f"Could not register the download access grant: {error}"
                 ) from error
 
-        # notify data steward
-        data_steward_email = self._data_steward_email
-        if data_steward_email:
-            await self._notify(
-                recipient_email=data_steward_email,
-                recipient_name="Data Steward",
-                request=request,
-                notification=REQUEST_DENIED_CONFIRMATION
-                if status == AccessRequestStatus.DENIED
-                else REQUEST_ALLOWED_CONFIRMATION,
-            )
-        # notify requester
-        await self._notify(
-            recipient_email=request.email,
-            recipient_name=request.full_user_name,
-            request=request,
-            notification=REQUEST_DENIED_NOTIFICATION
-            if status == AccessRequestStatus.DENIED
-            else REQUEST_ALLOWED_NOTIFICATION,
-        )
+        # Emit events that communicate the fate of the access request
+        if status == AccessRequestStatus.DENIED:
+            await self._event_publisher.publish_request_denied(request=request)
+        elif status == AccessRequestStatus.ALLOWED:
+            await self._event_publisher.publish_request_allowed(request=request)
 
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:
         """Blank out internal information in the request"""
         return request.model_copy(update={"changed_by": None})
-
-    async def _notify(
-        self,
-        recipient_email: str,
-        recipient_name: str,
-        request: AccessRequest,
-        notification: Notification,
-    ) -> None:
-        """Send the given notification to the specified recipient."""
-        await self._notification_emitter.notify(
-            email=recipient_email,
-            full_name=recipient_name,
-            subject=notification.subject,
-            text=notification.text.format(**request.model_dump()).strip(),
-        )

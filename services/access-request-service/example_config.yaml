@@ -1,5 +1,9 @@
 access_grant_max_days: 730
 access_grant_min_days: 7
+access_request_allowed_event_type: access_request_allowed
+access_request_created_event_type: access_request_created
+access_request_denied_event_type: access_request_denied
+access_request_events_topic: access_request_events
 access_upfront_max_days: 180
 api_root_path: ''
 auth_algs:
@@ -16,7 +20,6 @@ cors_allow_credentials: false
 cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
-data_steward_email: helpdesk@ghga.de
 db_connection_str: '**********'
 db_name: access-requests
 docs_url: /docs
@@ -32,8 +35,6 @@ kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
 log_format: null
 log_level: INFO
-notification_event_topic: notifications
-notification_event_type: notification
 openapi_url: /openapi.json
 port: 8080
 service_instance_id: '1'

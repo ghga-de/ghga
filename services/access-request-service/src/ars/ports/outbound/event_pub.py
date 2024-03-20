@@ -12,21 +12,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Outbound port for sending notifications."""
+"""Interface for broadcasting events to other services."""
 
 from abc import ABC, abstractmethod
 
-__all__ = ["NotificationEmitterPort"]
+from ars.core import models
 
 
-class NotificationEmitterPort(ABC):
-    """Emits results of a calculation."""
+class EventPublisherPort(ABC):
+    """An interface for an adapter that publishes events happening to this service."""
 
     @abstractmethod
-    async def notify(
-        self, *, email: str, full_name: str, subject: str, text: str
-    ) -> None:
-        """Send notification to the specified email address."""
+    async def publish_request_allowed(self, *, request: models.AccessRequest) -> None:
+        """Publish an event relaying that an access request was allowed."""
+
+    @abstractmethod
+    async def publish_request_created(self, *, request: models.AccessRequest) -> None:
+        """Publish an event relaying that an access request was created."""
+        ...
+
+    @abstractmethod
+    async def publish_request_denied(self, *, request: models.AccessRequest) -> None:
+        """Publish an event relaying that an access request was denied."""
         ...

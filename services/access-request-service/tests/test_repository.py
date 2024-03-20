@@ -34,7 +34,7 @@ from ars.core.models import (
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
-from ars.ports.outbound.notification_emitter import NotificationEmitterPort
+from ars.ports.outbound.event_pub import EventPublisherPort
 
 pytestmark = pytest.mark.asyncio(scope="session")
 
@@ -74,7 +74,6 @@ config = AccessRequestConfig(
     access_upfront_max_days=365,
     access_grant_min_days=30,
     access_grant_max_days=2 * 365,
-    data_steward_email=auth_context_steward.email,
 )
 
 
@@ -190,39 +189,46 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         self.last_upsert = dto
 
 
-class NotificationRecord(NamedTuple):
-    """Class that records a sent notification while testing."""
+class MockAccessRequestEvent(NamedTuple):
+    """Mock of AccessRequestDetails plus status field to represent event type"""
 
-    recipient: str
-    subject: str
-    text: str
+    user_id: str
+    dataset_id: str
+    status: str
 
 
-class NotificationEmitterDummy(NotificationEmitterPort):
-    """Dummy notification emitter for testing."""
+class EventPublisherDummy(EventPublisherPort):
+    """Dummy event publisher for testing."""
 
-    notifications: dict[str, NotificationRecord]
+    events: list[MockAccessRequestEvent]
 
     def reset(self) -> None:
-        """Reset the recorded notification."""
-        self.notifications = {}
+        """Reset the recorded events."""
+        self.events = []
 
     @property
-    def num_notifications(self):
-        """Get total number of recorded notifications."""
-        return len(self.notifications)
+    def num_events(self):
+        """Get total number of recorded events."""
+        return len(self.events)
 
-    def notification_for(self, email: str) -> NotificationRecord:
-        """Get recorded notification to the given email."""
-        return self.notifications[email]
+    def _record_request(self, *, request: AccessRequest, request_state: str):
+        """Record a request as either created, allowed, or denied for a user and dataset."""
+        mock_event = MockAccessRequestEvent(
+            request.user_id, request.dataset_id, request_state
+        )
+        self.events.append(mock_event)
 
-    async def notify(
-        self, *, email: str, full_name: str, subject: str, text: str
-    ) -> None:
-        """Send a notification."""
-        if email in self.notifications:
-            raise RuntimeError(f"A notification to {email} was already sent.")
-        self.notifications[email] = NotificationRecord(full_name, subject, text)
+    async def publish_request_allowed(self, *, request: AccessRequest) -> None:
+        """Mark an access request as allowed via event publish."""
+        self._record_request(request=request, request_state="allowed")
+
+    async def publish_request_created(self, *, request: AccessRequest) -> None:
+        """Mark an access request as created via event publish."""
+        self._record_request(request=request, request_state="created")
+
+    async def publish_request_denied(self, *, request: AccessRequest) -> None:
+        """Mark an access request as denied via event publish."""
+        self._record_request(request=request, request_state="denied")
 
 
 class AccessGrantsDummy(AccessGrantsPort):
@@ -253,21 +259,21 @@ class AccessGrantsDummy(AccessGrantsPort):
 
 
 dao = AccessRequestDaoDummy()
-notification_emitter = NotificationEmitterDummy()
+event_publisher = EventPublisherDummy()
 access_grants = AccessGrantsDummy()
 
 
 def reset():
     """Reset dummy adapters."""
     dao.reset()
-    notification_emitter.reset()
+    event_publisher.reset()
     access_grants.reset()
 
 
 repository = AccessRequestRepository(
     config=config,
     access_request_dao=dao,
-    notification_emitter=notification_emitter,
+    event_publisher=event_publisher,
     access_grants=access_grants,
 )
 
@@ -304,24 +310,11 @@ async def test_can_create_request():
 
     assert dao.last_upsert == request
 
-    assert notification_emitter.num_notifications == 2
-    notification = notification_emitter.notification_for("steward@ghga.de")
-    assert notification.recipient == "Data Steward"
-    assert "access request has been created" in notification.subject
-    assert (
-        notification.text
-        == "Dr. John Doe requested to download the dataset some-dataset.\n\n"
-        + "The specified contact email address is: me@john-doe.name"
+    # the 'publish_request_created' method should have been called, get events for request
+    expected_event = MockAccessRequestEvent(
+        request.user_id, request.dataset_id, "created"
     )
-    notification = notification_emitter.notification_for("me@john-doe.name")
-    assert notification.recipient == "Dr. John Doe"
-    assert "Your data download access request" in notification.subject
-    assert (
-        notification.text
-        == "Your request to download the dataset some-dataset has been registered.\n\n"
-        + "You should be contacted by one of our data stewards"
-        + " in the next three workdays."
-    )
+    assert event_publisher.events == [expected_event]
 
     assert access_grants.last_grant == "nothing granted so far"
 
@@ -365,7 +358,8 @@ async def test_silently_correct_request_that_is_too_early():
     assert request.access_ends == creation_data.access_ends
     assert dao.last_upsert == request
 
-    assert notification_emitter.num_notifications == 2
+    # There should be one event published which communicates the state of the request
+    assert len(event_publisher.events) == 1
 
 
 async def test_cannot_create_request_too_much_in_advance():
@@ -388,7 +382,7 @@ async def test_cannot_create_request_too_much_in_advance():
         await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert dao.last_upsert is None
-    assert notification_emitter.num_notifications == 0
+    assert event_publisher.num_events == 0
 
 
 async def test_cannot_create_request_too_short():
@@ -411,7 +405,7 @@ async def test_cannot_create_request_too_short():
         await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert dao.last_upsert is None
-    assert notification_emitter.num_notifications == 0
+    assert event_publisher.num_events == 0
 
 
 async def test_cannot_create_request_too_long():
@@ -434,7 +428,7 @@ async def test_cannot_create_request_too_long():
         await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert dao.last_upsert is None
-    assert notification_emitter.num_notifications == 0
+    assert event_publisher.num_events == 0
 
 
 async def test_can_get_all_requests_as_data_steward():
@@ -550,25 +544,10 @@ async def test_set_status_to_allowed():
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
 
-    assert notification_emitter.num_notifications == 2
-    notification = notification_emitter.notification_for("steward@ghga.de")
-    assert notification.recipient == "Data Steward"
-    assert "download access has been allowed" in notification.subject
-    assert (
-        notification.text
-        == "The request by Dr. John Doe to download the dataset\n"
-        + "new-dataset has now been registered as allowed\n"
-        + "and the access has been granted."
+    expected_event = MockAccessRequestEvent(
+        changed_request.user_id, changed_request.dataset_id, "allowed"
     )
-    notification = notification_emitter.notification_for("me@john-doe.name")
-    assert notification.recipient == "Dr. John Doe"
-    assert "Your data download access request has been accepted" in notification.subject
-    assert (
-        notification.text
-        == "We are glad to inform you that your request to download the dataset\n"
-        + "new-dataset has been accepted.\n\n"
-        + "You can now start download the dataset as explained in the GHGA Data Portal."
-    )
+    assert event_publisher.events == [expected_event]
 
     assert (
         access_grants.last_grant == "to id-of-john-doe@ghga.de for new-dataset"
@@ -600,7 +579,7 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
     changed_request = dao.last_upsert
     assert changed_request is not None
     assert changed_request == original_request
-    assert notification_emitter.num_notifications == 0
+    assert event_publisher.num_events == 0
 
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():
@@ -620,7 +599,7 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
         )
 
     assert dao.last_upsert is None
-    assert notification_emitter.num_notifications == 0
+    assert event_publisher.num_events == 0
 
     assert access_grants.last_grant == "nothing granted so far"
 
@@ -658,7 +637,7 @@ async def test_set_status_of_non_existing_request():
         )
 
     assert dao.last_upsert is None
-    assert notification_emitter.num_notifications == 0
+    assert event_publisher.num_events == 0
     assert access_grants.last_grant == "nothing granted so far"
 
 
@@ -674,5 +653,5 @@ async def test_set_status_when_not_a_data_steward():
         )
 
     assert dao.last_upsert is None
-    assert notification_emitter.num_notifications == 0
+    assert event_publisher.num_events == 0
     assert access_grants.last_grant == "nothing granted so far"

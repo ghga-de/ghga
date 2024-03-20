@@ -59,7 +59,9 @@ class AccessRequestRepositoryPort(ABC):
 
         Users may only create access requests for themselves.
 
-        Raises an AccessRequestAuthorizationError if the user is not authorized.
+        Raises:
+        - `AccessRequestAuthorizationError` if the user is not authorized.
+        - `AccessRequestInvalidDuration` error if the dates are invalid.
         """
         ...
 
@@ -76,8 +78,7 @@ class AccessRequestRepositoryPort(ABC):
 
         Only data stewards may list requests created by other users.
 
-        Raises an AccessRequestAuthorizationError if the user is not authorized.
-        Raises an AccessRequestInvalidDuration error if the dates are invalid.
+        Raises an `AccessRequestAuthorizationError` if the user is not authorized.
         """
         ...
 
@@ -93,9 +94,10 @@ class AccessRequestRepositoryPort(ABC):
 
         Only data stewards may use this method.
 
-        Raises an AccessRequestAuthorizationError if the user is not authorized.
-        raises an AccessRequestNotFoundError if the specified request was not found.
-        raises an AccessRequestInvalidState error is the specified state is invalid.
-        Raises an AccessRequestServerError if the grant could not be registered.
+        Raises:
+        - `AccessRequestAuthorizationError` if the user is not authorized.
+        - `AccessRequestNotFoundError` if the specified request was not found.
+        - `AccessRequestInvalidState` error if the specified state is invalid.
+        - `AccessRequestServerError` if the grant could not be registered.
         """
         ...

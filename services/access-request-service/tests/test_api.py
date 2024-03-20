@@ -17,17 +17,13 @@
 """Integration test using the REST API of the access request service"""
 
 import json
-import re
-from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import NamedTuple, cast
 
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.providers.akafka.testutils import RecordedEvent
 from pytest_httpx import HTTPXMock
 
-from .fixtures import (  # noqa: F401
+from tests.fixtures import (  # noqa: F401
     JointFixture,
     fixture_auth_headers_doe,
     fixture_auth_headers_doe_inactive,
@@ -74,34 +70,6 @@ def assert_same_datetime(date1: str, date2: str, max_diff_seconds=5) -> None:
     )
 
 
-class NotificationPayload(NamedTuple):
-    """Class that stores an expected notification event payload."""
-
-    email: str
-    name: str
-    subject: str  # regex pattern
-    text: str  # regex pattern
-
-
-def assert_recorded_events(
-    recorded_events: Sequence[RecordedEvent],
-    expected_payloads: list[NotificationPayload],
-) -> None:
-    """Assert that the recorded events are as expected."""
-    assert len(recorded_events) == len(expected_payloads)
-    for event, expected in zip(recorded_events, expected_payloads):
-        assert event.type_ == "notification"
-        assert event.key == expected.email
-        got = event.payload
-        assert isinstance(got, dict)
-        assert got["recipient_email"] == expected.email
-        assert got["email_cc"] == []
-        assert got["email_bcc"] == []
-        assert got["recipient_name"] == expected.name
-        assert re.search(expected.subject, cast(str, got["subject"]))
-        assert re.search(expected.text, cast(str, got["plaintext_body"]))
-
-
 async def test_health_check(joint_fixture: JointFixture):
     """Test that the health check endpoint works."""
     response = await joint_fixture.rest_client.get("/health")
@@ -115,9 +83,9 @@ async def test_create_access_request(
 ):
     """Test that an active user can create an access request."""
     kafka = joint_fixture.kafka
-    topic = joint_fixture.config.notification_event_topic
+    topic = joint_fixture.config.access_request_events_topic
     async with kafka.record_events(in_topic=topic):
-        pass  # skip previous notifications
+        pass  # skip previous events
     async with kafka.record_events(in_topic=topic) as recorder:
         response = await joint_fixture.rest_client.post(
             "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -128,23 +96,16 @@ async def test_create_access_request(
     access_request_id = response.json()
     assert_is_uuid(access_request_id)
 
-    # check that notifications have been sent
-    assert_recorded_events(
-        recorder.recorded_events,
-        [
-            NotificationPayload(
-                "steward@ghga.de",
-                "Data Steward",
-                "A data download access request has been created",
-                "Dr. John Doe requested to download the dataset some-dataset",
-            ),
-            NotificationPayload(
-                "me@john-doe.name",
-                "Dr. John Doe",
-                "Your data download access request has been registered",
-                "Your request to download the dataset some-dataset has been registered",
-            ),
-        ],
+    # check that an event was published for 'access request created'
+    assert len(recorder.recorded_events) == 1
+    recorded_event = recorder.recorded_events[0]
+    assert recorded_event.key == CREATION_DATA["user_id"]
+    assert recorded_event.payload == {
+        "user_id": CREATION_DATA["user_id"],
+        "dataset_id": CREATION_DATA["dataset_id"],
+    }
+    assert (
+        recorded_event.type_ == joint_fixture.config.access_request_created_event_type
     )
 
 
@@ -358,9 +319,9 @@ async def test_patch_access_request(
 
     # set status to allowed as data steward
     kafka = joint_fixture.kafka
-    topic = joint_fixture.config.notification_event_topic
+    topic = joint_fixture.config.access_request_events_topic
     async with kafka.record_events(in_topic=topic):
-        pass  # skip previous notifications
+        pass  # skip previous events
     async with kafka.record_events(in_topic=topic) as recorder:
         response = await joint_fixture.rest_client.patch(
             f"/access-requests/{access_request_id}",
@@ -379,23 +340,16 @@ async def test_patch_access_request(
         validity["valid_until"].replace("Z", "+00:00") == CREATION_DATA["access_ends"]
     )
 
-    # check that notifications have been sent
-    assert_recorded_events(
-        recorder.recorded_events,
-        [
-            NotificationPayload(
-                "steward@ghga.de",
-                "Data Steward",
-                "Data download access has been allowed",
-                "some-dataset has now been registered as allowed",
-            ),
-            NotificationPayload(
-                "me@john-doe.name",
-                "Dr. John Doe",
-                "Your data download access request has been accepted",
-                "You can now start download the dataset",
-            ),
-        ],
+    # check that an event was published for 'access request allowed'
+    assert len(recorder.recorded_events) == 1
+    recorded_event = recorder.recorded_events[0]
+    assert recorded_event.key == CREATION_DATA["user_id"]
+    assert recorded_event.payload == {
+        "user_id": CREATION_DATA["user_id"],
+        "dataset_id": CREATION_DATA["dataset_id"],
+    }
+    assert (
+        recorded_event.type_ == joint_fixture.config.access_request_allowed_event_type
     )
 
     # get request as user

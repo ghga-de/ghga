@@ -2,19 +2,6 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
-    "data_steward_email": {
-      "anyOf": [
-        {
-          "format": "email",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "An email address that can be used to notify data stewards",
-      "title": "Data Steward Email"
-    },
     "access_upfront_max_days": {
       "default": 180,
       "description": "The maximum lead time in days to request access grants",
@@ -41,20 +28,36 @@
       "title": "Download Access Url",
       "type": "string"
     },
-    "notification_event_topic": {
-      "description": "Name of the topic used for notification events.",
+    "access_request_events_topic": {
+      "description": "The topic used for events related to access requests.",
       "examples": [
-        "notifications"
+        "access_requests"
       ],
-      "title": "Notification Event Topic",
+      "title": "Access Request Events Topic",
       "type": "string"
     },
-    "notification_event_type": {
-      "description": "The type used for notification events.",
+    "access_request_created_event_type": {
+      "description": "The type to use for 'access request created' events",
       "examples": [
-        "notification"
+        "access_request_created"
       ],
-      "title": "Notification Event Type",
+      "title": "Access Request Created Event Type",
+      "type": "string"
+    },
+    "access_request_allowed_event_type": {
+      "description": "The type to use for 'access request allowed' events",
+      "examples": [
+        "access_request_allowed"
+      ],
+      "title": "Access Request Allowed Event Type",
+      "type": "string"
+    },
+    "access_request_denied_event_type": {
+      "description": "The type to use for 'access request denied' events",
+      "examples": [
+        "access_request_denied"
+      ],
+      "title": "Access Request Denied Event Type",
       "type": "string"
     },
     "service_name": {
@@ -341,10 +344,11 @@
     }
   },
   "required": [
-    "data_steward_email",
     "download_access_url",
-    "notification_event_topic",
-    "notification_event_type",
+    "access_request_events_topic",
+    "access_request_created_event_type",
+    "access_request_allowed_event_type",
+    "access_request_denied_event_type",
     "service_instance_id",
     "kafka_servers",
     "db_connection_str",

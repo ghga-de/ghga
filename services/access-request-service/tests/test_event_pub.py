@@ -19,18 +19,24 @@
 from typing import Any
 
 import pytest
+from ghga_event_schemas.pydantic_ import AccessRequestDetails
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
 
 from ars.adapters.outbound.event_pub import (
-    NotificationEmitter,
-    NotificationEmitterConfig,
+    EventPubTranslator,
+    EventPubTranslatorConfig,
 )
+from ars.core.models import AccessRequest, AccessRequestStatus
 
 pytestmark = pytest.mark.asyncio(scope="session")
 
-dummy_config = NotificationEmitterConfig(
-    notification_event_topic="dummy_topic", notification_event_type="dummy_type"
+dummy_config = EventPubTranslatorConfig(
+    access_request_allowed_event_type="access_request_allowed",
+    access_request_created_event_type="access_request_created",
+    access_request_denied_event_type="access_request_denied",
+    access_request_events_topic="access_requests",
 )
 
 
@@ -54,27 +60,41 @@ class EventRecorder(EventPublisherProtocol):
 event_recorder = EventRecorder()
 
 
-notification_emitter = NotificationEmitter(
+event_publisher = EventPubTranslator(
     config=dummy_config, event_publisher=event_recorder
 )
 
 
-async def test_sending_a_notification():
-    """Test that a notification is translated properly."""
-    await notification_emitter.notify(
-        email="someone@somewhere.org",
-        full_name="Some User Name",
-        subject="Some subject",
-        text="Some text",
+@pytest.mark.parametrize("status", ["created", "allowed", "denied"])
+async def test_access_request_events(status: str):
+    """Test that an event is published properly."""
+    request = AccessRequest(
+        id="unique_access_request_id",
+        user_id="user123",
+        dataset_id="dataset456",
+        email="requester@example.com",
+        request_text="Requesting access for research purposes",
+        access_starts=now_as_utc(),
+        access_ends=now_as_utc(),
+        full_user_name="Dr. Jane Doe",
+        request_created=now_as_utc(),
+        status=AccessRequestStatus.PENDING,
+        status_changed=None,
+        changed_by=None,
     )
+
+    publish_method = getattr(event_publisher, f"publish_request_{status}")
+    await publish_method(request=request)
+
+    expected_topic = dummy_config.access_request_events_topic
+    expected_type = getattr(dummy_config, f"access_request_{status}_event_type")
+    expected_payload = AccessRequestDetails(
+        user_id=request.user_id, dataset_id=request.dataset_id
+    ).model_dump()
+
     assert event_recorder.recorded_event == {
-        "recipient_email": "someone@somewhere.org",
-        "recipient_name": "Some User Name",
-        "email_cc": [],
-        "email_bcc": [],
-        "subject": "Some subject",
-        "plaintext_body": "Some text",
-        "topic": "dummy_topic",
-        "type": "dummy_type",
-        "key": "someone@somewhere.org",
+        "type": expected_type,
+        "key": request.user_id,
+        "topic": expected_topic,
+        **expected_payload,
     }

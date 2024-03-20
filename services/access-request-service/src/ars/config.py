@@ -23,7 +23,7 @@ from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
-from ars.adapters.outbound.event_pub import NotificationEmitterConfig
+from ars.adapters.outbound.event_pub import EventPubTranslatorConfig
 from ars.adapters.outbound.http import AccessGrantsConfig
 from ars.core.repository import AccessRequestConfig
 
@@ -37,7 +37,7 @@ class Config(
     LoggingConfig,
     MongoDbConfig,
     KafkaConfig,
-    NotificationEmitterConfig,
+    EventPubTranslatorConfig,
     AccessGrantsConfig,
     AccessRequestConfig,
 ):

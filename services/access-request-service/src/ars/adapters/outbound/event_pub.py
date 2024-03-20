@@ -22,54 +22,82 @@ from hexkit.protocols.eventpub import EventPublisherProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from ars.ports.outbound.notification_emitter import NotificationEmitterPort
+from ars.core import models
+from ars.ports.outbound.event_pub import EventPublisherPort
 
-__all__ = ["NotificationEmitterConfig", "NotificationEmitter"]
+__all__ = ["EventPubTranslatorConfig", "EventPubTranslator"]
 
 
-class NotificationEmitterConfig(BaseSettings):
-    """Config for sending notification events."""
+class EventPubTranslatorConfig(BaseSettings):
+    """Config for the event pub translator"""
 
-    notification_event_topic: str = Field(
-        ...,
-        description=("Name of the topic used for notification events."),
-        examples=["notifications"],
+    access_request_events_topic: str = Field(
+        default=...,
+        description="The topic used for events related to access requests.",
+        examples=["access_requests"],
     )
-    notification_event_type: str = Field(
-        ...,
-        description=("The type used for notification events."),
-        examples=["notification"],
+    access_request_created_event_type: str = Field(
+        default=...,
+        description="The type to use for 'access request created' events",
+        examples=["access_request_created"],
+    )
+    access_request_allowed_event_type: str = Field(
+        default=...,
+        description="The type to use for 'access request allowed' events",
+        examples=["access_request_allowed"],
+    )
+    access_request_denied_event_type: str = Field(
+        default=...,
+        description="The type to use for 'access request denied' events",
+        examples=["access_request_denied"],
     )
 
 
-class NotificationEmitter(NotificationEmitterPort):
-    """Translator from NotificationEmitterPort to EventPublisherProtocol."""
+class EventPubTranslator(EventPublisherPort):
+    """Translator from EventPublisherPort to EventPublisherProtocol."""
 
     def __init__(
         self,
         *,
-        config: NotificationEmitterConfig,
+        config: EventPubTranslatorConfig,
         event_publisher: EventPublisherProtocol,
     ):
         """Initialize with config and a provider of the EventPublisherProtocol."""
-        self._event_topic = config.notification_event_topic
-        self._event_type = config.notification_event_type
+        self._config = config
         self._event_publisher = event_publisher
 
-    async def notify(
-        self, *, email: str, full_name: str, subject: str, text: str
+    async def _publish_access_request_event(
+        self, *, request: models.AccessRequest, type_: str
     ) -> None:
-        """Send notification to the specified email address."""
-        payload: JsonObject = event_schemas.Notification(
-            recipient_email=email,
-            recipient_name=full_name,
-            subject=subject,
-            plaintext_body=text,
+        """Publish an access request-related event with the given details and type."""
+        payload: JsonObject = event_schemas.AccessRequestDetails(
+            user_id=request.user_id, dataset_id=request.dataset_id
         ).model_dump()
 
         await self._event_publisher.publish(
             payload=payload,
-            type_=self._event_type,
-            key=email,
-            topic=self._event_topic,
+            type_=type_,
+            key=request.user_id,
+            topic=self._config.access_request_events_topic,
+        )
+
+    async def publish_request_allowed(self, *, request: models.AccessRequest) -> None:
+        """Publish an event relaying that an access request was allowed."""
+        await self._publish_access_request_event(
+            request=request,
+            type_=self._config.access_request_allowed_event_type,
+        )
+
+    async def publish_request_created(self, *, request: models.AccessRequest) -> None:
+        """Publish an event relaying that an access request was created."""
+        await self._publish_access_request_event(
+            request=request,
+            type_=self._config.access_request_created_event_type,
+        )
+
+    async def publish_request_denied(self, *, request: models.AccessRequest) -> None:
+        """Publish an event relaying that an access request was denied."""
+        await self._publish_access_request_event(
+            request=request,
+            type_=self._config.access_request_denied_event_type,
         )

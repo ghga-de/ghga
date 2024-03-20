@@ -119,7 +119,6 @@ async def joint_fixture_function(
     config = Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
         download_access_url="http://access",
-        data_steward_email="steward@ghga.de",
         **kafka_fixture.config.model_dump(),
         **mongodb_fixture.config.model_dump(),
     )

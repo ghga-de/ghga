@@ -29,7 +29,7 @@ from hexkit.providers.mongodb import MongoDbDaoFactory
 from ars.adapters.inbound.fastapi_ import dummies
 from ars.adapters.inbound.fastapi_.configure import get_configured_app
 from ars.adapters.outbound.dao import AccessRequestDaoConstructor
-from ars.adapters.outbound.event_pub import NotificationEmitter
+from ars.adapters.outbound.event_pub import EventPubTranslator
 from ars.adapters.outbound.http import AccessGrantsAdapter
 from ars.config import Config
 from ars.core.repository import AccessRequestRepository
@@ -50,12 +50,12 @@ async def prepare_core(
         KafkaEventPublisher.construct(config=config) as event_publisher,
         AccessGrantsAdapter.construct(config=config) as access_grants,
     ):
-        notification_emitter = NotificationEmitter(
+        event_publisher = EventPubTranslator(
             config=config, event_publisher=event_publisher
         )
         yield AccessRequestRepository(
             access_request_dao=access_request_dao,
-            notification_emitter=notification_emitter,
+            event_publisher=event_publisher,
             access_grants=access_grants,
             config=config,
         )
