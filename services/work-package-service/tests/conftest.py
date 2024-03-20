@@ -15,6 +15,7 @@
 #
 
 """Shared fixtures"""
+
 import asyncio
 from time import sleep
 

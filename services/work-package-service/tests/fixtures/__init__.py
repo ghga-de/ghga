@@ -62,7 +62,6 @@ AUTH_CLAIMS = {
     "email": "john@home.org",
     "title": "Dr.",
     "id": "john-doe@ghga.de",
-    "status": "active",
 }
 
 
@@ -82,7 +81,7 @@ def fixture_auth_headers() -> dict[str, str]:
 def fixture_bad_auth_headers() -> dict[str, str]:
     """Get a invalid auth headers for testing"""
     claims = AUTH_CLAIMS.copy()
-    claims["status"] = "inactive"
+    del claims["id"]
     token = sign_and_serialize_token(claims, AUTH_KEY_PAIR)
     return headers_for_token(token)
 

@@ -24,14 +24,22 @@ from typing import Annotated
 
 from fastapi import Depends
 from ghga_service_commons.api.di import DependencyDummy
+from ghga_service_commons.auth.context import AuthContextProtocol
+from ghga_service_commons.auth.ghga import AuthContext
 
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
-__all__ = ["auth_provider", "work_package_repo_port", "WorkPackageRepositoryDummy"]
+__all__ = [
+    "auth_provider",
+    "work_package_repo_port",
+    "AuthProviderDummy",
+    "WorkPackageRepositoryDummy",
+]
 
 auth_provider = DependencyDummy("auth_provider")
-
 work_package_repo_port = DependencyDummy("work_package_repo_port")
+
+AuthProviderDummy = Annotated[AuthContextProtocol[AuthContext], Depends(auth_provider)]
 WorkPackageRepositoryDummy = Annotated[
     WorkPackageRepositoryPort, Depends(work_package_repo_port)
 ]

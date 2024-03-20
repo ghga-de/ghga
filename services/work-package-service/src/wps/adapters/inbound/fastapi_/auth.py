@@ -20,25 +20,22 @@ from typing import Annotated
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from ghga_service_commons.auth.context import AuthContextProtocol
-from ghga_service_commons.auth.ghga import AuthContext, is_active
+from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
 
-from wps.adapters.inbound.fastapi_.dummies import auth_provider
+from wps.adapters.inbound.fastapi_ import dummies
 
-__all__ = ["RequiresAuthContext", "RequiresWorkPackageAccessToken"]
+__all__ = ["UserAuthContext", "WorkPackageAccessToken"]
 
 
-async def require_active_context(
+async def require_auth_context(
     credentials: Annotated[
         HTTPAuthorizationCredentials, Depends(HTTPBearer(auto_error=True))
     ],
-    auth_provider: Annotated[AuthContextProtocol[AuthContext], Depends(auth_provider)],
+    auth_provider: dummies.AuthProviderDummy,
 ) -> AuthContext:
-    """Require an active GHGA auth context using FastAPI."""
-    return await require_auth_context_using_credentials(
-        credentials, auth_provider, is_active
-    )
+    """Require a GHGA auth context using FastAPI."""
+    return await require_auth_context_using_credentials(credentials, auth_provider)
 
 
 async def require_access_token(
@@ -50,8 +47,8 @@ async def require_access_token(
     return credentials.credentials
 
 
-# policy that requires (and returns) an active auth context
-RequiresAuthContext = Annotated[AuthContext, Security(require_active_context)]
+# policy that requires (and returns) a user auth context
+UserAuthContext = Annotated[AuthContext, Security(require_auth_context)]
 
 # policy that requires (and returns) a work package access token
-RequiresWorkPackageAccessToken = Annotated[str, Security(require_access_token)]
+WorkPackageAccessToken = Annotated[str, Security(require_access_token)]

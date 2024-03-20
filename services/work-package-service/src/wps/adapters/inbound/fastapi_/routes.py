@@ -20,10 +20,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, status
 
-from wps.adapters.inbound.fastapi_.auth import (
-    RequiresAuthContext,
-    RequiresWorkPackageAccessToken,
-)
+from wps.adapters.inbound.fastapi_.auth import UserAuthContext, WorkPackageAccessToken
 from wps.adapters.inbound.fastapi_.dummies import WorkPackageRepositoryDummy
 from wps.core.models import (
     Dataset,
@@ -69,7 +66,7 @@ async def health():
 async def create_work_package(
     creation_data: WorkPackageCreationData,
     repository: WorkPackageRepositoryDummy,
-    auth_context: RequiresAuthContext,
+    auth_context: UserAuthContext,
 ) -> WorkPackageCreationResponse:
     """Create a work package using an internal auth token with a user context."""
     try:
@@ -99,7 +96,7 @@ async def create_work_package(
 async def get_work_package(
     work_package_id: str,
     repository: WorkPackageRepositoryDummy,
-    work_package_access_token: RequiresWorkPackageAccessToken,
+    work_package_access_token: WorkPackageAccessToken,
 ) -> WorkPackageDetails:
     """Get work package details using a work package access token."""
     try:
@@ -139,7 +136,7 @@ async def create_work_order_token(
     work_package_id: str,
     file_id: str,
     repository: WorkPackageRepositoryDummy,
-    work_package_access_token: RequiresWorkPackageAccessToken,
+    work_package_access_token: WorkPackageAccessToken,
 ) -> str:
     """Get an encrypted work order token using a work package access token."""
     try:
@@ -175,7 +172,7 @@ async def create_work_order_token(
 async def get_datasets(
     user_id: str,
     repository: WorkPackageRepositoryDummy,
-    auth_context: RequiresAuthContext,
+    auth_context: UserAuthContext,
 ) -> list[Dataset]:
     """Get datasets using an internal auth token with a user context."""
     try:

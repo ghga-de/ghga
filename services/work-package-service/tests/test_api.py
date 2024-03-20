@@ -65,7 +65,7 @@ async def test_create_work_package_unauthorized(
     response = await client.post(
         "/work-packages", json=CREATION_DATA, headers=bad_auth_headers
     )
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @mark.asyncio(scope="session")
