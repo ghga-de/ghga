@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Describes a command line interface"""
 
-from schemapack._internals.cli import cli
+from .main import cli
 
-if __name__ == "__main__":
-    cli()
+__all__ = ["cli"]

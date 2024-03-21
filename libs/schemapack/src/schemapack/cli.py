@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Details on the command line interface."""
 
-from schemapack._internals.cli import cli
+from schemapack._internals.cli import exit_codes
 
-if __name__ == "__main__":
-    cli()
+__all__ = ["exit_codes"]

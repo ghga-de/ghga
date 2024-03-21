@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Exit codes returned for different outcomes."""
 
-from schemapack._internals.cli import cli
+from typing import Final
 
-if __name__ == "__main__":
-    cli()
+SUCCESS: Final = 0
+VALIDATION_ERROR: Final = 10
+DATAPACK_SPEC_ERROR: Final = 20
+SCHEMAPACK_SPEC_ERROR: Final = 30

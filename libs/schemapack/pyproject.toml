@@ -30,6 +30,7 @@ dependencies = [
     "ruamel.yaml ~= 0.18.6",
     "jsonschema >=4.19.2, <5",
     "immutabledict >=3.0.0, <4",
+    "rich >13, <14",
 ]
 
 [project.license]
@@ -37,6 +38,9 @@ text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/schemapack"
+
+[project.scripts]
+schemapack = "schemapack.__main__:cli"
 
 [tool.setuptools.packages.find]
 where = [
