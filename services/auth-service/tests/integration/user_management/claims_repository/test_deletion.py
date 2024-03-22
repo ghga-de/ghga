@@ -21,7 +21,10 @@ from datetime import timedelta
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError
-from hexkit.providers.akafka.testutils import KafkaFixture, kafka_fixture  # noqa: F401
+from hexkit.providers.akafka.testutils import (
+    KafkaFixture,
+    kafka_fixture,  # noqa: F401
+)
 from pydantic import SecretStr
 from pytest import LogCaptureFixture, mark, raises
 
@@ -33,7 +36,10 @@ from auth_service.user_management.claims_repository.models.claims import (
     VisaType,
 )
 
-from .fixtures import MongoDbContainer, fixture_mongodb  # noqa: F401
+from .fixtures import (
+    MongoDbContainer,
+    fixture_mongodb,  # noqa: F401
+)
 
 
 @mark.asyncio()

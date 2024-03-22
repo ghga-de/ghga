@@ -41,9 +41,16 @@ from ...fixtures.utils import (
     create_access_token,
     headers_for_session,
 )
-from .fixtures import fixture_client  # noqa: F401
+from .fixtures import (
+    AUTH_PATH,
+    fixture_client,  # noqa: F401
+)
 
 pytestmark = mark.asyncio()
+
+
+LOGIN_PATH = AUTH_PATH + "/rpc/login"
+LOGOUT_PATH = AUTH_PATH + "/rpc/logout"
 
 
 def expected_set_cookie(session_id: str) -> str:
@@ -89,7 +96,7 @@ async def test_logout(client: AsyncTestClient):
     )
     assert await store.get_session(session.session_id)
     headers = headers_for_session(session)
-    response = await client.post("/rpc/logout", headers=headers)
+    response = await client.post(LOGOUT_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not await store.get_session(session.session_id)
 
@@ -99,7 +106,7 @@ async def test_logout(client: AsyncTestClient):
 
 async def test_logout_without_session(client: AsyncTestClient):
     """Test that a logout request without a session does not fail."""
-    response = await client.post("/rpc/logout")
+    response = await client.post(LOGOUT_PATH)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     assert "session" not in response.cookies
@@ -116,7 +123,7 @@ async def test_logout_with_invalid_csrf_token(client: AsyncTestClient):
     headers = headers_for_session(session)
     headers["X-CSRF-Token"] += "-invalidated"
     assert await store.get_session(session.session_id)
-    response = await client.post("/rpc/logout", headers=headers)
+    response = await client.post(LOGOUT_PATH, headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert "X-CSRF-Token" not in response.headers
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
@@ -135,7 +142,7 @@ async def test_login_with_unregistered_user(
     setup_daos(ext_id="not.john@aai.org")
 
     auth = f"Bearer {create_access_token()}"
-    response = await client.post("/rpc/login", headers={"Authorization": auth})
+    response = await client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
     session_id = response.cookies.get("session")
     assert session_id
@@ -165,7 +172,7 @@ async def test_login_with_invalid_userinfo(
     setup_daos(ext_id="not.john@aai.org")
 
     auth = f"Bearer {create_access_token()}"
-    response = await client.post("/rpc/login", headers={"Authorization": auth})
+    response = await client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {
         "detail": "Subject in userinfo differs from access token"
@@ -184,7 +191,7 @@ async def test_login_with_registered_user(
     setup_daos()
 
     auth = f"Bearer {create_access_token()}"
-    response = await client.post("/rpc/login", headers={"Authorization": auth})
+    response = await client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
     session_id = response.cookies.get("session")
     assert session_id
@@ -215,7 +222,7 @@ async def test_login_with_registered_user_and_name_change(
     setup_daos()
 
     auth = f"Bearer {create_access_token()}"
-    response = await client.post("/rpc/login", headers={"Authorization": auth})
+    response = await client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
     session_id = response.cookies.get("session")
     assert session_id
@@ -245,7 +252,7 @@ async def test_login_with_registered_user_with_title(
     setup_daos(title="Dr.")
 
     auth = f"Bearer {create_access_token()}"
-    response = await client.post("/rpc/login", headers={"Authorization": auth})
+    response = await client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
     session_id = response.cookies.get("session")
     assert session_id
@@ -276,14 +283,14 @@ async def test_login_with_deactivated_user(
     setup_daos(status=UserStatus.INACTIVE)
 
     auth = f"Bearer {create_access_token()}"
-    response = await client.post("/rpc/login", headers={"Authorization": auth})
+    response = await client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "User account is disabled"}
 
 
 async def test_login_without_access_token(client: AsyncTestClient):
     """Test that a login request without an access token fails."""
-    response = await client.post("/rpc/login")
+    response = await client.post(LOGIN_PATH)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "No access token provided"}
 
@@ -294,7 +301,7 @@ async def test_login_without_access_token(client: AsyncTestClient):
 async def test_login_with_invalid_access_token(client: AsyncTestClient):
     """Test that a login request with an invalid access token fails."""
     auth = "Bearer invalid"
-    response = await client.post("/rpc/login", headers={"Authorization": auth})
+    response = await client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {
         "detail": "Access token error: Not a valid token: Token format unrecognized"
@@ -314,7 +321,7 @@ async def test_login_with_cookie_and_unregistered_user(client: AsyncTestClient):
     )
     assert await store.get_session(session.session_id)
     headers = headers_for_session(session)
-    response = await client.post("/rpc/login", headers=headers)
+    response = await client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     assert "session" not in response.cookies
@@ -342,7 +349,7 @@ async def test_login_with_cookie_and_registered_user(client: AsyncTestClient):
     )
     assert await store.get_session(session_dict.session_id)
     headers = headers_for_session(session_dict)
-    response = await client.post("/rpc/login", headers=headers)
+    response = await client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     assert "session" not in response.cookies
@@ -377,7 +384,7 @@ async def test_login_with_cookie_and_registered_data_steward(client: AsyncTestCl
     )
     assert await store.get_session(session_dict.session_id)
     headers = headers_for_session(session_dict)
-    response = await client.post("/rpc/login", headers=headers)
+    response = await client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     assert "session" not in response.cookies
@@ -405,7 +412,7 @@ async def test_login_with_cookie_and_invalid_csrf_token(client: AsyncTestClient)
     assert await store.get_session(session.session_id)
     headers = headers_for_session(session)
     headers["X-CSRF-Token"] += "-invalidated"
-    response = await client.post("/rpc/login", headers=headers)
+    response = await client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert "X-CSRF-Token" not in response.headers
     assert response.json() == {"detail": "Invalid or missing CSRF token"}

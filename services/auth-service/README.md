@@ -49,13 +49,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:2.1.0
+docker pull ghga/auth-service:2.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:2.1.0 .
+docker build -t ghga/auth-service:2.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -63,7 +63,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:2.1.0 --help
+docker run -p 8080:8080 ghga/auth-service:2.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -362,7 +362,7 @@ The service requires the following configuration parameters:
 
 - **`run_auth_adapter`** *(boolean)*: Run as auth adapter. Default: `false`.
 
-- **`api_ext_path`** *(string)*: external API path for the user management as seen by the auth adapter. Default: `"/api/auth"`.
+- **`api_ext_path`** *(string)*: external API path for the auth related endpoints (user, session and TOTP management). Default: `"/api/auth"`.
 
 - **`auth_ext_keys`**: external public key set for auth adapter (not used for user management). Default: `null`.
 

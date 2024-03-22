@@ -69,8 +69,8 @@ class Config(
 
     api_ext_path: str = Field(
         default="/api/auth",
-        description="external API path for the user management"
-        " as seen by the auth adapter",
+        description="external API path for the auth related endpoints"
+        " (user, session and TOTP management)",
     )
 
     auth_ext_keys: Optional[str] = Field(

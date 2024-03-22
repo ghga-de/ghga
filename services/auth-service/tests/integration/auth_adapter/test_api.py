@@ -29,7 +29,6 @@ from auth_service.auth_adapter.api import main
 from auth_service.auth_adapter.api.headers import get_bearer_token
 from auth_service.auth_adapter.core.session_store import SessionState
 from auth_service.auth_adapter.deps import get_user_token_dao
-from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import get_user_dao
 
@@ -40,21 +39,17 @@ from ...fixtures.utils import (
     get_claims_from_token,
     headers_for_session,
 )
-from .fixtures import (  # noqa: F401
+from .fixtures import (
+    AUTH_PATH,
     ClientWithSession,
-    fixture_client,
-    fixture_client_with_session,
-    fixture_with_basic_auth,
+    fixture_client,  # noqa: F401
+    fixture_client_with_session,  # noqa: F401
+    fixture_with_basic_auth,  # noqa: F401
     query_new_session,
 )
 from .test_totp import get_valid_totp_code
 
 pytestmark = mark.asyncio()
-
-API_EXT_PATH = CONFIG.api_ext_path.strip("/")
-if API_EXT_PATH:
-    API_EXT_PATH += "/"
-USERS_PATH = f"/{API_EXT_PATH}users"
 
 USER_INFO = {
     "name": "John Doe",
@@ -258,7 +253,7 @@ async def test_basic_auth_service_logo(with_basic_auth: str, client: AsyncTestCl
 
 async def test_post_user_without_session(client: AsyncTestClient):
     """Test authentication for user registration without a session."""
-    response = await client.post("/users")
+    response = await client.put(AUTH_PATH + "/users/some-internal-id")
     assert_is_authorization_error(response, "Not logged in")
 
 
@@ -268,7 +263,9 @@ async def test_post_user_with_session_and_invalid_csrf(
     """Test user registration with session and invalid CSRF token."""
     client, session = client_with_session[:2]
     session.csrf_token = "invalid"
-    response = await client.post("/users", headers=headers_for_session(session))
+    response = await client.post(
+        AUTH_PATH + "/users", headers=headers_for_session(session)
+    )
     assert_is_authorization_error(response, "Invalid or missing CSRF token")
 
 
@@ -282,7 +279,9 @@ async def test_post_user_with_session(client: AsyncTestClient, httpx_mock: HTTPX
     session = await query_new_session(client)
     assert not session.user_id
 
-    response = await client.post("/users", headers=headers_for_session(session))
+    response = await client.post(
+        AUTH_PATH + "/users", headers=headers_for_session(session)
+    )
 
     assert response.status_code == status.HTTP_200_OK
     assert not response.text
@@ -313,7 +312,7 @@ async def test_post_user_with_session(client: AsyncTestClient, httpx_mock: HTTPX
 
 async def test_put_user_without_session(client: AsyncTestClient):
     """Test authentication for user update without a session."""
-    response = await client.put("/users/some-internal-id")
+    response = await client.put(AUTH_PATH + "/users/some-internal-id")
     assert_is_authorization_error(response, "Not logged in")
 
 
@@ -323,7 +322,7 @@ async def test_put_user_with_session_and_wrong_user_id(
     """Test user update with session and wrong user ID."""
     client, session = client_with_session[:2]
     response = await client.put(
-        "/users/jane@ghga.de", headers=headers_for_session(session)
+        AUTH_PATH + "/users/jane@ghga.de", headers=headers_for_session(session)
     )
     assert_is_authorization_error(response, "Not registered")
 
@@ -335,7 +334,7 @@ async def test_put_user_with_session_and_invalid_csrf(
     client, session = client_with_session[:2]
     session.csrf_token = "invalid"
     response = await client.put(
-        "/users/john@ghga.de", headers=headers_for_session(session)
+        AUTH_PATH + "/users/john@ghga.de", headers=headers_for_session(session)
     )
     assert_is_authorization_error(response, "Invalid or missing CSRF token")
 
@@ -354,7 +353,7 @@ async def test_put_unregistered_user_with_session(
     assert not session.user_id
 
     response = await client.put(
-        "/users/john@ghga.de", headers=headers_for_session(session)
+        AUTH_PATH + "/users/john@ghga.de", headers=headers_for_session(session)
     )
     assert_is_authorization_error(response, "Not registered")
 
@@ -376,7 +375,7 @@ async def test_put_registered_user_with_session(
     assert session.user_id == "john@ghga.de"
 
     response = await client.put(
-        "/users/john@ghga.de", headers=headers_for_session(session)
+        AUTH_PATH + "/users/john@ghga.de", headers=headers_for_session(session)
     )
 
     assert response.status_code == status.HTTP_200_OK
@@ -441,7 +440,7 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
 
     # create second factor and authenticate with that
     response = await client.post(
-        "/totp-token",
+        AUTH_PATH + "/totp-token",
         json={"user_id": session.user_id, "force": False},
         headers=headers,
     )
@@ -449,7 +448,7 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     uri = response.json()["uri"]
     secret = parse_qs(urlparse(uri).query)["secret"][0]
     response = await client.post(
-        "/rpc/verify-totp",
+        AUTH_PATH + "/rpc/verify-totp",
         json={"user_id": session.user_id, "totp": get_valid_totp_code(secret)},
         headers=headers,
     )

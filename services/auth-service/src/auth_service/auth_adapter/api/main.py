@@ -68,9 +68,9 @@ READ_METHODS = ["GET", "HEAD", "OPTIONS"]
 WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"]
 ALL_METHODS = READ_METHODS + WRITE_METHODS
 
-API_EXT_PATH = CONFIG.api_ext_path.strip("/")
-if API_EXT_PATH:
-    API_EXT_PATH += "/"
+AUTH_PATH = CONFIG.api_ext_path.strip("/")
+if AUTH_PATH:
+    AUTH_PATH = "/" + AUTH_PATH
 
 
 def add_allowed_route(route: str, write: bool = False):
@@ -102,7 +102,7 @@ add_allowed_routes()
 
 
 @app.post(
-    "/rpc/login",
+    AUTH_PATH + "/rpc/login",
     operation_id="login",
     tags=["users"],
     summary="Create or get user session",
@@ -185,7 +185,7 @@ async def login(  # noqa: C901, PLR0913
 
 
 @app.post(
-    "/rpc/logout",
+    AUTH_PATH + "/rpc/logout",
     operation_id="logout",
     tags=["users"],
     summary="End user session",
@@ -203,7 +203,7 @@ async def logout(
 
 
 @app.post(
-    "/users",
+    AUTH_PATH + "/users",
     operation_id="post_user",
     tags=["users"],
     summary="Register a user",
@@ -226,7 +226,7 @@ async def post_user(
 
 
 @app.put(
-    "/users/{id}",
+    AUTH_PATH + "/users/{id}",
     operation_id="put_user",
     tags=["users"],
     summary="Update a user",
@@ -261,7 +261,7 @@ async def put_user(
 
 
 @app.post(
-    "/totp-token",
+    AUTH_PATH + "/totp-token",
     operation_id="create_new_totp_token",
     tags=["totp"],
     summary="Create a new TOTP token",
@@ -303,7 +303,7 @@ async def create_new_totp_token(
 
 
 @app.post(
-    "/rpc/verify-totp",
+    AUTH_PATH + "/rpc/verify-totp",
     operation_id="verify_totp",
     tags=["totp"],
     summary="Verify a TOTP code",

@@ -17,9 +17,7 @@
 """Test user specific DAOs."""
 
 from ghga_service_commons.utils.utc_dates import utc_datetime
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    mongodb_fixture,
-)
+from hexkit.providers.mongodb.testutils import mongodb_fixture  # noqa: F401
 from pytest import mark
 
 from auth_service.user_management.user_registry.core.registry import UserRegistry

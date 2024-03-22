@@ -475,7 +475,7 @@
     },
     "api_ext_path": {
       "default": "/api/auth",
-      "description": "external API path for the user management as seen by the auth adapter",
+      "description": "external API path for the auth related endpoints (user, session and TOTP management)",
       "title": "Api Ext Path",
       "type": "string"
     },

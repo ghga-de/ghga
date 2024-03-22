@@ -34,7 +34,7 @@ from pytest_httpx import HTTPXMock
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.deps import get_user_token_dao
-from auth_service.deps import Config, get_config
+from auth_service.deps import CONFIG, Config, get_config
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import (
     get_iva_dao,
@@ -51,6 +51,10 @@ from ...fixtures.utils import (
     create_access_token,
     headers_for_session,
 )
+
+AUTH_PATH = CONFIG.api_ext_path.strip("/")
+if AUTH_PATH:
+    AUTH_PATH = "/" + AUTH_PATH
 
 totp_encryption_key = TOTPHandler.random_encryption_key()
 
@@ -121,7 +125,7 @@ async def query_new_session(
     else:
         auth = f"Bearer {create_access_token()}"
         headers = {"Authorization": auth}
-    response = await client.post("/rpc/login", headers=headers)
+    response = await client.post(f"{AUTH_PATH}/rpc/login", headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert "X-CSRF-Token" not in response.headers
     if session:
