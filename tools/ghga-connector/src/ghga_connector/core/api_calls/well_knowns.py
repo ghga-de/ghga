@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Make calls to the WKVS"""
+
 from dataclasses import dataclass
 from typing import Any
 

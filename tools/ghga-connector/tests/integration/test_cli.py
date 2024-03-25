@@ -285,9 +285,13 @@ async def test_download(
                             my_private_key_path=Path(PRIVATE_KEY_FILE),
                         )
             else:
-                with pytest.raises(
-                    expected_exception  # type: ignore
-                ) if expected_exception else nullcontext():
+                with (
+                    pytest.raises(
+                        expected_exception  # type: ignore
+                    )
+                    if expected_exception
+                    else nullcontext()
+                ):
                     download(
                         output_dir=output_dir,
                         my_public_key_path=Path(PUBLIC_KEY_FILE),
@@ -382,9 +386,13 @@ async def test_upload(
     )
 
     with patch("ghga_connector.cli.CONFIG", get_test_config()):
-        with pytest.raises(
-            expected_exception  # type: ignore
-        ) if expected_exception else nullcontext():
+        with (
+            pytest.raises(
+                expected_exception  # type: ignore
+            )
+            if expected_exception
+            else nullcontext()
+        ):
             message_display = init_message_display(debug=True)
             parameters = retrieve_upload_parameters()
             await upload(

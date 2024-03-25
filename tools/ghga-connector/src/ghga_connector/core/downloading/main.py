@@ -20,6 +20,7 @@ from queue import Empty, Queue
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.downloading.abstract_downloader import DownloaderBase
+from ghga_connector.core.downloading.progress_bar import ProgressBar
 from ghga_connector.core.file_operations import calc_part_ranges
 from ghga_connector.core.message_display import AbstractMessageDisplay
 
@@ -106,12 +107,21 @@ def download_parts(  # noqa: PLR0913
         file.write(envelope)
         offset = len(envelope)
         downloaded_size = 0
-        while downloaded_size < file_size:
-            try:
-                start, part = queue.get(block=False)
-            except Empty:
-                continue
-            file.seek(offset + start)
-            file.write(part)
-            downloaded_size += len(part)
-            queue.task_done()
+
+        # track and display actually written bytes
+        with ProgressBar(file_name=output_file.name, file_size=file_size) as progress:
+            while downloaded_size < file_size:
+                try:
+                    # this will block forever, poll instead and retry if empty
+                    start, part = queue.get(block=False)
+                except Empty:
+                    # not sure if this ramps up CPU usage and this should sleep for some
+                    # amount of time
+                    continue
+                file.seek(offset + start)
+                file.write(part)
+                # update tracking information
+                chunk_size = len(part)
+                downloaded_size += chunk_size
+                queue.task_done()
+                progress.advance(chunk_size)

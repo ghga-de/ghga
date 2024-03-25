@@ -85,9 +85,13 @@ async def test_patch_multipart_upload(
     elif expected_exception is None:
         httpx_mock.add_response(status_code=204)
 
-    with pytest.raises(
-        expected_exception  # type: ignore
-    ) if expected_exception else nullcontext():
+    with (
+        pytest.raises(
+            expected_exception  # type: ignore
+        )
+        if expected_exception
+        else nullcontext()
+    ):
         async with async_client() as client:
             uploader = Uploader(
                 api_url=api_url, client=client, file_id="", public_key_path=Path("")

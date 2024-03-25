@@ -15,6 +15,7 @@
 #
 
 """Contains abstract message display base class"""
+
 import enum
 from abc import ABC, abstractmethod
 

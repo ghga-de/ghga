@@ -13,14 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Module for reusable wrapper classes improving readability"""
 
-from dataclasses import dataclass
+"""Test progress bar wrapper implementation."""
+
+from math import ceil
+from time import sleep
+
+from ghga_connector.core.downloading.progress_bar import ProgressBar
 
 
-@dataclass
-class PartRange:
-    """Container for inclusive download ranges"""
+def test_progress_bar():
+    """Test progress bar with dummy data"""
+    file_name = "test_file.gz"
+    file_size = 1024**3
+    chunk_size = 100 * 1024**2
 
-    start: int
-    stop: int
+    with ProgressBar(file_name=file_name, file_size=file_size) as progress:
+        for _ in range(ceil(file_size / chunk_size)):
+            progress.advance(chunk_size)
+            sleep(0.1)
+
+        assert progress._progress.finished
+        assert progress._progress.tasks[0].completed == file_size

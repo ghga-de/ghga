@@ -354,9 +354,9 @@ def decrypt(  # noqa: PLR0912, C901
         output_file = output_dir / input_file.with_suffix("").name
 
         if output_file.exists():
-            errors[
-                str(input_file)
-            ] = f"File already exists at '{output_file}', will not overwrite."
+            errors[str(input_file)] = (
+                f"File already exists at '{output_file}', will not overwrite."
+            )
             continue
 
         try:
@@ -367,9 +367,9 @@ def decrypt(  # noqa: PLR0912, C901
                 decryption_private_key_path=my_private_key_path,
             )
         except ValueError as error:
-            errors[
-                str(input_file)
-            ] = f"Could not decrypt the provided file with the given key.\nError: {str(error)}"
+            errors[str(input_file)] = (
+                f"Could not decrypt the provided file with the given key.\nError: {str(error)}"
+            )
             continue
 
         message_display.success(
