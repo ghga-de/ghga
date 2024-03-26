@@ -16,7 +16,6 @@
 
 """Logic for transforming metadata models."""
 
-
 from copy import deepcopy
 from typing import Optional, cast
 

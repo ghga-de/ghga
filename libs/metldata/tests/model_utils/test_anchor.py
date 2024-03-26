@@ -16,7 +16,6 @@
 
 """Test the anchor module."""
 
-
 import pytest
 
 from metldata.model_utils.anchors import (

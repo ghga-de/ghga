@@ -16,7 +16,6 @@
 
 """Logic for handling submissions."""
 
-
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from metldata.accession_registry.accession_registry import AccessionRegistry

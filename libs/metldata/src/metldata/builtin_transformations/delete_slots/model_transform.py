@@ -16,7 +16,6 @@
 
 """Logic for transforming metadata models."""
 
-
 from metldata.model_utils.essentials import MetadataModel
 from metldata.model_utils.manipulate import delete_class_slot
 

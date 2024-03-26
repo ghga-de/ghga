@@ -16,7 +16,6 @@
 
 """Event Models."""
 
-
 from pydantic import BaseModel, Field
 
 from metldata.custom_types import SubmissionContent

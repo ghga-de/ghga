@@ -16,7 +16,6 @@
 
 """Logic for transforming metadata."""
 
-
 from metldata.builtin_transformations.infer_references.path.resolve import (
     resolve_reference_for_metadata_resource,
 )

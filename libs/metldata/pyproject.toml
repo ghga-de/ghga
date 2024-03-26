@@ -22,12 +22,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "metldata"
-version = "1.2.0"
+version = "1.2.1"
 description = "metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing."
 dependencies = [
-    "hexkit[akafka,mongodb]~=1.0.0",
-    "ghga-service-commons[api,auth]~=1.1.0",
-    "ghga-event-schemas~=1.0.0",
+    "hexkit[akafka,mongodb] >=2.1.1, <3",
+    "ghga-service-commons[api,auth] >=3.1.1, <4",
+    "ghga-event-schemas >=3.0.0, <4",
     "typer~=0.9.0",
     "linkml==1.6.1",
     "linkml-runtime==1.6.0",
@@ -56,6 +56,21 @@ exclude = [
     "build",
     "dist",
 ]
+line-length = 88
+src = [
+    "src",
+    "tests",
+    "examples",
+    "scripts",
+]
+target-version = "py39"
+
+[tool.ruff.lint]
+fixable = [
+    "UP",
+    "I",
+    "D",
+]
 ignore = [
     "E",
     "W",
@@ -73,7 +88,6 @@ ignore = [
     "D206",
     "D300",
 ]
-line-length = 88
 select = [
     "C90",
     "F",
@@ -87,23 +101,11 @@ select = [
     "SIM",
     "D",
 ]
-fixable = [
-    "UP",
-    "I",
-    "D",
-]
-src = [
-    "src",
-    "tests",
-    "examples",
-    "scripts",
-]
-target-version = "py39"
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 10
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "scripts/*" = [
     "PL",
     "S",
@@ -129,7 +131,7 @@ max-complexity = 10
     "D",
 ]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "pep257"
 
 [tool.mypy]

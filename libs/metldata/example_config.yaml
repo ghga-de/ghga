@@ -1,4 +1,4 @@
-api_root_path: /
+api_root_path: ''
 artifact_infos:
 - description: embedded_restricted
   name: embedded_restricted
@@ -203,6 +203,7 @@ dataset_upsertion_type: dataset_created
 db_connection_str: '**********'
 db_name: dev_db
 docs_url: /docs
+generate_correlation_id: true
 host: 127.0.0.1
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
@@ -213,7 +214,6 @@ kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
 loader_token_hashes:
 - 09e5724dab34b50fe2db5ebae7ac5eac4ef2904d105f8f2b3d5a4cb2c7f43da4
-log_level: trace
 openapi_url: /openapi.json
 port: 8080
 primary_artifact_name: embedded_public

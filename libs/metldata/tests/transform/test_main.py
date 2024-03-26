@@ -37,7 +37,7 @@ from tests.fixtures.workflows import (
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="session")
 async def test_run_workflow_on_all_source_events(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):

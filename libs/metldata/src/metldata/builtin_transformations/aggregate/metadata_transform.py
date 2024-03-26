@@ -80,7 +80,7 @@ def execute_aggregations(
             original_data=metadata,
             aggregation=aggregation,
         )
-        transformed_data[
-            transformed_anchors_points[aggregation.output].root_slot
-        ] = output_data
+        transformed_data[transformed_anchors_points[aggregation.output].root_slot] = (
+            output_data
+        )
     return transformed_data

@@ -16,12 +16,11 @@
 
 """Test the api_factory module."""
 
-
 import httpx
 import pytest
 from fastapi import FastAPI
 from ghga_service_commons.api.testing import AsyncTestClient
-from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import DaoFactoryProtocol
 
 from metldata.artifacts_rest.api_factory import rest_api_factory
@@ -165,7 +164,7 @@ async def test_get_stats_endpoint(
     if isinstance(raw_observed_created, str) and raw_observed_created.endswith("Z"):
         raw_observed_created = raw_observed_created.replace("Z", "+00:00")
 
-    observed_created = DateTimeUTC.fromisoformat(raw_observed_created)
+    observed_created = UTCDatetime.fromisoformat(raw_observed_created)
     assert abs((now_as_utc() - observed_created).seconds) < 5
 
     expected_stats = {

@@ -260,10 +260,12 @@ class WorkflowHandler:
             input_metadata = (
                 metadata if step.input is None else transformed_metadata[step.input]
             )
-            transformed_metadata[
-                step_name
-            ] = step.transformation_handler.transform_metadata(
-                input_metadata, annotation=annotation, assume_validated=assume_validated
+            transformed_metadata[step_name] = (
+                step.transformation_handler.transform_metadata(
+                    input_metadata,
+                    annotation=annotation,
+                    assume_validated=assume_validated,
+                )
             )
             assume_validated = True
 

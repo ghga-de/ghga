@@ -16,7 +16,6 @@
 
 """Logic for resolving reference paths for existing metadata."""
 
-
 from metldata.builtin_transformations.infer_references.path.path import ReferencePath
 from metldata.builtin_transformations.infer_references.path.path_elements import (
     ReferencePathElement,

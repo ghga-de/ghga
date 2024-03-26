@@ -16,7 +16,6 @@
 
 """Test the metadata utils."""
 
-
 import pytest
 
 from metldata.metadata_utils import (

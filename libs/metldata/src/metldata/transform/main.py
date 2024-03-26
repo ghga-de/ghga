@@ -16,7 +16,6 @@
 
 """Main logic for running a transformation workflow on submissions."""
 
-
 from collections.abc import Awaitable
 from typing import Callable
 

@@ -16,7 +16,6 @@
 
 """Logic for checking transformation-specific model assumptions."""
 
-
 from metldata.model_utils.assumptions import check_class_slot_exists
 from metldata.model_utils.essentials import MetadataModel
 

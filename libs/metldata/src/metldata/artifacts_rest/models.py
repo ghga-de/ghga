@@ -18,7 +18,7 @@
 
 from typing import Optional
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
 
@@ -115,7 +115,7 @@ class GlobalStats(BaseModel):
     """Model to describe statistical information on all resources."""
 
     id: Literal["global"]
-    created: DateTimeUTC = Field(..., description="When these stats were created.")
+    created: UTCDatetime = Field(..., description="When these stats were created.")
 
     resource_stats: dict[str, ResourceStats] = Field(
         ...,

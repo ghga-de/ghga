@@ -16,7 +16,6 @@
 
 """A transformation to generate custom embeddings for classes of a metadata model."""
 
-
 # shortcuts:
 # pylint: disable=unused-import
 from metldata.builtin_transformations.custom_embeddings.main import (  # noqa: F401

@@ -16,7 +16,6 @@
 
 """A transformation to infer references based on existing ones in the metadata model."""
 
-
 # shortcuts:
 # pylint: disable=unused-import
 from metldata.builtin_transformations.infer_references.main import (  # noqa: F401

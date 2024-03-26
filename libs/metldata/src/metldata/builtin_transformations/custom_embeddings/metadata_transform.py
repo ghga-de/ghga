@@ -175,9 +175,9 @@ def add_custom_embedding_to_metadata(
         root_slot=get_embedding_profile_root_slot(embedding_profile=embedding_profile),
     )
     anchor_points_by_target_modified = anchor_points_by_target.copy()
-    anchor_points_by_target_modified[
-        embedding_profile.target_class
-    ] = embedded_class_anchor_point
+    anchor_points_by_target_modified[embedding_profile.target_class] = (
+        embedded_class_anchor_point
+    )
 
     return upsert_resources_in_metadata(
         resources=resources,

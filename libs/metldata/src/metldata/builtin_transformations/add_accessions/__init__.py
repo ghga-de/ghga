@@ -16,7 +16,6 @@
 
 """A transformation to add accessions to metadata."""
 
-
 # shortcuts:
 # pylint: disable=unused-import
 from metldata.builtin_transformations.add_accessions.main import (  # noqa: F401

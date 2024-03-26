@@ -241,7 +241,7 @@ async def test_load_artifacts_endpoint_invalid_token(
         json={},
         headers={"Authorization": f"Bearer {invalid_token}"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio

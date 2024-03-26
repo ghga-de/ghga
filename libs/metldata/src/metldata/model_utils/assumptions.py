@@ -15,6 +15,7 @@
 #
 
 """Logic to check basic assumptions about the metadata model."""
+
 from typing import Optional
 
 from metldata.model_utils.anchors import (

@@ -160,7 +160,7 @@
     },
     "kafka_ssl_cafile": {
       "default": "",
-      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA not specified, the default system CA will be used if found by OpenSSL.",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
       "title": "Kafka Ssl Cafile",
       "type": "string"
     },
@@ -181,6 +181,16 @@
       "description": "Optional password to be used for the client private key.",
       "title": "Kafka Ssl Password",
       "type": "string"
+    },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
     },
     "primary_artifact_name": {
       "description": "Name of the artifact from which the information for outgoing change events is derived.",
@@ -258,20 +268,6 @@
       "title": "Port",
       "type": "integer"
     },
-    "log_level": {
-      "default": "info",
-      "description": "Controls the verbosity of the log.",
-      "enum": [
-        "critical",
-        "error",
-        "warning",
-        "info",
-        "debug",
-        "trace"
-      ],
-      "title": "Log Level",
-      "type": "string"
-    },
     "auto_reload": {
       "default": false,
       "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
@@ -285,7 +281,7 @@
       "type": "integer"
     },
     "api_root_path": {
-      "default": "/",
+      "default": "",
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "title": "Api Root Path",
       "type": "string"

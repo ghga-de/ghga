@@ -20,7 +20,7 @@ from enum import Enum
 from operator import attrgetter
 from typing import Optional
 
-from ghga_service_commons.utils.utc_dates import DateTimeUTC, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypeAlias
 
@@ -47,7 +47,7 @@ class SubmissionStatus(Enum):
 class StatusChange(BaseModel):
     """A model for describing status changes of submissions."""
 
-    timestamp: DateTimeUTC
+    timestamp: UTCDatetime
     new_status: SubmissionStatus
 
 

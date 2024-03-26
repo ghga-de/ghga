@@ -16,7 +16,6 @@
 
 """Test the base module."""
 
-
 import pytest
 from pydantic import ValidationError
 

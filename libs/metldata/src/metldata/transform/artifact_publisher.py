@@ -16,7 +16,6 @@
 
 """Logic for publishing artifacts."""
 
-
 import json
 
 from hexkit.protocols.eventpub import EventPublisherProtocol
