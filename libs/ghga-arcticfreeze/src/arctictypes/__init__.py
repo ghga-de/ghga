@@ -18,12 +18,14 @@ from importlib.metadata import version
 
 from ._internal._converters import STANDARD_CONVERTERS, Converter
 from ._internal.freeze import ConverterNotFoundError, freeze
+from ._internal.frozendict import FrozenDict
 
 __all__ = [
     "ConverterNotFoundError",
     "freeze",
     "STANDARD_CONVERTERS",
     "Converter",
+    "FrozenDict",
 ]
 
 __version__ = version(__package__)
