@@ -12,4 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests."""
+"""Test the standard converters."""
+
+import pytest
+from arctictypes._internal._converters import STANDARD_CONVERTERS
+from arctictypes._internal.resolve import sort_and_deduplicate_converters
+
+
+@pytest.mark.parametrize("converters", [STANDARD_CONVERTERS])
+def test_converter_sequences(converters):
+    """Make sure that all builtin converters are sorted and that they only contain one
+    converter for each input type.
+    """
+    expected_converters, _ = sort_and_deduplicate_converters(converters)
+    assert expected_converters == converters
