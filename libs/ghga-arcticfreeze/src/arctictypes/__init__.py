@@ -12,8 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utils for Fixture handling."""
+"""Short description of package."""  # Please adapt to package
 
-from pathlib import Path
+from importlib.metadata import version
 
-BASE_DIR = Path(__file__).parent.resolve()
+from ._internal._converters import STANDARD_CONVERTERS, Converter
+from ._internal.freeze import ConverterNotFoundError, freeze
+
+__all__ = [
+    "ConverterNotFoundError",
+    "freeze",
+    "STANDARD_CONVERTERS",
+    "Converter",
+]
+
+__version__ = version(__package__)

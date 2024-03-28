@@ -12,9 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test dummy."""
-
-
-def test_dummy():
-    """A very simple example test."""
-    pass
+"""Internal implementation details of the package. They may change without notice
+even between minor or patch version bumps."""
