@@ -17,8 +17,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from arctictypes import ConverterNotFoundError
-from immutabledict import immutabledict
+from arctictypes import ConverterNotFoundError, FrozenDict
 
 
 @dataclass(frozen=True)
@@ -45,7 +44,7 @@ SEQUENCE_OF_PRIMITIVES_EXAMPLE = (1, "hello", True, None, b"hello")
 MAPPING_OF_PRIMITIVES_EXAMPLE = {
     value: value for value in SEQUENCE_OF_PRIMITIVES_EXAMPLE
 }
-NESTED_IMMUTABLE_EXAMPLE: Any = immutabledict(
+NESTED_IMMUTABLE_EXAMPLE: Any = FrozenDict(
     {"a": tuple(frozenset(SEQUENCE_OF_PRIMITIVES_EXAMPLE))}
 )
 
@@ -83,9 +82,9 @@ VALID_CASES = (
         expected_outputs=(),
     ),
     ValidTestCase(
-        name="empty_immutabledict",
-        inputs=immutabledict(),
-        expected_outputs=immutabledict(),
+        name="empty_FrozenDict",
+        inputs=FrozenDict(),
+        expected_outputs=FrozenDict(),
     ),
     ValidTestCase(
         name="empty_frozenset",
@@ -100,7 +99,7 @@ VALID_CASES = (
     ValidTestCase(
         name="empty_dict",
         inputs={},
-        expected_outputs=immutabledict(),
+        expected_outputs=FrozenDict(),
     ),
     ValidTestCase(
         name="empty_set",
@@ -114,9 +113,9 @@ VALID_CASES = (
         expected_outputs=tuple(SEQUENCE_OF_PRIMITIVES_EXAMPLE),
     ),
     ValidTestCase(
-        name="immutabledict_of_primitives",
-        inputs=immutabledict(MAPPING_OF_PRIMITIVES_EXAMPLE),
-        expected_outputs=immutabledict(MAPPING_OF_PRIMITIVES_EXAMPLE),
+        name="FrozenDict_of_primitives",
+        inputs=FrozenDict(MAPPING_OF_PRIMITIVES_EXAMPLE),
+        expected_outputs=FrozenDict(MAPPING_OF_PRIMITIVES_EXAMPLE),
     ),
     ValidTestCase(
         name="frozenset_of_primitives",
@@ -132,7 +131,7 @@ VALID_CASES = (
     ValidTestCase(
         name="dict_of_primitives",
         inputs=dict(MAPPING_OF_PRIMITIVES_EXAMPLE),
-        expected_outputs=immutabledict(MAPPING_OF_PRIMITIVES_EXAMPLE),
+        expected_outputs=FrozenDict(MAPPING_OF_PRIMITIVES_EXAMPLE),
     ),
     ValidTestCase(
         name="set_of_primitives",
@@ -152,7 +151,7 @@ VALID_CASES = (
     ),
     ValidTestCase(
         name="nested_immutable_parent_mutable_children",
-        inputs=immutabledict({"a": list(set(SEQUENCE_OF_PRIMITIVES_EXAMPLE))}),
+        inputs=FrozenDict({"a": list(set(SEQUENCE_OF_PRIMITIVES_EXAMPLE))}),
         expected_outputs=NESTED_IMMUTABLE_EXAMPLE,
     ),
     ValidTestCase(

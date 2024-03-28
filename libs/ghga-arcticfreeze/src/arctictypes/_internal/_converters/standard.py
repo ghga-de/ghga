@@ -18,14 +18,13 @@ import collections
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Callable, Final
 
-import immutabledict
-
 from arctictypes._internal._converters.base import (
     STANDARD_MUTABLE_PRIORITY,
     STANDARD_NON_PRIMITIVE_IMMUTABLE_PRIORITY,
     STANDARD_PRIMITIVE_PRIORITY,
     Converter,
 )
+from arctictypes._internal.frozendict import FrozenDict
 
 STANDARD_PRIMITIVE_TYPES: Final = (str, int, float, bool, type(None))
 
@@ -46,11 +45,9 @@ def convert_set_like(obj: Iterable, freeze_child: Callable) -> set:
     return set(freeze_child(child) for child in obj)
 
 
-def convert_mapping(
-    obj: Mapping, freeze_child: Callable
-) -> immutabledict.immutabledict:
+def convert_mapping(obj: Mapping, freeze_child: Callable) -> FrozenDict:
     """A convert a mapping object."""
-    return immutabledict.immutabledict(
+    return FrozenDict(
         {freeze_child(key): freeze_child(value) for key, value in obj.items()}
     )
 
@@ -68,7 +65,7 @@ STANDARD_NON_PRIMITIVE_IMMUTABLE_CONVERTERS: Final[Sequence[Converter]] = (
         priority=STANDARD_NON_PRIMITIVE_IMMUTABLE_PRIORITY,
     ),
     Converter(
-        input_type=immutabledict.immutabledict,
+        input_type=FrozenDict,
         convert=convert_mapping,
         priority=STANDARD_NON_PRIMITIVE_IMMUTABLE_PRIORITY,
     ),
