@@ -51,8 +51,8 @@ def test_frozen_dict_serialization():
 
     dumped_data = model.model_dump()
     observed_dict = dumped_data["frozen_dict"]
-    assert observed_dict == input_dict
-    assert isinstance(observed_dict, dict)
+    assert isinstance(observed_dict, FrozenDict)
+    assert dict(observed_dict) == input_dict
 
 
 def test_frozen_dict_serialization_json():
