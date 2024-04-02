@@ -70,6 +70,8 @@ else:
         from pydantic import GetCoreSchemaHandler
         from pydantic_core.core_schema import (
             CoreSchema,
+            any_schema,
+            json_or_python_schema,
             no_info_after_validator_function,
             plain_serializer_function_ser_schema,
         )
@@ -82,28 +84,38 @@ else:
             args = typing.get_args(source)
             if not args:
                 validation_schema = handler.generate_schema(Mapping)
-                return_schema = handler.generate_schema(dict)
             elif len(args) == 2:
                 validation_schema = handler.generate_schema(Mapping[args[0], args[1]])  # type: ignore
-                return_schema = handler.generate_schema(dict[args[0], args[1]])  # type: ignore
             else:
                 raise TypeError(
                     "Expected exactly two (or no) type arguments for FrozenDict, got"
                     + f" {len(args)}"
                 )
 
-            serialization_schema = plain_serializer_function_ser_schema(
-                lambda x: dict(x), return_schema=return_schema
+            python_serialization_schema = plain_serializer_function_ser_schema(
+                lambda x: x, return_schema=any_schema()
             )
 
-            # Uses cls as validator function to convert the dict to a FrozenDict:
-            return no_info_after_validator_function(
+            python_schema = no_info_after_validator_function(
                 # callable to use after validation against the schema (convert to
                 # FrozenDict):
                 cls,
                 # the validation schema to use before executing the callable:
                 validation_schema,
-                serialization=serialization_schema,
+                serialization=python_serialization_schema,
+            )
+
+            json_serialization_schema = python_serialization_schema = (
+                plain_serializer_function_ser_schema(
+                    lambda x: dict(x), return_schema=validation_schema, when_used="json"
+                )
+            )
+
+            # Uses cls as validator function to convert the dict to a FrozenDict:
+            return json_or_python_schema(
+                json_schema=validation_schema,
+                python_schema=python_schema,
+                serialization=json_serialization_schema,
             )
 
         FrozenDict.__get_pydantic_core_schema__ = classmethod(  # type: ignore
