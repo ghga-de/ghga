@@ -1,8 +1,8 @@
-[![tests](https://github.com/kerstenbreuer/arctictypes/actions/workflows/tests.yaml/badge.svg)](https://github.com/kerstenbreuer/arctictypes/actions/workflows/tests.yaml)
+[![tests](https://github.com/kerstenbreuer/arcticfreeze/actions/workflows/tests.yaml/badge.svg)](https://github.com/kerstenbreuer/arcticfreeze/actions/workflows/tests.yaml)
 
-# artictypes
+# articfreeze
 
-Deep frozen data structures for Python.
+Enjoy Python on the rocks with deeply (recursively) frozen data structures.
 
 ## Description
 

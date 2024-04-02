@@ -18,13 +18,13 @@ import collections
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Callable, Final
 
-from arctictypes._internal._converters.base import (
+from arcticfreeze._internal._converters.base import (
     STANDARD_MUTABLE_PRIORITY,
     STANDARD_NON_PRIMITIVE_IMMUTABLE_PRIORITY,
     STANDARD_PRIMITIVE_PRIORITY,
     Converter,
 )
-from arctictypes._internal.frozendict import FrozenDict
+from arcticfreeze._internal.frozendict import FrozenDict
 
 STANDARD_PRIMITIVE_TYPES: Final = (str, int, float, bool, type(None))
 

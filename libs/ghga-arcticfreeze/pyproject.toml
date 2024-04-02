@@ -20,23 +20,24 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "arctictypes"
+name = "arcticfreeze"
 version = "0.1.0"
-description = "arctictypes - deep frozen data structures for Python."
+description = "Enjoy Python on the rocks with deeply (recursively) frozen data structures."
 dependencies = [
     "immutabledict >=4, <5"
 ]
 
 [project.optional-dependencies]
 pydantic = [
-    "pydantic >=2, <3"
+    "pydantic >=2, <3",
+    "pydantic_core >=2, <3",
 ]
 
 [project.license]
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/kerstenbreuer/arctictypes"
+Repository = "https://github.com/kerstenbreuer/arcticfreeze"
 
 [tool.setuptools.packages.find]
 where = [
@@ -51,7 +52,7 @@ fixable = [
 ]
 ignore = [
     "E", # pycodestyle errors
-    "W", # pycodestyle warnings - pycodestyle covered by black
+    "W", # pycodestyle warnings - pycodestyle covered by ruff
     "PLW", # pylint warnings
     "RUF001", # ambiguous unicode character strings
     "RUF010", # explicit conversion to string or repr: !s or !r

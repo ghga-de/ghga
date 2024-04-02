@@ -15,8 +15,8 @@
 """Test the standard converters."""
 
 import pytest
-from arctictypes._internal._converters import STANDARD_CONVERTERS
-from arctictypes._internal.resolve import sort_and_deduplicate_converters
+from arcticfreeze._internal._converters import STANDARD_CONVERTERS
+from arcticfreeze._internal.resolve import sort_and_deduplicate_converters
 
 
 @pytest.mark.parametrize("converters", [STANDARD_CONVERTERS])

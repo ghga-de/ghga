@@ -17,11 +17,11 @@
 from collections.abc import Sequence
 from typing import Optional
 
-from arctictypes._internal._converters import (
+from arcticfreeze._internal._converters import (
     STANDARD_CONVERTERS,
     Converter,
 )
-from arctictypes._internal.resolve import (
+from arcticfreeze._internal.resolve import (
     ConverterNotFoundError,  # noqa: F401 - a shortcut
     get_converter_by_type,
 )

@@ -24,7 +24,7 @@ from typing import Any, TypeVar, overload
 
 from immutabledict import immutabledict
 
-from arctictypes._internal.utils import PYDANTIC_V2_INSTALLED
+from arcticfreeze._internal.utils import PYDANTIC_V2_INSTALLED
 
 _K = TypeVar("_K")
 _V_co = TypeVar("_V_co", covariant=True)
@@ -39,7 +39,7 @@ class FrozenDict(immutabledict[_K, _V_co]):
 
     Examples:
     ```python
-    from arctictypes import FrozenDict
+    from arcticfreeze import FrozenDict
 
     # Construct a FrozenDict from another mapping (such as a dictionary):
     example_from_dict = FrozenDict({"a": 1, "b": 2})

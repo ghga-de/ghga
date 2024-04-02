@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Short description of package."""  # Please adapt to package
+"""A package to produce deeply (recursively) frozen Python data structures."""
 
 from importlib.metadata import version
 
