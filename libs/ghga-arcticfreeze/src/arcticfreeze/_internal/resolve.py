@@ -16,7 +16,7 @@
 
 from collections.abc import Mapping, Sequence
 
-from arctictypes._internal._converters import Converter
+from arcticfreeze._internal._converters import Converter
 
 
 class ConverterNotFoundError(Exception):
