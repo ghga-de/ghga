@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "arcticfreeze"
-version = "0.1.0"
+version = "0.1.1"
 description = "Enjoy Python on the rocks with deeply (recursively) frozen data structures."
 dependencies = [
     "immutabledict >=4, <5"
@@ -30,7 +30,6 @@ dependencies = [
 [project.optional-dependencies]
 pydantic = [
     "pydantic >=2, <3",
-    "pydantic_core >=2, <3",
 ]
 
 [project.license]

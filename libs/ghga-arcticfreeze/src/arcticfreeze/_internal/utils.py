@@ -16,14 +16,10 @@
 
 # Check if Pydantic v2 is installed and store the result in a constant:
 PYDANTIC_V2_INSTALLED = False
-PYDANTIC_VERSION_PREFIX = "2."
 try:
     from pydantic import __version__ as pydantic_version
-    from pydantic_core import __version__ as pydantic_core_version
 except ImportError:
     pass
 else:
-    if pydantic_version.startswith(
-        PYDANTIC_VERSION_PREFIX
-    ) and pydantic_core_version.startswith(PYDANTIC_VERSION_PREFIX):
+    if pydantic_version.startswith("2."):
         PYDANTIC_V2_INSTALLED = True
