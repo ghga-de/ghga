@@ -49,7 +49,7 @@ parameters:
     host: "0.0.0.0"
     kafka_servers:
     - kafka:9092
-    log_level: info
+
     openapi_url: /openapi.json
     port: 8080
     resource_change_event_topic: searchable_resources

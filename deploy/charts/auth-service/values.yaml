@@ -78,7 +78,7 @@ parameters:
     db_name: auth-db
     docs_url: /docs
     host: 0.0.0.0
-    log_level: debug
+
     openapi_url: /openapi.json
     organization_url: https://ghga.de
     port: 8080

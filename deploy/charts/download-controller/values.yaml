@@ -76,7 +76,7 @@ parameters:
     files_to_register_type: internal_file_registered
     host: "0.0.0.0"
     kafka_servers: []
-    log_level: info
+
     openapi_url: /openapi.json
     outbox_bucket: outbox
     port: 8080

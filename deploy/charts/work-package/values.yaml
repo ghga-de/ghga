@@ -62,7 +62,7 @@ parameters:
     download_access_url: http://claims-repository-svc:8080/download-access
     host: "0.0.0.0"
     kafka_servers: []
-    log_level: info
+
     openapi_url: /openapi.json
     port: 8080
     service_instance_id: 'wps_1'

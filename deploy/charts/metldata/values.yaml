@@ -54,7 +54,7 @@ parameters:
     kafka_servers:
     - kafka:9092
     loader_token_hashes: null  # <Please fill - The tokens must be the loader token generated using the data steward kit.>
-    log_level: info
+
     openapi_url: /openapi.json
     port: 8080
     primary_artifact_name: embedded_public

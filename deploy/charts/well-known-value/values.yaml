@@ -47,7 +47,7 @@ parameters:
     dcs_api_url: http://127.0.0.1/download
     docs_url: /docs
     host: "0.0.0.0"
-    log_level: info
+
     openapi_url: /openapi.json
     port: 8080
     service_name: wkvs
