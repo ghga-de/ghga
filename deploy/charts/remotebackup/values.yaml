@@ -3,10 +3,10 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: ghga/mongodb-s3-backup
+  repository: ghga/devops-remotebackup
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: 0.0.0-a917c5042b56f0448552c6a02b5ce2f12eb8547a
+  tag: 0.0.0-60c3780d2666f0d
 
 imagePullSecrets: []
 nameOverride: ""
@@ -49,19 +49,20 @@ schedule: "0 3 * * *"
 successfulJobsHistoryLimit: 5
 
 # Are passed as environment variables to the Pod
-env_vars:
-  S3CMD_BUCKET_LOCATION: eu-west-1
-  S3CMD_CHECK_SSL_CERTIFICATE: "True"
-  S3CMD_CHECK_SSL_HOSTNAME: "True"
-  S3CMD_GPG_COMMAND: /usr/bin/gpg
-  S3CMD_HOST_BASE: https://localstack:4566
-  S3CMD_HOST_BUCKET: https://localstack:4566/%(bucket)
-  S3CMD_PATH_PREFIX: backups/
-  S3CMD_BUCKET_NAME: backup-bucket
-  MONGODB_SERVICE_NAME: mongodb
+env_vars: {}
 
 serviceAccount:
   enabled: true
   name: mongodb-s3-backup
 
 runCommands: /home/appuser/run.sh
+
+parameters:
+  database:
+    mongodb:
+      source_connection_string: mongodb://mongodb
+      mongorestore:
+        excluded_namespaces:
+          - admin.system.users
+    encryption:
+      key: "*****"
