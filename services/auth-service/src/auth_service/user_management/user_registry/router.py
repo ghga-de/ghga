@@ -16,9 +16,9 @@
 
 """Routes for managing users and IVAs"""
 
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Path, Response
+from fastapi import APIRouter, Path, Query, Response
 from fastapi.exceptions import HTTPException
 
 from ..auth import (
@@ -27,7 +27,14 @@ from ..auth import (
     is_steward,
 )
 from .deps import Depends, get_user_registry
-from .models.ivas import IvaBasicData, IvaData, IvaId, IvaVerificationCode
+from .models.ivas import (
+    IvaAndUserData,
+    IvaBasicData,
+    IvaData,
+    IvaId,
+    IvaState,
+    IvaVerificationCode,
+)
 from .models.users import (
     User,
     UserBasicData,
@@ -295,7 +302,7 @@ async def delete_user(
 
 @router.get(
     "/users/{user_id}/ivas",
-    operation_id="get_ivas",
+    operation_id="get_user_ivas",
     tags=["users"],
     summary="Get all IVAs of a user",
     description="Endpoint used to get all IVAs for a specified user."
@@ -311,7 +318,7 @@ async def delete_user(
     },
     status_code=200,
 )
-async def get_ivas(
+async def get_user_ivas(
     user_id: Annotated[
         str,
         Path(
@@ -337,7 +344,7 @@ async def get_ivas(
 
 @router.post(
     "/users/{user_id}/ivas",
-    operation_id="post_iva",
+    operation_id="post_user_iva",
     tags=["users"],
     summary="Create a new IVA",
     description="Endpoint used to create a new IVA for a specified user.",
@@ -350,7 +357,7 @@ async def get_ivas(
     },
     status_code=201,
 )
-async def post_iva(
+async def post_user_iva(
     user_id: Annotated[
         str,
         Path(
@@ -383,7 +390,7 @@ async def post_iva(
 
 @router.delete(
     "/users/{user_id}/ivas/{iva_id}",
-    operation_id="delete_iva",
+    operation_id="delete_user_iva",
     tags=["users"],
     summary="Delete an IVA",
     description="Endpoint used to delete an IVA for a specified user.",
@@ -396,7 +403,7 @@ async def post_iva(
     },
     status_code=204,
 )
-async def delete_iva(
+async def delete_user_iva(
     user_id: Annotated[
         str,
         Path(
@@ -663,3 +670,42 @@ async def validate_code_for_iva(
             status_code=403, detail="The submitted verification code was invalid."
         )
     return Response(status_code=204)
+
+
+@router.get(
+    "/ivas",
+    operation_id="get_all_ivas",
+    tags=["users"],
+    summary="Get all IVAs",
+    description="Endpoint used to get all IVAs and their corresponding users."
+    " Can only be performed by a data steward.",
+    responses={
+        200: {
+            "model": list[IvaData],
+            "description": "IVAs have been retrieved.",
+        },
+        403: {"description": "Not authorized to request IVAs."},
+    },
+    status_code=200,
+)
+async def get_all_ivas(
+    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    _auth_context: StewardAuthContext,
+    user_id: Annotated[
+        Optional[str],
+        Query(
+            description="Filter for the internal user ID",
+        ),
+    ] = None,
+    state: Annotated[
+        Optional[IvaState],
+        Query(
+            description="Filter for the state of the IVA",
+        ),
+    ] = None,
+) -> list[IvaAndUserData]:
+    """Get all IVAs and their corresponding users."""
+    try:
+        return await user_registry.get_ivas_with_users(user_id=user_id, state=state)
+    except user_registry.IvaRetrievalError as error:
+        raise HTTPException(status_code=500, detail="Cannot retrieve IVAs.") from error

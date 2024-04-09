@@ -50,13 +50,14 @@ class UserDaoFactory(UserDaoFactoryPort):
         self, *, config: UserDaoConfig, dao_factory: DaoFactoryProtocol
     ) -> None:
         """Configure with provider for the DaoFactoryProtocol"""
-        self._collection = config.users_collection
+        self._users_collection = config.users_collection
+        self._ivas_collection = config.ivas_collection
         self._dao_factory = dao_factory
 
     async def get_user_dao(self) -> UserDao:
         """Construct a DAO for interacting with user data in a database."""
         return await self._dao_factory.get_dao(
-            name=self._collection,
+            name=self._users_collection,
             dto_model=UserDto,
             id_field="id",
             dto_creation_model=UserCreationDto,
@@ -65,7 +66,7 @@ class UserDaoFactory(UserDaoFactoryPort):
     async def get_iva_dao(self) -> IvaDao:
         """Construct a DAO for interacting with IVA data in a database."""
         return await self._dao_factory.get_dao(
-            name=self._collection,
+            name=self._ivas_collection,
             dto_model=IvaDto,
             id_field="id",
             dto_creation_model=IvaCreationDto,

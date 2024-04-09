@@ -353,7 +353,6 @@ async def test_total_limit_totp(client_with_session: ClientWithSession):
     headers = headers_for_session(session)
 
     user = user_registry.dummy_user
-    assert user
     user_id = user.id
     assert user_id == "john@ghga.de"
     assert user.status is UserStatus.ACTIVE
@@ -409,7 +408,6 @@ async def test_total_limit_totp(client_with_session: ClientWithSession):
 
     # check that the user account has been disabled
     user = user_registry.dummy_user
-    assert user
     assert user.status is UserStatus.INACTIVE
     status_change = user.status_change
     assert status_change

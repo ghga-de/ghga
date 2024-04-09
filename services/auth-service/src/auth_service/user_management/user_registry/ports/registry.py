@@ -15,10 +15,12 @@
 
 """Port for the core user registry."""
 
-from abc import ABC, abstractmethod
-from typing import Any, Optional, Union
+from __future__ import annotations
 
-from ..models.ivas import Iva, IvaBasicData, IvaData, IvaState
+from abc import ABC, abstractmethod
+from typing import Any
+
+from ..models.ivas import Iva, IvaAndUserData, IvaBasicData, IvaData, IvaState
 from ..models.users import User, UserBasicData, UserModifiableData, UserRegisteredData
 
 
@@ -31,7 +33,7 @@ class UserRegistryPort(ABC):
     class UserCreationError(UserRegistryError):
         """Raised when a user cannot be created in the database."""
 
-        def __init__(self, *, ext_id: str, details: Optional[str] = None):
+        def __init__(self, *, ext_id: str, details: str | None = None):
             message = f"Could not create user with external ID {ext_id}"
             if details:
                 message += f": {details}"
@@ -85,19 +87,25 @@ class UserRegistryPort(ABC):
         """Raised when IVAs cannot be retrieved from the database."""
 
         def __init__(
-            self, *, iva_id: Optional[str] = None, user_id: Optional[str] = None
+            self,
+            *,
+            iva_id: str | None = None,
+            user_id: str | None = None,
+            state: IvaState | None = None,
         ):
             message = "Could not retrieve IVA"
             if iva_id:
                 message += f" with ID {iva_id}"
             if user_id:
                 message += f" for user with ID {user_id}"
+            if state:
+                message += f" in state {state.name}"
             super().__init__(message)
 
     class IvaDoesNotExistError(UserRegistryIvaError):
         """Raised when trying to access a non-existing IVA."""
 
-        def __init__(self, *, iva_id: str, user_id: Optional[str] = None):
+        def __init__(self, *, iva_id: str, user_id: str | None = None):
             message = (
                 f"User with ID {user_id} does not have an IVA with ID {iva_id}"
                 if user_id
@@ -168,10 +176,10 @@ class UserRegistryPort(ABC):
     async def update_user(
         self,
         user_id: str,
-        user_data: Union[UserBasicData, UserModifiableData],
+        user_data: UserBasicData | UserModifiableData,
         *,
-        changed_by: Optional[str] = None,
-        context: Optional[str] = None,
+        changed_by: str | None = None,
+        context: str | None = None,
     ) -> None:
         """Update user data.
 
@@ -209,10 +217,22 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def get_ivas(self, user_id: str) -> list[IvaData]:
-        """Get all IVAs of a user.
+    async def get_ivas(
+        self, user_id: str, *, state: IvaState | None = None
+    ) -> list[IvaData]:
+        """Get all IVAs for a given user with a given state.
 
         The internal data of the IVAs is not included in the result.
+
+        May raise an IvaRetrievalError.
+        """
+        ...
+
+    @abstractmethod
+    async def get_ivas_with_users(
+        self, *, user_id: str | None = None, state: IvaState | None = None
+    ) -> list[IvaAndUserData]:
+        """Get all IVAs with user information filtered by the given parameters.
 
         May raise an IvaRetrievalError.
         """
@@ -228,7 +248,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def delete_iva(self, iva_id: str, *, user_id: Optional[str] = None) -> None:
+    async def delete_iva(self, iva_id: str, *, user_id: str | None = None) -> None:
         """Delete the IVA with the ID.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError
@@ -243,7 +263,7 @@ class UserRegistryPort(ABC):
     async def unverify_iva(self, iva_id: str, *, notify: bool = True):
         """Reset an IVA as being unverified.
 
-        Also notitfies the user if not specified otherwise.
+        Also notifies the user if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError or an IvaModificationError.
@@ -252,11 +272,11 @@ class UserRegistryPort(ABC):
 
     @abstractmethod
     async def request_iva_verification_code(
-        self, iva_id: str, *, user_id: Optional[str] = None, notify: bool = True
+        self, iva_id: str, *, user_id: str | None = None, notify: bool = True
     ):
         """Request a verification code for the IVA with the given ID.
 
-        Also notifies the user and a datasteward if not specified otherwise.
+        Also notifies the user and a data steward if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
@@ -296,12 +316,12 @@ class UserRegistryPort(ABC):
         iva_id: str,
         code: str,
         *,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         notify: bool = True,
     ) -> bool:
         """Validate a verification code for the given IVA.
 
-        Also notifies the dtata steward if not specified otherwise.
+        Also notifies the data steward if not specified otherwise.
 
         Checks whether the given verification code matches the stored hash.
 

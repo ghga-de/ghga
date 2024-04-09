@@ -641,13 +641,13 @@ async def test_get_datasets_with_download_access(client_with_db):
         **some_claim_data,
         "visa_value": some_claim_data["visa_value"].replace("some", "foreign"),
     }
-    user = user_dao.user
     # pretend for the next query that Jane exists
-    user_dao.user = user.model_copy(update={"id": "jane@ghga.de"})
+    users = user_dao.users
+    users.append(users[0].model_copy(update={"id": "jane@ghga.de"}))
     response = await client_with_db.post(
         "/users/jane@ghga.de/claims", json=foreign_claim_data
     )
-    user_dao.user = user
+    users.pop()
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED

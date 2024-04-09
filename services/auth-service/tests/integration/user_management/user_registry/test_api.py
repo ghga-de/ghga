@@ -738,9 +738,48 @@ async def test_delete_user_unauthenticated(client: AsyncTestClient):
     assert error == {"detail": "Not authenticated"}
 
 
+async def test_get_ivas_when_not_a_data_steward(
+    client_with_db: AsyncTestClient,
+    user_headers: dict[str, str],
+):
+    """Test getting all IVAs when not a data steward."""
+    response = await client_with_db.get("ivas")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authenticated"}
+    response = await client_with_db.get("ivas", headers=user_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized"}
+    response = await client_with_db.get(
+        "ivas", headers=user_headers, params={"user_id": "max-internal"}
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized"}
+
+
+async def test_get_ivas_as_a_data_steward(
+    client_with_db: AsyncTestClient,
+    steward_headers: dict[str, str],
+):
+    """Test getting all IVAs as a data steward."""
+    response = await client_with_db.get("ivas", headers=steward_headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert ivas == []
+    response = await client_with_db.get(
+        "ivas", headers=steward_headers, params={"user_id": "max-internal"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert ivas == []
+
+
 async def test_crud_operations_for_ivas(
     client_with_db: AsyncTestClient,
     new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
 ):
     """Test all CRUD operations for IVAs."""
     # Create a user
@@ -751,6 +790,9 @@ async def test_crud_operations_for_ivas(
     assert response.status_code == status.HTTP_201_CREATED
     user = response.json()
     user_id = user["id"]
+    user_info = {
+        f"user_{field}": user[field] for field in ("id", "name", "title", "email")
+    }
 
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
@@ -777,7 +819,7 @@ async def test_crud_operations_for_ivas(
     iva_id_fax = iva_id["id"]
     assert iva_id_fax
 
-    # Retrieve the IVAs
+    # Retrieve the IVAs as the user
     response = await client_with_db.get(f"/users/{user_id}/ivas", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     ivas = response.json()
@@ -788,20 +830,75 @@ async def test_crud_operations_for_ivas(
     for iva in ivas:
         for date_field in ("created", "changed"):
             assert 0 <= seconds_passed(iva.pop(date_field)) <= 10
+        assert iva.pop("state") == "Unverified"
     assert ivas == [
         {
             "id": iva_id_phone,
             "type": "Phone",
             "value": "123",
-            "state": "Unverified",
         },
         {
             "id": iva_id_fax,
             "type": "Fax",
             "value": "456",
-            "state": "Unverified",
         },
     ]
+
+    # Retrieve the IVAs as the data steward
+    response = await client_with_db.get("/ivas", headers=steward_headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 2
+
+    ivas.sort(key=lambda iva: iva["value"])
+    for iva in ivas:
+        for date_field in ("created", "changed"):
+            assert 0 <= seconds_passed(iva.pop(date_field)) <= 10
+        assert iva.pop("state") == "Unverified"
+    assert ivas == [
+        {
+            "id": iva_id_phone,
+            "type": "Phone",
+            "value": "123",
+            **user_info,
+        },
+        {
+            "id": iva_id_fax,
+            "type": "Fax",
+            "value": "456",
+            **user_info,
+        },
+    ]
+
+    # Retrieve selected IVAs as the data steward
+    response = await client_with_db.get(
+        "/ivas",
+        headers=steward_headers,
+        params={"user_id": user_id, "state": "Unverified"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 2
+    response = await client_with_db.get(
+        "/ivas",
+        headers=steward_headers,
+        params={"user_id": "some-other-user"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 0
+    response = await client_with_db.get(
+        "/ivas",
+        headers=steward_headers,
+        params={"state": "Verified"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 0
 
     # Delete one IVA
     response = await client_with_db.delete(
@@ -879,6 +976,37 @@ async def test_crud_operations_for_ivas_as_data_steward(
         "state": "Unverified",
     }
 
+    # Retrieve all IVAs
+    response = await client_with_db.get("/ivas", headers=steward_headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    iva = ivas[0]
+    assert iva["id"] == iva_id
+    assert iva["value"] == "123/456"
+    assert iva["user_id"] == user_id
+    assert iva["user_name"] == "Max Headroom"
+
+    # Retrieve the IVA
+    response = await client_with_db.get(
+        f"/users/{user_id}/ivas", headers=steward_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+
+    iva = ivas[0]
+    for date_field in ("created", "changed"):
+        assert 0 <= seconds_passed(iva.pop(date_field)) <= 10
+    assert iva == {
+        "id": iva_id,
+        "type": "Phone",
+        "value": "123/456",
+        "state": "Unverified",
+    }
+
     # Delete the IVA
     response = await client_with_db.delete(
         f"/users/{user_id}/ivas/{iva_id}", headers=steward_headers
@@ -890,6 +1018,11 @@ async def test_crud_operations_for_ivas_as_data_steward(
     response = await client_with_db.get(
         f"/users/{user_id}/ivas", headers=steward_headers
     )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert not ivas
+    response = await client_with_db.get("/ivas", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     ivas = response.json()
     assert isinstance(ivas, list)
@@ -939,7 +1072,23 @@ async def test_crud_operations_for_ivas_as_another_user(
     ivas = response.json()
     assert isinstance(ivas, list)
     assert len(ivas) == 1
-    assert ivas[0]["id"] == iva_id
+    iva = ivas[0]
+    assert iva["id"] == iva_id
+    assert "user_id" not in iva
+
+    # Retrieve all IVAs
+    response = await client_with_db.get("/ivas", headers=user_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error["detail"] == "Not authorized"
+    response = await client_with_db.get("/ivas", headers=steward_headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    iva = ivas[0]
+    assert iva["id"] == iva_id
+    assert iva["user_id"] == user_id
 
     # Delete the IVA
     response = await client_with_db.delete(
@@ -961,6 +1110,11 @@ async def test_crud_operations_for_ivas_as_another_user(
     response = await client_with_db.get(
         f"/users/{user_id}/ivas", headers=steward_headers
     )
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert not ivas
+    response = await client_with_db.get("/ivas", headers=steward_headers)
     assert response.status_code == status.HTTP_200_OK
     ivas = response.json()
     assert isinstance(ivas, list)

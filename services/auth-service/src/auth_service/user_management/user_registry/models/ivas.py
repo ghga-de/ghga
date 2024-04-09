@@ -35,6 +35,7 @@ __all__ = [
     "IvaId",
     "IvaData",
     "IvaFullData",
+    "IvaAndUserData",
     "Iva",
 ]
 
@@ -122,6 +123,19 @@ class IvaData(IvaId, IvaWithState, IvaAutomaticData):
             "description": "Independent Verification Address (IVA)",
         },
     )
+
+
+class IvaAndUserData(IvaData):
+    """IVA with all external data and user information."""
+
+    user_id: str = Field(
+        default=..., description="The internal ID of the associated user"
+    )
+    user_name: str = Field(default=..., description="The full name of the user")
+    user_title: Optional[str] = Field(
+        default=None, description="The academic title of the user"
+    )
+    user_email: str = Field(default=..., description="The email address of the user")
 
 
 class IvaFullData(IvaWithState, IvaInternalData, IvaAutomaticData):

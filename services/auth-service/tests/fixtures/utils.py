@@ -217,7 +217,7 @@ def request_with_authorization(token: str = "") -> Request:
 class DummyUserDao:
     """UserDao that can retrieve one dummy user."""
 
-    user: User
+    users: list[User]
 
     def __init__(
         self,
@@ -228,49 +228,81 @@ class DummyUserDao:
         ext_id="john@aai.org",
         status="active",
     ):
-        """Initialize the dummy UserDao"""
-        self.user = User(
-            id=id_,
-            name=name,
-            email=email,  # pyright: ignore
-            title=title,
-            ext_id=ext_id,  # pyright: ignore
-            status=status,  # pyright: ignore
-            status_change=None,
-            registration_date=utc_datetime(2020, 1, 1),
-            active_submissions=[],
-            active_access_requests=[],
-        )
+        """Initialize the DummyUserDao."""
+        self.users = [
+            User(
+                id=id_,
+                name=name,
+                email=email,  # pyright: ignore
+                title=title,
+                ext_id=ext_id,  # pyright: ignore
+                status=status,  # pyright: ignore
+                status_change=None,
+                registration_date=utc_datetime(2020, 1, 1),
+                active_submissions=[],
+                active_access_requests=[],
+            )
+        ]
+
+    @property
+    def user(self) -> User:
+        """Get the last inserted user."""
+        return self.users[-1]
 
     async def get_by_id(self, id_: str) -> User:
         """Get the dummy user via internal ID."""
-        if id_ == self.user.id:
-            return self.user
+        for user in self.users:
+            if id_ == user.id:
+                return user
         raise ResourceNotFoundError(id_=id_)
 
     async def find_one(self, *, mapping: Mapping[str, Any]) -> Optional[User]:
         """Find the dummy user via LS-ID."""
-        user, ext_id = self.user, mapping.get("ext_id")
-        if user and ext_id and ext_id == user.ext_id:
-            return user
+        mapping = json.loads(json.dumps(mapping))
+        ext_id = mapping.get("ext_id")
+        for user in self.users:
+            if not ext_id or ext_id == user.ext_id:
+                return user
         raise NoHitsFoundError(mapping=mapping)
 
-    async def insert(self, user: UserData) -> User:
+    async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[User]:
+        """Find all dummy users with given ID(s)."""
+        mapping = json.loads(json.dumps(mapping))
+        for user in self.users:
+            data = user.model_dump()
+            for key, value in mapping.items():
+                if isinstance(value, dict) and "$in" in value:
+                    value = value["$in"]
+                    if data[key] not in value:
+                        break
+                elif data[key] != value:
+                    break
+            else:
+                yield user
+
+    async def insert(self, dto: UserData) -> User:
         """Insert the dummy user."""
-        user = User(id=user.ext_id.replace("@aai.org", "@ghga.de"), **user.model_dump())
-        self.user = user
+        user = User(id=dto.ext_id.replace("@aai.org", "@ghga.de"), **dto.model_dump())
+        self.users.append(user)
         return user
 
-    async def update(self, user: User) -> None:
+    async def update(self, dto: User) -> None:
         """Update the dummy user."""
-        if user.id == self.user.id:
-            self.user = user
+        for index, user in enumerate(self.users):
+            if dto.id == user.id:
+                self.users[index] = dto
+                break
+        else:
+            raise ResourceNotFoundError(id_=dto.id)
 
     async def delete(self, id_: str) -> None:
-        """Update the dummy user."""
-        if id_ != self.user.id:
+        """Delete the dummy user."""
+        for index, user in enumerate(self.users):
+            if id_ == user.id:
+                del self.users[index]
+                break
+        else:
             raise ResourceNotFoundError(id_=id_)
-        self.user = self.user.model_copy(update={"id": "deleted"})
 
 
 class DummyIvaDao:
@@ -279,7 +311,7 @@ class DummyIvaDao:
     ivas: list[Iva]
 
     def __init__(self, ivas: Optional[list[Iva]] = None):
-        """Initialize the dummy UserDao"""
+        """Initialize the DummyIvaDao."""
         self.ivas = ivas if ivas else []
 
     async def get_by_id(self, id_: str) -> Iva:
@@ -294,25 +326,28 @@ class DummyIvaDao:
         mapping = json.loads(json.dumps(mapping))
         for iva in self.ivas:
             data = iva.model_dump()
-            data["id_"] = data.pop("id")
-            for key in mapping:
-                if mapping[key] != data[key]:
+            for key, value in mapping.items():
+                if isinstance(value, dict) and "$in" in value:
+                    value = value["$in"]
+                    if data[key] not in value:
+                        break
+                elif data[key] != value:
                     break
             else:
                 yield iva
 
-    async def insert(self, iva: IvaFullData) -> Iva:
+    async def insert(self, dto: IvaFullData) -> Iva:
         """Insert a dummy IVA."""
-        iva = Iva(id="new-iva", **iva.model_dump())
-        self.ivas.append(iva)
-        return iva
+        dto = Iva(id="new-iva", **dto.model_dump())
+        self.ivas.append(dto)
+        return dto
 
-    async def update(self, iva: Iva) -> None:
+    async def update(self, dto: Iva) -> None:
         """Update a dummy IVA."""
-        iva_id = iva.id
-        for index, iva_at_index in enumerate(self.ivas):
-            if iva_at_index.id == iva_id:
-                self.ivas[index] = iva
+        iva_id = dto.id
+        for index, iva in enumerate(self.ivas):
+            if iva.id == iva_id:
+                self.ivas[index] = dto
                 break
         else:
             raise ResourceNotFoundError(id_=iva_id)
@@ -354,7 +389,7 @@ class DummyClaimDao:
     claims: list[Claim]
 
     def __init__(self, valid_date=now_as_utc()):
-        """Initialize the dummy ClaimDao"""
+        """Initialize the DummyClaimDao."""
         self.valid_date = valid_date
         self.invalid_date = valid_date + timedelta(14)
         self.claims = [
@@ -413,6 +448,7 @@ class DummyUserRegistry(UserRegistry):
     """A modified user registry for testing with the dummy DAOs."""
 
     def __init__(self, *, config: UserRegistryConfig = CONFIG):
+        """Initialize the DummyUserRegistry."""
         self.dummy_user_dao = DummyUserDao()
         self.dummy_iva_dao = DummyIvaDao()
         super().__init__(
@@ -435,6 +471,11 @@ class DummyUserRegistry(UserRegistry):
     def dummy_user(self) -> User:
         """Get the dummy user."""
         return self.dummy_user_dao.user
+
+    @property
+    def dummy_users(self) -> list[User]:
+        """Get the dummy users."""
+        return self.dummy_user_dao.users
 
     @property
     def dummy_ivas(self) -> list[Iva]:

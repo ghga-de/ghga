@@ -15,8 +15,10 @@
 
 """Implementation of the core user registry."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Optional, Union
+from typing import Any
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import (
@@ -26,7 +28,14 @@ from hexkit.protocols.dao import (
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from ..models.ivas import Iva, IvaBasicData, IvaData, IvaFullData, IvaState
+from ..models.ivas import (
+    Iva,
+    IvaAndUserData,
+    IvaBasicData,
+    IvaData,
+    IvaFullData,
+    IvaState,
+)
 from ..models.users import (
     StatusChange,
     User,
@@ -129,10 +138,10 @@ class UserRegistry(UserRegistryPort):
     async def update_user(
         self,
         user_id: str,
-        user_data: Union[UserBasicData, UserModifiableData],
+        user_data: UserBasicData | UserModifiableData,
         *,
-        changed_by: Optional[str] = None,
-        context: Optional[str] = None,
+        changed_by: str | None = None,
+        context: str | None = None,
     ) -> None:
         """Update user data.
 
@@ -210,7 +219,7 @@ class UserRegistry(UserRegistryPort):
             raise self.IvaCreationError(user_id=user_id) from error
         return iva.id
 
-    async def get_iva(self, iva_id: str, *, user_id: Optional[str] = None) -> Iva:
+    async def get_iva(self, iva_id: str, *, user_id: str | None = None) -> Iva:
         """Get the IVA with the given ID.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
@@ -224,22 +233,76 @@ class UserRegistry(UserRegistryPort):
             raise self.IvaDoesNotExistError(iva_id=iva_id, user_id=user_id)
         return iva
 
-    async def get_ivas(self, user_id: str) -> list[IvaData]:
-        """Get all IVAs of a user.
+    async def _get_ivas(
+        self, *, user_id: str | None = None, state: IvaState | None = None
+    ) -> list[Iva]:
+        """Get all IVAs filtered by a given user or state.
+
+        May raise an IvaRetrievalError.
+        """
+        try:
+            mapping: dict[str, Any] = {}
+            if user_id:
+                mapping["user_id"] = user_id
+            if state:
+                mapping["state"] = state
+            return [iva async for iva in self.iva_dao.find_all(mapping=mapping)]
+        except Exception as error:
+            log.error("Could not retrieve IVAs: %s", error)
+            raise self.IvaRetrievalError(user_id=user_id, state=state) from error
+
+    async def get_ivas(
+        self, user_id: str, *, state: IvaState | None = None
+    ) -> list[IvaData]:
+        """Get all IVAs for a given user with a given state.
 
         The internal data of the IVAs is not included in the result.
 
         May raise an IvaRetrievalError.
         """
+        ivas = await self._get_ivas(user_id=user_id, state=state)
         external_fields = IvaData.model_fields
+        return [IvaData(**iva.model_dump(include=external_fields)) for iva in ivas]
+
+    async def get_ivas_with_users(
+        self, *, user_id: str | None = None, state: IvaState | None = None
+    ) -> list[IvaAndUserData]:
+        """Get all IVAs with user information filtered by the given parameters.
+
+        May raise an IvaRetrievalError.
+        """
+        ivas = await self._get_ivas(user_id=user_id, state=state)
+        user_ids = list({iva.user_id for iva in ivas})
+        users: dict[str, User] = {}
         try:
-            return [
-                IvaData(**iva.model_dump(include=external_fields))
-                async for iva in self.iva_dao.find_all(mapping={"user_id": user_id})
-            ]
+            # Note: Here we rely on "$in" being supported by the DAO.
+            users = {
+                user.id: user
+                async for user in self.user_dao.find_all(
+                    mapping={"id": {"$in": user_ids}}
+                )
+            }
         except Exception as error:
-            log.error("Could not retrieve IVAs: %s", error)
-            raise self.IvaRetrievalError(user_id=user_id) from error
+            log.error("Could not retrieve users for IVAs: %s", error)
+            raise self.IvaRetrievalError(user_id=user_id, state=state) from error
+        external_fields = IvaData.model_fields
+        ivas_with_users: list[IvaAndUserData] = []
+        for iva in ivas:
+            try:
+                user = users[iva.user_id]
+            except KeyError:
+                pass  # corresponding user does not exist in the database
+            else:
+                ivas_with_users.append(
+                    IvaAndUserData(
+                        **iva.model_dump(include=external_fields),
+                        user_id=user.id,
+                        user_name=user.name,
+                        user_title=user.title,
+                        user_email=user.email,
+                    )
+                )
+        return ivas_with_users
 
     async def update_iva(self, iva: Iva, **update: Any) -> None:
         """Update the IVA with the given data.
@@ -259,7 +322,7 @@ class UserRegistry(UserRegistryPort):
             log.error("Could not update IVA: %s", error)
             raise self.IvaModificationError(iva_id=iva.id) from error
 
-    async def delete_iva(self, iva_id: str, *, user_id: Optional[str] = None) -> None:
+    async def delete_iva(self, iva_id: str, *, user_id: str | None = None) -> None:
         """Delete the IVA with the ID.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError
@@ -281,7 +344,7 @@ class UserRegistry(UserRegistryPort):
     async def unverify_iva(self, iva_id: str, *, notify: bool = True):
         """Reset an IVA as being unverified.
 
-        Also notitfies the user if not specified otherwise.
+        Also notifies the user if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError or an IvaModificationError.
@@ -297,11 +360,11 @@ class UserRegistry(UserRegistryPort):
             pass  # TODO: should also send a notification to the user
 
     async def request_iva_verification_code(
-        self, iva_id: str, *, user_id: Optional[str] = None, notify: bool = True
+        self, iva_id: str, *, user_id: str | None = None, notify: bool = True
     ):
         """Request a verification code for the IVA with the given ID.
 
-        Also notifies the user and a datasteward if not specified otherwise.
+        Also notifies the user and a data steward if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
@@ -361,12 +424,12 @@ class UserRegistry(UserRegistryPort):
         iva_id: str,
         code: str,
         *,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         notify: bool = True,
     ) -> bool:
         """Validate a verification code for the given IVA.
 
-        Also notifies the dtata steward if not specified otherwise.
+        Also notifies the data steward if not specified otherwise.
 
         Checks whether the given verification code matches the stored hash.
 

@@ -29,6 +29,7 @@ from auth_service.user_management.user_registry.core.verification_codes import (
 )
 from auth_service.user_management.user_registry.models.ivas import (
     Iva,
+    IvaAndUserData,
     IvaBasicData,
     IvaData,
     IvaState,
@@ -225,9 +226,9 @@ async def test_update_non_existing_user():
 async def test_delete_existing_user():
     """Test deleting an existing user."""
     registry = DummyUserRegistry()
+    assert registry.dummy_users
     await registry.delete_user("john@ghga.de")
-    dummy_user = registry.dummy_user
-    assert dummy_user.id == "deleted"
+    assert not registry.dummy_users
 
 
 async def test_delete_non_existing_user():
@@ -249,8 +250,7 @@ async def test_delete_existing_user_with_ivas():
     ivas = registry.dummy_ivas
     assert len(ivas) == 3
     await registry.delete_user("john@ghga.de")
-    dummy_user = registry.dummy_user
-    assert dummy_user.id == "deleted"
+    assert not registry.dummy_users
     assert len(ivas) == 1
     assert ivas[0].user_id == "jane@ghga.de"
 
@@ -319,6 +319,80 @@ async def test_get_ivas_of_an_existing_user_with_ivas():
     assert [Iva(**iva.model_dump(), user_id="john@ghga.de") for iva in ivas] == [
         iva for iva in ivas_before if iva.user_id.startswith("john")
     ]
+
+
+async def test_get_ivas_of_an_existing_user_filtering_by_state():
+    """Test getting all IVAs of an existing user without IVAS."""
+    registry = DummyUserRegistry()
+    registry.add_dummy_iva(value="123")
+    registry.add_dummy_iva(value="456", state=IvaState.VERIFIED)
+    ivas = await registry.get_ivas("john@ghga.de")
+    assert isinstance(ivas, list)
+    assert len(ivas) == 2
+    ivas = await registry.get_ivas("john@ghga.de", state=IvaState.VERIFIED)
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    assert ivas[0].state == IvaState.VERIFIED
+    ivas = await registry.get_ivas("john@ghga.de", state=IvaState.CODE_REQUESTED)
+    assert isinstance(ivas, list)
+    assert len(ivas) == 0
+
+
+async def test_get_all_ivas_with_user():
+    """Test getting all IVAs with user data."""
+    registry = DummyUserRegistry()
+    john = registry.dummy_user
+    jane = john.model_copy(
+        update={
+            "id": "jane@ghga.de",
+            "name": "Jane Roe",
+            "title": "Prof.",
+            "email": "jane@home.org",
+        }
+    )
+    registry.dummy_users.append(jane)
+    registry.add_dummy_iva(value="123", user_id=john.id)
+    registry.add_dummy_iva(value="456", user_id=jane.id)
+    registry.add_dummy_iva(value="789", user_id=john.id, state=IvaState.VERIFIED)
+    expected_ivas_with_users = [
+        IvaAndUserData(
+            id=iva.id,
+            type=iva.type,
+            value=iva.value,
+            state=iva.state,
+            created=iva.created,
+            changed=iva.changed,
+            user_id=user.id,
+            user_name=user.name,
+            user_title=user.title,
+            user_email=user.email,
+        )
+        for iva, user in zip(registry.dummy_ivas, [john, jane, john])
+    ]
+    ivas_with_users = await registry.get_ivas_with_users()
+    assert ivas_with_users == expected_ivas_with_users
+
+
+async def test_get_selected_ivas_with_user():
+    """Test getting a selection of IVAs with user data."""
+    registry = DummyUserRegistry()
+    john = registry.dummy_user
+    jane = john.model_copy(update={"id": "jane@ghga.de"})
+    registry.dummy_users.append(jane)
+    add_iva = registry.add_dummy_iva
+    add_iva(value="123", user_id=john.id)
+    add_iva(value="456", user_id=jane.id)
+    add_iva(value="789", user_id=john.id, state=IvaState.VERIFIED)
+    get_ivas = registry.get_ivas_with_users
+    ivas = await get_ivas(user_id=jane.id)
+    assert len(ivas) == 1
+    assert ivas[0].value == "456"
+    ivas = await get_ivas(state=IvaState.VERIFIED)
+    assert len(ivas) == 1
+    assert ivas[0].value == "789"
+    ivas = await get_ivas(state=IvaState.UNVERIFIED, user_id=john.id)
+    assert len(ivas) == 1
+    assert ivas[0].value == "123"
 
 
 async def test_delete_existing_iva():
