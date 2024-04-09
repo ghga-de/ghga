@@ -4,5 +4,7 @@ metadata:
   name: {{ include "remotebackup.fullname" . }}-file
   labels:
     {{- include "remotebackup.labels" . | nindent 4 }}
-data:
+data: |
+  {{- if .Values.parameters }}
   {{- toYaml .Values.parameters | nindent 4 }}
+  {{- end }}
