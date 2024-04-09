@@ -1,0 +1,35 @@
+db_connection_str: '**********'
+db_name: dev_db
+file_deleted_event_topic: internal_file_registry
+file_deleted_event_type: file_deleted
+file_registered_event_topic: internal_file_registry
+file_registered_event_type: file_registered
+file_staged_event_topic: internal_file_registry
+file_staged_event_type: file_staged_for_download
+files_to_delete_topic: file_deletions
+files_to_delete_type: file_deletion_requested
+files_to_register_topic: file_interrogation
+files_to_register_type: file_interrogation_success
+files_to_stage_topic: file_downloads
+files_to_stage_type: file_stage_requested
+generate_correlation_id: true
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+object_storages:
+  test:
+    bucket: permanent
+    credentials:
+      aws_config_ini: null
+      s3_access_key_id: test
+      s3_endpoint_url: http://ifrs:4566
+      s3_secret_access_key: '**********'
+      s3_session_token: null
+service_instance_id: '001'
+service_name: internal_file_registry

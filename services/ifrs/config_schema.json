@@ -1,0 +1,344 @@
+{
+  "$defs": {
+    "S3Config": {
+      "additionalProperties": false,
+      "description": "S3-specific config params.\nInherit your config class from this class if you need\nto talk to an S3 service in the backend.\n\nArgs:\n    s3_endpoint_url (str): The URL to the S3 endpoint.\n    s3_access_key_id (str):\n        Part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    s3_secret_access_key (str):\n        Part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    s3_session_token (Optional[str]):\n        Optional part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    aws_config_ini (Optional[Path]):\n        Path to a config file for specifying more advanced S3 parameters.\n        This should follow the format described here:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file\n        Defaults to None.",
+      "properties": {
+        "s3_endpoint_url": {
+          "description": "URL to the S3 API.",
+          "examples": [
+            "http://localhost:4566"
+          ],
+          "title": "S3 Endpoint Url",
+          "type": "string"
+        },
+        "s3_access_key_id": {
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-access-key-id"
+          ],
+          "title": "S3 Access Key Id",
+          "type": "string"
+        },
+        "s3_secret_access_key": {
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-secret-access-key"
+          ],
+          "format": "password",
+          "title": "S3 Secret Access Key",
+          "type": "string",
+          "writeOnly": true
+        },
+        "s3_session_token": {
+          "anyOf": [
+            {
+              "format": "password",
+              "type": "string",
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-session-token"
+          ],
+          "title": "S3 Session Token"
+        },
+        "aws_config_ini": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file",
+          "examples": [
+            "~/.aws/config"
+          ],
+          "title": "Aws Config Ini"
+        }
+      },
+      "required": [
+        "s3_endpoint_url",
+        "s3_access_key_id",
+        "s3_secret_access_key"
+      ],
+      "title": "S3Config",
+      "type": "object"
+    },
+    "S3ObjectStorageNodeConfig": {
+      "additionalProperties": false,
+      "description": "Configuration for one specific object storage node and one bucket in it.\n\nThe bucket is the main bucket that the service is responsible for.",
+      "properties": {
+        "bucket": {
+          "title": "Bucket",
+          "type": "string"
+        },
+        "credentials": {
+          "$ref": "#/$defs/S3Config"
+        }
+      },
+      "required": [
+        "bucket",
+        "credentials"
+      ],
+      "title": "S3ObjectStorageNodeConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Modifies the orginal Settings class provided by the user",
+  "properties": {
+    "log_level": {
+      "default": "INFO",
+      "description": "The minimum log level to capture.",
+      "enum": [
+        "CRITICAL",
+        "ERROR",
+        "WARNING",
+        "INFO",
+        "DEBUG",
+        "TRACE"
+      ],
+      "title": "Log Level",
+      "type": "string"
+    },
+    "service_name": {
+      "default": "internal_file_registry",
+      "title": "Service Name",
+      "type": "string"
+    },
+    "service_instance_id": {
+      "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
+      "examples": [
+        "germany-bw-instance-001"
+      ],
+      "title": "Service Instance Id",
+      "type": "string"
+    },
+    "log_format": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details",
+      "examples": [
+        "%(timestamp)s - %(service)s - %(level)s - %(message)s",
+        "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+      ],
+      "title": "Log Format"
+    },
+    "object_storages": {
+      "additionalProperties": {
+        "$ref": "#/$defs/S3ObjectStorageNodeConfig"
+      },
+      "title": "Object Storages",
+      "type": "object"
+    },
+    "file_registered_event_topic": {
+      "description": "Name of the topic used for events indicating that a new file has been internally registered.",
+      "examples": [
+        "internal_file_registry"
+      ],
+      "title": "File Registered Event Topic",
+      "type": "string"
+    },
+    "file_registered_event_type": {
+      "description": "The type used for events indicating that a new file has been internally registered.",
+      "examples": [
+        "file_registered"
+      ],
+      "title": "File Registered Event Type",
+      "type": "string"
+    },
+    "file_staged_event_topic": {
+      "description": "Name of the topic used for events indicating that a new file has been internally registered.",
+      "examples": [
+        "internal_file_registry"
+      ],
+      "title": "File Staged Event Topic",
+      "type": "string"
+    },
+    "file_staged_event_type": {
+      "description": "The type used for events indicating that a new file has been internally registered.",
+      "examples": [
+        "file_staged_for_download"
+      ],
+      "title": "File Staged Event Type",
+      "type": "string"
+    },
+    "file_deleted_event_topic": {
+      "description": "Name of the topic used for events indicating that a file has been deleted.",
+      "examples": [
+        "internal_file_registry"
+      ],
+      "title": "File Deleted Event Topic",
+      "type": "string"
+    },
+    "file_deleted_event_type": {
+      "description": "The type used for events indicating that a file has been deleted.",
+      "examples": [
+        "file_deleted"
+      ],
+      "title": "File Deleted Event Type",
+      "type": "string"
+    },
+    "files_to_register_topic": {
+      "description": "The name of the topic to receive events informing about new files to register.",
+      "examples": [
+        "file_interrogation"
+      ],
+      "title": "Files To Register Topic",
+      "type": "string"
+    },
+    "files_to_register_type": {
+      "description": "The type used for events informing about new files to register.",
+      "examples": [
+        "file_interrogation_success"
+      ],
+      "title": "Files To Register Type",
+      "type": "string"
+    },
+    "files_to_stage_topic": {
+      "description": "The name of the topic to receive events informing about files to stage.",
+      "examples": [
+        "file_downloads"
+      ],
+      "title": "Files To Stage Topic",
+      "type": "string"
+    },
+    "files_to_stage_type": {
+      "description": "The type used for events informing about a file to be staged.",
+      "examples": [
+        "file_stage_requested"
+      ],
+      "title": "Files To Stage Type",
+      "type": "string"
+    },
+    "files_to_delete_topic": {
+      "description": "The name of the topic to receive events informing about files to delete.",
+      "examples": [
+        "file_deletions"
+      ],
+      "title": "Files To Delete Topic",
+      "type": "string"
+    },
+    "files_to_delete_type": {
+      "description": "The type used for events informing about a file to be deleted.",
+      "examples": [
+        "file_deletion_requested"
+      ],
+      "title": "Files To Delete Type",
+      "type": "string"
+    },
+    "kafka_servers": {
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "examples": [
+        [
+          "localhost:9092"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Kafka Servers",
+      "type": "array"
+    },
+    "kafka_security_protocol": {
+      "default": "PLAINTEXT",
+      "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
+      "enum": [
+        "PLAINTEXT",
+        "SSL"
+      ],
+      "title": "Kafka Security Protocol",
+      "type": "string"
+    },
+    "kafka_ssl_cafile": {
+      "default": "",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
+      "title": "Kafka Ssl Cafile",
+      "type": "string"
+    },
+    "kafka_ssl_certfile": {
+      "default": "",
+      "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
+      "title": "Kafka Ssl Certfile",
+      "type": "string"
+    },
+    "kafka_ssl_keyfile": {
+      "default": "",
+      "description": "Optional filename containing the client private key.",
+      "title": "Kafka Ssl Keyfile",
+      "type": "string"
+    },
+    "kafka_ssl_password": {
+      "default": "",
+      "description": "Optional password to be used for the client private key.",
+      "title": "Kafka Ssl Password",
+      "type": "string"
+    },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, the a newly correlation ID will be generated and used in the event header.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
+    },
+    "db_connection_str": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "password",
+      "title": "Db Connection Str",
+      "type": "string",
+      "writeOnly": true
+    },
+    "db_name": {
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
+      "title": "Db Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "service_instance_id",
+    "object_storages",
+    "file_registered_event_topic",
+    "file_registered_event_type",
+    "file_staged_event_topic",
+    "file_staged_event_type",
+    "file_deleted_event_topic",
+    "file_deleted_event_type",
+    "files_to_register_topic",
+    "files_to_register_type",
+    "files_to_stage_topic",
+    "files_to_stage_type",
+    "files_to_delete_topic",
+    "files_to_delete_type",
+    "kafka_servers",
+    "db_connection_str",
+    "db_name"
+  ],
+  "title": "ModSettings",
+  "type": "object"
+}
