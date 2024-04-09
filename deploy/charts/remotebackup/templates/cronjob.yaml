@@ -1,9 +1,9 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "mongodb-s3-backup.fullname" . }}
+  name: {{ include "remotebackup.fullname" . }}
   labels:
-    {{- include "mongodb-s3-backup.labels" . | nindent 4 }}
+    {{- include "remotebackup.labels" . | nindent 4 }}
   annotations:
     configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }} 
 spec:
@@ -27,7 +27,7 @@ spec:
               {{- include "ghga-common.command-args" (list .Values.runCommands )  | nindent 14 }}
               envFrom:
                 - configMapRef:
-                    name: {{ include "mongodb-s3-backup.fullname" . }}
+                    name: {{ include "remotebackup.fullname" . }}
               {{- with .Values.resources }}
               resources:
               {{- toYaml . | nindent 16 }}
