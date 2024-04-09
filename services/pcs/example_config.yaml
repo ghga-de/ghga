@@ -1,0 +1,28 @@
+api_root_path: /
+auto_reload: false
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+docs_url: /docs
+files_to_delete_topic: file_deletions
+files_to_delete_type: file_deletion_requested
+generate_correlation_id: true
+host: 127.0.0.1
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+openapi_url: /openapi.json
+port: 8080
+service_instance_id: '1'
+service_name: pcs
+token_hashes:
+- abcdef
+- ghijkl
+workers: 1
