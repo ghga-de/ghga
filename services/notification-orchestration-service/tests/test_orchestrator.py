@@ -90,11 +90,11 @@ async def test_access_request(
 
     event_type_to_use = ""
     if event_type == "created":
-        event_type_to_use = joint_fixture.config.access_request_created_type
+        event_type_to_use = joint_fixture.config.access_request_created_event_type
     elif event_type == "allowed":
-        event_type_to_use = joint_fixture.config.access_request_allowed_type
+        event_type_to_use = joint_fixture.config.access_request_allowed_event_type
     elif event_type == "denied":
-        event_type_to_use = joint_fixture.config.access_request_denied_type
+        event_type_to_use = joint_fixture.config.access_request_denied_event_type
 
     assert event_type_to_use
 
@@ -158,9 +158,9 @@ async def test_missing_user_id(joint_fixture: JointFixture, logot: Logot):
     """Test for error handling in case of invalid user id."""
     payload = access_request_payload("bogus_user_id")
     for event_type in [
-        joint_fixture.config.access_request_created_type,
-        joint_fixture.config.access_request_allowed_type,
-        joint_fixture.config.access_request_denied_type,
+        joint_fixture.config.access_request_created_event_type,
+        joint_fixture.config.access_request_allowed_event_type,
+        joint_fixture.config.access_request_denied_event_type,
     ]:
         await joint_fixture.kafka.publish_event(
             payload=payload,

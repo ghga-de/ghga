@@ -4,9 +4,9 @@ db_connection_str: mongodb://localhost:27017
 db_name: users
 kafka_servers: ["kafka:9092"]
 access_request_events_topic: access_request_events
-access_request_created_type: access_request_created
-access_request_allowed_type: access_request_allowed
-access_request_denied_type: access_request_denied
+access_request_created_event_type: access_request_created
+access_request_allowed_event_type: access_request_allowed
+access_request_denied_event_type: access_request_denied
 notification_event_type: notification
 notification_event_topic: notification_events
 file_registered_event_topic: internal_file_registry

@@ -101,7 +101,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`access_request_created_type`** *(string)*: The type to use for access request created events.
+- **`access_request_created_event_type`** *(string)*: The type to use for access request created events.
 
 
   Examples:
@@ -111,7 +111,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`access_request_allowed_type`** *(string)*: The type to use for access request allowed events.
+- **`access_request_allowed_event_type`** *(string)*: The type to use for access request allowed events.
 
 
   Examples:
@@ -121,7 +121,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`access_request_denied_type`** *(string)*: The type to use for access request denied events.
+- **`access_request_denied_event_type`** *(string)*: The type to use for access request denied events.
 
 
   Examples:

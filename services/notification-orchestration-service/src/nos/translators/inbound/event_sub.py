@@ -33,17 +33,17 @@ class EventSubTranslatorConfig(BaseSettings):
         description="Name of the event topic used to consume access request events",
         examples=["access_requests"],
     )
-    access_request_created_type: str = Field(
+    access_request_created_event_type: str = Field(
         default=...,
         description="The type to use for access request created events",
         examples=["access_request_created"],
     )
-    access_request_allowed_type: str = Field(
+    access_request_allowed_event_type: str = Field(
         default=...,
         description="The type to use for access request allowed events",
         examples=["access_request_allowed"],
     )
-    access_request_denied_type: str = Field(
+    access_request_denied_event_type: str = Field(
         default=...,
         description="The type to use for access request denied events",
         examples=["access_request_denied"],
@@ -71,9 +71,9 @@ class EventSubTranslator(EventSubscriberProtocol):
             config.file_registered_event_topic,
         ]
         self.types_of_interest = [
-            config.access_request_created_type,
-            config.access_request_allowed_type,
-            config.access_request_denied_type,
+            config.access_request_created_event_type,
+            config.access_request_allowed_event_type,
+            config.access_request_denied_event_type,
             config.file_registered_event_type,
         ]
         self._config = config
@@ -104,9 +104,9 @@ class EventSubTranslator(EventSubscriberProtocol):
     ) -> None:
         """Consumes an event"""
         if type_ in (
-            self._config.access_request_created_type,
-            self._config.access_request_allowed_type,
-            self._config.access_request_denied_type,
+            self._config.access_request_created_event_type,
+            self._config.access_request_allowed_event_type,
+            self._config.access_request_denied_event_type,
         ):
             await self._handle_access_request(type_, payload)
         elif type_ == self._config.file_registered_event_type:

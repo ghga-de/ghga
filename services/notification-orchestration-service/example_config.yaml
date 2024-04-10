@@ -1,6 +1,6 @@
-access_request_allowed_type: access_request_allowed
-access_request_created_type: access_request_created
-access_request_denied_type: access_request_denied
+access_request_allowed_event_type: access_request_allowed
+access_request_created_event_type: access_request_created
+access_request_denied_event_type: access_request_denied
 access_request_events_topic: access_request_events
 central_data_stewardship_email: test@test.abc
 db_connection_str: '**********'

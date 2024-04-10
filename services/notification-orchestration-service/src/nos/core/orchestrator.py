@@ -54,9 +54,9 @@ class Orchestrator(OrchestratorPort):
                 When the provided user ID does not exist in the DB.
         """
         method_map = {
-            self._config.access_request_created_type: self._access_request_created,
-            self._config.access_request_allowed_type: self._access_request_allowed,
-            self._config.access_request_denied_type: self._access_request_denied,
+            self._config.access_request_created_event_type: self._access_request_created,
+            self._config.access_request_allowed_event_type: self._access_request_allowed,
+            self._config.access_request_denied_event_type: self._access_request_denied,
         }
         extra = {  # for error logging
             "user_id": user_id,
