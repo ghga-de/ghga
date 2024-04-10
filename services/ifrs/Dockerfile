@@ -32,7 +32,7 @@ RUN apt update
 RUN apt upgrade -y
 # copy and install requirements and wheel
 WORKDIR /service
-COPY --from=builder /service/lock/requirements.txt /service
+COPY --from=builder /service/requirements.txt /service
 RUN pip install --no-deps -r requirements.txt
 RUN rm requirements.txt
 COPY --from=builder /service/dist/ /service
@@ -44,5 +44,4 @@ WORKDIR /home/appuser
 USER appuser
 # set environment
 ENV PYTHONUNBUFFERED=1
-# Please adapt to package name:
 ENTRYPOINT ["ifrs"]
