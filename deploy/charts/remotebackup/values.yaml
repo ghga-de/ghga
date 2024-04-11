@@ -6,7 +6,7 @@ image:
   repository: ghga/devops-remotebackup
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: 0.0.0-a2f33ba8baa2cbb074b5cf4091bfcf8d96ba2416
+  tag: 0.0.0
 
 imagePullSecrets: []
 nameOverride: ""
