@@ -19,7 +19,9 @@ spec:
               {{- toYaml . | nindent 12 }}
             {{- end }}
         spec:
+          {{- if .Values.serviceAccount.enabled }}
           serviceAccountName: {{ .Values.serviceAccount.name }}
+          {{- end }}
           containers:
             - name: {{ .Chart.Name }}
               imagePullPolicy: {{ .Values.image.pullPolicy }} 
@@ -37,8 +39,9 @@ spec:
               {{- toYaml . | nindent 16 }}
               {{- end }}
               volumeMounts:
-              - name: config
+              - name: config-yaml
                 mountPath: "/home/appuser/config.yaml"
+                subPath: config.yaml
                 readOnly: true
           restartPolicy: {{ .Values.restartPolicy }}
           {{- with .Values.imagePullSecrets }}
@@ -46,6 +49,9 @@ spec:
             {{- toYaml .Values.imagePullSecrets | nindent 10 }}
           {{- end }}
           volumes:
-          - name: config
+          - name: config-yaml
             configMap:
-              name: {{ .Release.Name }}-file
+              name: {{ include "remotebackup.fullname" . }}-config-yaml
+              items:
+              - key: config.yaml
+                path: config.yaml

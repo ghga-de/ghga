@@ -6,7 +6,7 @@ image:
   repository: ghga/devops-remotebackup
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: 0.0.0-60c3780d2666f0d
+  tag: 0.0.0-a2f33ba8baa2cbb074b5cf4091bfcf8d96ba2416
 
 imagePullSecrets: []
 nameOverride: ""
@@ -55,14 +55,14 @@ serviceAccount:
   enabled: true
   name: remotebackup
 
-runCommands: /home/appuser/run.sh
+runCommands: remotebackup backup
 
-parameters:
-  database:
-    mongodb:
-      source_connection_string: mongodb://mongodb
-      mongorestore:
-        excluded_namespaces:
-          - admin.system.users
-    encryption:
-      key: "*****"
+# Parameters which are passed to the config.yaml file.
+parameters: {}
+  # database:
+  #   mongodb:
+  #     mongorestore:
+  #       excluded_namespaces:
+  #         - admin.system.users
+  #   encryption:
+  #     key: "*****"
