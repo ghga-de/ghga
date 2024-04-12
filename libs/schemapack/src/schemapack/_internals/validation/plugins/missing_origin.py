@@ -89,7 +89,7 @@ class MissingMandatoryOriginValidationPlugin(ClassValidationPlugin):
                 message=(
                     "For the following relations that are mandatory on the origin end"
                     + " the specified targets are not referenced by any origin:"
-                    + " {not_referenced_target_by_relation}"
+                    + f"{not_referenced_target_id_by_relation}"
                 ),
                 details={
                     "not_referenced_target_by_relation": not_referenced_target_id_by_relation

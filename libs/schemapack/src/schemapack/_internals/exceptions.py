@@ -136,7 +136,7 @@ def _val_record_to_str(record: ValidationErrorRecord) -> str:
         if record.subject_resource:
             context = f"resource '{record.subject_class}.{record.subject_resource}'"
         else:
-            context = "class '{record.subject_class}'"
+            context = f"class '{record.subject_class}'"
     else:
         context = "global datapack"
 
