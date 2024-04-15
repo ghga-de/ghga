@@ -21,7 +21,7 @@ import rich.panel
 EXCEPTION_CONSOLE = rich.console.Console(stderr=True, style="red")
 FINAL_SUCCESS_CONSOLE = rich.console.Console(style="green bold", stderr=True)
 FINAL_FAILURE_CONSOLE = rich.console.Console(style="red bold", stderr=True)
-OUTPUT_CONSOLE = rich.console.Console()
+OUTPUT_CONSOLE = rich.console.Console(soft_wrap=True)
 
 
 def print_exception(exception: Exception, exception_name: str = "Exception"):

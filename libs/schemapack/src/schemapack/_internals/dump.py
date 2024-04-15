@@ -16,17 +16,16 @@
 
 """Logic for dumping schemapacks."""
 
-import json
-from io import StringIO
 from pathlib import Path
 from typing import Any
 
-import ruamel.yaml
-
+from schemapack._internals.spec.datapack import DataPack
 from schemapack._internals.spec.schemapack import SchemaPack
-
-yaml = ruamel.yaml.YAML(typ="rt")
-yaml.indent(mapping=2, sequence=4, offset=2)
+from schemapack._internals.utils import (
+    dumps_model,
+    model_to_serializable_dict,
+    write_dict,
+)
 
 
 def get_content_schema_path(*, class_name: str, content_schema_dir: Path) -> Path:
@@ -59,18 +58,6 @@ def set_content_schema_paths(
     return {**schemapack_dict, "classes": modified_classes}
 
 
-def write_schemapack_dict(
-    schemapack_dict: dict, *, path: Path, yaml_format: bool
-) -> None:
-    """Writes the provided schemapack dictionary to a file at the provided path."""
-    if yaml_format:
-        with open(path, "w", encoding="utf-8") as file:
-            yaml.dump(schemapack_dict, file)
-    else:
-        with open(path, "w", encoding="utf-8") as file:
-            json.dump(schemapack_dict, file, indent=2)
-
-
 def write_content_schemas(
     *, schemapack: SchemaPack, content_schema_dir: Path, relative_to: Path
 ) -> None:
@@ -89,17 +76,6 @@ def write_content_schemas(
             file.write(class_.content.json_schema)
 
 
-def schemapack_to_dict(
-    schemapack: SchemaPack,
-) -> dict[str, Any]:
-    """Converts the provided schemapack to a mutable dictionary.
-
-    Returns:
-        A dictionary representation of the provided schemapack.
-    """
-    return json.loads(schemapack.model_dump_json(exclude_defaults=True))
-
-
 def dumps_schemapack(
     schemapack: SchemaPack,
     *,
@@ -114,14 +90,23 @@ def dumps_schemapack(
         yaml_format:
             Whether to dump as YAML (`True`) or JSON (`False`).
     """
-    schemapack_dict = schemapack_to_dict(schemapack)
+    return dumps_model(schemapack, yaml_format=yaml_format)
 
-    if yaml_format:
-        with StringIO() as buffer:
-            yaml.dump(schemapack_dict, buffer)
-            return buffer.getvalue().strip()
 
-    return json.dumps(schemapack_dict, indent=2)
+def dumps_datapack(
+    datapack: DataPack,
+    *,
+    yaml_format: bool = True,
+) -> str:
+    """Dumps the provided datapack as a JSON or YAML-formatted string.
+
+    Args:
+        datapack:
+            The datapack to dump.
+        yaml_format:
+            Whether to dump as YAML (`True`) or JSON (`False`).
+    """
+    return dumps_model(datapack, yaml_format=yaml_format)
 
 
 def dump_schemapack(
@@ -161,7 +146,7 @@ def dump_schemapack(
     if not parent_dir.exists():
         raise FileNotFoundError(f"The parent directory of '{path}' does not exist.")
 
-    schemapack_dict = schemapack_to_dict(schemapack)
+    schemapack_dict = model_to_serializable_dict(schemapack)
 
     if not condensed:
         schemapack_dict = set_content_schema_paths(
@@ -173,4 +158,4 @@ def dump_schemapack(
             relative_to=parent_dir,
         )
 
-    write_schemapack_dict(schemapack_dict, path=path, yaml_format=yaml_format)
+    write_dict(schemapack_dict, path=path, yaml_format=yaml_format)

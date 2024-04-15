@@ -23,13 +23,18 @@ from collections import defaultdict
 from collections.abc import Mapping
 from typing import Optional
 
+from schemapack._internals.exceptions import (
+    ClassNotFoundError,
+    ResourceNotFoundError,
+    SpecType,
+)
 from schemapack.exceptions import ValidationAssumptionError
 from schemapack.spec.custom_types import ClassName, ResourceId
 from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import SchemaPack
 
 
-def identify_dependencies(
+def identify_dependencies(  # noqa: C901, PLR0912
     *,
     datapack: DataPack,
     class_name: ClassName,
@@ -63,15 +68,25 @@ def identify_dependencies(
         (keys).
 
     Raises:
-        KeyError:
-            If the resource_class or the resource_id does not exist in the schemapack
-            or datapack.
+        schemapack.Exceptions.ClassNotFoundError:
+            If the class_name does not exist in the schemapack or datapack.
+        schemapack.Exceptions.ResourceNotFoundError:
+            If the resource_id does not exist in the schemapack or datapack.
         schemapack.Exceptions.ValidationAssumptionError:
             If it became apparent that the datapack was not already validated against
             the schemapack.
     """
-    target_resource = datapack.resources[class_name][resource_id]
-    target_class_definition = schemapack.classes[class_name]
+    target_class_resources = datapack.resources.get(class_name)
+    if target_class_resources is None:
+        raise ClassNotFoundError(class_name=class_name, spec_type=SpecType.DATAPACK)
+
+    target_resource = target_class_resources.get(resource_id)
+    if target_resource is None:
+        raise ResourceNotFoundError(class_name=class_name, resource_id=resource_id)
+
+    target_class_definition = schemapack.classes.get(class_name)
+    if target_class_definition is None:
+        raise ClassNotFoundError(class_name=class_name, spec_type=SpecType.SCHEMAPACK)
 
     # Define a blacklist of resources to avoid getting lost in infinity loop for
     # circular dependencies:
@@ -143,7 +158,6 @@ def downscope_datapack(
         KeyError:
             If a resource from the resource_map is not in the datapack and
             ignore_non_existing is set to `False`.
-
     """
     resources: dict[ClassName, dict[ResourceId, Resource]] = defaultdict(dict)
 
@@ -182,6 +196,15 @@ def isolate_resource(
     Please note:
         The returned rooted datapack will not be compatible anymore with the original
         non-rooted schemapack.
+
+    Raises:
+        schemapack.Exceptions.ClassNotFoundError:
+            If the class_name does not exist in the schemapack or datapack.
+        schemapack.Exceptions.ResourceNotFoundError:
+            If the resource_id does not exist in the schemapack or datapack.
+        schemapack.Exceptions.ValidationAssumptionError:
+            If it became apparent that the datapack was not already validated against
+            the schemapack.
     """
     dependency_map = identify_dependencies(
         datapack=datapack,
@@ -196,7 +219,16 @@ def isolate_resource(
 
 
 def isolate_class(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPack:
-    """Return a copy of the provided schemapack that is rooted to the specified class."""
+    """Return a copy of the provided schemapack that is rooted to the specified class.
+
+
+    Raises:
+        schemapack.Exceptions.ClassNotFoundError:
+            If the class_name does not exist in the schemapack or datapack.
+    """
+    if class_name not in schemapack.classes:
+        raise ClassNotFoundError(class_name=class_name, spec_type=SpecType.SCHEMAPACK)
+
     return schemapack.model_copy(update={"rootClass": class_name})
 
 
@@ -213,6 +245,15 @@ def isolate(
 
     Returns:
         A tuple containing both the rooted schemapack and the rooted datapack.
+
+    Raises:
+        schemapack.Exceptions.ClassNotFoundError:
+            If the class_name does not exist in the schemapack or datapack.
+        schemapack.Exceptions.ResourceNotFoundError:
+            If the resource_id does not exist in the schemapack or datapack.
+        schemapack.Exceptions.ValidationAssumptionError:
+            If it became apparent that the datapack was not already validated against
+            the schemapack.
     """
     rooted_schemapack = isolate_class(class_name=class_name, schemapack=schemapack)
     rooted_datapack = isolate_resource(

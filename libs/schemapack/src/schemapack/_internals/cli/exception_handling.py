@@ -64,11 +64,44 @@ def expect_schemapack_errors():
 
 
 @contextmanager
-def expect_user_errors():
+def expect_common_user_errors():
     """Handle all user-derived errors."""
     with (
         expect_validation_errors(),
         expect_datapackspec_errors(),
         expect_schemapack_errors(),
     ):
+        yield
+
+
+@contextmanager
+def expect_class_not_found_errors():
+    """Handle class not found errors."""
+    try:
+        yield
+    except exceptions.ClassNotFoundError as error:
+        print_exception(error, exception_name="ClassNotFoundError")
+        print_final_failure(
+            "The provided document did not contain the specified class."
+        )
+        raise typer.Exit(exit_codes.CLASS_NOT_FOUND_ERROR) from None
+
+
+@contextmanager
+def expect_resource_not_found_errors():
+    """Handle resource not found errors."""
+    try:
+        yield
+    except exceptions.ResourceNotFoundError as error:
+        print_exception(error, exception_name="ResourceNotFoundError")
+        print_final_failure(
+            "The provided document did not contain the specified resource."
+        )
+        raise typer.Exit(exit_codes.RESOURCE_NOT_FOUND_ERROR) from None
+
+
+@contextmanager
+def expect_class_or_resource_not_found_errors():
+    """Handle class or resource not found errors."""
+    with expect_class_not_found_errors(), expect_resource_not_found_errors():
         yield

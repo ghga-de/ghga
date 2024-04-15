@@ -18,7 +18,14 @@
 
 import pytest
 
-from schemapack import isolate, load_datapack, load_schemapack
+from schemapack import (
+    exceptions,
+    isolate,
+    isolate_class,
+    isolate_resource,
+    load_datapack,
+    load_schemapack,
+)
 from schemapack.spec.custom_types import ClassName, ResourceId
 from tests.fixtures.examples import VALID_DATAPACK_PATHS, VALID_SCHEMAPACK_PATHS
 
@@ -93,3 +100,70 @@ def test_isolate(
 
     assert rooted_schemapack == expected_rooted_schemapack
     assert rooted_datapack == expected_rooted_datapack
+
+
+def test_isolate_with_non_existing_class():
+    """Test the isolate function with a non-existing class."""
+    schemapack_path = VALID_SCHEMAPACK_PATHS["simple_relations"]
+    datapack_path = VALID_DATAPACK_PATHS["simple_relations.simple_resources"]
+    schemapack = load_schemapack(schemapack_path)
+    datapack = load_datapack(datapack_path)
+
+    with pytest.raises(exceptions.ClassNotFoundError) as error:
+        isolate(
+            class_name="NonExistingClass",
+            resource_id="example_dataset_1",
+            schemapack=schemapack,
+            datapack=datapack,
+        )
+    assert "schemapack" in str(error)
+
+
+def test_isolate_with_non_existing_resource():
+    """Test the isolate function with a non-existing resource."""
+    schemapack_path = VALID_SCHEMAPACK_PATHS["simple_relations"]
+    datapack_path = VALID_DATAPACK_PATHS["simple_relations.simple_resources"]
+    schemapack = load_schemapack(schemapack_path)
+    datapack = load_datapack(datapack_path)
+
+    with pytest.raises(exceptions.ResourceNotFoundError):
+        isolate(
+            class_name="Dataset",
+            resource_id="NonExistingResource",
+            schemapack=schemapack,
+            datapack=datapack,
+        )
+
+
+def test_isolate_resource_non_exisiting_class():
+    """Test the isolate_resource function with a non-existing class. Happy paths are
+    tested as part of the isolate function and appear not worth repeating for this
+    specific function.
+    """
+    schemapack_path = VALID_SCHEMAPACK_PATHS["simple_relations"]
+    datapack_path = VALID_DATAPACK_PATHS["simple_relations.simple_resources"]
+    schemapack = load_schemapack(schemapack_path)
+    datapack = load_datapack(datapack_path)
+
+    with pytest.raises(exceptions.ClassNotFoundError):
+        isolate_resource(
+            class_name="NonExistingClass",
+            resource_id="example_dataset_1",
+            schemapack=schemapack,
+            datapack=datapack,
+        )
+
+
+def test_isolate_class_non_exisiting_class():
+    """Test the isolate_class function with a non-existing class. Happy paths are
+    tested as part of the isolate function and appear not worth repeating for this
+    specific function.
+    """
+    schemapack_path = VALID_SCHEMAPACK_PATHS["simple_relations"]
+    schemapack = load_schemapack(schemapack_path)
+
+    with pytest.raises(exceptions.ClassNotFoundError):
+        isolate_class(
+            schemapack=schemapack,
+            class_name="NonExistingClass",
+        )
