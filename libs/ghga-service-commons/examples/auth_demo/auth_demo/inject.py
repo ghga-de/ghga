@@ -16,9 +16,10 @@
 
 """Dependency injection logic"""
 
+from __future__ import annotations
+
 from collections.abc import Generator
 from contextlib import asynccontextmanager, contextmanager, nullcontext
-from typing import Optional
 
 from auth_demo import dummies
 from auth_demo.auth.config import DemoAuthContext
@@ -43,7 +44,7 @@ def prepare_core(
 def prepare_core_with_override(
     *,
     config: Config,
-    hangout_override: Optional[HangoutPort] = None,
+    hangout_override: HangoutPort | None = None,
 ):
     """Resolve the hangout context manager based on config and override (if any)."""
 
@@ -58,8 +59,8 @@ def prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    auth_provider_override: Optional[AuthContextProtocol[DemoAuthContext]] = None,
-    hangout_override: Optional[HangoutPort] = None,
+    auth_provider_override: AuthContextProtocol[DemoAuthContext] | None = None,
+    hangout_override: HangoutPort | None = None,
 ):
     """Construct and initialize an REST API app along with all its dependencies.
 

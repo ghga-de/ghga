@@ -16,7 +16,7 @@
 
 """The core app with some protected methods."""
 
-from typing import Optional
+from __future__ import annotations
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -41,7 +41,7 @@ class Hangout(HangoutPort):
         self._greeting = config.greeting
         self._treat = config.treat
 
-    async def reception(self, name: Optional[str] = None) -> str:
+    async def reception(self, name: str | None = None) -> str:
         """A method that is not protected at all."""
         name = name or "anonymous user"
         return f"{self._greeting}, {name}!"

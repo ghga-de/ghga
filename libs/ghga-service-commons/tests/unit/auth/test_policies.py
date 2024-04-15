@@ -16,7 +16,7 @@
 
 """Test the auth.policies module."""
 
-from typing import Optional
+from __future__ import annotations
 
 import pytest
 from fastapi.exceptions import HTTPException
@@ -40,7 +40,7 @@ class DummyAuthContext(BaseModel):
 class DummyAuthProvider(AuthContextProtocol[DummyAuthContext]):
     """Dummy auth provider for testing."""
 
-    async def get_context(self, token: str) -> Optional[DummyAuthContext]:
+    async def get_context(self, token: str) -> DummyAuthContext | None:
         """Return a dummy auth context."""
         if not token:
             return None

@@ -16,15 +16,16 @@
 
 """An inbound port for the demo application."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Optional
 
 
 class HangoutPort(ABC):
     """An inbound port for a demo application showing personalized welcome messages."""
 
     @abstractmethod
-    async def reception(self, name: Optional[str] = None) -> str:
+    async def reception(self, name: str | None = None) -> str:
         """A method that is not protected at all."""
         ...
 

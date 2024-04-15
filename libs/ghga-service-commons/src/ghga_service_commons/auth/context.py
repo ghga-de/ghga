@@ -16,8 +16,10 @@
 
 """Protocol for retrieving a context for authentication and authorization."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -35,7 +37,7 @@ class AuthContextProtocol(ABC, Generic[AuthContext]):
         """Error that is raised when the underlying token is invalid."""
 
     @abstractmethod
-    async def get_context(self, token: str) -> Optional[AuthContext]:
+    async def get_context(self, token: str) -> AuthContext | None:
         """Derive an authentication and authorization context from a token.
 
         The protocol is independent of the underlying serialization format.

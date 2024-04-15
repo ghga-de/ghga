@@ -22,7 +22,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "3.1.1"
+version = "3.1.2"
 description = "A library that contains common functionality used in services of GHGA"
 dependencies = [
     "pydantic >=2, <3",
@@ -34,22 +34,22 @@ text = "Apache 2.0"
 [project.optional-dependencies]
 api = [
     "fastapi>=0.110, <0.111",
-    "uvicorn[standard]>=0.27.1, <0.28",
+    "uvicorn[standard]>=0.29, <0.30",
     "ghga-service-commons[objectstorage]",
 ]
 auth = [
-    "jwcrypto>=1.5.4, <2",
+    "jwcrypto>=1.5.6, <2",
     "pydantic[email]>=2, <3",
 ]
 crypt = [
-    "pynacl>=1.5.0, <2",
-    "crypt4gh>=1.6.0, <2",
+    "pynacl>=1.5, <2",
+    "crypt4gh>=1.6, <2",
 ]
 dev = [
-    "requests>=2.31.0, <3",
+    "requests>=2.31, <3",
 ]
 objectstorage = [
-    "hexkit>=2, <3",
+    "hexkit>=2, <4",
 ]
 all = [
     "ghga-service-commons[api,auth,crypt,dev,objectstorage]",
@@ -87,8 +87,9 @@ fixable = [
     "D",
 ]
 ignore = [
-    "E",
-    "W",
+    "E111",
+    "E114",
+    "E116",
     "PLW",
     "RUF001",
     "RUF010",
@@ -161,5 +162,5 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "7.4"
+minversion = "8.0"
 asyncio_mode = "strict"

@@ -16,8 +16,10 @@
 
 """Helper functions for Crypt4GH compliant encryption."""
 
+from __future__ import annotations
+
 import base64
-from typing import NamedTuple, Union
+from typing import NamedTuple
 
 from nacl.public import PrivateKey, PublicKey, SealedBox
 
@@ -75,7 +77,7 @@ def decode_key(key: str) -> bytes:
 
 
 def decrypt(
-    data: Union[bytes, str], key: Union[bytes, str, PrivateKey], encoding: str = "utf-8"
+    data: bytes | str, key: bytes | str | PrivateKey, encoding: str = "utf-8"
 ) -> str:
     """Decrypt a base64 encoded or bytes string using a private Crypt4GH key.
 
@@ -97,7 +99,7 @@ def decrypt(
 
 
 def encrypt(
-    data: str, key: Union[bytes, str, PrivateKey, PublicKey], encoding: str = "utf-8"
+    data: str, key: bytes | str | PrivateKey | PublicKey, encoding: str = "utf-8"
 ) -> str:
     """Encrypt a str with given encoding using a public Crypt4GH key.
 

@@ -16,7 +16,7 @@
 
 """Tests for the MockRouter class."""
 
-from typing import Union
+from __future__ import annotations
 
 import httpx
 import pytest
@@ -196,7 +196,7 @@ def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
     class TestValueError(ValueError):
         """Subclass of ValueError to test handle_exception_subclasses."""
 
-    def handler(request: httpx.Request, exc: Union[ValueError, TestValueError]):
+    def handler(request: httpx.Request, exc: ValueError | TestValueError):
         return httpx.Response(status_code=500)
 
     throwaway: MockRouter = MockRouter(

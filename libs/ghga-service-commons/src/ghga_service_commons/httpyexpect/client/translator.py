@@ -16,7 +16,7 @@
 
 """Logic to translate responses to HTTP calls to python exceptions."""
 
-from typing import Optional
+from __future__ import annotations
 
 import pydantic
 
@@ -91,7 +91,7 @@ class ResponseTranslator:
         # call the factory with the param values to get the exception:
         return factory_kit.factory(**required_param_values)
 
-    def get_error(self) -> Optional[Exception]:
+    def get_error(self) -> Exception | None:
         """Translate the response into a python exception.
 
         In case the provided response corresponds to an error, it will translate the

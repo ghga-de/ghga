@@ -15,10 +15,14 @@
 #
 """Test Crypt4GH utility functions."""
 
+from __future__ import annotations
+
 import base64
 import os
 from pathlib import Path
 from tempfile import mkstemp
+
+import pytest
 
 from ghga_service_commons.utils.crypt4gh import (
     create_envelope,
@@ -28,11 +32,12 @@ from ghga_service_commons.utils.crypt4gh import (
     random_encrypted_content,
 )
 
-FILE_SIZE = 64 * 1024**2
+FILE_SIZES = [1024**2, 64 * 1024**2, 1000**2, 64 * 1000**2]
 
 
-def test_crypt4gh_utilities_bytes():
-    """Test Crypt4GH functionality wrappers in sequence for bytes type arguments."""
+@pytest.mark.parametrize("file_size, use_path", zip(FILE_SIZES[:2], [True, False]))
+def test_crypt4gh_utilities_bytes(file_size: int, use_path: bool):
+    """Test Crypt4GH functionality wrappers in sequence with bytes type arguments."""
     keypair = generate_keypair()
 
     file_secret = os.urandom(32)
@@ -50,7 +55,7 @@ def test_crypt4gh_utilities_bytes():
     assert file_secret == extracted_secret
 
     test_data = random_encrypted_content(
-        file_size=FILE_SIZE, private_key=keypair.private, public_key=keypair.public
+        file_size=file_size, private_key=keypair.private, public_key=keypair.public
     )
 
     file_secret = extract_file_secret(
@@ -60,27 +65,24 @@ def test_crypt4gh_utilities_bytes():
     )
     assert len(file_secret) == 32
 
-    _, inpath = mkstemp()
-    _, outpath = mkstemp()
+    in_path: str | Path = mkstemp()[1]
+    out_path: str | Path = mkstemp()[1]
 
     test_data.content.seek(0)
-    with open(inpath, "wb") as infile:
+    with open(in_path, "wb") as infile:
         infile.write(test_data.content.read())
-        infile.seek(0)
 
-    decrypt_file(input_path=inpath, output_path=outpath, private_key=keypair.private)
-    with open(outpath, "rb") as out_file:
-        assert len(out_file.read()) == test_data.decrypted_size
+    if use_path:  # test with Path type arguments
+        in_path, out_path = Path(in_path), Path(out_path)
 
-    decrypt_file(
-        input_path=Path(inpath), output_path=Path(outpath), private_key=keypair.private
-    )
-    with open(outpath, "rb") as out_file:
-        assert len(out_file.read()) == test_data.decrypted_size
+    decrypt_file(input_path=in_path, output_path=out_path, private_key=keypair.private)
+    with open(out_path, "rb") as out_file:
+        assert os.stat(out_file.name).st_size == test_data.decrypted_size
 
 
-def test_crypt4gh_utilities_str():
-    """Test Crypt4GH functionality wrappers in sequence."""
+@pytest.mark.parametrize("file_size, use_path", zip(FILE_SIZES[2:], [True, False]))
+def test_crypt4gh_utilities_str(file_size: int, use_path: bool):
+    """Test Crypt4GH functionality wrappers in sequence with str type arguments."""
     keypair = generate_keypair()
 
     private_key = base64.b64encode(keypair.private).decode()
@@ -103,7 +105,7 @@ def test_crypt4gh_utilities_str():
     assert base64.b64decode(file_secret) == extracted_secret
 
     test_data = random_encrypted_content(
-        file_size=FILE_SIZE, private_key=keypair.private, public_key=keypair.public
+        file_size=file_size, private_key=keypair.private, public_key=keypair.public
     )
 
     test_data_envelope = base64.b64encode(test_data.content.read(1024**2)).decode()
@@ -114,20 +116,16 @@ def test_crypt4gh_utilities_str():
     )
     assert len(file_secret) == 32
 
-    _, inpath = mkstemp()
-    _, outpath = mkstemp()
+    in_path: str | Path = mkstemp()[1]
+    out_path: str | Path = mkstemp()[1]
 
     test_data.content.seek(0)
-    with open(inpath, "wb") as infile:
+    with open(in_path, "wb") as infile:
         infile.write(test_data.content.read())
-        infile.seek(0)
 
-    decrypt_file(input_path=inpath, output_path=outpath, private_key=private_key)
-    with open(outpath, "rb") as out_file:
-        assert len(out_file.read()) == test_data.decrypted_size
+    if use_path:  # test with Path type arguments
+        in_path, out_path = Path(in_path), Path(out_path)
 
-    decrypt_file(
-        input_path=Path(inpath), output_path=Path(outpath), private_key=private_key
-    )
-    with open(outpath, "rb") as out_file:
-        assert len(out_file.read()) == test_data.decrypted_size
+    decrypt_file(input_path=in_path, output_path=out_path, private_key=private_key)
+    with open(out_path, "rb") as out_file:
+        assert os.stat(out_file.name).st_size == test_data.decrypted_size

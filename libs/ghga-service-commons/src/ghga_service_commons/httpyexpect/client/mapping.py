@@ -20,9 +20,11 @@ A exception mapping is a datastructure that maps an HTTP error response (4xx or 
 to a python exception.
 """
 
+from __future__ import annotations
+
 import inspect
 from collections.abc import Mapping, Sequence
-from typing import Any, NamedTuple, Optional, cast
+from typing import Any, NamedTuple, cast
 
 from ghga_service_commons.httpyexpect.client.custom_types import (
     ExceptionFactory,
@@ -105,7 +107,7 @@ class ExceptionMapping:
 
     @staticmethod
     def _get_error_intro(
-        status_code: Optional[int] = None, exception_id: Optional[str] = None
+        status_code: int | None = None, exception_id: str | None = None
     ):
         """Return an intro for a ValidationError.
 
@@ -126,8 +128,8 @@ class ExceptionMapping:
         cls,
         factory: ExceptionFactory,
         *,
-        exception_id: Optional[str] = None,
-        status_code: Optional[int] = None,
+        exception_id: str | None = None,
+        status_code: int | None = None,
     ) -> Sequence[ExceptionFactoryParam]:
         """Inspect the parameters of the given factory.
 
@@ -188,8 +190,8 @@ class ExceptionMapping:
         cls,
         factory: object,
         *,
-        exception_id: Optional[str] = None,
-        status_code: Optional[int] = None,
+        exception_id: str | None = None,
+        status_code: int | None = None,
     ) -> None:
         """Check the signature of an exception factory."""
         if not callable(factory):

@@ -16,9 +16,11 @@
 
 """JSON web token based provider implementing the AuthContextProtocol."""
 
+from __future__ import annotations
+
 import json
 from contextlib import asynccontextmanager
-from typing import Any, Optional
+from typing import Any
 
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
@@ -91,7 +93,7 @@ class JWTAuthContextProvider(AuthContextProtocol[AuthContext]):
         self._map_claims = config.auth_map_claims
         self._context_class = context_class
 
-    async def get_context(self, token: str) -> Optional[AuthContext]:
+    async def get_context(self, token: str) -> AuthContext | None:
         """Get an authentication and authorization context from a token.
 
         The token must be a serialized and signed JSON web token.

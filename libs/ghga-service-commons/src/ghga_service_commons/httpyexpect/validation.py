@@ -16,8 +16,9 @@
 
 """General purpose validation logic used by both the client and server side."""
 
+from __future__ import annotations
+
 import re
-from typing import Optional
 
 from ghga_service_commons.httpyexpect.base_exception import HttpyExpectError
 from ghga_service_commons.httpyexpect.models import EXCEPTION_ID_PATTERN
@@ -39,7 +40,7 @@ def assert_error_code(status_code: object) -> None:
 def validate_exception_id(
     exception_id: object,
     *,
-    status_code: Optional[int] = None,
+    status_code: int | None = None,
 ) -> None:
     """Check the format of an exception id."""
     if not isinstance(exception_id, str) or not re.match(

@@ -15,10 +15,12 @@
 #
 """A class for mocking API endpoints when testing with the httpx_mock fixture."""
 
+from __future__ import annotations
+
 import re
 from functools import partial
 from inspect import signature
-from typing import Any, Callable, Generic, Optional, TypeVar, cast, get_type_hints
+from typing import Any, Callable, Generic, TypeVar, cast, get_type_hints
 
 import httpx
 import pytest
@@ -104,10 +106,9 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
 
     def __init__(
         self,
-        exception_handler: Optional[
-            Callable[[httpx.Request, ExpectedExceptionTypes], Any]
-        ] = None,
-        exceptions_to_handle: Optional[tuple[type[Exception], ...]] = None,
+        exception_handler: Callable[[httpx.Request, ExpectedExceptionTypes], Any]
+        | None = None,
+        exceptions_to_handle: tuple[type[Exception], ...] | None = None,
         handle_exception_subclasses: bool = False,
     ):
         """Initialize the MockRouter with an optional exception handler.

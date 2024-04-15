@@ -16,8 +16,9 @@
 
 """Dependency injection logic"""
 
+from __future__ import annotations
+
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from ghga_auth import dummies
 from ghga_auth.config import Config
@@ -31,7 +32,7 @@ from ghga_service_commons.utils.context import asyncnullcontext
 async def prepare_rest_app(
     *,
     config: Config,
-    auth_provider_override: Optional[AuthContextProtocol[AuthContext]] = None,
+    auth_provider_override: AuthContextProtocol[AuthContext] | None = None,
 ):
     """Construct and initialize an REST API app along with all its dependencies.
 
