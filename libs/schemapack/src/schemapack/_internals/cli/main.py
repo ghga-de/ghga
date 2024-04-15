@@ -27,7 +27,11 @@ from schemapack._internals.cli.exception_handling import (
     expect_schemapack_errors,
     expect_user_errors,
 )
-from schemapack._internals.cli.printing import print_final_success, print_info
+from schemapack._internals.cli.printing import (
+    print_final_success,
+    print_output,
+)
+from schemapack._internals.dump import dumps_schemapack
 from schemapack._internals.load import load_datapack, load_schemapack
 from schemapack._internals.main import load_and_validate
 
@@ -38,7 +42,7 @@ def version_callback(
     version: bool = False,
 ):
     if version:
-        print_info(__version__)
+        print_output(__version__)
         raise typer.Exit(exit_codes.SUCCESS)
 
 
@@ -117,3 +121,30 @@ def check_datapack(
         load_datapack(datapack)
 
     print_final_success("The provided document complies with the specs of a datapack.")
+
+
+@cli.command()
+def condense_schemapack(
+    *,
+    schemapack: Annotated[
+        Path,
+        typer.Argument(
+            help="Provide the path to a JSON/YAML file to check against the specs.",
+        ),
+    ],
+    json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            "-j",
+            help="Output the condensed schemapack as JSON instead of YAML (the default).",
+        ),
+    ] = False,
+):
+    """Writes a condensed version of the provided schemapack that contains content
+    schemas to stdout.
+    """
+    with expect_schemapack_errors():
+        schemapack_dict = load_schemapack(schemapack)
+        condensed_schemapack = dumps_schemapack(schemapack_dict, yaml_format=not json)
+        print_output(condensed_schemapack)

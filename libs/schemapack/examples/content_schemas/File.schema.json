@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "A file is an object that contains information generated from a process, either an Experiment or an Analysis.",
+  "description": "Contains data.",
   "properties": {
     "checksum": {
       "type": "string"

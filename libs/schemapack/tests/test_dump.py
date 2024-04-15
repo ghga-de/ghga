@@ -23,9 +23,33 @@ import pytest
 import ruamel.yaml
 
 from schemapack import dump_schemapack, load_schemapack
+from schemapack._internals.dump import dumps_schemapack
 from tests.fixtures.examples import VALID_SCHEMAPACK_PATHS
 
-yaml = ruamel.yaml.YAML(typ="safe")
+yaml = ruamel.yaml.YAML(typ="rt")
+
+
+@pytest.mark.parametrize(
+    "yaml_format", [True, False], ids=["yaml_format", "json_format"]
+)
+def test_dumps(yaml_format: bool, tmp_path: Path):
+    """Tests using the dumps_schemapack function to dump a schemapack as a
+    condensed representation to string.
+    """
+    input_schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["simple_relations"])
+    expected_dict = yaml.load(VALID_SCHEMAPACK_PATHS["simple_relations_condensed"])
+
+    observed_str = dumps_schemapack(input_schemapack, yaml_format=yaml_format)
+
+    # make sure that it has the schemapack property at the top:
+    if yaml_format:
+        assert observed_str.startswith("schemapack:")
+        observed_dict = yaml.load(observed_str)
+    else:
+        assert observed_str.startswith('{\n  "schemapack":')
+        observed_dict = json.loads(observed_str)
+
+    assert observed_dict == expected_dict
 
 
 @pytest.mark.parametrize(

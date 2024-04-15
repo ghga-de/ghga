@@ -28,6 +28,8 @@ from typer.testing import CliRunner
 
 import schemapack
 from schemapack._internals.cli import cli
+from schemapack._internals.dump import dumps_schemapack
+from schemapack._internals.load import load_schemapack
 from schemapack.cli import exit_codes
 from tests.fixtures.examples import (
     INVALID_DATAPACK_PATHS,
@@ -36,7 +38,9 @@ from tests.fixtures.examples import (
     VALID_SCHEMAPACK_PATHS,
 )
 
-runner = CliRunner(mix_stderr=False)
+runner = CliRunner(
+    mix_stderr=False,
+)
 
 
 def test_version():
@@ -168,3 +172,25 @@ def test_check_datapack_not_complies():
     result = runner.invoke(cli, ["check-datapack", str(datapack)])
     assert result.exit_code == exit_codes.DATAPACK_SPEC_ERROR != 0
     assert "DataPackSpecError" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "json, abbreviate",
+    [(False, False), (True, False), (True, True)],
+    ids=["yaml_format", "json_format_no_abbrev", "json_format_abbrev"],
+)
+def test_condense_schemapack(json: bool, abbreviate: bool):
+    """Test the condense-schemapack command. This is checked against the output of
+    the dumps_schemapack function. Further behavior is checked for that function.
+    """
+    schemapack_path = VALID_SCHEMAPACK_PATHS["simple_relations"]
+    schemapack = load_schemapack(schemapack_path)
+    expected_str = dumps_schemapack(schemapack, yaml_format=not json)
+
+    command = ["condense-schemapack", str(schemapack_path)]
+    if json:
+        command.append("-j" if abbreviate else "--json")
+    result = runner.invoke(cli, command)
+    assert result.exit_code == exit_codes.SUCCESS == 0
+
+    assert result.output.strip() == expected_str

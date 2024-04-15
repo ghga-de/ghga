@@ -17,6 +17,7 @@
 """Logic for dumping schemapacks."""
 
 import json
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
@@ -24,9 +25,8 @@ import ruamel.yaml
 
 from schemapack._internals.spec.schemapack import SchemaPack
 
-yaml = ruamel.yaml.YAML(typ="safe")
+yaml = ruamel.yaml.YAML(typ="rt")
 yaml.indent(mapping=2, sequence=4, offset=2)
-yaml.default_flow_style = False
 
 
 def get_content_schema_path(*, class_name: str, content_schema_dir: Path) -> Path:
@@ -89,6 +89,41 @@ def write_content_schemas(
             file.write(class_.content.json_schema)
 
 
+def schemapack_to_dict(
+    schemapack: SchemaPack,
+) -> dict[str, Any]:
+    """Converts the provided schemapack to a mutable dictionary.
+
+    Returns:
+        A dictionary representation of the provided schemapack.
+    """
+    return json.loads(schemapack.model_dump_json(exclude_defaults=True))
+
+
+def dumps_schemapack(
+    schemapack: SchemaPack,
+    *,
+    yaml_format: bool = True,
+) -> str:
+    """Dumps a condensed version of the provided schemapack as a JSON or YAML-formatted
+    string.
+
+    Args:
+        schemapack:
+            The schemapack to dump.
+        yaml_format:
+            Whether to dump as YAML (`True`) or JSON (`False`).
+    """
+    schemapack_dict = schemapack_to_dict(schemapack)
+
+    if yaml_format:
+        with StringIO() as buffer:
+            yaml.dump(schemapack_dict, buffer)
+            return buffer.getvalue().strip()
+
+    return json.dumps(schemapack_dict, indent=2)
+
+
 def dump_schemapack(
     schemapack: SchemaPack,
     *,
@@ -126,7 +161,7 @@ def dump_schemapack(
     if not parent_dir.exists():
         raise FileNotFoundError(f"The parent directory of '{path}' does not exist.")
 
-    schemapack_dict = json.loads(schemapack.model_dump_json(exclude_defaults=True))
+    schemapack_dict = schemapack_to_dict(schemapack)
 
     if not condensed:
         schemapack_dict = set_content_schema_paths(
