@@ -29,6 +29,16 @@ from ghga_service_commons.utils.utc_dates import (
 )
 
 
+def test_utc_constant():
+    """Test the UTC constant."""
+    assert UTC is timezone.utc
+    try:
+        assert UTC is datetime.UTC  # type: ignore
+    except AttributeError:  # Python < 3.11
+        pass
+    assert UTC.tzname(None) == "UTC"
+
+
 @pytest.mark.parametrize(
     "value",
     [
@@ -36,8 +46,7 @@ from ghga_service_commons.utils.utc_dates import (
         "2022-11-15T12:00:00",
         datetime(2022, 11, 15, 12, 0, 0),
         datetime.now(),
-        datetime.utcnow(),
-        datetime.utcfromtimestamp(0),
+        datetime.fromtimestamp(0),
     ],
 )
 def test_does_not_accept_naive_datetimes(value):
@@ -58,7 +67,7 @@ def test_does_not_accept_naive_datetimes(value):
         "2022-11-15T12:00:00+00:00",
         "2022-11-15T12:00:00Z",
         datetime(2022, 11, 15, 12, 0, 0, tzinfo=UTC),
-        datetime.now(timezone.utc),
+        datetime.now(UTC),
         datetime.fromtimestamp(0, UTC),
     ],
 )
