@@ -16,6 +16,7 @@
 
 """Logic for dumping schemapacks."""
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -72,8 +73,9 @@ def write_content_schemas(
         content_schema_path = get_content_schema_path(
             class_name=class_name, content_schema_dir=abs_content_schema_dir
         )
+        class_dict = json.loads(class_.model_dump_json())
         with open(content_schema_path, "w", encoding="utf-8") as file:
-            file.write(class_.content.json_schema)
+            json.dump(class_dict["content"], file)
 
 
 def dumps_schemapack(

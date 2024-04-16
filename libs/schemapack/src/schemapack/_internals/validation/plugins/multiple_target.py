@@ -54,7 +54,7 @@ class MultipleTargetValidationPlugin(ResourceValidationPlugin):
         """
         wrong_relations: set[str] = set()
         for relation_name, relation in resource.relations.items():
-            is_set = isinstance(relation, set)
+            is_set = isinstance(relation, frozenset)
 
             try:
                 expected_set = self._relations[relation_name].multiple.target

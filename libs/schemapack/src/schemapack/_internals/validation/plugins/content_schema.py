@@ -17,6 +17,8 @@
 """A validation plugin."""
 
 import json
+from collections.abc import Mapping
+from typing import Any
 
 import jsonschema.exceptions
 import jsonschema.protocols
@@ -29,12 +31,13 @@ from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import ClassDefinition
 
 
-def _get_json_schema_validator(schema_str: str) -> jsonschema.protocols.Validator:
-    """Get a JSON Schema validator for the given schema formatted as JSON string.
+def _get_json_schema_validator(
+    schema: Mapping[str, Any],
+) -> jsonschema.protocols.Validator:
+    """Get a JSON Schema validator for the given schema.
     It is assumed that the schema has already been checked for validity against the
     JSON Schema specs.
     """
-    schema = json.loads(schema_str)
     cls: type[jsonschema.protocols.Validator] = jsonschema.validators.validator_for(
         schema
     )
@@ -58,9 +61,7 @@ class ContentSchemaValidationPlugin(ResourceValidationPlugin):
 
     def __init__(self, *, class_: ClassDefinition):
         """This plugin is configured with one specific class definition of a schemapack."""
-        self._json_schema_validator = _get_json_schema_validator(
-            class_.content.json_schema
-        )
+        self._json_schema_validator = _get_json_schema_validator(class_.content)
 
     def validate(
         self, *, resource: Resource, resource_id: ResourceId, datapack: DataPack
@@ -71,8 +72,9 @@ class ContentSchemaValidationPlugin(ResourceValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
+        json_compatible_content = json.loads(resource.model_dump_json())["content"]
         try:
-            self._json_schema_validator.validate(resource.content)
+            self._json_schema_validator.validate(json_compatible_content)
         except jsonschema.exceptions.ValidationError as error:
             raise ValidationPluginError(
                 type_="ContentValidationError", message=error.message

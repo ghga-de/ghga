@@ -28,9 +28,9 @@ description = "Make your JSON Schemas sociable and create linked data model."
 dependencies = [
     "pydantic >=2, <3",
     "pydantic_settings >=2, <3",
-    "ruamel.yaml ~= 0.18.6",
+    "ruamel.yaml ~=0.18.6",
     "jsonschema >=4.19.2, <5",
-    "immutabledict >=3.0.0, <4",
+    "arcticfreeze ~=0.1.1",
     "rich >13, <14",
 ]
 

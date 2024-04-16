@@ -21,11 +21,13 @@ import json
 from immutabledict import immutabledict
 
 from schemapack import load_schemapack
+from schemapack._internals.load import load_datapack
+from schemapack._internals.utils import read_json_or_yaml_mapping
 from schemapack.spec.datapack import (
     SUPPORTED_DATA_PACK_VERSIONS,
     DataPack,
 )
-from tests.fixtures.examples import VALID_SCHEMAPACK_PATHS
+from tests.fixtures.examples import VALID_DATAPACK_PATHS, VALID_SCHEMAPACK_PATHS
 
 
 def test_schemapack_is_hashable():
@@ -70,14 +72,23 @@ def test_comparison_and_hashing_different():
 
 def test_content_schema_serialization():
     """Test that content schemas of a schemapack are serialized as dicts."""
-    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["simple_relations"])
+    schemapack_path = VALID_SCHEMAPACK_PATHS["simple_relations_condensed"]
+    schemapack = load_schemapack(schemapack_path)
+    expected_schemapack_dict = read_json_or_yaml_mapping(schemapack_path)
+
     serialized_schemapack = json.loads(schemapack.model_dump_json())
 
-    for class_name, class_ in schemapack.classes.items():
+    for class_name in schemapack.classes:
         assert (
             serialized_schemapack["classes"][class_name]["content"]
-            == class_.content.json_schema_dict
+            == expected_schemapack_dict["classes"][class_name]["content"]
         )
+
+
+def test_datapack_is_hashable():
+    """Test that instances of DataPack are hashable."""
+    datapack = load_datapack(VALID_DATAPACK_PATHS["simple_relations.simple_resources"])
+    _ = hash(datapack)
 
 
 def test_datapack_target_id_ordering_upon_dump():

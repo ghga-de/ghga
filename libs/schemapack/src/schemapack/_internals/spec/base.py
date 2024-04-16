@@ -12,26 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Custom types annotations used for type hinting."""
+"""Base models."""
 
-from typing import Annotated as _Annotated
+from pydantic import BaseModel, ConfigDict
 
-from pydantic import Field as _Field
-from typing_extensions import TypeAlias as _TypeAlias
 
-__all__ = [
-    "ClassName",
-    "ResourceId",
-    "RelationPropertyName",
-    "ContentPropertyName",
-    "IdPropertyName",
-]
+class _FrozenNoExtraBaseModel(BaseModel):
+    """A BaseModel that does not allow any extra fields."""
 
-_NonEmptyStr: _TypeAlias = _Annotated[str, _Field(..., min_length=1)]
-ClassName: _TypeAlias = _NonEmptyStr
-ResourceId: _TypeAlias = _NonEmptyStr
-RelationPropertyName: _TypeAlias = _NonEmptyStr
-ContentPropertyName: _TypeAlias = _NonEmptyStr
-IdPropertyName: _TypeAlias = _NonEmptyStr
+    model_config = ConfigDict(use_enum_values=True, extra="forbid", frozen=True)

@@ -214,7 +214,7 @@ def isolate_resource(
         include_target=True,
     )
     rooted_datapack = downscope_datapack(datapack=datapack, resource_map=dependency_map)
-    rooted_datapack.rootResource = resource_id
+    rooted_datapack = rooted_datapack.model_copy(update={"rootResource": resource_id})
     return rooted_datapack
 
 

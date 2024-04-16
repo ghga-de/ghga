@@ -112,7 +112,7 @@ def denormalize(  # noqa: PLR0912,C901
 
         target_class_name = relation_definition.targetClass
 
-        if isinstance(target_ids, set):
+        if isinstance(target_ids, frozenset):
             denormalized_object[relation_name] = []
 
             # make the output predictable:

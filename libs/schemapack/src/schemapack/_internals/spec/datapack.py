@@ -24,11 +24,18 @@ from collections import Counter
 from collections.abc import Iterable
 from typing import Annotated, Any, Literal, Optional, Union
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, WrapSerializer
+import arcticfreeze
+from arcticfreeze import FrozenDict
+from pydantic import BeforeValidator, Field, WrapSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import TypeAlias
 
-from ...spec.custom_types import ClassName, RelationPropertyName, ResourceId
+from schemapack._internals.spec.base import _FrozenNoExtraBaseModel
+from schemapack._internals.spec.custom_types import (
+    ClassName,
+    RelationPropertyName,
+    ResourceId,
+)
 
 SupportedDataPackVersions = Literal["0.3.0"]
 SUPPORTED_DATA_PACK_VERSIONS = typing.get_args(SupportedDataPackVersions)
@@ -39,7 +46,7 @@ def validate_duplicate_target_ids(iterable: Iterable) -> Any:
     does, a PydanticCustomError with name "DuplicateTargetIdError" is raised. Otherwise,
     the given iterable is returned.
     """
-    if isinstance(iterable, set):
+    if isinstance(iterable, frozenset):
         return iterable
 
     try:
@@ -65,26 +72,26 @@ def validate_duplicate_target_ids(iterable: Iterable) -> Any:
 
 
 ResourceIdSet: TypeAlias = Annotated[
-    set[str],
+    frozenset[str],
     # Upon serialization, assert that the provided sequence does not contain duplicates:
     BeforeValidator(validate_duplicate_target_ids),
     # Upon serialization, produce predictablily sorted lists:
     WrapSerializer(lambda v, next_: sorted(next_(v))),
 ]
 
+ContentPropertyValue: TypeAlias = Annotated[
+    Any,
+    # the value of a content property is deeply frozen:
+    BeforeValidator(arcticfreeze.freeze),
+]
 
-class _NoExtraBaseModel(BaseModel):
-    """A BaseModel that does not allow any extra fields."""
 
-    model_config = ConfigDict(use_enum_values=True, extra="forbid")
-
-
-class Resource(_NoExtraBaseModel):
+class Resource(_FrozenNoExtraBaseModel):
     """A model defining content and relations of a resource
     of a specific class.
     """
 
-    content: dict[str, Any] = Field(
+    content: FrozenDict[str, ContentPropertyValue] = Field(
         ...,
         description=(
             "The content of the resource that complies with the content schema defined"
@@ -92,10 +99,10 @@ class Resource(_NoExtraBaseModel):
         ),
     )
 
-    relations: dict[
+    relations: FrozenDict[
         RelationPropertyName, Union[Optional[ResourceId], ResourceIdSet]
     ] = Field(
-        {},
+        FrozenDict(),
         description=(
             "A dictionary containing the relations of the resource to other resources."
             + " Each key correspond to the name of a relation property as per the"
@@ -111,7 +118,7 @@ class Resource(_NoExtraBaseModel):
 
     def get_target_id_set(
         self, relation_name: RelationPropertyName, do_not_raise: bool = False
-    ) -> set[ResourceId]:
+    ) -> frozenset[ResourceId]:
         """Get the target ids for the given relation always represented as a set.
         This is even the case if the actual value in the relations dict is a single
         string (translated into a list of length one) or None (translated into an
@@ -127,17 +134,17 @@ class Resource(_NoExtraBaseModel):
             targets = self.relations[relation_name]
         except KeyError:
             if do_not_raise:
-                return set()
+                return frozenset()
             raise
 
         if targets is None:
-            return set()
-        if isinstance(targets, set):
+            return frozenset()
+        if isinstance(targets, frozenset):
             return targets
-        return {targets}
+        return frozenset({targets})
 
 
-class DataPack(_NoExtraBaseModel):
+class DataPack(_FrozenNoExtraBaseModel):
     """A model for describing a schemapack definition."""
 
     datapack: SupportedDataPackVersions = Field(
@@ -149,7 +156,7 @@ class DataPack(_NoExtraBaseModel):
         ),
     )
 
-    resources: dict[ClassName, dict[ResourceId, Resource]] = Field(
+    resources: FrozenDict[ClassName, FrozenDict[ResourceId, Resource]] = Field(
         ...,
         description=(
             "A nested dictionary containing resources per class name (keys on the first"
