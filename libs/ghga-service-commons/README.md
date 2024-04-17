@@ -1,7 +1,7 @@
-![tests](https://github.com/ghga-de/ghga-service-commons/actions/workflows/unit_and_int_tests.yaml/badge.svg)
+![tests](https://github.com/ghga-de/ghga-service-commons/actions/workflows/tests.yaml/badge.svg)
 [![PyPI version shields.io](https://img.shields.io/pypi/v/ghga_service_commons.svg)](https://pypi.python.org/pypi/ghga_service_commons/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga_service_commons.svg)](https://pypi.python.org/pypi/ghga_service_commons/)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga_service_commons/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga_service_commons?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-service-commons/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-service-commons?branch=main)
 
 # ghga-service-commons
 This Python library serves as a collection of common utilities used by
