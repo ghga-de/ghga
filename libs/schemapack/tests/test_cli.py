@@ -32,6 +32,7 @@ from schemapack._internals.cli import cli
 from schemapack._internals.utils import read_json_or_yaml_mapping
 from schemapack.cli import exit_codes
 from tests.fixtures.examples import (
+    ERD_PATHS,
     INVALID_DATAPACK_PATHS,
     INVALID_SCHEMAPACK_PATHS,
     VALID_DATAPACK_PATHS,
@@ -335,3 +336,28 @@ def test_isolate_class_non_existing():
     result = runner.invoke(cli, command)
     assert result.exit_code == exit_codes.CLASS_NOT_FOUND_ERROR != 0
     assert "ClassNotFoundError" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "props,example_suffix",
+    [
+        ([], "_wo_props"),
+        (["-c"], "_w_props"),
+        (["--content-properties"], "_w_props"),
+    ],
+    ids=("no_content_props", "content_props_abbrev", "content_props"),
+)
+def test_export_mermaid(tmp_path, props: list[str], example_suffix: str):
+    """Test the export-mermaid command."""
+    example = "comprehensive_cardinalities_and_types"
+    schemapack = VALID_SCHEMAPACK_PATHS[example]
+    erd = ERD_PATHS[example + example_suffix]
+
+    args = [
+        "export-mermaid",
+        str(schemapack),
+        *props,
+    ]
+    result = runner.invoke(cli, args)
+    assert result.exit_code == exit_codes.SUCCESS == 0
+    assert result.output == erd.read_text()

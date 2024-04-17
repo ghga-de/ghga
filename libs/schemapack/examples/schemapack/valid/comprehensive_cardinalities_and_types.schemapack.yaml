@@ -1,0 +1,150 @@
+schemapack: 0.3.0
+description: a schemapack that utilizes most cardinalities, modalities and json schema types
+classes:
+  Customer:
+    id:
+      propertyName: id
+    content:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      required:
+        - name
+        - attributes
+        - company
+      type: object
+      properties:
+        name:
+          type: string
+        attributes:
+          type: object
+        company:
+          type: boolean
+      additionalProperties: false
+    relations:
+      addresses:
+        targetClass: Address
+        mandatory:
+          origin: true
+          target: false
+        multiple:
+          origin: false
+          target: true
+      orders:
+        targetClass: Order
+        mandatory:
+          origin: true
+          target: false
+        multiple:
+          origin: false
+          target: true
+
+  Address:
+    id:
+      propertyName: id
+    content:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      required:
+        - street
+        - city
+        - zip_code
+        - country
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        zip_code:
+          type: integer
+        country:
+          type: string
+          enum:
+            - Germany
+            - Austria
+            - Switzerland
+        address_info:
+          type: object
+          properties:
+            foo:
+              type: string
+            bar:
+              type: integer
+          additionalProperties: false
+      additionalProperties: false
+
+  Order:
+    id:
+      propertyName: id
+    content:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      additionalProperties: true
+    relations:
+      products:
+        targetClass: Product
+        mandatory:
+          origin: false
+          target: true
+        multiple:
+          origin: true
+          target: true
+      shipping_event:
+        targetClass: ShippingEvent
+        mandatory:
+          origin: true
+          target: false
+        multiple:
+          origin: false
+          target: false
+
+  Product:
+    id:
+      propertyName: id
+    content:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      required:
+        - name
+        - price
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+        comments:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    relations:
+      categories:
+        targetClass: ProductCategory
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true
+
+
+  ProductCategory:
+    id:
+      propertyName: id
+    content:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+      additionalProperties: true
+
+  ShippingEvent:
+    id:
+      propertyName: id
+    content:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      required:
+        - datetime
+      type: object
+      additionalProperties: false

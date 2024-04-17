@@ -33,6 +33,7 @@ from schemapack._internals.cli.printing import (
     print_output,
 )
 from schemapack._internals.dump import dumps_datapack, dumps_schemapack
+from schemapack._internals.erd import export_mermaid as export_mermaid_impl
 from schemapack._internals.isolate import isolate_class as isolate_class_impl
 from schemapack._internals.isolate import isolate_resource as isolate_resource_impl
 from schemapack._internals.load import load_datapack, load_schemapack
@@ -267,3 +268,35 @@ def isolate_class(
 
     rooted_schemapack_str = dumps_schemapack(rooted_schemapack, yaml_format=not json)
     print_output(rooted_schemapack_str)
+
+
+@cli.command()
+def export_mermaid(
+    *,
+    schemapack: Annotated[
+        Path,
+        typer.Argument(
+            help="Provide the path to a schemapack file to export.",
+        ),
+    ],
+    content_properties: Annotated[
+        bool,
+        typer.Option(
+            "--content-properties",
+            "-c",
+            help="Include properties in the output.",
+        ),
+    ] = False,
+):
+    """Generate an entity relationship diagram based on the mermaid markup from the
+    provided schemapack.
+    """
+    with expect_schemapack_errors():
+        schemapack_ = load_schemapack(schemapack)
+
+    erd_diagram = export_mermaid_impl(
+        schemapack=schemapack_, content_properties=content_properties
+    )
+    print_output(erd_diagram)
+
+    print_final_success("Schemapack exported successfully.")

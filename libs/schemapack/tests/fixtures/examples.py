@@ -24,6 +24,7 @@ EXAMPLES_DIR = ROOT_DIR / "examples"
 SCHEMAPACK_DIR = EXAMPLES_DIR / "schemapack"
 VALID_SCHEMAPACK_DIR = SCHEMAPACK_DIR / "valid"
 INVALID_SCHEMAPACK_DIR = SCHEMAPACK_DIR / "invalid"
+ERD_DIR = EXAMPLES_DIR / "erd"
 DATAPACK_DIR = EXAMPLES_DIR / "datapack"
 VALID_DATAPACK_DIR = DATAPACK_DIR / "valid"
 INVALID_DATAPACK_DIR = DATAPACK_DIR / "invalid"
@@ -32,6 +33,7 @@ DENORMALIZED_DIR = EXAMPLES_DIR / "denormalized"
 schemapack_suffix = ".schemapack.yaml"
 datapack_suffix = ".datapack.yaml"
 denomalizated_suffix = ".denormalized.yaml"
+erd_suffix = ".mm.txt"
 
 
 def list_examples_in_dir(dir: Path, *, suffix: str) -> dict[str, Path]:
@@ -102,3 +104,15 @@ def list_denormalized_in_dir(dir: Path) -> dict[str, Path]:
 
 
 DENORMALIZED_PATHS = list_denormalized_in_dir(DENORMALIZED_DIR)
+
+
+def list_erds_in_dir(dir: Path) -> dict[str, Path]:
+    """List all erd files in the given dir.
+
+    Returns:
+        A dict of {example_name: path}.
+    """
+    return list_examples_in_dir(dir, suffix=erd_suffix)
+
+
+ERD_PATHS = list_erds_in_dir(ERD_DIR)
