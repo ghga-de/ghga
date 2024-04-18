@@ -15,9 +15,9 @@
 
 """Fixtures for the inter service integration tests"""
 
+import asyncio
 from typing import NamedTuple
 
-from hexkit.providers.testing.utils import get_event_loop
 from pytest import fixture
 
 from fixtures.auth import TokenGenerator, auth_fixture
@@ -25,7 +25,8 @@ from fixtures.config import Config
 from fixtures.connector import ConnectorFixture, connector_fixture
 from fixtures.dsk import DskFixture, dsk_fixture
 from fixtures.file import batch_file_fixture, file_fixture
-from fixtures.http_req import HttpClient, Response, http_fixture
+from fixtures.http_client import HttpClient, Response, http_fixture
+from fixtures.iva import IVAFixture, iva_fixture
 from fixtures.kafka import KafkaFixture, kafka_fixture
 from fixtures.mongo import MongoFixture, mongo_fixture
 from fixtures.s3 import S3Fixture, s3_fixture
@@ -51,9 +52,18 @@ __all__ = [
     "Response",
     "StateStorage",
     "vault_fixture",
+    "iva_fixture",
 ]
 
-event_loop = get_event_loop(scope="session")
+
+def event_loop_fixture():
+    """Event loop fixture for when an event loop is needed beyond function scope."""
+    loop = asyncio.get_event_loop()
+    yield loop
+    loop.close()
+
+
+event_loop = fixture(fixture_function=event_loop_fixture, scope="session")
 
 
 class JointFixture(NamedTuple):
@@ -69,6 +79,7 @@ class JointFixture(NamedTuple):
     connector: ConnectorFixture
     state: StateStorage
     vault: VaultFixture
+    iva: IVAFixture
 
 
 @fixture(name="config", scope="session")  # pyright: ignore
@@ -90,9 +101,10 @@ def joint_fixture(
     connector: ConnectorFixture,
     state: StateStorage,
     vault: VaultFixture,
+    iva: IVAFixture,
 ) -> JointFixture:
     """A fixture that collects all fixtures for integration testing."""
 
     return JointFixture(
-        config, http, kafka, mongo, s3, auth, dsk, connector, state, vault
+        config, http, kafka, mongo, s3, auth, dsk, connector, state, vault, iva
     )

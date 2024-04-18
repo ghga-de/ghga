@@ -16,15 +16,27 @@
 
 """Fixture for testing APIs that use an auth token."""
 
+import hashlib
+import json
+from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Optional
+from urllib.parse import parse_qs, urlparse
 
+import pyotp
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+from httpx import Response
 from jwcrypto import jwk
+from pydantic import BaseModel, EmailStr, Field, model_validator
+from pyparsing import Any
 from pytest import fixture
 
+from fixtures.state import StateStorage
+
 from .config import Config
-from .http_req import HttpClient
+from .http_client import HttpClient
 
 __all__ = ["auth_fixture"]
 
@@ -32,11 +44,47 @@ DEFAULT_VALID_SECONDS = 60 * 60  # 10 mins
 DEFAULT_USER_STATUS = "active"
 
 
+class Session(BaseModel):
+    """Session object that is passed to the client."""
+
+    user_id: Optional[str] = Field(None, alias="id")
+    session_id: str
+    csrf: str
+    ext_id: str
+    name: str
+    email: EmailStr
+    state: str
+    timeout: int
+    extends: int
+    role: Optional[str] = None
+
+    @model_validator(mode="after")
+    def assign_ext_id_to_id(self):
+        """If ID is not provided, assign the ext_id value.
+
+        Internal ID is assigned when the user is registered,
+        until then external ID is used.
+        """
+        if self.user_id is None:
+            self.user_id = self.ext_id
+        return self
+
+    class Config:
+        populate_by_name = True
+
+
+class TOTPAlgorithm(str, Enum):
+    """Hash algorithm used for TOTP code generation"""
+
+    SHA1 = "sha1"
+    SHA256 = "sha256"
+    SHA512 = "sha512"
+
+
 class TokenGenerator:
     """Generator for auth tokens"""
 
     use_api_gateway: bool
-    use_auth_adapter: bool
     key_file: Path
     auth_adapter_url: str
     op_url: str
@@ -46,12 +94,19 @@ class TokenGenerator:
 
     def __init__(self, config: Config, http: HttpClient):
         self.use_api_gateway = config.use_api_gateway
-        self.use_auth_adapter = config.use_auth_adapter
         self.key_file = config.auth_key_file
         self.op_url = config.op_url
         self.op_issuer = config.op_issuer
         self.auth_adapter_url = config.auth_adapter_url
         self.http = http
+        if config.totp_algorithm == TOTPAlgorithm.SHA1:
+            self.digest = hashlib.sha1
+        elif config.totp_algorithm == TOTPAlgorithm.SHA256:
+            self.digest = hashlib.sha256
+        elif config.totp_algorithm == TOTPAlgorithm.SHA512:
+            self.digest = hashlib.sha512
+        self.totp_digits = config.totp_digits
+        self.totp_interval = config.totp_interval
 
     @classmethod
     def split_title(cls, full_name: str) -> tuple[Optional[str], str]:
@@ -81,14 +136,122 @@ class TokenGenerator:
         mail_id = name.lower().replace(" ", ".")
         return f"{mail_id}@{self.user_domain}"
 
-    def external_access_token_from_name(
+    def internal_access_token_from_session(self, session_headers: dict) -> str:
+        """Get an unregistered internal access token using the auth adapter."""
+        url = self.auth_adapter_url + "/users"
+        method = self.http.post
+        response = method(url, headers=session_headers)
+        assert not response.text
+        status_code = response.status_code
+        assert status_code == 200, status_code
+        authorization = response.headers.get("Authorization")
+        assert authorization and authorization.startswith("Bearer ")
+        token = authorization.split(None, 1)[-1]
+        assert token and token.count(".") == 2
+        return token
+
+    def headers_for_session(self, session: Session) -> dict[str, str]:
+        """Get proper headers for the given session."""
+        return {
+            "X-CSRF-Token": session.csrf,
+            "Cookie": f"session={session.session_id}",
+        }
+
+    def session_from_response(
+        self, response: Response, session_id: Optional[str] = None
+    ) -> Session:
+        """Get a session object from the response."""
+        if not session_id:
+            session_id = response.cookies.get("session")
+        assert session_id
+        session_header = response.headers.get("X-Session")
+        assert session_header
+        session_dict = json.loads(session_header)
+        session = Session(session_id=session_id, **session_dict)
+        return session
+
+    def get_saved_session(
+        self, name: str, state_store: StateStorage
+    ) -> Optional[Session]:
+        """Check state store and get session for the user"""
+        sub = self.get_sub(name)
+        assert state_store, "No state store provided. Cannot query session."
+        session = state_store.get_state(f"session-{sub}") or None
+        return Session(**session) if session else None
+
+    def fetch_session(
+        self,
+        name: str,
+        email: Optional[str] = None,
+        title: Optional[str] = None,
+        user_id: Optional[str] = None,
+        valid_seconds: int = DEFAULT_VALID_SECONDS,
+        state_store: Optional[StateStorage] = None,
+    ) -> Session:
+        """Fetch the current session.
+
+        If the session ID is not known, the user is logged in
+        using an external access token.
+        """
+        if title is None:
+            title, name = self.split_title(name)
+        sub = user_id if user_id else self.get_sub(name)
+
+        session_id = None
+        if state_store:
+            session = self.get_saved_session(name, state_store)
+            if session:
+                auth_headers = self.headers_for_session(session)
+                response = self.auth_login(headers=auth_headers)
+                session_id = session.session_id
+
+        if not session_id:
+            external_token = self.oidc_login(
+                name=name, email=email, sub=sub, valid_seconds=valid_seconds
+            )
+            auth_headers = {"Authorization": f"Bearer {external_token}"}
+
+        response = self.auth_login(headers=auth_headers)
+        session = self.session_from_response(response, session_id=session_id)
+        return session
+
+    def save_session(self, name: str, session: Session, state_store: StateStorage):
+        """Memorize the session for the user with the given name."""
+        sub = self.get_sub(name)
+        session_dict = session.model_dump()
+        assert state_store, "No state store provided. Cannot query session."
+        state_store.set_state(f"session-{sub}", session_dict)
+
+    def headers(
+        self,
+        session: Optional[Session] = None,
+    ):
+        """Generate headers for HTTP requests.
+
+        If there is no session provided, an empty header will be returned.
+
+        If the API gateway is used according to the configuration setting
+        `use_api_gateway`, then the headers containing external access
+        token for the API gateway will be created. Otherwise the headers
+        containing internal access token for internal access will be
+        generated via the Auth Adapter.
+        """
+        if not session:
+            return {}
+        headers = self.headers_for_session(session=session)
+        if not self.use_api_gateway:
+            internal_token = self.internal_access_token_from_session(headers)
+            headers = {"Authorization": f"Bearer {internal_token}"}
+        return headers
+
+    def oidc_login(
         self,
         name: str,
         email: Optional[str] = None,
         sub: Optional[str] = None,
         valid_seconds: Optional[int] = None,
     ):
-        """Create an external access token for the given name and email address."""
+        """Login with OpenID Connect."""
         if not valid_seconds:
             valid_seconds = DEFAULT_VALID_SECONDS
         login_info = {
@@ -106,89 +269,102 @@ class TokenGenerator:
         assert token and token.count(".") == 2
         return token
 
-    def internal_access_token_from_external_access_token(
-        self, token: str, for_registration: bool = False
-    ) -> str:
-        """Get an internal from an external access token using the auth adapter."""
-        url = self.auth_adapter_url + "/users"
-        method = self.http.post if for_registration else self.http.get
-        headers = {"Authorization": f"Bearer {token}"}
-        response = method(url, headers=headers)  # type: ignore
+    def auth_login(self, headers: dict[str, Any]):
+        """Get or create session."""
+        url = self.auth_adapter_url + "/rpc/login"
+        response = self.http.post(url, headers=headers)
         status_code = response.status_code
-        assert status_code == 200, status_code
-        assert not response.json()
-        authorization = response.headers.get("Authorization")
-        assert authorization and authorization.startswith("Bearer ")
-        token = authorization.split(None, 1)[-1]
-        assert token and token.count(".") == 2
+        assert status_code == 204, status_code
+        return response
+
+    def get_totp_token(
+        self,
+        name: str,
+        user_id: str,
+        headers: dict[str, Any],
+        state_store: StateStorage,
+        force: bool = False,
+    ) -> str:
+        """Request a valid TOTP token."""
+        sub = self.get_sub(name)
+        if not force:
+            assert state_store, "No state store provided. Cannot query TOTP token."
+            token = state_store.get_state(f"totp-token-{sub}")
+            if token:
+                return token
+        user_info = {"user_id": user_id, "force": force}
+        url = self.auth_adapter_url + "/totp-token"
+        response = self.http.post(url, json=user_info, headers=headers)
+        status_code = response.status_code
+        assert status_code == 201, status_code
+        uri = response.json().get("uri")
+        assert uri
+        uri_params = parse_qs(urlparse(uri).query)
+        assert "secret" in uri_params
+        token = uri_params["secret"][0]
+        state_store.set_state(f"totp-token-{sub}", token)
         return token
 
-    def internal_access_token_from_name(
-        self,
-        name: str,
-        email: Optional[str] = None,
-        title: Optional[str] = None,
-        sub: Optional[str] = None,
-        user_id: Optional[str] = None,
-        status: Optional[str] = None,
-        valid_seconds: Optional[int] = None,
+    def generate_totp(
+        self, token: str, for_time: Optional[datetime] = None, offset: int = 0
     ) -> str:
-        """Create an internal access token for the given name and email address."""
-        email = self.get_email(name)
-        role = "data_steward" if "steward" in name.lower() else None
-        if not status:
-            status = DEFAULT_USER_STATUS
-        claims = {
-            "name": name,
-            "email": email,
-            "title": title,
-            "role": role,
-            "status": status,
-        }
-        if user_id:
-            claims["id"] = user_id
-        if sub:
-            claims["ext_id"] = sub
-        if not valid_seconds:
-            valid_seconds = DEFAULT_VALID_SECONDS
-        return sign_and_serialize_token(claims, self.key, valid_seconds)
+        """Generate a TOTP code for testing purposes."""
+        totp = pyotp.TOTP(
+            token,
+            digest=self.digest,
+            digits=self.totp_digits,
+            interval=self.totp_interval,
+        )
+        if for_time is None:
+            for_time = now_as_utc()
+        return totp.at(for_time, offset)
 
-    def generate_headers(
+    def verify_totp(self, user_id: str, totp: str, headers: dict[str, Any]) -> Response:
+        """Verify the TOTP code."""
+        user_info = {"user_id": user_id, "totp": totp}
+        url = self.auth_adapter_url + "/rpc/verify-totp"
+        return self.http.post(url, json=user_info, headers=headers)
+
+    def auth_logout(
         self,
-        name: str,
-        email: Optional[str] = None,
-        title: Optional[str] = None,
-        user_id: Optional[str] = None,
-        valid_seconds: int = DEFAULT_VALID_SECONDS,
-    ) -> dict[str, str]:
-        """Generate headers with auth token with specified claims.
+        session: Session,
+    ):
+        """Logout and remove session."""
+        url = self.auth_adapter_url + "/rpc/logout"
+        session_headers = self.headers_for_session(session)
+        response = self.http.post(url, headers=session_headers)
+        status_code = response.status_code
+        assert status_code == 204, status_code
 
-        If the API gateway should used according to the configuration setting
-        `use_api_gateway`, then an external access token will be created.
-        Otherwise an internal access token will be generated, either directly or
-        via the auth adapter, again depending on the setting `use_auth_adapter`.
-        """
-        if title is None:
-            title, name = self.split_title(name)
-        sub = None if user_id else self.get_sub(name)
-        if self.use_api_gateway or self.use_auth_adapter:
-            token = self.external_access_token_from_name(
-                name=name, email=email, sub=sub, valid_seconds=valid_seconds
-            )
-            if not self.use_api_gateway:
-                token = self.internal_access_token_from_external_access_token(
-                    token, for_registration=not user_id
-                )
+    def authenticate(
+        self,
+        session: Session,
+        state_store: StateStorage,
+        user_id: Optional[str] = None,
+    ) -> Response:
+        """Authenticate with two-factor authentication."""
+        session_headers = self.headers_for_session(session)
+        # Login to retrieve up-to-date session information from the server
+        response = self.auth_login(session_headers)
+        session_header = response.headers.get("X-Session")
+        assert session_header
+        session_dict = json.loads(session_header)
+        if session_dict.get("state") == "Authenticated":
+            return Response(204, content=b"")
         else:
-            token = self.internal_access_token_from_name(
-                name=name,
-                email=email,
-                title=title,
-                sub=sub,
+            # if session state is not "Authenticated", then we need to authenticate
+            user_id = user_id if user_id else session.user_id
+            assert (
+                user_id
+            ), "No user ID provided for authentication or found in the session"
+            totp_token = self.get_totp_token(
+                name=session.name,
                 user_id=user_id,
-                valid_seconds=valid_seconds,
+                headers=session_headers,
+                state_store=state_store,
             )
-        return {"Authorization": f"Bearer {token}"}
+            totp = self.generate_totp(totp_token)
+            return self.verify_totp(user_id, totp, session_headers)
 
     @property
     def key(self) -> jwk.JWK:

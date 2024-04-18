@@ -65,7 +65,6 @@ Located in the `features` directory, the **feature files** are numerically prefi
 
 The Archive Test Bed can be configured through either **YAML file** or **environment variables**, with environment variables having higher priority.
 
-- **Auth Adapter Settings:** The `use_auth_adapter` setting controls the usage of the auth adapter for token exchanges. It's mandatory in black box testing for external OIDC tokens.
 - **States:** The `keep_state_in_db` setting determines whether to store test states in a database or in memory, with the latter being default for automated black box tests.
 - **Additional Authentication:** The `auth_basic` setting is for passing basic authentication credentials, applicable only in black box testing.
 

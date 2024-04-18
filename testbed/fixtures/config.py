@@ -33,9 +33,6 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     use_api_gateway: bool = Field(
         False, description="set to True for black-box testing"
     )
-    use_auth_adapter: bool = Field(
-        True, description="set to True for token exchange via auth adapter"
-    )
     keep_state_in_db: bool = Field(
         True, description="set to True for saving state permanently"
     )
@@ -108,6 +105,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     auth_adapter_url: str = "http://auth:8080"
     auth_basic: str = ""  # for Basic Authentication
     upload_token: str = ""  # simple token for uploading metadata
+    totp_digits: int = 6
+    totp_algorithm: str = "sha1"
+    totp_interval: int = 30
 
     # wkvs
     wkvs_url: str = "http://wkvs"
@@ -135,6 +135,8 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     ums_db_name: str = "auth"
     ums_users_collection: str = "users"
     ums_claims_collection: str = "claims"
+    ums_user_tokens_collection: str = "user_tokens"
+    ums_user_ivas_collection: str = "ivas"
     ums_url: str = "http://ums:8080"
 
     # wps
@@ -172,14 +174,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     @model_validator(mode="after")
     def check_operation_modes(self):
         """Check that operation modes are not conflicting."""
-        try:
-            if self.use_api_gateway:
-                if not self.use_auth_adapter:
-                    raise ValueError("API gateway always uses auth adapter")
-            elif self.auth_basic:
-                raise ValueError("Basic auth must only be used with API gateway")
-        except (KeyError, ValueError) as error:
-            raise ValueError(f"Check operation modes: {error}") from error
+        if not self.use_api_gateway and self.auth_basic:
+            error = "Basic auth must only be used with API gateway"
+            raise ValueError(f"Check operation modes: {error}")
         return self
 
     @model_validator(mode="after")

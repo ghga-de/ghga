@@ -12,7 +12,8 @@ Feature: 27 Dataset Details
     Then the response status code is "200"
     And I get the details of "DS_B" dataset
 
-    When I request an associated sample resource
+  Scenario: View associated sample resource for dataset B
+    When I request an associated sample resource for "DS_B" dataset
     Then the response status code is "200"
     And I get a sample resource
 

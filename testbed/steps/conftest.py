@@ -40,6 +40,7 @@ from fixtures import (  # noqa: RUF100
     event_loop,
     file_fixture,
     http_fixture,
+    iva_fixture,
     joint_fixture,
     kafka_fixture,
     mongo_fixture,
@@ -93,13 +94,6 @@ class UserData(NamedTuple):
     email: str
 
 
-class LoginFixture(NamedTuple):
-    """A fixture to hold a user and a corresponding access token."""
-
-    user: UserData
-    headers: dict[str, str]
-
-
 def get_user_data(name: str, fixtures: JointFixture) -> UserData:
     auth = fixtures.auth
     title, name = auth.split_title(name)
@@ -116,17 +110,59 @@ def registered_as_user(name: str, fixtures: JointFixture) -> UserData:
     return get_user_data(name, fixtures)
 
 
-@given(parse('I am logged in as "{name}"'), target_fixture="login")
-def access_as_user(name: str, fixtures: JointFixture) -> LoginFixture:
-    user = get_user_data(name, fixtures)
-    headers = fixtures.auth.generate_headers(name=name, user_id=user.id)
-    return LoginFixture(user, headers)
+@given(parse('I am logged in as "{name}"'))
+def access_as_user(name: str, fixtures: JointFixture):
+    sub = fixtures.auth.get_sub(name)
+    session = fixtures.auth.fetch_session(
+        name=name, user_id=sub, state_store=fixtures.state
+    )
+    fixtures.auth.save_session(name=name, session=session, state_store=fixtures.state)
+
+
+@given(parse('I am authenticated as "{full_name}"'))
+def authenticate_user(full_name: str, fixtures: JointFixture):
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, f"No session found for {full_name}"
+    response = fixtures.auth.authenticate(
+        session=session, user_id=session.user_id, state_store=fixtures.state
+    )
+    assert response.status_code == 204, response.text
+
+
+@given(parse('the user "{name}" is logged out'))
+def logout_as_user(name: str, fixtures: JointFixture):
+    """Log out the user without knowing the login status on server.
+
+    Sessions that are alive in the Auth Adapter need to be removed.
+    In order to achieve this, the session is retrieved via login and used to logout.
+    """
+    sub = fixtures.auth.get_sub(name)
+    session = fixtures.auth.get_saved_session(name=name, state_store=fixtures.state)
+    if not session:
+        print("No session found, creating a new one.")
+        session = fixtures.auth.fetch_session(name=name, user_id=sub)
+    fixtures.auth.auth_logout(session)
+    fixtures.state.unset_state(f"session-{sub}")
 
 
 @then(parse('the response status code is "{code:d}"'))
 def check_status_code(code: int, response: Response):
     status_code = response.status_code
     assert status_code == code, f"{status_code}: {response.text}"
+
+
+@given("the session store is empty")
+def empty_session_store(fixtures: JointFixture):
+    """Remove all states starting with "session" from the state storage"""
+    fixtures.state.unset_state("session")
+
+
+@given("the TOTP token store is empty")
+def empty_totp_token_store(fixtures: JointFixture):
+    """Remove all states starting with "totp-token" from the state storage"""
+    fixtures.state.unset_state("totp-token-")
 
 
 # Global test bed state memory
@@ -221,3 +257,8 @@ def check_hit_count(count: int, response: Response):
 def check_received_item_count(response: Response, item_count):
     results = response.json()
     assert len(results["hits"]) == item_count
+
+
+@then(parse('the expected item count is "{expected_count:d}"'))
+def check_item_count_in_list(results: list, expected_count):
+    assert len(results) == expected_count

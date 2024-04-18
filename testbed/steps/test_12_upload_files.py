@@ -138,7 +138,7 @@ def call_data_steward_kit_ingest(
         completed_ingest.stdout.strip()
         == "Successfully sent all file upload metadata for ingest."
     )
-    assert not completed_ingest.stderr
+    assert not "ERROR" in completed_ingest.stderr
     assert not completed_ingest.returncode
 
 

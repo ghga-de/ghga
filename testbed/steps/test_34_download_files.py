@@ -31,7 +31,7 @@ from .conftest import (
 )
 from .utils import verify_named_file
 
-scenarios("../features/33_download_files.feature")
+scenarios("../features/34_download_files.feature")
 
 
 @given("the download buckets are empty")

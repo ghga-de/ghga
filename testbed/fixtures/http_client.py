@@ -46,6 +46,7 @@ def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
         headers = request.headers
         url = str(request.url)
         auth = headers.get("Authorization")
+        session = headers.get("Cookie")
         if auth_basic:
             headers["Authorization"] = auth_basic
             auth_methods = "with basic"
@@ -54,6 +55,8 @@ def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
                 auth_methods += " and bearer"
         elif auth:
             auth_methods = "with bearer"
+        elif session:
+            auth_methods = "with session"
         else:
             auth_methods = "without"
         auth_methods += " auth"

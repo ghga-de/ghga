@@ -14,11 +14,12 @@ Feature: 23 Filter Datasets
     Then the response status code is "200"
     And I get the expected results from alias filter
 
-  Scenario: Filter dataset by study file format
+  Scenario: Filter dataset by FASTQ file format
     When I filter dataset with "FASTQ" study file format
     Then the response status code is "200"
     And the expected hit count is "5"
 
+ Scenario: Filter dataset by BAM file format
     When I filter dataset with "BAM" study file format
     Then the response status code is "200"
     And the expected hit count is "0"

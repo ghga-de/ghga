@@ -16,6 +16,8 @@
 
 """Step definition for service health check using health endpoint"""
 
+from json import JSONDecodeError
+
 from pytest_bdd import scenarios, then, when
 
 from .conftest import Config, JointFixture
@@ -23,7 +25,7 @@ from .conftest import Config, JointFixture
 scenarios("../features/01_health_check.feature")
 
 
-def check_api_is_healthy(api: str, fixtures: JointFixture):
+def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901
     """Check that service API is healthy or not reachable if internal."""
     config = fixtures.config
     is_internal = config.use_api_gateway and api in config.internal_apis
@@ -42,17 +44,22 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):
     if status_code != expected_status:
         msg = f"status should be {expected_status}, but is {status_code}"
     elif not is_internal:
-        ret = response.json()
-        if not isinstance(ret, dict):
-            msg = "does not return JSON object"
-        if api == "mail":
-            ok = "total" in ret
-        elif api == "auth_adapter":
-            ok = not ret
+        try:
+            ret = response.json()
+        except JSONDecodeError as e:
+            if api == "auth_adapter":
+                ok = True
+            else:
+                msg = f"does not return JSON object: {e}"
         else:
-            ok = ret.get("status") == "OK"
-        if not ok:
-            msg = f"unexpected response: {ret}"
+            if not isinstance(ret, dict):
+                msg = "does not return JSON object"
+            if api == "mail":
+                ok = "total" in ret
+            else:
+                ok = ret.get("status") == "OK"
+            if not ok:
+                msg = f"unexpected response: {ret}"
     assert not msg, f"Health check at endpoint {health_endpoint}: {msg}"
     if api == "ums":
         check_user_management_apis_are_healthy(fixtures)
@@ -60,11 +67,16 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):
 
 def check_user_management_apis_are_healthy(fixtures: JointFixture):
     """Check health and security of user management APIs more thoroughly."""
+    # return True
     name = "Data Steward"
     sub = fixtures.auth.get_sub(name)
     ums_url = fixtures.config.ums_url
-    endpoint = f"{ums_url}/users/{sub}"
-    headers = fixtures.auth.generate_headers(name)
+    session = fixtures.auth.fetch_session(name=name, user_id=sub)
+    fixtures.auth.authenticate(
+        session=session, user_id=session.user_id, state_store=fixtures.state
+    )
+    headers = fixtures.auth.headers(session=session)
+    endpoint = f"{ums_url}/users/{session.user_id}"
     response = fixtures.http.get(endpoint, headers=headers)
     status_code = response.status_code
     assert status_code == 200, f"Error {status_code} when requesting info for {name}"

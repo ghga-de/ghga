@@ -27,10 +27,17 @@ from fixtures.config import Config
 __all__ = ["kafka_fixture", "KafkaFixture"]
 
 
+def wrapped_exec_run(command: str, run_in_shell: bool):
+    pass
+
+
 @async_fixture(name="kafka", scope="session")
 async def kafka_fixture(config: Config) -> AsyncGenerator[KafkaFixture, None]:
     """Pytest fixture for tests depending on the Kafka-based provider."""
     async with KafkaEventPublisher.construct(config=config) as publisher:
         yield KafkaFixture(
-            config=config, kafka_servers=config.kafka_servers, publisher=publisher
+            config=config,
+            kafka_servers=config.kafka_servers,
+            publisher=publisher,
+            cmd_exec_func=wrapped_exec_run,
         )

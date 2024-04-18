@@ -32,8 +32,7 @@ from .utils import get_dataset_overview
 scenarios("../features/27_dataset_details.feature")
 
 
-@when(parse('I request the details of "{alias}" dataset'), target_fixture="response")
-def request_dataset_details(
+def get_dataset_details(
     alias: str, config: Config, http: HttpClient, state: StateStorage
 ) -> Response:
     datasets = state.get_state("all available datasets")
@@ -49,6 +48,13 @@ def request_dataset_details(
     return http.get(url)
 
 
+@when(parse('I request the details of "{alias}" dataset'), target_fixture="response")
+def request_dataset_details(
+    alias: str, config: Config, http: HttpClient, state: StateStorage
+) -> Response:
+    return get_dataset_details(alias=alias, config=config, http=http, state=state)
+
+
 @then(parse('I get the details of "{alias}" dataset'))
 def check_dataset_details(alias: str, response: Response, state: StateStorage):
     result = response.json()
@@ -60,10 +66,14 @@ def check_dataset_details(alias: str, response: Response, state: StateStorage):
     assert overview == datasets[alias]
 
 
-@when(parse("I request an associated sample resource"), target_fixture="response")
+@when(
+    parse('I request an associated sample resource for "{alias}" dataset'),
+    target_fixture="response",
+)
 def request_one_associated_samples(
-    config: Config, http: HttpClient, response: Response
+    alias: str, config: Config, http: HttpClient, state: StateStorage
 ) -> Response:
+    response = get_dataset_details(alias=alias, config=config, http=http, state=state)
     result = response.json()
     match = re.search("'sample': '(GHGAN[0-9]+)'", repr(result))
     assert match

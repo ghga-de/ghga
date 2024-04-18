@@ -66,6 +66,7 @@ def check_summary_statistics(response: Response):
         },
         "Publication": {"count": 2},
         "Sample": {"count": 2},
+        "SampleFile": {"count": 0},
         "SequencingExperiment": {"count": 1},
         "SequencingProcess": {"count": 9},
         "SequencingProcessFile": {

@@ -13,13 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Step definitions for requesting access in the frontend"""
+"""Step definitions for user authentication and registration"""
 
 from datetime import datetime, timedelta
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from .conftest import JointFixture, Response, given, parse, scenarios, then, when
+from .conftest import (
+    JointFixture,
+    Response,
+    given,
+    parse,
+    scenarios,
+    then,
+    when,
+)
 
 scenarios("../features/30_user_registration.feature")
 
@@ -41,17 +49,25 @@ def user_not_yet_registered(full_name: str, fixtures: JointFixture):
 
 
 @when(
-    parse('the user "{full_name}" retrieves the own user data'),
+    parse('"{full_name}" retrieves their user data'),
     target_fixture="response",
 )
 def user_fetches_own_info(full_name: str, fixtures: JointFixture):
+    """Fetches the user data for the given user from the UMS.
+
+    Use session authentication if exist otherwise no authentication.
+    """
     sub = fixtures.auth.get_sub(full_name)
-    url = f"{fixtures.config.ums_url}/users/{sub}"
-    headers = fixtures.auth.generate_headers(full_name)
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    headers = fixtures.auth.headers(session=session)
+    user_id = session.user_id if session else sub
+    url = f"{fixtures.config.ums_url}/users/{user_id}"
     return fixtures.http.get(url, headers=headers)
 
 
-@when(parse('the user "{full_name}" tries to register'), target_fixture="response")
+@when(parse('"{full_name}" registers as a new user'), target_fixture="response")
 def user_registers(full_name: str, fixtures: JointFixture):
     title, name = fixtures.auth.split_title(full_name)
     email = fixtures.auth.get_email(name)
@@ -63,7 +79,10 @@ def user_registers(full_name: str, fixtures: JointFixture):
         "ext_id": sub,
     }
     url = f"{fixtures.config.ums_url}/users"
-    headers = fixtures.auth.generate_headers(full_name)
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    headers = fixtures.auth.headers(session=session)
     return fixtures.http.post(url, json=user_data, headers=headers)
 
 
@@ -97,3 +116,47 @@ def user_gets_id(full_name: str, fixtures: JointFixture, response: Response):
     registered_users = fixtures.state.get_state("registered users") or {}
     registered_users[sub] = user_id
     fixtures.state.set_state("registered users", registered_users)
+
+
+@given(parse('I lost my TOTP token as "{full_name}"'))
+def totp_token_is_lost(full_name: str, fixtures: JointFixture):
+    sub = fixtures.auth.get_sub(full_name)
+    token = fixtures.state.get_state(f"totp-token-{sub}")
+    assert not token, f"TOTP token for {full_name} should not exist"
+
+
+@when(
+    parse('I retrieve a new TOTP token as "{full_name}"'),
+    target_fixture="new_totp_token",
+)
+def get_new_totp_token(full_name: str, fixtures: JointFixture):
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, "User session not found"
+    assert session.user_id, "User ID not found"
+    session_headers = fixtures.auth.headers_for_session(session)
+    totp_token = fixtures.auth.get_totp_token(
+        name=session.name,
+        user_id=session.user_id,
+        headers=session_headers,
+        state_store=fixtures.state,
+        force=True,  # requesting a new one because the previous is lost
+    )
+    return totp_token
+
+
+@then(parse('the new TOTP token for "{full_name}" is validated'))
+def validate_new_token(full_name: str, new_totp_token: str, fixtures: JointFixture):
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, f"No session found for {full_name}"
+    assert session.user_id, f"user_id is missing for {full_name}"
+    session_headers = fixtures.auth.headers_for_session(session)
+    totp = fixtures.auth.generate_totp(new_totp_token)
+    response = fixtures.auth.verify_totp(session.user_id, totp, session_headers)
+    assert response.status_code == 204, response.text
+    sub = fixtures.auth.get_sub(full_name)
+    token_state = fixtures.state.get_state(f"totp-token-{sub}")
+    assert token_state == new_totp_token

@@ -30,8 +30,9 @@ Feature: 40 Deletion of datasets
     Given we have the state "John Doe is allowed to download the test dataset"
     And I am registered as "Dr. John Doe"
     And I am logged in as "Dr. John Doe"
+    And I am authenticated as "Dr. John Doe"
 
-    When the list of datasets is queried
+    When "Dr. John Doe" lists the datasets
     Then the response status code is "200"
     And no dataset is returned
 

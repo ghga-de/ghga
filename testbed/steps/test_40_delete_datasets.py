@@ -31,8 +31,7 @@ from .conftest import (
     when,
 )
 from .test_13_load_metadata import run_the_load_command
-from .test_32_work_packages import query_datasets_with_wps
-from .test_33_download_files import clean_connector_work_dir, keys_are_made_available
+from .test_34_download_files import clean_connector_work_dir, keys_are_made_available
 from .utils import get_dataset_overview, search_dataset_rpc
 
 scenarios("../features/40_delete_datasets.feature")
@@ -155,10 +154,17 @@ def check_access_grants_in_claims_repository(config: Config, mongo: MongoFixture
     assert not grants
 
 
-# The following step is re-used from the work package creation test
-when("the list of datasets is queried", target_fixture="response")(
-    query_datasets_with_wps
-)
+@when(parse('"{full_name}" lists the datasets'), target_fixture="response")
+def query_datasets_with_wps(fixtures: JointFixture, full_name: str):
+    # This step is the copy of the one in the work package creation test
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session
+    headers = fixtures.auth.headers(session=session)
+    user_id = session.user_id
+    url = f"{fixtures.config.wps_url}/users/{user_id}/datasets"
+    return fixtures.http.get(url, headers=headers)
 
 
 @then("no dataset is returned")
