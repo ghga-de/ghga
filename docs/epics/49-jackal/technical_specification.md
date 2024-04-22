@@ -151,7 +151,8 @@ III. Transpile schemapack-based models to a spreadsheet representation
 
 - Make transpiler produce datapack instead of original JSON format
 - Migrate ghga-transpiler to a more general configuration strategy that ideally lives longer than individual metadata models
-  - Refactor transpiler to read relevant information from hidden sheet in XLS rather than config maintained in transpiler code base
+  - Refactor the transpiler to read the infomation on i) the data types (e.g., list, str, int), ii) the value restriction (unrestricted, controlled vocabulary, value from another class) from a hidden sheet in the XLS file. This information will be presented in table form with boolean values.
+  - Refactor the transpiler to read the second hidden sheet where the indices of the header row, start row, and start column are provided; and a third hidden sheet where the version of the transpilation protocol is encoded.
 
 ## Human Resource/Time Estimation:
 
