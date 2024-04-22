@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,8 +83,6 @@ async def test_create_access_request(
     """Test that an active user can create an access request."""
     kafka = joint_fixture.kafka
     topic = joint_fixture.config.access_request_events_topic
-    async with kafka.record_events(in_topic=topic):
-        pass  # skip previous events
     async with kafka.record_events(in_topic=topic) as recorder:
         response = await joint_fixture.rest_client.post(
             "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -307,8 +305,6 @@ async def test_patch_access_request(
     # set status to allowed as data steward
     kafka = joint_fixture.kafka
     topic = joint_fixture.config.access_request_events_topic
-    async with kafka.record_events(in_topic=topic):
-        pass  # skip previous events
     async with kafka.record_events(in_topic=topic) as recorder:
         response = await joint_fixture.rest_client.patch(
             f"/access-requests/{access_request_id}",
