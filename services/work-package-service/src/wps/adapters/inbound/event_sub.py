@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -119,7 +119,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             await self._repository.delete_dataset(validated_payload.accession)
 
     async def _consume_validated(
-        self, *, payload: JsonObject, type_: Ascii, topic: Ascii
+        self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
     ) -> None:
         """
         Receive and process an event with already validated topic and type.
@@ -128,6 +128,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             payload (JsonObject): The data/payload to send with the event.
             type_ (str): The type of the event.
             topic (str): Name of the topic the event was published to.
+            key: A key used for routing the event.
         """
         if type_ == self._dataset_upsertion_event_type:
             await self._handle_upsertion(payload)

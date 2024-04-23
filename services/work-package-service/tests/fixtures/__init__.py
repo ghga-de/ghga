@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,8 @@
 from collections.abc import AsyncGenerator
 from datetime import timedelta
 
+import pytest
+import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import (
@@ -27,13 +29,11 @@ from ghga_service_commons.utils.jwt_helpers import (
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from pytest import fixture
-from pytest_asyncio import fixture as async_fixture
 
 from wps.adapters.outbound.dao import DatasetDaoConstructor, WorkPackageDaoConstructor
 from wps.config import Config
 from wps.core.repository import WorkPackageRepository
-from wps.inject import Consumer, prepare_consumer, prepare_rest_app
+from wps.inject import Consumer, prepare_rest_app
 
 from .access import AccessCheckMock
 
@@ -70,14 +70,14 @@ def headers_for_token(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-@fixture(name="auth_headers")
+@pytest.fixture(name="auth_headers")
 def fixture_auth_headers() -> dict[str, str]:
     """Get auth headers for testing"""
     token = sign_and_serialize_token(AUTH_CLAIMS, AUTH_KEY_PAIR)
     return headers_for_token(token)
 
 
-@fixture(name="bad_auth_headers")
+@pytest.fixture(name="bad_auth_headers")
 def fixture_bad_auth_headers() -> dict[str, str]:
     """Get a invalid auth headers for testing"""
     claims = AUTH_CLAIMS.copy()
@@ -86,17 +86,17 @@ def fixture_bad_auth_headers() -> dict[str, str]:
     return headers_for_token(token)
 
 
-@fixture(name="auth_context")
+@pytest.fixture(name="auth_context")
 def fixture_auth_context() -> AuthContext:
     """Fixture for getting an auth context"""
     iat = now_as_utc() - timedelta(1)  # validity is actually assumed by the repository
-    return AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)  # pyright: ignore
+    return AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)  # type: ignore
 
 
-@async_fixture(name="config", scope="session")
-async def fixture_config(
+@pytest.fixture(name="config", scope="session")
+def fixture_config(
     kafka_fixture: KafkaFixture, mongodb_fixture: MongoDbFixture
-) -> AsyncGenerator[Config, None]:
+) -> Config:
     """Fixture for creating a test configuration."""
     return Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
@@ -107,7 +107,7 @@ async def fixture_config(
     )
 
 
-@async_fixture(name="repository", scope="session")
+@pytest_asyncio.fixture(name="repository", scope="session")
 async def fixture_repository(
     config: Config, mongodb_fixture: MongoDbFixture
 ) -> WorkPackageRepository:
@@ -129,16 +129,7 @@ async def fixture_repository(
     )
 
 
-@async_fixture(name="consumer", scope="session")
-async def fixture_consumer(config: Config) -> AsyncGenerator[Consumer, None]:
-    """Get test event subscriber for the work package service."""
-    async with prepare_consumer(config=config) as consumer:
-        # wait for event to be submitted and processed,
-        # so that the database is populated with the published datasets
-        yield consumer
-
-
-@async_fixture(name="client", scope="session")
+@pytest_asyncio.fixture(name="client", scope="session")
 async def fixture_client(config: Config) -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for the work package service."""
     async with prepare_rest_app(config=config) as app:
@@ -146,7 +137,7 @@ async def fixture_client(config: Config) -> AsyncGenerator[AsyncTestClient, None
             yield client
 
 
-@fixture
+@pytest.fixture
 def non_mocked_hosts() -> list[str]:
     """Get hosts that are not mocked by pytest-httpx."""
     return ["test", "localhost"]

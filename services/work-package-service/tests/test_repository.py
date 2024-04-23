@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,9 +16,9 @@
 
 """Test the Work Package Repository."""
 
+import pytest
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
-from pytest import mark, raises
 
 from wps.core.models import (
     WorkPackage,
@@ -38,10 +38,11 @@ from .fixtures import (  # noqa: F401
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET
 
+pytestmark = pytest.mark.asyncio(scope="session")
 
-@mark.asyncio(scope="session")
+
 async def test_work_package_and_token_creation(
-    repository: WorkPackageRepository, auth_context: AuthContext
+    repository: WorkPackageRepository, auth_context: AuthContext, empty_mongodb
 ):
     """Test creating a work package and a work order token"""
     # announce dataset
@@ -67,12 +68,12 @@ async def test_work_package_and_token_creation(
 
     # retrieve work package
 
-    with raises(repository.WorkPackageAccessError):
+    with pytest.raises(repository.WorkPackageAccessError):
         await repository.get(
             work_package_id, check_valid=True, work_package_access_token="foo"
         )
 
-    with raises(repository.WorkPackageAccessError):
+    with pytest.raises(repository.WorkPackageAccessError):
         await repository.get(
             "invalid-id", check_valid=True, work_package_access_token=wpat
         )
@@ -100,21 +101,21 @@ async def test_work_package_and_token_creation(
 
     # crate work order token
 
-    with raises(repository.WorkPackageAccessError):
+    with pytest.raises(repository.WorkPackageAccessError):
         await repository.work_order_token(
             work_package_id="invalid-work-package-id",
             file_id="file-id-1",
             work_package_access_token=wpat,
         )
 
-    with raises(repository.WorkPackageAccessError):
+    with pytest.raises(repository.WorkPackageAccessError):
         await repository.work_order_token(
             work_package_id=work_package_id,
             file_id="invalid-file-id",
             work_package_access_token=wpat,
         )
 
-    with raises(repository.WorkPackageAccessError):
+    with pytest.raises(repository.WorkPackageAccessError):
         await repository.work_order_token(
             work_package_id=work_package_id,
             file_id="file-id-1",
@@ -162,14 +163,14 @@ async def test_work_package_and_token_creation(
 
     # crate work order token
 
-    with raises(repository.WorkPackageAccessError):
+    with pytest.raises(repository.WorkPackageAccessError):
         await repository.work_order_token(
             work_package_id=work_package_id,
             file_id="non-existing-file",
             work_package_access_token=wpat,
         )
 
-    with raises(repository.WorkPackageAccessError):
+    with pytest.raises(repository.WorkPackageAccessError):
         await repository.work_order_token(
             work_package_id=work_package_id,
             file_id="file-id-2",
@@ -198,12 +199,11 @@ async def test_work_package_and_token_creation(
     }
 
 
-@mark.asyncio(scope="session")
 async def test_checking_accessible_datasets(
-    repository: WorkPackageRepository, auth_context: AuthContext
+    repository: WorkPackageRepository, auth_context: AuthContext, empty_mongodb
 ):
     """Test checking the accessibility of datasets"""
-    with raises(repository.DatasetNotFoundError):
+    with pytest.raises(repository.DatasetNotFoundError):
         await repository.get_dataset("some-dataset_id")
 
     assert await repository.get_datasets(auth_context=auth_context) == []
@@ -216,12 +216,9 @@ async def test_checking_accessible_datasets(
     assert await repository.get_datasets(auth_context=auth_context) == [DATASET]
 
 
-@mark.asyncio(scope="session")
-async def test_deletion_of_datasets(
-    repository: WorkPackageRepository, auth_context: AuthContext
-):
+async def test_deletion_of_datasets(repository: WorkPackageRepository, empty_mongodb):
     """Test deletion of existing datasets"""
-    with raises(repository.DatasetNotFoundError):
+    with pytest.raises(repository.DatasetNotFoundError):
         await repository.delete_dataset(DATASET.id)
 
     await repository.register_dataset(DATASET)
@@ -229,5 +226,5 @@ async def test_deletion_of_datasets(
 
     await repository.delete_dataset(DATASET.id)
 
-    with raises(repository.DatasetNotFoundError):
+    with pytest.raises(repository.DatasetNotFoundError):
         await repository.delete_dataset(DATASET.id)

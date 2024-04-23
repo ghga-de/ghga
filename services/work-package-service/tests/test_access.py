@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,16 +18,18 @@
 
 from collections.abc import AsyncGenerator
 
-from pytest import mark
-from pytest_asyncio import fixture as async_fixture
+import pytest
+import pytest_asyncio
 from pytest_httpx import HTTPXMock
 
 from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
 
+pytestmark = pytest.mark.asyncio()
+
 DOWNLOAD_ACCESS_URL = "http://test-access:1234"
 
 
-@async_fixture(name="access_check", scope="function")
+@pytest_asyncio.fixture(name="access_check", scope="function")
 async def fixture_access_check() -> AsyncGenerator[AccessCheckAdapter, None]:
     """Get configured access test adapter."""
     config = AccessCheckConfig(download_access_url=DOWNLOAD_ACCESS_URL)
@@ -35,7 +37,6 @@ async def fixture_access_check() -> AsyncGenerator[AccessCheckAdapter, None]:
         yield adapter
 
 
-@mark.asyncio
 async def test_check_download_access(
     access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
 ):
@@ -61,7 +62,6 @@ async def test_check_download_access(
     assert await check_access("some-user-id", "no-data-id") is False
 
 
-@mark.asyncio
 async def test_get_download_datasets(
     access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
 ):

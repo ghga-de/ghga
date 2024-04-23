@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,10 @@
 
 """Test the API of the work package service."""
 
+import pytest
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
-from pytest import mark
 from pytest_httpx import HTTPXMock
 
 from .fixtures import (  # noqa: F401
@@ -28,13 +28,15 @@ from .fixtures import (  # noqa: F401
     fixture_bad_auth_headers,
     fixture_client,
     fixture_config,
-    fixture_consumer,
     fixture_repository,
     headers_for_token,
     non_mocked_hosts,
 )
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET
+
+pytestmark = pytest.mark.asyncio(scope="session")
+
 
 CREATION_DATA = {
     "dataset_id": "some-dataset-id",
@@ -46,7 +48,6 @@ CREATION_DATA = {
 TIMEOUT = 5
 
 
-@mark.asyncio(scope="session")
 async def test_health_check(client: AsyncTestClient):
     """Test that the health check endpoint works."""
     response = await client.get("/health", timeout=TIMEOUT)
@@ -55,7 +56,6 @@ async def test_health_check(client: AsyncTestClient):
     assert response.json() == {"status": "OK"}
 
 
-@mark.asyncio(scope="session")
 async def test_create_work_package_unauthorized(
     client: AsyncTestClient, bad_auth_headers: dict[str, str]
 ):
@@ -68,19 +68,17 @@ async def test_create_work_package_unauthorized(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@mark.asyncio(scope="session")
 async def test_get_work_package_unauthorized(client: AsyncTestClient):
     """Test that getting a work package needs authorization."""
     response = await client.get("/work-packages/some-work-package-id")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@mark.asyncio(scope="session")
 async def test_create_work_order_token(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
     httpx_mock: HTTPXMock,
-    populate_db,
+    populated_mongodb,
 ):
     """Test that work order tokens can be properly created."""
     # mock the access check for the test dataset
@@ -219,14 +217,12 @@ async def test_create_work_order_token(
     }
 
 
-@mark.asyncio(scope="session")
 async def test_get_datasets_unauthenticated(client: AsyncTestClient):
     """Test that the list of accessible datasets cannot be fetched unauthenticated."""
     response = await client.get("/users/john-doe@ghga.de/datasets")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@mark.asyncio(scope="session")
 async def test_get_datasets_for_another_user(
     client: AsyncTestClient, auth_headers: dict[str, str]
 ):
@@ -237,12 +233,11 @@ async def test_get_datasets_for_another_user(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@mark.asyncio(scope="session")
 async def test_get_datasets_when_none_authorized(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
     httpx_mock: HTTPXMock,
-    populate_db,
+    populated_mongodb,
 ):
     """Test that no datasets are fetched when none are accessible."""
     # mock the access check for the test dataset
@@ -265,12 +260,11 @@ async def test_get_datasets_when_none_authorized(
     assert response_data == []
 
 
-@mark.asyncio(scope="session")
 async def test_get_datasets(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
     httpx_mock: HTTPXMock,
-    populate_db,
+    populated_mongodb,
 ):
     """Test that the list of accessible datasets can be fetched."""
     # mock the access check for the test dataset

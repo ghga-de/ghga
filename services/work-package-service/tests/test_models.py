@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,8 @@
 
 from datetime import datetime, timezone
 
+import pytest
 from pydantic import ValidationError
-from pytest import raises
 
 from wps.core.models import (
     WorkOrderToken,
@@ -76,28 +76,28 @@ def test_good_creation_data():
 
 def test_bad_creation_data():
     """Test instantiating invalid work package creation DTO."""
-    with raises(ValidationError, match="dataset_id"):
+    with pytest.raises(ValidationError, match="dataset_id"):
         WorkPackageCreationData(
             dataset_id=["foo", "bar"],  # type: ignore
             type=WorkType.DOWNLOAD,
             file_ids=["some-file-id", "another-file-id"],
             user_public_crypt4gh_key=user_public_crypt4gh_key,
         )
-    with raises(ValidationError, match="type"):
+    with pytest.raises(ValidationError, match="type"):
         WorkPackageCreationData(
             dataset_id="some-dataset-id",
             type="UNKNOWN_TYPE",  # type: ignore
             file_ids=["some-file-id", "another-file-id"],
             user_public_crypt4gh_key=user_public_crypt4gh_key,
         )
-    with raises(ValidationError, match="file_ids"):
+    with pytest.raises(ValidationError, match="file_ids"):
         WorkPackageCreationData(
             dataset_id="some-dataset-id",
             type=WorkType.DOWNLOAD,
             file_ids="some-file-id",  # type: ignore
             user_public_crypt4gh_key=user_public_crypt4gh_key,
         )
-    with raises(ValidationError, match="user_public_crypt4gh_key"):
+    with pytest.raises(ValidationError, match="user_public_crypt4gh_key"):
         WorkPackageCreationData(
             dataset_id="some-dataset-id",
             type=WorkType.DOWNLOAD,
