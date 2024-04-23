@@ -48,6 +48,7 @@ parameters:
       exp: null
       iat: null
       name: null
+      id: null
     auth_key: '{}'
     auth_map_claims: {}
     auto_reload: true
@@ -63,12 +64,18 @@ parameters:
     host: "0.0.0.0"
     kafka_servers:
     - kafka-kafka-bootstrap:9092
-
-    notification_event_topic: notifications
-    notification_event_type: notification
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
+    access_request_events_topic: access_request_events
+    access_request_created_event_type: access_request_created
+    access_request_allowed_event_type: access_request_allowed
+    access_request_denied_event_type: access_request_denied
     openapi_url: /openapi.json
     port: 8080
-    service_instance_id: 'ars_1'
+    service_instance_id: 'rest.1'
     service_name: ars
     workers: 1
 

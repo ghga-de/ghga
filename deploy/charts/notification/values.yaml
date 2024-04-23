@@ -33,6 +33,11 @@ parameters:
       </html>
     kafka_servers:
     - kafka:9092
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
     login_password: test
     login_user: test@test.com
     notification_event_topic: notifications
@@ -44,7 +49,7 @@ parameters:
 
       Warm regards,
       The GHGA Team
-    service_instance_id: 'ns_1'
+    service_instance_id: 'rest.1'
     service_name: ns
     smtp_host: 127.0.0.1
     smtp_port: 587

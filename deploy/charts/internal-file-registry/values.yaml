@@ -35,12 +35,20 @@ parameters:
     files_to_stage_topic: downloads
     files_to_stage_type: unstaged_drs_object_requested
     kafka_servers: []
-    permanent_bucket: permanent
-    s3_access_key_id: null
-    s3_endpoint_url: null
-    s3_secret_access_key: null
-    s3_session_token: null
-    service_instance_id: "ifrs_1"
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
+    service_instance_id: "consumer.1"
     service_name: internal_file_registry
+    object_storages:
+      test:
+        bucket: permanent
+        credentials:
+          s3_access_key_id: null
+          s3_endpoint_url: null
+          s3_secret_access_key: null
+          s3_session_token: null
 
 shareProcessNamespace: false

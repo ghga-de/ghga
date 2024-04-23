@@ -49,6 +49,11 @@ parameters:
     host: "0.0.0.0"
     kafka_servers:
     - kafka:9092
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
 
     openapi_url: /openapi.json
     port: 8080
@@ -66,8 +71,8 @@ parameters:
     service_name: mass
     workers: 1
   rest:
-    service_instance_id: 'mass_rest_1'
+    service_instance_id: 'rest.1'
   consumer:
-    service_instance_id: 'mass_consumer_1'
+    service_instance_id: 'consumer.1'
 
 shareProcessNamespace: false
