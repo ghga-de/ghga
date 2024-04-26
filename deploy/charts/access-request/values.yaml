@@ -56,7 +56,6 @@ parameters:
     cors_allowed_headers: []
     cors_allowed_methods: []
     cors_allowed_origins: []
-    data_steward_email: helpdesk@ghga.de
     db_connection_str: null
     db_name: ars
     docs_url: /docs
