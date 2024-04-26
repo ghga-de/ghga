@@ -24,8 +24,7 @@ from collections import Counter
 from collections.abc import Iterable
 from typing import Annotated, Any, Literal, Optional, Union
 
-import arcticfreeze
-from arcticfreeze import FrozenDict
+from arcticfreeze import FrozenDict, freeze
 from pydantic import BeforeValidator, Field, WrapSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import TypeAlias
@@ -82,7 +81,7 @@ ResourceIdSet: TypeAlias = Annotated[
 ContentPropertyValue: TypeAlias = Annotated[
     Any,
     # the value of a content property is deeply frozen:
-    BeforeValidator(arcticfreeze.freeze),
+    BeforeValidator(lambda obj: freeze(obj, by_superclass=True)),
 ]
 
 

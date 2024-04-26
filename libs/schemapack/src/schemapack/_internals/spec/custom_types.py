@@ -16,22 +16,14 @@
 
 """Custom types annotations used for type hinting."""
 
-from typing import Annotated as _Annotated
+from typing import Annotated
 
 from pydantic import Field as _Field
-from typing_extensions import TypeAlias as _TypeAlias
+from typing_extensions import TypeAlias
 
-__all__ = [
-    "ClassName",
-    "ResourceId",
-    "RelationPropertyName",
-    "ContentPropertyName",
-    "IdPropertyName",
-]
-
-_NonEmptyStr: _TypeAlias = _Annotated[str, _Field(..., min_length=1)]
-ClassName: _TypeAlias = _NonEmptyStr
-ResourceId: _TypeAlias = _NonEmptyStr
-RelationPropertyName: _TypeAlias = _NonEmptyStr
-ContentPropertyName: _TypeAlias = _NonEmptyStr
-IdPropertyName: _TypeAlias = _NonEmptyStr
+_NonEmptyStr: TypeAlias = Annotated[str, _Field(..., min_length=1)]
+ClassName: TypeAlias = _NonEmptyStr
+ResourceId: TypeAlias = _NonEmptyStr
+RelationPropertyName: TypeAlias = _NonEmptyStr
+ContentPropertyName: TypeAlias = _NonEmptyStr
+IdPropertyName: TypeAlias = _NonEmptyStr
