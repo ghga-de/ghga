@@ -44,7 +44,7 @@ parameters:
     # Injected through Vault
     auth_ext_keys: null
     auth_key: null
-    db_url: null
+    db_connection_str: null
 
     # Required for auth-adapter only and injected through Vault
     basic_auth_credentials: null
@@ -56,7 +56,7 @@ parameters:
 
     add_as_data_stewards: []
     api_ext_path: /api/auth
-    api_root_path: /
+    api_root_path: ''
     auth_algs:
     - ES256
     auth_check_claims:
@@ -64,6 +64,7 @@ parameters:
       exp: null
       iat: null
       name: null
+      id: null
     auth_ext_algs:
     - RS256
     - ES256
@@ -79,12 +80,25 @@ parameters:
     docs_url: /docs
     host: 0.0.0.0
 
+    dataset_deletion_event_topic: metadata_datasets
+    dataset_deletion_event_type: dataset_deleted
+
     openapi_url: /openapi.json
-    organization_url: https://ghga.de
+    organization_url: https://ghga.de/
     port: 8080
     service_name: auth_service
     users_collection: users
+    user_tokens_collection: user_tokens
     workers: 1
+
+    kafka_servers: []
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
+
+    ivas_collection: ivas
 
 authService:
   emissary:

@@ -38,6 +38,8 @@ parameters:
     vault_verify: false
     vault_role_id: null
     vault_secret_id: null
+    vault_path: ekss
+    vault_kube_role: null
     workers: 1
 
 shareProcessNamespace: false

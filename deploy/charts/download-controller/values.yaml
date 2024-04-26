@@ -76,24 +76,34 @@ parameters:
     files_to_register_type: internal_file_registered
     host: "0.0.0.0"
     kafka_servers: []
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
 
     openapi_url: /openapi.json
     outbox_bucket: outbox
     port: 8080
     presigned_url_expires_after: 10
     retry_access_after: 120
-    s3_access_key_id: null
-    s3_endpoint_url: null
-    s3_secret_access_key: null
-    s3_session_token: null
+    object_storages:
+      test:
+        bucket: outbox
+        credentials:
+          aws_config_ini: null
+          s3_endpoint_url: null
+          s3_access_key_id: null
+          s3_secret_access_key: null
+          s3_session_token: null
     service_instance_id: 'dcs_1'
     service_name: dcs
     unstaged_download_event_topic: downloads
     unstaged_download_event_type: unstaged_drs_object_requested
     workers: 1
   rest:
-    service_instance_id: 'dcs_rest_1'
+    service_instance_id: 'rest.1'
   consumer:
-    service_instance_id: 'dcs_consumer_1'
+    service_instance_id: 'consumer.1'
 
 shareProcessNamespace: false

@@ -37,7 +37,7 @@ mapping:
 
 parameters:
   default:
-    api_root_path: /
+    api_root_path: ""
     auto_reload: false
     cors_allow_credentials: false
     cors_allowed_headers: []
@@ -46,13 +46,18 @@ parameters:
     docs_url: /docs
     host: 0.0.0.0
     kafka_servers: []
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
 
     openapi_url: /openapi.json
     port: 8080
     private_key: ""
     publisher_topic: interrogations
     publisher_type: validation_success
-    service_instance_id: "fis_1"
+    service_instance_id: rest.1
     service_name: fis
     source_bucket_id: staging
     token_hashes: []
@@ -60,6 +65,9 @@ parameters:
     vault_verify: false
     vault_role_id: null
     vault_secret_id: null
+    vault_path: ekss
+    vault_kube_role: null
     workers: 1
+    selected_storage_alias: staging
 
 shareProcessNamespace: false

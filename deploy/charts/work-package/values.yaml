@@ -37,7 +37,7 @@ mapping:
 
 parameters:
   default:
-    api_root_path: /
+    api_root_path: ""
     auth_algs:
     - ES256
     auth_check_claims:
@@ -45,6 +45,7 @@ parameters:
       exp: null
       iat: null
       name: null
+      id: null
     auth_key: '{}'
     auth_map_claims: {}
     auto_reload: true
@@ -62,6 +63,11 @@ parameters:
     download_access_url: http://claims-repository-svc:8080/download-access
     host: "0.0.0.0"
     kafka_servers: []
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
 
     openapi_url: /openapi.json
     port: 8080
@@ -72,8 +78,8 @@ parameters:
     work_packages_collection: workPackages
     workers: 1
   rest:
-    service_instance_id: 'wps_rest_1'
+    service_instance_id: 'rest.1'
   consumer:
-    service_instance_id: 'wps_consumer_1'
+    service_instance_id: 'consumer.1'
 
 shareProcessNamespace: false
