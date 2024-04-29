@@ -40,7 +40,7 @@ from ifrs.ports.inbound.file_registry import FileRegistryPort
 from ifrs.ports.outbound.dao import FileMetadataDaoPort
 from pytest_asyncio.plugin import _ScopeName
 
-from tests.fixtures.config import get_config
+from tests_ifrs.fixtures.config import get_config
 
 OUTBOX_BUCKET = "outbox"
 PERMANENT_BUCKET = "permanent"
