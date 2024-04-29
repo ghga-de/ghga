@@ -21,7 +21,7 @@ from typing import Optional
 from pcs.config import Config
 from pydantic_settings import BaseSettings
 
-from tests.fixtures.utils import BASE_DIR
+from tests_pcs.fixtures.utils import BASE_DIR
 
 TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 
