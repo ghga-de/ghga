@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
@@ -56,7 +55,7 @@ async def prepare_core(
 def prepare_core_with_override(
     *,
     config: Config,
-    core_override: Optional[OrchestratorPort] = None,
+    core_override: OrchestratorPort | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return (
@@ -70,7 +69,7 @@ def prepare_core_with_override(
 async def prepare_event_subscriber(
     *,
     config: Config,
-    core_override: Optional[OrchestratorPort] = None,
+    core_override: OrchestratorPort | None = None,
 ) -> AsyncGenerator[KafkaEventSubscriber, None]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also

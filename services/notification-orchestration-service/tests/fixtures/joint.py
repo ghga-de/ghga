@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@
 
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest_asyncio
 from hexkit.custom_types import PytestScope
@@ -45,7 +44,7 @@ class JointFixture:
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     user_dao: UserDaoPort
-    test_user: Optional[User] = None
+    test_user: User | None = None
 
 
 async def joint_fixture_function(

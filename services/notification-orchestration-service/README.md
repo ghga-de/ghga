@@ -185,7 +185,7 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
 
 - **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, the a newly correlation ID will be generated and used in the event header. Default: `true`.
 
