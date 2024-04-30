@@ -17,7 +17,6 @@
 """Module containing the main FastAPI router and all route functions."""
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Response
 from fastapi.exceptions import HTTPException
@@ -106,9 +105,9 @@ async def create_access_request(
 async def get_access_requests(
     repository: dummies.AccessRequestRepoDummy,
     auth_context: UserAuthContext,
-    dataset_id: Optional[str] = None,
-    user_id: Optional[str] = None,
-    status: Optional[AccessRequestStatus] = None,
+    dataset_id: str | None = None,
+    user_id: str | None = None,
+    status: AccessRequestStatus | None = None,
 ) -> list[AccessRequest]:
     """Get access requests"""
     try:

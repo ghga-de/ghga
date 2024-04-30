@@ -17,7 +17,6 @@
 """Interface for the work package repository."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from ghga_service_commons.auth.ghga import AuthContext
 
@@ -72,9 +71,9 @@ class AccessRequestRepositoryPort(ABC):
     async def get(
         self,
         *,
-        dataset_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        status: Optional[AccessRequestStatus] = None,
+        dataset_id: str | None = None,
+        user_id: str | None = None,
+        status: AccessRequestStatus | None = None,
         auth_context: AuthContext,
     ) -> list[AccessRequest]:
         """Get the list of all access requests with the given properties.
@@ -92,7 +91,7 @@ class AccessRequestRepositoryPort(ABC):
         *,
         status: AccessRequestStatus,
         auth_context: AuthContext,
-        iva_id: Optional[str] = None,
+        iva_id: str | None = None,
     ) -> None:
         """Update the status of the access request.
 

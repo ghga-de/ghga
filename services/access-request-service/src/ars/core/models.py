@@ -18,7 +18,6 @@ in the API.
 """
 
 from enum import Enum
-from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, Field
@@ -50,7 +49,7 @@ class AccessRequestCreationData(BaseDto):
     """All data necessary to create an access request."""
 
     user_id: str = Field(default=..., description="ID of the user who requests access")
-    iva_id: Optional[str] = Field(
+    iva_id: str | None = Field(
         default=None,
         description="ID of the IVA to be used for this request,"
         " but this can also be specified later",
@@ -86,10 +85,10 @@ class AccessRequestData(AccessRequestCreationData):
         default=AccessRequestStatus.PENDING,
         description="The status of this access request",
     )
-    status_changed: Optional[UTCDatetime] = Field(
+    status_changed: UTCDatetime | None = Field(
         default=None, description="Last change date of the status of this request"
     )
-    changed_by: Optional[str] = Field(
+    changed_by: str | None = Field(
         default=None,
         description="The ID of the data steward who made the status change",
     )
@@ -98,7 +97,7 @@ class AccessRequestData(AccessRequestCreationData):
 class AccessRequestPatchData(BaseDto):
     """All data that describes an access request patch."""
 
-    iva_id: Optional[str] = Field(
+    iva_id: str | None = Field(
         default=None,
         description="ID of the IVA to be used for this request",
     )

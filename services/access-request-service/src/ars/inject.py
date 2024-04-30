@@ -18,7 +18,6 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from fastapi import FastAPI
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
@@ -64,7 +63,7 @@ async def prepare_core(
 def prepare_core_with_override(
     *,
     config: Config,
-    core_override: Optional[AccessRequestRepositoryPort] = None,
+    core_override: AccessRequestRepositoryPort | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return (
@@ -78,7 +77,7 @@ def prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    core_override: Optional[AccessRequestRepositoryPort] = None,
+    core_override: AccessRequestRepositoryPort | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize a REST API app along with all its dependencies.
 

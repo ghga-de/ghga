@@ -19,7 +19,7 @@
 from collections.abc import AsyncIterator, Mapping
 from datetime import timedelta
 from operator import attrgetter
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 import pytest
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
@@ -165,7 +165,7 @@ ACCESS_REQUESTS = [
 class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
     """Dummy AccessRequest DAO for testing."""
 
-    last_upsert: Optional[AccessRequest]
+    last_upsert: AccessRequest | None
 
     def reset(self):
         """Reset the last recorded upsert."""

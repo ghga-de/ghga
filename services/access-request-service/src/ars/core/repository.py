@@ -18,7 +18,7 @@
 
 from datetime import timedelta
 from operator import attrgetter
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from ghga_service_commons.auth.ghga import AuthContext, has_role
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -127,9 +127,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     async def get(
         self,
         *,
-        dataset_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        status: Optional[AccessRequestStatus] = None,
+        dataset_id: str | None = None,
+        user_id: str | None = None,
+        status: AccessRequestStatus | None = None,
         auth_context: AuthContext,
     ) -> list[AccessRequest]:
         """Get the list of all access requests with the given properties.
@@ -171,7 +171,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         *,
         status: AccessRequestStatus,
         auth_context: AuthContext,
-        iva_id: Optional[str] = None,
+        iva_id: str | None = None,
     ) -> None:
         """Update the status of the access request.
 
