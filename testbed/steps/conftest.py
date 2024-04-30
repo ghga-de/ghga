@@ -37,7 +37,6 @@ from fixtures import (  # noqa: RUF100
     config_fixture,
     connector_fixture,
     dsk_fixture,
-    event_loop,
     file_fixture,
     http_fixture,
     iva_fixture,
