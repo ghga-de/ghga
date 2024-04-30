@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 
 """FastAPI dependencies for the auth adapter"""
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import HTTPException, Request, status
 
@@ -63,7 +63,7 @@ async def get_session_store(
 async def get_session(
     store: Annotated[SessionStorePort[Session], Depends(get_session_store)],
     request: Request,
-) -> Optional[Session]:
+) -> Session | None:
     """Get the current session.
 
     Also checks the CSRF token if this is a write request.
@@ -114,6 +114,6 @@ SessionStoreDependency = Annotated[
     SessionStorePort[Session], Depends(get_session_store)
 ]
 
-SessionDependency = Annotated[Optional[Session], Depends(get_session)]
+SessionDependency = Annotated[Session | None, Depends(get_session)]
 
 TOTPHandlerDependency = Annotated[TOTPHandlerPort[TOTPToken], Depends(get_totp_handler)]

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ import json
 import logging
 import time
 from functools import cached_property, lru_cache
-from typing import Any, NamedTuple, Optional, Union
+from typing import Any, NamedTuple
 from urllib.parse import urlparse
 
 import httpx
@@ -145,7 +145,7 @@ class JWTConfig:
 
     external_jwks: jwk.JWKSet  # the external public key set
     internal_jwk: jwk.JWK  # the internal key pair
-    external_algs: Optional[list[str]] = None  # allowed external signing algorithms
+    external_algs: list[str] | None = None  # allowed external signing algorithms
     check_at_claims: dict[str, Any] = {  # access token claims that shall be verified
         "iat": None,
         "exp": None,
@@ -258,7 +258,7 @@ def _assert_ui_claims_not_empty(ui_claims: dict[str, Any]) -> None:
 
 
 def decode_and_validate_token(
-    access_token: str, key: Union[jwk.JWK, jwk.JWKSet] = jwt_config.external_jwks
+    access_token: str, key: jwk.JWK | jwk.JWKSet = jwt_config.external_jwks
 ) -> dict[str, Any]:
     """Decode and validate the given JSON Web Token.
 
@@ -312,7 +312,7 @@ class UserInfo(NamedTuple):
     email: str
 
 
-def get_user_info(access_token: Optional[str]):
+def get_user_info(access_token: str | None):
     """Get the user info from the OIDC access token.
 
     Raises a UserInfoError in case the user info cannot be retrieved.

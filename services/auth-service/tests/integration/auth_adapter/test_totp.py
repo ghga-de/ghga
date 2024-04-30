@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@
 
 from datetime import datetime
 from random import randint
-from typing import Optional, cast
 from urllib.parse import parse_qs, urlparse
 
 import pyotp
@@ -53,18 +52,18 @@ VERIFY_TOTP_PATH = AUTH_PATH + "/rpc/verify-totp"
 
 
 def get_valid_totp_code(
-    secret: str, when: Optional[datetime] = None, offset: int = 0
+    secret: str, when: datetime | None = None, offset: int = 0
 ) -> str:
     """Generate a valid TOTP code for the given secret."""
     if not when:
-        when = cast(datetime, now_as_utc())
+        when = now_as_utc()
     return pyotp.TOTP(secret).at(when, offset)
 
 
-def get_invalid_totp_code(secret: str, when: Optional[datetime] = None) -> str:
+def get_invalid_totp_code(secret: str, when: datetime | None = None) -> str:
     """Generate an invalid TOTP code for the given secret."""
     if not when:
-        when = cast(datetime, now_as_utc())
+        when = now_as_utc()
     # get the time codes for the tolerance interval
     # plus one more for possible timecode increment during the test
     valid_codes = {get_valid_totp_code(secret, when, offset) for offset in range(-1, 3)}

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,17 +61,17 @@ async def test_iva_exists():
         changed=now,
     )
     kwargs = {
-        "user_dao": cast(UserDao, DummyUserDao(id_=user_id)),
-        "iva_dao": cast(IvaDao, DummyIvaDao([iva])),
+        "user_dao": DummyUserDao(id_=user_id),
+        "iva_dao": DummyIvaDao([iva]),
     }
 
     assert await iva_exists(None, None, **kwargs) is False  # type: ignore
     assert await iva_exists(None, iva_id, **kwargs) is False  # type: ignore
     assert await iva_exists(user_id, None, **kwargs) is False  # type: ignore
-    assert await iva_exists("other-user-id", iva_id, **kwargs) is False
-    assert await iva_exists(user_id, "other-iva-id", **kwargs) is False
+    assert await iva_exists("other-user-id", iva_id, **kwargs) is False  # type: ignore
+    assert await iva_exists(user_id, "other-iva-id", **kwargs) is False  # type: ignore
 
-    assert await iva_exists(user_id, iva_id, **kwargs) is True
+    assert await iva_exists(user_id, iva_id, **kwargs) is True  # type: ignore
 
 
 async def test_iva_exists_when_it_belongs_to_a_different_user():
@@ -87,12 +87,12 @@ async def test_iva_exists_when_it_belongs_to_a_different_user():
         changed=now,
     )
     kwargs = {
-        "user_dao": cast(UserDao, DummyUserDao(id_=user_id)),
-        "iva_dao": cast(IvaDao, DummyIvaDao([iva])),
+        "user_dao": DummyUserDao(id_=user_id),
+        "iva_dao": DummyIvaDao([iva]),
     }
 
-    assert await iva_exists(user_id, iva_id, **kwargs) is False
-    assert await iva_exists("other-user-id", iva_id, **kwargs) is False
+    assert await iva_exists(user_id, iva_id, **kwargs) is False  # type: ignore
+    assert await iva_exists("other-user-id", iva_id, **kwargs) is False  # type: ignore
 
 
 @pytest.mark.parametrize("state", IvaState.__members__.values())
@@ -124,9 +124,9 @@ async def test_iva_is_verified(state: IvaState):
 
 async def test_is_data_steward():
     """Test check that a user is a data steward."""
-    claim_dao = DummyClaimDao()
-    invalid_date = claim_dao.invalid_date
-    claim_dao = cast(ClaimDao, claim_dao)
+    dummy_claim_dao = DummyClaimDao()
+    invalid_date = dummy_claim_dao.invalid_date
+    claim_dao = cast(ClaimDao, dummy_claim_dao)
     user_dao = cast(UserDao, DummyUserDao(id_="james@ghga.de"))
     assert await is_data_steward(
         "james@ghga.de", user_dao=user_dao, claim_dao=claim_dao

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 """Test the core user session store functionality."""
 
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from pytest import mark
@@ -53,7 +53,7 @@ class CoreSessionStore(SessionStore):
         await self._update_session(session, **kwargs)
         self.saved_session = session
 
-    async def get_session(self, session_id: str) -> Optional[Session]:
+    async def get_session(self, session_id: str) -> Session | None:
         """Get a valid user session with a given ID."""
         raise NotImplementedError
 

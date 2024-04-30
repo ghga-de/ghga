@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 """Manage request and response headers"""
 
 import json
-from typing import Callable, Optional, Union
+from collections.abc import Callable
 
 from fastapi import Request, Response, status
 
@@ -25,7 +25,7 @@ from ..core.session_store import Session
 __all__ = ["get_bearer_token", "session_to_header", "pass_auth_response"]
 
 
-def get_bearer_token(*header_values: Optional[str]) -> Optional[str]:
+def get_bearer_token(*header_values: str | None) -> str | None:
     """Extract the bearer token from the authorization header.
 
     Multiple possible authorization header values can be passed,
@@ -40,10 +40,10 @@ def get_bearer_token(*header_values: Optional[str]) -> Optional[str]:
 
 
 def session_to_header(
-    session: Session, timeouts: Optional[Callable[[Session], tuple[int, int]]] = None
+    session: Session, timeouts: Callable[[Session], tuple[int, int]] | None = None
 ) -> str:
     """Serialize a session to a response header value to be used by the frontend."""
-    session_dict: dict[str, Union[str, int]] = {
+    session_dict: dict[str, str | int] = {
         "ext_id": session.ext_id,
         "name": session.user_name,
         "email": session.user_email,
@@ -63,9 +63,7 @@ def session_to_header(
     return json.dumps(session_dict, ensure_ascii=False, separators=(",", ":"))
 
 
-def pass_auth_response(
-    request: Request, authorization: Optional[str] = None
-) -> Response:
+def pass_auth_response(request: Request, authorization: str | None = None) -> Response:
     """Create a response for ExtAuth that signals that the request is authorized.
 
     The Authorization header is set as specified.

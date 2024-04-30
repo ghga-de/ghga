@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
 
 """Config Parameter Modeling and Parsing"""
 
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
@@ -27,11 +27,11 @@ from pydantic import Field, HttpUrl
 
 from auth_service.auth_adapter.core.session_store import SessionConfig
 from auth_service.auth_adapter.core.totp import TOTPConfig
-from auth_service.user_management.claims_repository.translators.akafka import (
-    EventSubTranslatorConfig,
-)
 from auth_service.user_management.claims_repository.translators.dao import (
     ClaimDaoConfig,
+)
+from auth_service.user_management.claims_repository.translators.event_sub import (
+    EventSubTranslatorConfig,
 )
 from auth_service.user_management.user_registry.core.registry import UserRegistryConfig
 from auth_service.user_management.user_registry.translators.dao import UserDaoConfig
@@ -61,7 +61,7 @@ class Config(
 
     run_auth_adapter: bool = Field(default=False, description="Run as auth adapter")
 
-    auth_key: Optional[str] = Field(
+    auth_key: str | None = Field(  # type: ignore
         default=None,
         description="internal public key for user management"
         " (key pair for auth adapter)",
@@ -73,7 +73,7 @@ class Config(
         " (user, session and TOTP management)",
     )
 
-    auth_ext_keys: Optional[str] = Field(
+    auth_ext_keys: str | None = Field(
         default=None,
         description="external public key set for auth adapter"
         " (not used for user management)",
@@ -83,7 +83,7 @@ class Config(
         description="allowed algorithms for signing external tokens",
     )
 
-    basic_auth_credentials: Optional[str] = Field(
+    basic_auth_credentials: str | None = Field(
         default=None,
         description="credentials for basic authentication, separated by whitespace",
     )
@@ -106,7 +106,7 @@ class Config(
         " If no APIs are specified, run the event consumer.",
     )
 
-    add_as_data_stewards: list[Union[str, dict]] = Field(
+    add_as_data_stewards: list[str | dict] = Field(
         default=[],
         description="a list of external IDs of data stewards or user objects"
         " to seed the claims repository with",
@@ -116,7 +116,7 @@ class Config(
         default="https://proxy.aai.lifescience-ri.eu",
         description="external OIDC authority URL used by the auth adapter",
     )
-    oidc_userinfo_endpoint: Optional[HttpUrl] = Field(
+    oidc_userinfo_endpoint: HttpUrl | None = Field(
         default="https://proxy.aai.lifescience-ri.eu/OIDC/userinfo",
         description="external OIDC userinfo endpoint used by the auth adapter",
     )
@@ -145,4 +145,4 @@ class Config(
     )
 
 
-CONFIG = Config()  # pyright: ignore
+CONFIG = Config()  # type: ignore

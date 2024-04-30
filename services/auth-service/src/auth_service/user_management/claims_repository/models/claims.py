@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 """Claims model classes used as DTOs and core entities."""
 
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
@@ -139,12 +139,12 @@ class ClaimValidity(BaseDto):
 class ClaimCreation(ClaimValidity):
     """A claim made about a user with a user ID"""
 
-    iva_id: Optional[str] = Field(  # actually UUID
+    iva_id: str | None = Field(  # actually UUID
         default=None, description="ID of an IVA associated with this claim"
     )
 
     visa_type: VisaType = Field(default=..., examples=["AffiliationAndRole"])
-    visa_value: Union[EmailStr, HttpUrl, list[Identity]] = Field(
+    visa_value: EmailStr | HttpUrl | list[Identity] = Field(
         default=...,
         description="Scope of the claim depending of the visa type",
         examples=["faculty@home.org"],
@@ -159,21 +159,21 @@ class ClaimCreation(ClaimValidity):
     source: HttpUrl = Field(
         default=..., description="Asserting organization", examples=["https://home.org"]
     )  # organization making the assertion
-    sub_source: Optional[HttpUrl] = Field(
+    sub_source: HttpUrl | None = Field(
         default=None,
         description="Asserting sub-organization",
         examples=["https://dac.home.org"],
     )  # e.g. DAC or Data Hub
-    asserted_by: Optional[AuthorityLevel] = Field(
+    asserted_by: AuthorityLevel | None = Field(
         default=None, description="Authority level", examples=["so", "dac", "system"]
     )
 
-    conditions: Optional[list[list[Condition]]] = Field(
+    conditions: list[list[Condition]] | None = Field(
         default=None, description="Set of conditions"
     )  # nested list (first level OR, second level AND)
 
     @field_serializer("source", "sub_source", "visa_value")
-    def serialize_url(self, value: Any) -> Optional[str]:
+    def serialize_url(self, value: Any) -> str | None:
         """Remove trailing slash from sources without path."""
         if value:
             value = str(value)
@@ -198,7 +198,7 @@ class ClaimFullCreation(ClaimCreation):
     creation_date: UTCDatetime = Field(
         default=..., description="Date of creation of this claim"
     )
-    revocation_date: Optional[UTCDatetime] = Field(
+    revocation_date: UTCDatetime | None = Field(
         default=None, description="If revoked, date of revocation"
     )
 

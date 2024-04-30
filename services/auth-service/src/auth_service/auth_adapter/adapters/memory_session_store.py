@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 
 # for the German Human Genome-Phenome Archive (GHGA)
 #
@@ -19,7 +19,7 @@
 
 import asyncio
 from contextlib import suppress
-from typing import Any, Optional
+from typing import Any
 
 from auth_service.auth_adapter.core.session_store import (
     Session,
@@ -59,7 +59,7 @@ class MemorySessionStore(SessionStore):
         await self._update_session(session, **kwargs)
         self.store[session.session_id] = session
 
-    async def get_session(self, session_id: str) -> Optional[Session]:
+    async def get_session(self, session_id: str) -> Session | None:
         """Get a valid user session with a given ID.
 
         If no such user session exists, return None.

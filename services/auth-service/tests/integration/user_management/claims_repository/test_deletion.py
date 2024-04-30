@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,9 +88,11 @@ async def test_deletion_handler(
         )
         await event_subscriber.run(forever=False)
         records = caplog.records
-        assert len(records) == 4, records
-        messages = [record.message for record in records]
-        messages = [message for message in messages if "correlation" not in message]
+        messages = [
+            record.message
+            for record in records
+            if record.module in ("eventsub", "deletion")
+        ]
         assert len(messages) == 2, messages
         assert messages[0].startswith('Consuming event of type "dataset_deleted"')
         assert messages[1] == "Deleted 1 claims for dataset some-dataset-id"

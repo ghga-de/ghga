@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 """Port for managing and using TOTP tokens."""
 
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel
@@ -40,7 +40,7 @@ class TOTPHandlerPort(ABC, Generic[T]):
         ...
 
     @abstractmethod
-    def get_provisioning_uri(self, token: T, name: Optional[str]) -> str:
+    def get_provisioning_uri(self, token: T, name: str | None) -> str:
         """Get the provisioning URI for a TOTP token and the given user name."""
         ...
 
@@ -53,7 +53,7 @@ class TOTPHandlerPort(ABC, Generic[T]):
     def generate_code(
         self,
         token: T,
-        for_time: Optional[UTCDatetime] = None,
+        for_time: UTCDatetime | None = None,
         counter_offset: int = 0,
     ) -> str:
         """Generate a TOTP code for testing purposes."""
@@ -64,8 +64,8 @@ class TOTPHandlerPort(ABC, Generic[T]):
         self,
         token: T,
         code: str,
-        for_time: Optional[UTCDatetime] = None,
-    ) -> Optional[bool]:
+        for_time: UTCDatetime | None = None,
+    ) -> bool | None:
         """Verify a TOTP token with replay attack prevention and rate limiting.
 
         A return value of True means that the code is valid.

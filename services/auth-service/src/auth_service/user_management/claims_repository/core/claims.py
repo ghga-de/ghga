@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,8 @@
 
 """Definitions and helper functions for validating user claims."""
 
+from collections.abc import Callable
 from datetime import timedelta
-from typing import Callable, Optional
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
@@ -132,7 +132,7 @@ def create_controlled_access_filter(dataset_id: str) -> dict[str, str]:
     }
 
 
-def get_dataset_for_value(value: str) -> Optional[str]:
+def get_dataset_for_value(value: str) -> str | None:
     """Return the dataset ID if the given value is a Visa URL Claim for a dataset."""
     if not value.startswith(DATASET_PREFIX):
         return None
@@ -147,7 +147,7 @@ def has_download_access_for_dataset(claim: Claim, dataset_id: str) -> bool:
     return get_dataset_for_value(str(visa_value)) == dataset_id
 
 
-def dataset_id_for_download_access(claim: Claim) -> Optional[str]:
+def dataset_id_for_download_access(claim: Claim) -> str | None:
     """Return dataset ID if the given claim gives download access to a dataset."""
     if not is_internal_claim(claim, VisaType.CONTROLLED_ACCESS_GRANTS):
         return None

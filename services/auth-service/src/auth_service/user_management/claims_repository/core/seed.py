@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 """Functions to seed the repository with user claims."""
 
 import logging
-from typing import Union
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
@@ -62,7 +61,7 @@ async def _remove_existing_data_steward_claims(claim_dao: ClaimDao) -> None:
     log.info("Removed %d existing data steward claim(s).", num_removed_claims)
 
 
-async def _add_user_with_ext_id(user: Union[str, dict], user_dao: UserDao) -> User:
+async def _add_user_with_ext_id(user: str | dict, user_dao: UserDao) -> User:
     """Add a new user with the given external ID to the database."""
     if not isinstance(user, dict):
         raise TypeError("User data (name and email) is missing.")
@@ -78,7 +77,7 @@ async def _add_user_with_ext_id(user: Union[str, dict], user_dao: UserDao) -> Us
 
 
 async def _add_configured_data_steward_claims(
-    data_stewards: list[Union[str, dict]], user_dao: UserDao, claim_dao: ClaimDao
+    data_stewards: list[str | dict], user_dao: UserDao, claim_dao: ClaimDao
 ) -> None:
     # add configured data steward claims
     for data_steward in data_stewards:

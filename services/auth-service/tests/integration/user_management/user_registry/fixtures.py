@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +33,7 @@ async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
     """Get a test client for the user registry."""
     config = Config(
         include_apis=["users"],
-    )  # pyright: ignore
+    )  # type: ignore
     app.dependency_overrides[get_config] = lambda: config
     async with lifespan(app):
         async with AsyncTestClient(app) as client:
@@ -56,7 +56,7 @@ async def fixture_client_with_db(
         db_connection_str=SecretStr(mongodb.get_connection_url()),
         db_name="test-user-registry",
         include_apis=["users"],
-    )  # pyright: ignore
+    )  # type: ignore
     mongodb.get_connection_client().drop_database(config.db_name)
     app.dependency_overrides[get_config] = lambda: config
     assert app.router.lifespan_context

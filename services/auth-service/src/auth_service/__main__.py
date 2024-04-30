@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,7 @@ from auth_service.user_management.claims_repository.deps import (
     ClaimDao,
     get_claim_dao_factory,
 )
-from auth_service.user_management.claims_repository.translators.akafka import (
+from auth_service.user_management.claims_repository.translators.event_sub import (
     EventSubTranslator,
 )
 

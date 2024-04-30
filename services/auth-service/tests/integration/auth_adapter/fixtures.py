@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ from collections.abc import AsyncGenerator, Generator
 from datetime import timedelta
 from importlib import reload
 from os import environ
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -68,7 +68,7 @@ async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
 
     config_with_totp_encryption_key = Config(
         totp_encryption_key=SecretStr(totp_encryption_key),
-    )  # pyright: ignore
+    )  # type: ignore
     main.app.dependency_overrides[get_config] = lambda: config_with_totp_encryption_key
 
     async with AsyncTestClient(main.app) as client:
@@ -95,9 +95,7 @@ _map_session_dict_to_object = {
 }
 
 
-def session_from_response(
-    response: Response, session_id: Optional[str] = None
-) -> Session:
+def session_from_response(response: Response, session_id: str | None = None) -> Session:
     """Get a session object from the response."""
     if not session_id:
         session_id = response.cookies.get("session")
@@ -117,7 +115,7 @@ def session_from_response(
 
 
 async def query_new_session(
-    client: AsyncTestClient, session: Optional[Session] = None
+    client: AsyncTestClient, session: Session | None = None
 ) -> Session:
     """Query the current backend session."""
     if session:
@@ -128,12 +126,13 @@ async def query_new_session(
     response = await client.post(f"{AUTH_PATH}/rpc/login", headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert "X-CSRF-Token" not in response.headers
+    session_id: str | None
     if session:
         assert "session" not in response.cookies
         session_id = session.session_id
     else:
         session_id = response.cookies.get("session")
-        assert session_id
+    assert session_id
     session_header = response.headers.get("X-Session")
     assert session_header
     session_dict = json.loads(session_header)

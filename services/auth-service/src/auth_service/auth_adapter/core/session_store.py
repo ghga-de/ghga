@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 
 import secrets
 from enum import Enum
-from typing import Optional, Protocol
+from typing import Protocol
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import EmailStr, Field
@@ -48,7 +48,7 @@ class Session(BaseSession):
         default=...,
         description="External ID of the associated user",
     )
-    user_id: Optional[str] = Field(
+    user_id: str | None = Field(
         default=None,
         description="Internal ID of the associated user, if registered",
     )
@@ -56,16 +56,16 @@ class Session(BaseSession):
     user_email: EmailStr = Field(
         default=..., description="The email address of the user"
     )
-    user_title: Optional[str] = Field(
+    user_title: str | None = Field(
         default=None, description="Optional academic title of the user"
     )
-    role: Optional[str] = Field(default=None, description="Optional role of the user")
+    role: str | None = Field(default=None, description="Optional role of the user")
     state: SessionState = Field(
         default=SessionState.NEEDS_REGISTRATION,
         description="The authentication state of the user session",
     )
     csrf_token: str = Field(default=..., description="The CSRF token for the session")
-    totp_token: Optional[TOTPToken] = Field(
+    totp_token: TOTPToken | None = Field(
         default=None, description="The TOTP token of the user if available"
     )
     created: UTCDatetime = Field(description="Time when the session was created")
@@ -133,9 +133,9 @@ class SessionStore(SessionStorePort[Session]):
         ext_id: str,
         user_name: str,
         user_email: str,
-        user_id: Optional[str] = None,
-        user_title: Optional[str] = None,
-        role: Optional[str] = None,
+        user_id: str | None = None,
+        user_title: str | None = None,
+        role: str | None = None,
     ) -> Session:
         """Create a new user session without saving it."""
         session_id = self._generate_session_id()
@@ -181,9 +181,9 @@ class SessionStore(SessionStorePort[Session]):
     async def _update_session(
         self,
         session: Session,
-        user: Optional[User] = None,
-        is_data_steward: Optional[AsyncUserPredicate] = None,
-        has_totp_token: Optional[AsyncUserPredicate] = None,
+        user: User | None = None,
+        is_data_steward: AsyncUserPredicate | None = None,
+        has_totp_token: AsyncUserPredicate | None = None,
     ) -> None:
         """Update the given user session."""
         if user is not None and user.ext_id == session.ext_id:

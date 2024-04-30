@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
 import base64
 import hashlib
 from enum import Enum
-from typing import Annotated, Optional
+from typing import Annotated
 
 # nacl is used for encryption of TOTP secrets
 # this library is used anyway by the service commons, so no additional dependency
@@ -55,7 +55,7 @@ class TOTPConfig(BaseSettings):
     totp_issuer: str = Field(
         default="GHGA", description="Issuer name for TOTP provisioning URIs"
     )
-    totp_image: Optional[AnyHttpUrl] = Field(
+    totp_image: AnyHttpUrl | None = Field(
         default=None,
         description="URL of the PNG image provided in the TOTP provisioning URIs",
         examples=["https://www.ghga.de/logo.png"],
@@ -114,7 +114,7 @@ class TOTPConfig(BaseSettings):
         ),
     ] = 32
     # the encryption key is optional since it is only needed by the auth adapter
-    totp_encryption_key: Optional[SecretStr] = Field(
+    totp_encryption_key: SecretStr | None = Field(
         default=None, description="Base64 encoded key used to encrypt TOTP secrets"
     )
 
@@ -186,7 +186,7 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
         encrypted_secret = base64.b64decode(token.encrypted_secret)
         return self._secret_box.decrypt(encrypted_secret).decode("ascii")
 
-    def get_provisioning_uri(self, token: TOTPToken, name: Optional[str]) -> str:
+    def get_provisioning_uri(self, token: TOTPToken, name: str | None) -> str:
         """Get the provisioning URI for a TOTP token and the given user name."""
         totp = pyotp.TOTP(
             self.get_secret(token),
@@ -209,7 +209,7 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
     def generate_code(
         self,
         token: TOTPToken,
-        for_time: Optional[UTCDatetime] = None,
+        for_time: UTCDatetime | None = None,
         counter_offset: int = 0,
     ) -> str:
         """Generate a TOTP code for testing purposes."""
@@ -227,8 +227,8 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
         self,
         token: TOTPToken,
         code: str,
-        for_time: Optional[UTCDatetime] = None,
-    ) -> Optional[bool]:
+        for_time: UTCDatetime | None = None,
+    ) -> bool | None:
         """Verify a TOTP token with replay attack prevention and rate limiting.
 
         A return value of True means that the code is valid.

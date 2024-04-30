@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 
 """Core utilities for the Claims Repository."""
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
@@ -74,7 +74,7 @@ async def is_data_steward(
     user_id: str,
     *,
     claim_dao: ClaimDao,
-    user_dao: Optional[UserDao] = None,
+    user_dao: UserDao | None = None,
     now: Callable[[], UTCDatetime] = now_as_utc,
 ):
     """Check whether the user with the given ID is a data steward.

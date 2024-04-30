@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ Note: If a path_prefix is used for the Emissary AuthService,
 then this must be also specified in the config setting api_root_path.
 """
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import FastAPI, Header, HTTPException, Path, Request, Response, status
 from ghga_service_commons.api import configure_app
@@ -84,7 +84,7 @@ def add_allowed_route(route: str, write: bool = False):
     @app.api_route(route, methods=methods)
     async def allowed_route(
         request: Request,
-        authorization: Annotated[Optional[str], Header()] = None,
+        authorization: Annotated[str | None, Header()] = None,
     ) -> Response:
         """Unprotected route."""
         return pass_auth_response(request, authorization)
@@ -115,8 +115,8 @@ async def login(  # noqa: C901, PLR0913
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
     claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
-    authorization: Annotated[Optional[str], Header()] = None,
-    x_authorization: Annotated[Optional[str], Header()] = None,
+    authorization: Annotated[str | None, Header()] = None,
+    x_authorization: Annotated[str | None, Header()] = None,
 ) -> Response:
     """Create a new or get an existing user session."""
     if session:

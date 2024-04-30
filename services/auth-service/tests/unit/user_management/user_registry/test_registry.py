@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -346,7 +346,7 @@ async def test_get_all_ivas_with_user():
         update={
             "id": "jane@ghga.de",
             "name": "Jane Roe",
-            "title": "Prof.",
+            "title": AcademicTitle.PROF,
             "email": "jane@home.org",
         }
     )
@@ -367,7 +367,7 @@ async def test_get_all_ivas_with_user():
             user_title=user.title,
             user_email=user.email,
         )
-        for iva, user in zip(registry.dummy_ivas, [john, jane, john])
+        for iva, user in zip(registry.dummy_ivas, [john, jane, john], strict=True)
     ]
     ivas_with_users = await registry.get_ivas_with_users()
     assert ivas_with_users == expected_ivas_with_users
@@ -937,7 +937,7 @@ async def test_reset_verified_ivas():
     old_ivas = list(dummy_ivas)
     await registry.reset_verified_ivas("john@ghga.de")
     assert len(dummy_ivas) == len(old_ivas)
-    for old_iva, new_iva in zip(old_ivas, dummy_ivas):
+    for old_iva, new_iva in zip(old_ivas, dummy_ivas, strict=True):
         if old_iva.user_id == "john@ghga.de" and old_iva.state == IvaState.VERIFIED:
             assert new_iva.state == IvaState.UNVERIFIED
             assert new_iva == old_iva.model_copy(

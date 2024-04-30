@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 """Port for managing user sessions that keep track of authentication state."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -53,7 +53,7 @@ class SessionStorePort(ABC, Generic[T]):
         ...
 
     @abstractmethod
-    async def get_session(self, session_id: str) -> Optional[T]:
+    async def get_session(self, session_id: str) -> T | None:
         """Get a valid user session with a given ID.
 
         If no such valid user session exists, return None.

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,6 @@ An IVA is an "indendent verification address" used to verify a user's identity.
 """
 
 from enum import Enum
-from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import ConfigDict, Field
@@ -86,7 +85,7 @@ class IvaInternalData(BaseDto):
     """Internal data of an IVA (not exposed via the API)"""
 
     user_id: str = Field(default=..., description="Internal user ID")
-    verification_code_hash: Optional[str] = Field(
+    verification_code_hash: str | None = Field(
         default=None, description="Salted hash of the verification code for the IVA"
     )
     verification_attempts: int = Field(
@@ -132,7 +131,7 @@ class IvaAndUserData(IvaData):
         default=..., description="The internal ID of the associated user"
     )
     user_name: str = Field(default=..., description="The full name of the user")
-    user_title: Optional[str] = Field(
+    user_title: str | None = Field(
         default=None, description="The academic title of the user"
     )
     user_email: str = Field(default=..., description="The email address of the user")

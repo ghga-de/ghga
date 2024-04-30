@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
 """User model classes used as DTOs and core entities."""
 
 from enum import Enum
-from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import EmailStr, Field
@@ -43,16 +42,16 @@ class AcademicTitle(str, Enum):
 class StatusChange(BaseDto):
     """Details of a status change"""
 
-    previous: Optional[UserStatus] = Field(
+    previous: UserStatus | None = Field(
         default=None, description="Previous user status"
     )
-    by: Optional[str] = Field(
+    by: str | None = Field(
         default=None,
         title="Changed by",
         description="ID of the user who changed the status",
     )
-    context: Optional[str] = Field(default=None, description="Status change context")
-    change_date: Optional[UTCDatetime] = Field(
+    context: str | None = Field(default=None, description="Status change context")
+    change_date: UTCDatetime | None = Field(
         default=None, description="Date of last change"
     )
 
@@ -65,7 +64,7 @@ class UserBasicData(BaseDto):
         description="Full name of the user",
         examples=["Rosalind Franklin"],
     )
-    title: Optional[AcademicTitle] = Field(
+    title: AcademicTitle | None = Field(
         default=None, title="Academic title", description="Academic title of the user"
     )
     email: EmailStr = Field(
@@ -89,10 +88,10 @@ class UserRegisteredData(UserBasicData):
 class UserModifiableData(BaseDto):
     """User data that can be modified"""
 
-    status: Optional[UserStatus] = Field(
+    status: UserStatus | None = Field(
         default=None, description="Registration status of the user"
     )
-    title: Optional[AcademicTitle] = Field(
+    title: AcademicTitle | None = Field(
         default=None, title="Academic title", description="Academic title of the user"
     )
 
@@ -104,7 +103,7 @@ class UserAutomaticData(BaseDto):
         default=..., description="Date when the user was registered"
     )
 
-    status_change: Optional[StatusChange] = Field(
+    status_change: StatusChange | None = Field(
         default=None, description="Last status change"
     )
 

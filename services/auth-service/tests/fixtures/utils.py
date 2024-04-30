@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ import re
 from collections.abc import AsyncIterator, Mapping
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 from fastapi import Request
 from ghga_service_commons.api import ApiConfigBase
@@ -72,17 +72,17 @@ class AdditionalConfig(ApiConfigBase):
     # full internal key for user management and auth adapter
     auth_key: str
     # full external key set for auth adapter
-    auth_ext_keys: Optional[str] = None
+    auth_ext_keys: str | None = None
 
 
 class SigningKeys:
     """Signing keys that can be used for testing."""
 
     internal_jwk: jwk.JWK
-    external_jwk: Optional[jwk.JWK]
+    external_jwk: jwk.JWK | None
 
     def __init__(self):
-        config = AdditionalConfig()  # pyright: ignore
+        config = AdditionalConfig()  # type: ignore
         self.internal_jwk = jwk.JWK.from_json(config.auth_key)
         self.external_jwk = (
             jwk.JWKSet.from_json(config.auth_ext_keys).get_key("test")
@@ -95,9 +95,9 @@ signing_keys = SigningKeys()
 
 
 def create_access_token(
-    key: Optional[jwk.JWK] = None,
+    key: jwk.JWK | None = None,
     expired: bool = False,
-    **kwargs: Union[None, int, str],
+    **kwargs: None | int | str,
 ) -> str:
     """Create an external access token that can be used for testing.
 
@@ -109,7 +109,7 @@ def create_access_token(
     kty = key["kty"]
     assert kty in ("EC", "RSA")
     header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
-    claims: dict[str, Union[None, str, int]] = {
+    claims: dict[str, None | str | int] = {
         "jti": "123-456-789-0",
         "sub": "john@aai.org",
         "iss": str(CONFIG.oidc_authority_url).rstrip("/"),
@@ -135,9 +135,9 @@ def create_access_token(
 
 
 def create_internal_token(
-    key: Optional[jwk.JWK] = None,
+    key: jwk.JWK | None = None,
     expired: bool = False,
-    **kwargs: Union[None, int, str],
+    **kwargs: None | int | str,
 ) -> str:
     """Create an internal token that can be used for testing.
 
@@ -149,7 +149,7 @@ def create_internal_token(
     kty = key["kty"]
     assert kty in ("EC", "RSA")
     header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
-    claims: dict[str, Union[None, int, str]] = {
+    claims: dict[str, None | int | str] = {
         "name": "John Doe",
         "email": "john@home.org",
         "status": "active",
@@ -172,9 +172,9 @@ def create_internal_token(
 
 
 def get_headers_for(
-    key: Optional[jwk.JWK] = None,
+    key: jwk.JWK | None = None,
     expired: bool = False,
-    **kwargs: Union[None, int, str],
+    **kwargs: None | int | str,
 ) -> dict[str, str]:
     """Create the headers for an internal token with the given arguments.
 
@@ -184,7 +184,7 @@ def get_headers_for(
     return {"Authorization": f"Bearer {token}"}
 
 
-def get_claims_from_token(token: str, key: Optional[jwk.JWK] = None) -> dict[str, Any]:
+def get_claims_from_token(token: str, key: jwk.JWK | None = None) -> dict[str, Any]:
     """Decode the given JWT access token and get its claims.
 
     If no signing key is provided, the additional test configuration is used.
@@ -256,7 +256,7 @@ class DummyUserDao:
                 return user
         raise ResourceNotFoundError(id_=id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> Optional[User]:
+    async def find_one(self, *, mapping: Mapping[str, Any]) -> User | None:
         """Find the dummy user via LS-ID."""
         mapping = json.loads(json.dumps(mapping))
         ext_id = mapping.get("ext_id")
@@ -310,7 +310,7 @@ class DummyIvaDao:
 
     ivas: list[Iva]
 
-    def __init__(self, ivas: Optional[list[Iva]] = None):
+    def __init__(self, ivas: list[Iva] | None = None):
         """Initialize the DummyIvaDao."""
         self.ivas = ivas if ivas else []
 
@@ -484,15 +484,15 @@ class DummyUserRegistry(UserRegistry):
 
     def add_dummy_iva(
         self,
-        id_: Optional[str] = None,
-        user_id: Optional[str] = None,
+        id_: str | None = None,
+        user_id: str | None = None,
         type_: IvaType = IvaType.PHONE,
         value: str = "123456",
         state: IvaState = IvaState.UNVERIFIED,
-        verification_code_hash: Optional[str] = None,
+        verification_code_hash: str | None = None,
         verification_attempts: int = 0,
-        created: Optional[UTCDatetime] = None,
-        changed: Optional[UTCDatetime] = None,
+        created: UTCDatetime | None = None,
+        changed: UTCDatetime | None = None,
     ):
         """Add a dummy IVA with the specified data."""
         self.dummy_ivas.append(
