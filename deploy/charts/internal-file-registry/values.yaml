@@ -19,7 +19,6 @@ config_prefix: ifrs
 
 parameters:
   default:
-    aws_config_ini: null
     db_connection_str: null
     db_name: ifrs
     file_deleted_event_topic: internal_registrations
@@ -46,6 +45,7 @@ parameters:
       test:
         bucket: permanent
         credentials:
+          aws_config_ini: null
           s3_access_key_id: null
           s3_endpoint_url: null
           s3_secret_access_key: null

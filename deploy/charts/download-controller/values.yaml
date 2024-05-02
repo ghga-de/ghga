@@ -53,7 +53,6 @@ parameters:
     auth_key: '{}'
     auth_map_claims: {}
     auto_reload: false
-    aws_config_ini: null
     cache_timeout: 7
     cors_allow_credentials: false
     cors_allowed_headers: []
