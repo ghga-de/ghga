@@ -82,7 +82,6 @@ parameters:
     kafka_ssl_password: null
 
     openapi_url: /openapi.json
-    outbox_bucket: outbox
     port: 8080
     presigned_url_expires_after: 10
     retry_access_after: 120
