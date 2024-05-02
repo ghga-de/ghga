@@ -58,4 +58,4 @@ async def test_journey(joint_fixture: JointFixture):  # noqa: F811
         f"/files/{file_id}", headers=headers, timeout=5
     )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED

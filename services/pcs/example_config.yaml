@@ -1,4 +1,4 @@
-api_root_path: /
+api_root_path: ''
 auto_reload: false
 cors_allow_credentials: null
 cors_allowed_headers: null
