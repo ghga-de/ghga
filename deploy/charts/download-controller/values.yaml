@@ -106,4 +106,4 @@ parameters:
 
 shareProcessNamespace: false
 kafkaSecrets:
-  enabled: true
+  enabled: false
