@@ -57,3 +57,5 @@ parameters:
     service_instance_id: rest.1
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: true

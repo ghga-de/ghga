@@ -79,3 +79,5 @@ parameters:
     workers: 1
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: true

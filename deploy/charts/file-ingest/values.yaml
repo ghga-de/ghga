@@ -71,3 +71,5 @@ parameters:
     selected_storage_alias: staging
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: true

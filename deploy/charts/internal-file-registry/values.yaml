@@ -52,3 +52,5 @@ parameters:
           s3_session_token: null
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: true
