@@ -106,3 +106,5 @@ authService:
     name: authentication
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: false

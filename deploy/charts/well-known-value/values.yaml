@@ -56,3 +56,5 @@ parameters:
     wps_api_url: http://127.0.0.1
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: false

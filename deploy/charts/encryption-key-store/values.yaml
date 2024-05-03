@@ -34,6 +34,7 @@ parameters:
     server_private_key: <Please fill>
     server_public_key: <Please fill>
     service_name: encryption_key_store
+    service_instance_id: test
     vault_url: http://vault:8200
     vault_verify: false
     vault_role_id: null
@@ -43,3 +44,5 @@ parameters:
     workers: 1
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: false

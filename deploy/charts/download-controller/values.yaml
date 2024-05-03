@@ -105,3 +105,5 @@ parameters:
     service_instance_id: 'consumer.1'
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: false

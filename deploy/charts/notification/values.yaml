@@ -56,3 +56,5 @@ parameters:
     use_starttls: false
 
 shareProcessNamespace: false
+kafkaSecrets:
+  enabled: false
