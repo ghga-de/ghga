@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ schema representations such as json-schema.
 """
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -41,7 +41,7 @@ class MetadataDatasetFile(BaseModel):
     """
 
     accession: str = Field(..., description="The file accession.")
-    description: Optional[str] = Field(..., description="The description of the file.")
+    description: str | None = Field(..., description="The description of the file.")
     file_extension: str = Field(
         ..., description="The file extension with a leading dot."
     )
@@ -82,9 +82,7 @@ class MetadataDatasetOverview(MetadataDatasetID):
     stage: MetadataDatasetStage = Field(
         ..., description="The current stage of this dataset."
     )
-    description: Optional[str] = Field(
-        ..., description="The description of the dataset."
-    )
+    description: str | None = Field(..., description="The description of the dataset.")
     files: list[MetadataDatasetFile] = Field(
         ..., description="Files contained in the dataset."
     )
@@ -395,13 +393,46 @@ class FileDeletionSuccess(FileDeletionRequested):
 class UserID(BaseModel):
     """Generic event payload to relay a user ID."""
 
-    user_id: str
+    user_id: str = Field(..., description="The user ID")
 
 
 class AccessRequestDetails(UserID):
     """Event used to convey the user ID and dataset ID of an access request."""
 
-    dataset_id: str
+    dataset_id: str = Field(..., description="The dataset ID")
+
+
+class IvaType(str, Enum):
+    """The type of IVA"""
+
+    PHONE = "Phone"
+    FAX = "Fax"
+    POSTAL_ADDRESS = "PostalAddress"
+    IN_PERSON = "InPerson"
+
+
+class IvaState(str, Enum):
+    """The state of an IVA"""
+
+    UNVERIFIED = "Unverified"
+    CODE_REQUESTED = "CodeRequested"
+    CODE_CREATED = "CodeCreated"
+    CODE_TRANSMITTED = "CodeTransmitted"
+    VERIFIED = "Verified"
+
+
+class UserIvaState(UserID):
+    """Notification event for state changes of a user's IVA(s)."""
+
+    value: str | None = Field(
+        default=..., description="The value of the IVA (None = all IVAs of the user)"
+    )
+    type: IvaType | None = Field(
+        default=..., description="The type of the IVA (None = all IVAs of the user"
+    )
+    state: IvaState = Field(..., description="The new state of the IVA")
+
+    model_config = ConfigDict(title="iva_state_change")
 
 
 # Lists event schemas (values) by event types (key):
@@ -421,5 +452,7 @@ schema_registry: dict[str, type[BaseModel]] = {
     "searchable_resource_deleted": SearchableResourceInfo,
     "searchable_resource_upserted": SearchableResource,
     "user_id": UserID,
+    "second_factor_recreated": UserID,
     "access_request_details": AccessRequestDetails,
+    "iva_state_changed": UserIvaState,
 }
