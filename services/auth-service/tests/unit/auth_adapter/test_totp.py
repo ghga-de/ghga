@@ -21,9 +21,9 @@ import hashlib
 from datetime import timedelta
 from random import randint
 
+import pytest
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import AnyUrl, SecretStr
-from pytest import fixture, mark
 
 from auth_service.auth_adapter.core.totp import (
     TOTPAlgorithm,
@@ -33,7 +33,7 @@ from auth_service.auth_adapter.core.totp import (
 )
 
 
-@fixture(name="totp_handler")
+@pytest.fixture(name="totp_handler")
 def create_totp_handler() -> TOTPHandler:
     """Create a default TOTP handler."""
     encryption_key = TOTPHandler.random_encryption_key()
@@ -45,7 +45,7 @@ def create_totp_handler() -> TOTPHandler:
     return TOTPHandler(config)
 
 
-@fixture(name="custom_totp_handler")
+@pytest.fixture(name="custom_totp_handler")
 def create_custom_totp_handler() -> TOTPHandler:
     """Create a non-default TOTP handler."""
     encryption_key = TOTPHandler.random_encryption_key()
@@ -174,7 +174,7 @@ def test_verify_code_with_slightly_invalid_code(totp_handler: TOTPHandler):
     assert totp_handler.verify_code(token, code, for_time) is False
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "code",
     [
         "",

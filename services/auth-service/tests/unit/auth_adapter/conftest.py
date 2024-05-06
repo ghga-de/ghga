@@ -15,12 +15,12 @@
 
 """Test configuration for the auth adapter"""
 
-from pytest import fixture
+import pytest
 
 from ...fixtures import auth_keys
 
 
-@fixture(autouse=True, scope="package")
+@pytest.fixture(autouse=True, scope="package")
 def config_for_auth_adapter() -> None:
     """Set the environment for the auth adapter"""
     auth_keys.reload_auth_key_config(auth_adapter=True)

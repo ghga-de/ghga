@@ -15,15 +15,13 @@
 
 """Fixtures for the claims repository integration tests"""
 
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 
-from ghga_service_commons.api.testing import AsyncTestClient
+import pytest_asyncio
+from ghga_service_commons.api.testing import AsyncTestClient as BareClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
-from pydantic import SecretStr
-from pytest import fixture
-from pytest_asyncio import fixture as async_fixture
-from testcontainers.mongodb import MongoDbContainer
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.config import Config
 from auth_service.deps import get_config, get_mongodb_dao_factory
@@ -31,15 +29,15 @@ from auth_service.user_management.api.main import app, lifespan
 from auth_service.user_management.user_registry.models.users import User, UserStatus
 
 
-@async_fixture(name="client")
-async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
-    """Get a test client for the claims repository."""
+@pytest_asyncio.fixture(name="bare_client")
+async def fixture_bare_client() -> AsyncGenerator[BareClient, None]:
+    """Get a test client for the claims repository without a database connection."""
     config = Config(
         include_apis=["claims"],
     )  # type: ignore
     app.dependency_overrides[get_config] = lambda: config
     async with lifespan(app):
-        async with AsyncTestClient(app) as client:
+        async with BareClient(app) as client:
             yield client
 
 
@@ -68,28 +66,26 @@ async def seed_database(config: Config) -> None:
         await user_dao.insert(data_steward)
 
 
-@fixture(name="mongodb", scope="session")
-def fixture_mongodb() -> Generator[MongoDbContainer, None, None]:
-    """Get a test container for the Mongo database."""
-    with MongoDbContainer() as mongodb:
-        yield mongodb
+class FullClient(BareClient):
+    """A test client that has been equipped with a database."""
+
+    mongodb: MongoDbFixture
 
 
-@async_fixture(name="client_with_db")
-async def fixture_client_with_db(
-    mongodb: MongoDbContainer,
-) -> AsyncGenerator[AsyncTestClient, None]:
-    """Get a test client for the claims repository with a test database."""
+@pytest_asyncio.fixture(name="full_client")
+async def fixture_full_client(
+    mongodb: MongoDbFixture,
+) -> AsyncGenerator[FullClient, None]:
+    """Get a test client for the user registry with a test database."""
     config = Config(
-        db_connection_str=SecretStr(mongodb.get_connection_url()),
-        db_name="test-claims-repository",
+        db_connection_str=mongodb.config.db_connection_str,
+        db_name=mongodb.config.db_name,
         include_apis=["claims"],
         add_as_data_stewards=add_as_data_stewards,  # type: ignore
     )  # pyright: ignore
-    mongodb.get_connection_client().drop_database(config.db_name)
     await seed_database(config)
     app.dependency_overrides[get_config] = lambda: config
     async with lifespan(app):
-        async with AsyncTestClient(app) as client:
+        async with FullClient(app) as client:
             yield client
     app.dependency_overrides.clear()

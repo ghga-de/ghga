@@ -21,10 +21,9 @@ from random import randint
 from urllib.parse import parse_qs, urlparse
 
 import pyotp
+import pytest
 from fastapi import status
-from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from pytest import mark
 
 from auth_service.auth_adapter.core.session_store import SessionState
 from auth_service.user_management.user_registry.models.ivas import IvaState
@@ -35,13 +34,14 @@ from ...fixtures.utils import (
 )
 from .fixtures import (
     AUTH_PATH,
+    BareClient,
     ClientWithSession,
-    fixture_client,  # noqa: F401
-    fixture_client_with_session,  # noqa: F401
+    fixture_bare_client,  # noqa: F401
+    fixture_bare_client_with_session,  # noqa: F401
     query_new_session,
 )
 
-pytestmark = mark.asyncio()
+pytestmark = pytest.mark.asyncio()
 
 
 LOGOUT_PATH = AUTH_PATH + "/rpc/logout"
@@ -74,9 +74,9 @@ def get_invalid_totp_code(secret: str, when: datetime | None = None) -> str:
     raise RuntimeError("Could not find an invalid TOTP code")
 
 
-async def test_create_totp_token_without_session(client: AsyncTestClient):
+async def test_create_totp_token_without_session(bare_client: BareClient):
     """Test that TOTP token creation without a session fails."""
-    response = await client.post(
+    response = await bare_client.post(
         TOTP_TOKEN_PATH, json={"user_id": "some-user-id", "force": False}
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -148,9 +148,9 @@ async def test_create_totp_token_with_registered_user(
     assert session.state is SessionState.NEW_TOTP_TOKEN
 
 
-async def test_verify_totp_without_session(client: AsyncTestClient):
+async def test_verify_totp_without_session(bare_client: BareClient):
     """Test that TOTP verification without a session fails."""
-    response = await client.post(
+    response = await bare_client.post(
         VERIFY_TOTP_PATH,
         json={"user_id": "some-user-id", "totp": "123456"},
     )

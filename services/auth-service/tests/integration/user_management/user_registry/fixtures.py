@@ -15,52 +15,60 @@
 
 """Fixtures for the user registry integration tests"""
 
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 
-from ghga_service_commons.api.testing import AsyncTestClient
-from pydantic import SecretStr
-from pytest import fixture
-from pytest_asyncio import fixture as async_fixture
-from testcontainers.mongodb import MongoDbContainer
+import pytest_asyncio
+from ghga_service_commons.api.testing import AsyncTestClient as BareClient
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.testing.eventpub import InMemEventPublisher
 
 from auth_service.config import Config
 from auth_service.deps import get_config
 from auth_service.user_management.api.main import app, lifespan
+from auth_service.user_management.user_registry.deps import get_event_publisher
 
 
-@async_fixture(name="client")
-async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
-    """Get a test client for the user registry."""
-    config = Config(
+@pytest_asyncio.fixture(name="bare_client")
+async def fixture_bare_client() -> AsyncGenerator[BareClient, None]:
+    """Get a test client for the user registry without database and event store."""
+    app.dependency_overrides[get_config] = lambda: Config(
         include_apis=["users"],
     )  # type: ignore
-    app.dependency_overrides[get_config] = lambda: config
+    app.dependency_overrides[get_event_publisher] = lambda: InMemEventPublisher()
+
     async with lifespan(app):
-        async with AsyncTestClient(app) as client:
+        async with BareClient(app) as client:
             yield client
 
 
-@fixture(name="mongodb", scope="session")
-def fixture_mongodb() -> Generator[MongoDbContainer, None, None]:
-    """Get a test container for the Mongo database."""
-    with MongoDbContainer() as mongodb:
-        yield mongodb
+class FullClient(BareClient):
+    """A test client that has been equipped with a database and an event store."""
+
+    config: Config
+    mongodb: MongoDbFixture
+    kafka: KafkaFixture
 
 
-@async_fixture(name="client_with_db")
-async def fixture_client_with_db(
-    mongodb: MongoDbContainer,
-) -> AsyncGenerator[AsyncTestClient, None]:
-    """Get a test client for the user registry with a test database."""
+@pytest_asyncio.fixture(name="full_client")
+async def fixture_full_client(
+    mongodb: MongoDbFixture, kafka: KafkaFixture
+) -> AsyncGenerator[FullClient, None]:
+    """Get a test client for the user registry with a test database and event store."""
     config = Config(
-        db_connection_str=SecretStr(mongodb.get_connection_url()),
-        db_name="test-user-registry",
+        db_connection_str=mongodb.config.db_connection_str,
+        db_name=mongodb.config.db_name,
+        kafka_servers=kafka.config.kafka_servers,
+        service_name=kafka.config.service_name,
+        service_instance_id=kafka.config.service_instance_id,
         include_apis=["users"],
-    )  # type: ignore
-    mongodb.get_connection_client().drop_database(config.db_name)
+    )
     app.dependency_overrides[get_config] = lambda: config
     assert app.router.lifespan_context
     async with lifespan(app):
-        async with AsyncTestClient(app) as client:
+        async with FullClient(app) as client:
+            client.config = config
+            client.mongodb = mongodb
+            client.kafka = kafka
             yield client
     app.dependency_overrides.clear()

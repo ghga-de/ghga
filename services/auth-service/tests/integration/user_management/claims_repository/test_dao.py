@@ -16,11 +16,9 @@
 
 """Test user specific DAOs."""
 
+import pytest
 from ghga_service_commons.utils.utc_dates import utc_datetime
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    mongodb_fixture,
-)
-from pytest import mark
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.user_management.claims_repository.deps import (
     get_claim_dao_factory,
@@ -33,13 +31,11 @@ from auth_service.user_management.claims_repository.models.claims import (
 )
 
 
-@mark.asyncio()
-async def test_claim_creation(
-    mongodb_fixture,  # noqa: F811
-):
+@pytest.mark.asyncio()
+async def test_claim_creation(mongodb: MongoDbFixture):
     """Test creating a new user claim"""
     claim_dao_factory = get_claim_dao_factory(
-        config=get_config(), dao_factory=mongodb_fixture.dao_factory
+        config=get_config(), dao_factory=mongodb.dao_factory
     )
     claim_dao = await claim_dao_factory.get_claim_dao()
 

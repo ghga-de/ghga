@@ -35,6 +35,9 @@ from auth_service.user_management.claims_repository.translators.event_sub import
 )
 from auth_service.user_management.user_registry.core.registry import UserRegistryConfig
 from auth_service.user_management.user_registry.translators.dao import UserDaoConfig
+from auth_service.user_management.user_registry.translators.event_pub import (
+    EventPubTranslatorConfig,
+)
 
 SERVICE_NAME = "auth_service"
 
@@ -52,6 +55,7 @@ class Config(
     ClaimDaoConfig,
     KafkaConfig,
     EventSubTranslatorConfig,
+    EventPubTranslatorConfig,
 ):
     """Config parameters and their defaults."""
 

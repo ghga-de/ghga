@@ -16,9 +16,9 @@
 
 """Unit tests for the auth adapter core token validation feature"""
 
+import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from jwcrypto import jwk
-from pytest import raises
 
 from auth_service.auth_adapter.core import auth
 from auth_service.config import CONFIG
@@ -72,16 +72,16 @@ def test_validates_access_token_with_ec_signature():
 
 def test_does_not_validate_an_empty_token():
     """Test that an empty access token rejected."""
-    with raises(auth.TokenValidationError, match="Empty token"):
+    with pytest.raises(auth.TokenValidationError, match="Empty token"):
         auth.decode_and_validate_token(None)  # type: ignore
-    with raises(auth.TokenValidationError, match="Empty token"):
+    with pytest.raises(auth.TokenValidationError, match="Empty token"):
         auth.decode_and_validate_token("")
 
 
 def test_does_not_validate_an_access_token_with_wrong_format():
     """Test that an access token with a completely wrong format is rejected."""
     access_token = "random.garbage"
-    with raises(auth.TokenValidationError, match="Token format unrecognized"):
+    with pytest.raises(auth.TokenValidationError, match="Token format unrecognized"):
         auth.decode_and_validate_token(access_token)
 
 
@@ -89,7 +89,9 @@ def test_does_not_validate_an_access_token_with_bad_signature():
     """Test that an access token with a corrupt signature is rejected."""
     access_token = create_access_token()
     access_token = ".".join(access_token.split(".")[:-1] + ["somebadsignature"])
-    with raises(auth.TokenValidationError, match="Not a valid token: Missing Key"):
+    with pytest.raises(
+        auth.TokenValidationError, match="Not a valid token: Missing Key"
+    ):
         auth.decode_and_validate_token(access_token)
 
 
@@ -101,7 +103,9 @@ def test_does_not_validate_an_access_token_when_alg_is_not_allowed():
     auth.jwt_config.external_algs = external_algs[:]
     try:
         auth.jwt_config.external_algs.remove("ES256")
-        with raises(auth.TokenValidationError, match="Not a valid token: Missing Key"):
+        with pytest.raises(
+            auth.TokenValidationError, match="Not a valid token: Missing Key"
+        ):
             auth.decode_and_validate_token(access_token)
     finally:
         auth.jwt_config.external_algs = external_algs
@@ -110,7 +114,7 @@ def test_does_not_validate_an_access_token_when_alg_is_not_allowed():
 def test_does_not_validate_an_access_token_with_invalid_client_id():
     """Test that an access token with an unknown client id is rejected."""
     access_token = create_access_token(client_id="some-bad-client")
-    with raises(auth.TokenValidationError) as exc_info:
+    with pytest.raises(auth.TokenValidationError) as exc_info:
         auth.decode_and_validate_token(access_token)
     assert str(exc_info.value) == (
         "Not a valid token: Invalid 'client_id' value."
@@ -121,7 +125,7 @@ def test_does_not_validate_an_access_token_with_invalid_client_id():
 def test_does_not_validate_an_access_token_with_invalid_issuer():
     """Test that an access token with an unknown issuer is rejected."""
     access_token = create_access_token(iss="https://proxy.aai.badscience-ri.eu")
-    with raises(auth.TokenValidationError) as exc_info:
+    with pytest.raises(auth.TokenValidationError) as exc_info:
         auth.decode_and_validate_token(access_token)
     assert str(exc_info.value) == (
         "Not a valid token: Invalid 'iss' value."
@@ -133,7 +137,7 @@ def test_does_not_validate_an_access_token_with_invalid_issuer():
 def test_does_not_validate_an_expired_access_token():
     """Test that access tokens that have expired are rejected."""
     access_token = create_access_token(expired=True)
-    with raises(auth.TokenValidationError, match="Not a valid token: Expired"):
+    with pytest.raises(auth.TokenValidationError, match="Not a valid token: Expired"):
         auth.decode_and_validate_token(access_token)
 
 
@@ -148,7 +152,7 @@ def test_does_not_validate_token_with_invalid_payload():
             "eyJzdWIiOiAiSm9obiBEb2UifQ."
             "RQYHxFwGjMdVh-umuuA1Yd4Ssx6TAYkg1INYK6_lKVw"
         )
-        with raises(
+        with pytest.raises(
             auth.TokenValidationError, match="Not a valid token: Claim iat is missing"
         ):
             auth.decode_and_validate_token(token_with_valid_payload, key=key)
@@ -157,7 +161,7 @@ def test_does_not_validate_token_with_invalid_payload():
             "VGhpcyBpcyBub3QgSlNPTiE."
             "bKt6NQoZGLOLqqqB-XT99ENnsmv-hxLId08FxR4LUOw"
         )
-        with raises(
+        with pytest.raises(
             auth.TokenValidationError, match="Not a valid token: .* not a json dict"
         ):
             auth.decode_and_validate_token(token_with_text_as_payload, key=key)
@@ -166,7 +170,9 @@ def test_does_not_validate_token_with_invalid_payload():
             "eyJzdWIiOiAiRnLpZOlyaWMgQ2hvcGluIn0."
             "8OTfVB6CN2pXgPHZBPdbkqWGd2XhtbVDhlcYdYNh6d4"
         )
-        with raises(auth.TokenValidationError, match="'utf-8' codec can't decode"):
+        with pytest.raises(
+            auth.TokenValidationError, match="'utf-8' codec can't decode"
+        ):
             auth.decode_and_validate_token(token_with_bad_encoding, key=key)
     finally:
         auth.jwt_config.external_algs = external_algs

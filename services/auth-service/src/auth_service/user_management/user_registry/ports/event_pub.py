@@ -13,14 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test configuration for the user management"""
+"""Interface for broadcasting events to other services."""
 
-import pytest
+from abc import ABC, abstractmethod
 
-from ....fixtures import auth_keys
+from ..models.ivas import Iva
 
 
-@pytest.fixture(autouse=True, scope="package")
-def config_for_user_registry() -> None:
-    """Set the environment for the user registry"""
-    auth_keys.reload_auth_key_config(auth_adapter=False)
+class EventPublisherPort(ABC):
+    """An interface for an adapter that publishes events happening to this service."""
+
+    @abstractmethod
+    async def publish_iva_state_changed(self, *, iva: Iva) -> None:
+        """Publish an event relaying that the state of a user IVA has been changed."""
+
+    @abstractmethod
+    async def publish_ivas_reset(self, *, user_id: str) -> None:
+        """Publish an event relaying that all IVAs of the user have been reset."""

@@ -19,9 +19,9 @@ from datetime import datetime
 from operator import itemgetter
 from typing import Any
 
+import pytest
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from pytest import mark
 
 from auth_service.user_management.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_management.user_registry.models.ivas import (
@@ -32,12 +32,13 @@ from auth_service.user_management.user_registry.models.ivas import (
 
 from ....fixtures.utils import DummyIvaDao, DummyUserDao
 from .fixtures import (  # noqa: F401
-    fixture_client,
-    fixture_client_with_db,
-    fixture_mongodb,
+    BareClient,
+    FullClient,
+    fixture_bare_client,
+    fixture_full_client,
 )
 
-pytestmark = mark.asyncio()
+pytestmark = pytest.mark.asyncio()
 
 ROLE_CLAIM_DATA = {
     "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
@@ -58,27 +59,27 @@ DATASET_CLAIM_DATA = {
 }
 
 
-async def test_health_check(client):
+async def test_health_check(bare_client: BareClient):
     """Test that the health check endpoint works."""
-    response = await client.get("/health")
+    response = await bare_client.get("/health")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"status": "OK"}
 
 
-async def test_get_from_a_random_path(client):
+async def test_get_from_a_random_path(bare_client: BareClient):
     """Test that a GET request to a random path raises a not found error."""
-    response = await client.post("/some/random/path")
+    response = await bare_client.post("/some/random/path")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_post_claim(client_with_db):
+async def test_post_claim(full_client: FullClient):
     """Test that creating a user claim works."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/users/john@ghga.de/claims", json=ROLE_CLAIM_DATA
     )
 
@@ -100,17 +101,17 @@ async def test_post_claim(client_with_db):
     assert claim == ROLE_CLAIM_DATA
 
     # test with non-existing user
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/users/john@haag.de/claims", json=ROLE_CLAIM_DATA
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
 
 
-async def test_get_claims(client_with_db):
+async def test_get_claims(full_client: FullClient):
     """Test that getting all claims of a user works."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     user_id = "john@ghga.de"
 
@@ -124,11 +125,11 @@ async def test_get_claims(client_with_db):
     }
     posted_claims = []
     for claim in (claim1, claim2):
-        response = await client_with_db.post(f"/users/{user_id}/claims", json=claim)
+        response = await full_client.post(f"/users/{user_id}/claims", json=claim)
         assert response.status_code == status.HTTP_201_CREATED
         posted_claims.append(response.json())
 
-    response = await client_with_db.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     requested_claims = response.json()
     requested_claims.sort(key=itemgetter("assertion_date"))
@@ -142,22 +143,20 @@ async def test_get_claims(client_with_db):
     assert requested_claims[0]["visa_value"] != requested_claims[1]["visa_value"]
 
     # test with non-existing user
-    response = await client_with_db.get("/users/john@haag.de/claims")
+    response = await full_client.get("/users/john@haag.de/claims")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
 
 
-async def test_patch_claim(client_with_db):
+async def test_patch_claim(full_client: FullClient):
     """Test that revoking a user claim works."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     user_id = "john@ghga.de"
 
     # post test claim
-    response = await client_with_db.post(
-        f"/users/{user_id}/claims", json=ROLE_CLAIM_DATA
-    )
+    response = await full_client.post(f"/users/{user_id}/claims", json=ROLE_CLAIM_DATA)
     posted_claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -168,13 +167,13 @@ async def test_patch_claim(client_with_db):
     # revoke test claim
     revocation_date = "2022-10-15T12:00:00Z"
     patch_data = {"revocation_date": revocation_date}
-    response = await client_with_db.patch(
+    response = await full_client.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been revoked
-    response = await client_with_db.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -184,14 +183,14 @@ async def test_patch_claim(client_with_db):
 
     # test without revocation date
     patch_data = {"revocation_date": None}  # type: ignore
-    response = await client_with_db.patch(
+    response = await full_client.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     # test with later revocation date
     patch_data = {"revocation_date": "2022-10-15T13:00:00Z"}
-    response = await client_with_db.patch(
+    response = await full_client.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -200,13 +199,13 @@ async def test_patch_claim(client_with_db):
     # test with earlier revocation date
     revocation_date = "2022-10-15T11:00:00Z"
     patch_data = {"revocation_date": revocation_date}
-    response = await client_with_db.patch(
+    response = await full_client.patch(
         f"/users/{user_id}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that revocation was advanced
-    response = await client_with_db.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -215,23 +214,23 @@ async def test_patch_claim(client_with_db):
     assert claim == posted_claim
 
     # test with non-existing user
-    response = await client_with_db.patch(
+    response = await full_client.patch(
         f"/users/john@haag.de/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
     # test with non-existing claim
-    response = await client_with_db.patch(
+    response = await full_client.patch(
         f"/users/{user_id}/claims/invalid-claim-id", json=patch_data
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user claim was not found."
 
 
-async def test_delete_claim(client_with_db):
+async def test_delete_claim(full_client: FullClient):
     """Test that deleting a user claim works."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     user_id = "john@ghga.de"
 
@@ -240,7 +239,7 @@ async def test_delete_claim(client_with_db):
     claim2 = ROLE_CLAIM_DATA.copy()
     claim2["visa_type"] = "ResearcherStatus"
     for claim in (claim1, claim2):
-        response = await client_with_db.post(f"/users/{user_id}/claims", json=claim)
+        response = await full_client.post(f"/users/{user_id}/claims", json=claim)
         assert response.status_code == status.HTTP_201_CREATED
         claim_id = response.json()["id"]
         assert claim_id
@@ -248,21 +247,21 @@ async def test_delete_claim(client_with_db):
 
     # test deletion of first claim with non-existing user
     claim_id = claim1["id"]
-    response = await client_with_db.delete(f"/users/john@haag.de/claims/{claim_id}")
+    response = await full_client.delete(f"/users/john@haag.de/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
     # test that claims have been posted
-    response = await client_with_db.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 2
 
     # delete first claim properly
-    response = await client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been deleted
-    response = await client_with_db.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -271,29 +270,29 @@ async def test_delete_claim(client_with_db):
     assert claim["visa_type"] == "ResearcherStatus"
 
     # delete again
-    response = await client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
     # delete second claim
     claim_id = claim2["id"]
-    response = await client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been deleted
-    response = await client_with_db.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{user_id}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 0
 
     # delete again
-    response = await client_with_db.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_grant_download_access(client_with_db):
+async def test_grant_download_access(full_client: FullClient):
     """Test that granting access to a dataset works."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_as_utc()
     iva = Iva(
         id="some-iva-id",
@@ -305,20 +304,20 @@ async def test_grant_download_access(client_with_db):
         changed=now,
     )
     iva_dao = DummyIvaDao([iva])
-    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+    full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     validity = {
         "valid_from": f"{now.year - 1}-01-01T00:00:00Z",
         "valid_until": f"{now.year + 1}-12-31T23:59:59Z",
     }
 
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/download-access/users/john@ghga.de/ivas/some-iva-id/datasets/some-dataset-id",
         json=validity,
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    response = await client_with_db.get("/users/john@ghga.de/claims")
+    response = await full_client.get("/users/john@ghga.de/claims")
     assert response.status_code == status.HTTP_200_OK
     requested_claims = response.json()
 
@@ -346,15 +345,15 @@ async def test_grant_download_access(client_with_db):
         "visa_value": DATASET_CLAIM_DATA["visa_value"],
     }
 
-    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == ["some-dataset-id"]
 
 
-async def test_grant_download_access_with_unverified_iva(client_with_db):
+async def test_grant_download_access_with_unverified_iva(full_client: FullClient):
     """Test granting access to a dataset when the IVA is not yet verified."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_as_utc()
     iva = Iva(
         id="some-iva-id",
@@ -365,20 +364,20 @@ async def test_grant_download_access_with_unverified_iva(client_with_db):
         changed=now,
     )
     iva_dao = DummyIvaDao([iva])
-    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+    full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     validity = {
         "valid_from": f"{now.year - 1}-01-01T00:00:00Z",
         "valid_until": f"{now.year + 1}-12-31T23:59:59Z",
     }
 
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/download-access/users/john@ghga.de/ivas/some-iva-id/datasets/some-dataset-id",
         json=validity,
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    response = await client_with_db.get("/users/john@ghga.de/claims")
+    response = await full_client.get("/users/john@ghga.de/claims")
     assert response.status_code == status.HTTP_200_OK
     requested_claims = response.json()
 
@@ -387,17 +386,17 @@ async def test_grant_download_access_with_unverified_iva(client_with_db):
     assert claim_data["user_id"] == "john@ghga.de"
     assert claim_data["iva_id"] == "some-iva-id"
 
-    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
 
-async def test_grant_download_access_without_iva(client_with_db):
+async def test_grant_download_access_without_iva(full_client: FullClient):
     """Test granting access to a dataset when the IVA does not exist."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     iva_dao = DummyIvaDao()
-    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+    full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     year = now_as_utc().year
     validity = {
@@ -405,26 +404,26 @@ async def test_grant_download_access_without_iva(client_with_db):
         "valid_until": f"{year + 1}-12-31T23:59:59Z",
     }
 
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/download-access/users/john@ghga.de/ivas/some-iva-id/datasets/some-dataset-id",
         json=validity,
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The IVA was not found."
 
-    response = await client_with_db.get("/users/john@ghga.de/claims")
+    response = await full_client.get("/users/john@ghga.de/claims")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
-    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
 
-async def test_check_download_access(client_with_db):
+async def test_check_download_access(full_client: FullClient):
     """Test that checking download access for a single dataset works."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_as_utc()
     iva = Iva(
         id="some-iva-id",
@@ -436,7 +435,7 @@ async def test_check_download_access(client_with_db):
         changed=now,
     )
     iva_dao = DummyIvaDao([iva])
-    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+    full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # post valid access permission for some-iva-id and some-dataset-id
 
@@ -448,7 +447,7 @@ async def test_check_download_access(client_with_db):
         "valid_until": current_timestamp + 60,
     }
 
-    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await full_client.post("/users/john@ghga.de/claims", json=claim_data)
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -463,7 +462,7 @@ async def test_check_download_access(client_with_db):
     claim_data["valid_from"] = current_timestamp - 60
     claim_data["valid_until"] = current_timestamp - 30
 
-    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await full_client.post("/users/john@ghga.de/claims", json=claim_data)
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -474,7 +473,7 @@ async def test_check_download_access(client_with_db):
 
     # check access for wrong user
 
-    response = await client_with_db.get(
+    response = await full_client.get(
         "/download-access/users/jane@ghga.de/datasets/some-dataset-id"
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -482,7 +481,7 @@ async def test_check_download_access(client_with_db):
 
     # check access for right user
 
-    response = await client_with_db.get(
+    response = await full_client.get(
         "/download-access/users/john@ghga.de/datasets/some-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
@@ -490,7 +489,7 @@ async def test_check_download_access(client_with_db):
 
     # check access when permission exists but is not valid any more
 
-    response = await client_with_db.get(
+    response = await full_client.get(
         "/download-access/users/john@ghga.de/datasets/former-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
@@ -498,17 +497,17 @@ async def test_check_download_access(client_with_db):
 
     # check access when dataset and permission does not exist
 
-    response = await client_with_db.get(
+    response = await full_client.get(
         "/download-access/users/john@ghga.de/datasets/another-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() is False
 
 
-async def test_check_download_access_with_unverified_iva(client_with_db):
+async def test_check_download_access_with_unverified_iva(full_client: FullClient):
     """Test checking download access for a single dataset with an unverified IVA."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_as_utc()
     iva = Iva(
         id="some-iva-id",
@@ -519,7 +518,7 @@ async def test_check_download_access_with_unverified_iva(client_with_db):
         changed=now,
     )
     iva_dao = DummyIvaDao([iva])
-    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+    full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # post valid access permission for some-iva-id and some-dataset-id
 
@@ -531,7 +530,7 @@ async def test_check_download_access_with_unverified_iva(client_with_db):
         "valid_until": current_timestamp + 60,
     }
 
-    response = await client_with_db.post("/users/john@ghga.de/claims", json=claim_data)
+    response = await full_client.post("/users/john@ghga.de/claims", json=claim_data)
 
     claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
@@ -542,17 +541,17 @@ async def test_check_download_access_with_unverified_iva(client_with_db):
 
     # check that access is not given when the IVA is not verified
 
-    response = await client_with_db.get(
+    response = await full_client.get(
         "/download-access/users/john@ghga.de/datasets/some-dataset-id"
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json() is False
 
 
-async def test_get_datasets_with_download_access(client_with_db):
+async def test_get_datasets_with_download_access(full_client: FullClient):
     """Test that getting all datasets with download access works."""
     user_dao = DummyUserDao()
-    client_with_db.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_as_utc()
     unverified_iva = Iva(
         id="unverified-iva-id",
@@ -566,11 +565,11 @@ async def test_get_datasets_with_download_access(client_with_db):
         update={"id": "verified-iva-id", "state": IvaState.VERIFIED}
     )
     iva_dao = DummyIvaDao([unverified_iva, verified_iva])
-    client_with_db.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+    full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # should not have downloadable datasets in the beginning
 
-    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
@@ -584,7 +583,7 @@ async def test_get_datasets_with_download_access(client_with_db):
         "valid_until": current_timestamp + 60,
     }
 
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/users/john@ghga.de/claims", json=some_claim_data
     )
 
@@ -602,7 +601,7 @@ async def test_get_datasets_with_download_access(client_with_db):
         **some_claim_data,
         "visa_value": some_claim_data["visa_value"].replace("some", "another"),
     }
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/users/john@ghga.de/claims", json=another_claim_data
     )
 
@@ -623,7 +622,7 @@ async def test_get_datasets_with_download_access(client_with_db):
         "visa_value": some_claim_data["visa_value"].replace("some", "yet-another"),
     }
 
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/users/john@ghga.de/claims", json=yet_another_claim_data
     )
 
@@ -644,7 +643,7 @@ async def test_get_datasets_with_download_access(client_with_db):
     # pretend for the next query that Jane exists
     users = user_dao.users
     users.append(users[0].model_copy(update={"id": "jane@ghga.de"}))
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/users/jane@ghga.de/claims", json=foreign_claim_data
     )
     users.pop()
@@ -667,7 +666,7 @@ async def test_get_datasets_with_download_access(client_with_db):
         "visa_value": some_claim_data["visa_value"].replace("some", "former"),
     }
 
-    response = await client_with_db.post(
+    response = await full_client.post(
         "/users/john@ghga.de/claims", json=former_claim_data
     )
 
@@ -681,7 +680,7 @@ async def test_get_datasets_with_download_access(client_with_db):
 
     # get list of all claims
 
-    response = await client_with_db.get("/users/john@ghga.de/claims")
+    response = await full_client.get("/users/john@ghga.de/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 4
@@ -694,12 +693,12 @@ async def test_get_datasets_with_download_access(client_with_db):
     }
 
     # check access for wrong user
-    response = await client_with_db.get("/download-access/users/jane@ghga.de/datasets")
+    response = await full_client.get("/download-access/users/jane@ghga.de/datasets")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
 
     # check access for right user
-    response = await client_with_db.get("/download-access/users/john@ghga.de/datasets")
+    response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
     dataset_ids = response.json()
 
@@ -707,9 +706,9 @@ async def test_get_datasets_with_download_access(client_with_db):
     assert sorted(dataset_ids) == ["another-dataset-id", "some-dataset-id"]
 
 
-async def test_get_claims_for_seeded_data_steward(client_with_db):
+async def test_get_claims_for_seeded_data_steward(full_client: FullClient):
     """Test that the database is seeded with the configured data steward."""
-    response = await client_with_db.get("/users/the-id-of-rod-steward/claims")
+    response = await full_client.get("/users/the-id-of-rod-steward/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1

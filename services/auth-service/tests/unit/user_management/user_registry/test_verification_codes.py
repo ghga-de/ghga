@@ -16,7 +16,7 @@
 
 """Unit tests for verification code generation."""
 
-from pytest import mark
+import pytest
 
 from auth_service.user_management.user_registry.core.verification_codes import (
     generate_code,
@@ -29,7 +29,7 @@ DEFAULT_SALT_SIZE = 16  # the size of the salt that we expect to be used by defa
 DEFAULT_HASH_SIZE = 64  # the size of the code hash that we expect to be used
 
 
-@mark.parametrize("size", [DEFAULT_CODE_SIZE, 4, 8, 10, 12])
+@pytest.mark.parametrize("size", [DEFAULT_CODE_SIZE, 4, 8, 10, 12])
 def test_generate_verification_code_with_various_size(size: int):
     """Test the generation of verification codes with alternative sizes."""
     codes = set()
@@ -59,7 +59,7 @@ TEST_CODES = [
 ]
 
 
-@mark.parametrize("code", TEST_CODES)
+@pytest.mark.parametrize("code", TEST_CODES)
 def test_hash_and_validate_code(code: str):
     """Test the hashing and validation of a selection of possible verification codes."""
     hash_with_salt = hash_code(code)

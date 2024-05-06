@@ -19,8 +19,8 @@
 import asyncio
 import logging
 
-from pydantic import SecretStr
-from testcontainers.mongodb import MongoDbContainer
+import pytest
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.config import Config
 from auth_service.user_management.claims_repository.core.seed import (
@@ -28,34 +28,34 @@ from auth_service.user_management.claims_repository.core.seed import (
 )
 
 
-def test_add_non_existing_data_steward(caplog):
+def test_add_non_existing_data_steward(
+    mongodb: MongoDbFixture, caplog: pytest.LogCaptureFixture
+):
     """Test that non-existing data stewards can be added in the configuration."""
-    with MongoDbContainer() as mongodb:
-        config = Config(
-            db_connection_str=SecretStr(mongodb.get_connection_url()),
-            db_name="test-claims-repository",
-            include_apis=["claims"],
-            add_as_data_stewards=[
-                {
-                    "name": "John Doe",
-                    "email": "john@home.org",
-                    "ext_id": "id-of-john-doe@ls.org",
-                },
-                "id-of-jane-roe@ls.org",
-            ],
-        )  # type: ignore
+    config = Config(
+        db_connection_str=mongodb.config.db_connection_str,
+        db_name=mongodb.config.db_name,
+        include_apis=["claims"],
+        add_as_data_stewards=[
+            {
+                "name": "John Doe",
+                "email": "john@home.org",
+                "ext_id": "id-of-john-doe@ls.org",
+            },
+            "id-of-jane-roe@ls.org",
+        ],
+    )  # type: ignore
 
-        caplog.set_level(logging.INFO)
-        caplog.clear()
-        asyncio.run(seed_data_steward_claims(config))
-        records = [record for record in caplog.records if record.module == "seed"]
-        log_messages = [record.message for record in records]
-        num_warnings = sum(record.levelno >= logging.WARNING for record in records)
+    caplog.set_level(logging.INFO)
+    caplog.clear()
+    asyncio.run(seed_data_steward_claims(config))
+    records = [record for record in caplog.records if record.module == "seed"]
+    log_messages = [record.message for record in records]
+    num_warnings = sum(record.levelno >= logging.WARNING for record in records)
 
-        client = mongodb.get_connection_client()
-        db = client.get_database(config.db_name)
-        users_collection = db.get_collection(config.users_collection)
-        users = list(users_collection.find())
+    db = mongodb.client.get_database(config.db_name)
+    users_collection = db.get_collection(config.users_collection)
+    users = list(users_collection.find())
 
     assert num_warnings == 2
     assert log_messages == [

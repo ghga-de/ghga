@@ -18,14 +18,14 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi import HTTPException, Request, status
-from pytest import mark, raises
 
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
 from auth_service.auth_adapter.deps import get_session
 from auth_service.config import CONFIG
 
-pytestmark = mark.asyncio(scope="module")
+pytestmark = pytest.mark.asyncio(scope="module")
 
 SESSION_COOKIE = "session"
 CSRF_TOKEN_HEADER = "X-CSRF-Token"
@@ -83,7 +83,7 @@ async def assert_get_session(
         {"type": "http", "method": method, "headers": headers, "path": "/some/path"}
     )
     if expect_result is False:
-        with raises(HTTPException) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             await get_session(store, request)
         assert exc_info.value.status_code == EXPECTED_ERROR_STATUS
         assert exc_info.value.detail == EXPECTED_ERROR_MESSAGE
@@ -93,19 +93,19 @@ async def assert_get_session(
         assert returned_session is expected_session
 
 
-@mark.parametrize("method", ALL_METHODS)
+@pytest.mark.parametrize("method", ALL_METHODS)
 async def test_get_session_without_cookie(method: str) -> None:
     """Test getting the session without a cookie."""
     await assert_get_session(method, with_cookie=False, expect_result=None)
 
 
-@mark.parametrize("method", ALL_METHODS)
+@pytest.mark.parametrize("method", ALL_METHODS)
 async def test_get_session_with_invalid_cookie(method: str) -> None:
     """Test getting the session wit an invalid cookie."""
     await assert_get_session(method, with_cookie="bad-cookie", expect_result=None)
 
 
-@mark.parametrize("method", ALL_METHODS)
+@pytest.mark.parametrize("method", ALL_METHODS)
 async def test_get_session_without_cookie_and_without_csrf_token(method: str) -> None:
     """Test getting the session without a cookie and without a CSRF token."""
     await assert_get_session(
@@ -113,7 +113,7 @@ async def test_get_session_without_cookie_and_without_csrf_token(method: str) ->
     )
 
 
-@mark.parametrize("method", ALL_METHODS)
+@pytest.mark.parametrize("method", ALL_METHODS)
 async def test_get_session_without_cookie_and_invalid_csrf_token(method: str) -> None:
     """Test getting the session without a cookie and an invalid CSRF token."""
     await assert_get_session(
@@ -121,37 +121,37 @@ async def test_get_session_without_cookie_and_invalid_csrf_token(method: str) ->
     )
 
 
-@mark.parametrize("method", UNCRITICAL_METHODS)
+@pytest.mark.parametrize("method", UNCRITICAL_METHODS)
 async def test_get_session_uncritical_without_csrf_token(method: str) -> None:
     """Test getting the session with an uncritical method and no CSRF token."""
     await assert_get_session(method, with_csrf_token=False)
 
 
-@mark.parametrize("method", CRITICAL_METHODS)
+@pytest.mark.parametrize("method", CRITICAL_METHODS)
 async def test_get_session_critical_method_without_csrf_token(method: str) -> None:
     """Test CSRF protection with a critical method and no CSRF token."""
     await assert_get_session(method, with_csrf_token=False, expect_result=False)
 
 
-@mark.parametrize("method", UNCRITICAL_METHODS)
+@pytest.mark.parametrize("method", UNCRITICAL_METHODS)
 async def test_get_session_on_uncritical_method_with_invalid_token(method: str) -> None:
     """Test CSRF protection with a critical method and invalid CSRF token."""
     await assert_get_session(method, with_csrf_token="bad-token")
 
 
-@mark.parametrize("method", CRITICAL_METHODS)
+@pytest.mark.parametrize("method", CRITICAL_METHODS)
 async def test_get_session_on_critical_method_with_invalid_token(method: str) -> None:
     """Test CSRF protection with a critical method and invalid CSRF token."""
     await assert_get_session(method, with_csrf_token="bad-token", expect_result=False)
 
 
-@mark.parametrize("method", UNCRITICAL_METHODS)
+@pytest.mark.parametrize("method", UNCRITICAL_METHODS)
 async def test_get_session_on_uncritical_method_with_valid_token(method: str) -> None:
     """Test CSRF protection with an uncritical method and valid CSRF token."""
     await assert_get_session(method)
 
 
-@mark.parametrize("method", CRITICAL_METHODS)
+@pytest.mark.parametrize("method", CRITICAL_METHODS)
 async def test_get_session_on_critical_method_with_valid_token(method: str) -> None:
     """Test CSRF protection with a critical method and a valid CSRF token."""
     await assert_get_session(method)

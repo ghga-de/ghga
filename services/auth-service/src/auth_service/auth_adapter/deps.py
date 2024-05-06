@@ -96,15 +96,15 @@ async def get_totp_handler(
 
 
 def get_user_token_dao_factory(
-    config: UserDaoConfig = Depends(get_config),
-    dao_factory: MongoDbDaoFactory = Depends(get_mongodb_dao_factory),
+    config: Annotated[UserDaoConfig, Depends(get_config)],
+    dao_factory: Annotated[MongoDbDaoFactory, Depends(get_mongodb_dao_factory)],
 ) -> UserTokenDaoFactory:
     """Get a user token DAO factory."""
     return UserTokenDaoFactory(config=config, dao_factory=dao_factory)
 
 
 async def get_user_token_dao(
-    dao_factory: UserTokenDaoFactory = Depends(get_user_token_dao_factory),
+    dao_factory: Annotated[UserTokenDaoFactory, Depends(get_user_token_dao_factory)],
 ) -> UserTokenDao:
     """Get user token data access object."""
     return await dao_factory.get_user_token_dao()

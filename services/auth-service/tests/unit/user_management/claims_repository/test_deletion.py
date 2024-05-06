@@ -18,7 +18,7 @@
 
 import logging
 
-from pytest import LogCaptureFixture, mark
+import pytest
 
 from auth_service.user_management.claims_repository.core.deletion import (
     DatasetDeletionHandler,
@@ -27,8 +27,8 @@ from auth_service.user_management.claims_repository.core.deletion import (
 from ....fixtures.utils import DummyClaimDao
 
 
-@mark.asyncio()
-async def test_deletion_handler(caplog: LogCaptureFixture):
+@pytest.mark.asyncio()
+async def test_deletion_handler(caplog: pytest.LogCaptureFixture):
     """Test the dataset deletion handler"""
     caplog.set_level(logging.INFO)
     records = caplog.records

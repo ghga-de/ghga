@@ -24,7 +24,7 @@ name = "auth_service"
 version = "2.3.0"
 description = "Authentication adapter and services used for the GHGA data portal"
 dependencies = [
-    "ghga-event-schemas==3.1.0",
+    "ghga-event-schemas==3.2.0",
     "ghga-service-commons[api,auth]>=3.1.1,<4",
     "hexkit[mongodb,akafka]>=2.1.1",
     "pynacl>=1.5,<2",

@@ -15,19 +15,19 @@
 
 """Test configuration for the user management"""
 
-from pytest import fixture
+import pytest
 
 from ....fixtures import auth_keys
 from ....fixtures.utils import get_headers_for
 
 
-@fixture(autouse=True, scope="package")
+@pytest.fixture(autouse=True, scope="package")
 def config_for_user_registry() -> None:
     """Set the environment for the user registry"""
     auth_keys.reload_auth_key_config(auth_adapter=False)
 
 
-@fixture(autouse=True, scope="package")
+@pytest.fixture(autouse=True, scope="package")
 def new_user_headers() -> dict[str, str]:
     """Get headers with authorization for a new (unregistered) user."""
     return get_headers_for(
@@ -35,7 +35,7 @@ def new_user_headers() -> dict[str, str]:
     )
 
 
-@fixture(autouse=True, scope="package")
+@pytest.fixture(autouse=True, scope="package")
 def user_headers() -> dict[str, str]:
     """Get headers with authorization for an existing (registered) user."""
     return get_headers_for(
@@ -43,7 +43,7 @@ def user_headers() -> dict[str, str]:
     )
 
 
-@fixture(autouse=True, scope="package")
+@pytest.fixture(autouse=True, scope="package")
 def steward_headers() -> dict[str, str]:
     """Get headers with authorization for a user with data steward role."""
     return get_headers_for(

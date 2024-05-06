@@ -18,8 +18,8 @@
 
 from datetime import timedelta
 
+import pytest
 from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
-from pytest import fixture, mark, raises
 
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
 from auth_service.auth_adapter.core.session_store import Session, SessionConfig
@@ -31,7 +31,7 @@ USER2_KWARGS = dict(
     ext_id="jane@aai.org", user_name="Jane Roe", user_email="jane@home.org"
 )
 
-pytestmark = mark.asyncio(scope="module")
+pytestmark = pytest.mark.asyncio(scope="module")
 
 
 class MemorySessionStoreWithControlledTime(MemorySessionStore):
@@ -64,7 +64,7 @@ class MemorySessionStoreWithBadIdGenerator(MemorySessionStore):
         return f"id{current_session_id}"
 
 
-@fixture
+@pytest.fixture
 def store():
     """Get a new memory session store for testing."""
     return MemorySessionStoreWithControlledTime(config=SessionConfig())
@@ -83,7 +83,7 @@ async def test_create_session(store):
 
 async def test_create_session_with_session_id(store):
     """Test that a session cannot be created with a given session ID."""
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         await store.create_session(session_id="some-session-id", **USER_KWARGS)
 
 
@@ -97,7 +97,7 @@ async def test_create_session_with_bad_generator():
         assert session.session_id.startswith("id")
         assert session.created == session.last_used
 
-    with raises(RuntimeError, match="Could not create a new session"):
+    with pytest.raises(RuntimeError, match="Could not create a new session"):
         session = await bad_store.create_session(**USER_KWARGS)
     assert await bad_store.get_size() == 3
 

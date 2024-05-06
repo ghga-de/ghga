@@ -16,9 +16,9 @@
 
 """Test user specific DAOs."""
 
+import pytest
 from ghga_service_commons.utils.utc_dates import utc_datetime
-from hexkit.providers.mongodb.testutils import mongodb_fixture  # noqa: F401
-from pytest import mark
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.user_management.user_registry.core.registry import UserRegistry
 from auth_service.user_management.user_registry.deps import (
@@ -34,13 +34,11 @@ from auth_service.user_management.user_registry.models.users import (
 )
 
 
-@mark.asyncio()
-async def test_user_creation(
-    mongodb_fixture,  # noqa: F811
-):
+@pytest.mark.asyncio()
+async def test_user_creation(mongodb: MongoDbFixture):
     """Test creating a new user"""
     user_dao_factory = get_user_dao_factory(
-        config=get_config(), dao_factory=mongodb_fixture.dao_factory
+        config=get_config(), dao_factory=mongodb.dao_factory
     )
     user_dao = await user_dao_factory.get_user_dao()
 
@@ -56,10 +54,10 @@ async def test_user_creation(
         active_access_requests=["req-1", "req-2"],
     )
 
-    for op in ("insert", "get"):
+    for insert in True, False:
         user = await (
             user_dao.insert(user_data)
-            if op == "insert"
+            if insert
             else user_dao.find_one(mapping={"ext_id": user_data.ext_id})
         )
 

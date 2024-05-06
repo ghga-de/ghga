@@ -37,6 +37,8 @@ generate_correlation_id: true
 host: 0.0.0.0
 include_apis:
 - users
+iva_events_topic: ivas
+iva_state_changed_event_type: iva_state_changed
 ivas_collection: ivas
 kafka_security_protocol: PLAINTEXT
 kafka_servers:

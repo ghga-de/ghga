@@ -15,6 +15,8 @@
 
 """FastAPI dependencies for the claims repository"""
 
+from typing import Annotated
+
 from auth_service.deps import (
     Depends,
     MongoDbDaoFactory,
@@ -29,15 +31,15 @@ __all__ = ["get_claim_dao", "ClaimDao"]
 
 
 def get_claim_dao_factory(
-    config: ClaimDaoConfig = Depends(get_config),
-    dao_factory: MongoDbDaoFactory = Depends(get_mongodb_dao_factory),
+    config: Annotated[ClaimDaoConfig, Depends(get_config)],
+    dao_factory: Annotated[MongoDbDaoFactory, Depends(get_mongodb_dao_factory)],
 ) -> ClaimDaoFactory:
     """Get claim DAO factory."""
     return ClaimDaoFactory(config=config, dao_factory=dao_factory)
 
 
 async def get_claim_dao(
-    dao_factory: ClaimDaoFactory = Depends(get_claim_dao_factory),
+    dao_factory: Annotated[ClaimDaoFactory, Depends(get_claim_dao_factory)],
 ) -> ClaimDao:
     """Get claim data access object."""
     return await dao_factory.get_claim_dao()

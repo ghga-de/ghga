@@ -16,6 +16,7 @@
 """Basic HTTP authentication"""
 
 import secrets
+from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -71,7 +72,7 @@ def get_basic_auth_dependency(app: FastAPI, config: Config):
         )
 
     async def check_basic_auth(
-        passed_credentials: HTTPBasicCredentials = Depends(http_basic),
+        passed_credentials: Annotated[HTTPBasicCredentials, Depends(http_basic)],
     ):
         """Check basic access authentication if username and password are set."""
         # checking user and password while avoiding timing attacks

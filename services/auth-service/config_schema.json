@@ -14,6 +14,24 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "iva_events_topic": {
+      "default": "ivas",
+      "description": "The topic used for events related to IVAs",
+      "examples": [
+        "ivas"
+      ],
+      "title": "Iva Events Topic",
+      "type": "string"
+    },
+    "iva_state_changed_event_type": {
+      "default": "iva_state_changed",
+      "description": "The event type for IVA state changes",
+      "examples": [
+        "iva_state_changed"
+      ],
+      "title": "Iva State Changed Event Type",
+      "type": "string"
+    },
     "dataset_deletion_event_topic": {
       "default": "metadata_datasets",
       "description": "the topic of the event announcing dataset deletions",

@@ -16,8 +16,8 @@
 
 """Test Claims models and show some usage examples."""
 
+import pytest
 from ghga_service_commons.utils.utc_dates import utc_datetime
-from pytest import mark, raises
 
 from auth_service.user_management.claims_repository.models.claims import (
     AuthorityLevel,
@@ -45,7 +45,7 @@ def test_good_visa_type():
 
 def test_bas_visa_type():
     """Test creating a visa with a non-existing type"""
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ClaimCreation(
             visa_type="UNKNOWN_TYPE",  # type: ignore
             visa_value="https://foo.org",
@@ -56,7 +56,7 @@ def test_bas_visa_type():
         )
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "value",
     [
         "foo@bar.org",
@@ -76,7 +76,7 @@ def test_good_visa_values(value):
     )
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "value",
     [
         "not-a-valid-value",
@@ -90,7 +90,7 @@ def test_good_visa_values(value):
 )
 def test_bad_visa_values(value):
     """Test creating an invalid visa value"""
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ClaimCreation(
             visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
             visa_value=value,
@@ -161,7 +161,7 @@ def test_conditions():
     )
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "valid_from, valid_until",
     [
         (
@@ -197,7 +197,9 @@ def test_validator_period(valid_from, valid_until):
         source="https://foo.org",  # type: ignore
     )
 
-    with raises(ValueError, match="'valid_until' must be later than 'valid_from'"):
+    with pytest.raises(
+        ValueError, match="'valid_until' must be later than 'valid_from'"
+    ):
         ClaimCreation(
             visa_type=VisaType.RESEARCHER_STATUS,
             visa_value="foo@bar.org",
@@ -207,7 +209,9 @@ def test_validator_period(valid_from, valid_until):
             source="https://foo.org",  # type: ignore
         )
 
-    with raises(ValueError, match="'valid_until' must be later than 'valid_from'"):
+    with pytest.raises(
+        ValueError, match="'valid_until' must be later than 'valid_from'"
+    ):
         ClaimCreation(
             visa_type=VisaType.RESEARCHER_STATUS,
             visa_value="foo@bar.org",

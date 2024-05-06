@@ -20,10 +20,10 @@ from contextlib import nullcontext
 from typing import cast
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from fastapi import HTTPException, status
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pydantic import SecretStr
-from pytest import mark, raises
 
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
 from auth_service.auth_adapter.core.session_store import SessionState
@@ -52,12 +52,12 @@ config = Config(
 )  # type: ignore
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "totp_code",
     ["", "123456", "423715", "123123", "999999"],
     ids=["empty", "invalid", "valid", "rate-limit", "total-limit"],
 )
-@mark.parametrize(
+@pytest.mark.parametrize(
     "session_state",
     [
         SessionState.REGISTERED,
@@ -66,7 +66,7 @@ config = Config(
         SessionState.AUTHENTICATED,
     ],
 )
-@mark.asyncio()
+@pytest.mark.asyncio()
 async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa: C901
     """Test the verification of a TOTP code under various circumstances."""
     session_store = MemorySessionStore(config=config)
@@ -119,7 +119,7 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
     session_store.save_session = AsyncMock()  # type: ignore
     session_store.delete_session = AsyncMock()  # type: ignore
 
-    with nullcontext() if should_verify else raises(HTTPException) as exc_info:
+    with nullcontext() if should_verify else pytest.raises(HTTPException) as exc_info:
         await verify_totp(
             totp_code,
             user_id,

@@ -239,8 +239,8 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def update_iva(self, iva: Iva, **update: Any) -> None:
-        """Update the IVA with the given data.
+    async def update_iva(self, iva: Iva, **update: Any) -> Iva:
+        """Update the IVA with the given data and return the updated IVA.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError
         or an IvaModificationError.

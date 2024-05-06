@@ -19,14 +19,11 @@
 import logging
 from datetime import timedelta
 
+import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError
-from hexkit.providers.akafka.testutils import (
-    KafkaFixture,
-    kafka_fixture,  # noqa: F401
-)
-from pydantic import SecretStr
-from pytest import LogCaptureFixture, mark, raises
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.__main__ import get_claim_dao, prepare_event_subscriber
 from auth_service.config import CONFIG
@@ -36,23 +33,18 @@ from auth_service.user_management.claims_repository.models.claims import (
     VisaType,
 )
 
-from .fixtures import (
-    MongoDbContainer,
-    fixture_mongodb,  # noqa: F401
-)
 
-
-@mark.asyncio()
+@pytest.mark.asyncio()
 async def test_deletion_handler(
-    kafka_fixture: KafkaFixture,  # noqa: F811
-    mongodb: MongoDbContainer,
-    caplog: LogCaptureFixture,
+    kafka: KafkaFixture,
+    mongodb: MongoDbFixture,
+    caplog: pytest.LogCaptureFixture,
 ):
     """Test the dataset deletion handler"""
     config = CONFIG.model_copy(
         update={
-            "db_connection_str": SecretStr(mongodb.get_connection_url()),
-            "kafka_servers": kafka_fixture.kafka_servers,
+            "db_connection_str": mongodb.config.db_connection_str,
+            "kafka_servers": kafka.config.kafka_servers,
         }
     )
 
@@ -83,9 +75,7 @@ async def test_deletion_handler(
     async with prepare_event_subscriber(config=config) as event_subscriber:
         caplog.set_level(logging.INFO)
         caplog.clear()
-        await kafka_fixture.publish_event(
-            payload=payload, type_=event_type, topic=event_topic
-        )
+        await kafka.publish_event(payload=payload, type_=event_type, topic=event_topic)
         await event_subscriber.run(forever=False)
         records = caplog.records
         messages = [
@@ -96,13 +86,11 @@ async def test_deletion_handler(
         assert len(messages) == 2, messages
         assert messages[0].startswith('Consuming event of type "dataset_deleted"')
         assert messages[1] == "Deleted 1 claims for dataset some-dataset-id"
-        with raises(NoHitsFoundError):
+        with pytest.raises(NoHitsFoundError):
             assert not await claim_dao.find_one(mapping={"user_id": "some-user-id"})
 
         caplog.clear()
-        await kafka_fixture.publish_event(
-            payload=payload, type_=event_type, topic=event_topic
-        )
+        await kafka.publish_event(payload=payload, type_=event_type, topic=event_topic)
         await event_subscriber.run(forever=False)
         assert len(records) == 4, records
         messages = [record.message for record in records]

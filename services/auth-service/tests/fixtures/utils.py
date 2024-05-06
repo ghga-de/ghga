@@ -50,6 +50,9 @@ from auth_service.user_management.user_registry.models.ivas import (
     IvaType,
 )
 from auth_service.user_management.user_registry.models.users import User, UserData
+from auth_service.user_management.user_registry.ports.event_pub import (
+    EventPublisherPort,
+)
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -444,18 +447,39 @@ class DummyClaimDao:
         self.claims.remove(claim)
 
 
+class DummyEventPublisher(EventPublisherPort):
+    """User registry event publisher for testing."""
+
+    def __init__(self):
+        """Initialize the dummy event pulisher."""
+        self.published_events = []
+
+    async def publish_iva_state_changed(self, *, iva: Iva) -> None:
+        """Publish an event relaying that the state of a user IVA has been changed."""
+        self.published_events.append(("iva_state_changed", iva))
+
+    async def publish_ivas_reset(self, *, user_id: str) -> None:
+        """Publish an event relaying that all IVAs of the user have been reset."""
+        self.published_events.append(("ivas_reset", user_id))
+
+
 class DummyUserRegistry(UserRegistry):
     """A modified user registry for testing with the dummy DAOs."""
+
+    published_events: list[tuple[str, Any]]
 
     def __init__(self, *, config: UserRegistryConfig = CONFIG):
         """Initialize the DummyUserRegistry."""
         self.dummy_user_dao = DummyUserDao()
         self.dummy_iva_dao = DummyIvaDao()
+        event_publisher = DummyEventPublisher()
         super().__init__(
             config=config,
             user_dao=cast(UserDao, self.dummy_user_dao),
             iva_dao=cast(IvaDao, self.dummy_iva_dao),
+            event_pub=event_publisher,
         )
+        self.published_events = event_publisher.published_events
 
     @staticmethod
     def is_internal_user_id(id_: str) -> bool:

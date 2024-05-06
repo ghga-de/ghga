@@ -19,8 +19,8 @@
 from datetime import timedelta
 from typing import Any
 
+import pytest
 from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
-from pytest import mark
 
 from auth_service.auth_adapter.core.session_store import (
     Session,
@@ -34,7 +34,7 @@ from auth_service.user_management.user_registry.models.users import (
     UserStatus,
 )
 
-pytestmark = mark.asyncio(scope="module")
+pytestmark = pytest.mark.asyncio(scope="module")
 
 
 class CoreSessionStore(SessionStore):
@@ -147,7 +147,7 @@ async def test_validate_session():
     assert not validate(session)
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "original_state",
     [
         SessionState.NEEDS_REGISTRATION,
@@ -179,7 +179,7 @@ async def test_update_session_last_used_without_user(original_state: SessionStat
     assert session.last_used == now
 
 
-@mark.parametrize("changed_field", ["name", "email"])
+@pytest.mark.parametrize("changed_field", ["name", "email"])
 async def test_update_session_with_user_to_needs_re_registration(changed_field: str):
     """Test updating a session to the needs-re-registration state."""
     config = SessionConfig()
@@ -215,7 +215,7 @@ async def test_update_session_with_user_to_needs_re_registration(changed_field: 
     assert session.state is SessionState.NEEDS_RE_REGISTRATION
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "original_state",
     [
         SessionState.NEEDS_REGISTRATION,
@@ -261,7 +261,7 @@ async def test_update_session_with_user_to_registered(original_state: SessionSta
     assert session.state is SessionState.REGISTERED
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "original_state",
     [
         SessionState.NEEDS_REGISTRATION,
@@ -315,7 +315,7 @@ async def test_update_session_with_data_steward_to_registered(
     assert session.state is SessionState.REGISTERED
 
 
-@mark.parametrize(
+@pytest.mark.parametrize(
     "original_state",
     [
         SessionState.NEEDS_REGISTRATION,

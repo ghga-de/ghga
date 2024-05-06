@@ -16,7 +16,7 @@
 
 """Unit tests for the auth adapter core token signing feature"""
 
-from pytest import raises
+import pytest
 
 from auth_service.auth_adapter.core import auth
 
@@ -33,7 +33,7 @@ def test_signs_and_encodes_an_internal_token():
 
 def test_does_not_sign_an_empty_payload():
     """Test that an empty payload is rejected."""
-    with raises(auth.TokenSigningError, match="No payload"):
+    with pytest.raises(auth.TokenSigningError, match="No payload"):
         auth.sign_and_encode_token(None)  # type: ignore
-    with raises(auth.TokenSigningError, match="No payload"):
+    with pytest.raises(auth.TokenSigningError, match="No payload"):
         auth.sign_and_encode_token({})

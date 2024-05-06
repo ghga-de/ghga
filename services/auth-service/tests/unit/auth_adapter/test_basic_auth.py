@@ -16,8 +16,8 @@
 
 """Unit tests for the auth adapter HTTP Basic authentication feature"""
 
+import pytest
 from fastapi.security import HTTPBasicCredentials
-from pytest import raises
 
 from auth_service.auth_adapter.api.basic import get_allowed_credentials
 from auth_service.config import Config
@@ -42,7 +42,7 @@ def test_set_credentials():
 def test_invalid_credentials():
     """Test that invalid credentials are detected."""
     config = Config(basic_auth_credentials="foo:oof rhubarb baz:zab")  # type: ignore
-    with raises(ValueError, match="must be passed as username:password"):
+    with pytest.raises(ValueError, match="must be passed as username:password"):
         get_allowed_credentials(config)
 
 

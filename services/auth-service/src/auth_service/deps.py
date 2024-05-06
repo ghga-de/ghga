@@ -15,6 +15,8 @@
 
 """FastAPI dependencies (used with the `Depends` feature)"""
 
+from typing import Annotated
+
 from fastapi import Depends
 from hexkit.providers.mongodb import MongoDbConfig, MongoDbDaoFactory
 
@@ -34,7 +36,7 @@ def get_config() -> Config:
 
 
 def get_mongodb_dao_factory(
-    config: MongoDbConfig = Depends(get_config),
+    config: Annotated[MongoDbConfig, Depends(get_config)],
 ) -> MongoDbDaoFactory:
     """Get MongoDB DAO factory."""
     return MongoDbDaoFactory(config=config)
