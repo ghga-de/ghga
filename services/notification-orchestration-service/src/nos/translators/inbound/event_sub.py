@@ -58,6 +58,16 @@ class EventSubTranslatorConfig(BaseSettings):
         description="The type used for events detailing internally file registrations.",
         examples=["file_registered"],
     )
+    iva_events_topic: str = Field(
+        default=...,
+        description="The name of the topic containing IVA events.",
+        examples=["ivas"],
+    )
+    iva_state_changed_event_type: str = Field(
+        default=...,
+        description="The type to use for iva state changed events.",
+        examples=["iva_state_changed"],
+    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -69,12 +79,14 @@ class EventSubTranslator(EventSubscriberProtocol):
         self.topics_of_interest = [
             config.access_request_events_topic,
             config.file_registered_event_topic,
+            config.iva_events_topic,
         ]
         self.types_of_interest = [
             config.access_request_created_event_type,
             config.access_request_allowed_event_type,
             config.access_request_denied_event_type,
             config.file_registered_event_type,
+            config.iva_state_changed_event_type,
         ]
         self._config = config
         self._orchestrator = orchestrator
@@ -99,15 +111,33 @@ class EventSubTranslator(EventSubscriberProtocol):
             file_id=validated_payload.file_id
         )
 
+    async def _handle_iva_state_change(self, payload: JsonObject) -> None:
+        """Send notifications for IVA state changes."""
+        validated_payload = get_validated_payload(payload, event_schemas.UserIvaState)
+        await self._orchestrator.process_iva_state_change(user_iva=validated_payload)
+
+    async def _handle_all_ivas_reset(self, payload: JsonObject) -> None:
+        """Send notifications for all IVA resets."""
+        validated_payload = get_validated_payload(payload, event_schemas.UserIvaState)
+        await self._orchestrator.process_all_ivas_invalidated(
+            user_id=validated_payload.user_id
+        )
+
     async def _consume_validated(
         self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
     ) -> None:
         """Consumes an event"""
-        if type_ in (
-            self._config.access_request_created_event_type,
-            self._config.access_request_allowed_event_type,
-            self._config.access_request_denied_event_type,
-        ):
-            await self._handle_access_request(type_, payload)
-        elif type_ == self._config.file_registered_event_type:
-            await self._handle_file_registered(payload=payload)
+        match type_:
+            case _ if type_ in (
+                self._config.access_request_created_event_type,
+                self._config.access_request_allowed_event_type,
+                self._config.access_request_denied_event_type,
+            ):
+                await self._handle_access_request(type_, payload)
+            case self._config.file_registered_event_type:
+                await self._handle_file_registered(payload=payload)
+            case self._config.iva_state_changed_event_type:
+                if key.startswith("all-"):
+                    await self._handle_all_ivas_reset(payload=payload)
+                else:
+                    await self._handle_iva_state_change(payload=payload)

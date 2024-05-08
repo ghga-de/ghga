@@ -151,6 +151,26 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`iva_events_topic`** *(string)*: The name of the topic containing IVA events.
+
+
+  Examples:
+
+  ```json
+  "ivas"
+  ```
+
+
+- **`iva_state_changed_event_type`** *(string)*: The type to use for iva state changed events.
+
+
+  Examples:
+
+  ```json
+  "iva_state_changed"
+  ```
+
+
 - **`service_name`** *(string)*: The Notification Orchestration Service controls the creation of notification events. Default: `"nos"`.
 
 - **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.

@@ -28,5 +28,4 @@ async def user_dao_factory(*, dao_factory: DaoFactoryProtocol) -> UserDaoPort:
         name="users",
         dto_model=models.User,
         id_field="id",
-        dto_creation_model=models.UserData,
     )

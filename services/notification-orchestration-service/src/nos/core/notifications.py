@@ -28,6 +28,13 @@ __all__ = [
     "ACCESS_REQUEST_ALLOWED_TO_DS",
     "ACCESS_REQUEST_DENIED_TO_USER",
     "ACCESS_REQUEST_DENIED_TO_DS",
+    "FILE_REGISTERED_TO_DS",
+    "ALL_IVAS_INVALIDATED_TO_USER",
+    "IVA_CODE_REQUESTED_TO_USER",
+    "IVA_CODE_REQUESTED_TO_DS",
+    "IVA_CODE_TRANSMITTED_TO_USER",
+    "IVA_CODE_SUBMITTED_TO_DS",
+    "IVA_UNVERIFIED_TO_DS",
 ]
 
 
@@ -125,4 +132,58 @@ and the access has not been granted.
 FILE_REGISTERED_TO_DS = Notification(
     "File upload completed",
     "The file {file_id} has been successfully uploaded.",
+)
+
+ALL_IVAS_INVALIDATED_TO_USER = Notification(
+    "Contact Address Invalidation",
+    """
+All of your registered contact addresses now need re-verification due to the establishment
+of a new 2nd authentication factor.
+
+If you have any questions, please contact a Data Steward at GHGA: {email}.
+""",
+)
+
+IVA_CODE_REQUESTED_TO_USER = Notification(
+    "Contact Address Verification Request Received",
+    """
+A verification code will be sent to you soon via the specified contact address.
+""",
+)
+
+IVA_CODE_REQUESTED_TO_DS = Notification(
+    "IVA Request Received",
+    """
+{full_user_name} has requested an IVA verification code.
+
+The specified contact email address is: {email}.
+""",
+)
+
+IVA_CODE_TRANSMITTED_TO_USER = Notification(
+    "Contact Address Verification Code Transmitted",
+    """
+A Data Steward has transmitted a verification code to the address specified by
+your contact address. Please check for the verification code and submit it on the
+GHGA Data Portal.
+""",
+)
+
+IVA_CODE_SUBMITTED_TO_DS = Notification(
+    "IVA Verification Code Submitted",
+    """
+{full_user_name} has submitted an IVA verification code for review.
+
+The specified contact email address is: {email}.
+""",
+)
+
+IVA_UNVERIFIED_TO_DS = Notification(
+    "IVA Unverified",
+    """
+The '{type}' IVA of {full_user_name} has been marked as unverified, due to too
+many failed verification attempts.
+
+The specified contact email address is: {email}.
+""",
 )

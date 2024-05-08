@@ -18,6 +18,8 @@
 
 from abc import ABC, abstractmethod
 
+from ghga_event_schemas import pydantic_ as event_schemas
+
 
 class OrchestratorPort(ABC):
     """A class that creates notification events from incoming event data."""
@@ -35,6 +37,13 @@ class OrchestratorPort(ABC):
             )
             super().__init__(message)
 
+    class UnexpectedIvaState(RuntimeError):
+        """Raised when an unexpected IVA state is encountered."""
+
+        def __init__(self, *, state: str) -> None:
+            message = f"Unexpected IVA state '{state}' encountered."
+            super().__init__(message)
+
     @abstractmethod
     async def process_access_request_notification(
         self, *, event_type: str, user_id: str, dataset_id: str
@@ -49,3 +58,11 @@ class OrchestratorPort(ABC):
     @abstractmethod
     async def process_file_registered_notification(self, *, file_id: str):
         """Send notifications for internal file registrations (completed uploads)."""
+
+    @abstractmethod
+    async def process_all_ivas_invalidated(self, *, user_id: str):
+        """Handle notifications for all IVA resets."""
+
+    @abstractmethod
+    async def process_iva_state_change(self, *, user_iva: event_schemas.UserIvaState):
+        """Handle notifications for IVA state changes."""

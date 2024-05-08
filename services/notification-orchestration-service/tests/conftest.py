@@ -19,13 +19,15 @@ import pytest_asyncio
 from hexkit.providers.akafka.testutils import get_kafka_fixture
 from hexkit.providers.mongodb.testutils import get_mongodb_fixture
 
-from nos.core.models import AcademicTitle, UserData
+from nos.core.models import AcademicTitle, User
 from tests.fixtures.joint import JointFixture, get_joint_fixture
 
 mongodb_fixture = get_mongodb_fixture(scope="module")
 kafka_fixture = get_kafka_fixture(scope="module")
 joint_fixture = get_joint_fixture(scope="module")
-TEST_USER = UserData(name="test user", title=AcademicTitle.DR, email="test@test.abc")
+TEST_USER = User(
+    id="test", name="test user", title=AcademicTitle.DR, email="test@test.abc"
+)
 
 
 @pytest_asyncio.fixture(autouse=True, scope="module")
@@ -36,8 +38,6 @@ async def insert_test_data(joint_fixture: JointFixture):
     The ID-containing user is assigned as an attribute to the joint_fixture as well so
     the ID is easily accessible to tests.
     """
-    user_with_id = await joint_fixture.user_dao.insert(TEST_USER)
-    joint_fixture.test_user = user_with_id
+    await joint_fixture.user_dao.insert(TEST_USER)
     yield
-    await joint_fixture.user_dao.delete(id_=user_with_id.id)
-    joint_fixture.test_user = None
+    await joint_fixture.user_dao.delete(id_=TEST_USER.id)

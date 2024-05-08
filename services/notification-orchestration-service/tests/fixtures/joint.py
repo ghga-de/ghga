@@ -26,7 +26,6 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from nos.config import Config
-from nos.core.models import User
 from nos.inject import prepare_core, prepare_event_subscriber
 from nos.ports.inbound.orchestrator import OrchestratorPort
 from nos.ports.outbound.dao import UserDaoPort
@@ -44,7 +43,6 @@ class JointFixture:
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     user_dao: UserDaoPort
-    test_user: User | None = None
 
 
 async def joint_fixture_function(
