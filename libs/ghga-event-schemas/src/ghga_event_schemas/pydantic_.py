@@ -396,6 +396,31 @@ class UserID(BaseModel):
     user_id: str = Field(..., description="The user ID")
 
 
+class AcademicTitle(str, Enum):
+    """Academic title"""
+
+    DR = "Dr."
+    PROF = "Prof."
+
+
+class User(UserID):
+    """Event used to publish user data changes via outbox pattern."""
+
+    name: str = Field(
+        default=...,
+        description="Full name of the user",
+        examples=["Rosalind Franklin"],
+    )
+    title: AcademicTitle | None = Field(
+        default=None, title="Academic title", description="Academic title of the user"
+    )
+    email: EmailStr = Field(
+        default=...,
+        description="Preferred e-mail address of the user",
+        examples=["user@home.org"],
+    )
+
+
 class AccessRequestDetails(UserID):
     """Event used to convey the user ID and dataset ID of an access request."""
 
