@@ -20,23 +20,6 @@ from typing import NamedTuple
 
 log = logging.getLogger(__name__)
 
-__all__ = [
-    "Notification",
-    "ACCESS_REQUEST_CREATED_TO_USER",
-    "ACCESS_REQUEST_CREATED_TO_DS",
-    "ACCESS_REQUEST_ALLOWED_TO_USER",
-    "ACCESS_REQUEST_ALLOWED_TO_DS",
-    "ACCESS_REQUEST_DENIED_TO_USER",
-    "ACCESS_REQUEST_DENIED_TO_DS",
-    "FILE_REGISTERED_TO_DS",
-    "ALL_IVAS_INVALIDATED_TO_USER",
-    "IVA_CODE_REQUESTED_TO_USER",
-    "IVA_CODE_REQUESTED_TO_DS",
-    "IVA_CODE_TRANSMITTED_TO_USER",
-    "IVA_CODE_SUBMITTED_TO_DS",
-    "IVA_UNVERIFIED_TO_DS",
-]
-
 
 class NotificationError(RuntimeError):
     """Raised for notification-related errors."""
@@ -185,5 +168,14 @@ The '{type}' IVA of {full_user_name} has been marked as unverified, due to too
 many failed verification attempts.
 
 The specified contact email address is: {email}.
+""",
+)
+
+USER_REREGISTERED_TO_USER = Notification(
+    "Account Details Changed",
+    """
+Your account details were recently updated. The changed details include: {changed_details}.
+
+If you did not make these changes or have questions, please contact the GHGA immediately at {support_email}.
 """,
 )

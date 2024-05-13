@@ -16,11 +16,10 @@
 
 """DAO interface for accessing the database."""
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import DaoNaturalId, ResourceNotFoundError
-
-from nos.core import models
 
 __all__ = ["UserDaoPort", "ResourceNotFoundError"]
 
 # ports described by type aliases:
-UserDaoPort = DaoNaturalId[models.User]
+UserDaoPort = DaoNaturalId[event_schemas.User]

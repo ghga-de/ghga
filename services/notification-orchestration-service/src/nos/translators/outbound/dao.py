@@ -16,9 +16,9 @@
 
 """DAO translator constructor"""
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import DaoFactoryProtocol
 
-from nos.core import models
 from nos.ports.outbound.dao import UserDaoPort
 
 
@@ -26,6 +26,6 @@ async def user_dao_factory(*, dao_factory: DaoFactoryProtocol) -> UserDaoPort:
     """Construct a UserDaoPort from the provided dao_factory"""
     return await dao_factory.get_dao(
         name="users",
-        dto_model=models.User,
-        id_field="id",
+        dto_model=event_schemas.User,
+        id_field="user_id",
     )

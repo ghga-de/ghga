@@ -66,3 +66,22 @@ class OrchestratorPort(ABC):
     @abstractmethod
     async def process_iva_state_change(self, *, user_iva: event_schemas.UserIvaState):
         """Handle notifications for IVA state changes."""
+
+    @abstractmethod
+    async def upsert_user_data(
+        self, resource_id: str, update: event_schemas.User
+    ) -> None:
+        """Upsert the user data.
+
+        This method will also examine the user data and send out notifications for the
+        following:
+        - User re-registration
+        """
+
+    @abstractmethod
+    async def delete_user_data(self, resource_id: str) -> None:
+        """Delete the user data.
+
+        In the case that the user ID does not exist in the database, this method will
+        log the fact but not raise an error.
+        """

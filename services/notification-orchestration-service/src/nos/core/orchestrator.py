@@ -18,13 +18,13 @@
 
 import logging
 from collections.abc import Callable
+from contextlib import suppress
 from functools import partial
 
 from ghga_event_schemas import pydantic_ as event_schemas
 
 from nos.config import Config
 from nos.core import notifications
-from nos.core.models import User
 from nos.ports.inbound.orchestrator import OrchestratorPort
 from nos.ports.outbound.dao import ResourceNotFoundError, UserDaoPort
 from nos.ports.outbound.notification_emitter import NotificationEmitterPort
@@ -79,7 +79,9 @@ class Orchestrator(OrchestratorPort):
 
         await method_map[event_type](user=user, dataset_id=dataset_id)
 
-    async def _access_request_created(self, *, user: User, dataset_id: str):
+    async def _access_request_created(
+        self, *, user: event_schemas.User, dataset_id: str
+    ):
         """Processes an Access Request Created event.
 
         One notification is sent to the data requester to confirm that their request
@@ -112,7 +114,9 @@ class Orchestrator(OrchestratorPort):
         )
         log.info("Sent Access Request Created notification to data steward")
 
-    async def _access_request_allowed(self, *, user: User, dataset_id: str):
+    async def _access_request_allowed(
+        self, *, user: event_schemas.User, dataset_id: str
+    ):
         """Process an Access Request Allowed event.
 
         One notification is sent to the data requester to inform them that the request
@@ -146,7 +150,9 @@ class Orchestrator(OrchestratorPort):
         )
         log.info("Sent Access Request Allowed notification to data steward")
 
-    async def _access_request_denied(self, *, user: User, dataset_id: str):
+    async def _access_request_denied(
+        self, *, user: event_schemas.User, dataset_id: str
+    ):
         """Process an Access Request Denied event.
 
         One notification is sent to the data requester telling them that the request
@@ -189,7 +195,7 @@ class Orchestrator(OrchestratorPort):
         )
         log.info("Sent File Upload Completed notification to data steward")
 
-    async def _iva_code_requested(self, *, user: User):
+    async def _iva_code_requested(self, *, user: event_schemas.User):
         """Send notifications relaying that an IVA code has been requested.
 
         One notification is sent to the user to confirm that their request was received.
@@ -212,7 +218,7 @@ class Orchestrator(OrchestratorPort):
             ),
         )
 
-    async def _iva_code_transmitted(self, *, user: User):
+    async def _iva_code_transmitted(self, *, user: event_schemas.User):
         """Send a notification that an IVA code has been transmitted to the user."""
         await self._notification_emitter.notify(
             email=user.email,
@@ -220,7 +226,7 @@ class Orchestrator(OrchestratorPort):
             notification=notifications.IVA_CODE_TRANSMITTED_TO_USER,
         )
 
-    async def _iva_code_validated(self, *, user: User):
+    async def _iva_code_validated(self, *, user: event_schemas.User):
         """Send a notification to the data steward that an IVA code has been validated."""
         await self._notification_emitter.notify(
             email=self._config.central_data_stewardship_email,
@@ -234,7 +240,7 @@ class Orchestrator(OrchestratorPort):
         self,
         *,
         iva_type: str,
-        user: User,
+        user: event_schemas.User,
     ):
         """Send notifications for IVAs set to 'unverified'.
 
@@ -320,3 +326,50 @@ class Orchestrator(OrchestratorPort):
             raise error from err
 
         await method_map[user_iva.state][0](user=user)
+
+    def _changed_info(
+        self, existing_user: event_schemas.User, new_user: event_schemas.User
+    ) -> str:
+        """Check what critical user information has changed (if any).
+
+        Critical information includes the user's email address and name.
+        """
+        changed = []
+        for field in ["email", "name"]:
+            if getattr(existing_user, field) != getattr(new_user, field):
+                changed.append(field)
+        return " and ".join(changed)
+
+    async def upsert_user_data(
+        self, resource_id: str, update: event_schemas.User
+    ) -> None:
+        """Upsert the user data.
+
+        This method will also examine the user data and send out notifications for
+        user re-registration.
+        """
+        with suppress(ResourceNotFoundError):
+            existing_user = await self._user_dao.get_by_id(resource_id)
+            if changed_details := self._changed_info(existing_user, update):
+                await self._notification_emitter.notify(
+                    email=existing_user.email,
+                    full_name=update.name,
+                    notification=notifications.USER_REREGISTERED_TO_USER.formatted(
+                        support_email=self._config.central_data_stewardship_email,
+                        changed_details=changed_details,
+                    ),
+                )
+                log.info("Sent User Re-registered notification to user")
+        await self._user_dao.upsert(dto=update)
+
+    async def delete_user_data(self, resource_id: str) -> None:
+        """Delete the user data.
+
+        In the case that the user ID does not exist in the database, this method will
+        log the fact but not raise an error.
+        """
+        try:
+            await self._user_dao.delete(resource_id)
+        except ResourceNotFoundError:
+            # do not raise an error if the user is not found, just log it.
+            log.warning("User not found for deletion", extra={"user_id": resource_id})

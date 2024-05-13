@@ -36,6 +36,12 @@
       "title": "Notification Event Type",
       "type": "string"
     },
+    "user_events_topic": {
+      "default": "users",
+      "description": "The name of the topic containing user events.",
+      "title": "User Events Topic",
+      "type": "string"
+    },
     "access_request_events_topic": {
       "description": "Name of the event topic used to consume access request events",
       "examples": [
@@ -84,12 +90,12 @@
       "title": "File Registered Event Type",
       "type": "string"
     },
-    "iva_events_topic": {
+    "iva_state_changed_event_topic": {
       "description": "The name of the topic containing IVA events.",
       "examples": [
         "ivas"
       ],
-      "title": "Iva Events Topic",
+      "title": "Iva State Changed Event Topic",
       "type": "string"
     },
     "iva_state_changed_event_type": {
@@ -221,7 +227,7 @@
     "access_request_denied_event_type",
     "file_registered_event_topic",
     "file_registered_event_type",
-    "iva_events_topic",
+    "iva_state_changed_event_topic",
     "iva_state_changed_event_type",
     "service_instance_id",
     "kafka_servers",

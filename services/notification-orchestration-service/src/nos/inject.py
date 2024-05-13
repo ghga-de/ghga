@@ -19,13 +19,20 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from ghga_service_commons.utils.context import asyncnullcontext
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.akafka import (
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+    KafkaOutboxSubscriber,
+)
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from nos.config import Config
 from nos.core.orchestrator import Orchestrator
 from nos.ports.inbound.orchestrator import OrchestratorPort
-from nos.translators.inbound.event_sub import EventSubTranslator
+from nos.translators.inbound.event_sub import (
+    EventSubTranslator,
+    OutboxSubTranslator,
+)
 from nos.translators.outbound.dao import user_dao_factory
 from nos.translators.outbound.event_pub import NotificationEmitter
 
@@ -87,3 +94,27 @@ async def prepare_event_subscriber(
             config=config, translator=event_sub_translator
         ) as event_subscriber:
             yield event_subscriber
+
+
+@asynccontextmanager
+async def prepare_outbox_subscriber(
+    *,
+    config: Config,
+    core_override: OrchestratorPort | None = None,
+) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
+    """Construct and initialize an outbox subscriber with all its dependencies.
+    By default, the core dependencies are automatically prepared but you can also
+    provide them using the override parameter.
+    """
+    async with prepare_core_with_override(
+        config=config, core_override=core_override
+    ) as orchestrator:
+        outbox_sub_translator = OutboxSubTranslator(
+            orchestrator=orchestrator,
+            config=config,
+        )
+
+        async with KafkaOutboxSubscriber.construct(
+            config=config, translators=[outbox_sub_translator]
+        ) as outbox_subscriber:
+            yield outbox_subscriber

@@ -91,6 +91,8 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`user_events_topic`** *(string)*: The name of the topic containing user events. Default: `"users"`.
+
 - **`access_request_events_topic`** *(string)*: Name of the event topic used to consume access request events.
 
 
@@ -151,7 +153,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`iva_events_topic`** *(string)*: The name of the topic containing IVA events.
+- **`iva_state_changed_event_topic`** *(string)*: The name of the topic containing IVA events.
 
 
   Examples:

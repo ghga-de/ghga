@@ -28,6 +28,7 @@ from tests.conftest import TEST_USER
 from tests.fixtures.joint import JointFixture
 
 DATASET_ID = "dataset1"
+pytestmark = pytest.mark.asyncio()
 
 
 def access_request_payload(user_id: str) -> dict[str, Any]:
@@ -83,7 +84,6 @@ def iva_state_payload(user_id: str, state: event_schemas.IvaState) -> dict[str, 
         ),
     ],
 )
-@pytest.mark.asyncio(scope="module")
 async def test_access_request(
     joint_fixture: JointFixture,
     user_notification_content: notifications.Notification,
@@ -96,7 +96,7 @@ async def test_access_request(
 
     Test will also check idempotence.
     """
-    test_user = await joint_fixture.user_dao.get_by_id(TEST_USER.id)
+    test_user = await joint_fixture.user_dao.get_by_id(TEST_USER.user_id)
 
     event_type_to_use = getattr(
         joint_fixture.config, f"access_request_{event_type}_event_type"
@@ -133,7 +133,7 @@ async def test_access_request(
 
     # Create the kafka event that would be published by the access request service
     await joint_fixture.kafka.publish_event(
-        payload=access_request_payload(test_user.id),
+        payload=access_request_payload(test_user.user_id),
         type_=event_type_to_use,
         topic=joint_fixture.config.access_request_events_topic,
     )
@@ -147,7 +147,7 @@ async def test_access_request(
 
     # Publish and consume event again to check idempotence
     await joint_fixture.kafka.publish_event(
-        payload=access_request_payload(test_user.id),
+        payload=access_request_payload(test_user.user_id),
         type_=event_type_to_use,
         topic=joint_fixture.config.access_request_events_topic,
     )
@@ -159,7 +159,6 @@ async def test_access_request(
         await joint_fixture.event_subscriber.run(forever=False)
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_missing_user_id_access_requests(
     joint_fixture: JointFixture, logot: Logot
 ):
@@ -191,7 +190,6 @@ async def test_missing_user_id_access_requests(
         )
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_missing_user_id_iva_state_changes(
     joint_fixture: JointFixture, logot: Logot
 ):
@@ -228,7 +226,6 @@ async def test_missing_user_id_iva_state_changes(
         )
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_file_registered(joint_fixture: JointFixture):
     """Test that the file registered events are translated into a notification."""
     # Prepare triggering event (the file registration event).
@@ -302,7 +299,6 @@ async def test_file_registered(joint_fixture: JointFixture):
         ),
     ],
 )
-@pytest.mark.asyncio(scope="module")
 async def test_iva_state_change(
     joint_fixture: JointFixture,
     iva_state: event_schemas.IvaState,
@@ -316,7 +312,7 @@ async def test_iva_state_change(
     """
     # Prepare triggering event (the IVA state change event).
     trigger_event = event_schemas.UserIvaState(
-        user_id=TEST_USER.id,
+        user_id=TEST_USER.user_id,
         state=iva_state,
         value=None,
         type=event_schemas.IvaType.FAX,
@@ -326,8 +322,8 @@ async def test_iva_state_change(
     await joint_fixture.kafka.publish_event(
         payload=trigger_event.model_dump(),
         type_=joint_fixture.config.iva_state_changed_event_type,
-        topic=joint_fixture.config.iva_events_topic,
-        key=TEST_USER.id,
+        topic=joint_fixture.config.iva_state_changed_event_topic,
+        key=TEST_USER.user_id,
     )
 
     # Build a notification payload for the user, if applicable
@@ -377,12 +373,11 @@ async def test_iva_state_change(
         await joint_fixture.event_subscriber.run(forever=False)
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_all_ivas_reset(joint_fixture: JointFixture):
     """Test that the 'all IVA invalidated' events are translated into a notification."""
     # Prepare triggering event (the IVA state change event).
     trigger_event = event_schemas.UserIvaState(
-        user_id=TEST_USER.id,
+        user_id=TEST_USER.user_id,
         state=event_schemas.IvaState.UNVERIFIED,
         value=None,
         type=None,
@@ -392,8 +387,8 @@ async def test_all_ivas_reset(joint_fixture: JointFixture):
     await joint_fixture.kafka.publish_event(
         payload=trigger_event.model_dump(),
         type_=joint_fixture.config.iva_state_changed_event_type,
-        topic=joint_fixture.config.iva_events_topic,
-        key=f"all-{TEST_USER.id}",
+        topic=joint_fixture.config.iva_state_changed_event_topic,
+        key=f"all-{TEST_USER.user_id}",
     )
 
     # Define the event that should be published by the NOS when the trigger is consumed

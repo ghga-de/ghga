@@ -18,6 +18,7 @@
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
+from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -58,7 +59,7 @@ class EventSubTranslatorConfig(BaseSettings):
         description="The type used for events detailing internally file registrations.",
         examples=["file_registered"],
     )
-    iva_events_topic: str = Field(
+    iva_state_changed_event_topic: str = Field(
         default=...,
         description="The name of the topic containing IVA events.",
         examples=["ivas"],
@@ -79,7 +80,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         self.topics_of_interest = [
             config.access_request_events_topic,
             config.file_registered_event_topic,
-            config.iva_events_topic,
+            config.iva_state_changed_event_topic,
         ]
         self.types_of_interest = [
             config.access_request_created_event_type,
@@ -141,3 +142,39 @@ class EventSubTranslator(EventSubscriberProtocol):
                     await self._handle_all_ivas_reset(payload=payload)
                 else:
                     await self._handle_iva_state_change(payload=payload)
+
+
+class OutboxSubTranslatorConfig(BaseSettings):
+    """Config for the outbox subscriber"""
+
+    user_events_topic: str = Field(
+        default="users",
+        description="The name of the topic containing user events.",
+    )
+
+
+class OutboxSubTranslator(DaoSubscriberProtocol[event_schemas.User]):
+    """A class that consumes events conveying changes in DB resources."""
+
+    event_topic: str
+    dto_model = event_schemas.User
+
+    def __init__(
+        self,
+        *,
+        config: OutboxSubTranslatorConfig,
+        orchestrator: OrchestratorPort,
+    ):
+        self._config = config
+        self._orchestrator = orchestrator
+        self.event_topic = config.user_events_topic
+
+    async def changed(self, resource_id: str, update: event_schemas.User) -> None:
+        """Consume change event (created or updated) for user data."""
+        await self._orchestrator.upsert_user_data(
+            resource_id=resource_id, update=update
+        )
+
+    async def deleted(self, resource_id: str) -> None:
+        """Consume event indicating the deletion of a user."""
+        await self._orchestrator.delete_user_data(resource_id=resource_id)

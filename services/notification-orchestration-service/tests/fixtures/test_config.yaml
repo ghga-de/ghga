@@ -11,5 +11,6 @@ notification_event_type: notification
 notification_event_topic: notification_events
 file_registered_event_topic: internal_file_registry
 file_registered_event_type: file_registered
-iva_events_topic: ivas
+iva_state_changed_event_topic: ivas
 iva_state_changed_event_type: iva_state_changed
+user_events_topic: users
