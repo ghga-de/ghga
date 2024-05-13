@@ -21,21 +21,22 @@ import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient as BareClient
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.testing.eventpub import InMemEventPublisher
 
 from auth_service.config import Config
 from auth_service.deps import get_config
 from auth_service.user_management.api.main import app, lifespan
-from auth_service.user_management.user_registry.deps import get_event_publisher
 
 
 @pytest_asyncio.fixture(name="bare_client")
-async def fixture_bare_client() -> AsyncGenerator[BareClient, None]:
-    """Get a test client for the user registry without database and event store."""
-    app.dependency_overrides[get_config] = lambda: Config(
+async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient, None]:
+    """Get a test client for the user registry without database."""
+    config = Config(
+        kafka_servers=kafka.config.kafka_servers,
+        service_name=kafka.config.service_name,
+        service_instance_id=kafka.config.service_instance_id,
         include_apis=["users"],
     )  # type: ignore
-    app.dependency_overrides[get_event_publisher] = lambda: InMemEventPublisher()
+    app.dependency_overrides[get_config] = lambda: config
 
     async with lifespan(app):
         async with BareClient(app) as client:

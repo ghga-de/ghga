@@ -517,7 +517,6 @@ components:
       - changed
       - type
       - value
-      - id
       - user_id
       - user_name
       - user_email
@@ -576,7 +575,6 @@ components:
       - changed
       - type
       - value
-      - id
       title: IVA
       type: object
     IvaId:
@@ -587,8 +585,6 @@ components:
           description: Internal IVA ID
           title: Id
           type: string
-      required:
-      - id
       title: IvaId
       type: object
     IvaState:
@@ -738,7 +734,6 @@ components:
       - email
       - ext_id
       - status
-      - id
       title: User
       type: object
     User-Output:
@@ -810,7 +805,6 @@ components:
       - email
       - ext_id
       - status
-      - id
       title: User
       type: object
     UserBasicData:

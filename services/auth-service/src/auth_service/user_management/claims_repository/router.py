@@ -254,7 +254,7 @@ async def delete_claim(
         raise claim_not_found_error
 
     try:
-        await claim_dao.delete(id_=claim_id)
+        await claim_dao.delete(claim_id)
     except ResourceNotFoundError as error:
         raise claim_not_found_error from error
 

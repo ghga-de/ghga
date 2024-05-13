@@ -23,6 +23,7 @@ from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 from pydantic import Field, HttpUrl
 
 from auth_service.auth_adapter.core.session_store import SessionConfig
@@ -50,10 +51,11 @@ class Config(
     TOTPConfig,
     UserRegistryConfig,
     LoggingConfig,
+    MongoKafkaConfig,
     MongoDbConfig,
+    KafkaConfig,
     UserDaoConfig,
     ClaimDaoConfig,
-    KafkaConfig,
     EventSubTranslatorConfig,
     EventPubTranslatorConfig,
 ):

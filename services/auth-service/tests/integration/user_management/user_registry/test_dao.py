@@ -18,31 +18,53 @@
 
 import pytest
 from ghga_service_commons.utils.utc_dates import utc_datetime
+from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.providers.akafka.testutils import KafkaFixture, RecordedEvent
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
-from auth_service.user_management.user_registry.core.registry import UserRegistry
+from auth_service.config import Config
 from auth_service.user_management.user_registry.deps import (
-    get_config,
+    UserDaoPublisherFactoryPort,
+    get_iva_dao,
+    get_user_dao,
     get_user_dao_factory,
 )
+from auth_service.user_management.user_registry.models.ivas import Iva, IvaType
 from auth_service.user_management.user_registry.models.users import (
     AcademicTitle,
     StatusChange,
     User,
-    UserData,
     UserStatus,
 )
 
 
-@pytest.mark.asyncio()
-async def test_user_creation(mongodb: MongoDbFixture):
-    """Test creating a new user"""
-    user_dao_factory = get_user_dao_factory(
-        config=get_config(), dao_factory=mongodb.dao_factory
+@pytest.fixture(name="user_dao_factory")
+def fixture_user_dao(
+    mongodb: MongoDbFixture, kafka: KafkaFixture
+) -> UserDaoPublisherFactoryPort:
+    """Create a user DAO factory for testing."""
+    config = Config(
+        db_connection_str=mongodb.config.db_connection_str,
+        db_name=mongodb.config.db_name,
+        kafka_servers=kafka.config.kafka_servers,
+        service_name=kafka.config.service_name,
+        service_instance_id=kafka.config.service_instance_id,
     )
-    user_dao = await user_dao_factory.get_user_dao()
 
-    user_data = UserData(
+    dao_publisher_factory = MongoKafkaDaoPublisherFactory(
+        config=config, event_publisher=kafka.publisher
+    )
+    return get_user_dao_factory(config, dao_publisher_factory)
+
+
+@pytest.mark.asyncio()
+async def test_user_crud(
+    user_dao_factory: UserDaoPublisherFactoryPort, kafka: KafkaFixture
+):
+    """Test creating, updating and deleting via the user DAO"""
+    user_dao = await get_user_dao(user_dao_factory)
+    user = User(
         ext_id="max@ls.org",
         status=UserStatus.ACTIVE,
         name="Max Headroom",
@@ -54,19 +76,81 @@ async def test_user_creation(mongodb: MongoDbFixture):
         active_access_requests=["req-1", "req-2"],
     )
 
-    for insert in True, False:
-        user = await (
-            user_dao.insert(user_data)
-            if insert
-            else user_dao.find_one(mapping={"ext_id": user_data.ext_id})
-        )
+    async with kafka.record_events(in_topic="users") as recorder:
+        await user_dao.insert(user)
 
-        assert user and isinstance(user, User)
-        assert user.ext_id == user_data.ext_id
-        assert user.status == user_data.status
-        assert user.name == user_data.name
-        assert user.title == user_data.title
-        assert user.email == user_data.email
-        assert user.registration_date == user_data.registration_date
-        assert UserRegistry.is_internal_user_id(user.id)
-        assert user.status_change == user_data.status_change
+        user_dto = await user_dao.get_by_id(user.id)
+
+        assert user_dto == user
+
+        changed_user = user.model_copy(update={"email": "max@changed.org"})
+        await user_dao.update(changed_user)
+        user_dto = await user_dao.get_by_id(user.id)
+        assert user_dto == changed_user
+
+        await user_dao.delete(user.id)
+        with pytest.raises(ResourceNotFoundError):
+            await user_dao.get_by_id(user.id)
+
+    # changes should be automatically published
+    assert recorder.recorded_events == [
+        RecordedEvent(
+            payload={
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "title": user.title,
+            },
+            type_="upserted",
+            key=user.id,
+        ),
+        RecordedEvent(
+            payload={
+                "id": user.id,
+                "name": user.name,
+                "email": changed_user.email,
+                "title": user.title,
+            },
+            type_="upserted",
+            key=user.id,
+        ),
+        RecordedEvent(
+            payload={},
+            type_="deleted",
+            key=user.id,
+        ),
+    ]
+
+
+@pytest.mark.asyncio()
+async def test_iva_crud(
+    user_dao_factory: UserDaoPublisherFactoryPort, kafka: KafkaFixture
+):
+    """Test creating, updating and deleting via the user DAO"""
+    iva_dao = await get_iva_dao(user_dao_factory)
+    iva = Iva(
+        user_id="some-user-id",
+        created=utc_datetime(2022, 9, 1, 12, 0),
+        changed=utc_datetime(2023, 4, 1, 12, 0),
+        type=IvaType.PHONE,
+        value="(0123)456789",
+    )
+
+    async with kafka.record_events(in_topic="ivas") as recorder:
+        await iva_dao.insert(iva)
+
+        iva_dto = await iva_dao.get_by_id(iva.id)
+
+        assert iva_dto == iva
+
+        changed_iva = iva.model_copy(update={"value": "(0123)444555"})
+        await iva_dao.update(changed_iva)
+        iva_dto = await iva_dao.get_by_id(iva.id)
+        assert iva_dto == changed_iva
+
+        await iva_dao.delete(iva.id)
+        with pytest.raises(ResourceNotFoundError):
+            await iva_dao.get_by_id(iva.id)
+
+    # changes should not be automatically published
+    assert not recorder.recorded_events

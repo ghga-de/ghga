@@ -38,18 +38,18 @@ from auth_service.user_management.claims_repository.models.claims import (
     VisaType,
 )
 from auth_service.user_management.user_registry.core.registry import (
-    IvaDao,
-    UserDao,
+    DaoPublisher,
+    IvaDto,
+    UserDto,
     UserRegistry,
     UserRegistryConfig,
 )
 from auth_service.user_management.user_registry.models.ivas import (
     Iva,
-    IvaFullData,
     IvaState,
     IvaType,
 )
-from auth_service.user_management.user_registry.models.users import User, UserData
+from auth_service.user_management.user_registry.models.users import User
 from auth_service.user_management.user_registry.ports.event_pub import (
     EventPublisherPort,
 )
@@ -283,9 +283,10 @@ class DummyUserDao:
             else:
                 yield user
 
-    async def insert(self, dto: UserData) -> User:
+    async def insert(self, dto: User) -> User:
         """Insert the dummy user."""
-        user = User(id=dto.ext_id.replace("@aai.org", "@ghga.de"), **dto.model_dump())
+        dto = dto.model_copy(update={"id": dto.ext_id.replace("@aai.org", "@ghga.de")})
+        user = User(**dto.model_dump())
         self.users.append(user)
         return user
 
@@ -339,9 +340,9 @@ class DummyIvaDao:
             else:
                 yield iva
 
-    async def insert(self, dto: IvaFullData) -> Iva:
+    async def insert(self, dto: Iva) -> Iva:
         """Insert a dummy IVA."""
-        dto = Iva(id="new-iva", **dto.model_dump())
+        dto = Iva(**dto.model_dump())
         self.ivas.append(dto)
         return dto
 
@@ -355,7 +356,7 @@ class DummyIvaDao:
         else:
             raise ResourceNotFoundError(id_=iva_id)
 
-    async def delete(self, *, id_: str) -> None:
+    async def delete(self, id_: str) -> None:
         """Delete a dummy IVA."""
         iva = await self.get_by_id(id_)
         self.ivas.remove(iva)
@@ -441,7 +442,7 @@ class DummyClaimDao:
             else:
                 yield claim
 
-    async def delete(self, *, id_: str) -> None:
+    async def delete(self, id_: str) -> None:
         """Delete a dummy user claim."""
         claim = await self.get_by_id(id_)
         self.claims.remove(claim)
@@ -475,8 +476,8 @@ class DummyUserRegistry(UserRegistry):
         event_publisher = DummyEventPublisher()
         super().__init__(
             config=config,
-            user_dao=cast(UserDao, self.dummy_user_dao),
-            iva_dao=cast(IvaDao, self.dummy_iva_dao),
+            user_dao=cast(DaoPublisher[UserDto], self.dummy_user_dao),
+            iva_dao=cast(DaoPublisher[IvaDto], self.dummy_iva_dao),
             event_pub=event_publisher,
         )
         self.published_events = event_publisher.published_events

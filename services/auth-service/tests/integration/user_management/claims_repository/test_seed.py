@@ -20,6 +20,7 @@ import asyncio
 import logging
 
 import pytest
+from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.config import Config
@@ -29,12 +30,15 @@ from auth_service.user_management.claims_repository.core.seed import (
 
 
 def test_add_non_existing_data_steward(
-    mongodb: MongoDbFixture, caplog: pytest.LogCaptureFixture
+    mongodb: MongoDbFixture, kafka: KafkaFixture, caplog: pytest.LogCaptureFixture
 ):
     """Test that non-existing data stewards can be added in the configuration."""
     config = Config(
         db_connection_str=mongodb.config.db_connection_str,
         db_name=mongodb.config.db_name,
+        kafka_servers=kafka.config.kafka_servers,
+        service_name=kafka.config.service_name,
+        service_instance_id=kafka.config.service_instance_id,
         include_apis=["claims"],
         add_as_data_stewards=[
             {
@@ -44,7 +48,7 @@ def test_add_non_existing_data_steward(
             },
             "id-of-jane-roe@ls.org",
         ],
-    )  # type: ignore
+    )
 
     caplog.set_level(logging.INFO)
     caplog.clear()

@@ -37,6 +37,6 @@ class DatasetDeletionHandler(DatasetDeletionPort):
         claims_filter = create_controlled_access_filter(dataset_id)
         count_deleted = 0
         async for dataset in self.claim_dao.find_all(mapping=claims_filter):
-            await self.claim_dao.delete(id_=dataset.id)
+            await self.claim_dao.delete(dataset.id)
             count_deleted += 1
         log.info("Deleted %d claims for dataset %s", count_deleted, dataset_id)

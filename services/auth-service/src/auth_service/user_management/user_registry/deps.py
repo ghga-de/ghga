@@ -20,19 +20,23 @@ from typing import Annotated
 
 from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.providers.akafka import KafkaConfig, KafkaEventPublisher
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from auth_service.deps import (
     Depends,
-    MongoDbDaoFactory,
     get_config,
-    get_mongodb_dao_factory,
+    get_mongo_kafka_dao_factory,
 )
 
 from .core.registry import UserRegistry, UserRegistryConfig
 from .ports.dao import IvaDao, UserDao
 from .ports.event_pub import EventPublisherPort
 from .ports.registry import UserRegistryPort
-from .translators.dao import UserDaoConfig, UserDaoFactory
+from .translators.dao import (
+    UserDaoConfig,
+    UserDaoPublisherFactory,
+    UserDaoPublisherFactoryPort,
+)
 from .translators.event_pub import EventPubTranslator, EventPubTranslatorConfig
 
 __all__ = ["get_user_dao", "IvaDao", "UserDao", "get_user_registry"]
@@ -40,21 +44,25 @@ __all__ = ["get_user_dao", "IvaDao", "UserDao", "get_user_registry"]
 
 def get_user_dao_factory(
     config: Annotated[UserDaoConfig, Depends(get_config)],
-    dao_factory: Annotated[MongoDbDaoFactory, Depends(get_mongodb_dao_factory)],
-) -> UserDaoFactory:
+    dao_publisher_factory: Annotated[
+        MongoKafkaDaoPublisherFactory, Depends(get_mongo_kafka_dao_factory)
+    ],
+) -> UserDaoPublisherFactoryPort:
     """Get user DAO factory."""
-    return UserDaoFactory(config=config, dao_factory=dao_factory)
+    return UserDaoPublisherFactory(
+        config=config, dao_publisher_factory=dao_publisher_factory
+    )
 
 
 async def get_user_dao(
-    dao_factory: Annotated[UserDaoFactory, Depends(get_user_dao_factory)],
+    dao_factory: Annotated[UserDaoPublisherFactoryPort, Depends(get_user_dao_factory)],
 ) -> UserDao:
     """Get user data access object."""
     return await dao_factory.get_user_dao()
 
 
 async def get_iva_dao(
-    dao_factory: Annotated[UserDaoFactory, Depends(get_user_dao_factory)],
+    dao_factory: Annotated[UserDaoPublisherFactoryPort, Depends(get_user_dao_factory)],
 ) -> IvaDao:
     """Get IVA data access object."""
     return await dao_factory.get_iva_dao()

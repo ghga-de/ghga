@@ -21,6 +21,7 @@ from functools import partial
 import pytest
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.providers.akafka.testutils import RecordedEvent
 
 from auth_service.user_management.user_registry.core.registry import UserRegistry
 
@@ -76,9 +77,11 @@ async def test_get_from_a_random_path(bare_client: BareClient):
 async def test_post_user(full_client: FullClient, new_user_headers: dict[str, str]):
     """Test that registering a user works."""
     user_data = MAX_USER_DATA
-    response = await full_client.post(
-        "/users", json=user_data, headers=new_user_headers
-    )
+
+    async with full_client.kafka.record_events(in_topic="users") as recorder:
+        response = await full_client.post(
+            "/users", json=user_data, headers=new_user_headers
+        )
 
     assert response.status_code == status.HTTP_201_CREATED
     user = response.json()
@@ -95,6 +98,19 @@ async def test_post_user(full_client: FullClient, new_user_headers: dict[str, st
 
     assert user == user_data
 
+    assert recorder.recorded_events == [
+        RecordedEvent(
+            payload={
+                "id": id_,
+                "name": "Max Headroom",
+                "email": "max@example.org",
+                "title": "Dr.",
+            },
+            type_="upserted",
+            key=id_,
+        ),
+    ]
+
     response = await full_client.post(
         "/users", json=user_data, headers=new_user_headers
     )
@@ -109,9 +125,11 @@ async def test_post_user_with_minimal_data(
 ):
     """Test that registering a user with minimal data works."""
     user_data = MIN_USER_DATA
-    response = await full_client.post(
-        "/users", json=user_data, headers=new_user_headers
-    )
+
+    async with full_client.kafka.record_events(in_topic="users") as recorder:
+        response = await full_client.post(
+            "/users", json=user_data, headers=new_user_headers
+        )
 
     assert response.status_code == status.HTTP_201_CREATED
     user = response.json()
@@ -127,6 +145,19 @@ async def test_post_user_with_minimal_data(
     assert user.pop("active_access_requests") == []
 
     assert user == {**MIN_USER_DATA, **dict.fromkeys(OPT_USER_DATA)}
+
+    assert recorder.recorded_events == [
+        RecordedEvent(
+            payload={
+                "id": id_,
+                "name": "Max Headroom",
+                "email": "max@example.org",
+                "title": None,
+            },
+            type_="upserted",
+            key=id_,
+        ),
+    ]
 
     response = await full_client.post(
         "/users", json=user_data, headers=new_user_headers
@@ -242,9 +273,25 @@ async def test_put_user(full_client: FullClient, new_user_headers: dict[str, str
 
     headers = get_headers_for(id=id_, name=new_data["name"], email=new_data["email"])
 
-    response = await full_client.put(f"/users/{id_}", json=new_data, headers=headers)
+    async with full_client.kafka.record_events(in_topic="users") as recorder:
+        response = await full_client.put(
+            f"/users/{id_}", json=new_data, headers=headers
+        )
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
+
+    assert recorder.recorded_events == [
+        RecordedEvent(
+            payload={
+                "id": id_,
+                "name": "Max Headhall",
+                "email": "head@example.org",
+                "title": "Prof.",
+            },
+            type_="upserted",
+            key=id_,
+        ),
+    ]
 
     response = await full_client.get(f"/users/{id_}", headers=headers)
     assert response.status_code == status.HTTP_200_OK
@@ -680,10 +727,19 @@ async def test_delete_user_as_data_steward(
     user = response.json()
     assert user["id"] == id_
 
-    response = await full_client.delete(f"/users/{id_}", headers=steward_headers)
+    async with full_client.kafka.record_events(in_topic="users") as recorder:
+        response = await full_client.delete(f"/users/{id_}", headers=steward_headers)
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
+
+    assert recorder.recorded_events == [
+        RecordedEvent(
+            payload={},
+            type_="deleted",
+            key=id_,
+        ),
+    ]
 
     response = await full_client.get(f"/users/{id_}", headers=steward_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND

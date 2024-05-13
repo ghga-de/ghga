@@ -16,6 +16,7 @@
 """User model classes used as DTOs and core entities."""
 
 from enum import Enum
+from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import EmailStr, Field
@@ -128,4 +129,6 @@ class UserData(UserRegisteredData, UserAutomaticData):
 class User(UserData):
     """Complete user model with ID"""
 
-    id: str = Field(default=..., description="Internal user ID")  # actually UUID
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), description="Internal user ID"
+    )

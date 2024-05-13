@@ -72,6 +72,7 @@ totp_issuer: GHGA
 totp_max_failed_attempts: 10
 totp_secret_size: 32
 totp_tolerance: 1
+user_events_topic: users
 user_tokens_collection: user_tokens
 users_collection: users
 workers: 1

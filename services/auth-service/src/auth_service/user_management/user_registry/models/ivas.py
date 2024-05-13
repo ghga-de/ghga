@@ -19,6 +19,7 @@ An IVA is an "indendent verification address" used to verify a user's identity.
 """
 
 from enum import Enum
+from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import ConfigDict, Field
@@ -108,7 +109,7 @@ class IvaAutomaticData(BaseDto):
 class IvaId(BaseDto):
     """The ID of an IVA"""
 
-    id: str = Field(default=..., description="Internal IVA ID")  # actually UUID
+    id: str = Field(default_factory=lambda: str(uuid4()), description="Internal IVA ID")
 
 
 class IvaData(IvaId, IvaWithState, IvaAutomaticData):

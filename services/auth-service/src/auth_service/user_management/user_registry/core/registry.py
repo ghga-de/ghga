@@ -33,21 +33,19 @@ from ..models.ivas import (
     IvaAndUserData,
     IvaBasicData,
     IvaData,
-    IvaFullData,
     IvaState,
 )
 from ..models.users import (
     StatusChange,
     User,
     UserBasicData,
-    UserData,
     UserModifiableData,
     UserRegisteredData,
     UserStatus,
 )
 from ..ports.event_pub import EventPublisherPort
 from ..ports.registry import UserRegistryPort
-from ..translators.dao import IvaDao, UserDao
+from ..translators.dao import DaoPublisher, IvaDto, UserDto
 from .verification_codes import generate_code, hash_code, validate_code
 
 log = logging.getLogger(__name__)
@@ -70,8 +68,8 @@ class UserRegistry(UserRegistryPort):
         self,
         *,
         config: UserRegistryConfig,
-        user_dao: UserDao,
-        iva_dao: IvaDao,
+        user_dao: DaoPublisher[UserDto],
+        iva_dao: DaoPublisher[IvaDto],
         event_pub: EventPublisherPort,
     ):
         """Initialize the user registry."""
@@ -114,13 +112,13 @@ class UserRegistry(UserRegistryPort):
             raise self.UserCreationError(ext_id=ext_id) from error
         else:
             raise self.UserAlreadyExistsError(ext_id=ext_id)
-        full_user_data = UserData(
+        user = User(
             **user_data.model_dump(),
             status=INITIAL_USER_STATUS,
             registration_date=now_as_utc(),
         )
         try:
-            user = await self._user_dao.insert(full_user_data)
+            await self._user_dao.insert(user)
         except Exception as error:
             log.error("Could not insert user: %s", error)
             raise self.UserCreationError(ext_id=ext_id) from error
@@ -188,7 +186,7 @@ class UserRegistry(UserRegistryPort):
         try:
             if not self.is_internal_user_id(user_id):
                 raise ResourceNotFoundError(id_=user_id)
-            await self._user_dao.delete(id_=user_id)
+            await self._user_dao.delete(user_id)
         except ResourceNotFoundError as error:
             raise self.UserDoesNotExistError(user_id=user_id) from error
         except Exception as error:
@@ -197,7 +195,7 @@ class UserRegistry(UserRegistryPort):
         try:
             try:
                 async for iva in self._iva_dao.find_all(mapping={"user_id": user_id}):
-                    await self._iva_dao.delete(id_=iva.id)
+                    await self._iva_dao.delete(iva.id)
             except ResourceNotFoundError:
                 pass
         except Exception as error:
@@ -216,11 +214,11 @@ class UserRegistry(UserRegistryPort):
         except self.UserRetrievalError as error:
             raise self.IvaCreationError(user_id=user_id) from error
         created = changed = now_as_utc()
-        iva_data = IvaFullData(
+        iva = Iva(
             **data.model_dump(), user_id=user_id, created=created, changed=changed
         )
         try:
-            iva = await self._iva_dao.insert(iva_data)
+            await self._iva_dao.insert(iva)
         except Exception as error:
             log.error("Could not create IVA: %s", error)
             raise self.IvaCreationError(user_id=user_id) from error
@@ -342,7 +340,7 @@ class UserRegistry(UserRegistryPort):
         if user_id:
             await self.get_iva(iva_id, user_id=user_id)
         try:
-            await self._iva_dao.delete(id_=iva_id)
+            await self._iva_dao.delete(iva_id)
         except ResourceNotFoundError as error:
             raise self.IvaDoesNotExistError(iva_id=iva_id) from error
         except Exception as error:

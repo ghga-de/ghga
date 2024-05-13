@@ -22,7 +22,7 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
 
 from auth_service.config import Config
-from auth_service.deps import get_mongodb_dao_factory
+from auth_service.deps import get_mongo_kafka_dao_factory, get_mongodb_dao_factory
 from auth_service.user_management.claims_repository.core.claims import (
     create_data_steward_claim,
 )
@@ -42,7 +42,6 @@ from auth_service.user_management.user_registry.deps import (
 )
 from auth_service.user_management.user_registry.models.users import (
     User,
-    UserData,
     UserStatus,
 )
 
@@ -56,7 +55,7 @@ async def _remove_existing_data_steward_claims(claim_dao: ClaimDao) -> None:
     num_removed_claims = 0
     async for claim in claim_dao.find_all(mapping={"visa_type": VisaType.GHGA_ROLE}):
         if is_data_steward_claim(claim):
-            await claim_dao.delete(id_=claim.id)
+            await claim_dao.delete(claim.id)
             num_removed_claims += 1
     log.info("Removed %d existing data steward claim(s).", num_removed_claims)
 
@@ -65,7 +64,7 @@ async def _add_user_with_ext_id(user: str | dict, user_dao: UserDao) -> User:
     """Add a new user with the given external ID to the database."""
     if not isinstance(user, dict):
         raise TypeError("User data (name and email) is missing.")
-    user_data = UserData(
+    user_dto = User(
         ext_id=user["ext_id"],
         name=user["name"],
         email=user["email"],
@@ -73,7 +72,8 @@ async def _add_user_with_ext_id(user: str | dict, user_dao: UserDao) -> User:
         status=UserStatus.ACTIVE,
         registration_date=now_as_utc(),
     )
-    return await user_dao.insert(user_data)
+    await user_dao.insert(user_dto)
+    return user_dto
 
 
 async def _add_configured_data_steward_claims(
@@ -121,19 +121,20 @@ async def seed_data_steward_claims(config: Config) -> None:
     if not data_stewards:
         log.warning("No data stewards are defined in the configuration.")
         return
-    user_dao = await get_user_dao(
-        dao_factory=get_user_dao_factory(
-            config=config,
-            dao_factory=get_mongodb_dao_factory(config=config),
+    async for dao_publisher_factory in get_mongo_kafka_dao_factory(config=config):
+        user_dao = await get_user_dao(
+            dao_factory=get_user_dao_factory(
+                config=config,
+                dao_publisher_factory=dao_publisher_factory,
+            )
         )
-    )
-    claim_dao = await get_claim_dao(
-        dao_factory=get_claim_dao_factory(
-            config=config,
-            dao_factory=get_mongodb_dao_factory(config=config),
+        claim_dao = await get_claim_dao(
+            dao_factory=get_claim_dao_factory(
+                config=config,
+                dao_factory=get_mongodb_dao_factory(config=config),
+            )
         )
-    )
-    await _remove_existing_data_steward_claims(claim_dao=claim_dao)
-    await _add_configured_data_steward_claims(
-        data_stewards, user_dao=user_dao, claim_dao=claim_dao
-    )
+        await _remove_existing_data_steward_claims(claim_dao=claim_dao)
+        await _add_configured_data_steward_claims(
+            data_stewards, user_dao=user_dao, claim_dao=claim_dao
+        )

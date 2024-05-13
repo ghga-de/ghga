@@ -19,22 +19,23 @@
 from abc import ABC, abstractmethod
 from typing import TypeAlias  # in typing only since Python 3.10
 
-from hexkit.protocols.dao import DaoSurrogateId
+from hexkit.protocols.daopub import DaoPublisher
 
 from ..models.ivas import Iva as IvaDto
-from ..models.ivas import IvaFullData as IvaCreationDto
 from ..models.users import User as UserDto
-from ..models.users import UserData as UserCreationDto
 
-__all__ = ["IvaDao", "UserDao", "UserDaoFactoryPort"]
-
-
-UserDao: TypeAlias = DaoSurrogateId[UserDto, UserCreationDto]
-IvaDao: TypeAlias = DaoSurrogateId[IvaDto, IvaCreationDto]
+__all__ = ["IvaDao", "UserDao", "UserDaoPublisherFactoryPort"]
 
 
-class UserDaoFactoryPort(ABC):
-    """Port that provides a factory for user related data access objects."""
+UserDao: TypeAlias = DaoPublisher[UserDto]
+IvaDao: TypeAlias = DaoPublisher[IvaDto]
+
+
+class UserDaoPublisherFactoryPort(ABC):
+    """Port that provides a factory for user related data access objects.
+
+    These objects will also publish changes according to the outbox pattern.
+    """
 
     @abstractmethod
     async def get_user_dao(self) -> UserDao:

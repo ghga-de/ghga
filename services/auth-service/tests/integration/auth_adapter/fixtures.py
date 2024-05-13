@@ -27,7 +27,7 @@ import pytest_asyncio
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient as BareClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.providers.testing.eventpub import InMemEventPublisher
+from hexkit.providers.akafka.testutils import KafkaFixture
 from httpx import Response
 from pydantic import SecretStr
 from pytest_httpx import HTTPXMock
@@ -38,7 +38,6 @@ from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.deps import CONFIG, Config, get_config
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import (
-    get_event_publisher,
     get_iva_dao,
     get_user_dao,
     get_user_registry,
@@ -62,16 +61,20 @@ totp_encryption_key = TOTPHandler.random_encryption_key()
 
 
 @pytest_asyncio.fixture(name="bare_client")
-async def fixture_bare_client() -> AsyncGenerator[BareClient, None]:
-    """Get a test client for the user registry without database and event store."""
+async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient, None]:
+    """Get a test client for the user registry without database."""
     from auth_service.auth_adapter.api import main
 
     reload(main)
 
-    main.app.dependency_overrides[get_config] = lambda: Config(
+    config = Config(
+        kafka_servers=kafka.config.kafka_servers,
+        service_name=kafka.config.service_name,
+        service_instance_id=kafka.config.service_instance_id,
         totp_encryption_key=SecretStr(totp_encryption_key),
     )  # type: ignore
-    main.app.dependency_overrides[get_event_publisher] = lambda: InMemEventPublisher()
+
+    main.app.dependency_overrides[get_config] = lambda: config
 
     async with BareClient(main.app) as client:
         yield client

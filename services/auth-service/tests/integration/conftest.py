@@ -26,6 +26,7 @@ from hexkit.providers.akafka.testcontainer import DEFAULT_IMAGE as KAFKA_IMAGE
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import (
+    MONGODB_IMAGE,
     MongoDbFixture,
     config_from_mongodb_container,
 )
@@ -85,7 +86,7 @@ def kafka_container_fixture() -> Generator[KafkaContainerFixture, None, None]:
 @pytest.fixture(name="mongodb_container", scope="session")
 def mongodb_container_fixture() -> Generator[MongoDbContainer, None, None]:
     """Fixture for getting a running MongoDB test container."""
-    with MongoDbContainer(image="mongo:6.0.3") as mongodb_container:
+    with MongoDbContainer(image=MONGODB_IMAGE) as mongodb_container:
         yield mongodb_container
 
 

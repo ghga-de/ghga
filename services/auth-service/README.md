@@ -80,29 +80,23 @@ auth_service --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`iva_events_topic`** *(string)*: The topic used for events related to IVAs. Default: `"ivas"`.
-
-
-  Examples:
-
-  ```json
-  "ivas"
-  ```
-
+- **`iva_events_topic`** *(string)*: The name of the topic for IVA related events. Default: `"ivas"`.
 
 - **`iva_state_changed_event_type`** *(string)*: The event type for IVA state changes. Default: `"iva_state_changed"`.
-
-
-  Examples:
-
-  ```json
-  "iva_state_changed"
-  ```
-
 
 - **`dataset_deletion_event_topic`** *(string)*: the topic of the event announcing dataset deletions. Default: `"metadata_datasets"`.
 
 - **`dataset_deletion_event_type`** *(string)*: the type of the event announcing dataset deletions. Default: `"dataset_deleted"`.
+
+- **`claims_collection`** *(string)*: Name of the collection for user claims. Default: `"claims"`.
+
+- **`users_collection`** *(string)*: Name of the collection for users. Default: `"users"`.
+
+- **`user_tokens_collection`** *(string)*: Name of the collection for user tokens. Default: `"user_tokens"`.
+
+- **`ivas_collection`** *(string)*: Name of the collection for IVAs. Default: `"ivas"`.
+
+- **`user_events_topic`** *(string)*: The name of the topic for user related events. Default: `"users"`.
 
 - **`service_name`** *(string)*: Short name of this service. Default: `"auth_service"`.
 
@@ -154,14 +148,6 @@ The service requires the following configuration parameters:
   false
   ```
 
-
-- **`claims_collection`** *(string)*: Name of the collection for user claims. Default: `"claims"`.
-
-- **`users_collection`** *(string)*: Name of the collection for users. Default: `"users"`.
-
-- **`user_tokens_collection`** *(string)*: Name of the collection for user tokens. Default: `"user_tokens"`.
-
-- **`ivas_collection`** *(string)*: Name of the collection for IVAs. Default: `"ivas"`.
 
 - **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 

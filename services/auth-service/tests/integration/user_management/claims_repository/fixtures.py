@@ -21,6 +21,7 @@ import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient as BareClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.config import Config
@@ -74,12 +75,15 @@ class FullClient(BareClient):
 
 @pytest_asyncio.fixture(name="full_client")
 async def fixture_full_client(
-    mongodb: MongoDbFixture,
+    mongodb: MongoDbFixture, kafka: KafkaFixture
 ) -> AsyncGenerator[FullClient, None]:
     """Get a test client for the user registry with a test database."""
     config = Config(
         db_connection_str=mongodb.config.db_connection_str,
         db_name=mongodb.config.db_name,
+        kafka_servers=kafka.config.kafka_servers,
+        service_name=kafka.config.service_name,
+        service_instance_id=kafka.config.service_instance_id,
         include_apis=["claims"],
         add_as_data_stewards=add_as_data_stewards,  # type: ignore
     )  # pyright: ignore

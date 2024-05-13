@@ -102,8 +102,8 @@ async def test_create_new_user():
         email="jane@home.org",
     )
     user = await registry.create_user(user_data)
+    user = user.model_copy(update={"id": "jane@ghga.de"})
     assert user == registry.dummy_user
-    assert user.id == "jane@ghga.de"
     assert registry.is_internal_user_id(user.id)
     assert user.ext_id == "jane@aai.org"
     assert user.status == UserStatus.ACTIVE

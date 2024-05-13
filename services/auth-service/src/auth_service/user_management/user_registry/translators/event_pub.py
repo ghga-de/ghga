@@ -36,13 +36,11 @@ class EventPubTranslatorConfig(BaseSettings):
 
     iva_events_topic: str = Field(
         default="ivas",
-        description="The topic used for events related to IVAs",
-        examples=["ivas"],
+        description="The name of the topic for IVA related events",
     )
     iva_state_changed_event_type: str = Field(
         default="iva_state_changed",
         description="The event type for IVA state changes",
-        examples=["iva_state_changed"],
     )
 
 
