@@ -17,20 +17,13 @@
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer
 
-__all__ = ["CreateTOTPToken", "TOTPTokenResponse", "VerifyTOTP"]
+__all__ = ["TOTPTokenResponse"]
 
 
 class BaseDto(BaseModel):
     """Base model pre-configured for use as Dto."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-
-
-class CreateTOTPToken(BaseDto):
-    """Request model for creating a TOTP token."""
-
-    user_id: str = Field(default=..., title="User ID")
-    force: bool = Field(default=False, title="Overwrite existing token")
 
 
 class TOTPTokenResponse(BaseDto):
@@ -42,10 +35,3 @@ class TOTPTokenResponse(BaseDto):
     def dump_secret(self, v):
         """Serialize the provisioning URI to a string."""
         return v.get_secret_value()
-
-
-class VerifyTOTP(BaseDto):
-    """Request model for verifying a TOTP code."""
-
-    user_id: str = Field(default=..., title="User ID")
-    totp: str = Field(default=..., title="the TOTP code to verify")

@@ -25,7 +25,8 @@ import pytest
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from auth_service.auth_adapter.core.session_store import SessionState
+from auth_service.auth_adapter.core.session_store import Session, SessionState
+from auth_service.auth_adapter.deps import get_config, get_session_store
 from auth_service.user_management.user_registry.models.ivas import IvaState
 from auth_service.user_management.user_registry.models.users import UserStatus
 
@@ -74,37 +75,45 @@ def get_invalid_totp_code(secret: str, when: datetime | None = None) -> str:
     raise RuntimeError("Could not find an invalid TOTP code")
 
 
-async def test_create_totp_token_without_session(bare_client: BareClient):
-    """Test that TOTP token creation without a session fails."""
-    response = await bare_client.post(
-        TOTP_TOKEN_PATH, json={"user_id": "some-user-id", "force": False}
-    )
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Not logged in"}
+def with_totp_code(
+    headers: dict[str, str], secret: str, valid: bool = True
+) -> dict[str, str]:
+    """Get headers for a valid or invalid TOTP code."""
+    totp = get_valid_totp_code(secret) if valid else get_invalid_totp_code(secret)
+    headers = headers.copy()
+    headers["X-Authorization"] = f"Bearer TOTP:{totp}"
+    return headers
 
 
-async def test_create_totp_token_without_body(
+async def remove_user_id_from_session(session: Session):
+    """Remove the user ID from the session in the backend."""
+    assert session.user_id
+    session_store = await get_session_store(config=get_config())
+    session_in_store = await session_store.get_session(session.session_id)
+    assert session_in_store
+    assert session_in_store.user_id == session.user_id
+    session_in_store.user_id = None
+    await session_store.save_session(session_in_store)
+
+
+async def test_create_totp_token_with_invalid_force_flag(
     client_with_session: ClientWithSession,
 ):
-    """Test that TOTP token creation without request body fails."""
+    """Test that TOTP token creation with an invalid force flag fails."""
     client, session = client_with_session[:2]
     response = await client.post(
-        TOTP_TOKEN_PATH,
-        headers=headers_for_session(session),
+        TOTP_TOKEN_PATH + "?force=invalid", headers=headers_for_session(session)
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-async def test_create_totp_token_with_unregistered_user(
+async def test_create_totp_token_without_user_id(
     client_with_session: ClientWithSession,
 ):
-    """Test that TOTP token creation with an unregistered user fails."""
+    """Test that TOTP token creation without a user ID fails."""
     client, session = client_with_session[:2]
-    response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": "unknown-user-id", "force": False},
-        headers=headers_for_session(session),
-    )
+    await remove_user_id_from_session(session)
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers_for_session(session))
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not registered"}
 
@@ -116,11 +125,7 @@ async def test_create_totp_token_without_csrf_token(
     client, session = client_with_session[:2]
     headers = headers_for_session(session)
     del headers["X-CSRF-Token"]
-    response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": "john@ghga.de", "force": False},
-        headers=headers,
-    )
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
 
@@ -130,11 +135,7 @@ async def test_create_totp_token_with_registered_user(
 ):
     """Test that TOTP token creation with a registered user is possible."""
     client, session = client_with_session[:2]
-    response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": "john@ghga.de", "force": False},
-        headers=headers_for_session(session),
-    )
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers_for_session(session))
     assert response.status_code == status.HTTP_201_CREATED
     totp_response = response.json()
     assert isinstance(totp_response, dict)
@@ -158,28 +159,28 @@ async def test_verify_totp_without_session(bare_client: BareClient):
     assert response.json() == {"detail": "Not logged in"}
 
 
-async def test_verify_totp_without_body(
+async def test_verify_totp_without_x_authorization_header(
     client_with_session: ClientWithSession,
 ):
-    """Test that TOTP verification without request body fails."""
+    """Test that TOTP verification without X-Authorization header fails."""
     client, session = client_with_session[:2]
     response = await client.post(
         VERIFY_TOTP_PATH,
         headers=headers_for_session(session),
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "No TOTP code provided"}
 
 
-async def test_verify_totp_with_unregistered_user(
+async def test_verify_totp_without_user_id(
     client_with_session: ClientWithSession,
 ):
-    """Test that TOTP token creation with an unregistered user fails."""
+    """Test that TOTP token creation without a user ID fails."""
     client, session = client_with_session[:2]
-    response = await client.post(
-        VERIFY_TOTP_PATH,
-        json={"user_id": "unknown-user-id", "totp": "123456"},
-        headers=headers_for_session(session),
-    )
+    await remove_user_id_from_session(session)
+    headers = headers_for_session(session).copy()
+    headers["X-Authorization"] = "Bearer TOTP:123456"
+    response = await client.post(VERIFY_TOTP_PATH, headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not registered"}
 
@@ -207,11 +208,7 @@ async def test_verify_totp(client_with_session: ClientWithSession):
     user_id = "john@ghga.de"
     assert session.state is SessionState.REGISTERED
     # create a new TOTP token on the backend
-    response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": user_id, "force": False},
-        headers=headers,
-    )
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
     assert response.status_code == status.HTTP_201_CREATED
     uri = response.json()["uri"]
     secret = parse_qs(urlparse(uri).query)["secret"][0]
@@ -226,8 +223,7 @@ async def test_verify_totp(client_with_session: ClientWithSession):
     # try to verify with invalid TOTP code
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_invalid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret, valid=False),
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid TOTP code"}
@@ -236,8 +232,7 @@ async def test_verify_totp(client_with_session: ClientWithSession):
     # verify with valid TOTP code
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
@@ -271,16 +266,14 @@ async def test_verify_totp(client_with_session: ClientWithSession):
     # again, first try to verify with invalid TOTP code
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_invalid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret, valid=False),
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid TOTP code"}
     # then verify with valid TOTP code
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
@@ -298,11 +291,7 @@ async def test_rate_limiting_totp(
     user_id = "john@ghga.de"
     assert session.state is SessionState.REGISTERED
     # create a new TOTP token on the backend
-    response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": user_id, "force": False},
-        headers=headers,
-    )
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
     assert response.status_code == status.HTTP_201_CREATED
     uri = response.json()["uri"]
     secret = parse_qs(urlparse(uri).query)["secret"][0]
@@ -310,8 +299,7 @@ async def test_rate_limiting_totp(
     assert session.state is SessionState.NEW_TOTP_TOKEN
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
     # decrease the TOTP counter so that we can re-login without waiting
@@ -322,16 +310,14 @@ async def test_rate_limiting_totp(
     for _ in range(6):
         response = await client.post(
             VERIFY_TOTP_PATH,
-            json={"user_id": user_id, "totp": get_invalid_totp_code(secret)},
-            headers=headers,
+            headers=with_totp_code(headers, secret, valid=False),
         )
         assert response.json() == {"detail": "Invalid TOTP code"}
     # now the user should not be verified any more
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid TOTP code"}
@@ -339,8 +325,7 @@ async def test_rate_limiting_totp(
     totp_token.counter_attempts = 0
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
@@ -365,11 +350,7 @@ async def test_total_limit_totp(client_with_session: ClientWithSession):
 
     assert session.state is SessionState.REGISTERED
     # create a new TOTP token on the backend
-    response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": user_id, "force": False},
-        headers=headers,
-    )
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
     assert response.status_code == status.HTTP_201_CREATED
     uri = response.json()["uri"]
     secret = parse_qs(urlparse(uri).query)["secret"][0]
@@ -377,8 +358,7 @@ async def test_total_limit_totp(client_with_session: ClientWithSession):
     assert session.state is SessionState.NEW_TOTP_TOKEN
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
     # decrease the TOTP counter so that we can re-login without waiting
@@ -389,8 +369,7 @@ async def test_total_limit_totp(client_with_session: ClientWithSession):
     for _ in range(10):
         response = await client.post(
             VERIFY_TOTP_PATH,
-            json={"user_id": user_id, "totp": get_invalid_totp_code(secret)},
-            headers=headers,
+            headers=with_totp_code(headers, secret, valid=False),
         )
         assert response.json() == {"detail": "Invalid TOTP code"}
         totp_token.counter_attempts = 0  # suppress rate limiting
@@ -399,8 +378,7 @@ async def test_total_limit_totp(client_with_session: ClientWithSession):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Too many failed attempts"}
@@ -429,15 +407,10 @@ async def test_recreate_existing_totp_token(
     """Test that TOTP tokens can be recreated."""
     client, session = client_with_session[:2]
     headers = headers_for_session(session)
-    user_id = "john@ghga.de"
     assert session.state is SessionState.REGISTERED
 
     # create a new TOTP token on the backend
-    response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": user_id, "force": False},
-        headers=headers,
-    )
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
     assert response.status_code == status.HTTP_201_CREATED
     uri = response.json()["uri"]
     secret = parse_qs(urlparse(uri).query)["secret"][0]
@@ -445,25 +418,18 @@ async def test_recreate_existing_totp_token(
     assert session.state is SessionState.NEW_TOTP_TOKEN
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # try to create a new TOTP token without force flag
-    response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": "john@ghga.de", "force": False},
-        headers=headers_for_session(session),
-    )
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers_for_session(session))
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Cannot create TOTP token at this point"}
 
     # try to create a new TOTP token with force flag
     response = await client.post(
-        TOTP_TOKEN_PATH,
-        json={"user_id": "john@ghga.de", "force": True},
-        headers=headers_for_session(session),
+        TOTP_TOKEN_PATH + "?force=true", headers=headers_for_session(session)
     )
     assert response.status_code == status.HTTP_201_CREATED
     uri = response.json()["uri"]
@@ -473,15 +439,13 @@ async def test_recreate_existing_totp_token(
     # cannot login with old secret any more
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid TOTP code"}
     # but can login with new secret now
     response = await client.post(
         VERIFY_TOTP_PATH,
-        json={"user_id": user_id, "totp": get_valid_totp_code(new_secret)},
-        headers=headers,
+        headers=with_totp_code(headers, new_secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT

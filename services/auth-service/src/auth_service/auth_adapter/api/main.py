@@ -21,7 +21,16 @@ then this must be also specified in the config setting api_root_path.
 
 from typing import Annotated
 
-from fastapi import FastAPI, Header, HTTPException, Path, Request, Response, status
+from fastapi import (
+    FastAPI,
+    Header,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    Response,
+    status,
+)
 from ghga_service_commons.api import configure_app
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import SecretStr
@@ -57,7 +66,7 @@ from ..deps import (
     get_user_token_dao,
 )
 from .basic import get_basic_auth_dependency
-from .dto import CreateTOTPToken, TOTPTokenResponse, VerifyTOTP
+from .dto import TOTPTokenResponse
 from .headers import get_bearer_token, pass_auth_response, session_to_header
 
 app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
@@ -269,17 +278,23 @@ async def put_user(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_new_totp_token(
-    creation_info: CreateTOTPToken,
     session_store: SessionStoreDependency,
     session: SessionDependency,
     totp_handler: TOTPHandlerDependency,
+    force: bool = Query(False, title="Overwrite existing token"),
 ) -> TOTPTokenResponse:
-    """Create a new TOTP token or replace an existing one."""
+    """Create a new TOTP token or replace an existing one.
+
+    Set "force" to true in order to allow overwriting an existing token.
+
+    Note: Since this endpoint is used via the ExtAuth protocol,
+    the request body cannot be used to pass parameters.
+    """
     if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
         )
-    if not session.user_id or session.user_id != creation_info.user_id:
+    if not session.user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
         )
@@ -287,8 +302,7 @@ async def create_new_totp_token(
     if not (
         state in (SessionState.REGISTERED, SessionState.NEW_TOTP_TOKEN)
         or (
-            state in (SessionState.HAS_TOTP_TOKEN, SessionState.AUTHENTICATED)
-            and creation_info.force
+            state in (SessionState.HAS_TOTP_TOKEN, SessionState.AUTHENTICATED) and force
         )
     ):
         raise HTTPException(
@@ -311,26 +325,38 @@ async def create_new_totp_token(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def rpc_verify_totp(  # noqa: PLR0913
-    verification_info: VerifyTOTP,
     session_store: SessionStoreDependency,
     session: SessionDependency,
     totp_handler: TOTPHandlerDependency,
     user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
     token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
+    x_authorization: Annotated[
+        str | None, Header(title="the TOTP code to verify")
+    ] = None,
 ) -> Response:
-    """Verify a TOTP token."""
+    """Verify a TOTP token.
+
+    The TOTP code is expected to be passed like a bearer token
+    in the "X-Authorization" header.
+
+    Note: Since this endpoint is used via the ExtAuth protocol,
+    the request body cannot be used to pass the TOTP code.
+    """
     if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
         )
-    if not session.user_id or session.user_id != verification_info.user_id:
+
+    totp = get_bearer_token(x_authorization)
+    if totp:
+        totp = totp.removeprefix("TOTP:")
+    if not totp:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="No TOTP code provided"
         )
 
     await verify_totp(
-        verification_info.totp,
-        verification_info.user_id,
+        totp,
         session_store=session_store,
         session=session,
         totp_handler=totp_handler,

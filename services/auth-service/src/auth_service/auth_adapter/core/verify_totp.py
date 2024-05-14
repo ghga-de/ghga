@@ -35,7 +35,6 @@ __all__ = ["verify_totp"]
 
 async def verify_totp(  # noqa: C901, PLR0912, PLR0913
     totp: str,
-    user_id: str,
     *,
     session_store: SessionStorePort,
     session: Session,
@@ -48,6 +47,12 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913
     As a side effect, the TOTP token is stored in the database if it is still only
     available in the session, and possibly already verified IVAs are reset.
     """
+    user_id = session.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not registered",
+        )
     if session.state == SessionState.NEW_TOTP_TOKEN:
         # get not yet verified TOTP token from the session
         user = user_token = None

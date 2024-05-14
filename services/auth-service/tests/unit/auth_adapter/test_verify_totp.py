@@ -60,6 +60,7 @@ config = Config(
 @pytest.mark.parametrize(
     "session_state",
     [
+        SessionState.NEEDS_REGISTRATION,
         SessionState.REGISTERED,
         SessionState.NEW_TOTP_TOKEN,
         SessionState.HAS_TOTP_TOKEN,
@@ -98,6 +99,7 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
     user_token_dao = DummyUserTokenDao()
 
     user_id = user_dao.user.id
+    assert user_id == session.user_id
     if user_has_token:
         assert totp_token
         await user_token_dao.upsert(UserToken(user_id=user_id, totp_token=totp_token))
@@ -122,7 +124,6 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
     with nullcontext() if should_verify else pytest.raises(HTTPException) as exc_info:
         await verify_totp(
             totp_code,
-            user_id,
             session_store=session_store,
             session=session,
             totp_handler=totp_handler,

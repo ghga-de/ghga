@@ -447,10 +447,10 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     assert response.status_code == status.HTTP_201_CREATED
     uri = response.json()["uri"]
     secret = parse_qs(urlparse(uri).query)["secret"][0]
+    totp = get_valid_totp_code(secret)
     response = await client.post(
         AUTH_PATH + "/rpc/verify-totp",
-        json={"user_id": session.user_id, "totp": get_valid_totp_code(secret)},
-        headers=headers,
+        headers={"X-Authorization": f"Bearer TOTP:{totp}", **headers},
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
