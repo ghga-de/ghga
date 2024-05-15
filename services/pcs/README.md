@@ -1,9 +1,6 @@
-[![tests](https://github.com/ghga-de/purge-controller-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/purge-controller-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/purge-controller-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/purge-controller-service?branch=main)
+# Purge  Controller  Service
 
-# Purge Controller Service
-
-Purge Controller Service - a service to commission file deletions
+a service to commission file deletions
 
 ## Description
 
@@ -27,15 +24,15 @@ It contains the file_id of the file that should be deleted.
 
 We recommend using the provided Docker container.
 
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/purge-controller-service):
+A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/purge--controller--service):
 ```bash
-docker pull ghga/purge-controller-service:1.2.0
+docker pull ghga/purge--controller--service:1.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/purge-controller-service:1.2.0 .
+docker build -t ghga/purge--controller--service:1.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -43,7 +40,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/purge-controller-service:1.2.0 --help
+docker run -p 8080:8080 ghga/purge--controller--service:1.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -141,7 +138,7 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
 
 - **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
@@ -166,7 +163,7 @@ The service requires the following configuration parameters:
 
 - **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
 
-- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `"/"`.
+- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
 
 - **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
 
@@ -276,7 +273,7 @@ To using file secrets please refer to the
 of the pydantic documentation.
 
 ## HTTP API
-An OpenAPI specification for this service can be found [here](./openapi.yaml).
+An OpenAPI specification for this service can be found [here](openapi.yaml).
 
 ## Architecture and Design:
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
