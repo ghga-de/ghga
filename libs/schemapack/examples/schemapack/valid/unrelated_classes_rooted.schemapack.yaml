@@ -1,0 +1,9 @@
+schemapack: 0.3.0
+description: Two unrelated classes # but rooted to one class so that only that class is
+            # kept.
+classes:
+  SomeClass:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+rootClass: SomeClass

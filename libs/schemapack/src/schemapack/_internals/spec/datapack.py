@@ -22,12 +22,11 @@ Warning: This is an internal part of the library and might change without notice
 import typing
 from collections import Counter
 from collections.abc import Iterable
-from typing import Annotated, Any, Literal, Optional, Union
+from typing import Annotated, Any, Literal, TypeAlias
 
 from arcticfreeze import FrozenDict, freeze
 from pydantic import BeforeValidator, Field, WrapSerializer
 from pydantic_core import PydanticCustomError
-from typing_extensions import TypeAlias
 
 from schemapack._internals.spec.base import _FrozenNoExtraBaseModel
 from schemapack._internals.spec.custom_types import (
@@ -98,21 +97,21 @@ class Resource(_FrozenNoExtraBaseModel):
         ),
     )
 
-    relations: FrozenDict[
-        RelationPropertyName, Union[Optional[ResourceId], ResourceIdSet]
-    ] = Field(
-        FrozenDict(),
-        description=(
-            "A dictionary containing the relations of the resource to other resources."
-            + " Each key correspond to the name of a relation property as per the"
-            + " schemapack definition. Each value could be one of the following types"
-            + " depending on the corresponding schemapack definition:"
-            + " (1) a id of a single target resource (multiple.target is False),"
-            + " (2) None (multiple.target and mandatory.target are both False),"
-            + " (3) a set of ids of target resources (multiple.target is True),"
-            + " (4) an empty set (multiple.target is True and mandatory.target is"
-            + " False)."
-        ),
+    relations: FrozenDict[RelationPropertyName, ResourceId | None | ResourceIdSet] = (
+        Field(
+            FrozenDict(),
+            description=(
+                "A dictionary containing the relations of the resource to other resources."
+                + " Each key correspond to the name of a relation property as per the"
+                + " schemapack definition. Each value could be one of the following types"
+                + " depending on the corresponding schemapack definition:"
+                + " (1) a id of a single target resource (multiple.target is False),"
+                + " (2) None (multiple.target and mandatory.target are both False),"
+                + " (3) a set of ids of target resources (multiple.target is True),"
+                + " (4) an empty set (multiple.target is True and mandatory.target is"
+                + " False)."
+            ),
+        )
     )
 
     def get_target_id_set(
@@ -165,7 +164,7 @@ class DataPack(_FrozenNoExtraBaseModel):
         ),
     )
 
-    rootResource: Optional[str] = Field(  # noqa: N815 - following JSON conventions
+    rootResource: str | None = Field(  # noqa: N815 - following JSON conventions
         None,
         description=(
             "Defines the id of the resource that should act as root. This means"

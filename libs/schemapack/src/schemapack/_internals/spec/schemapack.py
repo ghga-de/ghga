@@ -21,7 +21,7 @@ Warning: This is an internal part of the library and might change without notice
 import typing
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, cast
+from typing import Any, Literal, cast
 
 from arcticfreeze import FrozenDict, freeze
 from immutabledict import immutabledict
@@ -133,7 +133,7 @@ class MultipleRelationSpec(_FrozenNoExtraBaseModel):
 class Relation(_FrozenNoExtraBaseModel):
     """A model for describing a schemapack relation definition."""
 
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None,
         description="A description of the relation.",
     )
@@ -173,7 +173,7 @@ class IDSpec(_FrozenNoExtraBaseModel):
             + " denormalized representation."
         ),
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None,
         description="A description of the ID property.",
     )
@@ -182,7 +182,7 @@ class IDSpec(_FrozenNoExtraBaseModel):
 class ClassDefinition(_FrozenNoExtraBaseModel):
     """A model for describing a schemapack class definition."""
 
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None,
         description=("A description of the class definition."),
     )
@@ -214,7 +214,7 @@ class ClassDefinition(_FrozenNoExtraBaseModel):
     @field_validator("content", mode="before")
     @classmethod
     def load_and_validate_content_schema(
-        cls, value: Union[str, Path, Mapping]
+        cls, value: str | Path | Mapping
     ) -> FrozenDict:
         """A validator function for content schemas that:
         - loads a JSON or YAML file if a path is provided
@@ -364,7 +364,7 @@ class SchemaPack(_FrozenNoExtraBaseModel):
             + " schemapack specification."
         ),
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None,
         description=("A description of the schemapack definition."),
     )
@@ -377,7 +377,7 @@ class SchemaPack(_FrozenNoExtraBaseModel):
         min_length=1,
     )
 
-    rootClass: Optional[ClassName] = Field(  # noqa: N815 - following JSON conventions
+    rootClass: ClassName | None = Field(  # noqa: N815 - following JSON conventions
         None,
         description=(
             "Optionally, define the name of a class that should acting as the root of"

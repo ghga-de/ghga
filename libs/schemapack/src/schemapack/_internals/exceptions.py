@@ -19,7 +19,6 @@
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 import pydantic_core
 
@@ -96,7 +95,7 @@ class ValidationPluginError(BaseError, ValueError):
     """Raised by a ValidationPlugin."""
 
     def __init__(
-        self, *, type_: str, message: str, details: Optional[dict[str, object]] = None
+        self, *, type_: str, message: str, details: dict[str, object] | None = None
     ):
         """Initiate a ValidationPluginError.
 
@@ -129,8 +128,8 @@ class ValidationErrorRecord:
             A dictionary for transporting additional machine-readable details.
     """
 
-    subject_class: Optional[str]
-    subject_resource: Optional[str]
+    subject_class: str | None
+    subject_resource: str | None
     type: str
     message: str
     details: dict[str, object]

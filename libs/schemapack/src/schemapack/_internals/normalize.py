@@ -18,9 +18,7 @@
 
 from collections import defaultdict
 from collections.abc import Mapping
-from typing import Optional
-
-from typing_extensions import TypeAlias
+from typing import TypeAlias
 
 from schemapack.exceptions import CircularRelationError, ValidationAssumptionError
 from schemapack.spec.custom_types import ClassName, ResourceId
@@ -34,9 +32,9 @@ def denormalize(  # noqa: PLR0912,C901
     *,
     datapack: DataPack,
     schemapack: SchemaPack,
-    _resource_blacklist: Optional[Mapping[ClassName, set[ResourceId]]] = None,
-    _alt_root_class_name: Optional[ClassName] = None,
-    _alt_root_resource_id: Optional[ResourceId] = None,
+    _resource_blacklist: Mapping[ClassName, set[ResourceId]] | None = None,
+    _alt_root_class_name: ClassName | None = None,
+    _alt_root_resource_id: ResourceId | None = None,
 ) -> JsonObjectCompatible:
     """Integrate a rooted datapack into a nested json object-compatible data structure.
     It is assumed that the provided datapack has already been validated against the

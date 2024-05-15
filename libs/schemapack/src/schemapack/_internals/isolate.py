@@ -21,7 +21,6 @@ Warning: This is an internal part of the library and might change without notice
 
 from collections import defaultdict
 from collections.abc import Mapping
-from typing import Optional
 
 from schemapack._internals.exceptions import (
     ClassNotFoundError,
@@ -34,14 +33,14 @@ from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import SchemaPack
 
 
-def identify_dependencies(  # noqa: C901, PLR0912
+def identify_resource_dependencies(  # noqa: C901, PLR0912
     *,
     datapack: DataPack,
     class_name: ClassName,
     resource_id: ResourceId,
     schemapack: SchemaPack,
     include_target: bool = False,
-    _resource_blacklist: Optional[Mapping[ClassName, set[ResourceId]]] = None,
+    _resource_blacklist: Mapping[ClassName, set[ResourceId]] | None = None,
 ) -> Mapping[ClassName, set[ResourceId]]:
     """Identify all dependencies (recursively) for a given resource
     of the given class in the given datapack. Please note that it is assumed that
@@ -125,7 +124,7 @@ def identify_dependencies(  # noqa: C901, PLR0912
             dependencies_by_class[target_class_name].add(target_id)
 
             # Recursively add dependencies of this target resource:
-            nested_dependencies = identify_dependencies(
+            nested_dependencies = identify_resource_dependencies(
                 datapack=datapack,
                 class_name=target_class_name,
                 resource_id=target_id,
@@ -206,7 +205,7 @@ def isolate_resource(
             If it became apparent that the datapack was not already validated against
             the schemapack.
     """
-    dependency_map = identify_dependencies(
+    dependency_map = identify_resource_dependencies(
         datapack=datapack,
         class_name=class_name,
         resource_id=resource_id,
@@ -218,6 +217,70 @@ def isolate_resource(
     return rooted_datapack
 
 
+def identify_class_dependencies(
+    *,
+    class_name: ClassName,
+    schemapack: SchemaPack,
+    _class_blacklist: set[ClassName] | None = None,
+) -> set[ClassName]:
+    """Identify all dependencies (recursively) for a given class in the given schemapack.
+
+    Args:
+        class_name:
+            The class for which to identify dependencies.
+        schemapack:
+            The schemapack used for looking up the classes of relations.
+        _class_blacklist:
+            A set of class names to avoid getting lost in infinity loop for circular
+            dependencies. This is only used internally for recursion.
+
+    Raises:
+        schemapack.Exceptions.ClassNotFoundError:
+            If the class_name does not exist in the schemapack.
+    """
+    class_definition = schemapack.classes.get(class_name)
+    if class_definition is None:
+        raise ClassNotFoundError(class_name=class_name, spec_type=SpecType.SCHEMAPACK)
+
+    dependencies: set[ClassName] = set()
+
+    for relation in class_definition.relations.values():
+        if _class_blacklist and relation.targetClass in _class_blacklist:
+            continue
+
+        dependencies.add(relation.targetClass)
+
+        nested_dependencies = identify_class_dependencies(
+            class_name=relation.targetClass,
+            schemapack=schemapack,
+            _class_blacklist=dependencies,
+        )
+        dependencies.update(nested_dependencies)
+
+    return dependencies
+
+
+def downscope_schemapack(
+    *, schemapack: SchemaPack, classes_to_keep: set[ClassName]
+) -> SchemaPack:
+    """Downscope a schemapack to only contain the given classes.
+
+    Raises:
+        schemapack.Exceptions.ClassNotFoundError:
+            If one of the classes in classes_to_keep does not exist in the schemapack.
+    """
+    try:
+        downscoped_classes = {
+            class_name: schemapack.classes[class_name] for class_name in classes_to_keep
+        }
+    except KeyError as error:
+        raise ClassNotFoundError(
+            class_name=error.args[0], spec_type=SpecType.SCHEMAPACK
+        ) from error
+
+    return schemapack.model_copy(update={"classes": downscoped_classes})
+
+
 def isolate_class(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPack:
     """Return a copy of the provided schemapack that is rooted to the specified class.
 
@@ -226,8 +289,13 @@ def isolate_class(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPac
         schemapack.Exceptions.ClassNotFoundError:
             If the class_name does not exist in the schemapack or datapack.
     """
-    if class_name not in schemapack.classes:
-        raise ClassNotFoundError(class_name=class_name, spec_type=SpecType.SCHEMAPACK)
+    dependencies = identify_class_dependencies(
+        class_name=class_name, schemapack=schemapack
+    )
+    dependencies.add(class_name)
+    schemapack = downscope_schemapack(
+        schemapack=schemapack, classes_to_keep=dependencies
+    )
 
     return schemapack.model_copy(update={"rootClass": class_name})
 

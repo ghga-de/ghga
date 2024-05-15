@@ -16,10 +16,9 @@
 
 """Custom types annotations used for type hinting."""
 
-from typing import Annotated
+from typing import Annotated, TypeAlias
 
 from pydantic import Field as _Field
-from typing_extensions import TypeAlias
 
 _NonEmptyStr: TypeAlias = Annotated[str, _Field(..., min_length=1)]
 ClassName: TypeAlias = _NonEmptyStr

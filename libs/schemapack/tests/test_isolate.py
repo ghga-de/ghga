@@ -167,3 +167,14 @@ def test_isolate_class_non_exisiting_class():
             schemapack=schemapack,
             class_name="NonExistingClass",
         )
+
+
+def test_isolate_class_downscoping():
+    """Test that unrelated classes are not included in the isolated schemapack."""
+    schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS["unrelated_classes"])
+    expected_schemapack = load_schemapack(
+        VALID_SCHEMAPACK_PATHS["unrelated_classes_rooted"]
+    )
+
+    observed_schemapack = isolate_class(class_name="SomeClass", schemapack=schemapack)
+    assert observed_schemapack == expected_schemapack

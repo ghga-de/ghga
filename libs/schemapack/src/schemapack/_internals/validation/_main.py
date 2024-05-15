@@ -18,7 +18,7 @@
 schemapack.
 """
 
-from typing import Optional, Union, overload
+from typing import overload
 
 from schemapack._internals.validation.base import (
     ClassValidationPlugin,
@@ -67,22 +67,14 @@ def _create_plugins_by_class(
 def _create_plugins_by_class(
     *,
     schemapack: SchemaPack,
-    plugin_classes: Union[
-        list[type[ClassValidationPlugin]],
-        list[type[ResourceValidationPlugin]],
-        list[Union[type[ClassValidationPlugin], type[ResourceValidationPlugin]]],
-    ],
-) -> Union[
-    dict[str, list[ClassValidationPlugin]],
-    dict[
-        str,
-        list[ResourceValidationPlugin],
-    ],
-    dict[
-        str,
-        list[Union[ResourceValidationPlugin, ClassValidationPlugin]],
-    ],
-]:
+    plugin_classes: list[type[ClassValidationPlugin]]
+    | list[type[ResourceValidationPlugin]]
+    | list[type[ClassValidationPlugin] | type[ResourceValidationPlugin]],
+) -> (
+    dict[str, list[ClassValidationPlugin]]
+    | dict[str, list[ResourceValidationPlugin]]
+    | dict[str, list[ResourceValidationPlugin | ClassValidationPlugin]]
+):
     """Create instances of the provided plugins for each class (if relevant) in
     the given schemapack.
 
@@ -102,8 +94,8 @@ def _create_plugins_by_class(
 def _plugin_error_to_record(
     error: ValidationPluginError,
     *,
-    subject_class: Optional[str] = None,
-    subject_resource: Optional[str] = None,
+    subject_class: str | None = None,
+    subject_resource: str | None = None,
 ) -> ValidationErrorRecord:
     """Convert a ValidationPluginError to a ValidationErrorRecord."""
     return ValidationErrorRecord(
@@ -174,9 +166,9 @@ class SchemaPackValidator:
         self,
         *,
         schemapack: SchemaPack,
-        add_global_plugins: Optional[list[type[GlobalValidationPlugin]]] = None,
-        add_class_plugins: Optional[list[type[ClassValidationPlugin]]] = None,
-        add_resource_plugins: Optional[list[type[ResourceValidationPlugin]]] = None,
+        add_global_plugins: list[type[GlobalValidationPlugin]] | None = None,
+        add_class_plugins: list[type[ClassValidationPlugin]] | None = None,
+        add_resource_plugins: list[type[ResourceValidationPlugin]] | None = None,
     ):
         """Initialize with a specific schemapack.
 

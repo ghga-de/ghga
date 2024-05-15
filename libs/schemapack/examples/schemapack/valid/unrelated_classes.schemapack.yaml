@@ -1,0 +1,11 @@
+schemapack: 0.3.0
+description: Two unrelated classes
+classes:
+  SomeClass:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+  AnotherClass:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
