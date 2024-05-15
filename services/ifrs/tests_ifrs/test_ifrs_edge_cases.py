@@ -50,7 +50,7 @@ async def test_reregistration(
     file_fixture: FileObject,  # noqa: F811
 ):
     """Test the re-registration of a file with identical metadata (should not result in
-    an exception).
+    an exception). Test PR/Push workflow message
     """
     for s3, storage_alias in (
         (joint_fixture.s3, joint_fixture.endpoint_aliases.node1),
