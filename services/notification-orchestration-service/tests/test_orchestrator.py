@@ -416,3 +416,45 @@ If you have any questions, please contact a Data Steward at GHGA: {ds_email}.
         in_topic=joint_fixture.config.notification_event_topic,
     ):
         await joint_fixture.event_subscriber.run(forever=False)
+
+
+async def test_second_factor_recreated_notification(joint_fixture: JointFixture):
+    """Test that the second factor recreated event is translated into a notification."""
+    # Prepare triggering event (the second factor recreated event).
+    payload = event_schemas.UserID(
+        user_id=TEST_USER.user_id,
+    )
+
+    # Publish the trigger event
+    await joint_fixture.kafka.publish_event(
+        payload=payload.model_dump(),
+        type_=joint_fixture.config.second_factor_recreated_event_type,
+        topic=joint_fixture.config.second_factor_recreated_event_topic,
+        key=TEST_USER.user_id,
+    )
+
+    # Define the event that should be published by the NOS when the trigger is consumed
+    expected_notification_content = (
+        notifications.SECOND_FACTOR_RECREATED_TO_USER.formatted(
+            support_email=joint_fixture.config.central_data_stewardship_email
+        )
+    )
+
+    expected_notification = event_schemas.Notification(
+        recipient_email=TEST_USER.email,
+        recipient_name=TEST_USER.name,
+        subject=expected_notification_content.subject,
+        plaintext_body=expected_notification_content.text,
+    )
+
+    expected_event = ExpectedEvent(
+        payload=expected_notification.model_dump(),
+        type_=joint_fixture.config.notification_event_type,
+    )
+
+    # consume the event and verify that the expected event is published
+    async with joint_fixture.kafka.expect_events(
+        events=[expected_event],
+        in_topic=joint_fixture.config.notification_event_topic,
+    ):
+        await joint_fixture.event_subscriber.run(forever=False)

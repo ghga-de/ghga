@@ -106,6 +106,22 @@
       "title": "Iva State Changed Event Type",
       "type": "string"
     },
+    "second_factor_recreated_event_topic": {
+      "description": "The name of the topic containing second factor recreation events.",
+      "examples": [
+        "auth"
+      ],
+      "title": "Second Factor Recreated Event Topic",
+      "type": "string"
+    },
+    "second_factor_recreated_event_type": {
+      "description": "The event type for recreation of the second factor for authentication",
+      "examples": [
+        "second_factor_recreated"
+      ],
+      "title": "Second Factor Recreated Event Type",
+      "type": "string"
+    },
     "service_name": {
       "default": "nos",
       "description": "The Notification Orchestration Service controls the creation of notification events.",
@@ -229,6 +245,8 @@
     "file_registered_event_type",
     "iva_state_changed_event_topic",
     "iva_state_changed_event_type",
+    "second_factor_recreated_event_topic",
+    "second_factor_recreated_event_type",
     "service_instance_id",
     "kafka_servers",
     "central_data_stewardship_email"

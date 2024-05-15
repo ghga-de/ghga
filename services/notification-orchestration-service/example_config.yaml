@@ -21,6 +21,8 @@ log_format: null
 log_level: INFO
 notification_event_topic: notification_events
 notification_event_type: notification
+second_factor_recreated_event_topic: auth
+second_factor_recreated_event_type: second_factor_recreated
 service_instance_id: '1'
 service_name: nos
 user_events_topic: users

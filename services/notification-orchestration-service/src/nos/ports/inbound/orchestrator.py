@@ -85,3 +85,7 @@ class OrchestratorPort(ABC):
         In the case that the user ID does not exist in the database, this method will
         log the fact but not raise an error.
         """
+
+    @abstractmethod
+    async def process_second_factor_recreated(self, *, user_id: str) -> None:
+        """Send a notification to the user that their second factor has been recreated."""

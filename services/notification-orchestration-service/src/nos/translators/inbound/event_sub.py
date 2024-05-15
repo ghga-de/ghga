@@ -69,6 +69,16 @@ class EventSubTranslatorConfig(BaseSettings):
         description="The type to use for iva state changed events.",
         examples=["iva_state_changed"],
     )
+    second_factor_recreated_event_topic: str = Field(
+        default=...,
+        description="The name of the topic containing second factor recreation events.",
+        examples=["auth"],
+    )
+    second_factor_recreated_event_type: str = Field(
+        default=...,
+        description="The event type for recreation of the second factor for authentication",
+        examples=["second_factor_recreated"],
+    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -81,6 +91,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             config.access_request_events_topic,
             config.file_registered_event_topic,
             config.iva_state_changed_event_topic,
+            config.second_factor_recreated_event_topic,
         ]
         self.types_of_interest = [
             config.access_request_created_event_type,
@@ -88,6 +99,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             config.access_request_denied_event_type,
             config.file_registered_event_type,
             config.iva_state_changed_event_type,
+            config.second_factor_recreated_event_type,
         ]
         self._config = config
         self._orchestrator = orchestrator
@@ -124,6 +136,13 @@ class EventSubTranslator(EventSubscriberProtocol):
             user_id=validated_payload.user_id
         )
 
+    async def _handle_second_factor_recreated(self, payload: JsonObject) -> None:
+        """Send notifications for second factor recreation."""
+        validated_payload = get_validated_payload(payload, event_schemas.UserID)
+        await self._orchestrator.process_second_factor_recreated(
+            user_id=validated_payload.user_id
+        )
+
     async def _consume_validated(
         self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
     ) -> None:
@@ -142,6 +161,8 @@ class EventSubTranslator(EventSubscriberProtocol):
                     await self._handle_all_ivas_reset(payload=payload)
                 else:
                     await self._handle_iva_state_change(payload=payload)
+            case self._config.second_factor_recreated_event_type:
+                await self._handle_second_factor_recreated(payload=payload)
 
 
 class OutboxSubTranslatorConfig(BaseSettings):

@@ -20,13 +20,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-orchestration-service):
 ```bash
-docker pull ghga/notification-orchestration-service:0.1.0
+docker pull ghga/notification-orchestration-service:1.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-orchestration-service:0.1.0 .
+docker build -t ghga/notification-orchestration-service:1.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -34,7 +34,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-orchestration-service:0.1.0 --help
+docker run -p 8080:8080 ghga/notification-orchestration-service:1.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -170,6 +170,26 @@ The service requires the following configuration parameters:
 
   ```json
   "iva_state_changed"
+  ```
+
+
+- **`second_factor_recreated_event_topic`** *(string)*: The name of the topic containing second factor recreation events.
+
+
+  Examples:
+
+  ```json
+  "auth"
+  ```
+
+
+- **`second_factor_recreated_event_type`** *(string)*: The event type for recreation of the second factor for authentication.
+
+
+  Examples:
+
+  ```json
+  "second_factor_recreated"
   ```
 
 

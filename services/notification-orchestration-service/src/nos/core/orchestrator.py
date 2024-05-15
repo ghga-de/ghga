@@ -373,3 +373,28 @@ class Orchestrator(OrchestratorPort):
         except ResourceNotFoundError:
             # do not raise an error if the user is not found, just log it.
             log.warning("User not found for deletion", extra={"user_id": resource_id})
+
+    async def process_second_factor_recreated(self, *, user_id: str) -> None:
+        """Send a notification to the user that their second factor has been recreated."""
+        try:
+            user = await self._user_dao.get_by_id(user_id)
+        except ResourceNotFoundError as err:
+            error = self.MissingUserError(
+                user_id=user_id, notification_name="Second Factor Recreated"
+            )
+            log.error(
+                error,
+                extra={
+                    "user_id": user_id,
+                    "notification_name": "Second Factor Recreated",
+                },
+            )
+            raise error from err
+
+        await self._notification_emitter.notify(
+            email=user.email,
+            full_name=user.name,
+            notification=notifications.SECOND_FACTOR_RECREATED_TO_USER.formatted(
+                support_email=self._config.central_data_stewardship_email
+            ),
+        )
