@@ -29,6 +29,8 @@ from ghga_service_commons.httpyexpect.validation import (
     assert_error_code,
 )
 
+__all__ = ["ResponseTranslator"]
+
 
 class ResponseTranslator:
     """Translate a specific response to an HTTP call.

@@ -18,9 +18,7 @@
 
 from os.path import splitext
 
-__all__ = [
-    "FILE_COMPRESSION_EXTENSIONS",
-]
+__all__ = ["FILE_COMPRESSION_EXTENSIONS", "get_file_extension"]
 
 FILE_COMPRESSION_EXTENSIONS = {
     ".br",

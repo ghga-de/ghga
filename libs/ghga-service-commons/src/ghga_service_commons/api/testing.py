@@ -21,6 +21,8 @@ from typing import Any, Callable, Generic, TypeVar
 
 import httpx
 
+__all__ = ["get_free_port", "AsyncTestClient"]
+
 
 def get_free_port() -> int:
     """Find and return a free port on localhost."""

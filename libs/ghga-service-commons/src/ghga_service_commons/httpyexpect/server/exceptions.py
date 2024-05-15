@@ -29,6 +29,8 @@ from ghga_service_commons.httpyexpect.validation import (
     assert_error_code,
 )
 
+__all__ = ["HttpException", "HttpCustomExceptionBase"]
+
 
 class HttpException(HttpyExpectError):
     """A generic exception model.

@@ -18,6 +18,8 @@
 
 from ghga_service_commons.httpyexpect.base_exception import HttpyExpectError
 
+__all__ = ["UnexpectedError", "UnstructuredError"]
+
 
 class UnexpectedError(HttpyExpectError):
     """Error for HTTP Error/ExceptionMapping mismatch.

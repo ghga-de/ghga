@@ -21,6 +21,13 @@ from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.providers.s3 import S3Config, S3ObjectStorage
 from pydantic_settings import BaseSettings
 
+__all__ = [
+    "ObjectStorages",
+    "S3ObjectStorageNodeConfig",
+    "S3ObjectStoragesConfig",
+    "S3ObjectStorages",
+]
+
 
 class S3ObjectStorageNodeConfig(BaseSettings):
     """Configuration for one specific object storage node and one bucket in it.

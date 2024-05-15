@@ -18,8 +18,9 @@
 server side.
 """
 
-# shortcuts:
-from ghga_service_commons.httpyexpect.server.exceptions import (  # noqa: F401
+__all__ = ["HttpException", "HttpCustomExceptionBase"]
+
+from ghga_service_commons.httpyexpect.server.exceptions import (
     HttpCustomExceptionBase,
     HttpException,
 )

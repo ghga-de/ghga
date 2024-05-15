@@ -23,6 +23,8 @@ import re
 from ghga_service_commons.httpyexpect.base_exception import HttpyExpectError
 from ghga_service_commons.httpyexpect.models import EXCEPTION_ID_PATTERN
 
+__all__ = ["ValidationError", "assert_error_code", "validate_exception_id"]
+
 
 class ValidationError(HttpyExpectError):
     """Thrown when a exception mapping spec failed validation."""

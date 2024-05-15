@@ -42,6 +42,16 @@ from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
     configure_exception_handler,
 )
 
+__all__ = [
+    "CORRELATION_ID_HEADER_NAME",
+    "ApiConfigBase",
+    "set_header_correlation_id",
+    "get_validated_correlation_id",
+    "correlation_id_middleware",
+    "configure_app",
+    "run_server",
+]
+
 # unofficial, but frequently used header name
 # that is also used by Envoy-based proxies like Emissary-ingress
 CORRELATION_ID_HEADER_NAME = "X-Request-Id"

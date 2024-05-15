@@ -16,6 +16,8 @@
 
 """Contains a base exception that all other exceptions in this library inherit from."""
 
+__all__ = ["HttpyExpectError"]
+
 
 class HttpyExpectError(Exception):
     """A base exception that all other exceptions in this library inherit from.

@@ -19,6 +19,8 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
+__all__ = ["EXCEPTION_ID_PATTERN", "HttpExceptionBody"]
+
 EXCEPTION_ID_PATTERN = r"^[a-z][a-zA-Z0-9]{2,39}$"
 
 

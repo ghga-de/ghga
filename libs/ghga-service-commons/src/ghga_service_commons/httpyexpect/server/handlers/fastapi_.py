@@ -21,6 +21,8 @@ from fastapi.responses import JSONResponse
 
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 
+__all__ = ["configure_exception_handler"]
+
 
 def configure_exception_handler(app: FastAPI) -> None:
     """Configure a FastAPI app to handle httpyexpect's HttpExceptions.

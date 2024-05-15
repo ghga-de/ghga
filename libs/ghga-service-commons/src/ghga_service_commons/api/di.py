@@ -17,6 +17,8 @@
 
 """Utils for dependency injection using FastAPI."""
 
+__all__ = ["DependencyDummy"]
+
 
 class DependencyDummy:
     """A placeholder for a dependency that is injected at runtime into a FastAPI app.
