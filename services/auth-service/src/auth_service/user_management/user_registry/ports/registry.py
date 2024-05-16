@@ -343,3 +343,8 @@ class UserRegistryPort(ABC):
         May raise an IvaRetrievalError or an IvaModificationError.
         """
         ...
+
+    @abstractmethod
+    async def notify_2fa_recreation(self, user_id: str) -> None:
+        """Notify the user that the 2nd factor for authentication was recreated."""
+        ...

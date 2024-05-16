@@ -80,6 +80,10 @@ auth_service --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`auth_events_topic`** *(string)*: The name of the topic for authentication related events. Default: `"auth"`.
+
+- **`second_factor_recreated_event_type`** *(string)*: The event type for recreation of the second factor for authentication. Default: `"second_factor_recreated"`.
+
 - **`iva_events_topic`** *(string)*: The name of the topic for IVA related events. Default: `"ivas"`.
 
 - **`iva_state_changed_event_type`** *(string)*: The event type for IVA state changes. Default: `"iva_state_changed"`.

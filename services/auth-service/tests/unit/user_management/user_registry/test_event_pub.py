@@ -35,6 +35,8 @@ default_config = EventPubTranslatorConfig()
 
 custom_config = default_config.model_copy(
     update={
+        "auth_events_topic": "custom_auth",
+        "second_factor_recreated_event_type": "custom_second_factor_recreated",
         "iva_events_topic": "custom_ivas",
         "iva_state_changed_event_type": "custom_iva_state_changed",
     }
@@ -71,6 +73,27 @@ class DummyEventPublisher(EventPublisherProtocol):
         self.published_key = key
         assert isinstance(payload, dict)
         self.published_payload = payload
+
+
+class AuthEventPublisher(DummyEventPublisher):
+    """A event publisher for testing auth related notifications."""
+
+    def __init__(self, config: EventPubTranslatorConfig):
+        super().__init__(
+            config.auth_events_topic, config.second_factor_recreated_event_type
+        )
+
+
+async def test_publish_2fa_recreated(config: EventPubTranslatorConfig):
+    """Test publishing a 2FA setup recreation event for a user."""
+    publisher = AuthEventPublisher(config)
+    translator = EventPubTranslator(config=config, event_publisher=publisher)
+    user_id = "some-user-id"
+    await translator.publish_2fa_recreated(user_id=user_id)
+    assert publisher.published_key == "some-user-id"
+    assert publisher.published_payload == {
+        "user_id": user_id,
+    }
 
 
 class IvaEventPublisher(DummyEventPublisher):

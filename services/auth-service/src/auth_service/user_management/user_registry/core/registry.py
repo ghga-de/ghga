@@ -489,5 +489,9 @@ class UserRegistry(UserRegistryPort):
                 needed_reset = True
 
         if needed_reset and notify:
-            # send a notificaiton to the user
+            # send a notification to the user
             await self._event_pub.publish_ivas_reset(user_id=user_id)
+
+    async def notify_2fa_recreation(self, user_id: str) -> None:
+        """Notify the user that the 2nd factor for authentication was recreated."""
+        await self._event_pub.publish_2fa_recreated(user_id=user_id)

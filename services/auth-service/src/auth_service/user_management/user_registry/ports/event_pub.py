@@ -24,6 +24,10 @@ class EventPublisherPort(ABC):
     """An interface for an adapter that publishes events happening to this service."""
 
     @abstractmethod
+    async def publish_2fa_recreated(self, *, user_id: str) -> None:
+        """Publish an event relaying that the 2nd factor of a user was recreated."""
+
+    @abstractmethod
     async def publish_iva_state_changed(self, *, iva: Iva) -> None:
         """Publish an event relaying that the state of a user IVA has been changed."""
 

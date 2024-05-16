@@ -13,6 +13,7 @@ auth_check_claims:
   iat: null
   id: null
   name: null
+auth_events_topic: auth
 auth_ext_algs:
 - RS256
 - ES256
@@ -57,6 +58,7 @@ openapi_url: /openapi.json
 organization_url: https://ghga.de/
 port: 8080
 run_auth_adapter: false
+second_factor_recreated_event_type: second_factor_recreated
 service_instance_id: '1'
 service_name: auth_service
 session_id_bytes: 24

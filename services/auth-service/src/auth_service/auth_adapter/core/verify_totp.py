@@ -33,7 +33,7 @@ from .session_store import Session, SessionState
 __all__ = ["verify_totp"]
 
 
-async def verify_totp(  # noqa: C901, PLR0912, PLR0913
+async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     totp: str,
     *,
     session_store: SessionStorePort,
@@ -110,6 +110,15 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913
             user_id=user_id,
             totp_token=totp_token,
         )
+        # check whether a token already existed
+        try:
+            await token_dao.get_by_id(user_id)
+        except ResourceNotFoundError:
+            pass
+        else:
+            # notify user about the recreation of the TOTP token
+            await user_registry.notify_2fa_recreation(user_id)
+        # insert or update the token
         await token_dao.upsert(user_token)
     session.totp_token = None  # remove verified TOTP token from the session
     session.state = SessionState.AUTHENTICATED

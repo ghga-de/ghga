@@ -22,11 +22,8 @@ from hexkit.protocols.eventpub import EventPublisherProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from auth_service.user_management.user_registry.ports.event_pub import (
-    EventPublisherPort,
-)
-
 from ..models.ivas import Iva
+from ..ports.event_pub import EventPublisherPort
 
 __all__ = ["EventPubTranslatorConfig", "EventPubTranslator"]
 
@@ -34,6 +31,14 @@ __all__ = ["EventPubTranslatorConfig", "EventPubTranslator"]
 class EventPubTranslatorConfig(BaseSettings):
     """Config for the event pub translator"""
 
+    auth_events_topic: str = Field(
+        default="auth",
+        description="The name of the topic for authentication related events",
+    )
+    second_factor_recreated_event_type: str = Field(
+        default="second_factor_recreated",
+        description="The event type for recreation of the second factor for authentication",
+    )
     iva_events_topic: str = Field(
         default="ivas",
         description="The name of the topic for IVA related events",
@@ -56,6 +61,18 @@ class EventPubTranslator(EventPublisherPort):
         """Initialize with config and a provider of the EventPublisherProtocol."""
         self._config = config
         self._event_publisher = event_publisher
+
+    async def publish_2fa_recreated(self, *, user_id: str) -> None:
+        """Publish an event relaying that the 2nd factor of a user was recreated."""
+        payload = event_schemas.UserID(
+            user_id=user_id,
+        ).model_dump()
+        await self._event_publisher.publish(
+            payload=payload,
+            type_=self._config.second_factor_recreated_event_type,
+            key=user_id,
+            topic=self._config.auth_events_topic,
+        )
 
     async def publish_iva_state_changed(self, *, iva: Iva) -> None:
         """Publish an event relaying that the state of a user IVA has been changed."""

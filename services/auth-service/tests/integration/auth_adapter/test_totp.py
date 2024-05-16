@@ -405,7 +405,9 @@ async def test_recreate_existing_totp_token(
     client_with_session: ClientWithSession,
 ):
     """Test that TOTP tokens can be recreated."""
-    client, session = client_with_session[:2]
+    client, session, user_registry = client_with_session[:3]
+    assert not user_registry.published_events
+
     headers = headers_for_session(session)
     assert session.state is SessionState.REGISTERED
 
@@ -422,10 +424,14 @@ async def test_recreate_existing_totp_token(
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
+    assert not user_registry.published_events
+
     # try to create a new TOTP token without force flag
     response = await client.post(TOTP_TOKEN_PATH, headers=headers_for_session(session))
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Cannot create TOTP token at this point"}
+
+    assert not user_registry.published_events
 
     # try to create a new TOTP token with force flag
     response = await client.post(
@@ -435,6 +441,9 @@ async def test_recreate_existing_totp_token(
     uri = response.json()["uri"]
     new_secret = parse_qs(urlparse(uri).query)["secret"][0]
     assert session.state is SessionState.NEW_TOTP_TOKEN
+
+    # should not notify because the token had not been stored yet
+    assert not user_registry.published_events
 
     # cannot login with old secret any more
     response = await client.post(
@@ -449,3 +458,16 @@ async def test_recreate_existing_totp_token(
         headers=with_totp_code(headers, new_secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # try to create a new TOTP token with force flag again
+    response = await client.post(
+        TOTP_TOKEN_PATH + "?force=true", headers=headers_for_session(session)
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    uri = response.json()["uri"]
+    changed_secret = parse_qs(urlparse(uri).query)["secret"][0]
+    assert changed_secret != new_secret
+    assert session.state is SessionState.NEW_TOTP_TOKEN
+
+    # should notify because the token was overwritten
+    assert user_registry.published_events == [("2fa_recreation", "john@ghga.de")]

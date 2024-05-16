@@ -14,6 +14,18 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "auth_events_topic": {
+      "default": "auth",
+      "description": "The name of the topic for authentication related events",
+      "title": "Auth Events Topic",
+      "type": "string"
+    },
+    "second_factor_recreated_event_type": {
+      "default": "second_factor_recreated",
+      "description": "The event type for recreation of the second factor for authentication",
+      "title": "Second Factor Recreated Event Type",
+      "type": "string"
+    },
     "iva_events_topic": {
       "default": "ivas",
       "description": "The name of the topic for IVA related events",
