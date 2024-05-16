@@ -111,7 +111,7 @@ The session should have a state attribute that can have the following values:
   The user indicated that the TOTP token was lost and needs to be re-generated.
 - **authenticated**
   The user is fully authenticated with two factors.
-  Set via `POST /rpv/verify-totp`.
+  Set via `POST /rpc/verify-totp`.
 
 ### TOTP Management
 
@@ -120,9 +120,10 @@ To implement two-factor authentication using TOTP, we need a mechanism to create
 The Auth Adapter should intercept the following four endpoints:
 
 - `POST /totp-token` - *creates a TOTP token*
-  - request body:
-    - `user_id`: string (the registered User ID)
+  - query string (optional):
     - `force`: boolean (whether an existing TOTP can be replaced)
+  - request body:
+    - *empty* (cannot be passed via ExtAuth)
   - response body:
     - `uri`: string (the provisioning URI)
   - alternative response body:
@@ -138,9 +139,10 @@ As a side effect of this endpoint, when a user's TOTP token is replaced, all exi
 The QR code should be created in the frontend, e.g. using `react-qr-code` or the `qr-code` web component. If during implementation there are any issues with this approach, it can alternatively also be created in the backend, e.g. using the `segno` library.
 
 - `POST /rpc/verify-totp` - *verifies a one-time password*
+  - `X-Authorization` header:
+    - the one-time-password in the format `Bearer TOTP:123456`
   - request body:
-    - `user_id`: string (the registered User ID)
-    - `totp`: string (the one-time-password)
+    - *empty* (cannot be passed via ExtAuth)
 
 This endpoint first verifies that the user has a valid auth session, i.e. has been successfully logged in via LS Login. It then verifies that the session refers to an already registered user, and that the user has the same user ID as specified in the request body. Next, it verifies that this user has already created a TOTP token. Finally, it verifies the given one-time password in `totp` using the current time and a configurable time window. If all verification steps succeed, the token is activated, and the HTTP status `204 No Content` is send in an empty response. Otherwise, if the one-time password could be verified, it responds with the HTTP status `401 Unauthorized`.
 
@@ -356,9 +358,8 @@ The state from the backend is now used as frontend session state, and depending 
 
 If the user is not yet registered, the state is set to `needs-registration` and the frontend asks the user to register.
 
-If the user info from LS Login does not match the registered user info, the user will not be considered valid by the backend, the state is set to `needs-re-registration`, and the frontend should show a message accordingly, asking the user to confirm and thereby re-register.
-
-TODO: Should we send a notification to a data steward in this case, or maybe even invalidate existing TOTP tokens and IVAs?
+If the user info from LS Login does not match the registered user info, the user will not be considered valid by the backend, the state is set to `needs-re-registration`, and the frontend should show a message accordingly, asking the user to confirm and thereby re-register. After re-registration, a notification is sent to the user by the
+notificaton orchestration service.
 
 If the state is `needs-registration` or `needs-re-registration`, the user is requested to newly register or confirm the changed user data. Registration of users has already been implemented in the frontend and in the backend and does not need to be changed. After registration, the frontend also gets the user info from the backend and stores it in the session storage.
 
@@ -428,6 +429,10 @@ Note that per the [ExtAuth](https://www.getambassador.io/docs/edge-stack/latest/
 The `http_auth_request_module` used by Nginx-based proxies like Ingress-Nginx for external authentication works in a slightly different way by interpreting all `2xx` response status codes as a signal to allow access to the backend. Responses with these status codes are not communicated back to the client. Therefore, the solution outlined here cannot be used with Nginx-based proxies.
 
 Also note that Emissary-ingress needs to be properly configured to pass all necessary headers to the Auth Adapter and allow it to modify some headers.
+
+Another caveat is that the ExtAuth protocol does not pass the request body. Therefore,
+the `/totp-token` and `/rpc/verify-totp` endpoints use the query string and the request
+header instead of the request body for passing arguments as input.
 
 ![Auth flow in the backend](./images/flow_backend.png)
 
