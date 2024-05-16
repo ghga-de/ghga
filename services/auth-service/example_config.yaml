@@ -51,9 +51,9 @@ kafka_ssl_password: ''
 log_format: null
 log_level: DEBUG
 max_iva_verification_attempts: 10
-oidc_authority_url: https://proxy.aai.lifescience-ri.eu/
+oidc_authority_url: https://login.aai.lifescience-ri.eu/oidc/
 oidc_client_id: ghga-data-portal
-oidc_userinfo_endpoint: https://proxy.aai.lifescience-ri.eu/OIDC/userinfo
+oidc_userinfo_endpoint: https://login.aai.lifescience-ri.eu/oidc/userinfo
 openapi_url: /openapi.json
 organization_url: https://ghga.de/
 port: 8080

@@ -115,7 +115,7 @@ def create_access_token(
     claims: dict[str, None | str | int] = {
         "jti": "123-456-789-0",
         "sub": "john@aai.org",
-        "iss": str(CONFIG.oidc_authority_url).rstrip("/"),
+        "iss": str(CONFIG.oidc_authority_url),
         "client_id": CONFIG.oidc_client_id,
         "foo": "bar",
         "token_class": "access_token",

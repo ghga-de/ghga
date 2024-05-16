@@ -119,11 +119,11 @@ class Config(
     )
 
     oidc_authority_url: HttpUrl = Field(
-        default="https://proxy.aai.lifescience-ri.eu",
+        default="https://login.aai.lifescience-ri.eu/oidc/",
         description="external OIDC authority URL used by the auth adapter",
     )
     oidc_userinfo_endpoint: HttpUrl | None = Field(
-        default="https://proxy.aai.lifescience-ri.eu/OIDC/userinfo",
+        default="https://login.aai.lifescience-ri.eu/oidc/userinfo",
         description="external OIDC userinfo endpoint used by the auth adapter",
     )
     oidc_client_id: str = Field(

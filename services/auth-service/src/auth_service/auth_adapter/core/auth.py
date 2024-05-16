@@ -21,7 +21,6 @@ import logging
 import time
 from functools import cached_property, lru_cache
 from typing import Any, NamedTuple
-from urllib.parse import urlparse
 
 import httpx
 from fastapi import status
@@ -90,8 +89,8 @@ class OIDCDiscovery:
             config = response.json()
         except json.JSONDecodeError:
             config = None
-        if not isinstance(config, dict) or "version" not in config:
-            raise ConfigurationDiscoveryError("Unexpected discovery object")
+        if not isinstance(config, dict):
+            raise ConfigurationDiscoveryError("Invalid discovery object")
         return config
 
     @cached_property
@@ -193,18 +192,7 @@ class JWTConfig:
         else:
             log.warning("Allowed external signing algorithms not configured.")
             self.external_algs = None
-        authority_url_parts = urlparse(discovery.authority_url)
-        if (
-            authority_url_parts.scheme == "https"
-            and not authority_url_parts.netloc.endswith((".dev", ".test"))
-        ):
-            # this is a real OP, the issuer should match the authority URL
-            issuer = authority_url_parts.scheme + "://" + authority_url_parts.netloc
-        else:
-            # this is a test OP, discover its issuer, may not match the authority URL
-            log.warning("Using issuer from discovery instead of authority URL.")
-            issuer = discovery.issuer
-        self.check_at_claims["iss"] = issuer
+        self.check_at_claims["iss"] = discovery.issuer
         client_id = config.oidc_client_id
         if client_id:
             self.check_at_claims["client_id"] = client_id

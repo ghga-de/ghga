@@ -49,13 +49,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:2.3.0
+docker pull ghga/auth-service:2.4.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:2.3.0 .
+docker build -t ghga/auth-service:2.4.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -63,7 +63,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:2.3.0 --help
+docker run -p 8080:8080 ghga/auth-service:2.4.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -418,9 +418,9 @@ The service requires the following configuration parameters:
 
       - *object*
 
-- **`oidc_authority_url`** *(string, format: uri)*: external OIDC authority URL used by the auth adapter. Default: `"https://proxy.aai.lifescience-ri.eu"`.
+- **`oidc_authority_url`** *(string, format: uri)*: external OIDC authority URL used by the auth adapter. Default: `"https://login.aai.lifescience-ri.eu/oidc/"`.
 
-- **`oidc_userinfo_endpoint`**: external OIDC userinfo endpoint used by the auth adapter. Default: `"https://proxy.aai.lifescience-ri.eu/OIDC/userinfo"`.
+- **`oidc_userinfo_endpoint`**: external OIDC userinfo endpoint used by the auth adapter. Default: `"https://login.aai.lifescience-ri.eu/oidc/userinfo"`.
 
   - **Any of**
 

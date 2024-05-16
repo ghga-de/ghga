@@ -608,7 +608,7 @@
       "type": "array"
     },
     "oidc_authority_url": {
-      "default": "https://proxy.aai.lifescience-ri.eu",
+      "default": "https://login.aai.lifescience-ri.eu/oidc/",
       "description": "external OIDC authority URL used by the auth adapter",
       "format": "uri",
       "maxLength": 2083,
@@ -628,7 +628,7 @@
           "type": "null"
         }
       ],
-      "default": "https://proxy.aai.lifescience-ri.eu/OIDC/userinfo",
+      "default": "https://login.aai.lifescience-ri.eu/oidc/userinfo",
       "description": "external OIDC userinfo endpoint used by the auth adapter",
       "title": "Oidc Userinfo Endpoint"
     },

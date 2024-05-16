@@ -42,7 +42,8 @@ def test_decodes_and_validates_a_valid_access_token():
         "token_class",
     }
     assert claims["client_id"] == CONFIG.oidc_client_id
-    assert claims["iss"] == str(CONFIG.oidc_authority_url).rstrip("/")
+    assert claims["iss"] == str(CONFIG.oidc_authority_url)
+    assert claims["iss"].endswith("/")
     assert claims["jti"] == "123-456-789-0"
     assert claims["sub"] == "john@aai.org"
     assert claims["foo"] == "bar"
@@ -124,13 +125,13 @@ def test_does_not_validate_an_access_token_with_invalid_client_id():
 
 def test_does_not_validate_an_access_token_with_invalid_issuer():
     """Test that an access token with an unknown issuer is rejected."""
-    access_token = create_access_token(iss="https://proxy.aai.badscience-ri.eu")
+    access_token = create_access_token(iss="https://login.aai.badscience-ri.eu/oidc/")
     with pytest.raises(auth.TokenValidationError) as exc_info:
         auth.decode_and_validate_token(access_token)
     assert str(exc_info.value) == (
         "Not a valid token: Invalid 'iss' value."
-        " Expected 'https://proxy.aai.lifescience-ri.eu'"
-        " got 'https://proxy.aai.badscience-ri.eu'"
+        " Expected 'https://login.aai.lifescience-ri.eu/oidc/'"
+        " got 'https://login.aai.badscience-ri.eu/oidc/'"
     )
 
 

@@ -16,30 +16,42 @@
 
 """Test the OIDC Discovery helper class."""
 
+import json
+
+import pytest
+
 from auth_service.auth_adapter.core.auth import OIDCDiscovery
 
-LS_AAI = "https://proxy.aai.lifescience-ri.eu"
+LS_AAI = "https://login.aai.lifescience-ri.eu/oidc/"
 
 
-def test_ls_aai_issuer():
+@pytest.fixture(name="discovery")
+def discovery_fixture() -> OIDCDiscovery:
+    """Create an OIDCDiscovery instance for the LS AAI OIDC authority."""
+    return OIDCDiscovery(LS_AAI)
+
+
+def test_ls_aai_issuer(discovery: OIDCDiscovery):
     """Test the issuer discovery."""
-    discovery = OIDCDiscovery(LS_AAI)
     assert discovery.issuer == LS_AAI
 
 
-def test_ls_aai_jwks_str():
+def test_ls_aai_jwks_str(discovery: OIDCDiscovery):
     """Test the JWKS discovery."""
-    discovery = OIDCDiscovery(LS_AAI)
-    assert discovery.jwks_str.startswith('{"keys": [{')
+    jwks_str = discovery.jwks_str
+    assert jwks_str
+    assert jwks_str.startswith("{")
+    assert jwks_str.endswith("}")
+    jwks = json.loads(jwks_str)
+    assert "keys" in jwks
+    assert isinstance(jwks["keys"], list)
 
 
-def test_ls_aai_token_endpoint():
+def test_ls_aai_token_endpoint(discovery: OIDCDiscovery):
     """Test the userinfo endpoint discovery."""
-    discovery = OIDCDiscovery(LS_AAI)
-    assert discovery.token_endpoint == LS_AAI + "/OIDC/token"
+    assert discovery.token_endpoint == LS_AAI + "token"
 
 
-def test_ls_aai_userinfo_endpoint():
+def test_ls_aai_userinfo_endpoint(discovery: OIDCDiscovery):
     """Test the userinfo endpoint discovery."""
-    discovery = OIDCDiscovery(LS_AAI)
-    assert discovery.userinfo_endpoint == LS_AAI + "/OIDC/userinfo"
+    assert discovery.userinfo_endpoint == LS_AAI + "userinfo"
