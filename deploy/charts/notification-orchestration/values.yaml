@@ -15,7 +15,7 @@ resources:
     cpu: "100m"
     memory: "64M"
 
-config_prefix: ns
+config_prefix: nos
 
 parameters:
   default:
