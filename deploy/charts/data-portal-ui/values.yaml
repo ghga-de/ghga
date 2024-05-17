@@ -41,7 +41,7 @@ parameters:
     port: 8080
 
     ars_url: "/api/ars"
-    auths_url: "/api/auth"
+    auth_url: "/api/auth"
     mass_url: "/api/mass"
     metldata_url: "/api/metldata"
     wps_url: "/api/wps"
