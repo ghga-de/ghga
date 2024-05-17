@@ -4,7 +4,8 @@ ghga-connector==1.2.1
 ghga-datasteward-kit==2.0.0
 
 ghga-event-schemas>=3.0
-ghga-service-commons[auth,crypt]>=3.1.1
+ghga-service-commons[auth,crypt]==3.1.1
+# FIXME >=3.1.1 doesn't work with others (require typer>=0.12)
 hexkit[all]>=2, <3
 
 testcontainers>=4,<5

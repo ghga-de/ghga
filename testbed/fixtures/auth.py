@@ -277,6 +277,17 @@ class TokenGenerator:
         assert status_code == 204, status_code
         return response
 
+    def add_totp_to_headers(
+        self, totp_token: str, headers: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Add TOTP token to headers.
+
+        'X-Authorization' header is used to submit the one-time password. Due to ExtAuth
+        protocol by default doesn't allow the request body.
+        """
+        headers["X-Authorization"] = f"Bearer TOTP:{totp_token}"
+        return headers
+
     def get_totp_token(
         self,
         name: str,
@@ -292,11 +303,10 @@ class TokenGenerator:
             token = state_store.get_state(f"totp-token-{sub}")
             if token:
                 return token
-        user_info = {"user_id": user_id, "force": force}
         url = self.auth_adapter_url + "/totp-token"
-        response = self.http.post(url, json=user_info, headers=headers)
+        response = self.http.post(url, headers=headers, params={"force": force})
         status_code = response.status_code
-        assert status_code == 201, status_code
+        assert status_code == 201, f"{status_code}, {response.text}"
         uri = response.json().get("uri")
         assert uri
         uri_params = parse_qs(urlparse(uri).query)
@@ -321,9 +331,10 @@ class TokenGenerator:
 
     def verify_totp(self, user_id: str, totp: str, headers: dict[str, Any]) -> Response:
         """Verify the TOTP code."""
-        user_info = {"user_id": user_id, "totp": totp}
+        # user_info = {"user_id": user_id, "totp": totp}
         url = self.auth_adapter_url + "/rpc/verify-totp"
-        return self.http.post(url, json=user_info, headers=headers)
+        headers = self.add_totp_to_headers(totp, headers)
+        return self.http.post(url, headers=headers)
 
     def auth_logout(
         self,
