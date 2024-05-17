@@ -24,7 +24,7 @@ parameters:
     access_request_denied_event_type: access_request_denied
     access_request_events_topic: access_requests
     central_data_stewardship_email: ""
-    db_name: users
+    db_name: nos
     kafka_servers:
     - kafka:9092
     kafka_security_protocol: PLAINTEXT
