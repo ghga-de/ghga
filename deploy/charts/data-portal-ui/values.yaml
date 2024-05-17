@@ -37,9 +37,19 @@ mapping:
 
 parameters:
   default:
-    host: "0.0.0.0"
+    host: 0.0.0.0
     port: 8080
+
+    ars_url: "/api/ars"
+    auths_url: "/api/auth"
     mass_url: "/api/mass"
     metldata_url: "/api/metldata"
+    wps_url: "/api/wps"
+
+    oidc_authority_url: https://login.aai.lifescience-ri.eu/oidc/
+    oidc_authorization_url: authorize
+    oidc_token_url: token
+    oidc_userinfo_url: userinfo
+    oidc_use_discovery: false
 
 shareProcessNamespace: false
