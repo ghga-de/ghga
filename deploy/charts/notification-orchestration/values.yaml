@@ -1,0 +1,47 @@
+args: []
+command: []
+horizontalPodAutoscaler:
+  enabled: false
+  averageCpuUtilization: 75
+  averageMemoryUtilization: 75
+image:
+  name: "ghga/notification-orchestration-service"
+podAnnotations: {}
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256M"
+  requests:
+    cpu: "100m"
+    memory: "64M"
+
+config_prefix: nos
+
+parameters:
+  default:
+    access_request_allowed_event_type: access_request_allowed
+    access_request_created_event_type: access_request_created
+    access_request_denied_event_type: access_request_denied
+    access_request_events_topic: access_requests
+    central_data_stewardship_email: ""
+    db_name: nos
+    kafka_servers:
+    - kafka:9092
+    kafka_security_protocol: PLAINTEXT
+    kafka_ssl_cafile: null
+    kafka_ssl_certfile: null
+    kafka_ssl_keyfile: null
+    kafka_ssl_password: null
+    iva_state_changed_event_topic: ivas
+    iva_state_changed_event_type: iva_state_changed
+    notification_event_topic: notifications
+    notification_event_type: notification
+    second_factor_recreated_event_topic: auth
+    second_factor_recreated_event_type: second_factor_recreated
+    service_instance_id: 'consumer.1'
+    service_name: nos
+    user_events_topic: users
+
+shareProcessNamespace: false
+kafkaSecrets:
+  enabled: false

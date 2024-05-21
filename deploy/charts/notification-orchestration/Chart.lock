@@ -3,4 +3,4 @@ dependencies:
   repository: file://../ghga-common
   version: 0.2.3
 digest: sha256:c85429344c4acfa65f3233264521f5cecd87da1d4c5c1cac03e70e9f023a1b10
-generated: "2024-05-03T11:09:11.200235195+02:00"
+generated: "2024-05-03T11:12:51.893128991+02:00"

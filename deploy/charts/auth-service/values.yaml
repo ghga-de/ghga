@@ -49,14 +49,69 @@ parameters:
     # Required for auth-adapter only and injected through Vault
     basic_auth_credentials: null
     oidc_client_id: ghga-data-portal
+    totp_encryption_key: null
 
-    # Required for auth-adapter only
-    oidc_authority_url: https://proxy.aai.lifescience-ri.eu
-    oidc_userinfo_endpoint: null
+    # auth-adapter only
+    oidc_authority_url: https://login.aai.lifescience-ri.eu/oidc/
+    oidc_userinfo_endpoint: https://login.aai.lifescience-ri.eu/oidc/userinfo
+    auth_ext_algs:
+    - RS256
+    - ES256
+    auth_map_claims: {}
+    basic_auth_realm: GHGA Data Portal
+    user_tokens_collection: user_tokens
 
+    auth_events_topic: auth
+    second_factor_recreated_event_type: second_factor_recreated
+
+    session_id_bytes: 24
+    session_max_lifetime_seconds: 43200
+    session_timeout_seconds: 3600
+
+    totp_algorithm: sha1
+    totp_attempts_per_code: 3
+    totp_digits: 6
+    totp_image: null
+    totp_interval: 30
+    totp_issuer: GHGA
+    totp_max_failed_attempts: 10
+    totp_secret_size: 32
+    totp_tolerance: 1
+
+    # user-registry only
+    users_collection: users
+
+    iva_events_topic: ivas
+    iva_state_changed_event_type: iva_state_changed
+    ivas_collection: ivas
+
+    # claims-repository only
     add_as_data_stewards: []
+    claims_collection: claims
+
+    dataset_deletion_event_topic: metadata_datasets
+    dataset_deletion_event_type: dataset_deleted
+
+    # general
     api_ext_path: /api/auth
     api_root_path: ''
+
+    auto_reload: true
+
+    service_name: auth_service
+    db_name: auth-db
+
+    host: 0.0.0.0
+    port: 8080
+
+    cors_allow_credentials: null
+    cors_allowed_headers: null
+    cors_allowed_methods: null
+    cors_allowed_origins: null
+
+    openapi_url: /openapi.json
+    organization_url: https://ghga.de/
+
     auth_algs:
     - ES256
     auth_check_claims:
@@ -65,31 +120,6 @@ parameters:
       iat: null
       name: null
       id: null
-    auth_ext_algs:
-    - RS256
-    - ES256
-    auth_map_claims: {}
-    auto_reload: true
-    basic_auth_realm: GHGA Data Portal
-    claims_collection: claims
-    cors_allow_credentials: null
-    cors_allowed_headers: null
-    cors_allowed_methods: null
-    cors_allowed_origins: null
-    db_name: auth-db
-    docs_url: /docs
-    host: 0.0.0.0
-
-    dataset_deletion_event_topic: metadata_datasets
-    dataset_deletion_event_type: dataset_deleted
-
-    openapi_url: /openapi.json
-    organization_url: https://ghga.de/
-    port: 8080
-    service_name: auth_service
-    users_collection: users
-    user_tokens_collection: user_tokens
-    workers: 1
 
     kafka_servers: []
     kafka_security_protocol: PLAINTEXT
@@ -98,7 +128,7 @@ parameters:
     kafka_ssl_keyfile: null
     kafka_ssl_password: null
 
-    ivas_collection: ivas
+    workers: 1
 
 authService:
   emissary:

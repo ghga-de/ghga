@@ -68,7 +68,7 @@ parameters:
     kafka_ssl_certfile: null
     kafka_ssl_keyfile: null
     kafka_ssl_password: null
-    access_request_events_topic: access_request_events
+    access_request_events_topic: access_requests
     access_request_created_event_type: access_request_created
     access_request_allowed_event_type: access_request_allowed
     access_request_denied_event_type: access_request_denied
