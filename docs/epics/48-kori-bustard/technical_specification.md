@@ -40,29 +40,27 @@ _**Authentication**_
 > address, such as a mailing address or phone number, and is used to issue a code for
 > authentication.
 
-| Recipient    | Purpose                               | Source Exists | Data Required |
-|--------------|------------------------------------------|---------------|------------|
-| User         | IVA invalidated                          | No            | User ID    |
-| User         | IVA verification code requested (Confirmation) | No      | User ID    |
-| Central Data Steward | IVA verification code requested by user  | No    | User ID    |
-| User         | IVA verification code transmitted        | No            | User ID    |
-| Central Data Steward | IVA verification code submitted by user  | No    | User ID    |
+| Recipient    | Purpose                                           | Data Required |
+|--------------|---------------------------------------------------|---------------|
+| User         | All IVAs invalidated                              | User ID       |
+| User         | IVA verification code requested (Confirmation)    | User ID       |
+| Central Data Steward | IVA verification code requested by user   | User ID       |
+| User         | IVA verification code transmitted                 | User ID       |
+| Central Data Steward | IVA verification code submitted by user   | User ID       |
+| User         | 2nd Authentication Factor Recreated               | User ID       |
 
 
 _**Data Submission**_
 
 > Abbreviations:
-> - DS: Data Steward
 > - RD: Research Data
 >
 > For the "Research data upload completion" notification, the Research Data Controller's
 > email must be retrievable from the File ID.
 
-| Recipient     | Purpose                           | Source Exists | Data Req'd |
-|---------------|-----------------------------------|---------------|------------|
-| Central DS    | *Metadata is ready for review     | No            | File ID    |
-| RD Controller | Research data upload completion   | Yes           | File ID    |
-| RD Submitter  | *Approval/rejection of submission | No            | User ID    |
+| Recipient     | Purpose                         | Data Req'd |
+|---------------|---------------------------------|------------|
+| RD Controller | Research data upload completion | File ID    |
 
 
 
@@ -70,28 +68,21 @@ _**Data Request and Download**_
 
 > Abbreviations:
 > - DRR: Data Requester Representative
-> - DACR: Data Access Committee Representative
 >
 > If there is a stored entity linking the request to both the dataset and user IDs, then
 > the request would be the only piece of information needed from the event.
 
-| Recipient    | Purpose                          | Source Exists | Data Required      |
-|--------------|----------------------------------|---------------|--------------------|
-| DRR          | Request Created (Confirmation)   | No            | Dataset ID, User ID|
-| User (DACR)  | Request Created                  | No            | Dataset ID, User ID|
-| DRR          | Request Allowed                  | No            | Dataset ID, User ID|
-| User (DACR)  | Request Allowed                  | No            | Dataset ID, User ID|
-| DRR          | Request Denied                   | No            | Dataset ID, User ID|
-| User (DACR)  | Request Denied                   | No            | Dataset ID, User ID|
-| DRR          | Dataset ready for download       | Yes           | Dataset ID, User ID|
-| DRR          | *Data access expiration reminder | No            | Dataset ID, User ID|
-| DRR          | *Data access expired             | No            | Dataset ID, User ID|
-
-_**Data Deletion**_
-| Recipient    | Purpose                     | Source Exists | Data Required |
-|--------------|-----------------------------|---------------|---------------|
-| Data Steward | Deletion request received   | Yes           | File ID       |
-
+| Recipient    | Purpose                         | Data Required      |
+|--------------|---------------------------------|--------------------|
+| DRR          | Request Created (Confirmation)  | Dataset ID, User ID|
+| Data Steward | Request Created                 | Dataset ID, User ID|
+| DRR          | Request Allowed                 | Dataset ID, User ID|
+| Data Steward | Request Allowed                 | Dataset ID, User ID|
+| DRR          | Request Denied                  | Dataset ID, User ID|
+| Data Steward | Request Denied                  | Dataset ID, User ID|
+| DRR          | Dataset ready for download      | Dataset ID, User ID|
+| DRR          | *Data access expiration reminder| Dataset ID, User ID|
+| DRR          | *Data access expired            | Dataset ID, User ID|
 
 ## Tasks/Additional Implementation Details:
 
@@ -99,8 +90,12 @@ The Notification Orchestration Service will use an event subscriber to consume e
 from other services. Some of these events already exist, while others still
 need to be defined and implemented. This approach ensures that microservices remain
 agnostic to the notification framework. Instead, when a point in a user journey is
-reached which merits a notification, the given microservice publishes an event. That
-event is picked up by the NOS and used to construct a notification event.
+reached which merits a notification, the given microservice publishes an event with
+the required details. That event is picked up by the NOS and used to construct
+a notification event. In some cases, notifications may be sourced through other
+means, such as the new outbox pattern, where database information is relayed through
+an event that contains a subset of the database document's fields. For instance, a
+change to a user's email field could be used to drive the creation of a notification.
 
 ### Initial Implementation
 
@@ -141,7 +136,12 @@ The Notification Service needs to maintain idempotence with regard to event proc
 yet ensure that notifications are issued once and only once. This requirement is not
 met in its current state, where reprocessing a notification event would result in
 multiple identical emails. One way to achieve this would be to generate a deterministic
-hash key for each event and store in a database whether or not it was sent.
+hash key for each event and store in a database whether or not it was sent. However, a
+hash key alone is not enough, since it is possible for two valid emails to a user to have
+identical content. Another mechanism must be used to determine validity in such cases.
+One candidate approach would be to use the correlation IDs to distinguish between true
+duplicates (which should be blocked) and identical-but-distinct cases (which should be
+sent).
 
 ### Addition of new event schemas to ghga-event-schemas
 
@@ -152,16 +152,12 @@ There are at least two fields that must be included in the outstanding events:
 - `user_id`: string representing the unique user ID stored in the database
 - `dataset_id`: string representing the accession number of a dataset
 
-The following should contain `user_id` and `dataset_id`:
-- RequestCreated
-- RequestAllowed
-- RequestDenied
+One model should be defined in ghga-event-schemas to encapsulate the User ID alone, since
+that field is used across multiple events. The dataset ID is needed for the access
+request details, so an AccessRequestDetails model should be defined as well.
 
-The following should only contain `user_id`:
-- IVAInvalidated
-- IVAVerificationRequested
-- IVAVerificationTransmitted
-- IVAVerificationSubmitted
+The IVA notifications may require other information as details emerge, so required
+information may be separately encapsulated for them.
 
 ### Replace ARS notification events
 
