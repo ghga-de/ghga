@@ -96,7 +96,7 @@ async def test_user_crud(
     assert recorder.recorded_events == [
         RecordedEvent(
             payload={
-                "id": user.id,
+                "user_id": user.id,
                 "name": user.name,
                 "email": user.email,
                 "title": user.title,
@@ -106,7 +106,7 @@ async def test_user_crud(
         ),
         RecordedEvent(
             payload={
-                "id": user.id,
+                "user_id": user.id,
                 "name": user.name,
                 "email": changed_user.email,
                 "title": user.title,

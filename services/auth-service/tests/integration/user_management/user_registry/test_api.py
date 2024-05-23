@@ -101,7 +101,7 @@ async def test_post_user(full_client: FullClient, new_user_headers: dict[str, st
     assert recorder.recorded_events == [
         RecordedEvent(
             payload={
-                "id": id_,
+                "user_id": id_,
                 "name": "Max Headroom",
                 "email": "max@example.org",
                 "title": "Dr.",
@@ -149,7 +149,7 @@ async def test_post_user_with_minimal_data(
     assert recorder.recorded_events == [
         RecordedEvent(
             payload={
-                "id": id_,
+                "user_id": id_,
                 "name": "Max Headroom",
                 "email": "max@example.org",
                 "title": None,
@@ -283,7 +283,7 @@ async def test_put_user(full_client: FullClient, new_user_headers: dict[str, str
     assert recorder.recorded_events == [
         RecordedEvent(
             payload={
-                "id": id_,
+                "user_id": id_,
                 "name": "Max Headhall",
                 "email": "head@example.org",
                 "title": "Prof.",

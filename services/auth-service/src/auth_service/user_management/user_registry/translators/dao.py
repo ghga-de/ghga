@@ -16,6 +16,7 @@
 
 """Translation between general and user specific DAOs."""
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from pydantic import Field
@@ -69,12 +70,13 @@ class UserDaoPublisherFactory(UserDaoPublisherFactoryPort):
     @staticmethod
     def _user_to_event(user: UserDto) -> JsonObject:
         """Translate a user to an event."""
-        return {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "title": user.title.value if user.title else None,
-        }
+        validated_user = event_schemas.User(
+            user_id=user.id,
+            name=user.name,
+            email=user.email,
+            title=user.title.value if user.title else None,
+        )
+        return validated_user.model_dump()
 
     async def get_user_dao(self) -> DaoPublisher[UserDto]:
         """Construct a DAO for interacting with user data in a database.
