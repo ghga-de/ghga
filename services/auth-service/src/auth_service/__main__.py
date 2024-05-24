@@ -21,6 +21,7 @@ from contextlib import asynccontextmanager
 
 from ghga_service_commons.api import run_server
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
+from hexkit.log import configure_logging
 from hexkit.providers.akafka.provider import KafkaEventSubscriber
 
 from auth_service.deps import get_mongodb_dao_factory
@@ -78,6 +79,7 @@ async def consume_events(config: Config = CONFIG):
 
 def run(config: Config = CONFIG):
     """Run the service"""
+    configure_logging(config=config)
     assert_tz_is_utc()
     run_adapter = config.run_auth_adapter
     service = "auth_adapter" if run_adapter else "user_management"
