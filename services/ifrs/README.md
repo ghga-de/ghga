@@ -378,7 +378,7 @@ to talk to an S3 service in the backend.<br>  Args:
 
 ### Usage:
 
-A template YAML for configurating the service can be found at
+A template YAML for configuring the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
 Please adapt it, rename it to `.ifrs.yaml`, and place it into one of the following locations:
 - in the current working directory were you are execute the service (on unix: `./.ifrs.yaml`)
