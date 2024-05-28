@@ -17,8 +17,8 @@
 """Module to process config file"""
 
 from collections import Counter
+from collections.abc import Callable
 from importlib import resources
-from typing import Callable, Optional
 
 import yaml
 from pydantic import BaseModel, model_validator
@@ -40,18 +40,18 @@ class WorksheetSettings(BaseModel):
     """A data model for the per-worksheet settings of a transpiler config"""
 
     name: str
-    header_row: Optional[int] = None
-    start_row: Optional[int] = None
-    start_column: Optional[int] = None
-    end_column: Optional[int] = None
-    transformations: Optional[dict[str, Callable]] = None
+    header_row: int | None = None
+    start_row: int | None = None
+    start_column: int | None = None
+    end_column: int | None = None
+    transformations: dict[str, Callable] | None = None
 
 
 class Worksheet(BaseModel):
     """A data model for worksheets in the transpiler config"""
 
     sheet_name: str
-    settings: Optional[WorksheetSettings]
+    settings: WorksheetSettings | None
 
 
 class Config(BaseModel):

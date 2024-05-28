@@ -14,5 +14,6 @@
 # limitations under the License.
 #
 
-"""Module to load workbook configurations and convert it to transpiler config """
+"""Module to load workbook configurations and convert it to transpiler config"""
+
 from .config import Config, load_config  # noqa

@@ -16,7 +16,7 @@
 
 """Module containing transformation functions"""
 
-from typing import Callable
+from collections.abc import Callable
 
 
 def split_by_semicolon(value: str) -> list[str]:
@@ -35,7 +35,7 @@ def to_attributes() -> Callable:
     def split_one(value: str) -> dict:
         """Returns a dictionary with key, value as keys, splitted string as values"""
         splitted = (elem.strip() for elem in value.split("="))
-        return dict(zip(("key", "value"), splitted))
+        return dict(zip(("key", "value"), splitted, strict=False))
 
     def split_mult(value: str) -> list[dict]:
         """Converts string to attributes"""
