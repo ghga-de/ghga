@@ -1,45 +1,157 @@
 [build-system]
-requires = ["setuptools>=67.7.2"]
+requires = [
+    "setuptools>=69",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
-# please adapt to package name
-name = "ghga_transpiler"
-version = "2.0.0"
-description = "GHGA-Transpiler - excel to JSON converter"
 readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.9"
-license = { text = "Apache 2.0" }
+requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 1 - Planning",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
+name = "my_microservice"
+version = "1.1.0"
+description = "My-Microservice - a short description"
 dependencies = [
-    "typer ~= 0.9.0",
+    "typer >= 0.12",
     "openpyxl >= 3.1.2, == 3.*",
     "defusedxml >= 0.7, == 0.*",
     "pydantic >=2, <3",
     "PyYAML ~= 6.0",
-    "semver == 3.*"
+    "semver == 3.*",
 ]
 
+[project.license]
+text = "Apache 2.0"
+
 [project.urls]
-# please adapt to package name
-Repository = "https://github.com/ghga-de/ghga-transpiler"
+Repository = "https://github.com/ghga-de/my-microservice"
 
 [project.scripts]
-# please adapt to package name
-ghga-transpiler = "ghga_transpiler.__main__:run"
+my-microservice = "my_microservice.__main__:run"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = [
+    "src",
+]
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".devcontainer",
+    "__pycache__",
+    "build",
+    "dist",
+]
+line-length = 88
+src = [
+    "src",
+    "tests",
+    "examples",
+    "scripts",
+]
+target-version = "py312"
+
+[tool.ruff.lint]
+fixable = [
+    "UP",
+    "I",
+    "D",
+]
+ignore = [
+    "E111",
+    "E114",
+    "E116",
+    "PLW",
+    "RUF001",
+    "RUF010",
+    "RUF012",
+    "N818",
+    "B008",
+    "PLR2004",
+    "D205",
+    "D400",
+    "D401",
+    "D107",
+    "D206",
+    "D300",
+    "UP040",
+]
+select = [
+    "C90",
+    "F",
+    "I",
+    "S",
+    "B",
+    "N",
+    "UP",
+    "PL",
+    "RUF",
+    "SIM",
+    "D",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = [
+    "PL",
+    "S",
+    "SIM",
+    "D",
+]
+"tests/*" = [
+    "S",
+    "SIM",
+    "PLR",
+    "B011",
+]
+".devcontainer/*" = [
+    "S",
+    "SIM",
+    "D",
+]
+"examples/*" = [
+    "S",
+    "D",
+]
+"__init__.py" = [
+    "D",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+disable_error_code = "import"
+show_error_codes = true
+exclude = [
+    "build/lib/",
+]
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+no_site_packages = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+asyncio_mode = "strict"
+
+[tool.coverage.paths]
+source = [
+    "src",
+    "/workspace/src",
+    "**/lib/python*/site-packages",
+]

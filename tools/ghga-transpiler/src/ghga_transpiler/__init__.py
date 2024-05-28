@@ -13,13 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Short description of package"""  # Please adapt to package
-
-from importlib.metadata import version
+"""GHGA metadata transpiler"""
 
 from openpyxl.xml import DEFUSEDXML
 
-__version__ = version(__package__)
+__version__ = "1.1.0"
 
 if not DEFUSEDXML:
     raise RuntimeError(
