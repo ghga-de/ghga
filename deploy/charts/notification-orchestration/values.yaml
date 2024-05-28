@@ -41,6 +41,8 @@ parameters:
     service_instance_id: 'consumer.1'
     service_name: nos
     user_events_topic: users
+    file_registered_event_topic: internal_registrations
+    file_registered_event_type: internal_file_registered
 
 shareProcessNamespace: false
 kafkaSecrets:
