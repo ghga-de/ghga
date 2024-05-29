@@ -23,7 +23,7 @@ from ifrs.inject import prepare_event_subscriber
 
 async def consume_events(run_forever: bool = True):
     """Run an event consumer listening to the specified topic."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:

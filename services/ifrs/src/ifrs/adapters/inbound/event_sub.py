@@ -139,6 +139,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         payload: JsonObject,
         type_: Ascii,
         topic: Ascii,  # pylint: disable=unused-argument
+        key: str,
     ) -> None:
         """Consume events from the topics of interest."""
         if type_ == self._config.files_to_register_type:
