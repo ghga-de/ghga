@@ -22,7 +22,11 @@ import httpx
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.simple_token import generate_token_and_hash
-from hexkit.providers.akafka.testutils import KafkaFixture, kafka_fixture
+from hexkit.providers.akafka.testutils import (
+    KafkaFixture,
+    get_clean_kafka_fixture,
+    kafka_container_fixture,
+)
 from pcs.adapters.inbound.fastapi_.config import TokenHashConfig
 from pcs.config import Config
 from pcs.inject import prepare_core, prepare_rest_app
@@ -30,11 +34,10 @@ from pcs.ports.inbound.file_deletion import FileDeletionPort
 
 from tests_pcs.fixtures.config import get_config
 
-__all__ = [
-    "joint_fixture",
-    "JointFixture",
-    "kafka_fixture",
-]
+__all__ = ["joint_fixture", "JointFixture", "kafka", "kafka_container_fixture"]
+
+
+kafka = get_clean_kafka_fixture("session")
 
 
 @dataclass
@@ -50,14 +53,14 @@ class JointFixture:
 
 @pytest_asyncio.fixture
 async def joint_fixture(
-    kafka_fixture: KafkaFixture,
+    kafka: KafkaFixture,
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
     token, hash = generate_token_and_hash()
 
     token_hash_config = TokenHashConfig(token_hashes=[hash])
 
-    config = get_config(sources=[kafka_fixture.config, token_hash_config])
+    config = get_config(sources=[kafka.config, token_hash_config])
 
     async with prepare_core(config=config) as file_deletion:
         async with prepare_rest_app(config=config, core_override=file_deletion) as app:
@@ -66,6 +69,6 @@ async def joint_fixture(
                     config=config,
                     file_deletion=file_deletion,
                     rest_client=rest_client,
-                    kafka=kafka_fixture,
+                    kafka=kafka,
                     token=token,
                 )

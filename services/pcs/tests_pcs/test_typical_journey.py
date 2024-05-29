@@ -27,7 +27,8 @@ from httpx import Headers
 from tests_pcs.fixtures.joint import (  # noqa: F401
     JointFixture,
     joint_fixture,
-    kafka_fixture,
+    kafka,
+    kafka_container_fixture,
 )
 
 
