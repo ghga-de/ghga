@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,6 @@ the standard linkml SchemaView class.
 """
 
 from copy import deepcopy
-from typing import Optional, Union
 
 import jsonasobj2
 from linkml_runtime.linkml_model.meta import ClassDefinition, SlotDefinition
@@ -50,7 +49,7 @@ class ClassSlotNotFoundError(ModelManipulationError):
         class_name: str,
         slot_name: str,
         direct: bool = False,
-        context: Optional[str] = None,
+        context: str | None = None,
     ):
         message = (
             f"The slot '{slot_name}' does not exist"
@@ -181,7 +180,7 @@ def add_slot_usage_annotation(
     slot_name: str,
     class_name: str,
     annotation_key: str,
-    annotation_value: Union[str, bool, int, float],
+    annotation_value: str | bool | int | float,
 ) -> ExportableSchemaView:
     """Add annotations to a slot in the context of a class.
     For more details see:
@@ -250,7 +249,7 @@ def add_anchor_point(
     *,
     schema_view: ExportableSchemaView,
     anchor_point: AnchorPoint,
-    description: Optional[str] = None,
+    description: str | None = None,
 ) -> ExportableSchemaView:
     """Add an anchor point for a class to the tree root of the model."""
     class_ = schema_view.get_class(class_name=anchor_point.target_class)

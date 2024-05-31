@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,10 +22,6 @@ from copy import deepcopy
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
-from hexkit.providers.akafka.testutils import (  # noqa: F401; pylint: disable=unused-import
-    KafkaFixture,
-    kafka_fixture,
-)
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.load_resources import (
@@ -35,22 +31,17 @@ from metldata.artifacts_rest.load_resources import (
 from metldata.artifacts_rest.models import ArtifactResource, GlobalStats
 from metldata.load.auth import generate_token
 from metldata.load.stats import STATS_COLLECTION_NAME
-from tests.fixtures.load.joint import (  # noqa: F401; pylint: disable=unused-import
+from tests.fixtures.load.joint import (
     EMBEDDED_DATASET_TEST_PATH,
     JointFixture,
-    joint_fixture,
-)
-from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
-    MongoDbFixture,
-    mongodb_fixture,
+    joint_fixture,  # noqa: F401
 )
 from tests.fixtures.workflows import EXAMPLE_ARTIFACTS
 
+pytestmark = pytest.mark.asyncio()
 
-@pytest.mark.asyncio
-async def test_load_artifacts_endpoint_happy(
-    joint_fixture: JointFixture,  # noqa: F811
-):
+
+async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # noqa: F811
     """Test the happy path of using the load artifacts endpoint."""
     async with joint_fixture.kafka.record_events(
         in_topic=joint_fixture.config.dataset_change_event_topic
@@ -211,7 +202,6 @@ async def test_load_artifacts_endpoint_happy(
         await dao.get_by_id(changed_accession)
 
 
-@pytest.mark.asyncio
 async def test_load_artifacts_endpoint_invalid_resources(
     joint_fixture: JointFixture,  # noqa: F811
 ):
@@ -228,7 +218,6 @@ async def test_load_artifacts_endpoint_invalid_resources(
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_load_artifacts_endpoint_invalid_token(
     joint_fixture: JointFixture,  # noqa: F811
 ):
@@ -244,10 +233,7 @@ async def test_load_artifacts_endpoint_invalid_token(
     assert response.status_code == 401
 
 
-@pytest.mark.asyncio
-async def test_file_slot_transformation(
-    joint_fixture: JointFixture,  # noqa: F811
-):
+async def test_file_slot_transformation(joint_fixture: JointFixture):  # noqa: F811
     """Test that file slots are discovered and file extensions are extracted correctly"""
     with open(EMBEDDED_DATASET_TEST_PATH, encoding="utf-8") as file:
         embedded_datasets = json.load(file)

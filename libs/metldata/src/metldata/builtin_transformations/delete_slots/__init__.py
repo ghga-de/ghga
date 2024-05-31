@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 """A transformation that deletes slots from models and associated metadata."""
 
 # shortcuts:
-# pylint: disable=unused-import
 from metldata.builtin_transformations.delete_slots.main import (  # noqa: F401
     SLOT_DELETION_TRANSFORMATION,
     SlotDeletionConfig,

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@
 
 from collections.abc import Iterable
 from functools import partial
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import Json
@@ -45,7 +44,7 @@ def lookup_accession(
     anchor: str,
     alias: str,
     accession_map: AccessionMap,
-) -> Optional[str]:
+) -> str | None:
     """Lookup the accession for a resource with the provided user-defined alias of
     the class with the provided anchor. If no accession exists, None is returned.
     """
@@ -103,7 +102,7 @@ def get_aliases_for_resources(
 def generate_accession_map(
     *,
     content: SubmissionContent,
-    existing_accession_map: Optional[AccessionMap] = None,
+    existing_accession_map: AccessionMap | None = None,
     accession_registry: AccessionRegistry,
     anchor_points_by_target: dict[str, AnchorPoint],
 ) -> AccessionMap:

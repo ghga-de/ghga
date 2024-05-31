@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,6 @@
 #
 
 """API for loading artifacts into running services."""
-
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Response, Security
 from fastapi.routing import APIRouter
@@ -59,7 +57,7 @@ class LoaderTokenAuthProvider(AuthContextProtocol[LoaderTokenAuthContext]):
         """Initialize the loader token auth provider."""
         self._token_hashes = token_hashes
 
-    async def get_context(self, token: str) -> Optional[LoaderTokenAuthContext]:
+    async def get_context(self, token: str) -> LoaderTokenAuthContext | None:
         """Get a loader token auth context."""
         if not token:
             return None

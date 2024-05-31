@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,12 +26,10 @@ from metldata.model_utils.essentials import MetadataModel
 from metldata.transform.base import MetadataTransformer, TransformationDefinition
 
 
-# pylint: disable=unused-argument
 def check_model_assumptions(model: MetadataModel, config: NormalizationConfig):
     """Check that the classes and slots specified in the config exist in the model."""
 
 
-# pylint: disable=unused-argument
 def transform_model(model: MetadataModel, config: NormalizationConfig) -> MetadataModel:
     """Normalize the model."""
     return normalize_model(model)

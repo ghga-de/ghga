@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,11 +80,11 @@ async def test_pub_sub_workflow(
 
         def __init__(self):
             self.consumed_events: set[ConsumedEvent] = set()
-            self.topics_of_interest = {"topic1"}
-            self.types_of_interest = {"type1", "type2"}
+            self.topics_of_interest = {"topic1"}  # type: ignore
+            self.types_of_interest = {"type1", "type2"}  # type: ignore
 
         async def _consume_validated(
-            self, *, payload: JsonObject, type_: Ascii, topic: Ascii
+            self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
         ) -> None:
             self.consumed_events.add(
                 ConsumedEvent(topic=topic, type_=type_, payload=json.dumps(payload))

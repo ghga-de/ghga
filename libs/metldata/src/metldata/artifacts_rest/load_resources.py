@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -185,7 +185,7 @@ async def process_new_or_changed_resources(
             )
 
 
-async def process_resource_upsert(  # pylint: disable=too-many-locals
+async def process_resource_upsert(
     *,
     artifact_info_dict: dict[str, ArtifactInfo],
     artifact_name: str,

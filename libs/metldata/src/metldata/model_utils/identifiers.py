@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,12 +16,10 @@
 
 """Handling identifiers of classes in a metadata model."""
 
-from typing import Optional
-
 from metldata.model_utils.essentials import ROOT_CLASS, MetadataModel
 
 
-def get_class_identifier(model: MetadataModel, class_name: str) -> Optional[str]:
+def get_class_identifier(model: MetadataModel, class_name: str) -> str | None:
     """Get the identifier of a class in a metadata model.
 
     Returns:
@@ -37,7 +35,7 @@ def get_class_identifier(model: MetadataModel, class_name: str) -> Optional[str]
     return None
 
 
-def get_class_identifiers(model: MetadataModel) -> dict[str, Optional[str]]:
+def get_class_identifiers(model: MetadataModel) -> dict[str, str | None]:
     """Get the identifiers of all classes in a metadata model.
 
     Returns:
@@ -46,7 +44,7 @@ def get_class_identifiers(model: MetadataModel) -> dict[str, Optional[str]]:
     """
     schema_view = model.schema_view
 
-    identifiers_by_class: dict[str, Optional[str]] = {}
+    identifiers_by_class: dict[str, str | None] = {}
     for class_name in schema_view.all_classes():
         if class_name == ROOT_CLASS:
             continue  # Root class does not have an identifier

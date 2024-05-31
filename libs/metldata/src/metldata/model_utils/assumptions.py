@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,6 @@
 #
 
 """Logic to check basic assumptions about the metadata model."""
-
-from typing import Optional
 
 from metldata.model_utils.anchors import (
     AnchorPointNotFoundError,
@@ -92,9 +90,7 @@ def check_root_class_existence(model: MetadataModel) -> None:
         )
 
 
-def check_anchor_points(
-    model: MetadataModel, classes: Optional[list[str]] = None
-) -> None:
+def check_anchor_points(model: MetadataModel, classes: list[str] | None = None) -> None:
     """Checks the anchor points of the root class. If classes is specified, also checks
     that anchor points for the classes exist.
 

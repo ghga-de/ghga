@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 
 """Logic for transforming metadata."""
 
-from typing import Union, cast
+from typing import cast
 
 from metldata.builtin_transformations.custom_embeddings.embedding_profile import (
     EmbeddingProfile,
@@ -53,7 +53,7 @@ def is_slot_multivalued(
 
 def resolve_target_resource(
     target_resource_id: str,
-    target: Union[str, EmbeddingProfile],
+    target: str | EmbeddingProfile,
     global_metadata: Json,
     model: MetadataModel,
     anchor_points_by_target: dict,

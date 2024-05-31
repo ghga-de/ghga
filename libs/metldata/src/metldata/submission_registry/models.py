@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,11 +18,10 @@
 
 from enum import Enum
 from operator import attrgetter
-from typing import Optional
+from typing import TypeAlias
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import TypeAlias
 
 from metldata.custom_types import SubmissionContent
 
@@ -55,7 +54,7 @@ class SubmissionHeader(BaseModel):
     """Basic information provided for a submission."""
 
     title: str = Field(..., description="A descriptive title for this submission.")
-    description: Optional[str] = Field(None, description="An optional description.")
+    description: str | None = Field(None, description="An optional description.")
 
 
 class Submission(SubmissionHeader):
@@ -63,7 +62,7 @@ class Submission(SubmissionHeader):
 
     id: str
 
-    content: Optional[SubmissionContent] = Field(
+    content: SubmissionContent | None = Field(
         None,
         description=(
             "The metadata content of the submission. Keys on the top level correspond to"

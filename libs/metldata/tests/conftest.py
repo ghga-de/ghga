@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,21 +16,15 @@
 
 """Shared fixtures"""
 
-import asyncio
-
-import pytest
-from hexkit.providers.mongodb.testutils import get_mongodb_fixture
-
-
-def event_loop_fixture():
-    """Event loop fixture for when an event loop is needed beyond function scope."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-    asyncio.set_event_loop(None)
-
-
-event_loop = pytest.fixture(fixture_function=event_loop_fixture, scope="session")
-
-mongodb_session = get_mongodb_fixture(scope="session")
+# The container fixtures persist across the whole session.
+# The kafka- and mongodb_fixtures reset the underlying container state for each test,
+# and they only have a function scope
+# The default fixture names for kafka_fixture and mongodb_fixture are kafka and mongodb
+from hexkit.providers.akafka.testutils import (  # noqa: F401
+    kafka_container_fixture,
+    kafka_fixture,
+)
+from hexkit.providers.mongodb.testutils import (  # noqa: F401
+    mongodb_container_fixture,
+    mongodb_fixture,
+)

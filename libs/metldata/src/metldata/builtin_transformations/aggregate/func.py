@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Iterable
 from operator import itemgetter
-from typing import Any, Optional
+from typing import Any
 
 from metldata.builtin_transformations.aggregate.models import (
     MinimalClass,
@@ -37,7 +37,7 @@ class AggregationFunction(ABC):
     result_range_name: str
     """The name of the range of the data produced by func."""
 
-    result_range_cls_def: Optional[MinimalClass]
+    result_range_cls_def: MinimalClass | None
     """The class definition of the data produced by func. None if the function
     result range is a type rather than a class."""
 

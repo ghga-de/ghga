@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,6 @@
 import json
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Optional
 
 from hexkit.base import InboundProviderBase
 from hexkit.custom_types import Ascii, JsonObject
@@ -165,7 +164,7 @@ class FileSystemEventSubscriber(InboundProviderBase):
             event_store_path=self._config.event_store_path,
         ):
             await self._translator.consume(
-                payload=event.payload, type_=event.type_, topic=event.topic
+                payload=event.payload, type_=event.type_, topic=event.topic, key=""
             )
 
 
@@ -180,7 +179,7 @@ class FileSystemEventCollector:
         self._config = config
 
     def collect_events(
-        self, *, topic: str, types: Optional[list[str]] = None
+        self, *, topic: str, types: list[str] | None = None
     ) -> Iterator[Event]:
         """Collect all events for the given types from the given topic."""
         events = read_events_from_topic(

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,7 @@
 
 """Logic for subscribing to source events."""
 
-from collections.abc import Awaitable
-from typing import Callable
+from collections.abc import Awaitable, Callable
 
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
@@ -44,9 +43,8 @@ class SourceEventSubscriber(EventSubscriberProtocol):
         self.types_of_interest = [config.source_event_type]
         self._run_workflow_func = run_workflow_func
 
-    # pylint: disable=unused-argument
     async def _consume_validated(
-        self, *, payload: JsonObject, type_: Ascii, topic: Ascii
+        self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
     ) -> None:
         """
         Receive and process an event with already validated topic and type.
@@ -56,5 +54,5 @@ class SourceEventSubscriber(EventSubscriberProtocol):
             type_ (str): The type of the event.
             topic (str): Name of the topic the event was published to.
         """
-        submission_event_payload = SubmissionEventPayload(**payload)
+        submission_event_payload = SubmissionEventPayload(**payload)  # type: ignore
         await self._run_workflow_func(submission_event_payload)

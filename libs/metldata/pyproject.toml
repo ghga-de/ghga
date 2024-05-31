@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=67.7.2",
+    "setuptools>=69",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -9,26 +9,25 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 1 - Planning",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "metldata"
-version = "1.2.1"
+version = "1.3.0"
 description = "metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing."
 dependencies = [
-    "hexkit[akafka,mongodb] >=2.1.1, <3",
+    "hexkit[akafka,mongodb] >=3, <4",
     "ghga-service-commons[api,auth] >=3.1.1, <4",
     "ghga-event-schemas >=3.0.0, <4",
-    "typer~=0.9.0",
+    "typer>=0.12",
     "linkml==1.6.1",
     "linkml-runtime==1.6.0",
     "linkml-validator==0.4.5",
@@ -63,7 +62,7 @@ src = [
     "examples",
     "scripts",
 ]
-target-version = "py39"
+target-version = "py312"
 
 [tool.ruff.lint]
 fixable = [
@@ -72,8 +71,9 @@ fixable = [
     "D",
 ]
 ignore = [
-    "E",
-    "W",
+    "E111",
+    "E114",
+    "E116",
     "PLW",
     "RUF001",
     "RUF010",
@@ -87,6 +87,7 @@ ignore = [
     "D107",
     "D206",
     "D300",
+    "UP040",
 ]
 select = [
     "C90",
@@ -146,7 +147,7 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "7.1"
+minversion = "8.0"
 asyncio_mode = "strict"
 
 [tool.coverage.paths]

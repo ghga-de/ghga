@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,6 @@ from metldata.custom_types import Json
 from metldata.model_utils.anchors import AnchorPoint
 
 
-# pylint: disable=unused-argument
 def execute_aggregation(
     *,
     original_model: CachedMetadataModel,

@@ -58,13 +58,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/metldata):
 ```bash
-docker pull ghga/metldata:1.2.1
+docker pull ghga/metldata:1.3.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/metldata:1.2.1 .
+docker build -t ghga/metldata:1.3.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -72,7 +72,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/metldata:1.2.1 --help
+docker run -p 8080:8080 ghga/metldata:1.3.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -143,7 +143,7 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
 
 - **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
@@ -334,11 +334,54 @@ The service requires the following configuration parameters:
 
 - **`artifact_infos`** *(array)*: Information for artifacts to be queryable via the Artifacts REST API.
 
-  - **Items**: Refer to *[#/$defs/ArtifactInfo](#$defs/ArtifactInfo)*.
+  - **Items**: Refer to *[#/$defs/ArtifactInfo](#%24defs/ArtifactInfo)*.
 
 - **`loader_token_hashes`** *(array)*: Hashes of tokens used to authenticate for loading artifact.
 
   - **Items** *(string)*
+
+## Definitions
+
+
+- <a id="%24defs/AnchorPoint"></a>**`AnchorPoint`** *(object)*: A model for describing an anchor point for the specified target class.
+
+  - **`target_class`** *(string, required)*: The name of the class to be targeted.
+
+  - **`identifier_slot`** *(string, required)*: The name of the slot in the target class that is used as identifier.
+
+  - **`root_slot`** *(string, required)*: The name of the slot in the root class used to link to the target class.
+
+- <a id="%24defs/ArtifactInfo"></a>**`ArtifactInfo`** *(object)*: Model to describe general information on an artifact.
+Please note, it does not contain actual artifact instances derived from specific
+metadata.
+
+  - **`name`** *(string, required)*: The name of the artifact.
+
+  - **`description`** *(string, required)*: A description of the artifact.
+
+  - **`resource_classes`** *(object, required)*: A dictionary of resource classes for this artifact. The keys are the names of the classes. The values are the corresponding class models. Can contain additional properties.
+
+    - **Additional properties**: Refer to *[#/$defs/ArtifactResourceClass](#%24defs/ArtifactResourceClass)*.
+
+- <a id="%24defs/ArtifactResourceClass"></a>**`ArtifactResourceClass`** *(object)*: Model to describe a resource class of an artifact.
+
+  - **`name`** *(string, required)*: The name of the metadata class.
+
+  - **`description`**: A description of the metadata class. Default: `null`.
+
+    - **Any of**
+
+      - *string*
+
+      - *null*
+
+  - **`anchor_point`**: The anchor point for this metadata class.
+
+    - **All of**
+
+      - : Refer to *[#/$defs/AnchorPoint](#%24defs/AnchorPoint)*.
+
+  - **`json_schema`** *(object, required)*: The JSON schema for this metadata class.
 
 
 ### Usage:

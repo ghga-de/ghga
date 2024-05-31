@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,7 +73,6 @@ class MetadataModel(SchemaDefinition):
 
         return self.as_dict() == other.as_dict()
 
-    # pylint: disable=too-many-nested-blocks,too-many-branches
     def as_dict(self, essential: bool = True):  # noqa: PLR0912, C901
         """Get a dictionary representation of the model. If essential set to True, the
         dictionary will be cleaned of all fields that are not essential.

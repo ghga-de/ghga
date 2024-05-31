@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ LinkML-based JSON data graph.
 
 from collections import defaultdict
 from collections.abc import Iterator
-from typing import Any, Optional
+from typing import Any
 
 from linkml_runtime.linkml_model import SlotDefinition
 
@@ -72,7 +72,7 @@ class DataSubgraph:
 
     _model: MetadataModel
     _paths: list[list[SlotDefinition]]
-    _class_identifiers: dict[str, Optional[str]]
+    _class_identifiers: dict[str, str | None]
     _all_classes: list[str]
     _anchor_points: dict[str, AnchorPoint]
 
@@ -222,7 +222,7 @@ class DataSubgraph:
         submission_data: Json,
         origin: str,
         path_strings: list[str],
-        visit_once_classes: Optional[list[str]] = None,
+        visit_once_classes: list[str] | None = None,
     ):
         """Creates a new DataSubgraph object.
 

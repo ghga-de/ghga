@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 """A transformation to generate custom embeddings for classes of a metadata model."""
 
 # shortcuts:
-# pylint: disable=unused-import
 from metldata.builtin_transformations.custom_embeddings.main import (  # noqa: F401
     CUSTOM_EMBEDDING_TRANSFORMATION,
     CustomEmbeddingConfig,

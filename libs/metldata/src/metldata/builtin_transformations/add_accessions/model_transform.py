@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 """Logic for transforming metadata models."""
 
 from copy import deepcopy
-from typing import Optional, cast
+from typing import cast
 
 from linkml_runtime.linkml_model.meta import ClassDefinition, SlotDefinition
 
@@ -29,7 +29,7 @@ from metldata.transform.base import MetadataModelTransformationError
 
 
 def unset_identifier(
-    *, class_definition: ClassDefinition, class_identifiers: dict[str, Optional[str]]
+    *, class_definition: ClassDefinition, class_identifiers: dict[str, str | None]
 ) -> ClassDefinition:
     """Get a modified copy of the provided class definition with the identifier being
     unset.
@@ -74,7 +74,7 @@ def add_accessions_to_class(
     *,
     class_definition: ClassDefinition,
     accession_slot_name: str,
-    class_identifiers: dict[str, Optional[str]],
+    class_identifiers: dict[str, str | None],
 ) -> ClassDefinition:
     """Get a modified copy of the provided class definition with the accession slot
     being added as identifier.

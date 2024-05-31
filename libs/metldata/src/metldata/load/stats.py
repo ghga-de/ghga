@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 """Generate global summary statistics."""
 
 from operator import itemgetter
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
@@ -32,7 +32,7 @@ from metldata.load.aggregator import DbAggregator
 STATS_COLLECTION_NAME = "stats"
 
 
-def get_stat_slot(resource_class: str) -> Optional[str]:
+def get_stat_slot(resource_class: str) -> str | None:
     """Get the name of the slot that shall be used as grouping key."""
     if resource_class.endswith("File"):
         return "format"

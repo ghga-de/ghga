@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,6 @@
 
 """Config for aggregate transformations"""
 
-from typing import Optional
-
 from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings
 
@@ -34,7 +32,7 @@ class AggregationOperation(BaseModel):
 
     input_paths: list[str]
     output_path: str
-    visit_only_once: Optional[list[str]] = None
+    visit_only_once: list[str] | None = None
     function: type[AggregationFunction]
 
     @model_validator(mode="before")

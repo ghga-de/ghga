@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,16 +18,15 @@
 
 import pytest
 from hexkit.protocols.dao import DaoFactoryProtocol
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.load_resources import load_artifact_resources
 from metldata.artifacts_rest.models import ArtifactResource
 from tests.fixtures.artifact_info import MINIMAL_ARTIFACT_INFO
 from tests.fixtures.metadata import VALID_MINIMAL_METADATA_EXAMPLE
-from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
-    MongoDbFixture,
-    mongodb_fixture,
-)
+
+pytestmark = pytest.mark.asyncio()
 
 
 async def load_example_artifact_resources(
@@ -52,13 +51,10 @@ async def load_example_artifact_resources(
     return dao_collection
 
 
-@pytest.mark.asyncio
-async def test_load_artifact_resources(
-    mongodb_fixture: MongoDbFixture,  # noqa: F811
-):
+async def test_load_artifact_resources(mongodb: MongoDbFixture):
     """Test happy path of using load_artifact_resources function."""
     dao_collection = await load_example_artifact_resources(
-        dao_factory=mongodb_fixture.dao_factory,
+        dao_factory=mongodb.dao_factory,
     )
 
     # check that artifact resources have been persisted to the database by testing for

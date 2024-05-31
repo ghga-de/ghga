@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@ import itertools
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import asdict
-from typing import Optional
 
 from linkml_runtime.linkml_model import ClassDefinition, SlotDefinition
 from stringcase import snakecase
@@ -41,7 +40,7 @@ from metldata.model_utils.identifiers import get_class_identifier
 from metldata.model_utils.manipulate import add_anchor_point, upsert_class_slot
 from metldata.transform.base import MetadataModelTransformationError
 
-Path = tuple[Optional[str], ...]
+Path = tuple[str | None, ...]
 
 
 class PathMatrix:
@@ -81,7 +80,7 @@ class PathMatrix:
         """
         self.leaf_slots = [
             MinimalNamedSlot(slot_name=slot_name, **asdict(slot))
-            for slot_name, slot in zip(self.path_leaves(), leaf_slots)
+            for slot_name, slot in zip(self.path_leaves(), leaf_slots, strict=False)
         ]
 
     @property
@@ -203,7 +202,7 @@ def add_aggregation(min_model: MinimalLinkMLModel, aggregation: Aggregation) -> 
         path_strings=path_strings,
         leaf_slots=[
             MinimalSlot(range=slot_range, multivalued=mv)
-            for slot_range, mv in zip(leaf_ranges, leaf_multivalued)
+            for slot_range, mv in zip(leaf_ranges, leaf_multivalued, strict=False)
         ],
     )
 

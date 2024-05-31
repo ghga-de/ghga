@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,24 +17,20 @@
 """Test the query_resource module."""
 
 import pytest
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from metldata.artifacts_rest.query_resources import query_artifact_resource
 from tests.artifact_rest.test_load_artifacts import load_example_artifact_resources
 from tests.fixtures.artifact_info import MINIMAL_ARTIFACT_INFO
-from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
-    MongoDbFixture,
-    mongodb_fixture,
-)
+
+pytestmark = pytest.mark.asyncio()
 
 
-@pytest.mark.asyncio
-async def test_query_artifact_resource(
-    mongodb_fixture: MongoDbFixture,  # noqa: F811
-):
+async def test_query_artifact_resource(mongodb: MongoDbFixture):
     """Test happy path of using the query_artifact_resource function."""
     # load example resources and prepare client:
     dao_collection = await load_example_artifact_resources(
-        dao_factory=mongodb_fixture.dao_factory
+        dao_factory=mongodb.dao_factory
     )
 
     # Get an example resource:

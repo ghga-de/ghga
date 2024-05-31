@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,9 +18,10 @@
 
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from graphlib import CycleError, TopologicalSorter
-from typing import Callable, Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import (
     BaseModel,
@@ -35,7 +36,6 @@ from metldata.custom_types import Json
 from metldata.event_handling.models import SubmissionAnnotation
 
 # shortcuts:
-# pylint: disable=unused-import
 from metldata.model_utils.assumptions import MetadataModelAssumptionError  # noqa: F401
 from metldata.model_utils.essentials import MetadataModel
 
@@ -122,7 +122,7 @@ class WorkflowStepBase(BaseModel, ABC):
 
     model_config = ConfigDict(frozen=True)
     description: str = Field(..., description="A description of the step.")
-    input: Optional[str] = Field(
+    input: str | None = Field(
         ...,
         description=(
             "The name of the workflow step from which the output is used as input"
@@ -161,7 +161,6 @@ class WorkflowDefinition(BaseModel):
         ),
     )
 
-    # pylint: disable=no-self-argument
     @field_validator("steps", mode="after")
     def validate_step_references(
         cls,  # noqa: N805

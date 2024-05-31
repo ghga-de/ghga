@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@ from typing import Any
 
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest_asyncio import fixture
 
 from metldata.artifacts_rest.artifact_info import ArtifactInfo, load_artifact_info
@@ -33,10 +34,6 @@ from metldata.load.models import ArtifactResourceDict
 from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.load.config import get_config
 from tests.fixtures.load.utils import BASE_DIR
-from tests.fixtures.mongodb import (  # noqa: F401; pylint: disable=unused-import
-    MongoDbFixture,
-    mongodb_fixture,
-)
 
 ARTIFACT_INFOS_PATH = BASE_DIR / "example_models" / "artifact_infos.json"
 ARTIFACT_NAME = "embedded_public"
@@ -63,10 +60,7 @@ class JointFixture:
 
 
 @fixture
-async def joint_fixture(
-    kafka_fixture: KafkaFixture,
-    mongodb_fixture: MongoDbFixture,  # noqa: F811
-) -> JointFixture:
+async def joint_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> JointFixture:
     """Get a tuple of a configured test client together with a corresponding token."""
     artifact_infos = [
         load_artifact_info(
@@ -90,8 +84,8 @@ async def joint_fixture(
                 "artifact_infos": artifact_infos,
                 "loader_token_hashes": [token_hash],
             },
-            kafka_fixture.config,
-            mongodb_fixture.config,
+            kafka.config,
+            mongodb.config,
         ]
     )
 
@@ -109,7 +103,7 @@ async def joint_fixture(
         config=config,
         expected_file_resource_content=expected_file_resource_content,
         expected_embedded_dataset_resource_content=expected_embedded_dataset_resource_content,
-        kafka=kafka_fixture,
-        mongodb=mongodb_fixture,
+        kafka=kafka,
+        mongodb=mongodb,
         token=token,
     )
