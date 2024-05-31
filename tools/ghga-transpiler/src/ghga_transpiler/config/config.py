@@ -1,24 +1,25 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
-#
+
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
+
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+#
 
 """Module to process config file"""
 
 from collections import Counter
+from collections.abc import Callable
 from importlib import resources
-from typing import Callable, Optional
 
 import yaml
 from pydantic import BaseModel, model_validator
@@ -40,18 +41,18 @@ class WorksheetSettings(BaseModel):
     """A data model for the per-worksheet settings of a transpiler config"""
 
     name: str
-    header_row: Optional[int] = None
-    start_row: Optional[int] = None
-    start_column: Optional[int] = None
-    end_column: Optional[int] = None
-    transformations: Optional[dict[str, Callable]] = None
+    header_row: int | None = None
+    start_row: int | None = None
+    start_column: int | None = None
+    end_column: int | None = None
+    transformations: dict[str, Callable] | None = None
 
 
 class Worksheet(BaseModel):
     """A data model for worksheets in the transpiler config"""
 
     sheet_name: str
-    settings: Optional[WorksheetSettings]
+    settings: WorksheetSettings | None
 
 
 class Config(BaseModel):
