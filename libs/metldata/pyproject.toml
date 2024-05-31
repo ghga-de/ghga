@@ -31,6 +31,7 @@ dependencies = [
     "linkml==1.6.1",
     "linkml-runtime==1.6.0",
     "linkml-validator==0.4.5",
+    "cryptography>=42.0.0",
 ]
 
 [project.license]
