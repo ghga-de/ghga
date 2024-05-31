@@ -20,9 +20,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "my_microservice"
+name = "ghga_transpiler"
 version = "2.1.0"
-description = "My-Microservice - a short description"
+description = "GHGA-Transpiler - excel to JSON converter"
 dependencies = [
     "typer >= 0.12",
     "openpyxl >= 3.1.2, == 3.*",
@@ -36,10 +36,10 @@ dependencies = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/my-microservice"
+Repository = "https://github.com/ghga-de/ghga-transpiler"
 
 [project.scripts]
-my-microservice = "my_microservice.__main__:run"
+ghga-transpiler = "ghga_transpiler.__main__:run"
 
 [tool.setuptools.packages.find]
 where = [
