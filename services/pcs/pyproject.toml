@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ghga-de/pcs"
+Repository = "https://github.com/ghga-de/purge-controller-service"
 
 [project.scripts]
 pcs = "pcs.__main__:cli"
