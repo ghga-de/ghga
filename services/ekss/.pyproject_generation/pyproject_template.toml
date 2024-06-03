@@ -1,0 +1,109 @@
+[build-system]
+requires = ["setuptools>=67.7.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+readme = "README.md"
+authors = [
+    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+]
+requires-python = ">=3.9"
+license = { text = "Apache 2.0" }
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".devcontainer",
+    "__pycache__",
+    "build",
+    "dist",
+]
+line-length = 88
+src = ["src", "tests", "examples", "scripts"]
+target-version = "py39"
+
+[tool.ruff.lint]
+fixable = [
+    "UP", # e.g. List -> list
+    "I", # sort imports
+    "D", # pydocstyle
+]
+ignore = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings - pycodestyle covered by black
+    "PLW", # pylint warnings
+    "RUF001", # ambiguous unicode character strings
+    "RUF010", # explicit conversion to string or repr: !s or !r
+    "RUF012", # mutable class variables need typing.ClassVar annotation
+    "N818", # Errors need to have Error suffix
+    "B008", # function call in arg defaults,
+    "PLR2004", # magic numbers should be constants
+    "D205", # blank-line-after-summary
+    "D400", # first doc line ends in period
+    "D401", # non-imperative-mood
+    "D107", # missing docstring in __init__
+    "D206", # indent-with-spaces (ignored for formatter)
+    "D300", # triple-single-quotes (ignored for formatter)
+]
+select = [
+    "C90", # McCabe Complexity
+    "F", # pyflakes codes
+    "I", # isort
+    "S", # flake8-bandit
+    "B", # flake8-bugbear
+    "N", # pep8-naming
+    "UP", # pyupgrade
+    "PL", # pylint
+    "RUF", # ruff
+    "SIM", # flake8-simplify
+    "D", # pydocstyle
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["PL", "S", "SIM", "D"]
+"tests/*" = ["S", "SIM", "PLR", "B011"]
+".devcontainer/*" = ["S", "SIM", "D"]
+"examples/*" = ["S", "D"]
+"__init__.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+disable_error_code = "import"
+show_error_codes = true
+exclude = [
+    'build/lib/',
+]
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+no_site_packages = false
+
+[tool.pytest.ini_options]
+minversion = "7.1"
+asyncio_mode = "strict"
+
+[tool.coverage.paths]
+source = [
+  "src",
+  "/workspace/src",
+  "**/lib/python*/site-packages",
+]
