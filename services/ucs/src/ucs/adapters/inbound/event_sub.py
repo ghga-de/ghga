@@ -163,7 +163,8 @@ class EventSubTranslator(EventSubscriberProtocol):
         *,
         payload: JsonObject,
         type_: Ascii,
-        topic: Ascii,  # pylint: disable=unused-argument
+        topic: Ascii,
+        key: Ascii,
     ) -> None:
         """Consume events from the topics of interest."""
         if type_ == self._config.file_metadata_event_type:

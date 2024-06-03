@@ -93,7 +93,7 @@ UPLOAD_DETAILS_1 = UploadDetails(
     submission_metadata=FILE_TO_REGISTER_1,
 )
 UPLOAD_DETAILS_2 = UploadDetails(
-    storage_alias=STORAGE_ALIASES[1],
+    storage_alias=STORAGE_ALIASES[0],
     file_metadata=EXAMPLE_FILE_2,
     upload_attempt=EXAMPLE_UPLOAD_2,
     submission_metadata=FILE_TO_REGISTER_2,

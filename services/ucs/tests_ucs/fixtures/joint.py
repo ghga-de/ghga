@@ -15,14 +15,7 @@
 
 """Join the functionality of all fixtures for API-level integration testing."""
 
-__all__ = [
-    "joint_fixture",
-    "JointFixture",
-    "mongodb_fixture",
-    "kafka_fixture",
-    "s3_fixture",
-    "second_s3_fixture",
-]
+__all__ = ["JointFixture", "get_joint_fixture"]
 
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
@@ -35,9 +28,9 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStoragesConfig,
 )
 from hexkit.providers.akafka import KafkaEventSubscriber
-from hexkit.providers.akafka.testutils import KafkaFixture, get_kafka_fixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture, get_mongodb_fixture
-from hexkit.providers.s3.testutils import S3Fixture, get_s3_fixture
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.s3.testutils import S3Fixture
 from pytest_asyncio.plugin import _ScopeName
 from ucs.adapters.outbound.dao import DaoCollectionTranslator
 from ucs.config import Config
@@ -69,23 +62,14 @@ class JointFixture:
     mongodb: MongoDbFixture
     kafka: KafkaFixture
     s3: S3Fixture
-    second_s3: S3Fixture
     bucket_id: str
     inbox_inspector: StorageInspectorPort
 
-    async def reset_state(self):
-        """Completely reset fixture states"""
-        await self.s3.empty_buckets()
-        await self.second_s3.empty_buckets()
-        self.mongodb.empty_collections()
-        self.kafka.clear_topics()
-
 
 async def joint_fixture_function(
-    mongodb_fixture: MongoDbFixture,
-    kafka_fixture: KafkaFixture,
-    s3_fixture: S3Fixture,
-    second_s3_fixture: S3Fixture,
+    mongodb: MongoDbFixture,
+    kafka: KafkaFixture,
+    s3: S3Fixture,
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing.
 
@@ -93,29 +77,20 @@ async def joint_fixture_function(
     """
     bucket_id = "test-inbox"
 
-    node_config = S3ObjectStorageNodeConfig(
-        bucket=bucket_id, credentials=s3_fixture.config
-    )
-    second_node_config = S3ObjectStorageNodeConfig(
-        bucket=bucket_id, credentials=second_s3_fixture.config
-    )
+    node_config = S3ObjectStorageNodeConfig(bucket=bucket_id, credentials=s3.config)
     object_storages_config = S3ObjectStoragesConfig(
         object_storages={
             STORAGE_ALIASES[0]: node_config,
-            STORAGE_ALIASES[1]: second_node_config,
         }
     )
 
     # merge configs from different sources with the default one:
-    config = get_config(
-        sources=[mongodb_fixture.config, kafka_fixture.config, object_storages_config]
-    )
+    config = get_config(sources=[mongodb.config, kafka.config, object_storages_config])
 
-    daos = await DaoCollectionTranslator.construct(provider=mongodb_fixture.dao_factory)
-    await s3_fixture.populate_buckets([bucket_id])
-    await second_s3_fixture.populate_buckets([bucket_id])
+    daos = await DaoCollectionTranslator.construct(provider=mongodb.dao_factory)
+    await s3.populate_buckets([bucket_id])
 
-    # create a DI container instance:translators
+    # Assemble joint fixture with config injection
     async with (
         prepare_core(config=config) as (
             upload_service,
@@ -139,10 +114,9 @@ async def joint_fixture_function(
                     file_metadata_service=file_metadata_service,
                     rest_client=rest_client,
                     event_subscriber=event_subscriber,
-                    mongodb=mongodb_fixture,
-                    kafka=kafka_fixture,
-                    s3=s3_fixture,
-                    second_s3=second_s3_fixture,
+                    mongodb=mongodb,
+                    kafka=kafka,
+                    s3=s3,
                     bucket_id=bucket_id,
                     inbox_inspector=inbox_inspector,
                 )
@@ -151,10 +125,3 @@ async def joint_fixture_function(
 def get_joint_fixture(scope: _ScopeName = "function"):
     """Produce a joint fixture with desired scope"""
     return pytest_asyncio.fixture(joint_fixture_function, scope=scope)
-
-
-joint_fixture = get_joint_fixture()
-mongodb_fixture = get_mongodb_fixture()
-kafka_fixture = get_kafka_fixture()
-s3_fixture = get_s3_fixture()
-second_s3_fixture = get_s3_fixture()

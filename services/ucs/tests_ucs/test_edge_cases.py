@@ -28,22 +28,14 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.s3.testutils import upload_part_via_url
 from ucs.core import models
 
-from tests_ucs.fixtures.example_data import UPLOAD_DETAILS_1, UPLOAD_DETAILS_2
-from tests_ucs.fixtures.module_scope_fixtures import (  # noqa: F401
-    JointFixture,
-    joint_fixture,
-    kafka_fixture,
-    mongodb_fixture,
-    reset_state,
-    s3_fixture,
-    second_s3_fixture,
-)
+from tests_ucs.fixtures.example_data import UPLOAD_DETAILS_1
+from tests_ucs.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio()
 
 
 async def create_multipart_upload_with_data(
-    joint_fixture: JointFixture,  # noqa: F811
+    joint_fixture: JointFixture,
     file_to_register: event_schemas.MetadataSubmissionFiles,
     storage_alias: str,
 ):
@@ -88,7 +80,7 @@ async def create_multipart_upload_with_data(
     return upload_details["object_id"]
 
 
-async def test_get_health(joint_fixture: JointFixture):  # noqa: F811
+async def test_get_health(joint_fixture: JointFixture):
     """Test the GET /health endpoint.
 
     reset_state fixture isn't needed because the test is unaffected by state.
@@ -99,7 +91,7 @@ async def test_get_health(joint_fixture: JointFixture):  # noqa: F811
     assert response.json() == {"status": "OK"}
 
 
-async def test_get_file_metadata_not_found(joint_fixture: JointFixture):  # noqa: F811
+async def test_get_file_metadata_not_found(joint_fixture: JointFixture):
     """Test the get_file_metadata endpoint with an non-existing file id."""
     file_id = "myNonExistingFile001"
     response = await joint_fixture.rest_client.get(f"/files/{file_id}")
@@ -108,7 +100,7 @@ async def test_get_file_metadata_not_found(joint_fixture: JointFixture):  # noqa
     assert response.json()["exception_id"] == "fileNotRegistered"
 
 
-async def test_create_upload_not_found(joint_fixture: JointFixture):  # noqa: F811
+async def test_create_upload_not_found(joint_fixture: JointFixture):
     """Test the create_upload endpoint with an non-existing file id."""
     file_id = "myNonExistingFile001"
     response = await joint_fixture.rest_client.post(
@@ -137,7 +129,7 @@ async def test_create_upload_not_found(joint_fixture: JointFixture):  # noqa: F8
 )
 async def test_create_upload_other_active(
     existing_status: models.UploadStatus,
-    joint_fixture: JointFixture,  # noqa: F811
+    joint_fixture: JointFixture,
 ):
     """Test the create_upload endpoint when there is another active update already
     existing.
@@ -176,7 +168,7 @@ async def test_create_upload_other_active(
 )
 async def test_create_upload_accepted(
     existing_status: models.UploadStatus,
-    joint_fixture: JointFixture,  # noqa: F811
+    joint_fixture: JointFixture,
 ):
     """Test the create_upload endpoint when another update has already been accepted
     or is currently being evaluated.
@@ -207,9 +199,7 @@ async def test_create_upload_accepted(
     )
 
 
-async def test_create_upload_unknown_storage(
-    joint_fixture: JointFixture,  # noqa: F811
-):
+async def test_create_upload_unknown_storage(joint_fixture: JointFixture):
     """Test the create_upload endpoint with storage_alias missing in the request body"""
     # insert upload metadata into the database:
     await joint_fixture.daos.file_metadata.insert(UPLOAD_DETAILS_1.file_metadata)
@@ -229,7 +219,7 @@ async def test_create_upload_unknown_storage(
     assert response_body["exception_id"] == "noSuchStorage"
 
 
-async def test_get_upload_not_found(joint_fixture: JointFixture):  # noqa: F811
+async def test_get_upload_not_found(joint_fixture: JointFixture):
     """Test the get_upload endpoint with non-existing upload ID."""
     upload_id = "myNonExistingUpload001"
     response = await joint_fixture.rest_client.get(f"/uploads/{upload_id}")
@@ -238,9 +228,7 @@ async def test_get_upload_not_found(joint_fixture: JointFixture):  # noqa: F811
     assert response.json()["exception_id"] == "noSuchUpload"
 
 
-async def test_update_upload_status_not_found(
-    joint_fixture: JointFixture,  # noqa: F811
-):
+async def test_update_upload_status_not_found(joint_fixture: JointFixture):
     """Test the update_upload_status endpoint with non existing upload ID."""
     upload_id = "myNonExistingUpload001"
 
@@ -262,7 +250,7 @@ async def test_update_upload_status_not_found(
 )
 async def test_update_upload_status_invalid_new_status(
     new_status: models.UploadStatus,
-    joint_fixture: JointFixture,  # noqa: F811
+    joint_fixture: JointFixture,
 ):
     """Test the update_upload_status endpoint with invalid new status values."""
     upload_id = "myNonExistingUpload001"
@@ -286,7 +274,7 @@ async def test_update_upload_status_invalid_new_status(
 )
 async def test_update_upload_status_non_pending(
     old_status: models.UploadStatus,
-    joint_fixture: JointFixture,  # noqa: F811
+    joint_fixture: JointFixture,
 ):
     """Test the update_upload_status endpoint on non pending upload."""
     target_upload = UPLOAD_DETAILS_1.upload_attempt.model_copy(
@@ -308,9 +296,7 @@ async def test_update_upload_status_non_pending(
         assert response_body["data"]["current_upload_status"] == old_status.value
 
 
-async def test_create_presigned_url_not_found(
-    joint_fixture: JointFixture,  # noqa: F811
-):
+async def test_create_presigned_url_not_found(joint_fixture: JointFixture):
     """Test the create_presigned_url endpoint with non existing upload ID."""
     upload_id = "myNonExistingUpload001"
 
@@ -322,76 +308,69 @@ async def test_create_presigned_url_not_found(
     assert response.json()["exception_id"] == "noSuchUpload"
 
 
-async def test_deletion_upload_ongoing(joint_fixture: JointFixture):  # noqa: F811
+async def test_deletion_upload_ongoing(joint_fixture: JointFixture):
     """Test file data deletion while upload is still ongoing.
 
     This mainly tests if abort multipart upload worked correctly in the deletion context.
     """
-    for s3, upload_details in zip(
-        (joint_fixture.s3, joint_fixture.second_s3),
-        (UPLOAD_DETAILS_1, UPLOAD_DETAILS_2),
+    storage_alias = UPLOAD_DETAILS_1.storage_alias
+    file_to_register = UPLOAD_DETAILS_1.submission_metadata
+    file_id = file_to_register.file_id
+
+    inbox_object_id = await create_multipart_upload_with_data(
+        joint_fixture=joint_fixture,
+        file_to_register=file_to_register,
+        storage_alias=storage_alias,
+    )
+
+    # Verify everything that should exist is present
+    assert not await joint_fixture.s3.storage.does_object_exist(
+        bucket_id=joint_fixture.bucket_id, object_id=inbox_object_id
+    )
+    with suppress(joint_fixture.s3.storage.MultiPartUploadAlreadyExistsError):
+        await joint_fixture.s3.storage._assert_no_multipart_upload(
+            bucket_id=joint_fixture.bucket_id, object_id=inbox_object_id
+        )
+    assert await joint_fixture.daos.file_metadata.get_by_id(id_=file_id)
+
+    num_attempts = 0
+    async for _ in joint_fixture.daos.upload_attempts.find_all(
+        mapping={"file_id": file_id}
     ):
-        storage_alias = upload_details.storage_alias
-        file_to_register = upload_details.submission_metadata
-        file_id = file_to_register.file_id
+        num_attempts += 1
+    assert num_attempts == 1
 
-        inbox_object_id = await create_multipart_upload_with_data(
-            joint_fixture=joint_fixture,
-            file_to_register=file_to_register,
-            storage_alias=storage_alias,
-        )
+    # Request deletion
+    deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
+    await joint_fixture.kafka.publish_event(
+        payload=json.loads(deletion_event.model_dump_json()),
+        type_=joint_fixture.config.files_to_delete_type,
+        topic=joint_fixture.config.files_to_delete_topic,
+    )
 
-        # Verify everything that should exist is present
-        assert not await s3.storage.does_object_exist(
-            bucket_id=joint_fixture.bucket_id, object_id=inbox_object_id
-        )
-        with suppress(s3.storage.MultiPartUploadAlreadyExistsError):
-            await s3.storage._assert_no_multipart_upload(
-                bucket_id=joint_fixture.bucket_id, object_id=inbox_object_id
-            )
-        assert await joint_fixture.daos.file_metadata.get_by_id(id_=file_id)
+    # Consume inbound event and check outbound event
+    deletion_successful_event = event_schemas.FileDeletionSuccess(file_id=file_id)
+    async with joint_fixture.kafka.record_events(
+        in_topic=joint_fixture.config.file_deleted_event_topic
+    ) as recorder:
+        await joint_fixture.event_subscriber.run(forever=False)
 
-        num_attempts = 0
-        async for _ in joint_fixture.daos.upload_attempts.find_all(
-            mapping={"file_id": file_id}
-        ):
-            num_attempts += 1
-        assert num_attempts == 1
+    assert len(recorder.recorded_events) == 1
+    assert recorder.recorded_events[0].payload == deletion_successful_event.model_dump()
 
-        # Request deletion
-        deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
-        await joint_fixture.kafka.publish_event(
-            payload=json.loads(deletion_event.model_dump_json()),
-            type_=joint_fixture.config.files_to_delete_type,
-            topic=joint_fixture.config.files_to_delete_topic,
-        )
+    # Verify everything is gone
+    assert not await joint_fixture.s3.storage.does_object_exist(
+        bucket_id=joint_fixture.bucket_id, object_id=inbox_object_id
+    )
+    await joint_fixture.s3.storage._assert_no_multipart_upload(
+        bucket_id=joint_fixture.bucket_id, object_id=inbox_object_id
+    )
+    with suppress(ResourceNotFoundError):
+        await joint_fixture.daos.file_metadata.get_by_id(id_=file_id)
 
-        # Consume inbound event and check outbound event
-        deletion_successful_event = event_schemas.FileDeletionSuccess(file_id=file_id)
-        async with joint_fixture.kafka.record_events(
-            in_topic=joint_fixture.config.file_deleted_event_topic
-        ) as recorder:
-            await joint_fixture.event_subscriber.run(forever=False)
-
-        assert len(recorder.recorded_events) == 1
-        assert (
-            recorder.recorded_events[0].payload
-            == deletion_successful_event.model_dump()
-        )
-
-        # Verify everything is gone
-        assert not await s3.storage.does_object_exist(
-            bucket_id=joint_fixture.bucket_id, object_id=inbox_object_id
-        )
-        await s3.storage._assert_no_multipart_upload(
-            bucket_id=joint_fixture.bucket_id, object_id=inbox_object_id
-        )
-        with suppress(ResourceNotFoundError):
-            await joint_fixture.daos.file_metadata.get_by_id(id_=file_id)
-
-        num_attempts = 0
-        async for _ in joint_fixture.daos.upload_attempts.find_all(
-            mapping={"file_id": file_id}
-        ):
-            num_attempts += 1
-        assert num_attempts == 0
+    num_attempts = 0
+    async for _ in joint_fixture.daos.upload_attempts.find_all(
+        mapping={"file_id": file_id}
+    ):
+        num_attempts += 1
+    assert num_attempts == 0

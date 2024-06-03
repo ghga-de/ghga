@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """REST API-specific data models (not used by core package)"""
+
 from pydantic import ConfigDict
 
 try:  # workaround for https://github.com/pydantic/pydantic/issues/5821

@@ -15,7 +15,6 @@
 
 """Interfaces for the main upload handling logic of this service."""
 
-
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 
