@@ -19,7 +19,6 @@ from dataclasses import dataclass
 
 from ghga_event_schemas.pydantic_ import MetadataSubmissionFiles
 from ghga_service_commons.utils.utc_dates import now_as_utc
-
 from ucs.core import models
 
 

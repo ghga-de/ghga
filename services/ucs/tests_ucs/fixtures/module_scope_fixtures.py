@@ -22,7 +22,7 @@ from hexkit.providers.akafka.testutils import get_kafka_fixture
 from hexkit.providers.mongodb.testutils import get_mongodb_fixture
 from hexkit.providers.s3.testutils import get_s3_fixture
 
-from tests.fixtures.joint import JointFixture, get_joint_fixture
+from tests_ucs.fixtures.joint import JointFixture, get_joint_fixture
 
 
 @pytest.fixture(autouse=True, scope="function")

@@ -30,9 +30,10 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.s3.testutils import upload_part_via_url
+from ucs.core.models import UploadStatus
 
-from tests.fixtures.example_data import UPLOAD_DETAILS_1, UPLOAD_DETAILS_2
-from tests.fixtures.joint import (  # noqa: F401
+from tests_ucs.fixtures.example_data import UPLOAD_DETAILS_1, UPLOAD_DETAILS_2
+from tests_ucs.fixtures.joint import (  # noqa: F401
     JointFixture,
     joint_fixture,
     kafka_fixture,
@@ -40,7 +41,6 @@ from tests.fixtures.joint import (  # noqa: F401
     s3_fixture,
     second_s3_fixture,
 )
-from ucs.core.models import UploadStatus
 
 TARGET_BUCKET_ID = "test-staging"
 

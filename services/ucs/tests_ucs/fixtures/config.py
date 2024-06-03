@@ -19,9 +19,9 @@ from pathlib import Path
 from typing import Optional
 
 from pydantic_settings import BaseSettings
-
-from tests.fixtures.utils import BASE_DIR
 from ucs.config import Config
+
+from tests_ucs.fixtures.utils import BASE_DIR
 
 TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 

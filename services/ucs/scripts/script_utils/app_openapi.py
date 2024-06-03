@@ -16,11 +16,10 @@
 
 """Used to define the location of the main FastAPI app object."""
 
-# flake8: noqa
-# pylint: skip-file
+import json
+from typing import Any
 
 from fastapi import FastAPI
-
 from ucs.adapters.inbound.fastapi_.configure import get_openapi_schema
 from ucs.adapters.inbound.fastapi_.routes import router
 
@@ -28,12 +27,18 @@ app = FastAPI()
 app.include_router(router)
 
 
-def custom_openapi():
+def custom_openapi() -> dict[str, Any]:  # noqa: D103
     if app.openapi_schema:
         return app.openapi_schema
     openapi_schema = get_openapi_schema(app)
     app.openapi_schema = openapi_schema
-    return app.openapi_schema
+    return openapi_schema
 
 
-app.openapi = custom_openapi  # type: ignore
+def main():
+    """Print the openapi"""
+    print(json.dumps(custom_openapi()))
+
+
+if __name__ == "__main__":
+    main()

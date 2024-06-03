@@ -26,9 +26,10 @@ from fastapi import status
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.s3.testutils import upload_part_via_url
+from ucs.core import models
 
-from tests.fixtures.example_data import UPLOAD_DETAILS_1, UPLOAD_DETAILS_2
-from tests.fixtures.module_scope_fixtures import (  # noqa: F401
+from tests_ucs.fixtures.example_data import UPLOAD_DETAILS_1, UPLOAD_DETAILS_2
+from tests_ucs.fixtures.module_scope_fixtures import (  # noqa: F401
     JointFixture,
     joint_fixture,
     kafka_fixture,
@@ -37,7 +38,8 @@ from tests.fixtures.module_scope_fixtures import (  # noqa: F401
     s3_fixture,
     second_s3_fixture,
 )
-from ucs.core import models
+
+pytestmark = pytest.mark.asyncio()
 
 
 async def create_multipart_upload_with_data(
@@ -86,7 +88,6 @@ async def create_multipart_upload_with_data(
     return upload_details["object_id"]
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_get_health(joint_fixture: JointFixture):  # noqa: F811
     """Test the GET /health endpoint.
 
@@ -98,7 +99,6 @@ async def test_get_health(joint_fixture: JointFixture):  # noqa: F811
     assert response.json() == {"status": "OK"}
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_get_file_metadata_not_found(joint_fixture: JointFixture):  # noqa: F811
     """Test the get_file_metadata endpoint with an non-existing file id."""
     file_id = "myNonExistingFile001"
@@ -108,7 +108,6 @@ async def test_get_file_metadata_not_found(joint_fixture: JointFixture):  # noqa
     assert response.json()["exception_id"] == "fileNotRegistered"
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_create_upload_not_found(joint_fixture: JointFixture):  # noqa: F811
     """Test the create_upload endpoint with an non-existing file id."""
     file_id = "myNonExistingFile001"
@@ -136,7 +135,6 @@ async def test_create_upload_not_found(joint_fixture: JointFixture):  # noqa: F8
         ]
     ],
 )
-@pytest.mark.asyncio(scope="module")
 async def test_create_upload_other_active(
     existing_status: models.UploadStatus,
     joint_fixture: JointFixture,  # noqa: F811
@@ -176,7 +174,6 @@ async def test_create_upload_other_active(
         models.UploadStatus.ACCEPTED,
     ],
 )
-@pytest.mark.asyncio(scope="module")
 async def test_create_upload_accepted(
     existing_status: models.UploadStatus,
     joint_fixture: JointFixture,  # noqa: F811
@@ -210,7 +207,6 @@ async def test_create_upload_accepted(
     )
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_create_upload_unknown_storage(
     joint_fixture: JointFixture,  # noqa: F811
 ):
@@ -233,7 +229,6 @@ async def test_create_upload_unknown_storage(
     assert response_body["exception_id"] == "noSuchStorage"
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_get_upload_not_found(joint_fixture: JointFixture):  # noqa: F811
     """Test the get_upload endpoint with non-existing upload ID."""
     upload_id = "myNonExistingUpload001"
@@ -243,7 +238,6 @@ async def test_get_upload_not_found(joint_fixture: JointFixture):  # noqa: F811
     assert response.json()["exception_id"] == "noSuchUpload"
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_update_upload_status_not_found(
     joint_fixture: JointFixture,  # noqa: F811
 ):
@@ -266,7 +260,6 @@ async def test_update_upload_status_not_found(
         if status_ not in [models.UploadStatus.CANCELLED, models.UploadStatus.UPLOADED]
     ],
 )
-@pytest.mark.asyncio(scope="module")
 async def test_update_upload_status_invalid_new_status(
     new_status: models.UploadStatus,
     joint_fixture: JointFixture,  # noqa: F811
@@ -291,7 +284,6 @@ async def test_update_upload_status_invalid_new_status(
         if status_ != models.UploadStatus.PENDING
     ],
 )
-@pytest.mark.asyncio(scope="module")
 async def test_update_upload_status_non_pending(
     old_status: models.UploadStatus,
     joint_fixture: JointFixture,  # noqa: F811
@@ -316,7 +308,6 @@ async def test_update_upload_status_non_pending(
         assert response_body["data"]["current_upload_status"] == old_status.value
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_create_presigned_url_not_found(
     joint_fixture: JointFixture,  # noqa: F811
 ):
@@ -331,7 +322,6 @@ async def test_create_presigned_url_not_found(
     assert response.json()["exception_id"] == "noSuchUpload"
 
 
-@pytest.mark.asyncio(scope="module")
 async def test_deletion_upload_ongoing(joint_fixture: JointFixture):  # noqa: F811
     """Test file data deletion while upload is still ongoing.
 

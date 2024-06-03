@@ -39,9 +39,6 @@ from hexkit.providers.akafka.testutils import KafkaFixture, get_kafka_fixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture, get_mongodb_fixture
 from hexkit.providers.s3.testutils import S3Fixture, get_s3_fixture
 from pytest_asyncio.plugin import _ScopeName
-
-from tests.fixtures.config import get_config
-from tests.fixtures.example_data import STORAGE_ALIASES
 from ucs.adapters.outbound.dao import DaoCollectionTranslator
 from ucs.config import Config
 from ucs.inject import (
@@ -54,6 +51,9 @@ from ucs.ports.inbound.file_service import FileMetadataServicePort
 from ucs.ports.inbound.storage_inspector import StorageInspectorPort
 from ucs.ports.inbound.upload_service import UploadServicePort
 from ucs.ports.outbound.dao import DaoCollectionPort
+
+from tests_ucs.fixtures.config import get_config
+from tests_ucs.fixtures.example_data import STORAGE_ALIASES
 
 
 @dataclass
@@ -116,10 +116,13 @@ async def joint_fixture_function(
     await second_s3_fixture.populate_buckets([bucket_id])
 
     # create a DI container instance:translators
-    async with prepare_core(config=config) as (
-        upload_service,
-        file_metadata_service,
-    ), prepare_storage_inspector(config=config) as inbox_inspector:
+    async with (
+        prepare_core(config=config) as (
+            upload_service,
+            file_metadata_service,
+        ),
+        prepare_storage_inspector(config=config) as inbox_inspector,
+    ):
         async with (
             prepare_rest_app(
                 config=config, core_override=(upload_service, file_metadata_service)
