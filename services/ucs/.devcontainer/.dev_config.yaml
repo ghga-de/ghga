@@ -1,0 +1,23 @@
+db_connection_str: "mongodb://mongodb:27017"
+db_name: "dev_db"
+object_storages:
+  test:
+    bucket: inbox
+    credentials:
+      s3_endpoint_url: http://ucs:4566
+      s3_access_key_id: test
+      s3_secret_access_key: test
+files_to_delete_topic: file_deletions
+files_to_delete_type: file_deletion_requested
+file_deleted_event_topic: file_downloads
+file_deleted_event_type: file_deleted
+file_metadata_event_topic: metadata
+file_metadata_event_type: metadata_upsert
+upload_accepted_event_topic: internal_file_registry
+upload_accepted_event_type: file_registered
+upload_received_event_topic: file_uploads
+upload_received_event_type: file_upload_received
+upload_rejected_event_topic: file_interrogation
+upload_rejected_event_type: file_validation_failure
+service_instance_id: "001"
+kafka_servers: ["kafka:9092"]

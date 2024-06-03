@@ -1,0 +1,44 @@
+# List of all deprecated files and directories that
+# should not exist any more in this repo.
+# This list is similar to the `./mandatory_files`,
+# however, the entries here will be removed if they
+# still exist.
+
+.devcontainer/library-scripts/docker-in-docker-debian.sh
+.devcontainer/library-scripts
+
+.github/workflows/check_mandatory_and_static_files.yaml
+.github/workflows/dev_cd.yaml
+.github/workflows/unit_and_int_tests.yaml
+.github/workflows/cd.yaml
+
+scripts/check_mandatory_and_static_files.py
+scripts/update_static_files.py
+
+docs
+
+setup.py
+setup.cfg
+requirements-dev-common.in
+requirements-dev.in
+requirements-dev.txt
+requirements.txt
+pytest.ini
+readme_generation.md
+
+.pylintrc
+.flake8
+.mypy.ini
+.ruff.toml
+.coveragerc
+.editorconfig
+.deprecated_files
+.deprecated_files_ignore
+.mandatory_files
+.mandatory_files_ignore
+.static_files
+.static_files_ignore
+.description.md
+.design.md
+.readme_template.md
+.readme_generation.md

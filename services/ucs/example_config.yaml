@@ -1,0 +1,46 @@
+api_root_path: ''
+auto_reload: false
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+db_connection_str: '**********'
+db_name: dev_db
+docs_url: /docs
+file_deleted_event_topic: file_downloads
+file_deleted_event_type: file_deleted
+file_metadata_event_topic: metadata
+file_metadata_event_type: metadata_upsert
+files_to_delete_topic: file_deletions
+files_to_delete_type: file_deletion_requested
+generate_correlation_id: true
+host: 127.0.0.1
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+object_storages:
+  test:
+    bucket: inbox
+    credentials:
+      aws_config_ini: null
+      s3_access_key_id: test
+      s3_endpoint_url: http://ucs:4566
+      s3_secret_access_key: '**********'
+      s3_session_token: null
+openapi_url: /openapi.json
+port: 8080
+service_instance_id: '001'
+service_name: ucs
+upload_accepted_event_topic: internal_file_registry
+upload_accepted_event_type: file_registered
+upload_received_event_topic: file_uploads
+upload_received_event_type: file_upload_received
+upload_rejected_event_topic: file_interrogation
+upload_rejected_event_type: file_validation_failure
+workers: 1

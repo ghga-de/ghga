@@ -1,0 +1,32 @@
+# List of all mandatory files and directories that
+# have to exist in this repo.
+# This list is similar to the `./static_files`,
+# however, the entries here are just checked for
+# existence, their content is not evaluated and
+# may differ from that of the template repository.
+
+.devcontainer/dev_launcher
+.devcontainer/docker-compose.yml
+
+tests/__init__.py
+tests/fixtures/__init__.py
+
+scripts/script_utils/fastapi_app_location.py
+
+.readme_generation/description.md
+.readme_generation/design.md
+
+.pyproject_generation/pyproject_custom.toml
+
+lock/requirements-dev.in
+lock/requirements-dev.txt
+lock/requirements.txt
+
+Dockerfile
+config_schema.json
+example_config.yaml
+LICENSE
+pyproject.toml
+README.md
+
+.pre-commit-config.yaml
