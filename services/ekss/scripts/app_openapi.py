@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
@@ -16,8 +18,8 @@
 
 """Used to define the location of the main FastAPI app object."""
 
-# flake8: noqa
-# pylint: skip-file
+import json
+from typing import Any
 
 from ekss.adapters.inbound.fastapi_.custom_openapi import get_openapi_schema
 from ekss.adapters.inbound.fastapi_.main import setup_app
@@ -26,3 +28,20 @@ from ekss.config import CONFIG
 app = setup_app(CONFIG)
 
 __all__ = ["app"]
+
+
+def custom_openapi() -> dict[str, Any]:
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi_schema(app)
+    app.openapi_schema = openapi_schema
+    return openapi_schema
+
+
+def main():
+    """Print the openapi"""
+    print(json.dumps(custom_openapi()))
+
+
+if __name__ == "__main__":
+    main()

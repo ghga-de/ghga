@@ -22,7 +22,7 @@ from fastapi.openapi.utils import get_openapi
 from ekss import __version__
 from ekss.config import Config
 
-config = Config()  # type: ignore [call-arg]
+config = Config()
 
 
 def get_openapi_schema(api) -> dict[str, Any]:

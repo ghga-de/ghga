@@ -21,7 +21,10 @@ components:
           type: string
         exception_id:
           const: envelopeDecryptionError
+          enum:
+          - envelopeDecryptionError
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -44,7 +47,10 @@ components:
           type: string
         exception_id:
           const: malformedOrMissingEnvelopeError
+          enum:
+          - malformedOrMissingEnvelopeError
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -67,7 +73,10 @@ components:
           type: string
         exception_id:
           const: secretInsertionError
+          enum:
+          - secretInsertionError
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -90,7 +99,10 @@ components:
           type: string
         exception_id:
           const: secretNotFoundError
+          enum:
+          - secretNotFoundError
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -113,7 +125,10 @@ components:
           type: string
         exception_id:
           const: vaultConnectionError
+          enum:
+          - vaultConnectionError
           title: Exception Id
+          type: string
       required:
       - data
       - description
