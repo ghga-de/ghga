@@ -1,9 +1,6 @@
-[![tests](https://github.com/ghga-de/encryption-key-store-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/encryption-key-store-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/encryption-key-store-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/encryption-key-store-service?branch=main)
+# Encryption  Key  Store  Sevice
 
-# Encryption Key Store Service
-
-Encryption Key Store Sevice - providing crypt4gh file secret extraction, storage and envelope generation
+providing crypt4gh file secret extraction, storage and envelope generation
 
 ## Description
 
@@ -66,15 +63,15 @@ path "secret/metadata/ekss/*" {
 
 We recommend using the provided Docker container.
 
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/encryption-key-store-service):
+A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/encryption--key--store--sevice):
 ```bash
-docker pull ghga/encryption-key-store-service:1.2.0
+docker pull ghga/encryption--key--store--sevice:1.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/encryption-key-store-service:1.2.0 .
+docker build -t ghga/encryption--key--store--sevice:1.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -82,7 +79,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/encryption-key-store-service:1.2.0 --help
+docker run -p 8080:8080 ghga/encryption--key--store--sevice:1.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -352,7 +349,7 @@ The service requires the following configuration parameters:
 
 ### Usage:
 
-A template YAML for configurating the service can be found at
+A template YAML for configuring the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
 Please adapt it, rename it to `.ekss.yaml`, and place it into one of the following locations:
 - in the current working directory were you are execute the service (on unix: `./.ekss.yaml`)
@@ -375,7 +372,7 @@ To using file secrets please refer to the
 of the pydantic documentation.
 
 ## HTTP API
-An OpenAPI specification for this service can be found [here](./openapi.yaml).
+An OpenAPI specification for this service can be found [here](openapi.yaml).
 
 ## Architecture and Design:
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
