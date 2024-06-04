@@ -16,14 +16,14 @@
 """Unit tests for upload functionality"""
 
 import pytest
-
 from ekss.core.envelope_decryption import extract_envelope_content
-from tests.fixtures.file import (
+
+from tests_ekss.fixtures.file import (
     FirstPartFixture,
     first_part_fixture,  # noqa: F401
 )
-from tests.fixtures.keypair import generate_keypair_fixture  # noqa: F401
-from tests.fixtures.vault import vault_fixture  # noqa: F401
+from tests_ekss.fixtures.keypair import generate_keypair_fixture  # noqa: F401
+from tests_ekss.fixtures.vault import vault_fixture  # noqa: F401
 
 
 @pytest.mark.asyncio

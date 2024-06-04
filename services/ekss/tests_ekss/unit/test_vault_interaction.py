@@ -17,9 +17,9 @@
 import os
 
 import pytest
-
 from ekss.adapters.outbound.vault.exceptions import SecretRetrievalError
-from tests.fixtures.vault import (
+
+from tests_ekss.fixtures.vault import (
     VaultFixture,
     vault_fixture,  # noqa: F401
 )

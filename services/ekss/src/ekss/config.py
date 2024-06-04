@@ -29,7 +29,7 @@ class VaultConfig(BaseSettings):
     """Configuration for HashiCorp Vault connection"""
 
     vault_url: str = Field(
-        ...,
+        default=...,
         examples=["http://127.0.0.1.8200"],
         description="URL of the vault instance to connect to",
     )
@@ -44,14 +44,14 @@ class VaultConfig(BaseSettings):
         description="Vault secret ID to access a specific prefix",
     )
     vault_verify: Union[bool, str] = Field(
-        True,
+        default=True,
         examples=["/etc/ssl/certs/my_bundle.pem"],
         description="SSL certificates (CA bundle) used to"
         " verify the identity of the vault, or True to"
         " use the default CAs, or False for no verification.",
     )
     vault_path: str = Field(
-        ...,
+        default=...,
         description="Path without leading or trailing slashes where secrets should"
         + " be stored in the vault.",
     )

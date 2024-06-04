@@ -12,6 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""A collection of utilities used by scripts."""
+"""Testing the basics of the service API"""
+
+import pytest
+from ekss.adapters.inbound.fastapi_.main import setup_app
+from ekss.config import CONFIG
+from fastapi.testclient import TestClient
+
+app = setup_app(CONFIG)
+client = TestClient(app=app)
+
+
+@pytest.mark.asyncio
+async def test_health_check():
+    """Test that the health check endpoint works."""
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "OK"}

@@ -21,11 +21,11 @@ from dataclasses import dataclass
 
 import pytest_asyncio
 
-from tests.fixtures.keypair import (
+from tests_ekss.fixtures.keypair import (
     KeypairFixture,
     generate_keypair_fixture,  # noqa: F401
 )
-from tests.fixtures.vault import (
+from tests_ekss.fixtures.vault import (
     VaultFixture,
     vault_fixture,  # noqa: F401
 )

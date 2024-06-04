@@ -20,10 +20,11 @@ from dataclasses import dataclass
 
 import hvac
 import pytest
-from testcontainers.general import DockerContainer
-
 from ekss.adapters.inbound.fastapi_.deps import VaultConfig
 from ekss.adapters.outbound.vault.client import VaultAdapter
+
+# from testcontainers.vault import DockerContainer
+from testcontainers.core.generic import DockerContainer
 
 VAULT_URL = "http://0.0.0.0:8200"
 VAULT_NAMESPACE = "vault"
