@@ -1,4 +1,4 @@
-# Internal  File  Registry  Service
+# Internal File Registry Service
 
 This service acts as a registry for the internal location and representation of files.
 
@@ -34,15 +34,15 @@ This event is published after a file was successfully staged to the outbox.
 
 We recommend using the provided Docker container.
 
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/internal--file--registry--service):
+A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/internal-file-registry-service):
 ```bash
-docker pull ghga/internal--file--registry--service:1.3.0
+docker pull ghga/internal-file-registry-service:1.3.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/internal--file--registry--service:1.3.0 .
+docker build -t ghga/internal-file-registry-service:1.3.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -50,7 +50,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/internal--file--registry--service:1.3.0 --help
+docker run -p 8080:8080 ghga/internal-file-registry-service:1.3.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
