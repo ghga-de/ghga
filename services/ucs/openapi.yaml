@@ -50,7 +50,10 @@ components:
           type: string
         exception_id:
           const: existingActiveUpload
+          enum:
+          - existingActiveUpload
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -81,7 +84,10 @@ components:
           type: string
         exception_id:
           const: fileNotRegistered
+          enum:
+          - fileNotRegistered
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -109,7 +115,10 @@ components:
           type: string
         exception_id:
           const: fileNotRegistered
+          enum:
+          - fileNotRegistered
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -137,7 +146,10 @@ components:
           type: string
         exception_id:
           const: noFileAccess
+          enum:
+          - noFileAccess
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -165,7 +177,10 @@ components:
           type: string
         exception_id:
           const: noSuchStorage
+          enum:
+          - noSuchStorage
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -189,7 +204,10 @@ components:
           type: string
         exception_id:
           const: noSuchUpload
+          enum:
+          - noSuchUpload
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -217,7 +235,10 @@ components:
           type: string
         exception_id:
           const: uploadNotPending
+          enum:
+          - uploadNotPending
           title: Exception Id
+          type: string
       required:
       - data
       - description
@@ -248,7 +269,10 @@ components:
           type: string
         exception_id:
           const: uploadStatusChange
+          enum:
+          - uploadStatusChange
           title: Exception Id
+          type: string
       required:
       - data
       - description

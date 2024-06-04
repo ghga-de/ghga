@@ -1,7 +1,7 @@
 [project]
 name = "ucs"
 version = "3.0.1"
-description = "pload Controller Service - manages uploads to an S3 inbox bucket."
+description = "Upload Controller Service - manages uploads to an S3 inbox bucket."
 readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
