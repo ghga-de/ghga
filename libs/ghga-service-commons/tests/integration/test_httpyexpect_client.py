@@ -105,7 +105,6 @@ def test_typical_client_usage(
 
 def test_compatibility_with_httpx():
     """Make sure that our Response protocol is compatible with the httpx library."""
-    # pylint: disable=import-outside-toplevel
     from httpx import Response as HttpxResponse
 
     httpx_response = HttpxResponse(status_code=200, content=b'{"hello": "world"}')
@@ -116,7 +115,6 @@ def test_compatibility_with_httpx():
 
 def test_compatibility_with_requests():
     """Make sure that our Response protocol is compatible with the requests library."""
-    # pylint: disable=import-outside-toplevel
     from requests import Response as RequestsResponse
 
     requests_response = RequestsResponse()

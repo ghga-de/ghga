@@ -33,7 +33,7 @@ def configure_exception_handler(app: FastAPI) -> None:
 
     @app.exception_handler(HttpException)
     def exception_handler(
-        request: Request,  # pylint: disable=unused-argument
+        request: Request,
         # (The above is required by the corresponding FastAPI interface but not used here)
         exc: HttpException,
     ) -> JSONResponse:

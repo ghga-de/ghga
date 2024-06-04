@@ -17,10 +17,10 @@
 
 """Functionality building HTTP APIs using FastAPI."""
 
-from ghga_service_commons.api.api import (  # noqa: F401
+from ghga_service_commons.api.api import (
     ApiConfigBase,
     configure_app,
     run_server,
 )
 
-__all__ = ["ApiCOnfigBase", "configure_app", "run_server"]
+__all__ = ["ApiConfigBase", "configure_app", "run_server"]
