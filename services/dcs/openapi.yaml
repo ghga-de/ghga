@@ -1,0 +1,366 @@
+components:
+  schemas:
+    AccessMethod:
+      description: Wrapped DRS access_methods field value
+      properties:
+        access_url:
+          $ref: '#/components/schemas/AccessURL'
+        type:
+          const: s3
+          default: s3
+          enum:
+          - s3
+          title: Type
+          type: string
+      required:
+      - access_url
+      title: AccessMethod
+      type: object
+    AccessURL:
+      description: AccessUrl object for access method
+      properties:
+        url:
+          title: Url
+          type: string
+      required:
+      - url
+      title: AccessURL
+      type: object
+    Checksum:
+      description: Wrapped DRS checksums field value
+      properties:
+        checksum:
+          title: Checksum
+          type: string
+        type:
+          const: sha-256
+          default: sha-256
+          enum:
+          - sha-256
+          title: Type
+          type: string
+      required:
+      - checksum
+      title: Checksum
+      type: object
+    DeliveryDelayedModel:
+      description: Pydantic model for 202 Response. Empty, since 202 has no body.
+      properties: {}
+      title: DeliveryDelayedModel
+      type: object
+    DrsObjectResponseModel:
+      description: A DRS compliant representation for the DrsObjectWithAccess model
+      properties:
+        access_methods:
+          items:
+            $ref: '#/components/schemas/AccessMethod'
+          title: Access Methods
+          type: array
+        checksums:
+          items:
+            $ref: '#/components/schemas/Checksum'
+          title: Checksums
+          type: array
+        created_time:
+          title: Created Time
+          type: string
+        id:
+          title: Id
+          type: string
+        self_uri:
+          title: Self Uri
+          type: string
+        size:
+          title: Size
+          type: integer
+      required:
+      - access_methods
+      - checksums
+      - created_time
+      - id
+      - self_uri
+      - size
+      title: DrsObjectResponseModel
+      type: object
+    EnvelopeResponseModel:
+      description: Response model for base64 encoded envelope bytes
+      properties:
+        content:
+          title: Content
+          type: string
+      required:
+      - content
+      title: EnvelopeResponseModel
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    HttpInternalServerError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpInternalServerErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: internalServerError
+          enum:
+          - internalServerError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpInternalServerError
+      type: object
+    HttpInternalServerErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpInternalServerErrorData
+      type: object
+    HttpObjectNotFoundError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpObjectNotFoundErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: noSuchObject
+          enum:
+          - noSuchObject
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpObjectNotFoundError
+      type: object
+    HttpObjectNotFoundErrorData:
+      properties:
+        object_id:
+          title: Object Id
+          type: string
+      required:
+      - object_id
+      title: HttpObjectNotFoundErrorData
+      type: object
+    HttpWrongFileAuthorizationError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpWrongFileAuthorizationErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: wrongFileAuthorizationError
+          enum:
+          - wrongFileAuthorizationError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpWrongFileAuthorizationError
+      type: object
+    HttpWrongFileAuthorizationErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpWrongFileAuthorizationErrorData
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
+info:
+  description: "A service managing access to file objects storedon an S3-compatible\
+    \ Object Storage. \n\nThis is an implementation of the DRS standard from the Global\
+    \ Alliance for Genomics and Health, please find more information at: https://github.com/ga4gh/data-repository-service-schemas"
+  title: Download Controller Service
+  version: 1.3.0
+openapi: 3.1.0
+paths:
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - DownloadControllerService
+  /objects/{object_id}:
+    get:
+      description: 'Get info about a ``DrsObject``. The object_id parameter refers
+        to the file id
+
+        and **not** the S3 object id.'
+      operationId: getDrsObject
+      parameters:
+      - in: path
+        name: object_id
+        required: true
+        schema:
+          title: Object Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrsObjectResponseModel'
+          description: The DrsObject was found successfully.
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryDelayedModel'
+          description: The operation is delayed and will continue asynchronously.
+            The client should retry this same request after the delay specified by
+            Retry-After header.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpWrongFileAuthorizationError'
+          description: 'Work order token announced wrong file ID.
+
+            Exceptions by ID:
+
+            - wrongFileAuthorizationError: Mismatch of URL file ID and token file
+            ID'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpObjectNotFoundError'
+          description: 'Exceptions by ID:
+
+            - noSuchObject: The requested DrsObject was not found'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpInternalServerError'
+          description: A configuration or external communication error has occurred
+            and details should not be communicated to the client
+      security:
+      - HTTPBearer: []
+      summary: Returns object metadata, and a list of access methods that can be used
+        to fetch object bytes.
+      tags:
+      - DownloadControllerService
+  /objects/{object_id}/envelopes:
+    get:
+      description: 'Retrieve the base64 encoded envelope for a given object based
+        on object id and
+
+        URL safe base64 encoded public key. The object_id parameter refers to the
+        file id
+
+        and **not** the S3 object id.'
+      operationId: getEnvelope
+      parameters:
+      - in: path
+        name: object_id
+        required: true
+        schema:
+          title: Object Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeResponseModel'
+          description: Successfully delivered envelope.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpWrongFileAuthorizationError'
+          description: 'Work order token announced wrong file ID.
+
+            Exceptions by ID:
+
+            - wrongFileAuthorizationError: Mismatch of URL file ID and token file
+            ID'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpObjectNotFoundError'
+          description: 'Exceptions by ID:
+
+            - noSuchObject: The requested DrsObject was not found'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpInternalServerError'
+          description: A configuration or external communication error has occurred
+            and details should not be communicated to the client
+      security:
+      - HTTPBearer: []
+      summary: Returns base64 encoded, personalized file envelope
+      tags:
+      - DownloadControllerService
+servers:
+- url: /ga4gh/drs/v1
+tags:
+- name: DownloadControllerService

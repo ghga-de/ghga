@@ -1,0 +1,558 @@
+{
+  "$defs": {
+    "S3Config": {
+      "additionalProperties": false,
+      "description": "S3-specific config params.\nInherit your config class from this class if you need\nto talk to an S3 service in the backend.\n\nArgs:\n    s3_endpoint_url (str): The URL to the S3 endpoint.\n    s3_access_key_id (str):\n        Part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    s3_secret_access_key (str):\n        Part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    s3_session_token (Optional[str]):\n        Optional part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    aws_config_ini (Optional[Path]):\n        Path to a config file for specifying more advanced S3 parameters.\n        This should follow the format described here:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file\n        Defaults to None.",
+      "properties": {
+        "s3_endpoint_url": {
+          "description": "URL to the S3 API.",
+          "examples": [
+            "http://localhost:4566"
+          ],
+          "title": "S3 Endpoint Url",
+          "type": "string"
+        },
+        "s3_access_key_id": {
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-access-key-id"
+          ],
+          "title": "S3 Access Key Id",
+          "type": "string"
+        },
+        "s3_secret_access_key": {
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-secret-access-key"
+          ],
+          "format": "password",
+          "title": "S3 Secret Access Key",
+          "type": "string",
+          "writeOnly": true
+        },
+        "s3_session_token": {
+          "anyOf": [
+            {
+              "format": "password",
+              "type": "string",
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-session-token"
+          ],
+          "title": "S3 Session Token"
+        },
+        "aws_config_ini": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file",
+          "examples": [
+            "~/.aws/config"
+          ],
+          "title": "Aws Config Ini"
+        }
+      },
+      "required": [
+        "s3_endpoint_url",
+        "s3_access_key_id",
+        "s3_secret_access_key"
+      ],
+      "title": "S3Config",
+      "type": "object"
+    },
+    "S3ObjectStorageNodeConfig": {
+      "additionalProperties": false,
+      "description": "Configuration for one specific object storage node and one bucket in it.\n\nThe bucket is the main bucket that the service is responsible for.",
+      "properties": {
+        "bucket": {
+          "title": "Bucket",
+          "type": "string"
+        },
+        "credentials": {
+          "$ref": "#/$defs/S3Config"
+        }
+      },
+      "required": [
+        "bucket",
+        "credentials"
+      ],
+      "title": "S3ObjectStorageNodeConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Modifies the orginal Settings class provided by the user",
+  "properties": {
+    "log_level": {
+      "default": "INFO",
+      "description": "The minimum log level to capture.",
+      "enum": [
+        "CRITICAL",
+        "ERROR",
+        "WARNING",
+        "INFO",
+        "DEBUG",
+        "TRACE"
+      ],
+      "title": "Log Level",
+      "type": "string"
+    },
+    "service_name": {
+      "default": "dcs",
+      "title": "Service Name",
+      "type": "string"
+    },
+    "service_instance_id": {
+      "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
+      "examples": [
+        "germany-bw-instance-001"
+      ],
+      "title": "Service Instance Id",
+      "type": "string"
+    },
+    "log_format": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details",
+      "examples": [
+        "%(timestamp)s - %(service)s - %(level)s - %(message)s",
+        "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+      ],
+      "title": "Log Format"
+    },
+    "object_storages": {
+      "additionalProperties": {
+        "$ref": "#/$defs/S3ObjectStorageNodeConfig"
+      },
+      "title": "Object Storages",
+      "type": "object"
+    },
+    "files_to_register_topic": {
+      "description": "The name of the topic to receive events informing about new files that shall be made available for download.",
+      "examples": [
+        "internal_file_registry"
+      ],
+      "title": "Files To Register Topic",
+      "type": "string"
+    },
+    "files_to_register_type": {
+      "description": "The type used for events informing about new files that shall be made available for download.",
+      "examples": [
+        "file_registered"
+      ],
+      "title": "Files To Register Type",
+      "type": "string"
+    },
+    "files_to_delete_topic": {
+      "description": "The name of the topic to receive events informing about files to delete.",
+      "examples": [
+        "file_deletions"
+      ],
+      "title": "Files To Delete Topic",
+      "type": "string"
+    },
+    "files_to_delete_type": {
+      "description": "The type used for events informing about a file to be deleted.",
+      "examples": [
+        "file_deletion_requested"
+      ],
+      "title": "Files To Delete Type",
+      "type": "string"
+    },
+    "download_served_event_topic": {
+      "description": "Name of the topic used for events indicating that a download of a specified file happened.",
+      "examples": [
+        "file_downloads"
+      ],
+      "title": "Download Served Event Topic",
+      "type": "string"
+    },
+    "download_served_event_type": {
+      "description": "The type used for event indicating that a download of a specified file happened.",
+      "examples": [
+        "donwload_served"
+      ],
+      "title": "Download Served Event Type",
+      "type": "string"
+    },
+    "unstaged_download_event_topic": {
+      "description": "Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.",
+      "examples": [
+        "file_downloads"
+      ],
+      "title": "Unstaged Download Event Topic",
+      "type": "string"
+    },
+    "unstaged_download_event_type": {
+      "description": "The type used for event indicating that a download was requested for a file that is not yet available in the outbox.",
+      "examples": [
+        "unstaged_download_requested"
+      ],
+      "title": "Unstaged Download Event Type",
+      "type": "string"
+    },
+    "file_registered_event_topic": {
+      "description": "Name of the topic used for events indicating that a file has been registered for download.",
+      "examples": [
+        "file_downloads"
+      ],
+      "title": "File Registered Event Topic",
+      "type": "string"
+    },
+    "file_registered_event_type": {
+      "description": "The type used for event indicating that that a file has been registered for download.",
+      "examples": [
+        "file_registered"
+      ],
+      "title": "File Registered Event Type",
+      "type": "string"
+    },
+    "file_deleted_event_topic": {
+      "description": "Name of the topic used for events indicating that a file has been deleted.",
+      "examples": [
+        "file_downloads"
+      ],
+      "title": "File Deleted Event Topic",
+      "type": "string"
+    },
+    "file_deleted_event_type": {
+      "description": "The type used for events indicating that a file has been deleted.",
+      "examples": [
+        "file_deleted"
+      ],
+      "title": "File Deleted Event Type",
+      "type": "string"
+    },
+    "kafka_servers": {
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "examples": [
+        [
+          "localhost:9092"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Kafka Servers",
+      "type": "array"
+    },
+    "kafka_security_protocol": {
+      "default": "PLAINTEXT",
+      "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
+      "enum": [
+        "PLAINTEXT",
+        "SSL"
+      ],
+      "title": "Kafka Security Protocol",
+      "type": "string"
+    },
+    "kafka_ssl_cafile": {
+      "default": "",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
+      "title": "Kafka Ssl Cafile",
+      "type": "string"
+    },
+    "kafka_ssl_certfile": {
+      "default": "",
+      "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
+      "title": "Kafka Ssl Certfile",
+      "type": "string"
+    },
+    "kafka_ssl_keyfile": {
+      "default": "",
+      "description": "Optional filename containing the client private key.",
+      "title": "Kafka Ssl Keyfile",
+      "type": "string"
+    },
+    "kafka_ssl_password": {
+      "default": "",
+      "description": "Optional password to be used for the client private key.",
+      "format": "password",
+      "title": "Kafka Ssl Password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
+    },
+    "db_connection_str": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "password",
+      "title": "Db Connection Str",
+      "type": "string",
+      "writeOnly": true
+    },
+    "db_name": {
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
+      "title": "Db Name",
+      "type": "string"
+    },
+    "drs_server_uri": {
+      "description": "The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'.",
+      "examples": [
+        "drs://localhost:8080/"
+      ],
+      "title": "Drs Server Uri",
+      "type": "string"
+    },
+    "retry_access_after": {
+      "default": 120,
+      "description": "When trying to access a DRS object that is not yet in the outbox, instruct to retry after this many seconds.",
+      "title": "Retry Access After",
+      "type": "integer"
+    },
+    "ekss_base_url": {
+      "description": "URL containing host and port of the EKSS endpoint to retrieve personalized envelope from",
+      "examples": [
+        "http://ekss:8080/"
+      ],
+      "title": "Ekss Base Url",
+      "type": "string"
+    },
+    "presigned_url_expires_after": {
+      "description": "Expiration time in seconds for presigned URLS. Positive integer required",
+      "examples": [
+        30
+      ],
+      "exclusiveMinimum": 0,
+      "title": "Presigned Url Expires After",
+      "type": "integer"
+    },
+    "cache_timeout": {
+      "default": 7,
+      "description": "Time in days since last access after which a file present in the outbox should be unstaged and has to be requested from permanent storage again for the next request.",
+      "title": "Cache Timeout",
+      "type": "integer"
+    },
+    "auth_key": {
+      "description": "The GHGA internal public key for validating the token signature.",
+      "examples": [
+        "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+      ],
+      "title": "Internal public key",
+      "type": "string"
+    },
+    "auth_algs": {
+      "default": [
+        "ES256"
+      ],
+      "description": "A list of all algorithms used for signing GHGA internal tokens.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Auth Algs",
+      "type": "array"
+    },
+    "auth_check_claims": {
+      "default": {
+        "type": null,
+        "file_id": null,
+        "user_id": null,
+        "user_public_crypt4gh_key": null,
+        "full_user_name": null,
+        "email": null,
+        "iat": null,
+        "exp": null
+      },
+      "description": "A dict of all GHGA internal claims that shall be verified.",
+      "title": "Auth Check Claims",
+      "type": "object"
+    },
+    "auth_map_claims": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "A mapping of claims to attributes in the GHGA auth context.",
+      "title": "Auth Map Claims",
+      "type": "object"
+    },
+    "host": {
+      "default": "127.0.0.1",
+      "description": "IP of the host.",
+      "title": "Host",
+      "type": "string"
+    },
+    "port": {
+      "default": 8080,
+      "description": "Port to expose the server on the specified host",
+      "title": "Port",
+      "type": "integer"
+    },
+    "auto_reload": {
+      "default": false,
+      "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
+      "title": "Auto Reload",
+      "type": "boolean"
+    },
+    "workers": {
+      "default": 1,
+      "description": "Number of workers processes to run.",
+      "title": "Workers",
+      "type": "integer"
+    },
+    "api_root_path": {
+      "default": "",
+      "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
+      "title": "Api Root Path",
+      "type": "string"
+    },
+    "openapi_url": {
+      "default": "/openapi.json",
+      "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
+      "title": "Openapi Url",
+      "type": "string"
+    },
+    "docs_url": {
+      "default": "/docs",
+      "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
+      "title": "Docs Url",
+      "type": "string"
+    },
+    "cors_allowed_origins": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.",
+      "examples": [
+        [
+          "https://example.org",
+          "https://www.example.org"
+        ]
+      ],
+      "title": "Cors Allowed Origins"
+    },
+    "cors_allow_credentials": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.",
+      "examples": [
+        [
+          "https://example.org",
+          "https://www.example.org"
+        ]
+      ],
+      "title": "Cors Allow Credentials"
+    },
+    "cors_allowed_methods": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.",
+      "examples": [
+        [
+          "*"
+        ]
+      ],
+      "title": "Cors Allowed Methods"
+    },
+    "cors_allowed_headers": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
+      "examples": [
+        []
+      ],
+      "title": "Cors Allowed Headers"
+    },
+    "api_route": {
+      "default": "/ga4gh/drs/v1",
+      "title": "Api Route",
+      "type": "string"
+    }
+  },
+  "required": [
+    "service_instance_id",
+    "object_storages",
+    "files_to_register_topic",
+    "files_to_register_type",
+    "files_to_delete_topic",
+    "files_to_delete_type",
+    "download_served_event_topic",
+    "download_served_event_type",
+    "unstaged_download_event_topic",
+    "unstaged_download_event_type",
+    "file_registered_event_topic",
+    "file_registered_event_type",
+    "file_deleted_event_topic",
+    "file_deleted_event_type",
+    "kafka_servers",
+    "db_connection_str",
+    "db_name",
+    "drs_server_uri",
+    "ekss_base_url",
+    "presigned_url_expires_after",
+    "auth_key"
+  ],
+  "title": "ModSettings",
+  "type": "object"
+}
