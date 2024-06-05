@@ -291,7 +291,6 @@ class TokenGenerator:
     def get_totp_token(
         self,
         name: str,
-        user_id: str,
         headers: dict[str, Any],
         state_store: StateStorage,
         force: bool = False,
@@ -352,6 +351,7 @@ class TokenGenerator:
         session: Session,
         state_store: StateStorage,
         user_id: Optional[str] = None,
+        recreate_totp: bool = False,
     ) -> Response:
         """Authenticate with two-factor authentication."""
         session_headers = self.headers_for_session(session)
@@ -360,22 +360,20 @@ class TokenGenerator:
         session_header = response.headers.get("X-Session")
         assert session_header
         session_dict = json.loads(session_header)
-        if session_dict.get("state") == "Authenticated":
+        state = session_dict.get("state")
+        if state == "Authenticated":
             return Response(204, content=b"")
-        else:
-            # if session state is not "Authenticated", then we need to authenticate
-            user_id = user_id if user_id else session.user_id
-            assert (
-                user_id
-            ), "No user ID provided for authentication or found in the session"
-            totp_token = self.get_totp_token(
-                name=session.name,
-                user_id=user_id,
-                headers=session_headers,
-                state_store=state_store,
-            )
-            totp = self.generate_totp(totp_token)
-            return self.verify_totp(user_id, totp, session_headers)
+        # if session state is not "Authenticated", then we need to authenticate
+        user_id = user_id if user_id else session.user_id
+        assert user_id, "No user ID provided or can be found in the session"
+        totp_token = self.get_totp_token(
+            name=session.name,
+            headers=session_headers,
+            state_store=state_store,
+            force=recreate_totp,
+        )
+        totp = self.generate_totp(totp_token)
+        return self.verify_totp(user_id, totp, session_headers)
 
     @property
     def key(self) -> jwk.JWK:

@@ -152,6 +152,20 @@ def check_status_code(code: int, response: Response):
     assert status_code == code, f"{status_code}: {response.text}"
 
 
+@then(
+    parse(
+        'the response status code is "{code1:d} (with API gateway)'
+        ' or {code2:d} (without)"'
+    )
+)
+def check_status_code_depending_on_api_gateway(
+    code1: int, code2: int, config: Config, response: Response
+):
+    status_code = response.status_code
+    code = code1 if config.use_api_gateway else code2
+    assert status_code == code, f"{status_code}: {response.text}"
+
+
 @given("the session store is empty")
 def empty_session_store(fixtures: JointFixture):
     """Remove all states starting with "session" from the state storage"""

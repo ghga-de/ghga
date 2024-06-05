@@ -138,7 +138,6 @@ def get_new_totp_token(full_name: str, fixtures: JointFixture):
     session_headers = fixtures.auth.headers_for_session(session)
     totp_token = fixtures.auth.get_totp_token(
         name=session.name,
-        user_id=session.user_id,
         headers=session_headers,
         state_store=fixtures.state,
         force=True,  # requesting a new one because the previous is lost
