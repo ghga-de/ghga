@@ -438,7 +438,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`api_route`** *(string)*: Default: `"/ga4gh/drs/v1"`.
+- **`api_route`** *(string)*: DRS API route. Default: `"/ga4gh/drs/v1"`.
 
 ## Definitions
 

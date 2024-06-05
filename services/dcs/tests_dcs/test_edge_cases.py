@@ -30,8 +30,11 @@ from ghga_service_commons.api.mock_router import (  # noqa: F401
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from tests_dcs.fixtures.joint import *  # noqa: F403
-from tests_dcs.fixtures.joint import EXAMPLE_FILE, JointFixture, PopulatedFixture
+from tests_dcs.fixtures.joint import (
+    EXAMPLE_FILE,
+    JointFixture,
+    PopulatedFixture,
+)
 from tests_dcs.fixtures.mock_api.app import router
 from tests_dcs.fixtures.utils import (
     generate_token_signing_keys,
@@ -39,6 +42,8 @@ from tests_dcs.fixtures.utils import (
 )
 
 unintercepted_hosts: list[str] = ["localhost"]
+
+pytestmark = pytest.mark.asyncio()
 
 
 @dataclass
@@ -85,7 +90,6 @@ def non_mocked_hosts() -> list:
     return unintercepted_hosts
 
 
-@pytest.mark.asyncio
 async def test_get_health(joint_fixture: JointFixture):
     """Test the GET /health endpoint"""
     response = await joint_fixture.rest_client.get("/health")
@@ -94,7 +98,6 @@ async def test_get_health(joint_fixture: JointFixture):
     assert response.json() == {"status": "OK"}
 
 
-@pytest.mark.asyncio
 async def test_access_non_existing(joint_fixture: JointFixture):
     """Checks that requesting access to a non-existing DRS object fails with the
     expected exception.
@@ -136,7 +139,6 @@ async def test_access_non_existing(joint_fixture: JointFixture):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-@pytest.mark.asyncio
 async def test_deletion_config_error(
     storage_unavailable_fixture: StorageUnavailableFixture,
     httpx_mock: HTTPXMock,  # noqa: F811
@@ -153,7 +155,6 @@ async def test_deletion_config_error(
         await data_repository.delete_file(file_id=storage_unavailable_fixture.file_id)
 
 
-@pytest.mark.asyncio
 async def test_drs_config_error(
     storage_unavailable_fixture: StorageUnavailableFixture,
     httpx_mock: HTTPXMock,  # noqa: F811
@@ -184,7 +185,6 @@ async def test_drs_config_error(
     assert response.status_code == 500
 
 
-@pytest.mark.asyncio
 async def test_register_file_twice(populated_fixture: PopulatedFixture, caplog):
     """Assure that files cannot be registered twice"""
     joint_fixture = populated_fixture.joint_fixture

@@ -38,5 +38,4 @@ def get_config(
         for source in sources:
             sources_dict.update(**source.model_dump())
 
-    # type: ignore
     return Config(config_yaml=default_config_yaml, **sources_dict)

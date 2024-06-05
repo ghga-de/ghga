@@ -29,12 +29,16 @@ from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3.testutils import FileObject
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from tests_dcs.fixtures.joint import *  # noqa: F403
-from tests_dcs.fixtures.joint import CleanupFixture, PopulatedFixture
+from tests_dcs.fixtures.joint import (
+    CleanupFixture,
+    PopulatedFixture,
+)
 from tests_dcs.fixtures.mock_api.app import router
 from tests_dcs.fixtures.utils import generate_work_order_token
 
 unintercepted_hosts: list[str] = ["localhost"]
+
+pytestmark = pytest.mark.asyncio()
 
 
 @pytest.fixture
@@ -47,7 +51,6 @@ def non_mocked_hosts() -> list:
     return unintercepted_hosts
 
 
-@pytest.mark.asyncio
 async def test_happy_journey(
     populated_fixture: PopulatedFixture,
     tmp_file: FileObject,
@@ -165,7 +168,6 @@ async def test_happy_journey(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.asyncio
 async def test_happy_deletion(
     populated_fixture: PopulatedFixture,
     tmp_file: FileObject,
@@ -213,7 +215,6 @@ async def test_happy_deletion(
     )
 
 
-@pytest.mark.asyncio
 async def test_bucket_cleanup(cleanup_fixture: CleanupFixture):
     """Test multiple outbox bucket cleanup handling."""
     data_repository = cleanup_fixture.joint.data_repository

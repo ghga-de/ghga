@@ -526,6 +526,7 @@
     },
     "api_route": {
       "default": "/ga4gh/drs/v1",
+      "description": "DRS API route",
       "title": "Api Route",
       "type": "string"
     }

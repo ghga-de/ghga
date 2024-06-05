@@ -28,7 +28,7 @@ from dcs.inject import (
 
 async def run_rest_app():
     """Run the HTTP REST API."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
 
     async with prepare_rest_app(config=config) as app:
@@ -37,7 +37,7 @@ async def run_rest_app():
 
 async def consume_events(run_forever: bool = True):
     """Run an event consumer listening to the specified topic."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
@@ -46,7 +46,7 @@ async def consume_events(run_forever: bool = True):
 
 async def run_outbox_cleanup():
     """Check if outbox buckets contains files that should be cleaned up and perform clean-up."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
 
     async with prepare_outbox_cleaner(config=config) as cleanup_outbox:

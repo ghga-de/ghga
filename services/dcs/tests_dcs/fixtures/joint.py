@@ -17,15 +17,8 @@
 
 __all__ = [
     "cleanup_fixture",
-    "file_fixture",
     "joint_fixture",
     "JointFixture",
-    "mongodb_fixture",
-    "mongodb_container_fixture",
-    "s3_fixture",
-    "s3_container_fixture",
-    "kafka_fixture",
-    "kafka_container_fixture",
     "populated_fixture",
     "PopulatedFixture",
     "generate_work_order_token",
@@ -60,19 +53,12 @@ from ghga_service_commons.utils.multinode_storage import (
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import (
     KafkaFixture,
-    kafka_container_fixture,
-    kafka_fixture,
 )
 from hexkit.providers.mongodb.testutils import (
     MongoDbFixture,
-    mongodb_container_fixture,
-    mongodb_fixture,
 )
 from hexkit.providers.s3.testutils import (
     S3Fixture,
-    file_fixture,
-    s3_container_fixture,
-    s3_fixture,
     temp_file_object,
 )
 from jwcrypto.jwk import JWK
