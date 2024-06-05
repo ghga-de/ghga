@@ -1,7 +1,7 @@
 [project]
 name = "ekss"
 version = "1.2.0"
-description = "Encryption Key Store Sevice - providing crypt4gh file secret extraction, storage and envelope generation"
+description = "Encryption Key Store Service - providing crypt4gh file secret extraction, storage and envelope generation"
 readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
