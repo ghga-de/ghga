@@ -1,7 +1,0 @@
-#!/bin/bash
-
-# cd into .devcontainer dir so that the config yaml
-# is considered:
-cd /workspace/.devcontainer
-
-dcs run-rest

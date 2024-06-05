@@ -29,10 +29,10 @@ from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3.testutils import FileObject
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from tests.fixtures.joint import *  # noqa: F403
-from tests.fixtures.joint import CleanupFixture, PopulatedFixture
-from tests.fixtures.mock_api.app import router
-from tests.fixtures.utils import generate_work_order_token
+from tests_dcs.fixtures.joint import *  # noqa: F403
+from tests_dcs.fixtures.joint import CleanupFixture, PopulatedFixture
+from tests_dcs.fixtures.mock_api.app import router
+from tests_dcs.fixtures.utils import generate_work_order_token
 
 unintercepted_hosts: list[str] = ["localhost"]
 

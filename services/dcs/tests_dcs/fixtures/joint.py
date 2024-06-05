@@ -38,6 +38,18 @@ from datetime import timedelta
 
 import httpx
 import pytest_asyncio
+from dcs.adapters.outbound.dao import DrsObjectDaoConstructor
+from dcs.config import Config, WorkOrderTokenConfig
+from dcs.core import models
+from dcs.inject import (
+    OutboxCleaner,
+    prepare_core,
+    prepare_event_subscriber,
+    prepare_outbox_cleaner,
+    prepare_rest_app,
+)
+from dcs.ports.inbound.data_repository import DataRepositoryPort
+from dcs.ports.outbound.dao import DrsObjectDaoPort
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils import utc_dates
@@ -66,20 +78,11 @@ from hexkit.providers.s3.testutils import (
 from jwcrypto.jwk import JWK
 from pydantic_settings import BaseSettings
 
-from dcs.adapters.outbound.dao import DrsObjectDaoConstructor
-from dcs.config import Config, WorkOrderTokenConfig
-from dcs.core import models
-from dcs.inject import (
-    OutboxCleaner,
-    prepare_core,
-    prepare_event_subscriber,
-    prepare_outbox_cleaner,
-    prepare_rest_app,
+from tests_dcs.fixtures.config import get_config
+from tests_dcs.fixtures.utils import (
+    generate_token_signing_keys,
+    generate_work_order_token,
 )
-from dcs.ports.inbound.data_repository import DataRepositoryPort
-from dcs.ports.outbound.dao import DrsObjectDaoPort
-from tests.fixtures.config import get_config
-from tests.fixtures.utils import generate_token_signing_keys, generate_work_order_token
 
 STORAGE_ALIAS = "test"
 

@@ -21,6 +21,8 @@ from dataclasses import dataclass
 import httpx
 import pytest
 import pytest_asyncio
+from dcs.core import models
+from dcs.ports.outbound.dao import DrsObjectDaoPort
 from fastapi import status
 from ghga_service_commons.api.mock_router import (  # noqa: F401
     assert_all_responses_were_requested,
@@ -28,12 +30,13 @@ from ghga_service_commons.api.mock_router import (  # noqa: F401
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from dcs.core import models
-from dcs.ports.outbound.dao import DrsObjectDaoPort
-from tests.fixtures.joint import *  # noqa: F403
-from tests.fixtures.joint import EXAMPLE_FILE, JointFixture, PopulatedFixture
-from tests.fixtures.mock_api.app import router
-from tests.fixtures.utils import generate_token_signing_keys, generate_work_order_token
+from tests_dcs.fixtures.joint import *  # noqa: F403
+from tests_dcs.fixtures.joint import EXAMPLE_FILE, JointFixture, PopulatedFixture
+from tests_dcs.fixtures.mock_api.app import router
+from tests_dcs.fixtures.utils import (
+    generate_token_signing_keys,
+    generate_work_order_token,
+)
 
 unintercepted_hosts: list[str] = ["localhost"]
 

@@ -1,9 +1,6 @@
-[![tests](https://github.com/ghga-de/download-controller-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/download-controller-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/download-controller-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/download-controller-service?branch=main)
-
 # Download Controller Service
 
-Download Controller Service - a GA4GH DRS-compliant service for delivering files from S3 encrypted according to the GA4GH Crypt4GH standard.
+a GA4GH DRS compliant service for delivering files from S3 encrypted according to the GA4GH Crypt4GH standard.
 
 ## Description
 
@@ -536,7 +533,7 @@ to talk to an S3 service in the backend.<br>  Args:
 
 ### Usage:
 
-A template YAML for configurating the service can be found at
+A template YAML for configuring the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
 Please adapt it, rename it to `.dcs.yaml`, and place it into one of the following locations:
 - in the current working directory were you are execute the service (on unix: `./.dcs.yaml`)
@@ -559,7 +556,7 @@ To using file secrets please refer to the
 of the pydantic documentation.
 
 ## HTTP API
-An OpenAPI specification for this service can be found [here](./openapi.yaml).
+An OpenAPI specification for this service can be found [here](openapi.yaml).
 
 ## Architecture and Design:
 <!-- Please provide an overview of the architecture and design of the code base.
