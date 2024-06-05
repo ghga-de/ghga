@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #

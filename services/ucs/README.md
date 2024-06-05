@@ -1,9 +1,6 @@
-[![tests](https://github.com/ghga-de/upload-controller-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/upload-controller-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/upload-controller-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/upload-controller-service?branch=main)
-
 # Upload Controller Service
 
-The Upload-Controller Service (UCS) manages uploads to a S3 inbox bucket.
+manages uploads to an S3 inbox bucket.
 
 ## Description
 
@@ -226,7 +223,7 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
 
 - **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
@@ -452,7 +449,7 @@ to talk to an S3 service in the backend.<br>  Args:
 
 ### Usage:
 
-A template YAML for configurating the service can be found at
+A template YAML for configuring the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
 Please adapt it, rename it to `.ucs.yaml`, and place it into one of the following locations:
 - in the current working directory were you are execute the service (on unix: `./.ucs.yaml`)
@@ -475,7 +472,7 @@ To using file secrets please refer to the
 of the pydantic documentation.
 
 ## HTTP API
-An OpenAPI specification for this service can be found [here](./openapi.yaml).
+An OpenAPI specification for this service can be found [here](openapi.yaml).
 
 ## Architecture and Design:
 <!-- Please provide an overview of the architecture and design of the code base.
