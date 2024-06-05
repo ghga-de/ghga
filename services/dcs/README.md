@@ -1,6 +1,6 @@
 # Download Controller Service
 
-a GA4GH DRS compliant service for delivering files from S3 encrypted according to the GA4GH Crypt4GH standard.
+a GA4GH DRS-compliant service for delivering files from S3 encrypted according to the GA4GH Crypt4GH standard.
 
 ## Description
 
