@@ -1,0 +1,17 @@
+[project]
+name = "fis"
+version = "1.4.0"
+description = "File Ingest Service - A lightweight service to propagate file upload metadata to the GHGA file backend services"
+dependencies = [
+    "typer>=0.9.0",
+    "ghga-service-commons[api,crypt]>=2.0.0",
+    "ghga-event-schemas==1.0.0",
+    "hexkit[akafka,s3,mongodb]>=2.0.0",
+    "hvac>=1.0.2",
+]
+
+[project.urls]
+Repository = "https://github.com/ghga-de/file-ingest-service"
+
+[project.scripts]
+fis = "fis.__main__:run"

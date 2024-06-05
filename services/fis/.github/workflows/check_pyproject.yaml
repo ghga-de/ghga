@@ -1,0 +1,23 @@
+name: Check if pyproject.toml file is up to date
+
+on: push
+
+jobs:
+  static-code-analysis:
+    name: Check pyproject file
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Common steps
+        id: common
+        uses: ghga-de/gh-action-common@v6
+
+      - name: Check pyproject.toml
+        id: check-pyproject
+        run: |
+          ./scripts/update_pyproject.py --check

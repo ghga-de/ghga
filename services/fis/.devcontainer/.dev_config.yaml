@@ -1,0 +1,21 @@
+# Please only mention the non-default settings here:
+
+service_name: fis
+selected_storage_alias: staging
+source_bucket_id: staging
+private_key: dummy-key
+token_hashes: [abcdef, ghijkl]
+
+publisher_topic: file_interrogation
+publisher_type: file_validation_success
+
+service_instance_id: '1'
+kafka_servers: ["kafka:9092"]
+
+vault_url: "http://127.0.0.1:8200"
+vault_role_id: dummy-role
+vault_secret_id: dummy-secret
+vault_verify: True
+vault_path: ekss
+vault_secrets_mount_point: secret
+vault_kube_role: dummy-role

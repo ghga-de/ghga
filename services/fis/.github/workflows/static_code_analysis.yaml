@@ -1,0 +1,39 @@
+name: Static Code Analysis
+
+on: push
+
+jobs:
+  static-code-analysis:
+    name: Static Code Analysis
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Common steps
+        id: common
+        uses: ghga-de/gh-action-common@v6
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: no-commit-to-branch
+
+      - name: Run ruff
+        id: ruff
+        run: |
+          ruff check --output-format=github .
+          ruff format --check .
+
+      - name: Run mypy
+        id: mypy
+        run: |
+          mypy .
+
+      - name: Check license header and file
+        id: license-checker
+        run: |
+          ./scripts/check_license.py
