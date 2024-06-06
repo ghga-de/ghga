@@ -1,6 +1,6 @@
 {{- define "ghga-common.image-pull-secrets" -}}
-{{- if .Values.imagePullSecretName -}}
+{{- if .Values.imagePullSecretNames -}}
 imagePullSecrets:
-  {{- toYaml .Values.imagePullSecretName | nindent 6 }}
+  {{ toYaml .Values.imagePullSecretNames }}
 {{- end -}}
 {{- end -}}
