@@ -19,4 +19,4 @@ from hexkit.providers.akafka.testutils import (  # noqa: F401
     kafka_fixture,
 )
 
-from tests.fixtures.joint import joint_fixture  # noqa: F401
+from tests_fis.fixtures.joint import joint_fixture  # noqa: F401

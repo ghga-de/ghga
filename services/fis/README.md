@@ -1,9 +1,6 @@
-[![tests](https://github.com/ghga-de/file-ingest-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/file-ingest-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/file-ingest-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/file-ingest-service?branch=main)
-
 # File Ingest Service
 
-File Ingest Service - A lightweight service to propagate file upload metadata to the GHGA file backend services
+A lightweight service to propagate file upload metadata to the GHGA file backend services
 
 ## Description
 
@@ -336,7 +333,7 @@ The service requires the following configuration parameters:
 
 ### Usage:
 
-A template YAML for configurating the service can be found at
+A template YAML for configuring the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
 Please adapt it, rename it to `.fis.yaml`, and place it into one of the following locations:
 - in the current working directory were you are execute the service (on unix: `./.fis.yaml`)
@@ -359,7 +356,7 @@ To using file secrets please refer to the
 of the pydantic documentation.
 
 ## HTTP API
-An OpenAPI specification for this service can be found [here](./openapi.yaml).
+An OpenAPI specification for this service can be found [here](openapi.yaml).
 
 ## Architecture and Design:
 <!-- Please provide an overview of the architecture and design of the code base.

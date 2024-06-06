@@ -12,27 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Used to define the location of the main FastAPI app object."""
+"""Test config"""
 
-from typing import Any
+from pathlib import Path
 
-from fastapi import FastAPI
+from fis.config import Config
+from pydantic_settings import BaseSettings
 
-from fis.adapters.inbound.fastapi_.configure import get_openapi_schema
-from fis.adapters.inbound.fastapi_.routes import router
+from tests_fis.fixtures.utils import BASE_DIR
 
-app = FastAPI()
-app.include_router(router)
+TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 
 
-def custom_openapi() -> dict[str, Any]:
-    if app.openapi_schema:
-        return app.openapi_schema
-    openapi_schema = get_openapi_schema(app)
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
+def get_config(
+    sources: list[BaseSettings] | None = None,
+    default_config_yaml: Path = TEST_CONFIG_YAML,
+) -> Config:
+    """Merges parameters from the default TEST_CONFIG_YAML with params inferred
+    from testcontainers.
+    """
+    sources_dict: dict[str, object] = {}
 
+    if sources is not None:
+        for source in sources:
+            sources_dict.update(**source.model_dump())
 
-app.openapi = custom_openapi  # type: ignore [method-assign]
+    return Config(config_yaml=default_config_yaml, **sources_dict)  # type: ignore

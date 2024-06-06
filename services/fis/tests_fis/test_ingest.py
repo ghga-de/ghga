@@ -19,14 +19,14 @@ import base64
 import os
 
 import pytest
-from ghga_service_commons.utils.crypt import encrypt, generate_key_pair
-
 from fis.core.models import EncryptedPayload, LegacyUploadMetadata, UploadMetadata
 from fis.ports.inbound.ingest import (
     DecryptionError,
     WrongDecryptedFormatError,
 )
-from tests.fixtures.joint import JointFixture
+from ghga_service_commons.utils.crypt import encrypt, generate_key_pair
+
+from tests_fis.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio()
 
