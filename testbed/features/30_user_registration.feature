@@ -33,7 +33,7 @@ Feature: 30 User Registration
     When "Dr. John Doe" retrieves their user data
     Then the user data of "Dr. John Doe" is returned
 
-  Scenario: The data steward losts TOTP token
+  Scenario: The data steward lost the TOTP token
     Given I lost my TOTP token as "Data Steward"
     And I am logged in as "Data Steward"
     When I retrieve a new TOTP token as "Data Steward"

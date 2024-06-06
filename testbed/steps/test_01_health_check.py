@@ -73,12 +73,14 @@ def check_user_management_apis_are_healthy(fixtures: JointFixture):
     sub = fixtures.auth.get_sub(name)
     ums_url = fixtures.config.ums_url
     session = fixtures.auth.fetch_session(name=name, user_id=sub)
-    fixtures.auth.authenticate(
+    response = fixtures.auth.authenticate(
         session=session,
         user_id=session.user_id,
         state_store=fixtures.state,
         recreate_totp=True,
     )
+    status_code = response.status_code
+    assert status_code == 204, f"Error {status_code} when authenticating {name}"
     headers = fixtures.auth.headers(session=session)
     endpoint = f"{ums_url}/users/{session.user_id}"
     response = fixtures.http.get(endpoint, headers=headers)

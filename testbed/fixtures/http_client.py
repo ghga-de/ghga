@@ -19,8 +19,7 @@
 from base64 import b64encode
 from collections.abc import Generator
 
-from httpx import Client as HttpClient
-from httpx import Response
+from httpx import Client, Response
 from pytest import fixture
 
 from fixtures.config import Config
@@ -28,6 +27,21 @@ from fixtures.config import Config
 __all__ = ["http_fixture", "HttpClient", "Response"]
 
 TIMEOUT = 10  # timeout for HTTP requests in seconds
+
+
+class HttpClient(Client):
+    """An HTTP client that does not persist cookies."""
+
+    def request(self, *args, **kwargs):
+        """Build and send a request after clearing existing cookies.
+
+        Since we set cookie headers manually in the tests
+        and the HttpClient is also reused between tests,
+        the cookie preservation feature of the default Client
+        could give unexpected results, therefore we disable it.
+        """
+        self.cookies.clear()
+        return super().request(*args, **kwargs)
 
 
 @fixture(name="http", scope="session")

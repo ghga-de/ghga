@@ -97,7 +97,9 @@ class TokenGenerator:
         self.key_file = config.auth_key_file
         self.op_url = config.op_url
         self.op_issuer = config.op_issuer
-        self.auth_adapter_url = config.auth_adapter_url
+        self.auth_adapter_url = (
+            config.ums_url if self.use_api_gateway else config.auth_adapter_url
+        )
         self.http = http
         if config.totp_algorithm == TOTPAlgorithm.SHA1:
             self.digest = hashlib.sha1
