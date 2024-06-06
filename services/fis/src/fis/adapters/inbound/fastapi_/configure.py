@@ -25,7 +25,7 @@ from fis import __version__
 from fis.adapters.inbound.fastapi_.routes import router
 from fis.config import Config
 
-config = Config()  # type: ignore [call-arg]
+config = Config()
 
 
 def get_openapi_schema(api) -> dict[str, Any]:

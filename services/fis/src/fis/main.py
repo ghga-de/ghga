@@ -23,7 +23,7 @@ from fis.inject import prepare_rest_app
 
 async def run_rest():
     """Run the HTTP REST API."""
-    config = Config()  # type: ignore [call-arg]
+    config = Config()
     configure_logging(config=config)
 
     async with prepare_rest_app(config=config) as app:

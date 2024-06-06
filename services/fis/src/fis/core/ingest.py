@@ -76,7 +76,7 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
         self._event_publisher = event_publisher
         self._vault_adapter = vault_adapter
 
-    async def decrypt_payload(  # type: ignore
+    async def decrypt_payload(
         self, *, encrypted: models.EncryptedPayload
     ) -> models.LegacyUploadMetadata:
         """Decrypt upload metadata using private key"""

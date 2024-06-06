@@ -34,10 +34,7 @@ def custom_openapi() -> dict[str, Any]:  # noqa: D103
         return app.openapi_schema
     openapi_schema = get_openapi_schema(app)
     app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-
-app.openapi = custom_openapi  # type: ignore [method-assign]
+    return openapi_schema
 
 
 def main():
