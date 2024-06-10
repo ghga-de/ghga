@@ -2,5 +2,5 @@
 {{- if .Values.imagePullSecretNames -}}
 imagePullSecrets:
   {{- toYaml .Values.imagePullSecretNames | nindent 2 }}
-{{- end }}
+{{- end -}}
 {{- end -}}

@@ -21,7 +21,9 @@ spec:
       labels:
         app: {{ .Release.Name }}
         version: staging
+        {{- if .Values.podExtraLabels }}
         {{- include "ghga-common.pod-extra-labels" .  | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: {{ .Release.Name }}
       shareProcessNamespace: {{ .Values.shareProcessNamespace }}
