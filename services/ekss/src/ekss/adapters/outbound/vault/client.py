@@ -15,6 +15,7 @@
 """Provides client side functionality for interaction with HashiCorp Vault"""
 
 import base64
+import logging
 from uuid import uuid4
 
 import hvac
@@ -23,6 +24,8 @@ from hvac.api.auth_methods import Kubernetes
 
 from ekss.adapters.outbound.vault import exceptions
 from ekss.config import VaultConfig
+
+log = logging.getLogger(__name__)
 
 
 class VaultAdapter:
@@ -76,16 +79,18 @@ class VaultAdapter:
         key = str(uuid4())
 
         self._check_auth()
+        path = f"{self._path}/{key}"
 
         try:
             # set cas to 0 as we only want a static secret
             self._client.secrets.kv.v2.create_or_update_secret(
-                path=f"{self._path}/{key}",
+                path=path,
                 secret={key: value},
                 cas=0,
                 mount_point=self._secrets_mount_point,
             )
         except hvac.exceptions.InvalidRequest as exc:
+            log.debug("Invalid request error when storing secret at %s: %s", path, exc)
             raise exceptions.SecretInsertionError() from exc
         return key
 
@@ -95,14 +100,16 @@ class VaultAdapter:
         Key should be a UUID4 returned by store_secret on insertion
         """
         self._check_auth()
+        path = f"{self._path}/{key}"
 
         try:
             response = self._client.secrets.kv.v2.read_secret_version(
-                path=f"{self._path}/{key}",
+                path=path,
                 raise_on_deleted_version=True,
                 mount_point=self._secrets_mount_point,
             )
         except hvac.exceptions.InvalidPath as exc:
+            log.debug("Invalid path error when fetching secret at %s: %s", path, exc)
             raise exceptions.SecretRetrievalError() from exc
 
         secret = response["data"]["data"][key]
@@ -120,6 +127,7 @@ class VaultAdapter:
                 mount_point=self._secrets_mount_point,
             )
         except hvac.exceptions.InvalidPath as exc:
+            log.debug("Invalid path error when deleting secret at %s: %s", path, exc)
             raise exceptions.SecretRetrievalError() from exc
 
         response = self._client.secrets.kv.v2.delete_metadata_and_all_versions(
@@ -127,5 +135,11 @@ class VaultAdapter:
         )
 
         # Check the response status
-        if response.status_code != 204:
+        status_code = response.status_code
+        if status_code != 204:
+            log.debug(
+                "Unexpected status code %d when deleting secret at %s",
+                status_code,
+                path,
+            )
             raise exceptions.SecretDeletionError()
