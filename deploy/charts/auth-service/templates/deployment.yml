@@ -23,9 +23,11 @@ spec:
         version: staging
         sidecar.istio.io/inject: "true"
     spec:
-      {{- include "ghga-common.image-pull-secrets" .  | nindent 6 }}
       serviceAccountName: {{ .Release.Name }}
       shareProcessNamespace: {{ .Values.shareProcessNamespace }}
+      {{- if .Values.imagePullSecretNames }}
+      {{- include "ghga-common.image-pull-secrets" .  | nindent 6 }}
+      {{- end }}
       containers:
       - image: "{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
         {{- include "ghga-common.command-args" (list "auth-service")  | nindent 8 }}
