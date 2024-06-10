@@ -143,3 +143,6 @@ kafkaSecrets:
 # imagePullSecretNames:
 #  - name: dockerhub
 imagePullSecretNames: []
+
+podExtraLabels:
+  test: test-label
