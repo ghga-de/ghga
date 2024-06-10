@@ -1,6 +1,6 @@
 [project]
 name = "ekss"
-version = "1.2.0"
+version = "1.3.0"
 description = "Encryption Key Store Service - providing crypt4gh file secret extraction, storage and envelope generation"
 readme = "README.md"
 authors = [
