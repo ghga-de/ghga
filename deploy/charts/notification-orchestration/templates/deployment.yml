@@ -6,6 +6,7 @@ metadata:
     configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
   labels:
     app: {{ .Release.Name }}
+    {{- include "ghga-common.pod-extra-labels" .  | nindent 8 }}
 spec:
   revisionHistoryLimit: 1
   selector:
