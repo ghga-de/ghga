@@ -28,8 +28,8 @@ mapping:
 
 parameters:
   default:
-    api_root_path: /
-    auto_reload: true
+    api_root_path: ""
+    auto_reload: false
     cors_allow_credentials: false
     cors_allowed_headers: []
     cors_allowed_methods: []

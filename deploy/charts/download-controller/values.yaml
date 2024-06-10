@@ -37,7 +37,7 @@ mapping:
 
 parameters:
   default:
-    api_root_path: /
+    api_root_path: ""
     api_route: /ga4gh/drs/v1
     auth_algs:
     - ES256

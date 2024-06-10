@@ -38,7 +38,7 @@ mapping:
 
 parameters:
   default:
-    api_root_path: /
+    api_root_path: ""
     artifact_infos: []
     auto_reload: false
     cors_allow_credentials: false
