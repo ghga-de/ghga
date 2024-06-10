@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -159,7 +159,7 @@ class Downloader(DownloaderBase):
             max_workers=max_concurrent_downloads,
         )
 
-        for part_range, download_url in zip(part_ranges, url_response):
+        for part_range, download_url in zip(part_ranges, url_response, strict=False):
             kwargs: dict[str, Any] = {
                 "download_url": download_url.download_url,
                 "start": part_range.start,

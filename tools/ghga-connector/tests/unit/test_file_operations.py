@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@ import base64
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional
 
 import crypt4gh.keys
 import pytest
@@ -31,7 +30,7 @@ from ghga_connector.core.file_operations import is_file_encrypted, read_file_par
 
 
 @pytest.mark.parametrize("from_part", (None, 3))
-def test_read_file_parts(from_part: Optional[int]):
+def test_read_file_parts(from_part: int | None):
     """Test reading a full file with the `read_file_parts` function."""
     file_size = 20 * 1024 * 1024
     part_size = 5 * 1024 * 1024
@@ -46,9 +45,9 @@ def test_read_file_parts(from_part: Optional[int]):
         # read the file in parts:
         obtained_content = b""
         file_parts = (
-            read_file_parts(file, part_size=part_size)
+            read_file_parts(file, part_size=part_size)  # type: ignore
             if from_part is None
-            else read_file_parts(file, part_size=part_size, from_part=from_part)
+            else read_file_parts(file, part_size=part_size, from_part=from_part)  # type: ignore
         )
 
         for part in file_parts:

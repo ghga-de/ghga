@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,12 +27,7 @@ import logging
 import os
 from datetime import datetime
 from enum import Enum
-from typing import Union
-
-try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
-    from typing_extensions import Literal
-except ImportError:
-    from typing import Literal  # type: ignore
+from typing import Literal
 
 import httpx
 from fastapi import HTTPException, status
@@ -144,7 +139,7 @@ class HttpEnvelopeResponse(httpx.Response):
         super().__init__(content=envelope, status_code=status_code)
 
 
-def exception_handler(request: httpx.Request, exc: Union[HttpException, HTTPException]):
+def exception_handler(request: httpx.Request, exc: HttpException | HTTPException):
     """Transform HttpException data into a proper response object"""
     status_code = exc.status_code
 

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -389,6 +389,6 @@ class WellKnownValueNotFound(RuntimeError):
 
 def raise_if_connection_failed(request_error: httpx.RequestError, url: str):
     """Check if request exception is caused by hitting max retries and raise accordingly"""
-    if isinstance(request_error, (httpx.ConnectError, httpx.ConnectTimeout)):
+    if isinstance(request_error, httpx.ConnectError | httpx.ConnectTimeout):
         connection_failure = str(request_error.args[0])
         raise ConnectionFailedError(url=url, reason=connection_failure)

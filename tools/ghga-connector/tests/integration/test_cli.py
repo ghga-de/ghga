@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,6 @@ import re
 from contextlib import nullcontext
 from filecmp import cmp
 from pathlib import Path
-from typing import Optional
 from unittest.mock import Mock, patch
 
 import crypt4gh.keys
@@ -115,7 +114,7 @@ async def test_multipart_download(
     monkeypatch.setattr("ghga_connector.core.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
-        Mock(return_value=dict(zip([big_object.object_id], [""]))),
+        Mock(return_value=dict(zip([big_object.object_id], [""], strict=False))),
     )
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package._decrypt",
@@ -195,7 +194,7 @@ async def test_download(
     bad_url: bool,
     bad_outdir: bool,
     file_name: str,
-    expected_exception: type[Optional[Exception]],
+    expected_exception: type[Exception | None],
     s3_fixture: S3Fixture,  # noqa: F811
     tmp_path: pathlib.Path,
     proceed_on_missing: bool,
@@ -215,7 +214,7 @@ async def test_download(
     monkeypatch.setattr("ghga_connector.core.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
-        Mock(return_value=dict(zip([file.file_id], [""]))),
+        Mock(return_value=dict(zip([file.file_id], [""], strict=False))),
     )
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package._decrypt",
@@ -330,7 +329,7 @@ async def test_upload(
     httpx_mock: HTTPXMock,  # noqa: F811
     bad_url: bool,
     file_name: str,
-    expected_exception: type[Optional[Exception]],
+    expected_exception: type[Exception | None],
     s3_fixture: S3Fixture,  # noqa F811
     monkeypatch,
     tmpdir,

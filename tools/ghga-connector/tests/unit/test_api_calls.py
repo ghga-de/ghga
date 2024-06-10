@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@
 
 from contextlib import nullcontext
 from pathlib import Path
-from typing import Optional
 from unittest.mock import Mock
 
 import pytest
@@ -58,7 +57,7 @@ async def test_patch_multipart_upload(
     bad_url: bool,
     upload_id: str,
     upload_status: UploadStatus,
-    expected_exception: type[Optional[Exception]],
+    expected_exception: type[Exception | None],
 ):
     """Test the patch_multipart_upload function"""
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
@@ -111,9 +110,9 @@ async def test_patch_multipart_upload(
     ],
 )
 async def test_get_part_upload_urls(
-    from_part: Optional[int],
+    from_part: int | None,
     end_part: int,
-    expected_exception: type[Optional[Exception]],
+    expected_exception: type[Exception | None],
 ):
     """Test the `get_part_upload_urls` generator for iterating through signed part urls"""
     upload_id = "example-upload"

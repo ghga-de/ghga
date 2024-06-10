@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@ import os
 from collections.abc import Generator
 from io import BufferedReader
 from pathlib import Path
-from typing import Optional
 
 import crypt4gh.header
 import crypt4gh.keys
@@ -41,7 +40,7 @@ class Crypt4GHEncryptor(Encryptor):
         private_key_path: Path,
         server_public_key: str,
         checksums: Checksums = Checksums(),
-        file_secret: Optional[bytes] = None,
+        file_secret: bytes | None = None,
     ):
         self._encrypted_file_size = 0
         self._checksums = checksums
