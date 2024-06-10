@@ -219,7 +219,7 @@ async def correlation_id_middleware(
 
 def configure_app(app: FastAPI, config: ApiConfigBase):
     """Configure a FastAPI app based on a config object."""
-    app.root_path = config.api_root_path
+    app.root_path = config.api_root_path.rstrip("/")
     app.openapi_url = config.openapi_url
     app.docs_url = config.docs_url
 
