@@ -20,8 +20,7 @@ spec:
         {{- end }}
       labels:
         app: {{ .Release.Name }}
-        version: staging
-        sidecar.istio.io/inject: "true"
+        {{- include "ghga-common.pod-extra-labels" .  | nindent 8 }}
     spec:
       serviceAccountName: {{ .Release.Name }}
       shareProcessNamespace: {{ .Values.shareProcessNamespace }}
