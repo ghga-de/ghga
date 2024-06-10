@@ -53,3 +53,7 @@ parameters:
     oidc_use_discovery: false
 
 shareProcessNamespace: false
+
+# Add extra labels to the service pod
+# podExtraLabels:
+#   my-label: my-value

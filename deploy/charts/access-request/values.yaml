@@ -81,3 +81,7 @@ parameters:
 shareProcessNamespace: false
 kafkaSecrets:
   enabled: false
+
+# Add extra labels to the service pod
+# podExtraLabels:
+#   my-label: my-value
