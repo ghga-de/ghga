@@ -35,10 +35,8 @@ from dcs.adapters.outbound.dao import DrsObjectDaoConstructor
 from dcs.config import Config, WorkOrderTokenConfig
 from dcs.core import models
 from dcs.inject import (
-    OutboxCleaner,
     prepare_core,
     prepare_event_subscriber,
-    prepare_outbox_cleaner,
     prepare_rest_app,
 )
 from dcs.ports.inbound.data_repository import DataRepositoryPort
@@ -105,7 +103,6 @@ class JointFixture:
     data_repository: DataRepositoryPort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
-    outbox_cleaner: OutboxCleaner
     mongodb: MongoDbFixture
     s3: S3Fixture
     kafka: KafkaFixture
@@ -158,10 +155,6 @@ async def joint_fixture(
             prepare_event_subscriber(
                 config=config, data_repo_override=data_repository
             ) as event_subscriber,
-            prepare_outbox_cleaner(
-                config=config,
-                data_repo_override=data_repository,
-            ) as outbox_cleaner,
         ):
             async with AsyncTestClient(app=app) as rest_client:
                 yield JointFixture(
@@ -170,7 +163,6 @@ async def joint_fixture(
                     data_repository=data_repository,
                     rest_client=rest_client,
                     event_subscriber=event_subscriber,
-                    outbox_cleaner=outbox_cleaner,
                     mongodb=mongodb,
                     s3=s3,
                     kafka=kafka,
