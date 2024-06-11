@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
 
 """Step definitions for viewing the global summary in the frontend"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from .conftest import Config, HttpClient, Response, scenarios, then, when
 
@@ -34,7 +34,7 @@ def check_summary_statistics(response: Response):
     assert isinstance(result, dict)
     assert sorted(result) == ["created", "id", "resource_stats"]
     date_created = datetime.fromisoformat(result["created"].replace("Z", "+00:00"))
-    date_now = datetime.now(timezone.utc)
+    date_now = datetime.now(UTC)
     assert abs((date_created - date_now).seconds) < 24 * 60 * 60
     assert result["id"] == "global"
     resource_stats = result["resource_stats"]

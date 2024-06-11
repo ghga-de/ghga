@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,7 +85,7 @@ class JointFixture(NamedTuple):
 @fixture(name="config", scope="session")  # pyright: ignore
 def config_fixture() -> Config:
     """Get the testbed configuration."""
-    return Config()  # pyright: ignore
+    return Config()  # type: ignore
 
 
 # pylint: disable=redefined-outer-name

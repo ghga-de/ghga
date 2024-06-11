@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,9 +57,7 @@ class IVAFixture:
         assert response.status_code == 200, f"Failed to retrieve IVAs: {response.text}"
         return response.json()
 
-    def delete(
-        self, iva_ids: Union[str, list[str]], user_id: str, headers: dict
-    ) -> None:
+    def delete(self, iva_ids: str | list[str], user_id: str, headers: dict) -> None:
         """Delete the given IVAs for the user"""
         if isinstance(iva_ids, str):
             iva_ids = [iva_ids]

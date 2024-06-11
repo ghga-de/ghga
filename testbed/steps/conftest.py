@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 
 import inspect
 from functools import wraps
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 from fixtures import (  # noqa: RUF100
     Config,
@@ -89,7 +89,7 @@ class UserData(NamedTuple):
     id: str
     ext_id: str
     name: str
-    title: Optional[str]
+    title: str | None
     email: str
 
 
@@ -229,7 +229,7 @@ async def reset_state(fixtures: JointFixture):
         # we do not have access permissions to the state databases,
         # so we rely on the deployment to start with a clean slate.
         await fixtures.s3.empty_buckets()  # empty object storage
-        fixtures.kafka.delete_topics()  # empty event queues
+        await fixtures.kafka.clear_topics()  # empty event queues
         saved_data_steward = fetch_data_stewardship(fixtures)
         fixtures.mongo.empty_databases()  # empty service databases
         restore_data_stewardship(saved_data_steward, fixtures)

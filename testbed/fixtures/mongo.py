@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,8 +49,8 @@ class MongoFixture(BaseMongoFixture):
 
     def empty_databases(
         self,
-        db_names: Optional[Union[str, list[str]]] = None,
-        exclude_collections: Optional[Union[str, list[str]]] = None,
+        db_names: str | list[str] | None = None,
+        exclude_collections: str | list[str] | None = None,
     ):
         """Drop all mongodb collections in the given database(s).
 
@@ -80,7 +80,7 @@ class MongoFixture(BaseMongoFixture):
 
     def find_document(
         self, db_name: str, collection_name: str, mapping: Mapping[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Return one document from the given collection matching the given filter."""
         db = self.client[db_name]
         collection = db.get_collection(collection_name)
@@ -100,7 +100,7 @@ class MongoFixture(BaseMongoFixture):
         collection_name: str,
         mapping: Mapping[str, Any],
         timeout: float = TIMEOUT,
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Wait for a document.
 
         Waits for at least one document from the given collection matching the given
@@ -125,7 +125,7 @@ class MongoFixture(BaseMongoFixture):
         number: int = 1,
         timeout: float = TIMEOUT,
         interval: float = INTERVAL,
-    ) -> Optional[list[dict[str, Any]]]:
+    ) -> list[dict[str, Any]] | None:
         """Wait for a number of documents.
 
         Waits for the given number of documents from the given collection matching

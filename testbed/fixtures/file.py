@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,9 +45,9 @@ def create_named_file(
     target_dir: Path,
     config: Config,
     name: str,
-    file_size: Optional[int] = None,
-    alias: Optional[str] = None,
-    checksum: Optional[str] = None,
+    file_size: int | None = None,
+    alias: str | None = None,
+    checksum: str | None = None,
 ) -> FileObject:
     """Create a file with given parameters"""
     file_path = target_dir / name

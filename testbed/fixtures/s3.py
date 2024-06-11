@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ class S3Fixture(BaseS3Fixture):
             config.permanent_bucket,
         ]
 
-    async def empty_given_buckets(self, buckets: Union[str, list[str]]):
+    async def empty_given_buckets(self, buckets: str | list[str]):
         """Empty only the specified bucket(s)."""
         if isinstance(buckets, str):
             buckets = [buckets]

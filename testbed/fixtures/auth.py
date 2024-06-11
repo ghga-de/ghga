@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +47,7 @@ DEFAULT_USER_STATUS = "active"
 class Session(BaseModel):
     """Session object that is passed to the client."""
 
-    user_id: Optional[str] = Field(None, alias="id")
+    user_id: str | None = Field(None, alias="id")
     session_id: str
     csrf: str
     ext_id: str
@@ -56,7 +56,7 @@ class Session(BaseModel):
     state: str
     timeout: int
     extends: int
-    role: Optional[str] = None
+    role: str | None = None
 
     @model_validator(mode="after")
     def assign_ext_id_to_id(self):
@@ -111,7 +111,7 @@ class TokenGenerator:
         self.totp_interval = config.totp_interval
 
     @classmethod
-    def split_title(cls, full_name: str) -> tuple[Optional[str], str]:
+    def split_title(cls, full_name: str) -> tuple[str | None, str]:
         """Split the full name into title and actual name."""
         if full_name.startswith(cls.titles):
             title, name = full_name.split(None, 1)
@@ -160,7 +160,7 @@ class TokenGenerator:
         }
 
     def session_from_response(
-        self, response: Response, session_id: Optional[str] = None
+        self, response: Response, session_id: str | None = None
     ) -> Session:
         """Get a session object from the response."""
         if not session_id:
@@ -172,9 +172,7 @@ class TokenGenerator:
         session = Session(session_id=session_id, **session_dict)
         return session
 
-    def get_saved_session(
-        self, name: str, state_store: StateStorage
-    ) -> Optional[Session]:
+    def get_saved_session(self, name: str, state_store: StateStorage) -> Session | None:
         """Check state store and get session for the user"""
         sub = self.get_sub(name)
         assert state_store, "No state store provided. Cannot query session."
@@ -184,11 +182,11 @@ class TokenGenerator:
     def fetch_session(
         self,
         name: str,
-        email: Optional[str] = None,
-        title: Optional[str] = None,
-        user_id: Optional[str] = None,
+        email: str | None = None,
+        title: str | None = None,
+        user_id: str | None = None,
         valid_seconds: int = DEFAULT_VALID_SECONDS,
-        state_store: Optional[StateStorage] = None,
+        state_store: StateStorage | None = None,
     ) -> Session:
         """Fetch the current session.
 
@@ -226,7 +224,7 @@ class TokenGenerator:
 
     def headers(
         self,
-        session: Optional[Session] = None,
+        session: Session | None = None,
     ):
         """Generate headers for HTTP requests.
 
@@ -249,9 +247,9 @@ class TokenGenerator:
     def oidc_login(
         self,
         name: str,
-        email: Optional[str] = None,
-        sub: Optional[str] = None,
-        valid_seconds: Optional[int] = None,
+        email: str | None = None,
+        sub: str | None = None,
+        valid_seconds: int | None = None,
     ):
         """Login with OpenID Connect."""
         if not valid_seconds:
@@ -317,7 +315,7 @@ class TokenGenerator:
         return token
 
     def generate_totp(
-        self, token: str, for_time: Optional[datetime] = None, offset: int = 0
+        self, token: str, for_time: datetime | None = None, offset: int = 0
     ) -> str:
         """Generate a TOTP code for testing purposes."""
         totp = pyotp.TOTP(
@@ -352,7 +350,7 @@ class TokenGenerator:
         self,
         session: Session,
         state_store: StateStorage,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         recreate_totp: bool = False,
     ) -> Response:
         """Authenticate with two-factor authentication."""

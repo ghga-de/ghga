@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,8 +91,8 @@ def verify_named_file(
     name: str,
     extension: str,
     encrypted=False,
-    checksum: Optional[str] = None,
-    size_in_bytes: Optional[int] = None,
+    checksum: str | None = None,
+    size_in_bytes: int | None = None,
 ) -> None:
     """Verify a file with given parameters"""
     file_path = target_dir
@@ -122,11 +122,11 @@ def verify_named_file(
 
 def search_dataset_rpc(
     fixtures: JointFixture,
-    filters: Optional[list[dict[str, str]]] = None,
-    query: Optional[str] = None,
+    filters: list[dict[str, str]] | None = None,
+    query: str | None = None,
     class_name: str = "EmbeddedDataset",
-    limit: Optional[int] = None,
-    skip: Optional[int] = None,
+    limit: int | None = None,
+    skip: int | None = None,
 ):
     """Send a search request to the metadata artifact search service."""
     search_parameters: JsonObject = {

@@ -4,6 +4,27 @@ exclude = [
     "__pycache__",
 ]
 
+line-length = 88
+
+src = ["features", "fixtures", "steps", "scripts"]
+
+target-version = "py312"
+
+[lint]
+select = [
+    "C90", # McCabe Complexity
+    "F", # pyflakes codes
+    "I", # isort
+    "S", # flake8-bandit
+    "B", # flake8-bugbear
+    "N", # pep8-naming
+    "UP", # pyupgrade
+    "PL", # pylint
+    "RUF", # ruff
+    "SIM", # flake8-simplify
+    "D", # pydocstyle
+]
+
 ignore = [
     "E", # pycodestyle errors
     "W", # pycodestyle warnings - pycodestyle covered by black
@@ -23,41 +44,21 @@ ignore = [
     "D103", # Missing docstring in method
 ]
 
-line-length = 88
-
-select = [
-    "C90", # McCabe Complexity
-    "F", # pyflakes codes
-    "I", # isort
-    "S", # flake8-bandit
-    "B", # flake8-bugbear
-    "N", # pep8-naming
-    "UP", # pyupgrade
-    "PL", # pylint
-    "RUF", # ruff
-    "SIM", # flake8-simplify
-    "D", # pydocstyle
-]
-
 fixable = [
     "UP", # e.g. List -> list
     "I", # sort imports
     "D", # pydocstyle
 ]
 
-src = ["features", "fixtures", "steps", "scripts"]
-
-target-version = "py39"
-
-[mccabe]
+[lint.mccabe]
 max-complexity = 10
 
-[per-file-ignores]
+[lint.per-file-ignores]
 "scripts/*" = ["PL", "S", "SIM", "D"]
 "steps/*" = ["S", "SIM", "PLR"]
 ".devcontainer/*" = ["S", "SIM", "D"]
 "examples/*" = ["S", "D"]
 "__init__.py" = ["D"]
 
-[pydocstyle]
+[lint.pydocstyle]
 convention = "pep257"
