@@ -18,6 +18,7 @@
 
 import sys
 from pathlib import Path
+from typing import Optional
 
 import typer
 
@@ -44,7 +45,7 @@ def transpile(
         dir_okay=False,
         readable=True,
     ),
-    output_file: Path | None = typer.Argument(
+    output_file: Optional[Path] = typer.Argument(  # noqa: UP007 (typer issue #461)
         None, help="The path to output file (JSON).", dir_okay=False
     ),
     force: bool = typer.Option(
