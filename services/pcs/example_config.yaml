@@ -4,7 +4,10 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+db_connection_str: '**********'
+db_name: dev_db
 docs_url: /docs
+file_deletions_collection: file-deletions
 files_to_delete_topic: file_deletions
 files_to_delete_type: file_deletion_requested
 generate_correlation_id: true

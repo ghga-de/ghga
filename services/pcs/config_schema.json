@@ -2,6 +2,31 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "file_deletions_collection": {
+      "default": "file-deletions",
+      "description": "The name of the collection used to store file deletion requests.",
+      "examples": [
+        "file-deletions"
+      ],
+      "title": "File Deletions Collection",
+      "type": "string"
+    },
+    "files_to_delete_topic": {
+      "description": "The name of the topic to receive events informing about files to delete.",
+      "examples": [
+        "file_deletions"
+      ],
+      "title": "Files To Delete Topic",
+      "type": "string"
+    },
+    "files_to_delete_type": {
+      "description": "The type used for events informing about a file to be deleted.",
+      "examples": [
+        "file_deletion_requested"
+      ],
+      "title": "Files To Delete Type",
+      "type": "string"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -53,22 +78,6 @@
       },
       "title": "Token Hashes",
       "type": "array"
-    },
-    "files_to_delete_topic": {
-      "description": "The name of the topic to receive events informing about files to delete.",
-      "examples": [
-        "file_deletions"
-      ],
-      "title": "Files To Delete Topic",
-      "type": "string"
-    },
-    "files_to_delete_type": {
-      "description": "The type used for events informing about a file to be deleted.",
-      "examples": [
-        "file_deletion_requested"
-      ],
-      "title": "Files To Delete Type",
-      "type": "string"
     },
     "kafka_servers": {
       "description": "A list of connection strings to connect to Kafka bootstrap servers.",
@@ -128,6 +137,24 @@
       ],
       "title": "Generate Correlation Id",
       "type": "boolean"
+    },
+    "db_connection_str": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "password",
+      "title": "Db Connection Str",
+      "type": "string",
+      "writeOnly": true
+    },
+    "db_name": {
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
+      "title": "Db Name",
+      "type": "string"
     },
     "host": {
       "default": "127.0.0.1",
@@ -254,11 +281,13 @@
     }
   },
   "required": [
-    "service_instance_id",
-    "token_hashes",
     "files_to_delete_topic",
     "files_to_delete_type",
-    "kafka_servers"
+    "service_instance_id",
+    "token_hashes",
+    "kafka_servers",
+    "db_connection_str",
+    "db_name"
   ],
   "title": "ModSettings",
   "type": "object"

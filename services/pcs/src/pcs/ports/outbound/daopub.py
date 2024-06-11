@@ -13,26 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Main business-logic of this service"""
+"""Interface for broadcasting events to other services."""
+
+from abc import ABC, abstractmethod
+from typing import TypeAlias
 
 from ghga_event_schemas.pydantic_ import FileDeletionRequested
+from hexkit.protocols.daopub import DaoPublisher
 
-from pcs.ports.inbound.file_deletion import FileDeletionPort
-from pcs.ports.outbound.daopub import FileDeletionDao
+__all__ = ["FileDeletionDao", "OutboxPublisherFactoryPort"]
+
+FileDeletionDao: TypeAlias = DaoPublisher[FileDeletionRequested]
 
 
-class FileDeletion(FileDeletionPort):
-    """A service that commissions file deletions."""
+class OutboxPublisherFactoryPort(ABC):
+    """Port that provides a factory for user related data access objects.
 
-    def __init__(self, *, file_deletion_dao: FileDeletionDao):
-        """Initialize with outbound adapters."""
-        self._file_deletion_dao = file_deletion_dao
+    These objects will also publish changes according to the outbox pattern.
+    """
 
-    async def delete_file(self, *, file_id: str) -> None:
-        """Sends out an event to delete all occurrences of a certain file.
-
-        Args:
-            file_id: id for the file to delete.
-        """
-        file_deletion = FileDeletionRequested(file_id=file_id)
-        await self._file_deletion_dao.upsert(file_deletion)
+    @abstractmethod
+    async def get_file_deletion_dao(self) -> FileDeletionDao:
+        """Construct a DAO for interacting with file deletion requests in the database."""
+        ...

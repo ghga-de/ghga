@@ -19,9 +19,10 @@ from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 
 from pcs.adapters.inbound.fastapi_.config import TokenHashConfig
-from pcs.adapters.outbound.event_pub import EventPubTranslatorConfig
+from pcs.adapters.outbound.daopub import OutboxDaoConfig
 
 SERVICE_NAME = "pcs"
 
@@ -29,10 +30,11 @@ SERVICE_NAME = "pcs"
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     ApiConfigBase,
+    MongoKafkaConfig,
     KafkaConfig,
-    EventPubTranslatorConfig,
     TokenHashConfig,
     LoggingConfig,
+    OutboxDaoConfig,
 ):
     """Config parameters and their defaults."""
 

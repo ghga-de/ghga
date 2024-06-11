@@ -22,22 +22,17 @@ import httpx
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.simple_token import generate_token_and_hash
-from hexkit.providers.akafka.testutils import (
-    KafkaFixture,
-    get_clean_kafka_fixture,
-    kafka_container_fixture,
-)
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongokafka.testutils import MongoKafkaFixture
 from pcs.adapters.inbound.fastapi_.config import TokenHashConfig
 from pcs.config import Config
-from pcs.inject import prepare_core, prepare_rest_app
+from pcs.inject import get_file_deletion_dao, prepare_core, prepare_rest_app
 from pcs.ports.inbound.file_deletion import FileDeletionPort
+from pcs.ports.outbound.daopub import FileDeletionDao
 
 from tests_pcs.fixtures.config import get_config
 
-__all__ = ["joint_fixture", "JointFixture", "kafka", "kafka_container_fixture"]
-
-
-kafka = get_clean_kafka_fixture("session")
+__all__ = ["joint_fixture", "JointFixture"]
 
 
 @dataclass
@@ -45,30 +40,36 @@ class JointFixture:
     """Returned by the `joint_fixture`."""
 
     config: Config
+    dao: FileDeletionDao
     file_deletion: FileDeletionPort
     rest_client: httpx.AsyncClient
     kafka: KafkaFixture
+    mongo_kafka: MongoKafkaFixture
     token: str
 
 
 @pytest_asyncio.fixture
 async def joint_fixture(
+    mongo_kafka: MongoKafkaFixture,
     kafka: KafkaFixture,
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
     token, hash = generate_token_and_hash()
 
     token_hash_config = TokenHashConfig(token_hashes=[hash])
-
-    config = get_config(sources=[kafka.config, token_hash_config])
-
-    async with prepare_core(config=config) as file_deletion:
-        async with prepare_rest_app(config=config, core_override=file_deletion) as app:
-            async with AsyncTestClient(app=app) as rest_client:
-                yield JointFixture(
-                    config=config,
-                    file_deletion=file_deletion,
-                    rest_client=rest_client,
-                    kafka=kafka,
-                    token=token,
-                )
+    config = get_config(sources=[mongo_kafka.config, kafka.config, token_hash_config])
+    async with (
+        get_file_deletion_dao(config=config) as dao,
+        prepare_core(config=config) as file_deletion,
+        prepare_rest_app(config=config, core_override=file_deletion) as app,
+    ):
+        async with AsyncTestClient(app=app) as rest_client:
+            yield JointFixture(
+                config=config,
+                dao=dao,
+                file_deletion=file_deletion,
+                rest_client=rest_client,
+                mongo_kafka=mongo_kafka,
+                kafka=kafka,
+                token=token,
+            )

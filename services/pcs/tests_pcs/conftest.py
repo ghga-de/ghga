@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Interface for broadcasting events to other services."""
+"""Establish session-scoped fixtures, such as the testcontainer fixtures."""
 
-from abc import ABC, abstractmethod
+from hexkit.providers.akafka.testutils import (  # noqa: F401
+    kafka_container_fixture,
+    kafka_fixture,
+)
+from hexkit.providers.mongodb.testutils import (  # noqa: F401
+    mongodb_container_fixture,
+    mongodb_fixture,
+)
+from hexkit.providers.mongokafka.testutils import mongo_kafka_fixture  # noqa: F401
 
-
-class EventPublisherPort(ABC):
-    """A port through which DRS-specific events are communicated with the outside."""
-
-    @abstractmethod
-    async def delete_file(self, *, file_id: str) -> None:
-        """Communicate the event that a file needs to be deleted."""
+from tests_pcs.fixtures.joint import joint_fixture  # noqa: F401
