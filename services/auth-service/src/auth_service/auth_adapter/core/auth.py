@@ -87,7 +87,8 @@ class OIDCDiscovery:
         response = httpx.get(self.config_url, timeout=TIMEOUT)
         try:
             config = response.json()
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as error:
+            log.error("Cannot parse discovery object: %s", error)
             config = None
         if not isinstance(config, dict):
             raise ConfigurationDiscoveryError("Invalid discovery object")
