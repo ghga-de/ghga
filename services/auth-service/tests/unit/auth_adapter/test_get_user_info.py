@@ -48,21 +48,11 @@ def test_rejects_an_expired_access_token():
         auth.get_user_info(access_token)
 
 
-def test_rejects_an_access_token_without_sub():
-    """Test that you cannot get user info with missing subject."""
-    access_token = create_access_token(sub=None)
-    with pytest.raises(auth.UserInfoError, match="Missing value for sub claim"):
-        auth.get_user_info(access_token)
-
-
-def test_rejects_an_access_token_with_bad_token_class():
-    """Test that you cannot get user info with an unexpected token class."""
-    access_token = create_access_token(token_class="foo_token")
-    with pytest.raises(
-        auth.UserInfoError,
-        match=r"Not a valid token: Invalid 'token_class' value\."
-        " Expected 'access_token' got 'foo_token'",
-    ):
+@pytest.mark.parametrize("claim", ["sub", "aud", "scope"])
+def test_rejects_an_access_token_without_mandatory_claim(claim: str):
+    """Test that you cannot get user info with missing claims."""
+    access_token = create_access_token(**{claim: None})  # type: ignore
+    with pytest.raises(auth.UserInfoError, match=f"Missing value for {claim} claim"):
         auth.get_user_info(access_token)
 
 

@@ -150,7 +150,8 @@ class JWTConfig:
         "exp": None,
         "jti": None,
         "sub": None,
-        "token_class": "access_token",
+        "aud": None,
+        "scope": None,
     }
     check_ui_claims: dict[str, Any] = {  # userinfo claims that shall be verified
         "sub": None,

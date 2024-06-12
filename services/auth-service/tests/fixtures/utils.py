@@ -118,7 +118,8 @@ def create_access_token(
         "iss": str(CONFIG.oidc_authority_url),
         "client_id": CONFIG.oidc_client_id,
         "foo": "bar",
-        "token_class": "access_token",
+        "aud": CONFIG.oidc_client_id,
+        "scope": "openid email profile",
     }
     iat = int(now_as_utc().timestamp())
     if expired:

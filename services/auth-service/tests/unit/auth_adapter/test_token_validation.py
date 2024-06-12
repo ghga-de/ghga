@@ -39,7 +39,8 @@ def test_decodes_and_validates_a_valid_access_token():
         "iss",
         "jti",
         "sub",
-        "token_class",
+        "aud",
+        "scope",
     }
     assert claims["client_id"] == CONFIG.oidc_client_id
     assert claims["iss"] == str(CONFIG.oidc_authority_url)
@@ -47,7 +48,8 @@ def test_decodes_and_validates_a_valid_access_token():
     assert claims["jti"] == "123-456-789-0"
     assert claims["sub"] == "john@aai.org"
     assert claims["foo"] == "bar"
-    assert claims["token_class"] == "access_token"
+    assert claims["aud"] == CONFIG.oidc_client_id
+    assert claims["scope"] == "openid email profile"
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]

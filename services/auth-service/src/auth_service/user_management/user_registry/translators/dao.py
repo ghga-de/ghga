@@ -74,7 +74,7 @@ class UserDaoPublisherFactory(UserDaoPublisherFactoryPort):
             user_id=user.id,
             name=user.name,
             email=user.email,
-            title=user.title.value if user.title else None,
+            title=user.title.value if user.title else None,  # pyright: ignore
         )
         return validated_user.model_dump()
 
@@ -92,17 +92,6 @@ class UserDaoPublisherFactory(UserDaoPublisherFactoryPort):
             autopublish=True,
         )
 
-    @staticmethod
-    def _iva_to_event(iva: IvaDto) -> JsonObject:
-        """Translate an IVA to an event."""
-        return {
-            "id": iva.id,
-            "user_id": iva.user_id,
-            "type": iva.type.value,
-            "state": iva.state.value,
-            "value": iva.value,
-        }
-
     async def get_iva_dao(self) -> DaoPublisher[IvaDto]:
         """Construct a DAO for interacting with IVA data in a database.
 
@@ -113,7 +102,7 @@ class UserDaoPublisherFactory(UserDaoPublisherFactoryPort):
             name=self._ivas_collection,
             dto_model=IvaDto,
             id_field="id",
-            dto_to_event=self._iva_to_event,
+            dto_to_event=lambda dto: None,
             event_topic=self._iva_events_topic,
             autopublish=False,
         )

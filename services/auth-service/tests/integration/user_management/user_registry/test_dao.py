@@ -16,8 +16,11 @@
 
 """Test user specific DAOs."""
 
+from collections.abc import Generator
+
 import pytest
 from ghga_service_commons.utils.utc_dates import utc_datetime
+from hexkit.correlation import correlation_id_var, new_correlation_id
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import KafkaFixture, RecordedEvent
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -42,7 +45,7 @@ from auth_service.user_management.user_registry.models.users import (
 @pytest.fixture(name="user_dao_factory")
 def fixture_user_dao(
     mongodb: MongoDbFixture, kafka: KafkaFixture
-) -> UserDaoPublisherFactoryPort:
+) -> Generator[UserDaoPublisherFactoryPort, None, None]:
     """Create a user DAO factory for testing."""
     config = Config(
         db_connection_str=mongodb.config.db_connection_str,
@@ -55,7 +58,10 @@ def fixture_user_dao(
     dao_publisher_factory = MongoKafkaDaoPublisherFactory(
         config=config, event_publisher=kafka.publisher
     )
-    return get_user_dao_factory(config, dao_publisher_factory)
+    correlation_id = new_correlation_id()
+    token = correlation_id_var.set(correlation_id)
+    yield get_user_dao_factory(config, dao_publisher_factory)
+    correlation_id_var.reset(token)
 
 
 @pytest.mark.asyncio()

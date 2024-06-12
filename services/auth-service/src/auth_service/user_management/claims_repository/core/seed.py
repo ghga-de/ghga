@@ -19,6 +19,7 @@
 import logging
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.correlation import set_new_correlation_id
 from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
 
 from auth_service.config import Config
@@ -121,20 +122,21 @@ async def seed_data_steward_claims(config: Config) -> None:
     if not data_stewards:
         log.warning("No data stewards are defined in the configuration.")
         return
-    async for dao_publisher_factory in get_mongo_kafka_dao_factory(config=config):
-        user_dao = await get_user_dao(
-            dao_factory=get_user_dao_factory(
-                config=config,
-                dao_publisher_factory=dao_publisher_factory,
+    async with set_new_correlation_id():
+        async for dao_publisher_factory in get_mongo_kafka_dao_factory(config=config):
+            user_dao = await get_user_dao(
+                dao_factory=get_user_dao_factory(
+                    config=config,
+                    dao_publisher_factory=dao_publisher_factory,
+                )
             )
-        )
-        claim_dao = await get_claim_dao(
-            dao_factory=get_claim_dao_factory(
-                config=config,
-                dao_factory=get_mongodb_dao_factory(config=config),
+            claim_dao = await get_claim_dao(
+                dao_factory=get_claim_dao_factory(
+                    config=config,
+                    dao_factory=get_mongodb_dao_factory(config=config),
+                )
             )
-        )
-        await _remove_existing_data_steward_claims(claim_dao=claim_dao)
-        await _add_configured_data_steward_claims(
-            data_stewards, user_dao=user_dao, claim_dao=claim_dao
-        )
+            await _remove_existing_data_steward_claims(claim_dao=claim_dao)
+            await _add_configured_data_steward_claims(
+                data_stewards, user_dao=user_dao, claim_dao=claim_dao
+            )
