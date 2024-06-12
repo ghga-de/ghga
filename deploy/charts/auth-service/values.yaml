@@ -94,9 +94,9 @@ parameters:
 
     # general
     api_ext_path: /api/auth
-    api_root_path: ''
+    api_root_path: ""
 
-    auto_reload: true
+    auto_reload: false
 
     service_name: auth_service
     db_name: auth-db
