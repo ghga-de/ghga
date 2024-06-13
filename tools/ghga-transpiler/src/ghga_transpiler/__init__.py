@@ -18,7 +18,7 @@
 
 from openpyxl.xml import DEFUSEDXML
 
-__version__ = "2.1.1"
+__version__ = "2.1.4"
 
 if not DEFUSEDXML:
     raise RuntimeError(
