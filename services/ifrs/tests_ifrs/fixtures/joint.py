@@ -30,14 +30,17 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
     S3ObjectStoragesConfig,
 )
+from hexkit.providers.akafka.provider import KafkaOutboxSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
-from ifrs.adapters.outbound.dao import FileMetadataDaoConstructor
+from ifrs.adapters.inbound.idempotent import get_idempotence_handler
+from ifrs.adapters.outbound.dao import get_file_metadata_dao
 from ifrs.config import Config
-from ifrs.inject import prepare_core
+from ifrs.inject import prepare_core, prepare_outbox_subscriber
 from ifrs.ports.inbound.file_registry import FileRegistryPort
+from ifrs.ports.inbound.idempotent import IdempotenceHandlerPort
 from ifrs.ports.outbound.dao import FileMetadataDaoPort
 
 from tests_ifrs.fixtures.config import get_config
@@ -65,7 +68,9 @@ class JointFixture:
     s3: S3Fixture
     file_metadata_dao: FileMetadataDaoPort
     file_registry: FileRegistryPort
+    idempotence_handler: IdempotenceHandlerPort
     kafka: KafkaFixture
+    outbox_subscriber: KafkaOutboxSubscriber
     outbox_bucket: str
     staging_bucket: str
     endpoint_aliases: EndpointAliases
@@ -78,8 +83,6 @@ async def joint_fixture(
     kafka: KafkaFixture,
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
-    # merge configs from different sources with the default one:
-
     node_config = S3ObjectStorageNodeConfig(
         bucket=PERMANENT_BUCKET, credentials=s3.config
     )
@@ -91,22 +94,33 @@ async def joint_fixture(
             endpoint_aliases.node1: node_config,
         }
     )
+
+    # merge configs from different sources with the default one:
     config = get_config(sources=[mongodb.config, object_storage_config, kafka.config])
     dao_factory = MongoDbDaoFactory(config=config)
-    file_metadata_dao = await FileMetadataDaoConstructor.construct(
-        dao_factory=dao_factory
-    )
+    file_metadata_dao = await get_file_metadata_dao(dao_factory=dao_factory)
 
     # Prepare the file registry (core)
     async with prepare_core(config=config) as file_registry:
-        yield JointFixture(
+        idempotence_handler = await get_idempotence_handler(
             config=config,
-            mongodb=mongodb,
-            s3=s3,
-            file_metadata_dao=file_metadata_dao,
             file_registry=file_registry,
-            kafka=kafka,
-            outbox_bucket=OUTBOX_BUCKET,
-            staging_bucket=STAGING_BUCKET,
-            endpoint_aliases=endpoint_aliases,
         )
+        async with prepare_outbox_subscriber(
+            config=config,
+            core_override=file_registry,
+            idempotence_handler_override=idempotence_handler,
+        ) as outbox_subscriber:
+            yield JointFixture(
+                config=config,
+                mongodb=mongodb,
+                s3=s3,
+                file_metadata_dao=file_metadata_dao,
+                file_registry=file_registry,
+                idempotence_handler=idempotence_handler,
+                kafka=kafka,
+                outbox_subscriber=outbox_subscriber,
+                outbox_bucket=OUTBOX_BUCKET,
+                staging_bucket=STAGING_BUCKET,
+                endpoint_aliases=endpoint_aliases,
+            )

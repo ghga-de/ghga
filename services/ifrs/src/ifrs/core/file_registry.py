@@ -95,6 +95,8 @@ class FileRegistry(FileRegistryPort):
         Raises:
             self.FileContentNotInStagingError:
                 When the file content is not present in the storage staging.
+            ValueError:
+                When the configuration for the storage alias is not found.
         """
         storage_alias = file_without_object_id.storage_alias
 

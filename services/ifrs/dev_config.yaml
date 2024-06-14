@@ -10,11 +10,8 @@ object_storages:
 service_instance_id: "001"
 kafka_servers: ["kafka:9092"]
 files_to_register_topic: file_interrogation
-files_to_register_type: file_interrogation_success
 files_to_stage_topic: file_downloads
-files_to_stage_type: file_stage_requested
 files_to_delete_topic: file_deletions
-files_to_delete_type: file_deletion_requested
 file_registered_event_topic: internal_file_registry
 file_registered_event_type: file_registered
 file_staged_event_topic: internal_file_registry

@@ -17,19 +17,24 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaOutboxSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from ifrs.adapters.inbound.event_sub import EventSubTranslator
-from ifrs.adapters.outbound.dao import FileMetadataDaoConstructor
+from ifrs.adapters.inbound.event_sub import (
+    FileDeletionRequestedListener,
+    FileValidationSuccessListener,
+    NonstagedFileRequestedListener,
+)
+from ifrs.adapters.inbound.idempotent import get_idempotence_handler
+from ifrs.adapters.outbound import dao
 from ifrs.adapters.outbound.event_pub import EventPubTranslator
 from ifrs.config import Config
 from ifrs.core.file_registry import FileRegistry
 from ifrs.ports.inbound.file_registry import FileRegistryPort
+from ifrs.ports.inbound.idempotent import IdempotenceHandlerPort
 
 
 @asynccontextmanager
@@ -37,9 +42,7 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[FileRegistryPort, No
     """Constructs and initializes all core components and their outbound dependencies."""
     dao_factory = MongoDbDaoFactory(config=config)
     object_storages = S3ObjectStorages(config=config)
-    file_metadata_dao = await FileMetadataDaoConstructor.construct(
-        dao_factory=dao_factory
-    )
+    file_metadata_dao = await dao.get_file_metadata_dao(dao_factory=dao_factory)
 
     async with KafkaEventPublisher.construct(config=config) as kafka_event_publisher:
         event_publisher = EventPubTranslator(
@@ -57,7 +60,7 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[FileRegistryPort, No
 def prepare_core_with_override(
     *,
     config: Config,
-    core_override: Optional[FileRegistryPort] = None,
+    core_override: FileRegistryPort | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return (
@@ -68,9 +71,12 @@ def prepare_core_with_override(
 
 
 @asynccontextmanager
-async def prepare_event_subscriber(
-    *, config: Config, core_override: Optional[FileRegistryPort] = None
-):
+async def prepare_outbox_subscriber(
+    *,
+    config: Config,
+    core_override: FileRegistryPort | None = None,
+    idempotence_handler_override: IdempotenceHandlerPort | None = None,
+) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the core_override parameter.
@@ -78,10 +84,22 @@ async def prepare_event_subscriber(
     async with prepare_core_with_override(
         config=config, core_override=core_override
     ) as file_registry:
-        event_sub_translator = EventSubTranslator(
-            file_registry=file_registry, config=config
-        )
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=event_sub_translator
-        ) as kafka_event_subscriber:
-            yield kafka_event_subscriber
+        idempotence_handler = idempotence_handler_override
+        if not idempotence_handler:
+            idempotence_handler = await get_idempotence_handler(
+                config=config,
+                file_registry=file_registry,
+            )
+
+        outbox_translators = [
+            cls(config=config, idempotence_handler=idempotence_handler)
+            for cls in (
+                FileDeletionRequestedListener,
+                FileValidationSuccessListener,
+                NonstagedFileRequestedListener,
+            )
+        ]
+        async with KafkaOutboxSubscriber.construct(
+            config=config, translators=outbox_translators
+        ) as kafka_outbox_subscriber:
+            yield kafka_outbox_subscriber

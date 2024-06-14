@@ -21,7 +21,7 @@ from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 
-from ifrs.adapters.inbound.event_sub import EventSubTranslatorConfig
+from ifrs.adapters.inbound.event_sub import OutboxSubTranslatorConfig
 from ifrs.adapters.outbound.event_pub import EventPubTranslatorConfig
 
 
@@ -29,7 +29,7 @@ from ifrs.adapters.outbound.event_pub import EventPubTranslatorConfig
 class Config(
     MongoDbConfig,
     KafkaConfig,
-    EventSubTranslatorConfig,
+    OutboxSubTranslatorConfig,
     EventPubTranslatorConfig,
     S3ObjectStoragesConfig,
     LoggingConfig,

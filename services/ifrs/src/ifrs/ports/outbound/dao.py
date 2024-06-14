@@ -15,10 +15,15 @@
 
 """DAO interface for accessing the database."""
 
-# pylint: disable=unused-import
 from hexkit.protocols.dao import DaoNaturalId, ResourceNotFoundError  # noqa: F401
 
-from ifrs.core import models
+from ifrs.adapters.inbound import models
+from ifrs.core.models import FileMetadata
 
 # port described by a type alias:
-FileMetadataDaoPort = DaoNaturalId[models.FileMetadata]
+FileMetadataDaoPort = DaoNaturalId[FileMetadata]
+NonStagedFileRequestedDaoPort = DaoNaturalId[models.NonStagedFileRequestedRecord]
+FileUploadValidationSuccessDaoPort = DaoNaturalId[
+    models.FileUploadValidationSuccessRecord
+]
+FileDeletionRequestedDaoPort = DaoNaturalId[models.FileDeletionRequestedRecord]

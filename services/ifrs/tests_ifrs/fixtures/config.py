@@ -16,7 +16,6 @@
 """Test config"""
 
 from pathlib import Path
-from typing import Optional
 
 from ifrs.config import Config
 from pydantic_settings import BaseSettings
@@ -27,7 +26,7 @@ TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 
 
 def get_config(
-    sources: Optional[list[BaseSettings]] = None,
+    sources: list[BaseSettings] | None = None,
     default_config_yaml: Path = TEST_CONFIG_YAML,
 ) -> Config:
     """Merges parameters from the default TEST_CONFIG_YAML with params inferred
