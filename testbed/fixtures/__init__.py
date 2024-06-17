@@ -58,7 +58,7 @@ __all__ = [
 
 def event_loop_fixture():
     """Event loop fixture for when an event loop is needed beyond function scope."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     yield loop
     loop.close()
 
