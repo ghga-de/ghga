@@ -1,4 +1,4 @@
-# Monorepo Setup for Multiple Microservices
+# Monorepo Setup for Multiple Microservices (Ethiopian Wolf)
 **Epic Type:** Exploratory Epic
 
 Epic planning and implementation follows the

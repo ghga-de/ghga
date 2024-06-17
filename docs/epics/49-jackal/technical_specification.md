@@ -1,4 +1,4 @@
-# Re-Implementation of the Metadata Schema in Schemapack
+# Re-Implementation of the Metadata Schema in Schemapack (Jackal)
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the

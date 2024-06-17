@@ -56,3 +56,7 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (46) [Sugar Ant](./46-sugar-ant/technical_specification.md): Integrate 2FA and IVA functionality
 - (47) [Bluestreak Cleaner Wrasse](./47-bluestreak-cleaner-wrasse/technical_specification.md): Automatically remove stale content from buckets
 - (48) [Kori Bustard](./48-kori-bustard/technical_specification.md): Notification Orchestration Service
+- (49) [Jackal](./49-jackal/technical_specification.md): Re-Implementation of the Metadata Schema in Schemapack
+- (50) [Dhole](./50-dhole/technical_specification.md): Rewriting existing metldata transformations
+- (51) [Ethiopian Wolf](./51-ethiopian-wolf/technical_specification.md): Monorepo Setup for Multiple Microservices
+- (52) [Hero Shrew](./52-hero-shrew/technical_specification.md): Outbox Pattern Refactoring
