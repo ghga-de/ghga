@@ -27,7 +27,7 @@ from pytest_httpx import HTTPXMock
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
 
-pytestmark = pytest.mark.asyncio(scope="session")
+pytestmark = pytest.mark.asyncio()
 
 
 DOWNLOAD_ACCESS_URL = "http://test-access:1234"

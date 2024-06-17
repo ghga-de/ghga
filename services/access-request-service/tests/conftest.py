@@ -16,22 +16,13 @@
 
 """Setup for testing the access request service."""
 
-import pytest
-from hexkit.providers.akafka.testutils import get_kafka_fixture
-from hexkit.providers.mongodb.testutils import get_mongodb_fixture
+from hexkit.providers.akafka.testutils import (  # noqa: F401
+    kafka_container_fixture,
+    kafka_fixture,
+)
+from hexkit.providers.mongodb.testutils import (  # noqa: F401
+    mongodb_container_fixture,
+    mongodb_fixture,
+)
 
-from .fixtures import JointFixture, get_joint_fixture
-
-
-@pytest.fixture(autouse=True)
-def reset_state(joint_fixture: JointFixture):
-    """Clear joint_fixture state before tests.
-
-    This is a function-level fixture because it needs to run in each test.
-    """
-    joint_fixture.mongodb.empty_collections()
-
-
-kafka_fixture = get_kafka_fixture("session")
-mongodb_fixture = get_mongodb_fixture("session")
-joint_fixture = get_joint_fixture("session")
+from .fixtures import joint_fixture  # noqa: F401

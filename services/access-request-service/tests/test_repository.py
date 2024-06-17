@@ -36,7 +36,7 @@ from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
 from ars.ports.outbound.event_pub import EventPublisherPort
 
-pytestmark = pytest.mark.asyncio(scope="session")
+pytestmark = pytest.mark.asyncio()
 
 ONE_HOUR = timedelta(seconds=60 * 60)
 ONE_YEAR = timedelta(days=365)
@@ -672,7 +672,7 @@ async def test_set_status_to_allowed_overriding_iva():
     )
 
 
-async def test_set_status_to_allowed_witout_iva():
+async def test_set_status_to_allowed_without_iva():
     """Test setting the status of a request from pending to allowed without any IVA."""
     original_request = await dao.get_by_id("request-id-4")
     original_dict = original_request.model_dump()

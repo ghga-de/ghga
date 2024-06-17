@@ -30,7 +30,7 @@ from ars.adapters.outbound.event_pub import (
 )
 from ars.core.models import AccessRequest, AccessRequestStatus
 
-pytestmark = pytest.mark.asyncio(scope="session")
+pytestmark = pytest.mark.asyncio()
 
 dummy_config = EventPubTranslatorConfig(
     access_request_allowed_event_type="access_request_allowed",

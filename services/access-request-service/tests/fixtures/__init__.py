@@ -24,7 +24,6 @@ from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
     sign_and_serialize_token,
 )
-from hexkit.custom_types import PytestScope
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest import fixture
@@ -38,7 +37,7 @@ __all__ = [
     "AUTH_CLAIMS_STEWARD",
     "fixture_auth_headers_doe",
     "fixture_auth_headers_steward",
-    "get_joint_fixture",
+    "joint_fixture",
     "JointFixture",
     "headers_for_token",
 ]
@@ -91,8 +90,9 @@ class JointFixture(NamedTuple):
     rest_client: AsyncTestClient
 
 
-async def joint_fixture_function(
-    mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture
+@pytest_asyncio.fixture()
+async def joint_fixture(
+    mongodb: MongoDbFixture, kafka: KafkaFixture
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing
 
@@ -101,8 +101,8 @@ async def joint_fixture_function(
     config = Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
         download_access_url="http://access",
-        **kafka_fixture.config.model_dump(),
-        **mongodb_fixture.config.model_dump(),
+        **kafka.config.model_dump(),
+        **mongodb.config.model_dump(),
     )
     async with prepare_core(config=config) as core:
         async with (
@@ -111,12 +111,7 @@ async def joint_fixture_function(
             async with AsyncTestClient(app=app) as rest_client:
                 yield JointFixture(
                     config=config,
-                    kafka=kafka_fixture,
-                    mongodb=mongodb_fixture,
+                    kafka=kafka,
+                    mongodb=mongodb,
                     rest_client=rest_client,
                 )
-
-
-def get_joint_fixture(scope: PytestScope = "function"):
-    """Produce a joint fixture with desired scope"""
-    return pytest_asyncio.fixture(joint_fixture_function, scope=scope)

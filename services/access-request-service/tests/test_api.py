@@ -29,7 +29,7 @@ from tests.fixtures import (  # noqa: F401
     fixture_auth_headers_steward,
 )
 
-pytestmark = pytest.mark.asyncio(scope="session")
+pytestmark = pytest.mark.asyncio()
 
 DATE_NOW = now_as_utc()
 ONE_YEAR = timedelta(days=365)
