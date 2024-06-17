@@ -44,3 +44,9 @@ parameters:
     workers: 1
 
 shareProcessNamespace: false
+
+# Used to add image pull secrets to deployment
+# imagePullSecretNames:
+#  - name: dockerhub
+#  - name: ex
+imagePullSecretNames: []

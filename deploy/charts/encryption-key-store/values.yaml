@@ -47,6 +47,12 @@ shareProcessNamespace: false
 kafkaSecrets:
   enabled: false
 
+# Used to add image pull secrets to deployment
+# imagePullSecretNames:
+#  - name: dockerhub
+#  - name: ex
+imagePullSecretNames: []
+
 # Add extra labels to the service pod
 # podExtraLabels:
 #   my-label: my-value

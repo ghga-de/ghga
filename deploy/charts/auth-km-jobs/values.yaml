@@ -23,3 +23,9 @@ envVars:
   vault_addr: https://hashicorp-vault.vault:8200
   vault_namespace: vault
   kube_role: auth-km-jobs-role
+
+# Used to add image pull secrets to deployment
+# imagePullSecretNames:
+#  - name: dockerhub
+#  - name: ex
+imagePullSecretNames: []
