@@ -35,6 +35,7 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
+
 from ifrs.adapters.inbound.idempotent import get_idempotence_handler
 from ifrs.adapters.outbound.dao import get_file_metadata_dao
 from ifrs.config import Config
@@ -42,7 +43,6 @@ from ifrs.inject import prepare_core, prepare_outbox_subscriber
 from ifrs.ports.inbound.file_registry import FileRegistryPort
 from ifrs.ports.inbound.idempotent import IdempotenceHandlerPort
 from ifrs.ports.outbound.dao import FileMetadataDaoPort
-
 from tests_ifrs.fixtures.config import get_config
 
 OUTBOX_BUCKET = "outbox"

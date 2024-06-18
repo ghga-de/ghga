@@ -15,7 +15,7 @@
 
 """Tests for functionality related to the outbox subscriber."""
 
-from typing import Callable
+from collections.abc import Callable
 from unittest.mock import AsyncMock
 
 import pytest
@@ -24,14 +24,14 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.correlation import get_correlation_id
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb import MongoDbDaoFactory
+from logot import Logot, logged
+from pydantic import BaseModel
+
 from ifrs.adapters.inbound import models
 from ifrs.adapters.inbound.utils import check_record_is_new, make_record_from_update
 from ifrs.adapters.outbound.dao import (
     get_file_deletion_requested_dao,
 )
-from logot import Logot, logged
-from pydantic import BaseModel
-
 from tests_ifrs.fixtures.joint import JointFixture
 
 CHANGE_EVENT_TYPE = "upserted"

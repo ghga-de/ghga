@@ -23,8 +23,8 @@ from hexkit.providers.s3.testutils import (  # noqa: F401,
     S3Fixture,
     file_fixture,
 )
-from ifrs.ports.inbound.file_registry import FileRegistryPort
 
+from ifrs.ports.inbound.file_registry import FileRegistryPort
 from tests_ifrs.fixtures.example_data import EXAMPLE_METADATA, EXAMPLE_METADATA_BASE
 from tests_ifrs.fixtures.joint import JointFixture
 

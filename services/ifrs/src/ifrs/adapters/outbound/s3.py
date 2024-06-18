@@ -15,5 +15,4 @@
 
 """Implementation of object storage adapters."""
 
-# pylint: disable=unused-import
 from hexkit.providers.s3 import S3Config, S3ObjectStorage  # noqa: F401

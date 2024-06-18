@@ -16,6 +16,7 @@
 """Example data used for testing."""
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
+
 from ifrs.core import models
 
 EXAMPLE_METADATA_BASE = models.FileMetadataBase(

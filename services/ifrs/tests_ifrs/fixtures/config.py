@@ -17,9 +17,9 @@
 
 from pathlib import Path
 
-from ifrs.config import Config
 from pydantic_settings import BaseSettings
 
+from ifrs.config import Config
 from tests_ifrs.fixtures.utils import BASE_DIR
 
 TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"

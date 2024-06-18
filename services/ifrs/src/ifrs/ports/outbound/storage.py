@@ -15,7 +15,6 @@
 
 """Interfaces for object storage adapters and the exception they may throw."""
 
-# pylint: disable=unused-import
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 
 # Further abstraction seems not adequate here, thus using the protocol as port.
