@@ -30,7 +30,7 @@ class IngestTokenAuthContext(BaseModel):
     """Auth context holding the ingest token."""
 
     token: str = Field(
-        ...,
+        default=...,
         description="A simple alphanumeric token to authenticate the ingest of "
         + "file upload metadata.",
     )

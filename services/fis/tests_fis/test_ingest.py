@@ -26,7 +26,7 @@ from fis.ports.inbound.ingest import (
 )
 from ghga_service_commons.utils.crypt import encrypt, generate_key_pair
 
-from tests_fis.fixtures.joint import JointFixture
+from tests_fis.fixtures.joint import TEST_PAYLOAD, JointFixture
 
 pytestmark = pytest.mark.asyncio()
 
@@ -34,7 +34,7 @@ pytestmark = pytest.mark.asyncio()
 async def test_decryption_happy(joint_fixture: JointFixture):
     """Test decryption with valid keypair and correct file upload metadata format."""
     payload = UploadMetadata(
-        **joint_fixture.payload.model_dump(),
+        **TEST_PAYLOAD.model_dump(),
         secret_id="test_secret_id",
     )
 
@@ -54,7 +54,7 @@ async def test_decryption_happy(joint_fixture: JointFixture):
 async def test_legacy_decryption_happy(joint_fixture: JointFixture):
     """Test decryption with valid keypair and correct file upload metadata format."""
     payload = LegacyUploadMetadata(
-        **joint_fixture.payload.model_dump(),
+        **TEST_PAYLOAD.model_dump(),
         file_secret=base64.b64encode(os.urandom(32)).decode("utf-8"),
     )
 
@@ -78,7 +78,7 @@ async def test_decryption_sad(joint_fixture: JointFixture):
     # test faulty payload
     encrypted_payload = EncryptedPayload(
         payload=encrypt(
-            data=joint_fixture.payload.model_dump_json(),
+            data=TEST_PAYLOAD.model_dump_json(),
             key=joint_fixture.keypair.public,
         )
     )
@@ -92,7 +92,7 @@ async def test_decryption_sad(joint_fixture: JointFixture):
     keypair2 = generate_key_pair()
 
     payload = UploadMetadata(
-        **joint_fixture.payload.model_dump(),
+        **TEST_PAYLOAD.model_dump(),
         secret_id="test_secret_id",
     )
 
@@ -111,7 +111,7 @@ async def test_legacy_decryption_sad(joint_fixture: JointFixture):
     # test faulty payload
     encrypted_payload = EncryptedPayload(
         payload=encrypt(
-            data=joint_fixture.payload.model_dump_json(),
+            data=TEST_PAYLOAD.model_dump_json(),
             key=joint_fixture.keypair.public,
         )
     )
@@ -125,7 +125,7 @@ async def test_legacy_decryption_sad(joint_fixture: JointFixture):
     keypair2 = generate_key_pair()
 
     payload = LegacyUploadMetadata(
-        **joint_fixture.payload.model_dump(),
+        **TEST_PAYLOAD.model_dump(),
         file_secret=base64.b64encode(os.urandom(32)).decode("utf-8"),
     )
 

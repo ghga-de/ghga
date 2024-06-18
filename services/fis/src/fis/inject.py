@@ -21,11 +21,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
-from hexkit.providers.akafka.provider import KafkaEventPublisher
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.configure import get_configured_app
-from fis.adapters.outbound.event_pub import EventPubTranslator
+from fis.adapters.outbound.daopub import OutboxDaoPublisherFactory
 from fis.adapters.outbound.vault import VaultAdapter
 from fis.config import Config
 from fis.core.ingest import LegacyUploadMetadataProcessor, UploadMetadataProcessor
@@ -33,6 +33,29 @@ from fis.ports.inbound.ingest import (
     LegacyUploadMetadataProcessorPort,
     UploadMetadataProcessorPort,
 )
+from fis.ports.outbound.daopub import FileUploadValidationSuccessDao
+
+
+@asynccontextmanager
+async def get_mongo_kafka_dao_factory(
+    config: Config,
+) -> AsyncGenerator[MongoKafkaDaoPublisherFactory, None]:
+    """Get a MongoDB DAO publisher factory."""
+    async with MongoKafkaDaoPublisherFactory.construct(config=config) as factory:
+        yield factory
+
+
+@asynccontextmanager
+async def get_file_validation_success_dao(
+    *, config: Config
+) -> AsyncGenerator[FileUploadValidationSuccessDao, None]:
+    """Get a FileUploadValidationSuccess dao."""
+    async with get_mongo_kafka_dao_factory(config=config) as dao_publisher_factory:
+        outbox_dao_factory = OutboxDaoPublisherFactory(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
+        outbox_dao = await outbox_dao_factory.get_file_validation_success_dao()
+        yield outbox_dao
 
 
 @asynccontextmanager
@@ -43,17 +66,16 @@ async def prepare_core(
 ]:
     """Constructs and initializes all core components and their outbound dependencies."""
     vault_adapter = VaultAdapter(config=config)
-    async with KafkaEventPublisher.construct(config=config) as event_pub_provider:
-        event_publisher = EventPubTranslator(config=config, provider=event_pub_provider)
+    async with get_file_validation_success_dao(config=config) as outbox_dao:
         yield (
             UploadMetadataProcessor(
                 config=config,
-                event_publisher=event_publisher,
+                file_validation_success_dao=outbox_dao,
                 vault_adapter=vault_adapter,
             ),
             LegacyUploadMetadataProcessor(
                 config=config,
-                event_publisher=event_publisher,
+                file_validation_success_dao=outbox_dao,
                 vault_adapter=vault_adapter,
             ),
         )

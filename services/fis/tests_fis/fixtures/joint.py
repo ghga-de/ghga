@@ -35,8 +35,11 @@ from ghga_service_commons.utils.crypt import (
 )
 from ghga_service_commons.utils.simple_token import generate_token_and_hash
 from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from tests_fis.fixtures.config import get_config
+
+__all__ = ["joint_fixture", "JointFixture", "TEST_PAYLOAD"]
 
 TEST_PAYLOAD = UploadMetadataBase(
     file_id="abc",
@@ -57,7 +60,6 @@ class JointFixture:
     config: Config
     keypair: KeyPair
     token: str
-    payload: UploadMetadataBase
     kafka: KafkaFixture
     rest_client: httpx.AsyncClient
     s3_endpoint_alias: str
@@ -66,35 +68,38 @@ class JointFixture:
 
 
 @pytest_asyncio.fixture
-async def joint_fixture(kafka: KafkaFixture) -> AsyncGenerator[JointFixture, None]:
+async def joint_fixture(
+    kafka: KafkaFixture, mongodb: MongoDbFixture
+) -> AsyncGenerator[JointFixture, None]:
     """Generate keypair for testing and setup container with updated config"""
     keypair = generate_key_pair()
     private_key = encode_key(key=keypair.private)
 
     token, token_hash = generate_token_and_hash()
 
-    config = get_config(sources=[kafka.config])
+    config = get_config(sources=[kafka.config, mongodb.config])
     # cannot update inplace, copy and update instead
     config = config.model_copy(
         update={"private_key": private_key, "token_hashes": [token_hash]}
     )
-    async with prepare_core(config=config) as (
-        upload_metadata_processor,
-        legacy_upload_metadata_processor,
-    ):
-        async with prepare_rest_app(
+    async with (
+        prepare_core(config=config) as (
+            upload_metadata_processor,
+            legacy_upload_metadata_processor,
+        ),
+        prepare_rest_app(
             config=config,
             core_override=(upload_metadata_processor, legacy_upload_metadata_processor),
-        ) as app:
-            async with AsyncTestClient(app=app) as rest_client:
-                yield JointFixture(
-                    config=config,
-                    keypair=keypair,
-                    payload=TEST_PAYLOAD,
-                    token=token,
-                    kafka=kafka,
-                    rest_client=rest_client,
-                    s3_endpoint_alias=config.selected_storage_alias,
-                    upload_metadata_processor=upload_metadata_processor,
-                    legacy_upload_metadata_processor=legacy_upload_metadata_processor,
-                )
+        ) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        yield JointFixture(
+            config=config,
+            keypair=keypair,
+            token=token,
+            kafka=kafka,
+            rest_client=rest_client,
+            s3_endpoint_alias=config.selected_storage_alias,
+            upload_metadata_processor=upload_metadata_processor,
+            legacy_upload_metadata_processor=legacy_upload_metadata_processor,
+        )

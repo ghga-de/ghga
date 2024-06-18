@@ -166,79 +166,21 @@
       "title": "Selected Storage Alias",
       "type": "string"
     },
-    "kafka_servers": {
-      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+    "file_upload_validation_success_topic": {
+      "description": "The name of the topic use to publish FileUploadValidationSuccess events.",
       "examples": [
-        [
-          "localhost:9092"
-        ]
+        "file_upload_validation_success"
       ],
-      "items": {
-        "type": "string"
-      },
-      "title": "Kafka Servers",
-      "type": "array"
-    },
-    "kafka_security_protocol": {
-      "default": "PLAINTEXT",
-      "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
-      "enum": [
-        "PLAINTEXT",
-        "SSL"
-      ],
-      "title": "Kafka Security Protocol",
+      "title": "File Upload Validation Success Topic",
       "type": "string"
     },
-    "kafka_ssl_cafile": {
-      "default": "",
-      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
-      "title": "Kafka Ssl Cafile",
-      "type": "string"
-    },
-    "kafka_ssl_certfile": {
-      "default": "",
-      "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
-      "title": "Kafka Ssl Certfile",
-      "type": "string"
-    },
-    "kafka_ssl_keyfile": {
-      "default": "",
-      "description": "Optional filename containing the client private key.",
-      "title": "Kafka Ssl Keyfile",
-      "type": "string"
-    },
-    "kafka_ssl_password": {
-      "default": "",
-      "description": "Optional password to be used for the client private key.",
-      "format": "password",
-      "title": "Kafka Ssl Password",
-      "type": "string",
-      "writeOnly": true
-    },
-    "generate_correlation_id": {
-      "default": true,
-      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+    "file_validations_collection": {
+      "default": "file-validations",
+      "description": "The name of the collection used to store FileUploadValidationSuccess events.",
       "examples": [
-        true,
-        false
+        "file-validations"
       ],
-      "title": "Generate Correlation Id",
-      "type": "boolean"
-    },
-    "publisher_topic": {
-      "description": "Topic name expected by downstream services. Use the topic name from the interrogation room service.",
-      "examples": [
-        "file_interrogation"
-      ],
-      "title": "Publisher Topic",
-      "type": "string"
-    },
-    "publisher_type": {
-      "description": "Type expected by downstream services. Use the type from the interrogation room service.",
-      "examples": [
-        "file_validation_success"
-      ],
-      "title": "Publisher Type",
+      "title": "File Validations Collection",
       "type": "string"
     },
     "host": {
@@ -363,6 +305,83 @@
         []
       ],
       "title": "Cors Allowed Headers"
+    },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, the a newly correlation ID will be generated and used in the event header.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
+    },
+    "kafka_servers": {
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "examples": [
+        [
+          "localhost:9092"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Kafka Servers",
+      "type": "array"
+    },
+    "kafka_security_protocol": {
+      "default": "PLAINTEXT",
+      "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
+      "enum": [
+        "PLAINTEXT",
+        "SSL"
+      ],
+      "title": "Kafka Security Protocol",
+      "type": "string"
+    },
+    "kafka_ssl_cafile": {
+      "default": "",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
+      "title": "Kafka Ssl Cafile",
+      "type": "string"
+    },
+    "kafka_ssl_certfile": {
+      "default": "",
+      "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
+      "title": "Kafka Ssl Certfile",
+      "type": "string"
+    },
+    "kafka_ssl_keyfile": {
+      "default": "",
+      "description": "Optional filename containing the client private key.",
+      "title": "Kafka Ssl Keyfile",
+      "type": "string"
+    },
+    "kafka_ssl_password": {
+      "default": "",
+      "description": "Optional password to be used for the client private key.",
+      "format": "password",
+      "title": "Kafka Ssl Password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "db_connection_str": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "password",
+      "title": "Db Connection Str",
+      "type": "string",
+      "writeOnly": true
+    },
+    "db_name": {
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
+      "title": "Db Name",
+      "type": "string"
     }
   },
   "required": [
@@ -373,9 +392,10 @@
     "source_bucket_id",
     "token_hashes",
     "selected_storage_alias",
+    "file_upload_validation_success_topic",
     "kafka_servers",
-    "publisher_topic",
-    "publisher_type"
+    "db_connection_str",
+    "db_name"
   ],
   "title": "ModSettings",
   "type": "object"

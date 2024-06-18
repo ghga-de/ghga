@@ -1,13 +1,10 @@
-# Please only mention the non-default settings here:
-
 service_name: fis
 selected_storage_alias: staging
 source_bucket_id: staging
 private_key: dummy-key
 token_hashes: [abcdef, ghijkl]
 
-publisher_topic: file_interrogation
-publisher_type: file_validation_success
+file_upload_validation_success_topic: file_upload_validation_success
 
 service_instance_id: '1'
 kafka_servers: ["kafka:9092"]
@@ -19,3 +16,5 @@ vault_verify: True
 vault_path: ekss
 vault_secrets_mount_point: secret
 vault_kube_role: dummy-role
+db_connection_str: "mongodb://mongodb:27017"
+db_name: "dev_db"

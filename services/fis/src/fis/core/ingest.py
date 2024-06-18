@@ -17,7 +17,9 @@
 import json
 import logging
 
+from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
 from ghga_service_commons.utils.crypt import decrypt
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from nacl.exceptions import CryptoError
 from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings
@@ -30,7 +32,7 @@ from fis.ports.inbound.ingest import (
     VaultCommunicationError,
     WrongDecryptedFormatError,
 )
-from fis.ports.outbound.event_pub import EventPublisherPort
+from fis.ports.outbound.daopub import FileUploadValidationSuccessDao
 from fis.ports.outbound.vault.client import VaultAdapterPort
 
 log = logging.getLogger(__name__)
@@ -40,26 +42,53 @@ class ServiceConfig(BaseSettings):
     """Specific configs for authentication and encryption"""
 
     private_key: str = Field(
-        ...,
+        default=...,
         description="Base64 encoded private key of the keypair whose public key is used "
         + "to encrypt the payload.",
     )
     source_bucket_id: str = Field(
-        ...,
+        default=...,
         description="ID of the bucket the object(s) corresponding to the upload metadata "
         + "have been uploaded to. This should currently point to the staging bucket.",
     )
     token_hashes: list[str] = Field(
-        ...,
+        default=...,
         description="List of token hashes corresponding to the tokens that can be used "
         + "to authenticate calls to this service.",
     )
     selected_storage_alias: str = Field(
-        ...,
+        default=...,
         description="S3 endpoint alias of the object storage node the bucket and "
         + "object(s) corresponding to the upload metadata have been uploaded to. "
         + "This should point to a node containing a staging bucket.",
     )
+
+
+async def _send_file_metadata(
+    *,
+    dao: FileUploadValidationSuccessDao,
+    upload_metadata: models.UploadMetadataBase,
+    source_bucket_id: str,
+    secret_id: str,
+    s3_endpoint_alias: str,
+):
+    """Send FileUploadValidationSuccess event to downstream services"""
+    payload = FileUploadValidationSuccess(
+        upload_date=now_as_utc().isoformat(),
+        file_id=upload_metadata.file_id,
+        object_id=upload_metadata.object_id,
+        bucket_id=source_bucket_id,
+        s3_endpoint_alias=s3_endpoint_alias,
+        decrypted_size=upload_metadata.unencrypted_size,
+        decryption_secret_id=secret_id,
+        content_offset=0,
+        encrypted_part_size=upload_metadata.part_size,
+        encrypted_parts_md5=upload_metadata.encrypted_md5_checksums,
+        encrypted_parts_sha256=upload_metadata.encrypted_sha256_checksums,
+        decrypted_sha256=upload_metadata.unencrypted_checksum,
+    )
+
+    await dao.upsert(payload)
 
 
 class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
@@ -69,11 +98,11 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
         self,
         *,
         config: ServiceConfig,
-        event_publisher: EventPublisherPort,
+        file_validation_success_dao: FileUploadValidationSuccessDao,
         vault_adapter: VaultAdapterPort,
     ):
         self._config = config
-        self._event_publisher = event_publisher
+        self._file_validation_success_dao = file_validation_success_dao
         self._vault_adapter = vault_adapter
 
     async def decrypt_payload(
@@ -100,7 +129,8 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
         self, *, upload_metadata: models.LegacyUploadMetadata, secret_id: str
     ):
         """Send FileUploadValidationSuccess event to be processed by downstream services"""
-        await self._event_publisher.send_file_metadata(
+        await _send_file_metadata(
+            dao=self._file_validation_success_dao,
             secret_id=secret_id,
             source_bucket_id=self._config.source_bucket_id,
             upload_metadata=upload_metadata,
@@ -124,11 +154,11 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
         self,
         *,
         config: ServiceConfig,
-        event_publisher: EventPublisherPort,
+        file_validation_success_dao: FileUploadValidationSuccessDao,
         vault_adapter: VaultAdapterPort,
     ):
         self._config = config
-        self._event_publisher = event_publisher
+        self._file_validation_success_dao = file_validation_success_dao
         self._vault_adapter = vault_adapter
 
     async def decrypt_payload(
@@ -165,7 +195,8 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
         self, *, upload_metadata: models.UploadMetadata, secret_id: str
     ):
         """Send FileUploadValidationSuccess event to be processed by downstream services"""
-        await self._event_publisher.send_file_metadata(
+        await _send_file_metadata(
+            dao=self._file_validation_success_dao,
             secret_id=secret_id,
             source_bucket_id=self._config.source_bucket_id,
             upload_metadata=upload_metadata,

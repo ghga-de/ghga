@@ -17,25 +17,27 @@
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 
-from fis.adapters.outbound.event_pub import EventPubTranslatorConfig
+from fis.adapters.outbound.daopub import OutboxDaoConfig
 from fis.adapters.outbound.vault import VaultConfig
 from fis.core.ingest import ServiceConfig
 
+SERVICE_NAME = "fis"
 
-@config_from_yaml(prefix="fis")
+
+@config_from_yaml(prefix=SERVICE_NAME)
 class Config(
+    MongoKafkaConfig,
     ApiConfigBase,
-    EventPubTranslatorConfig,
-    KafkaConfig,
+    OutboxDaoConfig,
     ServiceConfig,
     VaultConfig,
     LoggingConfig,
 ):
     """Config parameters and their defaults."""
 
-    service_name: str = "fis"
+    service_name: str = SERVICE_NAME
 
 
 CONFIG = Config()  # type: ignore [call-arg]

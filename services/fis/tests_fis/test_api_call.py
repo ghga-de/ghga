@@ -30,7 +30,7 @@ from hexkit.providers.akafka.testutils import (
     check_recorded_events,
 )
 
-from tests_fis.fixtures.joint import JointFixture
+from tests_fis.fixtures.joint import TEST_PAYLOAD, JointFixture
 
 pytestmark = pytest.mark.asyncio()
 
@@ -87,7 +87,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     # test metadata ingest path
     payload = UploadMetadata(
-        **joint_fixture.payload.model_dump(),
+        **TEST_PAYLOAD.model_dump(),
         secret_id=secret_id,
     )
     encrypted_payload = EncryptedPayload(
@@ -99,7 +99,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     event_recorder = EventRecorder(
         kafka_servers=joint_fixture.kafka.config.kafka_servers,
-        topic=joint_fixture.config.publisher_topic,
+        topic=joint_fixture.config.file_upload_validation_success_topic,
     )
 
     async with event_recorder:
@@ -118,23 +118,23 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     payload = FileUploadValidationSuccess(
         upload_date=expected_upload_date,
-        file_id=joint_fixture.payload.file_id,
-        object_id=joint_fixture.payload.object_id,
+        file_id=TEST_PAYLOAD.file_id,
+        object_id=TEST_PAYLOAD.object_id,
         bucket_id=joint_fixture.config.source_bucket_id,
         s3_endpoint_alias=joint_fixture.s3_endpoint_alias,
-        decrypted_size=joint_fixture.payload.unencrypted_size,
+        decrypted_size=TEST_PAYLOAD.unencrypted_size,
         decryption_secret_id=secret_id,
         content_offset=0,
-        encrypted_part_size=joint_fixture.payload.part_size,
-        encrypted_parts_md5=joint_fixture.payload.encrypted_md5_checksums,
-        encrypted_parts_sha256=joint_fixture.payload.encrypted_sha256_checksums,
-        decrypted_sha256=joint_fixture.payload.unencrypted_checksum,
+        encrypted_part_size=TEST_PAYLOAD.part_size,
+        encrypted_parts_md5=TEST_PAYLOAD.encrypted_md5_checksums,
+        encrypted_parts_sha256=TEST_PAYLOAD.encrypted_sha256_checksums,
+        decrypted_sha256=TEST_PAYLOAD.unencrypted_checksum,
     )
 
     expected_event = ExpectedEvent(
         payload=payload.model_dump(),
-        type_=joint_fixture.config.publisher_type,
-        key=joint_fixture.payload.file_id,
+        type_="upserted",
+        key=TEST_PAYLOAD.file_id,
     )
 
     check_recorded_events(
@@ -162,7 +162,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
     """Test functionality with incoming API call"""
     payload = LegacyUploadMetadata(
-        **joint_fixture.payload.model_dump(),
+        **TEST_PAYLOAD.model_dump(),
         file_secret=base64.b64encode(os.urandom(32)).decode("utf-8"),
     )
     encrypted_payload = EncryptedPayload(
@@ -174,7 +174,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     event_recorder = EventRecorder(
         kafka_servers=joint_fixture.kafka.config.kafka_servers,
-        topic=joint_fixture.config.publisher_topic,
+        topic=joint_fixture.config.file_upload_validation_success_topic,
     )
     secret_id = "very_secret_id"
 
@@ -204,23 +204,23 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     payload = FileUploadValidationSuccess(
         upload_date=expected_upload_date,
-        file_id=joint_fixture.payload.file_id,
-        object_id=joint_fixture.payload.object_id,
+        file_id=TEST_PAYLOAD.file_id,
+        object_id=TEST_PAYLOAD.object_id,
         bucket_id=joint_fixture.config.source_bucket_id,
         s3_endpoint_alias=joint_fixture.s3_endpoint_alias,
-        decrypted_size=joint_fixture.payload.unencrypted_size,
+        decrypted_size=TEST_PAYLOAD.unencrypted_size,
         decryption_secret_id=secret_id,
         content_offset=0,
-        encrypted_part_size=joint_fixture.payload.part_size,
-        encrypted_parts_md5=joint_fixture.payload.encrypted_md5_checksums,
-        encrypted_parts_sha256=joint_fixture.payload.encrypted_sha256_checksums,
-        decrypted_sha256=joint_fixture.payload.unencrypted_checksum,
+        encrypted_part_size=TEST_PAYLOAD.part_size,
+        encrypted_parts_md5=TEST_PAYLOAD.encrypted_md5_checksums,
+        encrypted_parts_sha256=TEST_PAYLOAD.encrypted_sha256_checksums,
+        decrypted_sha256=TEST_PAYLOAD.unencrypted_checksum,
     )
 
     expected_event = ExpectedEvent(
         payload=payload.model_dump(),
-        type_=joint_fixture.config.publisher_type,
-        key=joint_fixture.payload.file_id,
+        type_="upserted",
+        key=TEST_PAYLOAD.file_id,
     )
 
     check_recorded_events(

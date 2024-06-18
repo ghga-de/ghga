@@ -15,20 +15,23 @@
 """Interface for broadcasting events to other services."""
 
 from abc import ABC, abstractmethod
+from typing import TypeAlias
 
-from fis.core.models import UploadMetadataBase
+from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
+from hexkit.protocols.daopub import DaoPublisher
+
+__all__ = ["FileUploadValidationSuccessDao", "OutboxPublisherFactoryPort"]
+
+FileUploadValidationSuccessDao: TypeAlias = DaoPublisher[FileUploadValidationSuccess]
 
 
-class EventPublisherPort(ABC):
-    """A port through which ingest events are communicated with the file backend services."""
+class OutboxPublisherFactoryPort(ABC):
+    """Port that provides a factory for user related data access objects.
+
+    These objects will also publish changes according to the outbox pattern.
+    """
 
     @abstractmethod
-    async def send_file_metadata(
-        self,
-        *,
-        upload_metadata: UploadMetadataBase,
-        source_bucket_id: str,
-        secret_id: str,
-        s3_endpoint_alias: str,
-    ):
-        """Send FileUploadValidationSuccess event to downstream services"""
+    async def get_file_validation_success_dao(self) -> FileUploadValidationSuccessDao:
+        """Construct a DAO for manipulating FileUploadValidationSuccess events in the DB."""
+        ...
