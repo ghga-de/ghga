@@ -21,8 +21,6 @@ from dataclasses import dataclass
 import httpx
 import pytest
 import pytest_asyncio
-from dcs.core import models
-from dcs.ports.outbound.dao import DrsObjectDaoPort
 from fastapi import status
 from ghga_service_commons.api.mock_router import (  # noqa: F401
     assert_all_responses_were_requested,
@@ -30,6 +28,8 @@ from ghga_service_commons.api.mock_router import (  # noqa: F401
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
+from dcs.core import models
+from dcs.ports.outbound.dao import DrsObjectDaoPort
 from tests_dcs.fixtures.joint import (
     EXAMPLE_FILE,
     JointFixture,

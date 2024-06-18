@@ -17,9 +17,9 @@
 
 from pathlib import Path
 
-from dcs.config import Config
 from pydantic_settings import BaseSettings
 
+from dcs.config import Config
 from tests_dcs.fixtures.utils import BASE_DIR
 
 TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"

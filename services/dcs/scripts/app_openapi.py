@@ -21,9 +21,10 @@
 import json
 from typing import Any
 
+from fastapi import FastAPI
+
 from dcs.adapters.inbound.fastapi_.configure import DrsApiConfig, get_openapi_schema
 from dcs.adapters.inbound.fastapi_.routes import router
-from fastapi import FastAPI
 
 app = FastAPI()
 app.include_router(router)
