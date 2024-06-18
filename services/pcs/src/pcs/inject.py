@@ -17,7 +17,6 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
@@ -65,7 +64,7 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[FileDeletionPort, No
 def prepare_core_with_override(
     *,
     config: Config,
-    core_override: Optional[FileDeletionPort] = None,
+    core_override: FileDeletionPort | None = None,
 ):
     """Return a context manager for preparing the core that can be overwritten
     with the given value.
@@ -81,7 +80,7 @@ def prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    core_override: Optional[FileDeletionPort] = None,
+    core_override: FileDeletionPort | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize an REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also

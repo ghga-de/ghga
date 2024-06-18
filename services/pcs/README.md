@@ -32,7 +32,6 @@ docker pull ghga/purge-controller-service:2.0.0
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-
 docker build -t ghga/purge-controller-service:2.0.0 .
 ```
 
@@ -75,16 +74,6 @@ The service requires the following configuration parameters:
 
   ```json
   "file_deletions"
-  ```
-
-
-- **`files_to_delete_type`** *(string)*: The type used for events informing about a file to be deleted.
-
-
-  Examples:
-
-  ```json
-  "file_deletion_requested"
   ```
 
 

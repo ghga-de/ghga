@@ -19,14 +19,6 @@
       "title": "Files To Delete Topic",
       "type": "string"
     },
-    "files_to_delete_type": {
-      "description": "The type used for events informing about a file to be deleted.",
-      "examples": [
-        "file_deletion_requested"
-      ],
-      "title": "Files To Delete Type",
-      "type": "string"
-    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -282,7 +274,6 @@
   },
   "required": [
     "files_to_delete_topic",
-    "files_to_delete_type",
     "service_instance_id",
     "token_hashes",
     "kafka_servers",

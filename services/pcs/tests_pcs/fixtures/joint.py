@@ -24,12 +24,12 @@ from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.simple_token import generate_token_and_hash
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongokafka.testutils import MongoKafkaFixture
+
 from pcs.adapters.inbound.fastapi_.config import TokenHashConfig
 from pcs.config import Config
 from pcs.inject import get_file_deletion_dao, prepare_core, prepare_rest_app
 from pcs.ports.inbound.file_deletion import FileDeletionPort
 from pcs.ports.outbound.daopub import FileDeletionDao
-
 from tests_pcs.fixtures.config import get_config
 
 __all__ = ["joint_fixture", "JointFixture"]

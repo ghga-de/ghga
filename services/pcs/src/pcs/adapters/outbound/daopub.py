@@ -37,11 +37,6 @@ class OutboxDaoConfig(BaseSettings):
         description="The name of the topic to receive events informing about files to delete.",
         examples=["file_deletions"],
     )
-    files_to_delete_type: str = Field(
-        default=...,
-        description="The type used for events informing about a file to be deleted.",
-        examples=["file_deletion_requested"],
-    )
 
 
 class OutboxDaoPublisherFactory(OutboxPublisherFactoryPort):
