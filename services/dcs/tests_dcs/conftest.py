@@ -14,6 +14,8 @@
 # limitations under the License.
 """Session-scoped fixture setup"""
 
+import pytest
+from hexkit.correlation import correlation_id_var, new_correlation_id
 from hexkit.providers.akafka.testutils import (  # noqa: F401
     kafka_container_fixture,
     kafka_fixture,
@@ -35,3 +37,12 @@ from tests_dcs.fixtures.joint import (  # noqa: F401
     joint_fixture,
     populated_fixture,
 )
+
+
+@pytest.fixture(autouse=True)
+def use_correlation_id():
+    """Provides a new correlation ID for each test case."""
+    correlation_id = new_correlation_id()
+    token = correlation_id_var.set(correlation_id)
+    yield
+    correlation_id_var.reset(token)

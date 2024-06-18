@@ -31,7 +31,6 @@ file_deleted_event_type: file_deleted
 file_registered_event_topic: file_downloads
 file_registered_event_type: file_registered
 files_to_delete_topic: file_deletions
-files_to_delete_type: file_deletion_requested
 files_to_register_topic: internal_file_registry
 files_to_register_type: file_registered
 generate_correlation_id: true

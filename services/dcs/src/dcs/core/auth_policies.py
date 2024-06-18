@@ -24,26 +24,26 @@ class WorkOrderContext(BaseModel):
     """Work order token model"""
 
     type: Literal["download"] | Literal["upload"] = Field(
-        ..., title="Type", description="Work type"
+        default=..., title="Type", description="Work type"
     )
     file_id: str = Field(
-        ...,
+        default=...,
         title="File ID",
         description="The ID of the file that shall be downloaded or uploaded",
     )
     user_id: str = Field(
-        ..., title="User ID", description="The internal ID of the user"
+        default=..., title="User ID", description="The internal ID of the user"
     )
     user_public_crypt4gh_key: str = Field(
         ..., description="Base64 encoded Crypt4GH public key of the user"
     )
     full_user_name: str = Field(
-        ...,
+        default=...,
         title="Full user name",
         description="The full name of the user (with academic title)",
     )
     email: EmailStr = Field(
-        ..., title="E-Mail", description="The email address of the user"
+        default=..., title="E-Mail", description="The email address of the user"
     )
 
     @field_validator("type")

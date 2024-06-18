@@ -31,12 +31,13 @@ from datetime import timedelta
 
 import httpx
 import pytest_asyncio
-from dcs.adapters.outbound.dao import DrsObjectDaoConstructor
+from dcs.adapters.outbound.dao import get_drs_dao
 from dcs.config import Config, WorkOrderTokenConfig
 from dcs.core import models
 from dcs.inject import (
     prepare_core,
     prepare_event_subscriber,
+    prepare_outbox_subscriber,
     prepare_rest_app,
 )
 from dcs.ports.inbound.data_repository import DataRepositoryPort
@@ -48,17 +49,10 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
     S3ObjectStoragesConfig,
 )
-from hexkit.providers.akafka import KafkaEventSubscriber
-from hexkit.providers.akafka.testutils import (
-    KafkaFixture,
-)
-from hexkit.providers.mongodb.testutils import (
-    MongoDbFixture,
-)
-from hexkit.providers.s3.testutils import (
-    S3Fixture,
-    temp_file_object,
-)
+from hexkit.providers.akafka import KafkaEventSubscriber, KafkaOutboxSubscriber
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.s3.testutils import S3Fixture, temp_file_object
 from jwcrypto.jwk import JWK
 from pydantic_settings import BaseSettings
 
@@ -103,6 +97,7 @@ class JointFixture:
     data_repository: DataRepositoryPort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
+    outbox_subscriber: KafkaOutboxSubscriber
     mongodb: MongoDbFixture
     s3: S3Fixture
     kafka: KafkaFixture
@@ -149,26 +144,32 @@ async def joint_fixture(
     # create storage entities:
     await s3.populate_buckets(buckets=[bucket_id])
 
-    async with prepare_core(config=config) as data_repository:
-        async with (
-            prepare_rest_app(config=config, data_repo_override=data_repository) as app,
-            prepare_event_subscriber(
-                config=config, data_repo_override=data_repository
-            ) as event_subscriber,
-        ):
-            async with AsyncTestClient(app=app) as rest_client:
-                yield JointFixture(
-                    config=config,
-                    bucket_id=bucket_id,
-                    data_repository=data_repository,
-                    rest_client=rest_client,
-                    event_subscriber=event_subscriber,
-                    mongodb=mongodb,
-                    s3=s3,
-                    kafka=kafka,
-                    jwk=jwk,
-                    endpoint_aliases=endpoint_aliases,
-                )
+    # prepare everything except the outbox subscriber
+    async with (
+        prepare_core(config=config) as data_repository,
+        prepare_rest_app(config=config, data_repo_override=data_repository) as app,
+        prepare_event_subscriber(
+            config=config, data_repo_override=data_repository
+        ) as event_subscriber,
+        AsyncTestClient(app=app) as rest_client,
+        prepare_outbox_subscriber(
+            config=config,
+            data_repo_override=data_repository,
+        ) as outbox_subscriber,
+    ):
+        yield JointFixture(
+            config=config,
+            bucket_id=bucket_id,
+            data_repository=data_repository,
+            rest_client=rest_client,
+            event_subscriber=event_subscriber,
+            outbox_subscriber=outbox_subscriber,
+            mongodb=mongodb,
+            s3=s3,
+            kafka=kafka,
+            jwk=jwk,
+            endpoint_aliases=endpoint_aliases,
+        )
 
 
 @dataclass(frozen=True)
@@ -229,9 +230,7 @@ async def populated_fixture(
     assert file_registered_event.decrypted_sha256 == EXAMPLE_FILE.decrypted_sha256
     assert file_registered_event.upload_date == EXAMPLE_FILE.creation_date
 
-    dao = await DrsObjectDaoConstructor.construct(
-        dao_factory=joint_fixture.mongodb.dao_factory
-    )
+    dao = await get_drs_dao(dao_factory=joint_fixture.mongodb.dao_factory)
 
     yield PopulatedFixture(
         mongodb_dao=dao,

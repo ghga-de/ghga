@@ -97,6 +97,14 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "files_to_delete_topic": {
+      "description": "The name of the topic to receive events informing about files to delete.",
+      "examples": [
+        "file_deletions"
+      ],
+      "title": "Files To Delete Topic",
+      "type": "string"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -162,22 +170,6 @@
         "file_registered"
       ],
       "title": "Files To Register Type",
-      "type": "string"
-    },
-    "files_to_delete_topic": {
-      "description": "The name of the topic to receive events informing about files to delete.",
-      "examples": [
-        "file_deletions"
-      ],
-      "title": "Files To Delete Topic",
-      "type": "string"
-    },
-    "files_to_delete_type": {
-      "description": "The type used for events informing about a file to be deleted.",
-      "examples": [
-        "file_deletion_requested"
-      ],
-      "title": "Files To Delete Type",
       "type": "string"
     },
     "download_served_event_topic": {
@@ -532,12 +524,11 @@
     }
   },
   "required": [
+    "files_to_delete_topic",
     "service_instance_id",
     "object_storages",
     "files_to_register_topic",
     "files_to_register_type",
-    "files_to_delete_topic",
-    "files_to_delete_type",
     "download_served_event_topic",
     "download_served_event_type",
     "unstaged_download_event_topic",

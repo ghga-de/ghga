@@ -37,7 +37,6 @@ files_to_register_type: file_registered
 unstaged_download_event_topic: file_downloads
 unstaged_download_event_type: unstaged_download_requested
 files_to_delete_topic: file_deletions
-files_to_delete_type: file_deletion_requested
 file_deleted_event_topic: file_downloads
 file_deleted_event_type: file_deleted
 auth_key: "{}"

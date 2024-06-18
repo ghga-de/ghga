@@ -15,9 +15,12 @@
 
 """Adapter for receiving events providing metadata on files"""
 
+import logging
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
+from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -25,12 +28,21 @@ from pydantic_settings import BaseSettings
 from dcs.core import models
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 
+log = logging.getLogger(__name__)
+
+__all__ = [
+    "EventSubTranslator",
+    "EventSubTranslatorConfig",
+    "FileDeletionRequestedListener",
+    "OutboxSubTranslatorConfig",
+]
+
 
 class EventSubTranslatorConfig(BaseSettings):
     """Config for receiving events providing metadata on files."""
 
     files_to_register_topic: str = Field(
-        ...,
+        default=...,
         description=(
             "The name of the topic to receive events informing about new files that shall"
             + " be made available for download."
@@ -38,23 +50,12 @@ class EventSubTranslatorConfig(BaseSettings):
         examples=["internal_file_registry"],
     )
     files_to_register_type: str = Field(
-        ...,
+        default=...,
         description=(
             "The type used for events informing about new files that shall"
             + " be made available for download."
         ),
         examples=["file_registered"],
-    )
-
-    files_to_delete_topic: str = Field(
-        ...,
-        description="The name of the topic to receive events informing about files to delete.",
-        examples=["file_deletions"],
-    )
-    files_to_delete_type: str = Field(
-        ...,
-        description="The type used for events informing about a file to be deleted.",
-        examples=["file_deletion_requested"],
     )
 
 
@@ -92,23 +93,52 @@ class EventSubTranslator(EventSubscriberProtocol):
 
         await self._data_repository.register_new_file(file=file)
 
-    async def _consume_file_deletions(self, *, payload: JsonObject) -> None:
-        """Consume file deletion events."""
-        validated_payload = get_validated_payload(
-            payload=payload, schema=event_schemas.FileDeletionRequested
-        )
-
-        await self._data_repository.delete_file(
-            file_id=validated_payload.file_id,
-        )
-
     async def _consume_validated(
         self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: str
     ) -> None:
         """Consume events from the topics of interest."""
         if type_ == self._config.files_to_register_type:
             await self._consume_files_to_register(payload=payload)
-        elif type_ == self._config.files_to_delete_type:
-            await self._consume_file_deletions(payload=payload)
         else:
             raise RuntimeError(f"Unexpected event of type: {type_}")
+
+
+class OutboxSubTranslatorConfig(BaseSettings):
+    """Config for the outbox subscriber"""
+
+    files_to_delete_topic: str = Field(
+        default=...,
+        description="The name of the topic to receive events informing about files to delete.",
+        examples=["file_deletions"],
+    )
+
+
+class FileDeletionRequestedListener(
+    DaoSubscriberProtocol[event_schemas.FileDeletionRequested]
+):
+    """A class that consumes FileDeletionRequested events."""
+
+    event_topic: str
+    dto_model = event_schemas.FileDeletionRequested
+
+    def __init__(
+        self,
+        *,
+        config: OutboxSubTranslatorConfig,
+        data_repository: DataRepositoryPort,
+    ):
+        self._data_repository = data_repository
+        self.event_topic = config.files_to_delete_topic
+
+    async def changed(
+        self, resource_id: str, update: event_schemas.FileDeletionRequested
+    ) -> None:
+        """Consume change event (created or updated) for File Deletion Requests."""
+        await self._data_repository.delete_file(file_id=resource_id)
+
+    async def deleted(self, resource_id: str) -> None:
+        """Consume event indicating the deletion of a File Deletion Request."""
+        log.warning(
+            "Received DELETED-type event for FileDeletionRequested with resource ID '%s'",
+            resource_id,
+        )

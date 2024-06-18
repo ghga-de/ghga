@@ -47,29 +47,29 @@ class DataRepositoryConfig(BaseSettings):
     """Config parameters needed for the DataRepository."""
 
     drs_server_uri: str = Field(
-        ...,
+        default=...,
         description="The base of the DRS URI to access DRS objects. Has to start with 'drs://'"
         + " and end with '/'.",
         examples=["drs://localhost:8080/"],
     )
     retry_access_after: int = Field(
-        120,
+        default=120,
         description="When trying to access a DRS object that is not yet in the outbox, instruct"
         + " to retry after this many seconds.",
     )
     ekss_base_url: str = Field(
-        ...,
+        default=...,
         description="URL containing host and port of the EKSS endpoint to retrieve"
         + " personalized envelope from",
         examples=["http://ekss:8080/"],
     )
     presigned_url_expires_after: PositiveInt = Field(
-        ...,
+        default=...,
         description="Expiration time in seconds for presigned URLS. Positive integer required",
         examples=[30],
     )
     cache_timeout: int = Field(
-        7,
+        default=7,
         description="Time in days since last access after which a file present in the "
         + "outbox should be unstaged and has to be requested from permanent storage again "
         + "for the next request.",

@@ -15,6 +15,8 @@
 
 """In this module object construction and dependency injection is carried out."""
 
+import asyncio
+
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 
@@ -22,6 +24,7 @@ from dcs.config import Config
 from dcs.inject import (
     prepare_event_subscriber,
     prepare_outbox_cleaner,
+    prepare_outbox_subscriber,
     prepare_rest_app,
 )
 
@@ -40,8 +43,14 @@ async def consume_events(run_forever: bool = True):
     config = Config()
     configure_logging(config=config)
 
-    async with prepare_event_subscriber(config=config) as event_subscriber:
-        await event_subscriber.run(forever=run_forever)
+    async with (
+        prepare_event_subscriber(config=config) as event_subscriber,
+        prepare_outbox_subscriber(config=config) as outbox_subscriber,
+    ):
+        await asyncio.gather(
+            event_subscriber.run(forever=run_forever),
+            outbox_subscriber.run(forever=run_forever),
+        )
 
 
 async def run_outbox_cleanup():

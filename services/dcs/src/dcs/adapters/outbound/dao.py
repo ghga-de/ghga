@@ -21,18 +21,12 @@ from dcs.core import models
 from dcs.ports.outbound.dao import DrsObjectDaoPort
 
 
-class DrsObjectDaoConstructor:
-    """Constructor compatible with the hexkit.inject.AsyncConstructable type. Used to
-    construct a DAO for interacting with DRS Object metadata in the database.
+async def get_drs_dao(*, dao_factory: DaoFactoryProtocol) -> DrsObjectDaoPort:
+    """Setup the DAOs using the specified provider of the
+    DaoFactoryProtocol.
     """
-
-    @staticmethod
-    async def construct(*, dao_factory: DaoFactoryProtocol) -> DrsObjectDaoPort:
-        """Setup the DAOs using the specified provider of the
-        DaoFactoryProtocol.
-        """
-        return await dao_factory.get_dao(
-            name="drs_objects",
-            dto_model=models.AccessTimeDrsObject,
-            id_field="file_id",
-        )
+    return await dao_factory.get_dao(
+        name="drs_objects",
+        dto_model=models.AccessTimeDrsObject,
+        id_field="file_id",
+    )

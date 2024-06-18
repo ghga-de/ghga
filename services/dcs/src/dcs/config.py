@@ -25,7 +25,10 @@ from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
-from dcs.adapters.inbound.event_sub import EventSubTranslatorConfig
+from dcs.adapters.inbound.event_sub import (
+    EventSubTranslatorConfig,
+    OutboxSubTranslatorConfig,
+)
 from dcs.adapters.inbound.fastapi_.configure import DrsApiConfig
 from dcs.adapters.outbound.event_pub import EventPubTranslatorConfig
 from dcs.core.data_repository import DataRepositoryConfig
@@ -56,6 +59,7 @@ class Config(
     EventSubTranslatorConfig,
     S3ObjectStoragesConfig,
     LoggingConfig,
+    OutboxSubTranslatorConfig,
 ):
     """Config parameters and their defaults."""
 
