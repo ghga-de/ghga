@@ -27,7 +27,7 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
     S3ObjectStoragesConfig,
 )
-from hexkit.providers.akafka import KafkaEventSubscriber
+from hexkit.providers.akafka import KafkaEventSubscriber, KafkaOutboxSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
@@ -37,6 +37,7 @@ from ucs.config import Config
 from ucs.inject import (
     prepare_core,
     prepare_event_subscriber,
+    prepare_outbox_subscriber,
     prepare_rest_app,
     prepare_storage_inspector,
 )
@@ -59,6 +60,7 @@ class JointFixture:
     file_metadata_service: FileMetadataServicePort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
+    outbox_subscriber: KafkaOutboxSubscriber
     mongodb: MongoDbFixture
     kafka: KafkaFixture
     s3: S3Fixture
@@ -97,29 +99,31 @@ async def joint_fixture_function(
             file_metadata_service,
         ),
         prepare_storage_inspector(config=config) as inbox_inspector,
+        prepare_rest_app(
+            config=config, core_override=(upload_service, file_metadata_service)
+        ) as app,
+        prepare_event_subscriber(
+            config=config, core_override=(upload_service, file_metadata_service)
+        ) as event_subscriber,
+        prepare_outbox_subscriber(
+            config=config, core_override=(upload_service, file_metadata_service)
+        ) as outbox_subscriber,
     ):
-        async with (
-            prepare_rest_app(
-                config=config, core_override=(upload_service, file_metadata_service)
-            ) as app,
-            prepare_event_subscriber(
-                config=config, core_override=(upload_service, file_metadata_service)
-            ) as event_subscriber,
-        ):
-            async with AsyncTestClient(app=app) as rest_client:
-                yield JointFixture(
-                    config=config,
-                    daos=daos,
-                    upload_service=upload_service,
-                    file_metadata_service=file_metadata_service,
-                    rest_client=rest_client,
-                    event_subscriber=event_subscriber,
-                    mongodb=mongodb,
-                    kafka=kafka,
-                    s3=s3,
-                    bucket_id=bucket_id,
-                    inbox_inspector=inbox_inspector,
-                )
+        async with AsyncTestClient(app=app) as rest_client:
+            yield JointFixture(
+                config=config,
+                daos=daos,
+                upload_service=upload_service,
+                file_metadata_service=file_metadata_service,
+                rest_client=rest_client,
+                event_subscriber=event_subscriber,
+                outbox_subscriber=outbox_subscriber,
+                mongodb=mongodb,
+                kafka=kafka,
+                s3=s3,
+                bucket_id=bucket_id,
+                inbox_inspector=inbox_inspector,
+            )
 
 
 def get_joint_fixture(scope: _ScopeName = "function"):

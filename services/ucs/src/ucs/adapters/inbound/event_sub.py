@@ -15,9 +15,12 @@
 
 """Receive events informing about files that are expected to be uploaded."""
 
+import logging
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
+from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -25,6 +28,8 @@ from pydantic_settings import BaseSettings
 from ucs.core import models
 from ucs.ports.inbound.file_service import FileMetadataServicePort
 from ucs.ports.inbound.upload_service import UploadServicePort
+
+log = logging.getLogger(__name__)
 
 
 class EventSubTranslatorConfig(BaseSettings):
@@ -46,18 +51,6 @@ class EventSubTranslatorConfig(BaseSettings):
         ),
         examples=["file_metadata_upserts"],
     )
-
-    files_to_delete_topic: str = Field(
-        default=...,
-        description="The name of the topic for events informing about files to be deleted.",
-        examples=["file_deletions"],
-    )
-    files_to_delete_type: str = Field(
-        default=...,
-        description="The type used for events informing about a file to be deleted.",
-        examples=["file_deletion_requested"],
-    )
-
     upload_accepted_event_topic: str = Field(
         default=...,
         description=(
@@ -100,13 +93,11 @@ class EventSubTranslator(EventSubscriberProtocol):
     ):
         """Initialize with config parameters and core dependencies."""
         self.topics_of_interest = [
-            config.files_to_delete_topic,
             config.file_metadata_event_topic,
             config.upload_accepted_event_topic,
             config.upload_rejected_event_topic,
         ]
         self.types_of_interest = [
-            config.files_to_delete_type,
             config.file_metadata_event_type,
             config.upload_accepted_event_type,
             config.upload_rejected_event_type,
@@ -150,14 +141,6 @@ class EventSubTranslator(EventSubscriberProtocol):
 
         await self._upload_service.reject_latest(file_id=validated_payload.file_id)
 
-    async def _consume_deletion_requested(self, *, payload: JsonObject) -> None:
-        """Consume file deletion event"""
-        validated_payload = get_validated_payload(
-            payload=payload, schema=event_schemas.FileDeletionRequested
-        )
-
-        await self._upload_service.deletion_requested(file_id=validated_payload.file_id)
-
     async def _consume_validated(
         self,
         *,
@@ -173,7 +156,48 @@ class EventSubTranslator(EventSubscriberProtocol):
             await self._consume_upload_accepted(payload=payload)
         elif type_ == self._config.upload_rejected_event_type:
             await self._consume_validation_failure(payload=payload)
-        elif type_ == self._config.files_to_delete_type:
-            await self._consume_deletion_requested(payload=payload)
         else:
             raise RuntimeError(f"Unexpected event of type: {type_}")
+
+
+class OutboxSubTranslatorConfig(BaseSettings):
+    """Config for the outbox subscriber"""
+
+    files_to_delete_topic: str = Field(
+        default=...,
+        description="The name of the topic for events informing about files to be deleted.",
+        examples=["file_deletions"],
+    )
+
+
+class FileDeletionRequestedListener(
+    DaoSubscriberProtocol[event_schemas.FileDeletionRequested]
+):
+    """A class that consumes FileDeletionRequested events."""
+
+    event_topic: str
+    dto_model = event_schemas.FileDeletionRequested
+
+    def __init__(
+        self,
+        *,
+        config: OutboxSubTranslatorConfig,
+        upload_service: UploadServicePort,
+    ):
+        self._upload_service = upload_service
+        self.event_topic = config.files_to_delete_topic
+
+    async def changed(
+        self, resource_id: str, update: event_schemas.FileDeletionRequested
+    ) -> None:
+        """Consume change event for File Deletion Requests.
+        Idempotence is handled by the core, so no intermediary is required.
+        """
+        await self._upload_service.deletion_requested(file_id=update.file_id)
+
+    async def deleted(self, resource_id: str) -> None:
+        """Consume event indicating the deletion of a File Deletion Request."""
+        log.warning(
+            "Received DELETED-type event for FileDeletionRequested with resource ID '%s'",
+            resource_id,
+        )

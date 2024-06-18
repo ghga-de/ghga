@@ -15,13 +15,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/upload-controller-service):
 ```bash
-docker pull ghga/upload-controller-service:3.1.0
+docker pull ghga/upload-controller-service:4.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/upload-controller-service:3.1.0 .
+docker build -t ghga/upload-controller-service:4.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -29,7 +29,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/upload-controller-service:3.1.0 --help
+docker run -p 8080:8080 ghga/upload-controller-service:4.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -86,6 +86,16 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`files_to_delete_topic`** *(string)*: The name of the topic for events informing about files to be deleted.
+
+
+  Examples:
+
+  ```json
+  "file_deletions"
+  ```
+
+
 - **`file_metadata_event_topic`** *(string)*: Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.
 
 
@@ -103,26 +113,6 @@ The service requires the following configuration parameters:
 
   ```json
   "file_metadata_upserts"
-  ```
-
-
-- **`files_to_delete_topic`** *(string)*: The name of the topic for events informing about files to be deleted.
-
-
-  Examples:
-
-  ```json
-  "file_deletions"
-  ```
-
-
-- **`files_to_delete_type`** *(string)*: The type used for events informing about a file to be deleted.
-
-
-  Examples:
-
-  ```json
-  "file_deletion_requested"
   ```
 
 

@@ -17,15 +17,21 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.akafka import (
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+    KafkaOutboxSubscriber,
+)
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from ucs.adapters.inbound.event_sub import EventSubTranslator
+from ucs.adapters.inbound.event_sub import (
+    EventSubTranslator,
+    FileDeletionRequestedListener,
+)
 from ucs.adapters.inbound.fastapi_ import dummies
 from ucs.adapters.inbound.fastapi_.configure import get_configured_app
 from ucs.adapters.outbound.dao import DaoCollectionTranslator
@@ -64,7 +70,7 @@ async def prepare_core(
 def prepare_core_with_override(
     *,
     config: Config,
-    core_override: Optional[tuple[UploadServicePort, FileMetadataServicePort]] = None,
+    core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return (
@@ -78,7 +84,7 @@ def prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    core_override: Optional[tuple[UploadServicePort, FileMetadataServicePort]] = None,
+    core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -103,7 +109,7 @@ async def prepare_rest_app(
 async def prepare_event_subscriber(
     *,
     config: Config,
-    core_override: Optional[tuple[UploadServicePort, FileMetadataServicePort]] = None,
+    core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
 ) -> AsyncGenerator[KafkaEventSubscriber, None]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -122,6 +128,29 @@ async def prepare_event_subscriber(
             config=config, translator=event_sub_translator
         ) as kafka_event_subscriber:
             yield kafka_event_subscriber
+
+
+@asynccontextmanager
+async def prepare_outbox_subscriber(
+    *,
+    config: Config,
+    core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
+) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
+    """Construct and initialize an outbox subscriber with all its dependencies.
+    By default, the core dependencies are automatically prepared but you can also
+    provide them using the core_override parameter.
+    """
+    async with prepare_core_with_override(
+        config=config, core_override=core_override
+    ) as (upload_service, file_metadata_service):
+        outbox_translator = FileDeletionRequestedListener(
+            upload_service=upload_service, config=config
+        )
+
+        async with KafkaOutboxSubscriber.construct(
+            config=config, translators=[outbox_translator]
+        ) as outbox_subscriber:
+            yield outbox_subscriber
 
 
 @asynccontextmanager

@@ -8,7 +8,6 @@ object_storages:
       s3_access_key_id: test
       s3_secret_access_key: test
 files_to_delete_topic: file_deletions
-files_to_delete_type: file_deletion_requested
 file_deleted_event_topic: file_downloads
 file_deleted_event_type: file_deleted
 file_metadata_event_topic: metadata

@@ -510,14 +510,19 @@ class UploadService(UploadServicePort):
         """
         Cancel the current upload attempt for the given file and remove all associated
         data related to upload attempts and file metadata.
+        An event will be published if the deletion is successful, but only in the case
+        that something exists to delete.
         """
         with suppress(ResourceNotFoundError):
             await self._daos.file_metadata.delete(id_=file_id)
+
+        attempts_found = False
 
         # delete upload attempt metadata and associated objects, if present
         async for attempt in self._daos.upload_attempts.find_all(
             mapping={"file_id": file_id}
         ):
+            attempts_found = True
             try:
                 storage_alias = attempt.storage_alias
                 bucket_id, object_storage = self._object_storages.for_alias(
@@ -550,4 +555,5 @@ class UploadService(UploadServicePort):
                 )
             await self._daos.upload_attempts.delete(id_=attempt.upload_id)
 
-        await self._event_publisher.publish_deletion_successful(file_id=file_id)
+        if attempts_found:
+            await self._event_publisher.publish_deletion_successful(file_id=file_id)

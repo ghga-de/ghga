@@ -26,6 +26,7 @@ from fastapi import status
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.s3.testutils import upload_part_via_url
+from logot import Logot, logged
 from ucs.core import models
 
 from tests_ucs.fixtures.example_data import UPLOAD_DETAILS_1
@@ -344,7 +345,7 @@ async def test_deletion_upload_ongoing(joint_fixture: JointFixture):
     deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
     await joint_fixture.kafka.publish_event(
         payload=json.loads(deletion_event.model_dump_json()),
-        type_=joint_fixture.config.files_to_delete_type,
+        type_="upserted",
         topic=joint_fixture.config.files_to_delete_topic,
     )
 
@@ -353,7 +354,7 @@ async def test_deletion_upload_ongoing(joint_fixture: JointFixture):
     async with joint_fixture.kafka.record_events(
         in_topic=joint_fixture.config.file_deleted_event_topic
     ) as recorder:
-        await joint_fixture.event_subscriber.run(forever=False)
+        await joint_fixture.outbox_subscriber.run(forever=False)
 
     assert len(recorder.recorded_events) == 1
     assert recorder.recorded_events[0].payload == deletion_successful_event.model_dump()
@@ -374,3 +375,47 @@ async def test_deletion_upload_ongoing(joint_fixture: JointFixture):
     ):
         num_attempts += 1
     assert num_attempts == 0
+
+
+async def test_deletion_with_no_file(joint_fixture: JointFixture):
+    """This should be the same as processing FileDeletionRequested repeats."""
+    file_id = "aint_no_such"
+    deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
+    await joint_fixture.kafka.publish_event(
+        payload=json.loads(deletion_event.model_dump_json()),
+        type_="upserted",
+        topic=joint_fixture.config.files_to_delete_topic,
+    )
+
+    # Consume inbound event
+    async with joint_fixture.kafka.record_events(
+        in_topic=joint_fixture.config.file_deleted_event_topic
+    ) as recorder:
+        await joint_fixture.upload_service.deletion_requested(file_id=file_id)
+
+    # Check for event
+    assert len(recorder.recorded_events) == 0
+
+
+async def test_deletion_logs(joint_fixture: JointFixture, logot: Logot):
+    """Test that the outbox subscriber logs deletions correctly.
+    Consume a 'DELETED' event type for the outbox event.
+    """
+    file_id = "file_id123"
+    # publish test event
+    await joint_fixture.kafka.publish_event(
+        payload=event_schemas.FileDeletionSuccess(file_id=file_id).model_dump(),
+        type_="deleted",
+        topic=joint_fixture.config.files_to_delete_topic,
+        key=file_id,
+    )
+    # consume that event
+    await joint_fixture.outbox_subscriber.run(forever=False)
+
+    # verify the log
+    logot.assert_logged(
+        logged.warning(
+            "Received DELETED-type event for FileDeletionRequested"
+            + f" with resource ID '{file_id}'",
+        )
+    )
