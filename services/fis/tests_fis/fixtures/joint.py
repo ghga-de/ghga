@@ -20,13 +20,6 @@ from dataclasses import dataclass
 
 import httpx
 import pytest_asyncio
-from fis.config import Config
-from fis.core.models import UploadMetadataBase
-from fis.inject import prepare_core, prepare_rest_app
-from fis.ports.inbound.ingest import (
-    LegacyUploadMetadataProcessorPort,
-    UploadMetadataProcessorPort,
-)
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.crypt import (
     KeyPair,
@@ -37,6 +30,13 @@ from ghga_service_commons.utils.simple_token import generate_token_and_hash
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from fis.config import Config
+from fis.core.models import UploadMetadataBase
+from fis.inject import prepare_core, prepare_rest_app
+from fis.ports.inbound.ingest import (
+    LegacyUploadMetadataProcessorPort,
+    UploadMetadataProcessorPort,
+)
 from tests_fis.fixtures.config import get_config
 
 __all__ = ["joint_fixture", "JointFixture", "TEST_PAYLOAD"]

@@ -21,7 +21,6 @@ import json
 import os
 
 import pytest
-from fis.core.models import EncryptedPayload, LegacyUploadMetadata, UploadMetadata
 from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
 from ghga_service_commons.utils.crypt import encrypt
 from hexkit.providers.akafka.testutils import (
@@ -30,6 +29,7 @@ from hexkit.providers.akafka.testutils import (
     check_recorded_events,
 )
 
+from fis.core.models import EncryptedPayload, LegacyUploadMetadata, UploadMetadata
 from tests_fis.fixtures.joint import TEST_PAYLOAD, JointFixture
 
 pytestmark = pytest.mark.asyncio()

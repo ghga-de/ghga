@@ -22,6 +22,7 @@ import json
 from typing import Any
 
 from fastapi import FastAPI
+
 from fis.adapters.inbound.fastapi_.configure import get_openapi_schema
 from fis.adapters.inbound.fastapi_.routes import router
 

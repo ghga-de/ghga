@@ -15,12 +15,12 @@
 """Tests for the outbox (mongokafka) dao publisher."""
 
 import pytest
-from fis.inject import get_file_validation_success_dao
 from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.correlation import new_correlation_id, set_correlation_id
 from hexkit.providers.akafka.testutils import ExpectedEvent
 
+from fis.inject import get_file_validation_success_dao
 from tests_fis.fixtures.joint import TEST_PAYLOAD, JointFixture
 
 
