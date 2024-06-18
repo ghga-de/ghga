@@ -172,8 +172,15 @@ async def test_missing_user_id_access_requests(
         joint_fixture.config.access_request_allowed_event_type,
         joint_fixture.config.access_request_denied_event_type,
     )
+    notification_names = (
+        "Access Request Created",
+        "Access Request Allowed",
+        "Access Request Denied",
+    )
 
-    for event_type in event_types:
+    for event_type, notification_name in zip(
+        event_types, notification_names, strict=True
+    ):
         await joint_fixture.kafka.publish_event(
             payload=payload,
             type_=event_type,
@@ -184,8 +191,8 @@ async def test_missing_user_id_access_requests(
             await joint_fixture.event_subscriber.run(forever=False)
         logot.assert_logged(
             logged.error(
-                "Unable to publish %s notification as user ID %s was not found in"
-                + " the database."
+                f"Unable to publish '{notification_name}' notification as user ID '{
+                    payload['user_id']}' was not found in the database."
             )
         )
 
@@ -209,7 +216,15 @@ async def test_missing_user_id_iva_state_changes(
         joint_fixture.config.iva_state_changed_event_type,  # verified
         joint_fixture.config.iva_state_changed_event_type,  # unverified
     )
-    for payload, event_type in zip(payloads, event_types, strict=True):
+    notification_names = (
+        "IVA Code Requested",
+        "IVA Code Transmitted",
+        "IVA Code Validated",
+        "IVA Unverified",
+    )
+    for payload, event_type, notification_name in zip(
+        payloads, event_types, notification_names, strict=True
+    ):
         await joint_fixture.kafka.publish_event(
             payload=payload,
             type_=event_type,
@@ -220,8 +235,8 @@ async def test_missing_user_id_iva_state_changes(
             await joint_fixture.event_subscriber.run(forever=False)
         logot.assert_logged(
             logged.error(
-                "Unable to publish %s notification as user ID %s was not found in"
-                + " the database."
+                f"Unable to publish '{notification_name}' notification as user ID '{
+                    payload['user_id']}' was not found in the database."
             )
         )
 
@@ -257,7 +272,8 @@ async def test_file_registered(joint_fixture: JointFixture):
         recipient_email=joint_fixture.config.central_data_stewardship_email,
         recipient_name="Data Steward",
         subject="File upload completed",
-        plaintext_body=f"The file {DATASET_ID} has been successfully uploaded.",
+        plaintext_body=f"The file {
+            DATASET_ID} has been successfully uploaded.",
     )
 
     expected_event = ExpectedEvent(

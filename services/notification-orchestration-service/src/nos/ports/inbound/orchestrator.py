@@ -33,7 +33,7 @@ class OrchestratorPort(ABC):
         def __init__(self, *, user_id: str, notification_name: str) -> None:
             message = (
                 f"Unable to publish '{notification_name}' notification as user ID"
-                + " '{user_id}' was not found in the database."
+                + f" '{user_id}' was not found in the database."
             )
             super().__init__(message)
 

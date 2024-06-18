@@ -57,15 +57,25 @@ class Orchestrator(OrchestratorPort):
             - MissingUserError:
                 When the provided user ID does not exist in the DB.
         """
-        method_map: dict[str, Callable] = {
-            self._config.access_request_created_event_type: self._access_request_created,
-            self._config.access_request_allowed_event_type: self._access_request_allowed,
-            self._config.access_request_denied_event_type: self._access_request_denied,
+        event_type_assets: dict[str, tuple[str, Callable]] = {
+            self._config.access_request_created_event_type: (
+                "Access Request Created",
+                self._access_request_created,
+            ),
+            self._config.access_request_allowed_event_type: (
+                "Access Request Allowed",
+                self._access_request_allowed,
+            ),
+            self._config.access_request_denied_event_type: (
+                "Access Request Denied",
+                self._access_request_denied,
+            ),
         }
+        notification_name, handler = event_type_assets[event_type]
         extra = {  # for error logging
             "user_id": user_id,
             "dataset_id": dataset_id,
-            "notification_name": "Access Request Created",
+            "notification_name": notification_name,
         }
 
         try:
@@ -77,7 +87,7 @@ class Orchestrator(OrchestratorPort):
             log.error(error, extra=extra)
             raise error from err
 
-        await method_map[event_type](user=user, dataset_id=dataset_id)
+        await handler(user=user, dataset_id=dataset_id)
 
     async def _access_request_created(
         self, *, user: event_schemas.User, dataset_id: str
