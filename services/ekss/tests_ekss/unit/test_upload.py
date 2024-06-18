@@ -16,8 +16,8 @@
 """Unit tests for upload functionality"""
 
 import pytest
-from ekss.core.envelope_decryption import extract_envelope_content
 
+from ekss.core.envelope_decryption import extract_envelope_content
 from tests_ekss.fixtures.file import (
     FirstPartFixture,
     first_part_fixture,  # noqa: F401

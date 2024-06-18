@@ -16,9 +16,10 @@
 """Testing the basics of the service API"""
 
 import pytest
+from fastapi.testclient import TestClient
+
 from ekss.adapters.inbound.fastapi_.main import setup_app
 from ekss.config import CONFIG
-from fastapi.testclient import TestClient
 
 app = setup_app(CONFIG)
 client = TestClient(app=app)

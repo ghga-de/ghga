@@ -21,9 +21,9 @@ from dataclasses import dataclass
 
 import crypt4gh.lib
 import pytest_asyncio
-from ekss.config import CONFIG
 from ghga_service_commons.utils import temp_files
 
+from ekss.config import CONFIG
 from tests_ekss.fixtures.keypair import (
     KeypairFixture,
     generate_keypair_fixture,  # noqa: F401

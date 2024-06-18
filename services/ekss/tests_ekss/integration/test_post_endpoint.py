@@ -19,11 +19,11 @@ import io
 
 import crypt4gh.header
 import pytest
+from fastapi.testclient import TestClient
+
 from ekss.adapters.inbound.fastapi_.deps import config_injector
 from ekss.adapters.inbound.fastapi_.main import setup_app
 from ekss.config import CONFIG
-from fastapi.testclient import TestClient
-
 from tests_ekss.fixtures.file import (
     FirstPartFixture,
     first_part_fixture,  # noqa: F401
