@@ -15,11 +15,14 @@
 
 """Test schema validation utils."""
 
+import json
 from datetime import datetime
+from typing import Any
 
 import pytest
 from pydantic import BaseModel
 
+from ghga_event_schemas import __version__
 from ghga_event_schemas.pydantic_ import UploadDateModel
 from ghga_event_schemas.validation import (
     EventSchemaValidationError,
@@ -52,7 +55,7 @@ def test_failure():
 
 def test_datetime_validation_happy():
     """Check validation hook for upload date - happy path"""
-    payload = {"upload_date": datetime.utcnow().isoformat()}
+    payload = {"upload_date": datetime.now().isoformat()}
     validated_payload = get_validated_payload(payload=payload, schema=UploadDateModel)
     assert isinstance(validated_payload, UploadDateModel)
 
@@ -62,3 +65,27 @@ def test_datetime_validation_failure():
     payload = {"upload_date": "test o'clock"}
     with pytest.raises(EventSchemaValidationError):
         _ = get_validated_payload(payload=payload, schema=UploadDateModel)
+
+
+@pytest.mark.parametrize(
+    "payload,assertions",
+    [
+        ({}, ["type=missing"]),
+        ({"upload_date": True}, ["type=string", "should be a valid string"]),
+    ],
+)
+def test_error_messages(payload: dict[str, Any], assertions: list[str]):
+    """Verify that the pydantic error includes information as expected."""
+    version_text = f"'UploadDateModel' from ghga-event-schemas v{__version__}"
+    payload_text = f"The complete payload was: {json.dumps(payload)}"
+
+    with pytest.raises(EventSchemaValidationError) as error:
+        get_validated_payload(payload, UploadDateModel)
+
+    error_text = str(error.value)
+
+    for string in assertions:
+        assert string in error_text
+    assert "upload_date" in error_text
+    assert version_text in error_text
+    assert payload_text in error_text

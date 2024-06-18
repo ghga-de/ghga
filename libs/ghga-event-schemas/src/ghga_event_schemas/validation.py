@@ -23,21 +23,28 @@ from typing import Any, TypeVar
 import pydantic
 
 JsonObject = Mapping[str, Any]
+Schema = TypeVar("Schema", bound=pydantic.BaseModel)
+
+from ghga_event_schemas import __version__
 
 
 class EventSchemaValidationError(ValueError):
     """Raised when an event schema failed to validate against an event schema."""
 
-    def __init__(self, *, payload: JsonObject, schema: type[pydantic.BaseModel]):
+    def __init__(
+        self,
+        *,
+        payload: JsonObject,
+        error: pydantic.ValidationError,
+        schema: type[Schema],
+    ):
         message = (
-            "The the following event payload failed validation against the corresponding"
-            + f" event schema. The payload was '{json.dumps(payload)}' but the schema"
-            + f" was '{schema.model_json_schema()}."
+            "The event payload failed validation against the corresponding"
+            + f" event schema: {error}."
+            + f"\nThe complete payload was: {json.dumps(payload)}."
+            + f" The schema is '{schema.__name__}' from ghga-event-schemas v{__version__}."
         )
         super().__init__(message)
-
-
-Schema = TypeVar("Schema", bound=pydantic.BaseModel)
 
 
 def get_validated_payload(payload: JsonObject, schema: type[Schema]) -> Schema:
@@ -47,7 +54,9 @@ def get_validated_payload(payload: JsonObject, schema: type[Schema]) -> Schema:
     try:
         return schema(**payload)
     except pydantic.ValidationError as error:
-        raise EventSchemaValidationError(payload=payload, schema=schema) from error
+        raise EventSchemaValidationError(
+            payload=payload, error=error, schema=schema
+        ) from error
 
 
 def validated_upload_date(upload_date: str):
