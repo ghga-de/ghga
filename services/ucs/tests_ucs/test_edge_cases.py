@@ -27,10 +27,10 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.s3.testutils import upload_part_via_url
 from logot import Logot, logged
-from ucs.core import models
 
 from tests_ucs.fixtures.example_data import UPLOAD_DETAILS_1
 from tests_ucs.fixtures.joint import JointFixture
+from ucs.core import models
 
 pytestmark = pytest.mark.asyncio()
 

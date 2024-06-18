@@ -15,17 +15,10 @@
 
 """REST API-specific data models (not used by core package)"""
 
-from pydantic import ConfigDict
+from typing import Literal
 
-try:  # workaround for https://github.com/pydantic/pydantic/issues/5821
-    from typing_extensions import Literal
-except ImportError:
-    from typing import Literal  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field
 
-from pydantic import BaseModel, Field
-
-# shortcuts:
-# pylint: disable=unused-import
 from ucs.core.models import FileMetadata, UploadAttempt, UploadStatus  # noqa: F401
 
 

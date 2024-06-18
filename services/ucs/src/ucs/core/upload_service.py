@@ -18,8 +18,8 @@
 
 import logging
 import uuid
+from collections.abc import Callable
 from contextlib import suppress
-from typing import Callable
 
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
 from ghga_service_commons.utils.utc_dates import now_as_utc

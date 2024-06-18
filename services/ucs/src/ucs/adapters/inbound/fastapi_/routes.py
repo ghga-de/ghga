@@ -15,7 +15,7 @@
 
 """Module containing the main FastAPI router and all route functions."""
 
-from typing import Annotated, Union
+from typing import Annotated
 
 from fastapi import APIRouter, Path, status
 
@@ -113,10 +113,8 @@ async def get_file_metadata(
                 + "\n- fileNotRegistered: The file with the given ID has not (yet) been"
                 + " registered for upload."
             ),
-            "model": Union[
-                http_exceptions.HttpExistingActiveUploadError.get_body_model(),
-                http_exceptions.HttpFileNotFoundUploadError.get_body_model(),
-            ],
+            "model": http_exceptions.HttpExistingActiveUploadError.get_body_model()
+            | http_exceptions.HttpFileNotFoundUploadError.get_body_model(),
         },
         status.HTTP_403_FORBIDDEN: ERROR_RESPONSES["noFileAccess"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["noSuchStorage"],
@@ -192,10 +190,8 @@ async def get_upload(
                 + " Failed to change the status of upload."
                 + " A reason is provided in the description."
             ),
-            "model": Union[
-                http_exceptions.HttpUploadNotPendingError.get_body_model(),
-                http_exceptions.HttpUploadStatusChangeError.get_body_model(),
-            ],
+            "model": http_exceptions.HttpUploadNotPendingError.get_body_model()
+            | http_exceptions.HttpUploadStatusChangeError.get_body_model(),
         },
         status.HTTP_403_FORBIDDEN: ERROR_RESPONSES["noFileAccess"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["noSuchUpload"],

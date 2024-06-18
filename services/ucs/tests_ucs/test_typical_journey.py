@@ -30,10 +30,10 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.s3.testutils import upload_part_via_url
-from ucs.core.models import UploadStatus
 
 from tests_ucs.fixtures.example_data import UPLOAD_DETAILS_1, UPLOAD_DETAILS_2
 from tests_ucs.fixtures.joint import JointFixture
+from ucs.core.models import UploadStatus
 
 TARGET_BUCKET_ID = "test-staging"
 

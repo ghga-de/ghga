@@ -26,10 +26,7 @@ from ucs.ports.inbound.file_service import (
 from ucs.ports.outbound.dao import DaoCollectionPort, ResourceNotFoundError
 
 
-def _get_metadata_diff(
-    a: models.FileMetadata,
-    b: models.FileMetadata,  # pylint: disable=invalid-name
-) -> set[str]:
+def _get_metadata_diff(a: models.FileMetadata, b: models.FileMetadata) -> set[str]:
     """Check which fields differ between the metadata provided in a and b."""
     a_dict = a.model_dump()
     b_dict = b.model_dump()

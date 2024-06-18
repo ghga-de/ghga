@@ -32,6 +32,9 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
 from pytest_asyncio.plugin import _ScopeName
+
+from tests_ucs.fixtures.config import get_config
+from tests_ucs.fixtures.example_data import STORAGE_ALIASES
 from ucs.adapters.outbound.dao import DaoCollectionTranslator
 from ucs.config import Config
 from ucs.inject import (
@@ -45,9 +48,6 @@ from ucs.ports.inbound.file_service import FileMetadataServicePort
 from ucs.ports.inbound.storage_inspector import StorageInspectorPort
 from ucs.ports.inbound.upload_service import UploadServicePort
 from ucs.ports.outbound.dao import DaoCollectionPort
-
-from tests_ucs.fixtures.config import get_config
-from tests_ucs.fixtures.example_data import STORAGE_ALIASES
 
 
 @dataclass

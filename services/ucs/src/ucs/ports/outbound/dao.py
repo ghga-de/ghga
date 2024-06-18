@@ -18,7 +18,6 @@
 from dataclasses import dataclass
 
 # for convienience: forward errors that may be thrown by DAO instances:
-# pylint: disable=unused-import
 from hexkit.protocols.dao import (
     DaoNaturalId,
     ResourceAlreadyExistsError,  # noqa: F401
