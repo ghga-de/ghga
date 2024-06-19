@@ -60,3 +60,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (50) [Dhole](./50-dhole/technical_specification.md): Rewriting existing metldata transformations
 - (51) [Ethiopian Wolf](./51-ethiopian-wolf/technical_specification.md): Monorepo Setup for Multiple Microservices
 - (52) [Hero Shrew](./52-hero-shrew/technical_specification.md): Outbox Pattern Refactoring
+- (53) [Honey Bee](./53-honey-bee/technical_specification.md): DevOps Production Preparation 1
