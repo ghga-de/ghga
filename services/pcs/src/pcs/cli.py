@@ -16,10 +16,11 @@
 """Entrypoint of the package"""
 
 import asyncio
+from typing import Annotated
 
 import typer
 
-from pcs.main import run_rest_app
+from pcs.main import publish_events, run_rest_app
 
 cli = typer.Typer()
 
@@ -28,3 +29,13 @@ cli = typer.Typer()
 def sync_run_rest_app():
     """Run the HTTP REST API."""
     asyncio.run(run_rest_app())
+
+
+@cli.command(name="publish-events")
+def sync_run_publish_events(
+    all: Annotated[
+        bool, typer.Argument(help="Set to (re)publish all events regardless of status")
+    ] = False,
+):
+    """Publish pending events."""
+    asyncio.run(publish_events(all=all))

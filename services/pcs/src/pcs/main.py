@@ -19,7 +19,7 @@ from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 
 from pcs.config import Config
-from pcs.inject import prepare_rest_app
+from pcs.inject import get_file_deletion_dao, prepare_rest_app
 
 
 async def run_rest_app():
@@ -29,3 +29,15 @@ async def run_rest_app():
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
+
+
+async def publish_events(*, all: bool = False):
+    """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
+    config = Config()
+    configure_logging(config=config)
+
+    async with get_file_deletion_dao(config=config) as dao:
+        if all:
+            await dao.republish()
+        else:
+            await dao.publish_pending()
