@@ -32,11 +32,12 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from fis.config import Config
 from fis.core.models import UploadMetadataBase
-from fis.inject import prepare_core, prepare_rest_app
+from fis.inject import get_file_validation_success_dao, prepare_core, prepare_rest_app
 from fis.ports.inbound.ingest import (
     LegacyUploadMetadataProcessorPort,
     UploadMetadataProcessorPort,
 )
+from fis.ports.outbound.daopub import FileUploadValidationSuccessDao
 from tests_fis.fixtures.config import get_config
 
 __all__ = ["joint_fixture", "JointFixture", "TEST_PAYLOAD"]
@@ -61,10 +62,12 @@ class JointFixture:
     keypair: KeyPair
     token: str
     kafka: KafkaFixture
+    mongodb: MongoDbFixture
     rest_client: httpx.AsyncClient
     s3_endpoint_alias: str
     upload_metadata_processor: UploadMetadataProcessorPort
     legacy_upload_metadata_processor: LegacyUploadMetadataProcessorPort
+    dao: FileUploadValidationSuccessDao
 
 
 @pytest_asyncio.fixture
@@ -91,6 +94,7 @@ async def joint_fixture(
             config=config,
             core_override=(upload_metadata_processor, legacy_upload_metadata_processor),
         ) as app,
+        get_file_validation_success_dao(config=config) as dao,
         AsyncTestClient(app=app) as rest_client,
     ):
         yield JointFixture(
@@ -98,8 +102,10 @@ async def joint_fixture(
             keypair=keypair,
             token=token,
             kafka=kafka,
+            mongodb=mongodb,
             rest_client=rest_client,
             s3_endpoint_alias=config.selected_storage_alias,
             upload_metadata_processor=upload_metadata_processor,
             legacy_upload_metadata_processor=legacy_upload_metadata_processor,
+            dao=dao,
         )

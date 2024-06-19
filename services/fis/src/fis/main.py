@@ -18,7 +18,7 @@ from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 
 from fis.config import Config
-from fis.inject import prepare_rest_app
+from fis.inject import get_file_validation_success_dao, prepare_rest_app
 
 
 async def run_rest():
@@ -28,3 +28,15 @@ async def run_rest():
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
+
+
+async def publish_events(*, all: bool = False):
+    """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
+    config = Config()
+    configure_logging(config=config)
+
+    async with get_file_validation_success_dao(config=config) as dao:
+        if all:
+            await dao.republish()
+        else:
+            await dao.publish_pending()
