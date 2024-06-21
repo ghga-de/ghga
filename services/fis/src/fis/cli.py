@@ -49,7 +49,7 @@ def sync_run_api():
 @cli.command(name="publish-events")
 def sync_run_publish_events(
     all: Annotated[
-        bool, typer.Argument(help="Set to (re)publish all events regardless of status")
+        bool, typer.Option(help="Set to (re)publish all events regardless of status")
     ] = False,
 ):
     """Publish pending events."""
