@@ -21,12 +21,11 @@ import json
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from time import sleep
 from urllib.parse import parse_qs, urlparse
 
 import pyotp
-from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from httpx import Response
 from jwcrypto import jwk
 from pydantic import BaseModel, EmailStr, Field, model_validator
@@ -138,22 +137,10 @@ class TokenGenerator:
         mail_id = name.lower().replace(" ", ".")
         return f"{mail_id}@{self.user_domain}"
 
-    def internal_access_token_from_session(self, session_headers: dict) -> str:
-        """Get an unregistered internal access token using the auth adapter."""
-        url = self.auth_adapter_url + "/users"
-        method = self.http.post
-        response = method(url, headers=session_headers)
-        assert not response.text
-        status_code = response.status_code
-        assert status_code == 200, status_code
-        authorization = response.headers.get("Authorization")
-        assert authorization and authorization.startswith("Bearer ")
-        token = authorization.split(None, 1)[-1]
-        assert token and token.count(".") == 2
-        return token
-
-    def headers_for_session(self, session: Session) -> dict[str, str]:
+    def headers(self, session: Session | None) -> dict[str, str]:
         """Get proper headers for the given session."""
+        if not session:
+            return {}
         return {
             "X-CSRF-Token": session.csrf,
             "Cookie": f"session={session.session_id}",
@@ -201,11 +188,17 @@ class TokenGenerator:
         if state_store:
             session = self.get_saved_session(name, state_store)
             if session:
-                auth_headers = self.headers_for_session(session)
+                auth_headers = self.headers(session)
                 response = self.auth_login(headers=auth_headers)
                 session_id = session.session_id
 
         if not session_id:
+            if state_store:
+                all_changed_user_data = state_store.get_state("changed user data") or {}
+                changed_user_data = all_changed_user_data.get(sub, {})
+                changed_email = changed_user_data.get("email")
+                if changed_email:
+                    email = changed_email
             external_token = self.oidc_login(
                 name=name, email=email, sub=sub, valid_seconds=valid_seconds
             )
@@ -221,28 +214,7 @@ class TokenGenerator:
         session_dict = session.model_dump()
         assert state_store, "No state store provided. Cannot query session."
         state_store.set_state(f"session-{sub}", session_dict)
-
-    def headers(
-        self,
-        session: Session | None = None,
-    ):
-        """Generate headers for HTTP requests.
-
-        If there is no session provided, an empty header will be returned.
-
-        If the API gateway is used according to the configuration setting
-        `use_api_gateway`, then the headers containing external access
-        token for the API gateway will be created. Otherwise the headers
-        containing internal access token for internal access will be
-        generated via the Auth Adapter.
-        """
-        if not session:
-            return {}
-        headers = self.headers_for_session(session=session)
-        if not self.use_api_gateway:
-            internal_token = self.internal_access_token_from_session(headers)
-            headers = {"Authorization": f"Bearer {internal_token}"}
-        return headers
+        state_store.set_state("logged in as", sub)
 
     def oidc_login(
         self,
@@ -277,15 +249,13 @@ class TokenGenerator:
         assert status_code == 204, status_code
         return response
 
-    def add_totp_to_headers(
-        self, totp_token: str, headers: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Add TOTP token to headers.
+    def add_totp_to_headers(self, totp: str, headers: dict[str, Any]) -> dict[str, Any]:
+        """Add TOTP to headers.
 
         'X-Authorization' header is used to submit the one-time password. Due to ExtAuth
         protocol by default doesn't allow the request body.
         """
-        headers["X-Authorization"] = f"Bearer TOTP:{totp_token}"
+        headers["X-Authorization"] = f"Bearer TOTP:{totp}"
         return headers
 
     def get_totp_token(
@@ -300,11 +270,15 @@ class TokenGenerator:
         if not force:
             assert state_store, "No state store provided. Cannot query TOTP token."
             token = state_store.get_state(f"totp-token-{sub}")
+            # Note: This can be used only once unless we wait for 30 seconds.
             if token:
                 return token
         url = self.auth_adapter_url + "/totp-token"
         response = self.http.post(url, headers=headers, params={"force": force})
         status_code = response.status_code
+        if status_code == 401:
+            detail = response.json()["detail"]
+            return f"error: {detail}"
         assert status_code == 201, f"{status_code}, {response.text}"
         uri = response.json().get("uri")
         assert uri
@@ -312,6 +286,7 @@ class TokenGenerator:
         assert "secret" in uri_params
         token = uri_params["secret"][0]
         state_store.set_state(f"totp-token-{sub}", token)
+        sleep(0.25)  # give the backend some time to store the token
         return token
 
     def generate_totp(
@@ -328,20 +303,16 @@ class TokenGenerator:
             for_time = now_as_utc()
         return totp.at(for_time, offset)
 
-    def verify_totp(self, user_id: str, totp: str, headers: dict[str, Any]) -> Response:
+    def verify_totp(self, totp: str, headers: dict[str, Any]) -> Response:
         """Verify the TOTP code."""
-        # user_info = {"user_id": user_id, "totp": totp}
         url = self.auth_adapter_url + "/rpc/verify-totp"
         headers = self.add_totp_to_headers(totp, headers)
         return self.http.post(url, headers=headers)
 
-    def auth_logout(
-        self,
-        session: Session,
-    ):
+    def auth_logout(self, session: Session):
         """Logout and remove session."""
         url = self.auth_adapter_url + "/rpc/logout"
-        session_headers = self.headers_for_session(session)
+        session_headers = self.headers(session)
         response = self.http.post(url, headers=session_headers)
         status_code = response.status_code
         assert status_code == 204, status_code
@@ -350,11 +321,10 @@ class TokenGenerator:
         self,
         session: Session,
         state_store: StateStorage,
-        user_id: str | None = None,
         recreate_totp: bool = False,
     ) -> Response:
         """Authenticate with two-factor authentication."""
-        session_headers = self.headers_for_session(session)
+        session_headers = self.headers(session)
         # Login to retrieve up-to-date session information from the server
         response = self.auth_login(session_headers)
         session_header = response.headers.get("X-Session")
@@ -364,8 +334,6 @@ class TokenGenerator:
         if state == "Authenticated":
             return Response(204, content=b"")
         # if session state is not "Authenticated", then we need to authenticate
-        user_id = user_id if user_id else session.user_id
-        assert user_id, "No user ID provided or can be found in the session"
         totp_token = self.get_totp_token(
             name=session.name,
             headers=session_headers,
@@ -373,7 +341,7 @@ class TokenGenerator:
             force=recreate_totp,
         )
         totp = self.generate_totp(totp_token)
-        return self.verify_totp(user_id, totp, session_headers)
+        return self.verify_totp(totp, session_headers)
 
     @property
     def key(self) -> jwk.JWK:

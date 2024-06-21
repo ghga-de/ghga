@@ -18,20 +18,79 @@ Feature: 30 User Registration
     Given the user "Dr. John Doe" is not yet registered
     And I am logged in as "Dr. John Doe"
     When "Dr. John Doe" retrieves their user data
-    Then the response status code is "403 (with API gateway) or 404 (without)"
+    Then the response status code is "403"
 
   Scenario: Successful registration of a new user
     Given I am logged in as "Dr. John Doe"
     When "Dr. John Doe" registers as a new user
     Then the response status code is "201"
-    And the user data of "Dr. John Doe" is returned
+    And the expected user data of "Dr. John Doe" is returned
 
   Scenario: Access user data after authentication
     Given I am logged in as "Dr. John Doe"
     And I am registered as "Dr. John Doe"
     And I am authenticated as "Dr. John Doe"
     When "Dr. John Doe" retrieves their user data
-    Then the user data of "Dr. John Doe" is returned
+    Then the expected user data of "Dr. John Doe" is returned
+
+  Scenario: The user has a new email address
+    Given the user "Dr. John Doe" is logged out
+    And "Dr. John Doe" has a new email address
+    And I am logged in as "Dr. John Doe"
+    When I retrieve a new TOTP token as "Dr. John Doe"
+    Then the session state is "NeedsReRegistration"
+    And I get the error "Cannot create TOTP token at this point"
+
+  Scenario: The user re-registers with the old email address
+    When "Dr. John Doe" re-registers with the old email
+    Then the response status code is "422"
+
+  Scenario: The user re-registers with the new email address
+    When "Dr. John Doe" re-registers with the new email
+    Then the response status code is "204"
+
+  Scenario: Trying to change the title without authentication
+    When "Dr. John Doe" changes the title to "Prof."
+    Then the response status code is "403"
+
+  Scenario: The user creates a new TOTP token
+    Given I am logged in as "Dr. John Doe"
+    When I retrieve a new TOTP token as "Dr. John Doe"
+    Then the session state is "HasTotpToken"
+
+  Scenario: Changing the title after authentication
+    Given I am authenticated as "Dr. John Doe"
+    When "Dr. John Doe" changes the title to "Prof."
+    Then the response status code is "204"
+
+  Scenario: Access user data again after changes
+    Given I am logged in as "Prof. John Doe"
+    And I am authenticated as "Prof. John Doe"
+    When "Prof. John Doe" retrieves their user data
+    Then the expected user data of "Prof. John Doe" is returned
+
+  Scenario: Changing the title back again
+    Given I am authenticated as "Prof. John Doe"
+    When "Prof. John Doe" changes the title to "Dr."
+    Then the response status code is "204"
+
+  Scenario: The user has the old email address again
+    Given the user "Dr. John Doe" is logged out
+    And "Dr. John Doe" has the old email address
+    And I am logged in as "Dr. John Doe"
+    When "Dr. John Doe" re-registers with the old email
+    Then the response status code is "204"
+
+  Scenario: The user creates another TOTP token
+    Given I am logged in as "Dr. John Doe"
+    When I retrieve a new TOTP token as "Dr. John Doe"
+    Then the session state is "HasTotpToken"
+
+  Scenario: Access user data again after reset
+    Given I am logged in as "Dr. John Doe"
+    And I am authenticated as "Dr. John Doe"
+    When "Dr. John Doe" retrieves their user data
+    Then the expected user data of "Dr. John Doe" is returned
 
   Scenario: The data steward lost the TOTP token
     Given I lost my TOTP token as "Data Steward"
@@ -44,7 +103,7 @@ Feature: 30 User Registration
     And I am authenticated as "Data Steward"
     When "Data Steward" retrieves their user data
     Then the response status code is "200"
-    And the user data of "Data Steward" is returned
+    And the expected user data of "Data Steward" is returned
 
   Scenario: Finishing the registration
     Then set the state to "user registration is completed"

@@ -124,9 +124,7 @@ def authenticate_user(full_name: str, fixtures: JointFixture):
         name=full_name, state_store=fixtures.state
     )
     assert session, f"No session found for {full_name}"
-    response = fixtures.auth.authenticate(
-        session=session, user_id=session.user_id, state_store=fixtures.state
-    )
+    response = fixtures.auth.authenticate(session=session, state_store=fixtures.state)
     assert response.status_code == 204, response.text
 
 
@@ -149,20 +147,6 @@ def logout_as_user(name: str, fixtures: JointFixture):
 @then(parse('the response status code is "{code:d}"'))
 def check_status_code(code: int, response: Response):
     status_code = response.status_code
-    assert status_code == code, f"{status_code}: {response.text}"
-
-
-@then(
-    parse(
-        'the response status code is "{code1:d} (with API gateway)'
-        ' or {code2:d} (without)"'
-    )
-)
-def check_status_code_depending_on_api_gateway(
-    code1: int, code2: int, config: Config, response: Response
-):
-    status_code = response.status_code
-    code = code1 if config.use_api_gateway else code2
     assert status_code == code, f"{status_code}: {response.text}"
 
 

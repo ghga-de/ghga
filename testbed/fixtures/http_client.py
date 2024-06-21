@@ -18,8 +18,9 @@
 
 from base64 import b64encode
 from collections.abc import Generator
+from urllib.parse import urljoin, urlparse
 
-from httpx import Client, Response
+from httpx import Client, HTTPStatusError, Response
 from pytest import fixture
 
 from fixtures.config import Config
@@ -27,6 +28,8 @@ from fixtures.config import Config
 __all__ = ["http_fixture", "HttpClient", "Response"]
 
 TIMEOUT = 10  # timeout for HTTP requests in seconds
+
+EXT_AUTH_APIS = ["ars", "dcs", "wps", "ums"]  # APIs that need ExtAuth
 
 
 class HttpClient(Client):
@@ -45,28 +48,41 @@ class HttpClient(Client):
 
 
 @fixture(name="http", scope="session")
-def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
+def http_fixture(config: Config) -> Generator[HttpClient, None, None]:  # noqa: C901, PLR0915
     """Pytest fixture for tests using an HTTP client."""
-    if config.use_api_gateway:
+    use_api_gateway = config.use_api_gateway
+    auth_adapter_url = config.auth_adapter_url
+    if use_api_gateway:
         auth_basic = config.auth_basic
         if auth_basic:
             auth_basic = b64encode(auth_basic.encode("ascii")).decode("ascii")
             auth_basic = f"Basic {auth_basic}"
     else:
         auth_basic = None
+    ext_auth_urls = tuple(getattr(config, f"{api}_url") for api in EXT_AUTH_APIS)
 
     def request_hook(request):
-        """Add Basic Authentication if necessary and log request."""
-        headers = request.headers
+        """HTTPX request hook for testing.
+
+        This hook is called before sending the request.
+
+        It adds Basic authentication if necessary,
+        simulates the API gateway if we don't have one
+        and logs the request on standard output.
+        """
         url = str(request.url)
+        headers = request.headers
         auth = headers.get("Authorization")
         session = headers.get("Cookie")
+
         if auth_basic:
             headers["Authorization"] = auth_basic
             auth_methods = "with basic"
             if auth:
                 headers["X-Authorization"] = auth
                 auth_methods += " and bearer"
+            elif session:
+                auth_methods += " and session"
         elif auth:
             auth_methods = "with bearer"
         elif session:
@@ -76,8 +92,32 @@ def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
         auth_methods += " auth"
         print(f"HTTP request: {request.method} {url} {auth_methods}")
 
+        if not use_api_gateway and url.startswith(ext_auth_urls):
+            # Mimic the behavior of the ApI Gateway following the ExtAuth protocol
+            # by calling the Auth Adapter with the same path and headers
+            url = urljoin(auth_adapter_url, urlparse(url).path)
+            auth_adapter_headers = headers.copy()
+            auth_adapter_headers["content-length"] = "0"
+            response = client.request(request.method, url, headers=auth_adapter_headers)
+            if response.status_code != 200:
+                # the request is not authenticated, return the error immediately
+                raise HTTPStatusError(response.text, request=request, response=response)
+            # the request is authenticated
+            assert not response.text
+            authorization = response.headers.get("Authorization")
+            if authorization:
+                # the response of the Auth Adapter contains an internal access token
+                assert authorization.startswith("Bearer ")
+                assert authorization.count(".") == 2
+                request.headers["Authorization"] = authorization
+
     def response_hook(response):
-        """Log response status."""
+        """HTTPX response hook for testing.
+
+        This hook is called after receiving the response.
+
+        It just logs the response status on standard output.
+        """
         print(f"HTTP response status: {response.status_code}")
 
     hooks = {"request": [request_hook], "response": [response_hook]}

@@ -65,9 +65,10 @@ Located in the `features` directory, the **feature files** are numerically prefi
 
 The Archive Test Bed can be configured through either **YAML file** or **environment variables**, with environment variables having higher priority.
 
+The testbed itself is configured via `tb.yaml`. The default configuration uses the docker compose environment used by the devcontainer. Alternative configurations can be saved as `tb.*.yaml` and then activated by setting the environment variable `TB_CONFIG_YAML` accordingly.
+
 - **States:** The `keep_state_in_db` setting determines whether to store test states in a database or in memory, with the latter being default for automated black box tests.
 - **Additional Authentication:** The `auth_basic` setting is for passing basic authentication credentials, applicable only in black box testing.
-
 
 ### Advanced Configuration
 
@@ -76,6 +77,7 @@ When running the tests against a Kubernetes cluster, please ensure that names of
 - Relevant settings include `auth_basic`, `upload_token`, and `fis_pubkey`. Bucket names (`*_bucket`) and URLs (`*_url`) must also be consistent.
 
 When running tests in a devcontainer with `docker-compose.yml`, **secrets are generated randomly and saved in `.env` files via the `set_env.sh` script**. These files are excluded from the repository.
+
 
 ## License
 

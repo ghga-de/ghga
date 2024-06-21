@@ -75,15 +75,14 @@ def check_user_management_apis_are_healthy(fixtures: JointFixture):
     session = fixtures.auth.fetch_session(name=name, user_id=sub)
     response = fixtures.auth.authenticate(
         session=session,
-        user_id=session.user_id,
         state_store=fixtures.state,
         recreate_totp=True,
     )
     status_code = response.status_code
     assert status_code == 204, f"Error {status_code} when authenticating {name}"
-    headers = fixtures.auth.headers(session=session)
-    endpoint = f"{ums_url}/users/{session.user_id}"
-    response = fixtures.http.get(endpoint, headers=headers)
+    url = f"{ums_url}/users/{session.user_id}"
+    headers = fixtures.auth.headers(session)
+    response = fixtures.http.get(url, headers=headers)
     status_code = response.status_code
     assert status_code == 200, f"Error {status_code} when requesting info for {name}"
     ret = response.json()
@@ -91,8 +90,8 @@ def check_user_management_apis_are_healthy(fixtures: JointFixture):
     user_id = ret.get("id")
     assert user_id, f"No user ID when requesting info for {name}"
     assert user_id == session.user_id, f"Unexpected user ID for {name}"
-    endpoint = f"{ums_url}/users/{user_id}/claims"
-    response = fixtures.http.get(endpoint)
+    url = f"{ums_url}/users/{user_id}/claims"
+    response = fixtures.http.get(url)
     status_code = response.status_code
     if fixtures.config.use_api_gateway:
         assert status_code == 404, (

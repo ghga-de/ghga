@@ -161,9 +161,9 @@ def query_datasets_with_wps(fixtures: JointFixture, full_name: str):
         name=full_name, state_store=fixtures.state
     )
     assert session
-    headers = fixtures.auth.headers(session=session)
     user_id = session.user_id
     url = f"{fixtures.config.wps_url}/users/{user_id}/datasets"
+    headers = fixtures.auth.headers(session=session)
     return fixtures.http.get(url, headers=headers)
 
 

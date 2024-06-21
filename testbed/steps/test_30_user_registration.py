@@ -46,6 +46,10 @@ def user_not_yet_registered(full_name: str, fixtures: JointFixture):
             del registered_users[sub]
             fixtures.state.set_state("registered users", registered_users)
     assert sub not in registered_users
+    changed_user_data = fixtures.state.get_state("changed user data") or {}
+    if sub in changed_user_data:
+        del changed_user_data[sub]
+        fixtures.state.set_state("changed user data", changed_user_data)
 
 
 @when(
@@ -61,17 +65,18 @@ def user_fetches_own_info(full_name: str, fixtures: JointFixture):
     session = fixtures.auth.get_saved_session(
         name=full_name, state_store=fixtures.state
     )
-    headers = fixtures.auth.headers(session=session)
     user_id = session.user_id if session else sub
     url = f"{fixtures.config.ums_url}/users/{user_id}"
+    headers = fixtures.auth.headers(session)
     return fixtures.http.get(url, headers=headers)
 
 
 @when(parse('"{full_name}" registers as a new user'), target_fixture="response")
 def user_registers(full_name: str, fixtures: JointFixture):
-    title, name = fixtures.auth.split_title(full_name)
-    email = fixtures.auth.get_email(name)
-    sub = fixtures.auth.get_sub(name)
+    auth = fixtures.auth
+    title, name = auth.split_title(full_name)
+    email = auth.get_email(name)
+    sub = auth.get_sub(name)
     user_data = {
         "name": name,
         "title": title,
@@ -79,14 +84,12 @@ def user_registers(full_name: str, fixtures: JointFixture):
         "ext_id": sub,
     }
     url = f"{fixtures.config.ums_url}/users"
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
-    )
-    headers = fixtures.auth.headers(session=session)
+    session = auth.get_saved_session(name=full_name, state_store=fixtures.state)
+    headers = auth.headers(session=session)
     return fixtures.http.post(url, json=user_data, headers=headers)
 
 
-@then(parse('the user data of "{full_name}" is returned'))
+@then(parse('the expected user data of "{full_name}" is returned'))
 def user_gets_id(full_name: str, fixtures: JointFixture, response: Response):
     title, name = fixtures.auth.split_title(full_name)
     email = fixtures.auth.get_email(full_name)
@@ -95,6 +98,10 @@ def user_gets_id(full_name: str, fixtures: JointFixture, response: Response):
     assert isinstance(user, dict)
     user_id = user["id"]
     assert user_id and "-" in user_id and len(user_id) > 6 and "@" not in user_id
+    all_changed_user_data = fixtures.state.get_state("changed user data") or {}
+    changed_user_data = all_changed_user_data.get(sub) or {}
+    title = changed_user_data.get("title", title)
+    email = changed_user_data.get("email", email)
     assert user["name"] == name
     assert user["title"] == title
     assert user["email"] == email
@@ -135,7 +142,7 @@ def get_new_totp_token(full_name: str, fixtures: JointFixture):
     )
     assert session, "User session not found"
     assert session.user_id, "User ID not found"
-    session_headers = fixtures.auth.headers_for_session(session)
+    session_headers = fixtures.auth.headers(session)
     totp_token = fixtures.auth.get_totp_token(
         name=session.name,
         headers=session_headers,
@@ -145,6 +152,20 @@ def get_new_totp_token(full_name: str, fixtures: JointFixture):
     return totp_token
 
 
+@then(parse('the session state is "{state}"'))
+def check_session_state(state: str, fixtures: JointFixture):
+    sub = fixtures.state.get_state("logged in as")
+    assert sub
+    session = fixtures.state.get_state(f"session-{sub}")
+    assert session
+    assert session["state"] == state
+
+
+@then(parse('I get the error "{detail}"'))
+def check_token_error(detail: str, new_totp_token: str):
+    assert new_totp_token == f"error: {detail}"
+
+
 @then(parse('the new TOTP token for "{full_name}" is validated'))
 def validate_new_token(full_name: str, new_totp_token: str, fixtures: JointFixture):
     session = fixtures.auth.get_saved_session(
@@ -152,10 +173,74 @@ def validate_new_token(full_name: str, new_totp_token: str, fixtures: JointFixtu
     )
     assert session, f"No session found for {full_name}"
     assert session.user_id, f"user_id is missing for {full_name}"
-    session_headers = fixtures.auth.headers_for_session(session)
+    session_headers = fixtures.auth.headers(session)
     totp = fixtures.auth.generate_totp(new_totp_token)
-    response = fixtures.auth.verify_totp(session.user_id, totp, session_headers)
+    response = fixtures.auth.verify_totp(totp, session_headers)
     assert response.status_code == 204, response.text
     sub = fixtures.auth.get_sub(full_name)
     token_state = fixtures.state.get_state(f"totp-token-{sub}")
     assert token_state == new_totp_token
+
+
+@given(parse('"{full_name}" has {a_new_or_the_old} email address'))
+def new_email_address(full_name: str, a_new_or_the_old: str, fixtures: JointFixture):
+    all_changed_user_data = fixtures.state.get_state("changed user data") or {}
+    sub = fixtures.auth.get_sub(full_name)
+    changed_user_data = all_changed_user_data.setdefault(sub, {})
+    if "new" in a_new_or_the_old:
+        email = fixtures.auth.get_email(full_name)
+        changed_user_data["email"] = email.replace("@home", "@new-home")
+    else:
+        if "email" in changed_user_data:
+            del changed_user_data["email"]
+    fixtures.state.set_state("changed user data", all_changed_user_data)
+
+
+@when(
+    parse('"{full_name}" re-registers with the {old_or_new} email'),
+    target_fixture="response",
+)
+def user_re_registers(full_name: str, old_or_new: str, fixtures: JointFixture):
+    auth = fixtures.auth
+    title, name = auth.split_title(full_name)
+    email = auth.get_email(name)
+    if old_or_new == "new":
+        email = email.replace("@home", "@new-home")
+    user_data = {
+        "name": name,
+        "title": title,
+        "email": email,
+    }
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session
+    user_id = session.user_id
+    assert user_id
+    url = f"{fixtures.config.ums_url}/users/{user_id}"
+    headers = auth.headers(session=session)
+    return fixtures.http.put(url, json=user_data, headers=headers)
+
+
+@when(
+    parse('"{full_name}" changes the title to "{title}"'),
+    target_fixture="response",
+)
+def user_changes_title(full_name: str, title: str, fixtures: JointFixture):
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session
+    user_id = session.user_id
+    assert user_id
+    url = f"{fixtures.config.ums_url}/users/{user_id}"
+    headers = fixtures.auth.headers(session=session)
+    user_data = {"title": title}
+    response = fixtures.http.patch(url, json=user_data, headers=headers)
+    if response.status_code == 204:
+        all_changed_user_data = fixtures.state.get_state("changed user data") or {}
+        sub = fixtures.auth.get_sub(full_name)
+        changed_user_data = all_changed_user_data.setdefault(sub, {})
+        changed_user_data["title"] = title
+        fixtures.state.set_state("changed user data", all_changed_user_data)
+    return response

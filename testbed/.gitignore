@@ -114,6 +114,8 @@ venv.bak/
 
 # Local configuration
 *.local.yaml
+*.bak.yaml
+tb.*.yaml
 
 # Spyder project settings
 .spyderproject

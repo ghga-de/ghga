@@ -21,7 +21,6 @@ from time import sleep
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from .conftest import (
-    Config,
     JointFixture,
     Response,
     StateStorage,

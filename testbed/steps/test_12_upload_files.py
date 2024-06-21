@@ -69,9 +69,6 @@ def call_data_steward_kit_upload(
             timeout=60,
         )
 
-    print("STDERR")
-    print(completed_upload.stderr)
-
     assert not completed_upload.stdout
     assert "ERROR" not in completed_upload.stderr
     assert not completed_upload.returncode
