@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,6 @@
 #
 
 """Models used by the API"""
-
-from typing import Optional, Union
 
 from pydantic import (
     AnyHttpUrl,
@@ -36,12 +34,12 @@ __all__ = ["LoginInfo", "UserInfo", "OidcConfiguration"]
 class LoginInfo(BaseModel):
     """Data that is used to login as a user."""
 
-    sub: Optional[str] = Field(default=None, description="subject identifier")
-    email: Optional[EmailStr] = Field(
+    sub: str | None = Field(default=None, description="subject identifier")
+    email: EmailStr | None = Field(
         default=None, description="e-mail address of the user"
     )
     name: str = Field(..., description="the full name of the user")
-    valid_seconds: Optional[Union[PositiveInt, PositiveFloat]] = Field(
+    valid_seconds: PositiveInt | PositiveFloat | None = Field(
         default=None, description="seconds until the login expires"
     )
 

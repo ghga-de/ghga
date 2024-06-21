@@ -115,7 +115,7 @@ components:
           title: Userinfo Signing Alg Values Supported
           type: array
         version:
-          default: 1.1.1
+          default: 1.1.2
           description: Version of the test OpenID Connect Provider
           title: Version
           type: string

@@ -97,7 +97,7 @@
       "type": "integer"
     },
     "api_root_path": {
-      "default": "/",
+      "default": "",
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "title": "Api Root Path",
       "type": "string"

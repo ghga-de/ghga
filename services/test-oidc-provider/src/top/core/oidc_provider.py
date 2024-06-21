@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 
 import asyncio
 from contextlib import suppress
-from typing import Any, Union
+from typing import Any
 
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
@@ -132,10 +132,10 @@ class OidcProvider:
         """Get the public key set."""
         return self.key_set.export(private_keys=False, as_dict=True)
 
-    def _add_cleanup_task(self, token: str, valid_seconds: Union[int, float]) -> None:
+    def _add_cleanup_task(self, token: str, valid_seconds: int | float) -> None:
         """Add a task to remove the token in the cache after the given time."""
 
-        async def cleanup_task(token: str, valid_seconds: Union[int, float]) -> None:
+        async def cleanup_task(token: str, valid_seconds: int | float) -> None:
             """Remove the given token in the cache after the given time."""
             await asyncio.sleep(valid_seconds)
             if token in self.users:
@@ -183,7 +183,7 @@ class OidcProvider:
         token = sign_and_serialize_token(
             claims,
             key=self.key,
-            valid_seconds=valid_seconds,
+            valid_seconds=int(valid_seconds),
         )
         self._add_user(token, user)
         self._add_cleanup_task(token, valid_seconds)

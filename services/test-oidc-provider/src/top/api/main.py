@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 import logging
 from enum import Enum
-from typing import Annotated, Union
+from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Response, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -35,7 +35,7 @@ configure_app(app, config=CONFIG)
 
 oidc_provider = OidcProvider(CONFIG)
 
-tags: list[Union[str, Enum]] = ["TestOP"]
+tags: list[str | Enum] = ["TestOP"]
 
 
 @app.get(
