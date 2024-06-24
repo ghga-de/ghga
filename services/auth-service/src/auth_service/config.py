@@ -115,7 +115,8 @@ class Config(
     add_as_data_stewards: list[str | dict] = Field(
         default=[],
         description="a list of external IDs of data stewards or user objects"
-        " to seed the claims repository with",
+        " to seed the claims repository with,"
+        " all other data steward claims will be removed (only used with claims API)",
     )
 
     oidc_authority_url: HttpUrl = Field(

@@ -220,7 +220,7 @@ async def test_post_user_with_invalid_email(
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
-    assert "The email address is not valid." in error["detail"][0]["msg"]
+    assert "not a valid email address" in error["detail"][0]["msg"]
 
 
 async def test_post_user_with_different_ext_id(
@@ -247,7 +247,7 @@ async def test_post_user_with_existing_user(
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
-    assert "The email address is not valid." in error["detail"][0]["msg"]
+    assert "not a valid email address" in error["detail"][0]["msg"]
 
 
 async def test_post_user_unauthenticated(bare_client: BareClient):
@@ -361,7 +361,7 @@ async def test_put_user_with_invalid_data(bare_client: BareClient):
     response = await bare_client.put(f"/users/{id_}", json=user_data, headers=headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error = response.json()
-    assert "email address is not valid" in error["detail"][0]["msg"]
+    assert "not a valid email address" in error["detail"][0]["msg"]
 
 
 async def test_put_user_unauthenticated(bare_client: BareClient):

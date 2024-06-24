@@ -29,19 +29,6 @@ from auth_service.deps import get_config, get_mongodb_dao_factory
 from auth_service.user_management.api.main import app, lifespan
 from auth_service.user_management.user_registry.models.users import User, UserStatus
 
-
-@pytest_asyncio.fixture(name="bare_client")
-async def fixture_bare_client() -> AsyncGenerator[BareClient, None]:
-    """Get a test client for the claims repository without a database connection."""
-    config = Config(
-        include_apis=["claims"],
-    )  # type: ignore
-    app.dependency_overrides[get_config] = lambda: config
-    async with lifespan(app):
-        async with BareClient(app) as client:
-            yield client
-
-
 data_steward = User(
     id="the-id-of-rod-steward",
     ext_id="rod@ls.org",
@@ -89,7 +76,6 @@ async def fixture_full_client(
     )  # pyright: ignore
     await seed_database(config)
     app.dependency_overrides[get_config] = lambda: config
-    async with lifespan(app):
-        async with FullClient(app) as client:
-            yield client
+    async with lifespan(app), FullClient(app) as client:
+        yield client
     app.dependency_overrides.clear()

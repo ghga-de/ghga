@@ -38,9 +38,8 @@ async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient,
     )  # type: ignore
     app.dependency_overrides[get_config] = lambda: config
 
-    async with lifespan(app):
-        async with BareClient(app) as client:
-            yield client
+    async with lifespan(app), BareClient(app) as client:
+        yield client
 
 
 class FullClient(BareClient):
@@ -66,10 +65,9 @@ async def fixture_full_client(
     )
     app.dependency_overrides[get_config] = lambda: config
     assert app.router.lifespan_context
-    async with lifespan(app):
-        async with FullClient(app) as client:
-            client.config = config
-            client.mongodb = mongodb
-            client.kafka = kafka
-            yield client
+    async with lifespan(app), FullClient(app) as client:
+        client.config = config
+        client.mongodb = mongodb
+        client.kafka = kafka
+        yield client
     app.dependency_overrides.clear()

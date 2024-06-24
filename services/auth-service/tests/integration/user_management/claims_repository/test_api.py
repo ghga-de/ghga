@@ -31,12 +31,7 @@ from auth_service.user_management.user_registry.models.ivas import (
 )
 
 from ....fixtures.utils import DummyIvaDao, DummyUserDao
-from .fixtures import (  # noqa: F401
-    BareClient,
-    FullClient,
-    fixture_bare_client,
-    fixture_full_client,
-)
+from .fixtures import FullClient, fixture_full_client  # noqa: F401
 
 pytestmark = pytest.mark.asyncio()
 
@@ -59,17 +54,17 @@ DATASET_CLAIM_DATA = {
 }
 
 
-async def test_health_check(bare_client: BareClient):
+async def test_health_check(full_client: FullClient):
     """Test that the health check endpoint works."""
-    response = await bare_client.get("/health")
+    response = await full_client.get("/health")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"status": "OK"}
 
 
-async def test_get_from_a_random_path(bare_client: BareClient):
+async def test_get_from_a_random_path(full_client: FullClient):
     """Test that a GET request to a random path raises a not found error."""
-    response = await bare_client.post("/some/random/path")
+    response = await full_client.post("/some/random/path")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 

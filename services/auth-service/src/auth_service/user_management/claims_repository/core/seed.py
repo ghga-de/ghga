@@ -121,7 +121,6 @@ async def seed_data_steward_claims(config: Config) -> None:
     data_stewards = config.add_as_data_stewards
     if not data_stewards:
         log.warning("No data stewards are defined in the configuration.")
-        return
     async with set_new_correlation_id():
         async for dao_publisher_factory in get_mongo_kafka_dao_factory(config=config):
             user_dao = await get_user_dao(

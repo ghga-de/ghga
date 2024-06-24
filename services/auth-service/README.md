@@ -49,13 +49,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:2.4.3
+docker pull ghga/auth-service:2.4.4
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:2.4.3 .
+docker build -t ghga/auth-service:2.4.4 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -63,7 +63,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:2.4.3 --help
+docker run -p 8080:8080 ghga/auth-service:2.4.4 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -408,7 +408,7 @@ The service requires the following configuration parameters:
 
   - **Items** *(string)*: Must be one of: `["users", "claims"]`.
 
-- **`add_as_data_stewards`** *(array)*: a list of external IDs of data stewards or user objects to seed the claims repository with. Default: `[]`.
+- **`add_as_data_stewards`** *(array)*: a list of external IDs of data stewards or user objects to seed the claims repository with, all other data steward claims will be removed (only used with claims API). Default: `[]`.
 
   - **Items**
 
