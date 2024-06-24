@@ -53,6 +53,7 @@ log_level: DEBUG
 max_iva_verification_attempts: 10
 oidc_authority_url: https://login.aai.lifescience-ri.eu/oidc/
 oidc_client_id: ghga-data-portal
+oidc_issuer: https://login.aai.lifescience-ri.eu/oidc/
 oidc_userinfo_endpoint: https://login.aai.lifescience-ri.eu/oidc/userinfo
 openapi_url: /openapi.json
 organization_url: https://ghga.de/

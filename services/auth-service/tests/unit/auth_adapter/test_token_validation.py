@@ -101,17 +101,18 @@ def test_does_not_validate_an_access_token_with_bad_signature():
 def test_does_not_validate_an_access_token_when_alg_is_not_allowed():
     """Test that an access token must be signed with an allowed algorithm."""
     access_token = create_access_token()
-    external_algs = auth.jwt_config.external_algs
+    jwt_config = auth.get_jwt_config()
+    external_algs = jwt_config.external_algs
     assert isinstance(external_algs, list)
-    auth.jwt_config.external_algs = external_algs[:]
+    jwt_config.external_algs = external_algs[:]
     try:
-        auth.jwt_config.external_algs.remove("ES256")
+        jwt_config.external_algs.remove("ES256")
         with pytest.raises(
             auth.TokenValidationError, match="Not a valid token: Missing Key"
         ):
             auth.decode_and_validate_token(access_token)
     finally:
-        auth.jwt_config.external_algs = external_algs
+        jwt_config.external_algs = external_algs
 
 
 def test_does_not_validate_an_access_token_with_invalid_client_id():
@@ -147,8 +148,9 @@ def test_does_not_validate_an_expired_access_token():
 def test_does_not_validate_token_with_invalid_payload():
     """Test that access tokens with invalid payload are rejected."""
     key = jwk.JWK(kty="oct", k="r0TSf_aAU9eS7I5JPPJ20pmkPmR__9LsfnZaKfXZYp8")
-    external_algs = auth.jwt_config.external_algs
-    auth.jwt_config.external_algs = ["HS256"]
+    jwt_config = auth.get_jwt_config()
+    external_algs = jwt_config.external_algs
+    jwt_config.external_algs = ["HS256"]
     try:
         token_with_valid_payload = (
             "eyJhbGciOiJIUzI1NiJ9."
@@ -178,4 +180,4 @@ def test_does_not_validate_token_with_invalid_payload():
         ):
             auth.decode_and_validate_token(token_with_bad_encoding, key=key)
     finally:
-        auth.jwt_config.external_algs = external_algs
+        jwt_config.external_algs = external_algs

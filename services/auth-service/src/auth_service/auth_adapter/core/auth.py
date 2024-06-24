@@ -31,7 +31,7 @@ from auth_service.config import CONFIG, Config
 
 from .session_store import Session
 
-__all__ = ["get_user_info", "internal_token_from_session", "jwt_config"]
+__all__ = ["get_user_info", "internal_token_from_session", "get_jwt_config"]
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ class OIDCDiscovery:
             raise ConfigurationDiscoveryError("Unexpected JWKS object")
         return jwks_response.text
 
-    @property
+    @cached_property
     def token_endpoint(self) -> str:
         """Fetch the URL of the token endpoint."""
         token_endpoint = self.config.get("token_endpoint")
@@ -130,7 +130,7 @@ class OIDCDiscovery:
         log.info("Discovered token endpoint: %s", token_endpoint)
         return token_endpoint
 
-    @property
+    @cached_property
     def userinfo_endpoint(self) -> str:
         """Fetch the URL of the userinfo endpoint."""
         userinfo_endpoint = self.config.get("userinfo_endpoint")
@@ -168,7 +168,7 @@ class JWTConfig:
 
         external_keys = config.auth_ext_keys
         if not external_keys:
-            log.warning("No external signing keys configured, using discovery.")
+            log.info("No external signing keys configured, using discovery.")
             external_keys = discovery.jwks_str
         external_jwks = jwk.JWKSet.from_json(external_keys)
         if not any(external_jwk.has_public for external_jwk in external_jwks):
@@ -194,7 +194,13 @@ class JWTConfig:
         else:
             log.warning("Allowed external signing algorithms not configured.")
             self.external_algs = None
-        self.check_at_claims["iss"] = discovery.issuer
+
+        issuer = str(config.oidc_issuer)
+        if not issuer:
+            log.info("No issuer configured, using discovery.")
+        log.debug("Using OIDC issuer: %s", issuer)
+        self.check_at_claims["iss"] = issuer
+
         client_id = config.oidc_client_id
         if client_id:
             self.check_at_claims["client_id"] = client_id
@@ -204,19 +210,31 @@ class JWTConfig:
 
         userinfo_endpoint = str(config.oidc_userinfo_endpoint)
         if not userinfo_endpoint:
-            log.warning("No external userinfo endpoint configured, using discovery.")
-            userinfo_endpoint = str(discovery.userinfo_endpoint)
+            log.info("No external userinfo endpoint configured, using discovery.")
+            userinfo_endpoint = discovery.userinfo_endpoint
+        log.debug("Using OIDC issuer: %s", issuer)
         self.userinfo_endpoint = userinfo_endpoint
 
 
-jwt_config = JWTConfig()
+_jwt_config: JWTConfig | None = None
+
+
+def get_jwt_config() -> JWTConfig:
+    """Get the JWT configuration only when required.
+
+    This allows the auth adapter to start even if OIDC discovery fails.
+    """
+    global _jwt_config
+    if _jwt_config is None:
+        _jwt_config = JWTConfig()
+    return _jwt_config
 
 
 @lru_cache(maxsize=1024)
 def _fetch_user_info(access_token: str) -> dict[str, Any]:
     """Fetch info for the given access token from the userinfo endpoint."""
     response = httpx.get(
-        jwt_config.userinfo_endpoint,
+        get_jwt_config().userinfo_endpoint,
         headers={"Authorization": f"Bearer {access_token}"},
     )
     if response.status_code != status.HTTP_200_OK:
@@ -232,7 +250,7 @@ def _assert_at_claims_not_empty(at_claims: dict[str, Any]) -> None:
 
     Raises a TokenValidationError in case one of the claims is empty.
     """
-    for claim in jwt_config.check_at_claims:
+    for claim in get_jwt_config().check_at_claims:
         if not at_claims[claim]:
             raise TokenValidationError(f"Missing value for {claim} claim.")
 
@@ -242,13 +260,13 @@ def _assert_ui_claims_not_empty(ui_claims: dict[str, Any]) -> None:
 
     Raises a UserInfoError in case one of the claims is empty.
     """
-    for claim in jwt_config.check_ui_claims:
+    for claim in get_jwt_config().check_ui_claims:
         if not ui_claims.get(claim):
             raise UserInfoError(f"Missing value for {claim} claim.")
 
 
 def decode_and_validate_token(
-    access_token: str, key: jwk.JWK | jwk.JWKSet = jwt_config.external_jwks
+    access_token: str, key: jwk.JWK | jwk.JWKSet | None = None
 ) -> dict[str, Any]:
     """Decode and validate the given JSON Web Token.
 
@@ -258,6 +276,9 @@ def decode_and_validate_token(
     """
     if not access_token:
         raise TokenValidationError("Empty token")
+    jwt_config = get_jwt_config()
+    if not key:
+        key = jwt_config.external_jwks
     try:
         token = jwt.JWT(
             jwt=access_token,
@@ -274,9 +295,7 @@ def decode_and_validate_token(
         raise TokenValidationError("Claims cannot be decoded") from exc
 
 
-def sign_and_encode_token(
-    claims: dict[str, Any], key: jwk.JWK = jwt_config.internal_jwk
-) -> str:
+def sign_and_encode_token(claims: dict[str, Any], key: jwk.JWK | None = None) -> str:
     """Encode and sign the given payload as JSON Web Token.
 
     Returns the signed and encoded payload.
@@ -285,6 +304,8 @@ def sign_and_encode_token(
     """
     if not claims:
         raise TokenSigningError("No payload")
+    if not key:
+        key = get_jwt_config().internal_jwk
     header = {"alg": "ES256" if key["kty"] == "EC" else "RS256", "typ": "JWT"}
     try:
         token = jwt.JWT(header=header, claims=claims)

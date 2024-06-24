@@ -82,7 +82,7 @@ class Config(
     auth_ext_keys: str | None = Field(
         default=None,
         description="external public key set for auth adapter"
-        " (not used for user management)",
+        " (used only by the auth adapter, determined using OIDC discovery if None)",
     )
     auth_ext_algs: list[str] = Field(
         default=["RS256", "ES256"],
@@ -122,9 +122,15 @@ class Config(
         default="https://login.aai.lifescience-ri.eu/oidc/",
         description="external OIDC authority URL used by the auth adapter",
     )
+    oidc_issuer: HttpUrl | None = Field(
+        default="https://login.aai.lifescience-ri.eu/oidc/",
+        description="external OIDC issuer for access tokens used by the auth adapter"
+        " (determined using OIDC discovery if None)",
+    )
     oidc_userinfo_endpoint: HttpUrl | None = Field(
         default="https://login.aai.lifescience-ri.eu/oidc/userinfo",
-        description="external OIDC userinfo endpoint used by the auth adapter",
+        description="external OIDC userinfo endpoint used by the auth adapter"
+        " (determined using OIDC discovery if None)",
     )
     oidc_client_id: str = Field(
         default="ghga-data-portal", description="the registered OIDC client ID"
