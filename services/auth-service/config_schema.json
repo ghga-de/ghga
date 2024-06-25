@@ -617,20 +617,10 @@
       "type": "string"
     },
     "oidc_issuer": {
-      "anyOf": [
-        {
-          "format": "uri",
-          "maxLength": 2083,
-          "minLength": 1,
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
       "default": "https://login.aai.lifescience-ri.eu/oidc/",
-      "description": "external OIDC issuer for access tokens used by the auth adapter (determined using OIDC discovery if None)",
-      "title": "Oidc Issuer"
+      "description": "external OIDC issuer for access tokens used by the auth adapter (URL format with or without end slash, determined using OIDC discovery if empty)",
+      "title": "Oidc Issuer",
+      "type": "string"
     },
     "oidc_userinfo_endpoint": {
       "anyOf": [

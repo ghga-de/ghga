@@ -178,6 +178,7 @@ class JWTConfig:
                 "Private external signing keys found,"
                 " these should not be put in the auth adapter configuration."
             )
+        log.debug("Found %d external signing keys", len(external_jwks))
         self.external_jwks = external_jwks
 
         internal_key = config.auth_key
@@ -195,7 +196,7 @@ class JWTConfig:
             log.warning("Allowed external signing algorithms not configured.")
             self.external_algs = None
 
-        issuer = str(config.oidc_issuer)
+        issuer = config.oidc_issuer
         if not issuer:
             log.info("No issuer configured, using discovery.")
         log.debug("Using OIDC issuer: %s", issuer)
@@ -212,7 +213,7 @@ class JWTConfig:
         if not userinfo_endpoint:
             log.info("No external userinfo endpoint configured, using discovery.")
             userinfo_endpoint = discovery.userinfo_endpoint
-        log.debug("Using OIDC issuer: %s", issuer)
+        log.debug("Using OIDC endpoint: %s", userinfo_endpoint)
         self.userinfo_endpoint = userinfo_endpoint
 
 
