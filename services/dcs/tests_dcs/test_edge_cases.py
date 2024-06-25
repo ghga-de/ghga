@@ -30,11 +30,7 @@ from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from dcs.core import models
 from dcs.ports.outbound.dao import DrsObjectDaoPort
-from tests_dcs.fixtures.joint import (
-    EXAMPLE_FILE,
-    JointFixture,
-    PopulatedFixture,
-)
+from tests_dcs.fixtures.joint import EXAMPLE_FILE, JointFixture, PopulatedFixture
 from tests_dcs.fixtures.mock_api.app import router
 from tests_dcs.fixtures.utils import (
     generate_token_signing_keys,

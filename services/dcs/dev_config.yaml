@@ -35,7 +35,7 @@ file_registered_event_type: file_registered
 files_to_register_topic: internal_file_registry
 files_to_register_type: file_registered
 unstaged_download_event_topic: file_downloads
-unstaged_download_event_type: unstaged_download_requested
+unstaged_download_collection: unstaged-download-requested
 files_to_delete_topic: file_deletions
 file_deleted_event_topic: file_downloads
 file_deleted_event_type: file_deleted

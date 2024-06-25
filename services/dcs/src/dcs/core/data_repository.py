@@ -21,6 +21,7 @@ import re
 import uuid
 from datetime import timedelta
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.utils import utc_dates
 from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorages,
@@ -38,6 +39,7 @@ from dcs.adapters.outbound.http.api_calls import (
 from dcs.core import models
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort, ResourceNotFoundError
+from dcs.ports.outbound.daopub import NonStagedFileRequestedDao
 from dcs.ports.outbound.event_pub import EventPublisherPort
 
 log = logging.getLogger(__name__)
@@ -92,19 +94,21 @@ class DataRepositoryConfig(BaseSettings):
 class DataRepository(DataRepositoryPort):
     """A service that manages a registry of DRS objects."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         config: DataRepositoryConfig,
         drs_object_dao: DrsObjectDaoPort,
         object_storages: S3ObjectStorages,
         event_publisher: EventPublisherPort,
+        nonstaged_file_requested_dao: NonStagedFileRequestedDao,
     ):
         """Initialize with essential config params and outbound adapters."""
         self._config = config
         self._event_publisher = event_publisher
         self._drs_object_dao = drs_object_dao
         self._object_storages = object_storages
+        self._nonstaged_file_requested_dao = nonstaged_file_requested_dao
 
     def _get_drs_uri(self, *, drs_id: str) -> str:
         """Construct DRS URI for the given DRS ID."""
@@ -175,11 +179,17 @@ class DataRepository(DataRepositoryPort):
             bucket_id=bucket_id, object_id=drs_object.object_id
         ):
             log.info(f"File not in outbox for '{drs_id}'. Request staging...")
-            # publish an event to request a stage of the corresponding file:
-            await self._event_publisher.unstaged_download_requested(
-                drs_object=drs_object_with_uri,
+
+            # publish an outbox event to request a stage of the corresponding file:
+            unstaged_file_dto = event_schemas.NonStagedFileRequested(
+                s3_endpoint_alias=drs_object.s3_endpoint_alias,
+                file_id=drs_object.file_id,
+                target_object_id=drs_object.object_id,
                 target_bucket_id=bucket_id,
+                decrypted_sha256=drs_object.decrypted_sha256,
             )
+
+            await self._nonstaged_file_requested_dao.insert(unstaged_file_dto)
 
             # instruct to retry later:
             raise self.RetryAccessLaterError(

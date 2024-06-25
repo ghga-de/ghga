@@ -16,10 +16,11 @@
 """Entrypoint of the package"""
 
 import asyncio
+from typing import Annotated
 
 import typer
 
-from dcs.main import consume_events, run_outbox_cleanup, run_rest_app
+from dcs.main import consume_events, publish_events, run_outbox_cleanup, run_rest_app
 
 cli = typer.Typer()
 
@@ -40,3 +41,13 @@ def sync_consume_events(run_forever: bool = True):
 def sync_run_cleanup():
     """Run outbox cleanup"""
     asyncio.run(run_outbox_cleanup())
+
+
+@cli.command(name="publish-events")
+def sync_run_publish_events(
+    all: Annotated[
+        bool, typer.Option(help="Set to (re)publish all events regardless of status")
+    ] = False,
+):
+    """Publish pending events."""
+    asyncio.run(publish_events(all=all))

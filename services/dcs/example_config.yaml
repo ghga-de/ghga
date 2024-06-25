@@ -59,6 +59,6 @@ presigned_url_expires_after: 30
 retry_access_after: 120
 service_instance_id: '001'
 service_name: dcs
+unstaged_download_collection: unstaged-download-requested
 unstaged_download_event_topic: file_downloads
-unstaged_download_event_type: unstaged_download_requested
 workers: 1

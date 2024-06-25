@@ -100,7 +100,7 @@ async def test_happy_journey(
         events=[
             ExpectedEvent(
                 payload=json.loads(non_staged_requested_event.model_dump_json()),
-                type_=joint_fixture.config.unstaged_download_event_type,
+                type_="upserted",
             )
         ],
         in_topic=joint_fixture.config.unstaged_download_event_topic,

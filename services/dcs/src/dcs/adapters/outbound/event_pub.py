@@ -45,22 +45,6 @@ class EventPubTranslatorConfig(BaseSettings):
         ),
         examples=["donwload_served"],
     )
-    unstaged_download_event_topic: str = Field(
-        default=...,
-        description=(
-            "Name of the topic used for events indicating that a download was requested"
-            + " for a file that is not yet available in the outbox."
-        ),
-        examples=["file_downloads"],
-    )
-    unstaged_download_event_type: str = Field(
-        default=...,
-        description=(
-            "The type used for event indicating that a download was requested"
-            + " for a file that is not yet available in the outbox."
-        ),
-        examples=["unstaged_download_requested"],
-    )
     file_registered_event_topic: str = Field(
         default=...,
         description=(
@@ -126,31 +110,6 @@ class EventPubTranslator(EventPublisherPort):
             payload=payload_dict,
             type_=self._config.download_served_event_type,
             topic=self._config.download_served_event_topic,
-            key=drs_object.file_id,
-        )
-
-    async def unstaged_download_requested(
-        self,
-        *,
-        drs_object: models.DrsObjectWithUri,
-        target_bucket_id: str,
-    ) -> None:
-        """Communicates the event that a download was requested for a file that
-        is not yet available in the outbox.
-        """
-        payload = event_schemas.NonStagedFileRequested(
-            s3_endpoint_alias=drs_object.s3_endpoint_alias,
-            file_id=drs_object.file_id,
-            target_object_id=drs_object.object_id,
-            target_bucket_id=target_bucket_id,
-            decrypted_sha256=drs_object.decrypted_sha256,
-        )
-        payload_dict = json.loads(payload.model_dump_json())
-
-        await self._provider.publish(
-            payload=payload_dict,
-            type_=self._config.unstaged_download_event_type,
-            topic=self._config.unstaged_download_event_topic,
             key=drs_object.file_id,
         )
 

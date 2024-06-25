@@ -30,6 +30,7 @@ from dcs.adapters.inbound.event_sub import (
     OutboxSubTranslatorConfig,
 )
 from dcs.adapters.inbound.fastapi_.configure import DrsApiConfig
+from dcs.adapters.outbound.daopub import OutboxDaoConfig
 from dcs.adapters.outbound.event_pub import EventPubTranslatorConfig
 from dcs.core.data_repository import DataRepositoryConfig
 
@@ -60,6 +61,7 @@ class Config(
     S3ObjectStoragesConfig,
     LoggingConfig,
     OutboxSubTranslatorConfig,
+    OutboxDaoConfig,
 ):
     """Config parameters and their defaults."""
 

@@ -12,35 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Interface for broadcasting events to other services."""
 
 from abc import ABC, abstractmethod
+from typing import TypeAlias
 
-from dcs.core import models
+from ghga_event_schemas.pydantic_ import NonStagedFileRequested
+from hexkit.protocols.daopub import DaoPublisher
+
+__all__ = ["NonStagedFileRequestedDao", "OutboxPublisherFactoryPort"]
+
+NonStagedFileRequestedDao: TypeAlias = DaoPublisher[NonStagedFileRequested]
 
 
-class EventPublisherPort(ABC):
-    """A port through which DRS-specific events are communicated with the outside."""
+class OutboxPublisherFactoryPort(ABC):
+    """Port that provides a factory for user related data access objects.
 
-    @abstractmethod
-    async def download_served(
-        self,
-        *,
-        drs_object: models.DrsObjectWithUri,
-        target_bucket_id: str,
-    ) -> None:
-        """Communicate the event of an download being served. This can be relevant for
-        auditing purposes.
-        """
-        ...
+    These objects will also publish changes according to the outbox pattern.
+    """
 
     @abstractmethod
-    async def file_registered(self, *, drs_object: models.DrsObjectWithUri) -> None:
-        """Communicates the event that a file has been registered."""
-        ...
-
-    @abstractmethod
-    async def file_deleted(self, *, file_id: str) -> None:
-        """Communicates the event that a file has been successfully deleted."""
+    async def get_nonstaged_file_requested_dao(self) -> NonStagedFileRequestedDao:
+        """Construct a DAO for manipulating NonStagedFileRequested events in the DB."""
         ...

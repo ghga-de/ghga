@@ -74,6 +74,26 @@ dcs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`unstaged_download_event_topic`** *(string)*: Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.
+
+
+  Examples:
+
+  ```json
+  "file_downloads"
+  ```
+
+
+- **`unstaged_download_collection`** *(string)*: The type used for event indicating that a download was requested for a file that is not yet available in the outbox. The value should use hyphens in place of underscores if needed.
+
+
+  Examples:
+
+  ```json
+  "unstaged-download-requested"
+  ```
+
+
 - **`files_to_delete_topic`** *(string)*: The name of the topic to receive events informing about files to delete.
 
 
@@ -160,26 +180,6 @@ The service requires the following configuration parameters:
 
   ```json
   "donwload_served"
-  ```
-
-
-- **`unstaged_download_event_topic`** *(string)*: Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.
-
-
-  Examples:
-
-  ```json
-  "file_downloads"
-  ```
-
-
-- **`unstaged_download_event_type`** *(string)*: The type used for event indicating that a download was requested for a file that is not yet available in the outbox.
-
-
-  Examples:
-
-  ```json
-  "unstaged_download_requested"
   ```
 
 

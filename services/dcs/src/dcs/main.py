@@ -22,6 +22,7 @@ from hexkit.log import configure_logging
 
 from dcs.config import Config
 from dcs.inject import (
+    get_nonstaged_file_requested_dao,
     prepare_event_subscriber,
     prepare_outbox_cleaner,
     prepare_outbox_subscriber,
@@ -60,3 +61,15 @@ async def run_outbox_cleanup():
 
     async with prepare_outbox_cleaner(config=config) as cleanup_outbox:
         await cleanup_outbox
+
+
+async def publish_events(*, all: bool = False):
+    """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
+    config = Config()
+    configure_logging(config=config)
+
+    async with get_nonstaged_file_requested_dao(config=config) as dao:
+        if all:
+            await dao.republish()
+        else:
+            await dao.publish_pending()

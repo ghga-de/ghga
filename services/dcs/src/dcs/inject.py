@@ -29,6 +29,7 @@ from hexkit.providers.akafka import (
     KafkaOutboxSubscriber,
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from dcs.adapters.inbound.event_sub import (
     EventSubTranslator,
@@ -37,11 +38,35 @@ from dcs.adapters.inbound.event_sub import (
 from dcs.adapters.inbound.fastapi_ import dummies
 from dcs.adapters.inbound.fastapi_.configure import get_configured_app
 from dcs.adapters.outbound.dao import get_drs_dao
+from dcs.adapters.outbound.daopub import OutboxDaoPublisherFactory
 from dcs.adapters.outbound.event_pub import EventPubTranslator
 from dcs.config import Config
 from dcs.core.auth_policies import WorkOrderContext
 from dcs.core.data_repository import DataRepository
 from dcs.ports.inbound.data_repository import DataRepositoryPort
+from dcs.ports.outbound.daopub import NonStagedFileRequestedDao
+
+
+@asynccontextmanager
+async def get_mongo_kafka_dao_factory(
+    config: Config,
+) -> AsyncGenerator[MongoKafkaDaoPublisherFactory, None]:
+    """Get a MongoDB DAO publisher factory."""
+    async with MongoKafkaDaoPublisherFactory.construct(config=config) as factory:
+        yield factory
+
+
+@asynccontextmanager
+async def get_nonstaged_file_requested_dao(
+    *, config: Config
+) -> AsyncGenerator[NonStagedFileRequestedDao, None]:
+    """Get a NonStagedFileRequested dao."""
+    async with get_mongo_kafka_dao_factory(config=config) as dao_publisher_factory:
+        outbox_dao_factory = OutboxDaoPublisherFactory(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
+        outbox_dao = await outbox_dao_factory.get_nonstaged_file_requested_dao()
+        yield outbox_dao
 
 
 @asynccontextmanager
@@ -51,13 +76,17 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort, 
     drs_object_dao = await get_drs_dao(dao_factory=dao_factory)
     object_storages = S3ObjectStorages(config=config)
 
-    async with KafkaEventPublisher.construct(config=config) as event_pub_provider:
+    async with (
+        KafkaEventPublisher.construct(config=config) as event_pub_provider,
+        get_nonstaged_file_requested_dao(config=config) as nonstaged_file_requested_dao,
+    ):
         event_publisher = EventPubTranslator(config=config, provider=event_pub_provider)
 
         yield DataRepository(
             drs_object_dao=drs_object_dao,
             object_storages=object_storages,
             event_publisher=event_publisher,
+            nonstaged_file_requested_dao=nonstaged_file_requested_dao,
             config=config,
         )
 

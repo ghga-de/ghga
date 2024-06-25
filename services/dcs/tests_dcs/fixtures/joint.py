@@ -49,6 +49,7 @@ from dcs.adapters.outbound.dao import get_drs_dao
 from dcs.config import Config, WorkOrderTokenConfig
 from dcs.core import models
 from dcs.inject import (
+    get_nonstaged_file_requested_dao,
     prepare_core,
     prepare_event_subscriber,
     prepare_outbox_subscriber,
@@ -56,6 +57,7 @@ from dcs.inject import (
 )
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort
+from dcs.ports.outbound.daopub import NonStagedFileRequestedDao
 from tests_dcs.fixtures.config import get_config
 from tests_dcs.fixtures.utils import (
     generate_token_signing_keys,
@@ -98,6 +100,7 @@ class JointFixture:
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
     outbox_subscriber: KafkaOutboxSubscriber
+    nonstaged_file_requested_dao: NonStagedFileRequestedDao
     mongodb: MongoDbFixture
     s3: S3Fixture
     kafka: KafkaFixture
@@ -156,6 +159,7 @@ async def joint_fixture(
             config=config,
             data_repo_override=data_repository,
         ) as outbox_subscriber,
+        get_nonstaged_file_requested_dao(config=config) as nonstaged_file_requested_dao,
     ):
         yield JointFixture(
             config=config,
@@ -164,6 +168,7 @@ async def joint_fixture(
             rest_client=rest_client,
             event_subscriber=event_subscriber,
             outbox_subscriber=outbox_subscriber,
+            nonstaged_file_requested_dao=nonstaged_file_requested_dao,
             mongodb=mongodb,
             s3=s3,
             kafka=kafka,
