@@ -45,7 +45,7 @@ def transpile(
         dir_okay=False,
         readable=True,
     ),
-    output_file: Optional[Path] = typer.Argument(  # noqa: UP007 (typer issue #461)
+    output_file: Optional[Path] = typer.Argument(
         None, help="The path to output file (JSON).", dir_okay=False
     ),
     force: bool = typer.Option(

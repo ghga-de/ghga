@@ -17,6 +17,8 @@
 
 """Module to process config file"""
 
+from __future__ import annotations
+
 from collections import Counter
 from collections.abc import Callable
 from importlib import resources

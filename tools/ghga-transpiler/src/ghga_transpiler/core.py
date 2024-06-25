@@ -17,6 +17,8 @@
 
 """This module contains functionalities for processing excel sheets into json object."""
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from importlib import resources
 
@@ -97,7 +99,7 @@ def convert_rows(header, rows) -> list[dict]:
     return [
         {
             key: value
-            for key, value in zip(header, row, strict=False)
+            for key, value in zip(header, row)
             if value is not None and value != ""
         }
         for row in rows
