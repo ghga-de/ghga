@@ -21,11 +21,13 @@ from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 
 from ucs.adapters.inbound.event_sub import (
     EventSubTranslatorConfig,
     OutboxSubTranslatorConfig,
 )
+from ucs.adapters.outbound.daopub import OutboxDaoConfig
 from ucs.adapters.outbound.event_pub import EventPubTranslatorConfig
 
 SERVICE_NAME = "ucs"
@@ -34,6 +36,7 @@ SERVICE_NAME = "ucs"
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     ApiConfigBase,
+    MongoKafkaConfig,
     MongoDbConfig,
     S3ObjectStoragesConfig,
     KafkaConfig,
@@ -41,6 +44,7 @@ class Config(
     EventSubTranslatorConfig,
     OutboxSubTranslatorConfig,
     EventPubTranslatorConfig,
+    OutboxDaoConfig,
 ):
     """Config parameters and their defaults."""
 

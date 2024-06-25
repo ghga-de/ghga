@@ -16,10 +16,11 @@
 """Entrypoint of the package"""
 
 import asyncio
+from typing import Annotated
 
 import typer
 
-from ucs.main import check_inbox_buckets, consume_events, run_rest_app
+from ucs.main import check_inbox_buckets, consume_events, publish_events, run_rest_app
 
 cli = typer.Typer()
 
@@ -40,3 +41,14 @@ def sync_consume_events(run_forever: bool = True):
 def sync_check_inbox_buckets():
     """Run a job to check all objects no longer needed have been deleted"""
     asyncio.run(check_inbox_buckets())
+
+
+@cli.command(name="publish-events")
+def sync_run_publish_events(
+    all: Annotated[
+        bool,
+        typer.Option(help="Set to (re)publish all events regardless of status"),
+    ] = False,
+):
+    """Publish pending events."""
+    asyncio.run(publish_events(all=all))

@@ -15,7 +15,7 @@
 
 """Join the functionality of all fixtures for API-level integration testing."""
 
-__all__ = ["JointFixture", "get_joint_fixture"]
+__all__ = ["JointFixture", "joint_fixture"]
 
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
@@ -31,13 +31,13 @@ from hexkit.providers.akafka import KafkaEventSubscriber, KafkaOutboxSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
-from pytest_asyncio.plugin import _ScopeName
 
 from tests_ucs.fixtures.config import get_config
 from tests_ucs.fixtures.example_data import STORAGE_ALIASES
 from ucs.adapters.outbound.dao import DaoCollectionTranslator
 from ucs.config import Config
 from ucs.inject import (
+    get_file_upload_received_dao,
     prepare_core,
     prepare_event_subscriber,
     prepare_outbox_subscriber,
@@ -48,6 +48,7 @@ from ucs.ports.inbound.file_service import FileMetadataServicePort
 from ucs.ports.inbound.storage_inspector import StorageInspectorPort
 from ucs.ports.inbound.upload_service import UploadServicePort
 from ucs.ports.outbound.dao import DaoCollectionPort
+from ucs.ports.outbound.daopub import FileUploadReceivedDao
 
 
 @dataclass
@@ -61,6 +62,7 @@ class JointFixture:
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
     outbox_subscriber: KafkaOutboxSubscriber
+    file_upload_received_dao: FileUploadReceivedDao
     mongodb: MongoDbFixture
     kafka: KafkaFixture
     s3: S3Fixture
@@ -68,15 +70,13 @@ class JointFixture:
     inbox_inspector: StorageInspectorPort
 
 
-async def joint_fixture_function(
+@pytest_asyncio.fixture(scope="function")
+async def joint_fixture(
     mongodb: MongoDbFixture,
     kafka: KafkaFixture,
     s3: S3Fixture,
 ) -> AsyncGenerator[JointFixture, None]:
-    """A fixture that embeds all other fixtures for API-level integration testing.
-
-    **Do not call directly** Instead, use get_joint_fixture().
-    """
+    """A fixture that embeds all other fixtures for API-level integration testing."""
     bucket_id = "test-inbox"
 
     node_config = S3ObjectStorageNodeConfig(bucket=bucket_id, credentials=s3.config)
@@ -108,24 +108,21 @@ async def joint_fixture_function(
         prepare_outbox_subscriber(
             config=config, core_override=(upload_service, file_metadata_service)
         ) as outbox_subscriber,
+        get_file_upload_received_dao(config=config) as file_upload_received_dao,
+        AsyncTestClient(app=app) as rest_client,
     ):
-        async with AsyncTestClient(app=app) as rest_client:
-            yield JointFixture(
-                config=config,
-                daos=daos,
-                upload_service=upload_service,
-                file_metadata_service=file_metadata_service,
-                rest_client=rest_client,
-                event_subscriber=event_subscriber,
-                outbox_subscriber=outbox_subscriber,
-                mongodb=mongodb,
-                kafka=kafka,
-                s3=s3,
-                bucket_id=bucket_id,
-                inbox_inspector=inbox_inspector,
-            )
-
-
-def get_joint_fixture(scope: _ScopeName = "function"):
-    """Produce a joint fixture with desired scope"""
-    return pytest_asyncio.fixture(joint_fixture_function, scope=scope)
+        yield JointFixture(
+            config=config,
+            daos=daos,
+            upload_service=upload_service,
+            file_metadata_service=file_metadata_service,
+            rest_client=rest_client,
+            event_subscriber=event_subscriber,
+            outbox_subscriber=outbox_subscriber,
+            file_upload_received_dao=file_upload_received_dao,
+            mongodb=mongodb,
+            kafka=kafka,
+            s3=s3,
+            bucket_id=bucket_id,
+            inbox_inspector=inbox_inspector,
+        )

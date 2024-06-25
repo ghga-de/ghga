@@ -27,6 +27,7 @@ from hexkit.providers.akafka import (
     KafkaOutboxSubscriber,
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from ucs.adapters.inbound.event_sub import (
     EventSubTranslator,
@@ -35,6 +36,7 @@ from ucs.adapters.inbound.event_sub import (
 from ucs.adapters.inbound.fastapi_ import dummies
 from ucs.adapters.inbound.fastapi_.configure import get_configured_app
 from ucs.adapters.outbound.dao import DaoCollectionTranslator
+from ucs.adapters.outbound.daopub import OutboxDaoPublisherFactory
 from ucs.adapters.outbound.event_pub import EventPubTranslator
 from ucs.config import Config
 from ucs.core.file_service import FileMetadataServive
@@ -42,6 +44,29 @@ from ucs.core.storage_inspector import InboxInspector
 from ucs.core.upload_service import UploadService
 from ucs.ports.inbound.file_service import FileMetadataServicePort
 from ucs.ports.inbound.upload_service import UploadServicePort
+from ucs.ports.outbound.daopub import FileUploadReceivedDao
+
+
+@asynccontextmanager
+async def get_mongo_kafka_dao_factory(
+    config: Config,
+) -> AsyncGenerator[MongoKafkaDaoPublisherFactory, None]:
+    """Get a MongoDB DAO publisher factory."""
+    async with MongoKafkaDaoPublisherFactory.construct(config=config) as factory:
+        yield factory
+
+
+@asynccontextmanager
+async def get_file_upload_received_dao(
+    *, config: Config
+) -> AsyncGenerator[FileUploadReceivedDao, None]:
+    """Get a FileUploadValidationSuccess dao."""
+    async with get_mongo_kafka_dao_factory(config=config) as dao_publisher_factory:
+        outbox_dao_factory = OutboxDaoPublisherFactory(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
+        outbox_dao = await outbox_dao_factory.get_file_upload_received_dao()
+        yield outbox_dao
 
 
 @asynccontextmanager
@@ -54,7 +79,10 @@ async def prepare_core(
     dao_factory = MongoDbDaoFactory(config=config)
     dao_collection = await DaoCollectionTranslator.construct(provider=dao_factory)
 
-    async with KafkaEventPublisher.construct(config=config) as kafka_event_publisher:
+    async with (
+        KafkaEventPublisher.construct(config=config) as kafka_event_publisher,
+        get_file_upload_received_dao(config=config) as file_upload_received_dao,
+    ):
         event_pub_translator = EventPubTranslator(
             config=config, provider=kafka_event_publisher
         )
@@ -62,6 +90,7 @@ async def prepare_core(
             daos=dao_collection,
             object_storages=object_storages,
             event_publisher=event_pub_translator,
+            file_upload_received_dao=file_upload_received_dao,
         )
         file_metadata_service = FileMetadataServive(daos=dao_collection)
         yield upload_service, file_metadata_service

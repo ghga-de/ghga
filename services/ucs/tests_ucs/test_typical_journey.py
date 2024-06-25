@@ -36,6 +36,7 @@ from tests_ucs.fixtures.joint import JointFixture
 from ucs.core.models import UploadStatus
 
 TARGET_BUCKET_ID = "test-staging"
+CHANGED = "upserted"
 
 pytestmark = pytest.mark.asyncio()
 
@@ -83,7 +84,7 @@ async def run_until_uploaded(
 
     # perform another upload and confirm it:
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.upload_received_event_topic
+        in_topic=joint_fixture.config.file_upload_received_topic
     ) as recorder:
         await perform_upload(
             joint_fixture,
@@ -94,10 +95,7 @@ async def run_until_uploaded(
 
     # check for the  events:
     assert len(recorder.recorded_events) == 1
-    assert (
-        recorder.recorded_events[0].type_
-        == joint_fixture.config.upload_received_event_type
-    )
+    assert recorder.recorded_events[0].type_ == CHANGED
     payload = event_schemas.FileUploadReceived(**recorder.recorded_events[0].payload)
     assert payload.file_id == file_to_register.file_id
     assert payload.expected_decrypted_sha256 == file_to_register.decrypted_sha256

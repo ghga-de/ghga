@@ -21,8 +21,9 @@ import uuid
 from collections.abc import Callable
 from contextlib import suppress
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.utils import calc_part_size
 
 from ucs.core import models
@@ -32,6 +33,7 @@ from ucs.ports.outbound.dao import (
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
 )
+from ucs.ports.outbound.daopub import FileUploadReceivedDao
 from ucs.ports.outbound.event_pub import EventPublisherPort
 
 log = logging.getLogger(__name__)
@@ -40,12 +42,13 @@ log = logging.getLogger(__name__)
 class UploadService(UploadServicePort):
     """Service for handling multi-part uploads to the Inbox storage."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         daos: DaoCollectionPort,
         object_storages: ObjectStorages,
         event_publisher: EventPublisherPort,
+        file_upload_received_dao: FileUploadReceivedDao,
         # domain internal dependencies are immediately injected:
         part_size_calculator: Callable[[int], int] = lambda file_size: calc_part_size(
             file_size=file_size
@@ -55,6 +58,7 @@ class UploadService(UploadServicePort):
         self._daos = daos
         self._object_storages = object_storages
         self._event_publisher = event_publisher
+        self._file_upload_received_dao = file_upload_received_dao
         self._part_size_calculator = part_size_calculator
 
     async def _get_upload_if_status(
@@ -427,6 +431,30 @@ class UploadService(UploadServicePort):
             )
             raise db_storage_not_synchronized from error
 
+    async def _publish_upload_received(  # noqa: PLR0913
+        self,
+        *,
+        file_metadata: models.FileMetadata,
+        upload_date: UTCDatetime,
+        submitter_public_key: str,
+        object_id: str,
+        bucket_id: str,
+        storage_alias: str,
+    ) -> None:
+        """Publish an outbox event relaying that a new file upload was received."""
+        event_payload = event_schemas.FileUploadReceived(
+            s3_endpoint_alias=storage_alias,
+            file_id=file_metadata.file_id,
+            object_id=object_id,
+            bucket_id=bucket_id,
+            upload_date=upload_date.isoformat(),
+            submitter_public_key=submitter_public_key,
+            decrypted_size=file_metadata.decrypted_size,
+            expected_decrypted_sha256=file_metadata.decrypted_sha256,
+        )
+
+        await self._file_upload_received_dao.insert(event_payload)
+
     async def complete(self, *, upload_id: str) -> None:
         """Confirm the completion of the multi-part upload with the given ID."""
         upload = await self._get_upload_if_status(
@@ -466,9 +494,9 @@ class UploadService(UploadServicePort):
         await self._daos.upload_attempts.update(updated_upload)
         log.info("Marked upload '%s' as completed.", upload_id)
 
-        # publish an event, informing other services that a new upload was received:
+        # publish an outbox event relaying that a new upload was received:
         file = await self._daos.file_metadata.get_by_id(upload.file_id)
-        await self._event_publisher.publish_upload_received(
+        await self._publish_upload_received(
             file_metadata=file,
             upload_date=completion_date,
             submitter_public_key=updated_upload.submitter_public_key,

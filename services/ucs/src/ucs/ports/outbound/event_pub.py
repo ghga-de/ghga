@@ -15,27 +15,11 @@
 
 """Interfaces for event publishing adapters and the exception they may throw."""
 
-from datetime import datetime
 from typing import Protocol
-
-from ucs.core import models
 
 
 class EventPublisherPort(Protocol):
     """An interface for an adapter that publishes events happening to this service."""
-
-    async def publish_upload_received(  # noqa: PLR0913
-        self,
-        *,
-        file_metadata: models.FileMetadata,
-        upload_date: datetime,
-        submitter_public_key: str,
-        object_id: str,
-        bucket_id: str,
-        storage_alias: str,
-    ) -> None:
-        """Publish event informing that a new upload was received."""
-        ...
 
     async def publish_deletion_successful(self, *, file_id: str) -> None:
         """Publish event informing that deletion of data and metadata for the given file ID has succeeded."""

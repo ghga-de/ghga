@@ -11,6 +11,8 @@ file_deleted_event_topic: file_downloads
 file_deleted_event_type: file_deleted
 file_metadata_event_topic: metadata
 file_metadata_event_type: metadata_upsert
+file_upload_received_collection: file-uploads
+file_upload_received_topic: file_uploads
 files_to_delete_topic: file_deletions
 generate_correlation_id: true
 host: 127.0.0.1
@@ -38,8 +40,6 @@ service_instance_id: '001'
 service_name: ucs
 upload_accepted_event_topic: internal_file_registry
 upload_accepted_event_type: file_registered
-upload_received_event_topic: file_uploads
-upload_received_event_type: file_upload_received
 upload_rejected_event_topic: file_interrogation
 upload_rejected_event_type: file_validation_failure
 workers: 1

@@ -46,6 +46,26 @@ ucs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`file_upload_received_topic`** *(string)*: The name of the topic use to publish FileUploadReceived events.
+
+
+  Examples:
+
+  ```json
+  "file_upload_received"
+  ```
+
+
+- **`file_upload_received_collection`** *(string)*: The name of the collection used to store FileUploadReceived events. The value should use hyphens in place of underscores if needed.
+
+
+  Examples:
+
+  ```json
+  "file-uploads"
+  ```
+
+
 - **`file_deleted_event_topic`** *(string)*: Name of the topic used for events indicating that a file has been deleted.
 
 
@@ -63,26 +83,6 @@ The service requires the following configuration parameters:
 
   ```json
   "file_deleted"
-  ```
-
-
-- **`upload_received_event_topic`** *(string)*: Name of the topic to publish events that inform about new file uploads.
-
-
-  Examples:
-
-  ```json
-  "file_uploads"
-  ```
-
-
-- **`upload_received_event_type`** *(string)*: The type to use for event that inform about new file uploads.
-
-
-  Examples:
-
-  ```json
-  "file_upload_received"
   ```
 
 

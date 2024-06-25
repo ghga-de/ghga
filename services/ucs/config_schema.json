@@ -97,6 +97,22 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "file_upload_received_topic": {
+      "description": "The name of the topic use to publish FileUploadReceived events.",
+      "examples": [
+        "file_upload_received"
+      ],
+      "title": "File Upload Received Topic",
+      "type": "string"
+    },
+    "file_upload_received_collection": {
+      "description": "The name of the collection used to store FileUploadReceived events. The value should use hyphens in place of underscores if needed.",
+      "examples": [
+        "file-uploads"
+      ],
+      "title": "File Upload Received Collection",
+      "type": "string"
+    },
     "file_deleted_event_topic": {
       "description": "Name of the topic used for events indicating that a file has been deleted.",
       "examples": [
@@ -111,22 +127,6 @@
         "file_deleted"
       ],
       "title": "File Deleted Event Type",
-      "type": "string"
-    },
-    "upload_received_event_topic": {
-      "description": "Name of the topic to publish events that inform about new file uploads.",
-      "examples": [
-        "file_uploads"
-      ],
-      "title": "Upload Received Event Topic",
-      "type": "string"
-    },
-    "upload_received_event_type": {
-      "description": "The type to use for event that inform about new file uploads.",
-      "examples": [
-        "file_upload_received"
-      ],
-      "title": "Upload Received Event Type",
       "type": "string"
     },
     "files_to_delete_topic": {
@@ -438,10 +438,10 @@
     }
   },
   "required": [
+    "file_upload_received_topic",
+    "file_upload_received_collection",
     "file_deleted_event_topic",
     "file_deleted_event_type",
-    "upload_received_event_topic",
-    "upload_received_event_type",
     "files_to_delete_topic",
     "file_metadata_event_topic",
     "file_metadata_event_type",

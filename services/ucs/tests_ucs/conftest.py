@@ -27,6 +27,4 @@ from hexkit.providers.s3.testutils import (  # noqa: F401
     s3_fixture,
 )
 
-from tests_ucs.fixtures.joint import get_joint_fixture
-
-joint_fixture = get_joint_fixture()
+from tests_ucs.fixtures.joint import joint_fixture  # noqa: F401
