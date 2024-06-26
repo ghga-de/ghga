@@ -236,7 +236,7 @@ class TokenGenerator:
         url = self.op_url + "/login"
         response = self.http.post(url, json=login_info)
         status_code = response.status_code
-        assert status_code == 201, status_code
+        assert status_code == 201, f"{status_code}: {response.text}"
         token = response.text
         assert token and token.count(".") == 2
         return token
@@ -246,7 +246,7 @@ class TokenGenerator:
         url = self.auth_adapter_url + "/rpc/login"
         response = self.http.post(url, headers=headers)
         status_code = response.status_code
-        assert status_code == 204, status_code
+        assert status_code == 204, f"{status_code}: {response.text}"
         return response
 
     def add_totp_to_headers(self, totp: str, headers: dict[str, Any]) -> dict[str, Any]:
