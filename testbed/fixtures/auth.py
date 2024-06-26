@@ -246,6 +246,12 @@ class TokenGenerator:
         url = self.auth_adapter_url + "/rpc/login"
         response = self.http.post(url, headers=headers)
         status_code = response.status_code
+        assert (
+            status_code != 401 or "Not a valid token: Missing Key" not in response.text
+        ), (
+            "Cannot validate the access token since it is signed with a different key."
+            " Maybe the auth adapter needs to be restarted to fetch the right key."
+        )
         assert status_code == 204, f"{status_code}: {response.text}"
         return response
 
