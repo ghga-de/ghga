@@ -18,7 +18,7 @@
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from pydantic import AnyHttpUrl, Field
+from pydantic import Field
 
 from top.core.oidc_provider import OidcProviderConfig
 
@@ -37,10 +37,6 @@ class Config(ApiConfigBase, OidcProviderConfig, LoggingConfig):
         description=(
             "String that uniquely identifies this service instance in log messages"
         ),
-    )
-    service_url: AnyHttpUrl = Field(
-        default=AnyHttpUrl("https://op.test"),
-        description="External base URL of this service",
     )
 
 

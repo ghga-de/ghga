@@ -204,14 +204,6 @@
       ],
       "title": "Generate Correlation Id",
       "type": "boolean"
-    },
-    "service_url": {
-      "default": "https://op.test/",
-      "description": "External base URL of this service",
-      "format": "uri",
-      "minLength": 1,
-      "title": "Service Url",
-      "type": "string"
     }
   },
   "title": "ModSettings",

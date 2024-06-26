@@ -18,13 +18,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/test-oidc-provider):
 ```bash
-docker pull ghga/test-oidc-provider:1.1.2
+docker pull ghga/test-oidc-provider:1.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/test-oidc-provider:1.1.2 .
+docker build -t ghga/test-oidc-provider:1.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -32,7 +32,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/test-oidc-provider:1.1.2 --help
+docker run -p 8080:8080 ghga/test-oidc-provider:1.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -190,8 +190,6 @@ The service requires the following configuration parameters:
   false
   ```
 
-
-- **`service_url`** *(string, format: uri)*: External base URL of this service. Default: `"https://op.test/"`.
 
 
 ### Usage:

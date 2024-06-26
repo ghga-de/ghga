@@ -19,7 +19,7 @@ import logging
 from enum import Enum
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Response, Security, status
+from fastapi import FastAPI, HTTPException, Request, Response, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ghga_service_commons.api import configure_app
 from pydantic import AnyHttpUrl
@@ -55,12 +55,14 @@ async def health():
     tags=tags,
     status_code=status.HTTP_200_OK,
 )
-async def get_openid_configuration() -> OidcConfiguration:
+async def get_openid_configuration(request: Request) -> OidcConfiguration:
     """The OpenID discovery endpoint."""
-    root_url = str(CONFIG.service_url).rstrip("/") + "/"
-    root_path = str(CONFIG.api_root_path).strip("/")
-    if root_path:
-        root_url += root_path + "/"
+    # create the URL for this endpoint sans query params
+    url_parts = request.url
+    this_url = f"{url_parts.scheme}://{url_parts.netloc}{url_parts.path}"
+    # remove the current route to get the root url
+    root_url = this_url.removesuffix(".well-known/openid-configuration")
+    # construct the other urls based on the root url
     userinfo_endpoint = AnyHttpUrl(root_url + "userinfo")
     jwks_uri = AnyHttpUrl(root_url + "jwks")
     return OidcConfiguration(
