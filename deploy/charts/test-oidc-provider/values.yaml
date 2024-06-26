@@ -49,7 +49,7 @@ parameters:
     openapi_url: /openapi.json
     port: 8080
     service_name: top
-    service_url: http://localhost:8080
+
     user_domain: home.org
     valid_seconds: 3600
     workers: 1
