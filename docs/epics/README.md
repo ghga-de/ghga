@@ -62,3 +62,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (52) [Hero Shrew](./52-hero-shrew/technical_specification.md): Outbox Pattern Refactoring
 - (53) [Honey Bee](./53-honey-bee/technical_specification.md): DevOps Production Preparation 1
 - (54) [Peacock Spider](./54-peacock-spider/technical_specification.md): File Information Service
+- (55) [Madagascan Sunset Moth](./55-madagascan-sunset-moth/technical_specification.md): Preliminary Storage Selection
