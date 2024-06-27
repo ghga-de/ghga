@@ -21,10 +21,15 @@ spec:
       labels:
         app: {{ .Release.Name }}
         version: staging
+        {{- if .Values.podExtraLabels }}
         {{- include "ghga-common.pod-extra-labels" .  | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: {{ .Release.Name }}
       shareProcessNamespace: {{ .Values.shareProcessNamespace }}
+      {{- if .Values.imagePullSecretNames }}
+      {{- include "ghga-common.image-pull-secrets" .  | nindent 6 }}
+      {{- end }}
       containers:
       - image: "{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
         {{- include "ghga-common.command-args" (list "ars")  | nindent 8 }}
