@@ -11,7 +11,7 @@ version: 1.0.6
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "1.0.1"
+appVersion: "1.0.2"
 
 # The major version of the API. Minor versions and patches are not relevant as they do not
 # introduce breaking changes.
