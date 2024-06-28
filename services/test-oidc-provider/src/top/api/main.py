@@ -25,6 +25,7 @@ from ghga_service_commons.api import configure_app
 from pydantic import AnyHttpUrl
 
 from ..config import CONFIG
+from ..core.http_utils import get_original_url
 from ..core.models import LoginInfo, OidcConfiguration, UserInfo
 from ..core.oidc_provider import Jwks, OidcProvider
 
@@ -57,14 +58,12 @@ async def health():
 )
 async def get_openid_configuration(request: Request) -> OidcConfiguration:
     """The OpenID discovery endpoint."""
-    # create the URL for this endpoint sans query params
-    url_parts = request.url
-    this_url = f"{url_parts.scheme}://{url_parts.netloc}{url_parts.path}"
-    # remove the current route to get the root url
-    root_url = this_url.removesuffix(".well-known/openid-configuration")
-    # construct the other urls based on the root url
-    userinfo_endpoint = AnyHttpUrl(root_url + "userinfo")
-    jwks_uri = AnyHttpUrl(root_url + "jwks")
+    original_url = get_original_url(request)
+    # remove the current route to get the base URL
+    base_url = original_url.removesuffix(".well-known/openid-configuration")
+    # construct the other URLs from the base URL
+    userinfo_endpoint = AnyHttpUrl(base_url + "userinfo")
+    jwks_uri = AnyHttpUrl(base_url + "jwks")
     return OidcConfiguration(
         userinfo_endpoint=userinfo_endpoint,
         issuer=CONFIG.issuer,

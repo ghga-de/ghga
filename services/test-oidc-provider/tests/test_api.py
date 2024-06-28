@@ -48,22 +48,37 @@ async def test_health_check(client: AsyncTestClient):
     assert response.json() == {"status": "OK"}
 
 
+@mark.parametrize("origin_header", [None, "x-forwarded", "x-envoy-original"])
 @mark.asyncio
-async def test_openid_configuration(client: AsyncTestClient):
+async def test_openid_configuration(origin_header: str | None, client: AsyncTestClient):
     """Test getting the OpenID configuration from the well-known path."""
-    response = await client.get("/.well-known/openid-configuration")
+    if origin_header:
+        scheme = "https"
+        host = "some-hostname.dev"
+        path = "/some-path/.well-known/openid-configuration"
+        headers = {
+            f"{origin_header}-proto": scheme,
+            f"{origin_header}-host": host,
+            f"{origin_header}-path": path,
+        }
+        base_url = "https://some-hostname.dev/some-path"
+    else:
+        headers = None
+        base_url = "http://localhost:8080"
+
+    response = await client.get("/.well-known/openid-configuration", headers=headers)
     assert response.status_code == status.HTTP_200_OK
 
     openid_config = response.json()
     assert openid_config == {
         "version": __version__,
         "issuer": "https://op.test",
-        "jwks_uri": "http://localhost:8080/jwks",
+        "jwks_uri": f"{base_url}/jwks",
         "scopes_supported": ["openid", "profile", "email"],
         "claims_supported": ["sub", "name", "email"],
         "request_object_signing_alg_values_supported": ["ES512"],
         "userinfo_signing_alg_values_supported": ["ES512"],
-        "userinfo_endpoint": "http://localhost:8080/userinfo",
+        "userinfo_endpoint": f"{base_url}/userinfo",
         "service_documentation": "https://github.com/ghga-de/test-oidc-provider",
     }
 

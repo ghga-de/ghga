@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "top"
-version = "1.2.0"
+version = "1.2.1"
 description = "Test OpenID Connect provider"
 dependencies = [
     "typer >= 0.12",
