@@ -34,7 +34,7 @@ from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.core.totp import TOTPHandler
-from auth_service.auth_adapter.deps import get_user_token_dao
+from auth_service.auth_adapter.deps import SESSION_COOKIE, get_user_token_dao
 from auth_service.deps import CONFIG, Config, get_config
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import (
@@ -103,7 +103,7 @@ _map_session_dict_to_object = {
 def session_from_response(response: Response, session_id: str | None = None) -> Session:
     """Get a session object from the response."""
     if not session_id:
-        session_id = response.cookies.get("session")
+        session_id = response.cookies.get(SESSION_COOKIE)
         assert session_id
     session_header = response.headers.get("X-Session")
     assert session_header
@@ -133,10 +133,10 @@ async def query_new_session(
     assert "X-CSRF-Token" not in response.headers
     session_id: str | None
     if session:
-        assert "session" not in response.cookies
+        assert SESSION_COOKIE not in response.cookies
         session_id = session.session_id
     else:
-        session_id = response.cookies.get("session")
+        session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     session_header = response.headers.get("X-Session")
     assert session_header

@@ -24,7 +24,11 @@ from httpx import Response
 from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.api import main
-from auth_service.auth_adapter.deps import get_session_store, get_user_token_dao
+from auth_service.auth_adapter.deps import (
+    SESSION_COOKIE,
+    get_session_store,
+    get_user_token_dao,
+)
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import get_user_dao
@@ -97,7 +101,19 @@ async def test_logout(bare_client: BareClient):
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not await store.get_session(session.session_id)
 
-    assert "session" not in response.cookies
+    cookie = response.headers.get("Set-Cookie")
+    assert cookie
+    assert "expires=" in cookie
+    assert "Max-Age=0" in cookie
+    cookie = ";".join(
+        filter(
+            lambda part: not part.startswith(" expires=") and part != " Max-Age=0",
+            cookie.split(";"),
+        )
+    )
+    assert cookie == expected_set_cookie('""')
+
+    assert SESSION_COOKIE not in response.cookies
     assert "X-Session" not in response.headers
 
 
@@ -106,7 +122,8 @@ async def test_logout_without_session(bare_client: BareClient):
     response = await bare_client.post(LOGOUT_PATH)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
+    assert "Set-Cookie" not in response.headers
     assert "X-Session" not in response.headers
 
 
@@ -126,7 +143,8 @@ async def test_logout_with_invalid_csrf_token(bare_client: BareClient):
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
     assert await store.get_session(session.session_id) == original_session
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
+    assert "Set-Cookie" not in response.headers
     assert "X-Session" not in response.headers
 
 
@@ -141,12 +159,12 @@ async def test_login_with_unregistered_user(
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    session_id = response.cookies.get("session")
+    session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     store = await get_session_store(config=CONFIG)
     session_dict = await store.get_session(session_id)
     assert session_dict
-    assert response.cookies.get("session") == session_id
+    assert response.cookies.get(SESSION_COOKIE) == session_id
     assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
         response,
@@ -175,7 +193,7 @@ async def test_login_with_invalid_userinfo(
         "detail": "Subject in userinfo differs from access token"
     }
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
     assert "X-Session" not in response.headers
 
 
@@ -190,12 +208,12 @@ async def test_login_with_registered_user(
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    session_id = response.cookies.get("session")
+    session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     store = await get_session_store(config=CONFIG)
     session_dict = await store.get_session(session_id)
     assert session_dict
-    assert response.cookies.get("session") == session_id
+    assert response.cookies.get(SESSION_COOKIE) == session_id
     assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
         response,
@@ -221,12 +239,12 @@ async def test_login_with_registered_user_and_name_change(
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    session_id = response.cookies.get("session")
+    session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     store = await get_session_store(config=CONFIG)
     session_dict = await store.get_session(session_id)
     assert session_dict
-    assert response.cookies.get("session") == session_id
+    assert response.cookies.get(SESSION_COOKIE) == session_id
     assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
         response,
@@ -251,12 +269,12 @@ async def test_login_with_registered_user_with_title(
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
-    session_id = response.cookies.get("session")
+    session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     store = await get_session_store(config=CONFIG)
     session_dict = await store.get_session(session_id)
     assert session_dict
-    assert response.cookies.get("session") == session_id
+    assert response.cookies.get(SESSION_COOKIE) == session_id
     assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
         response,
@@ -291,7 +309,7 @@ async def test_login_without_access_token(bare_client: BareClient):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "No access token provided"}
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
     assert "X-Session" not in response.headers
 
 
@@ -304,7 +322,7 @@ async def test_login_with_invalid_access_token(bare_client: BareClient):
         "detail": "Access token error: Not a valid token: Token format unrecognized"
     }
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
     assert "X-Session" not in response.headers
 
 
@@ -321,7 +339,7 @@ async def test_login_with_cookie_and_unregistered_user(bare_client: BareClient):
     response = await bare_client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
     assert_session_header(
         response,
         {
@@ -349,7 +367,7 @@ async def test_login_with_cookie_and_registered_user(bare_client: BareClient):
     response = await bare_client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
     assert_session_header(
         response,
         {
@@ -384,7 +402,7 @@ async def test_login_with_cookie_and_registered_data_steward(bare_client: BareCl
     response = await bare_client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
     assert_session_header(
         response,
         {
@@ -416,5 +434,5 @@ async def test_login_with_cookie_and_invalid_csrf_token(bare_client: BareClient)
 
     assert await store.get_session(session.session_id) == original_session
 
-    assert "session" not in response.cookies
+    assert SESSION_COOKIE not in response.cookies
     assert "X-Session" not in response.headers

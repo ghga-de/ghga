@@ -59,6 +59,7 @@ from ..core.auth import (
 from ..core.session_store import SessionState
 from ..core.verify_totp import verify_totp
 from ..deps import (
+    SESSION_COOKIE,
     SessionDependency,
     SessionStoreDependency,
     TOTPHandlerDependency,
@@ -127,7 +128,11 @@ async def login(  # noqa: C901, PLR0913
     authorization: Annotated[str | None, Header()] = None,
     x_authorization: Annotated[str | None, Header()] = None,
 ) -> Response:
-    """Create a new or get an existing user session."""
+    """Create a new or get an existing user session.
+
+    When creating a new user session based on an OIDC access token,
+    first call the logout endpoint to remove an existing session cookie.
+    """
     if session:
         session_created = False
     else:
@@ -184,7 +189,7 @@ async def login(  # noqa: C901, PLR0913
     )
     if session_created:
         response.set_cookie(
-            key="session",  # the name of the cookie
+            key=SESSION_COOKIE,  # the name of the cookie
             value=session.session_id,
             secure=True,  # only send cookie over HTTPS
             httponly=True,  # don't allow JavaScript to access the cookie
@@ -206,9 +211,17 @@ async def logout(
     session: SessionDependency,
 ) -> Response:
     """End the user session."""
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
     if session:
         await session_store.delete_session(session.session_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+        response.delete_cookie(
+            key=SESSION_COOKIE,
+            # must use the same params as in set_cookie
+            secure=True,
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 @app.post(

@@ -22,12 +22,11 @@ import pytest
 from fastapi import HTTPException, Request, status
 
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
-from auth_service.auth_adapter.deps import get_session
+from auth_service.auth_adapter.deps import SESSION_COOKIE, get_session
 from auth_service.config import CONFIG
 
 pytestmark = pytest.mark.asyncio(scope="module")
 
-SESSION_COOKIE = "session"
 CSRF_TOKEN_HEADER = "X-CSRF-Token"
 
 SESSION_ARGS = {
