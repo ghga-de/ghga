@@ -7,6 +7,7 @@ Feature: 32 Access Request
     Given we have the state "metadata has been loaded into the system"
     And the claims repository is empty
     And no access requests have been made yet
+    And no notification has been sent yet
     And I am registered as "Dr. John Doe"
 
     Given I am logged in as "Dr. John Doe"
@@ -14,8 +15,8 @@ Feature: 32 Access Request
 
     When "Dr. John Doe" requests access to the test dataset "DS_A"
     Then the response status code is "201"
-    # And an email has been sent to "helpdesk@ghga.de"
-    # And an email has been sent to "john.doe@home.org"
+    And "access_request_created" notification has been sent to "Central Data Steward"
+    And "access_request_registered" notification has been sent to "Dr. John Doe"
 
   Scenario: Viewing the pending access request
 
@@ -41,4 +42,6 @@ Feature: 32 Access Request
     Then the response status code is "200"
     And there is one request for test dataset "DS_A" from "Dr. John Doe"
     And the status of the request from "Dr. John Doe" is "allowed"
+    And "access_request_allowed" notification has been sent to "Central Data Steward"
+    And "access_request_accepted" notification has been sent to "Dr. John Doe"
     And set the state to "John Doe is allowed to download the test dataset"

@@ -17,7 +17,9 @@
 """Shared steps and fixtures"""
 
 import inspect
+from datetime import UTC, datetime
 from functools import wraps
+from time import sleep
 from typing import Any, NamedTuple
 
 from fixtures import (  # noqa: RUF100
@@ -57,6 +59,14 @@ from pytest_bdd import (  # noqa: RUF100
 
 parse = parsers.parse  # pylint: disable=invalid-name
 
+
+EXPECTED_NOTIFICATIONS = {
+    "access_request_created": "A data download access request has been created",
+    "access_request_allowed": "Data download access has been allowed",
+    "access_request_registered": "Your data download access request has been registered",
+    "access_request_accepted": "Your data download access request has been accepted",
+    "access_request_denied": "Your data download access request has been rejected",
+}
 
 # Helpers for async step functions
 
@@ -221,6 +231,13 @@ async def reset_state(fixtures: JointFixture):
     empty_mail_server(fixtures)  # reset mail server
 
 
+@given("no notification has been sent yet")
+@async_step
+async def reset_notifications(fixtures: JointFixture):
+    """Delete all email notifications from the mail server."""
+    empty_mail_server(fixtures)  # reset mail server
+
+
 @given(parse('we have the state "{name}"'))
 def assume_state_clause(name: str, state: StateStorage):
     value = state.get_state(name)
@@ -259,3 +276,42 @@ def check_received_item_count(response: Response, item_count):
 @then(parse('the expected item count is "{expected_count:d}"'))
 def check_item_count_in_list(results: list, expected_count):
     assert len(results) == expected_count
+
+
+@then(parse('"{notification_type}" notification has been sent to "{full_name}"'))
+def check_email_sent_to(
+    notification_type: str,
+    full_name: str,
+    fixtures: JointFixture,
+    timeout: float = 15,
+    interval: float = 0.1,
+):
+    """Validate e-mail notification.
+
+    Wait for an e-mail to be received by the mail server. If it does not appear
+    within the given timeout (in seconds), an AssertionError is raised.
+    """
+    url = f"{fixtures.config.mail_url}/api/v2/search"
+    slept: float = 0
+    subject = EXPECTED_NOTIFICATIONS.get(notification_type)
+    email = fixtures.auth.get_email(full_name)
+    assert subject, f"Undefined notification type: {notification_type}"
+    while slept < timeout:
+        response = fixtures.http.get(
+            url,
+            headers={"accept": "application/json"},
+            params={"kind": "containing", "query": subject},
+            timeout=timeout,
+        )  # not possible to filter by email and subject at the same time
+        assert response.status_code == 200
+        content = response.json()
+        if content["count"] == 1:
+            assert email in content["items"][0]["Raw"]["To"]
+            created_timestamp = content["items"][0]["Created"]
+            date_created = datetime.fromisoformat(created_timestamp)
+            date_now = datetime.now(UTC)
+            assert abs((date_now - date_created).seconds) < 60
+            return
+        sleep(interval)
+        slept += interval
+    assert False, f"An email notification was not received by {email}."

@@ -15,7 +15,7 @@
 
 """Step definitions for requesting access in the frontend"""
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from time import sleep
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -92,32 +92,6 @@ def request_access_for_dataset(full_name: str, alias: str, fixtures: JointFixtur
     }
 
     return fixtures.http.post(url, headers=headers, json=data)
-
-
-@then(parse('an email has been sent to "{email}"'))
-def check_email_sent_to(
-    email: str, fixtures: JointFixture, timeout: float = 15, interval: float = 0.1
-):
-    """Validate e-mail notification.
-
-    Wait for an e-mail to be received by the mail server. If it does not appear
-    within the given timeout (in seconds), an AssertionError is raised.
-    """
-    url = f"{fixtures.config.mail_url}/api/v2/search"
-    slept: float = 0
-    while slept < timeout:
-        response = fixtures.http.get(
-            url,
-            headers={"accept": "application/json"},
-            params={"kind": "to", "query": email},
-            timeout=timeout,
-        )
-        assert response.status_code == 200
-        if response.json()["count"] > 0:
-            return
-        sleep(interval)
-        slept += interval
-    assert False, f"An email notification was not received by {email}."
 
 
 @when(
