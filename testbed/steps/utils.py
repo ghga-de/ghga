@@ -16,6 +16,7 @@
 """Utilities used in step functions"""
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fixtures import Config, JointFixture
@@ -24,6 +25,7 @@ from ghga_datasteward_kit.file_ingest import IngestConfig
 from ghga_datasteward_kit.loading import LoadConfig
 from hexkit.custom_types import JsonObject
 from hexkit.providers.s3.testutils import FileObject
+from pydantic import BaseModel, EmailStr
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
 FILE_OVERVIEW_KEYS = {
@@ -34,6 +36,33 @@ FILE_OVERVIEW_KEYS = {
     "name",
     "size",
 }
+EXPECTED_NOTIFICATIONS = {
+    "access_request_created": "A data download access request has been created",
+    "access_request_allowed": "Data download access has been allowed",
+    "access_request_registered": "Your data download access request has been registered",
+    "access_request_accepted": "Your data download access request has been accepted",
+    "access_request_denied": "Your data download access request has been rejected",
+    "account_details_changed": "Account Details Changed",
+    "second_factor_recreated": "2FA Setup Recreated",
+    "iva_code_requested": "IVA Request Received",
+    "iva_verification_requested": "Contact Address Verification Request Received",
+    "iva_code_transmitted": "Contact Address Verification Code Transmitted",
+    "iva_code_submitted": "IVA Verification Code Submitted",
+}
+
+
+class Notification(BaseModel):
+    """A container for email notification data."""
+
+    sender: EmailStr
+    receiver: EmailStr
+    created_time: datetime
+    subject: str
+    body_text: str
+
+    def is_recent(self, seconds: int = 30) -> bool:
+        """Check if the notification is recent"""
+        return abs((datetime.now(UTC) - self.created_time).seconds) <= seconds
 
 
 def ingest_config_as_file(config: IngestConfig):
@@ -174,3 +203,17 @@ def get_secret_ids(file_metadata_dir: Path, file_objects: list[FileObject]) -> s
         ]
         secret_ids.add(secret_id)
     return secret_ids
+
+
+def parse_notifications(raw_data: dict) -> list[Notification]:
+    """Parse Email data from Mailhog into a sorted list of Notification instances."""
+    return [
+        Notification(
+            sender=item["Raw"]["From"],
+            receiver=item["Raw"]["To"][0],
+            created_time=datetime.fromisoformat(item["Created"]),
+            subject=item["Content"]["Headers"]["Subject"][0],
+            body_text=item["Content"]["Body"].split("--", 1)[0].strip(),
+        )
+        for item in sorted(raw_data["items"], key=lambda x: x["Created"], reverse=True)
+    ]

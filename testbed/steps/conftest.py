@@ -17,7 +17,6 @@
 """Shared steps and fixtures"""
 
 import inspect
-from datetime import UTC, datetime
 from functools import wraps
 from time import sleep
 from typing import Any, NamedTuple
@@ -57,16 +56,9 @@ from pytest_bdd import (  # noqa: RUF100
     when,
 )
 
+from steps.utils import EXPECTED_NOTIFICATIONS, parse_notifications
+
 parse = parsers.parse  # pylint: disable=invalid-name
-
-
-EXPECTED_NOTIFICATIONS = {
-    "access_request_created": "A data download access request has been created",
-    "access_request_allowed": "Data download access has been allowed",
-    "access_request_registered": "Your data download access request has been registered",
-    "access_request_accepted": "Your data download access request has been accepted",
-    "access_request_denied": "Your data download access request has been rejected",
-}
 
 # Helpers for async step functions
 
@@ -278,7 +270,7 @@ def check_item_count_in_list(results: list, expected_count):
     assert len(results) == expected_count
 
 
-@then(parse('"{notification_type}" notification has been sent to "{full_name}"'))
+@then(parse('"{notification_type}" notification was sent to "{full_name}"'))
 def check_email_sent_to(
     notification_type: str,
     full_name: str,
@@ -291,10 +283,17 @@ def check_email_sent_to(
     Wait for an e-mail to be received by the mail server. If it does not appear
     within the given timeout (in seconds), an AssertionError is raised.
     """
+    notification_type = notification_type.lower().replace(" ", "_")
     url = f"{fixtures.config.mail_url}/api/v2/search"
     slept: float = 0
     subject = EXPECTED_NOTIFICATIONS.get(notification_type)
     email = fixtures.auth.get_email(full_name)
+    if notification_type != "account_details_changed":
+        # When the registered email changes, notification is sent to the original email
+        sub = fixtures.auth.get_sub(full_name)
+        all_changed_user_data = fixtures.state.get_state("changed user data") or {}
+        changed_user_data = all_changed_user_data.get(sub) or {}
+        email = changed_user_data.get("email", email)
     assert subject, f"Undefined notification type: {notification_type}"
     while slept < timeout:
         response = fixtures.http.get(
@@ -305,12 +304,11 @@ def check_email_sent_to(
         )  # not possible to filter by email and subject at the same time
         assert response.status_code == 200
         content = response.json()
-        if content["count"] == 1:
-            assert email in content["items"][0]["Raw"]["To"]
-            created_timestamp = content["items"][0]["Created"]
-            date_created = datetime.fromisoformat(created_timestamp)
-            date_now = datetime.now(UTC)
-            assert abs((date_now - date_created).seconds) < 60
+        if content["count"] > 0:
+            notifications = parse_notifications(content)
+            latest_notification = notifications[0]
+            assert email in latest_notification.receiver
+            assert latest_notification.is_recent()
             return
         sleep(interval)
         slept += interval
