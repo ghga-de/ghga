@@ -60,23 +60,39 @@ def get_basic_auth_dependency(app: FastAPI, config: Config):
     http_basic = HTTPBasic(realm=realm)
 
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(_request, exc):
-        if exc.headers and "WWW-Authenticate" in exc.headers:
+    async def http_exception_handler(request, exc):
+        """Special exception handler for Basic authentication."""
+        status_code, detail = exc.status_code, exc.detail
+        response_headers = exc.headers
+        # Create a plaintext response for Basic auth exceptions:
+        if response_headers and (
+            response_headers.get("WWW-Authenticate") or ""
+        ).startswith("Basic "):
             return PlainTextResponse(
-                f"{realm}: {exc.detail}",
-                status_code=exc.status_code,
-                headers=exc.headers,
+                f"{realm}: {detail}",
+                status_code=status_code,
+                headers=response_headers,
             )
+        # Change unauthorized status code if the exception did not
+        # happen due to a missing Basic Auth, so that the browser
+        # does not ask for the Basic auth credentials again.
+        # Unfortunately we can do this only for auth adapter responses,
+        # but it catches most of the cases where these errors are produced.
+        if status_code == status.HTTP_401_UNAUTHORIZED and (
+            request.headers.get("Authorization") or ""
+        ).startswith("Basic "):
+            status_code = status.HTTP_403_FORBIDDEN
+        # Create the default JSON response for all other exceptions:
         return JSONResponse(
-            {"detail": exc.detail}, status_code=exc.status_code, headers=exc.headers
+            {"detail": detail}, status_code=status_code, headers=response_headers
         )
 
     async def check_basic_auth(
         passed_credentials: Annotated[HTTPBasicCredentials, Depends(http_basic)],
     ):
         """Check basic access authentication if username and password are set."""
-        # checking user and password while avoiding timing attacks
         for credentials in allowed_credentials:
+            # check user and password while avoiding timing attacks
             user_ok = secrets.compare_digest(
                 passed_credentials.username, credentials.username
             )

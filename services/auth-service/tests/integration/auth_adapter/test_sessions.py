@@ -17,6 +17,7 @@
 """Test handling user sessions in the auth adapter."""
 
 import json
+from base64 import b64encode
 
 import pytest
 from fastapi import status
@@ -47,6 +48,7 @@ from .fixtures import (
     AUTH_PATH,
     BareClient,
     fixture_bare_client,  # noqa: F401
+    fixture_with_basic_auth,  # noqa: F401
 )
 
 pytestmark = pytest.mark.asyncio()
@@ -311,6 +313,24 @@ async def test_login_without_access_token(bare_client: BareClient):
 
     assert SESSION_COOKIE not in response.cookies
     assert "X-Session" not in response.headers
+
+
+async def test_login_without_access_token_and_basic_auth(
+    with_basic_auth: str, bare_client: BareClient
+):
+    """Test login request with valid basic auth but without access token."""
+    assert with_basic_auth
+
+    auth = b64encode(with_basic_auth.encode("UTF-8")).decode("ASCII")
+    auth = f"Basic {auth}"
+    response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
+    # should give a 403 instead of 401 to distinguish from basic access error
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "No access token provided"}
+
+    assert SESSION_COOKIE not in response.cookies
+    assert "X-Session" not in response.headers
+    assert "WWW-Authenticate" not in response.headers
 
 
 async def test_login_with_invalid_access_token(bare_client: BareClient):

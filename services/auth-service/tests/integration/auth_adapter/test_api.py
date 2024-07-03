@@ -96,9 +96,16 @@ def assert_has_authorization_header(response, session):
     assert 0 <= claims["exp"] - claims["iat"] - 3600 < 2
 
 
-def assert_is_authorization_error(response, message: str):
-    """Check that the response is a CSRF error."""
+def assert_is_unauthorized_error(response, message: str):
+    """Check that the response is a "401 unauthorized" error."""
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "Authorization" not in response.headers
+    assert response.json() == {"detail": message}
+
+
+def assert_is_forbidden_error(response, message: str):
+    """Check that the response is a "403 forbidden" error."""
+    assert response.status_code == status.HTTP_403_FORBIDDEN
     assert "Authorization" not in response.headers
     assert response.json() == {"detail": message}
 
@@ -253,8 +260,39 @@ async def test_basic_auth_service_logo(with_basic_auth: str, bare_client: BareCl
 
 async def test_post_user_without_session(bare_client: BareClient):
     """Test authentication for user registration without a session."""
-    response = await bare_client.put(AUTH_PATH + "/users/some-internal-id")
-    assert_is_authorization_error(response, "Not logged in")
+    response = await bare_client.post(AUTH_PATH + "/users")
+    assert_is_unauthorized_error(response, "Not logged in")
+
+
+async def test_post_user_without_session_and_basic_auth(
+    with_basic_auth: str, bare_client: BareClient
+):
+    """Test valid basic auth but missing session."""
+    assert with_basic_auth
+
+    # no basic auth, no session
+    response = await bare_client.post(AUTH_PATH + "/users")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
+    assert response.text == "GHGA Data Portal: Not authenticated"
+
+    # invalid basic auth, no session
+    auth = "Basic invalid"
+    response = await bare_client.put(
+        AUTH_PATH + "/users/some-internal-id", headers={"Authorization": auth}
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
+    assert response.text == "GHGA Data Portal: Invalid authentication credentials"
+
+    # valid basic auth, still no session
+    auth = b64encode(with_basic_auth.encode("UTF-8")).decode("ASCII")
+    auth = f"Basic {auth}"
+    response = await bare_client.post(
+        AUTH_PATH + "/users", headers={"Authorization": auth}
+    )
+    # should give a 403 instead of 401 to distinguish from basic access error
+    assert_is_forbidden_error(response, "Not logged in")
 
 
 async def test_post_user_with_session_and_invalid_csrf(
@@ -266,7 +304,7 @@ async def test_post_user_with_session_and_invalid_csrf(
     response = await client.post(
         AUTH_PATH + "/users", headers=headers_for_session(session)
     )
-    assert_is_authorization_error(response, "Invalid or missing CSRF token")
+    assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
 
 
 async def test_post_user_with_session(bare_client: BareClient, httpx_mock: HTTPXMock):
@@ -313,7 +351,7 @@ async def test_post_user_with_session(bare_client: BareClient, httpx_mock: HTTPX
 async def test_put_user_without_session(bare_client: BareClient):
     """Test authentication for user update without a session."""
     response = await bare_client.put(AUTH_PATH + "/users/some-internal-id")
-    assert_is_authorization_error(response, "Not logged in")
+    assert_is_unauthorized_error(response, "Not logged in")
 
 
 async def test_put_user_with_session_and_wrong_user_id(
@@ -324,7 +362,7 @@ async def test_put_user_with_session_and_wrong_user_id(
     response = await client.put(
         AUTH_PATH + "/users/jane@ghga.de", headers=headers_for_session(session)
     )
-    assert_is_authorization_error(response, "Not registered")
+    assert_is_unauthorized_error(response, "Not registered")
 
 
 async def test_put_user_with_session_and_invalid_csrf(
@@ -336,7 +374,7 @@ async def test_put_user_with_session_and_invalid_csrf(
     response = await client.put(
         AUTH_PATH + "/users/john@ghga.de", headers=headers_for_session(session)
     )
-    assert_is_authorization_error(response, "Invalid or missing CSRF token")
+    assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
 
 
 async def test_put_unregistered_user_with_session(
@@ -355,7 +393,7 @@ async def test_put_unregistered_user_with_session(
     response = await bare_client.put(
         AUTH_PATH + "/users/john@ghga.de", headers=headers_for_session(session)
     )
-    assert_is_authorization_error(response, "Not registered")
+    assert_is_unauthorized_error(response, "Not registered")
 
 
 async def test_put_registered_user_with_session(
@@ -436,7 +474,7 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     # however, a post request without a CSRF token should fail
     # even if this is not critical here, since we are not yet fully unauthenticated
     response = await client.post("/some/path", headers=without_csrf)
-    assert_is_authorization_error(response, "Invalid or missing CSRF token")
+    assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
 
     # create second factor and authenticate with that
     response = await client.post(
@@ -466,21 +504,21 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
 
     # make a post request to a random path, without the CSRF token
     response = await client.post("/some/path", headers=without_csrf)
-    assert_is_authorization_error(response, "Invalid or missing CSRF token")
+    assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
     # make a post request to a random path, with the CSRF token
     response = await client.post("/some/path", headers=headers)
     assert_has_authorization_header(response, session)
 
     # make a put request to a random path, without the CSRF token
     response = await client.put("/some/path", headers=without_csrf)
-    assert_is_authorization_error(response, "Invalid or missing CSRF token")
+    assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
     # make a put request to a random path, with the CSRF token
     response = await client.put("/some/path", headers=headers)
     assert_has_authorization_header(response, session)
 
     # make a delete request to a random path, without the CSRF token
     response = await client.delete("/some/path", headers=without_csrf)
-    assert_is_authorization_error(response, "Invalid or missing CSRF token")
+    assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
     # make a delete request to a random path, with the CSRF token
     response = await client.delete("/some/path", headers=headers)
     assert_has_authorization_header(response, session)

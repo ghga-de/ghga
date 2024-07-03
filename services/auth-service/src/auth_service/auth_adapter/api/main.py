@@ -73,6 +73,9 @@ from .headers import get_bearer_token, pass_auth_response, session_to_header
 app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
 configure_app(app, config=CONFIG)
 
+basic_auth_dependency = get_basic_auth_dependency(app, CONFIG)
+basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else None
+
 # the auth adapter needs to handle all HTTP methods
 READ_METHODS = ["GET", "HEAD", "OPTIONS"]
 WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"]
@@ -117,6 +120,7 @@ add_allowed_routes()
     tags=["users"],
     summary="Create or get user session",
     description="Endpoint used when a user wants to log in",
+    dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def login(  # noqa: C901, PLR0913
@@ -204,6 +208,7 @@ async def login(  # noqa: C901, PLR0913
     tags=["users"],
     summary="End user session",
     description="Endpoint used when a user wants to log out",
+    dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def logout(
@@ -230,6 +235,7 @@ async def logout(
     tags=["users"],
     summary="Register a user",
     description="Handle the endpoint to register a new user",
+    dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
 async def post_user(
@@ -253,6 +259,7 @@ async def post_user(
     tags=["users"],
     summary="Update a user",
     description="Handle the endpoint to update an existing user",
+    dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
 async def put_user(
@@ -288,6 +295,7 @@ async def put_user(
     tags=["totp"],
     summary="Create a new TOTP token",
     description="Endpoint used to create or replace a TOTP token",
+    dependencies=basic_auth_dependencies,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_new_totp_token(
@@ -335,6 +343,7 @@ async def create_new_totp_token(
     tags=["totp"],
     summary="Verify a TOTP code",
     description="Endpoint used to verify a TOTP code",
+    dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def rpc_verify_totp(  # noqa: PLR0913
@@ -378,10 +387,6 @@ async def rpc_verify_totp(  # noqa: PLR0913
     )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-basic_auth_dependency = get_basic_auth_dependency(app, CONFIG)
-basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else None
 
 
 @app.api_route(
