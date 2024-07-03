@@ -67,6 +67,7 @@ spec:
           mountPath: "/home/appuser/.{{ .Values.config_prefix }}.yaml"
           subPath: .{{ .Values.config_prefix }}.yaml
           readOnly: true
+        {{- include "ghga-common.volume-mounts" . | nindent 8 }}
       - image: "{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
         {{- include "ghga-common.command-args" (list "dcs consume-events")  | nindent 8 }}
         name: {{ .Release.Name }}-consumer
