@@ -45,13 +45,6 @@ parameters:
     cors_allowed_origins: []
     docs_url: /docs
     host: 0.0.0.0
-    kafka_servers: []
-    kafka_security_protocol: PLAINTEXT
-    kafka_ssl_cafile: null
-    kafka_ssl_certfile: null
-    kafka_ssl_keyfile: null
-    kafka_ssl_password: null
-
     openapi_url: /openapi.json
     port: 8080
     private_key: ""

@@ -62,13 +62,6 @@ parameters:
     docs_url: /docs
     download_access_url: http://claims-repository-svc:8080/download-access
     host: "0.0.0.0"
-    kafka_servers: []
-    kafka_security_protocol: PLAINTEXT
-    kafka_ssl_cafile: null
-    kafka_ssl_certfile: null
-    kafka_ssl_keyfile: null
-    kafka_ssl_password: null
-
     openapi_url: /openapi.json
     port: 8080
     service_instance_id: 'wps_1'

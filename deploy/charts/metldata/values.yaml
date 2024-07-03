@@ -52,15 +52,7 @@ parameters:
     db_name: metadata_artifacts
     docs_url: /docs
     host: 0.0.0.0
-    kafka_servers:
-    - kafka:9092
-    kafka_security_protocol: PLAINTEXT
-    kafka_ssl_cafile: null
-    kafka_ssl_certfile: null
-    kafka_ssl_keyfile: null
-    kafka_ssl_password: null
     loader_token_hashes: null  # <Please fill - The tokens must be the loader token generated using the data steward kit.>
-
     openapi_url: /openapi.json
     port: 8080
     primary_artifact_name: embedded_public

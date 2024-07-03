@@ -61,13 +61,6 @@ parameters:
     docs_url: /docs
     download_access_url: http://claims-repository-svc:8080/download-access
     host: "0.0.0.0"
-    kafka_servers:
-    - kafka-kafka-bootstrap:9092
-    kafka_security_protocol: PLAINTEXT
-    kafka_ssl_cafile: null
-    kafka_ssl_certfile: null
-    kafka_ssl_keyfile: null
-    kafka_ssl_password: null
     access_request_events_topic: access_requests
     access_request_created_event_type: access_request_created
     access_request_allowed_event_type: access_request_allowed

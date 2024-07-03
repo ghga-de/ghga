@@ -25,13 +25,6 @@ parameters:
     access_request_events_topic: access_requests
     central_data_stewardship_email: ""
     db_name: nos
-    kafka_servers:
-    - kafka:9092
-    kafka_security_protocol: PLAINTEXT
-    kafka_ssl_cafile: null
-    kafka_ssl_certfile: null
-    kafka_ssl_keyfile: null
-    kafka_ssl_password: null
     iva_state_changed_event_topic: ivas
     iva_state_changed_event_type: iva_state_changed
     notification_event_topic: notifications

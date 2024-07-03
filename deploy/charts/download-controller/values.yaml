@@ -74,13 +74,6 @@ parameters:
     files_to_register_topic: internal_registrations
     files_to_register_type: internal_file_registered
     host: "0.0.0.0"
-    kafka_servers: []
-    kafka_security_protocol: PLAINTEXT
-    kafka_ssl_cafile: null
-    kafka_ssl_certfile: null
-    kafka_ssl_keyfile: null
-    kafka_ssl_password: null
-
     openapi_url: /openapi.json
     port: 8080
     presigned_url_expires_after: 10

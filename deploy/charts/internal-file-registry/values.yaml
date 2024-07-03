@@ -33,12 +33,6 @@ parameters:
     files_to_register_type: validation_success
     files_to_stage_topic: downloads
     files_to_stage_type: unstaged_drs_object_requested
-    kafka_servers: []
-    kafka_security_protocol: PLAINTEXT
-    kafka_ssl_cafile: null
-    kafka_ssl_certfile: null
-    kafka_ssl_keyfile: null
-    kafka_ssl_password: null
     service_instance_id: "consumer.1"
     service_name: internal_file_registry
     object_storages:

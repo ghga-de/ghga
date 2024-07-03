@@ -121,13 +121,6 @@ parameters:
       name: null
       id: null
 
-    kafka_servers: []
-    kafka_security_protocol: PLAINTEXT
-    kafka_ssl_cafile: null
-    kafka_ssl_certfile: null
-    kafka_ssl_keyfile: null
-    kafka_ssl_password: null
-
     workers: 1
 
 authService:
