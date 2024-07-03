@@ -17,7 +17,6 @@
 """Fixture for testing code that uses the S3ObjectStorage provider."""
 
 from collections.abc import Generator
-from typing import Union
 
 from hexkit.providers.s3.provider import S3ObjectStorage
 from hexkit.providers.s3.testutils import S3Fixture as BaseS3Fixture

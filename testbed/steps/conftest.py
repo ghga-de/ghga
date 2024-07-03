@@ -215,7 +215,7 @@ async def reset_state(fixtures: JointFixture):
         # we do not have access permissions to the state databases,
         # so we rely on the deployment to start with a clean slate.
         await fixtures.s3.empty_buckets()  # empty object storage
-        await fixtures.kafka.clear_topics()  # empty event queues
+        await fixtures.kafka.delete_topics()  # remove event queues
         saved_data_steward = fetch_data_stewardship(fixtures)
         fixtures.mongo.empty_databases()  # empty service databases
         restore_data_stewardship(saved_data_steward, fixtures)

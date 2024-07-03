@@ -18,7 +18,7 @@
 
 from collections.abc import Generator, Mapping
 from time import sleep
-from typing import Any, Optional, Union
+from typing import Any
 
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture as BaseMongoFixture

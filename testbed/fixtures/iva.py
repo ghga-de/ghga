@@ -17,10 +17,9 @@
 
 from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Optional, Union
 
 from httpx import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from pytest import fixture
 
 from .config import Config
