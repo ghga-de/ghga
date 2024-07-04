@@ -67,6 +67,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
         "ucs",
         "wps",
         "mass",
+        "nos",
     ]
 
     # S3 config
@@ -149,6 +150,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
 
     # mass
     mass_url: str = "http://mass:8080"
+
+    # notification orchestration
+    nos_db_name: str = "nos"
 
     # notifications
     mail_url: str = "http://mailhog:8025"

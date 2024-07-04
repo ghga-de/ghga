@@ -167,42 +167,59 @@ def empty_totp_token_store(fixtures: JointFixture):
 # Global test bed state memory
 
 
-def fetch_data_stewardship(fixtures: JointFixture) -> tuple[Any, Any]:
+def fetch_data_stewardship(fixtures: JointFixture) -> dict[str, Any]:
     """Fetch the data steward and the corresponding claim from the database."""
     assert not fixtures.config.use_api_gateway
-    data_steward_claim = fixtures.mongo.find_document(
+    state = {}
+    claim = fixtures.mongo.find_document(
         fixtures.config.ums_db_name,
         fixtures.config.ums_claims_collection,
         {"visa_value": "data_steward@ghga.de"},
     )
-    data_steward = (
-        fixtures.mongo.find_document(
-            fixtures.config.ums_db_name,
-            fixtures.config.ums_users_collection,
-            {"_id": data_steward_claim["user_id"]},
-        )
-        if data_steward_claim
-        else None
+    assert claim is not None, "no data steward claim found in the auth database"
+    state["claim"] = claim
+    user_id = claim["user_id"]
+    user = fixtures.mongo.find_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_users_collection,
+        {"_id": user_id},
     )
-    return data_steward, data_steward_claim
+    assert user is not None, "no data steward found in the auth database"
+    state["user"] = user
+    user = fixtures.mongo.find_document(
+        fixtures.config.nos_db_name,
+        "users",
+        {"_id": user_id},
+    )
+    assert user is not None, "no data steward found in the nos database"
+    state["nos"] = user
+    return state
 
 
-def restore_data_stewardship(state: tuple[Any, Any], fixtures: JointFixture) -> None:
+def restore_data_stewardship(state: dict[str, Any], fixtures: JointFixture) -> None:
     """Put the data steward and the corresponding claim back into the database."""
     assert not fixtures.config.use_api_gateway
-    data_steward, data_steward_claim = state
-    if data_steward:
-        fixtures.mongo.replace_document(
-            fixtures.config.ums_db_name,
-            fixtures.config.ums_users_collection,
-            data_steward,
-        )
-    if data_steward_claim:
-        fixtures.mongo.replace_document(
-            fixtures.config.ums_db_name,
-            fixtures.config.ums_claims_collection,
-            data_steward_claim,
-        )
+    user = state["user"]
+    assert user
+    fixtures.mongo.replace_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_users_collection,
+        user,
+    )
+    user = state["nos"]
+    assert user
+    fixtures.mongo.replace_document(
+        fixtures.config.nos_db_name,
+        "users",
+        user,
+    )
+    claim = state.get("claim")
+    assert claim
+    fixtures.mongo.replace_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_claims_collection,
+        claim,
+    )
 
 
 @given("we start on a clean slate")
