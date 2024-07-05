@@ -58,6 +58,36 @@ The following services need the outbox *subscriber* implemented for the listed e
 | Upload Controller      | FileDeletionRequested  |
 
 
+### Config Changes
+
+The outbox pattern implementation results in changes to service configuration parameters as follows:
+
+#### Download Controller:
+Added `unstaged_download_collection` without default value  
+Removed `unstaged_download_event_type`
+Removed `files_to_delete_type`
+
+#### File Ingest:
+Added `db_connection_str` and `db_name`  
+Added `file_validations_collection` with default value `file-validations`  
+Removed `publisher_type`  
+Renamed `publisher_topic` -> `file_upload_validation_success_topic`
+
+#### Internal File Registry:
+Removed `files_to_delete_type`, `files_to_register_type`, `files_to_stage_type`
+
+#### Interrogation Room:
+Removed `upload_received_event_type`
+
+#### Purge Controller:
+Added `db_connection_str` and `db_name`  
+Added `file_deletions_collection` with default value `file-deletions`  
+Removed `files_to_delete_type`
+
+#### Upload Controller:
+Added `file_upload_received_collection` without default value  
+Renamed `upload_received_event_topic` -> `file_upload_received_topic`  
+Removed `upload_received_event_type`, `files_to_delete_type`
 
 ## Human Resource/Time Estimation:
 
