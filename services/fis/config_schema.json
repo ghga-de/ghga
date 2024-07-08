@@ -161,11 +161,6 @@
       "title": "Token Hashes",
       "type": "array"
     },
-    "selected_storage_alias": {
-      "description": "S3 endpoint alias of the object storage node the bucket and object(s) corresponding to the upload metadata have been uploaded to. This should point to a node containing a staging bucket.",
-      "title": "Selected Storage Alias",
-      "type": "string"
-    },
     "file_upload_validation_success_topic": {
       "description": "The name of the topic use to publish FileUploadValidationSuccess events.",
       "examples": [
@@ -391,7 +386,6 @@
     "private_key",
     "source_bucket_id",
     "token_hashes",
-    "selected_storage_alias",
     "file_upload_validation_success_topic",
     "kafka_servers",
     "db_connection_str",

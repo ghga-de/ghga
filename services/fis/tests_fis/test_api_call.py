@@ -90,12 +90,6 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
         **TEST_PAYLOAD.model_dump(),
         secret_id=secret_id,
     )
-    encrypted_payload = EncryptedPayload(
-        payload=encrypt(
-            data=payload.model_dump_json(),
-            key=joint_fixture.keypair.public,
-        )
-    )
 
     event_recorder = EventRecorder(
         kafka_servers=joint_fixture.kafka.config.kafka_servers,
@@ -105,7 +99,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
     async with event_recorder:
         response = await joint_fixture.rest_client.post(
             "/federated/ingest_metadata",
-            json=encrypted_payload.model_dump(),
+            json=payload.model_dump(),
             headers=headers,
         )
 
@@ -121,7 +115,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
         file_id=TEST_PAYLOAD.file_id,
         object_id=TEST_PAYLOAD.object_id,
         bucket_id=joint_fixture.config.source_bucket_id,
-        s3_endpoint_alias=joint_fixture.s3_endpoint_alias,
+        s3_endpoint_alias=TEST_PAYLOAD.storage_alias,
         decrypted_size=TEST_PAYLOAD.unencrypted_size,
         decryption_secret_id=secret_id,
         content_offset=0,
@@ -143,14 +137,12 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     # test missing authorization
     response = await joint_fixture.rest_client.post(
-        "/federated/ingest_metadata", json=encrypted_payload.model_dump()
+        "/federated/ingest_metadata", json=payload.model_dump()
     )
     assert response.status_code == 403
 
     # test malformed payload
-    nonsense_payload = encrypted_payload.model_copy(
-        update={"payload": "abcdefghijklmn"}
-    )
+    nonsense_payload = payload.model_copy(update={"payload": "abcdefghijklmn"})
     response = await joint_fixture.rest_client.post(
         "/federated/ingest_metadata",
         json=nonsense_payload.model_dump(),
@@ -207,7 +199,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
         file_id=TEST_PAYLOAD.file_id,
         object_id=TEST_PAYLOAD.object_id,
         bucket_id=joint_fixture.config.source_bucket_id,
-        s3_endpoint_alias=joint_fixture.s3_endpoint_alias,
+        s3_endpoint_alias=TEST_PAYLOAD.storage_alias,
         decrypted_size=TEST_PAYLOAD.unencrypted_size,
         decryption_secret_id=secret_id,
         content_offset=0,

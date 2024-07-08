@@ -23,7 +23,7 @@ from fis.adapters.inbound.fastapi_.http_authorization import (
     IngestTokenAuthContext,
     require_token,
 )
-from fis.core.models import EncryptedPayload
+from fis.core.models import EncryptedPayload, UploadMetadata
 from fis.ports.inbound.ingest import (
     DecryptionError,
     VaultCommunicationError,
@@ -93,22 +93,15 @@ async def ingest_legacy_metadata(
     response_description="Received and decrypted data successfully.",
 )
 async def ingest_metadata(
-    encrypted_payload: EncryptedPayload,
+    payload: UploadMetadata,
     upload_metadata_processor: dummies.UploadProcessorPort,
     _token: Annotated[IngestTokenAuthContext, require_token],
 ):
-    """Decrypt payload, process metadata, file secret id and send success event"""
-    try:
-        decrypted_metadata = await upload_metadata_processor.decrypt_payload(
-            encrypted=encrypted_payload
-        )
-    except (DecryptionError, WrongDecryptedFormatError) as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
-
-    secret_id = decrypted_metadata.secret_id
+    """Process metadata, file secret id and send success event"""
+    secret_id = payload.secret_id
 
     await upload_metadata_processor.populate_by_event(
-        upload_metadata=decrypted_metadata, secret_id=secret_id
+        upload_metadata=payload, secret_id=secret_id
     )
 
     return Response(status_code=202)

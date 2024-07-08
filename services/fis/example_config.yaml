@@ -23,7 +23,6 @@ log_level: INFO
 openapi_url: /openapi.json
 port: 8080
 private_key: dummy-key
-selected_storage_alias: staging
 service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
 service_instance_id: '1'
 service_name: fis

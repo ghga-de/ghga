@@ -1,5 +1,4 @@
 service_name: fis
-selected_storage_alias: staging
 source_bucket_id: staging
 private_key: dummy-key
 token_hashes: [abcdef, ghijkl]

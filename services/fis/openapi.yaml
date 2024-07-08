@@ -22,6 +22,59 @@ components:
           type: array
       title: HTTPValidationError
       type: object
+    UploadMetadata:
+      description: 'Current model including a secret ID that can be used to retrieve
+        a stored secret
+
+        in place of the actual secret.'
+      properties:
+        encrypted_md5_checksums:
+          items:
+            type: string
+          title: Encrypted Md5 Checksums
+          type: array
+        encrypted_sha256_checksums:
+          items:
+            type: string
+          title: Encrypted Sha256 Checksums
+          type: array
+        encrypted_size:
+          title: Encrypted Size
+          type: integer
+        file_id:
+          title: File Id
+          type: string
+        object_id:
+          title: Object Id
+          type: string
+        part_size:
+          title: Part Size
+          type: integer
+        secret_id:
+          title: Secret Id
+          type: string
+        storage_alias:
+          title: Storage Alias
+          type: string
+        unencrypted_checksum:
+          title: Unencrypted Checksum
+          type: string
+        unencrypted_size:
+          title: Unencrypted Size
+          type: integer
+      required:
+      - file_id
+      - object_id
+      - part_size
+      - unencrypted_size
+      - encrypted_size
+      - unencrypted_checksum
+      - encrypted_md5_checksums
+      - encrypted_sha256_checksums
+      - storage_alias
+      - secret_id
+      title: UploadMetadata
+      type: object
     ValidationError:
       properties:
         loc:
@@ -51,19 +104,18 @@ info:
   description: A service to ingest s3 file upload metadata produced by thedata-steward-kit
     upload command
   title: File Ingest Service
-  version: 2.0.0
+  version: 3.0.0
 openapi: 3.1.0
 paths:
   /federated/ingest_metadata:
     post:
-      description: Decrypt payload, process metadata, file secret id and send success
-        event
+      description: Process metadata, file secret id and send success event
       operationId: ingestFileUploadMetadata
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EncryptedPayload'
+              $ref: '#/components/schemas/UploadMetadata'
         required: true
       responses:
         '202':

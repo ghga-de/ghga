@@ -21,7 +21,7 @@ import os
 import pytest
 from ghga_service_commons.utils.crypt import encrypt, generate_key_pair
 
-from fis.core.models import EncryptedPayload, LegacyUploadMetadata, UploadMetadata
+from fis.core.models import EncryptedPayload, LegacyUploadMetadata
 from fis.ports.inbound.ingest import (
     DecryptionError,
     WrongDecryptedFormatError,
@@ -29,26 +29,6 @@ from fis.ports.inbound.ingest import (
 from tests_fis.fixtures.joint import TEST_PAYLOAD, JointFixture
 
 pytestmark = pytest.mark.asyncio()
-
-
-async def test_decryption_happy(joint_fixture: JointFixture):
-    """Test decryption with valid keypair and correct file upload metadata format."""
-    payload = UploadMetadata(
-        **TEST_PAYLOAD.model_dump(),
-        secret_id="test_secret_id",
-    )
-
-    encrypted_payload = EncryptedPayload(
-        payload=encrypt(
-            data=payload.model_dump_json(),
-            key=joint_fixture.keypair.public,
-        )
-    )
-
-    processed_payload = await joint_fixture.upload_metadata_processor.decrypt_payload(
-        encrypted=encrypted_payload
-    )
-    assert processed_payload == payload
 
 
 async def test_legacy_decryption_happy(joint_fixture: JointFixture):
@@ -73,39 +53,6 @@ async def test_legacy_decryption_happy(joint_fixture: JointFixture):
     assert processed_payload == payload
 
 
-async def test_decryption_sad(joint_fixture: JointFixture):
-    """Test decryption throws correct errors for payload and key issues"""
-    # test faulty payload
-    encrypted_payload = EncryptedPayload(
-        payload=encrypt(
-            data=TEST_PAYLOAD.model_dump_json(),
-            key=joint_fixture.keypair.public,
-        )
-    )
-
-    with pytest.raises(WrongDecryptedFormatError):
-        await joint_fixture.legacy_upload_metadata_processor.decrypt_payload(
-            encrypted=encrypted_payload
-        )
-
-    # test wrong key
-    keypair2 = generate_key_pair()
-
-    payload = UploadMetadata(
-        **TEST_PAYLOAD.model_dump(),
-        secret_id="test_secret_id",
-    )
-
-    encrypted_payload = EncryptedPayload(
-        payload=encrypt(data=payload.model_dump_json(), key=keypair2.public)
-    )
-
-    with pytest.raises(DecryptionError):
-        await joint_fixture.legacy_upload_metadata_processor.decrypt_payload(
-            encrypted=encrypted_payload
-        )
-
-
 async def test_legacy_decryption_sad(joint_fixture: JointFixture):
     """Test decryption throws correct errors for payload and key issues"""
     # test faulty payload
@@ -117,7 +64,7 @@ async def test_legacy_decryption_sad(joint_fixture: JointFixture):
     )
 
     with pytest.raises(WrongDecryptedFormatError):
-        await joint_fixture.upload_metadata_processor.decrypt_payload(
+        await joint_fixture.legacy_upload_metadata_processor.decrypt_payload(
             encrypted=encrypted_payload
         )
 
@@ -134,6 +81,6 @@ async def test_legacy_decryption_sad(joint_fixture: JointFixture):
     )
 
     with pytest.raises(DecryptionError):
-        await joint_fixture.upload_metadata_processor.decrypt_payload(
+        await joint_fixture.legacy_upload_metadata_processor.decrypt_payload(
             encrypted=encrypted_payload
         )

@@ -38,7 +38,8 @@ class WrongDecryptedFormatError(RuntimeError):
     """Thrown when the decrypted payload"""
 
     def __init__(self, *, cause: str):
-        message = f"Decrypted payload does not conform to expected format: {cause}."
+        message = f"Decrypted payload does not conform to expected format: {
+            cause}."
         super().__init__(message)
 
 
@@ -67,13 +68,6 @@ class LegacyUploadMetadataProcessorPort(ABC):
 
 class UploadMetadataProcessorPort(ABC):
     """Port for S3 upload metadata processor"""
-
-    @abstractmethod
-    async def decrypt_payload(
-        self, *, encrypted: models.EncryptedPayload
-    ) -> models.UploadMetadata:
-        """Decrypt upload metadata using private key"""
-        ...
 
     @abstractmethod
     async def decrypt_secret(self, *, encrypted: models.EncryptedPayload) -> str:

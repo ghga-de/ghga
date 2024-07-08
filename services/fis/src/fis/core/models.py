@@ -39,6 +39,7 @@ class UploadMetadataBase(BaseModel):
     unencrypted_checksum: str
     encrypted_md5_checksums: list[str]
     encrypted_sha256_checksums: list[str]
+    storage_alias: str
 
 
 class LegacyUploadMetadata(UploadMetadataBase):

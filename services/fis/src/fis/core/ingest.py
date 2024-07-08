@@ -56,12 +56,6 @@ class ServiceConfig(BaseSettings):
         description="List of token hashes corresponding to the tokens that can be used "
         + "to authenticate calls to this service.",
     )
-    selected_storage_alias: str = Field(
-        default=...,
-        description="S3 endpoint alias of the object storage node the bucket and "
-        + "object(s) corresponding to the upload metadata have been uploaded to. "
-        + "This should point to a node containing a staging bucket.",
-    )
 
 
 async def _send_file_metadata(
@@ -70,7 +64,6 @@ async def _send_file_metadata(
     upload_metadata: models.UploadMetadataBase,
     source_bucket_id: str,
     secret_id: str,
-    s3_endpoint_alias: str,
 ):
     """Send FileUploadValidationSuccess event to downstream services"""
     payload = FileUploadValidationSuccess(
@@ -78,7 +71,7 @@ async def _send_file_metadata(
         file_id=upload_metadata.file_id,
         object_id=upload_metadata.object_id,
         bucket_id=source_bucket_id,
-        s3_endpoint_alias=s3_endpoint_alias,
+        s3_endpoint_alias=upload_metadata.storage_alias,
         decrypted_size=upload_metadata.unencrypted_size,
         decryption_secret_id=secret_id,
         content_offset=0,
@@ -134,7 +127,6 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
             secret_id=secret_id,
             source_bucket_id=self._config.source_bucket_id,
             upload_metadata=upload_metadata,
-            s3_endpoint_alias=self._config.selected_storage_alias,
         )
 
     async def store_secret(self, *, file_secret: str) -> str:
@@ -161,26 +153,6 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
         self._file_validation_success_dao = file_validation_success_dao
         self._vault_adapter = vault_adapter
 
-    async def decrypt_payload(
-        self, *, encrypted: models.EncryptedPayload
-    ) -> models.UploadMetadata:
-        """Decrypt upload metadata using private key"""
-        try:
-            decrypted = decrypt(data=encrypted.payload, key=self._config.private_key)
-        except (ValueError, CryptoError) as error:
-            decrypt_error = DecryptionError()
-            log.error(decrypt_error)
-            raise decrypt_error from error
-
-        upload_metadata = json.loads(decrypted)
-
-        try:
-            return models.UploadMetadata(**upload_metadata)
-        except ValidationError as error:
-            format_error = WrongDecryptedFormatError(cause=str(error))
-            log.error(format_error)
-            raise format_error from error
-
     async def decrypt_secret(self, *, encrypted: models.EncryptedPayload) -> str:
         """Decrypt file secret payload"""
         try:
@@ -200,7 +172,6 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
             secret_id=secret_id,
             source_bucket_id=self._config.source_bucket_id,
             upload_metadata=upload_metadata,
-            s3_endpoint_alias=self._config.selected_storage_alias,
         )
 
     async def store_secret(self, *, file_secret: str) -> str:

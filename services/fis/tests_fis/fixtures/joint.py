@@ -51,6 +51,7 @@ TEST_PAYLOAD = UploadMetadataBase(
     unencrypted_checksum="def",
     encrypted_md5_checksums=["a", "b", "c"],
     encrypted_sha256_checksums=["a", "b", "c"],
+    storage_alias="staging",
 )
 
 
@@ -64,7 +65,6 @@ class JointFixture:
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     rest_client: httpx.AsyncClient
-    s3_endpoint_alias: str
     upload_metadata_processor: UploadMetadataProcessorPort
     legacy_upload_metadata_processor: LegacyUploadMetadataProcessorPort
     dao: FileUploadValidationSuccessDao
@@ -104,7 +104,6 @@ async def joint_fixture(
             kafka=kafka,
             mongodb=mongodb,
             rest_client=rest_client,
-            s3_endpoint_alias=config.selected_storage_alias,
             upload_metadata_processor=upload_metadata_processor,
             legacy_upload_metadata_processor=legacy_upload_metadata_processor,
             dao=dao,

@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "fis"
-version = "2.0.0"
+version = "3.0.0"
 description = "File Ingest Service - A lightweight service to propagate file upload metadata to the GHGA file backend services"
 
 [project.license]
