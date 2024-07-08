@@ -5,7 +5,7 @@ ghga-datasteward-kit==2.1.2
 
 ghga-event-schemas>=3.3.0,<4
 ghga-service-commons[auth,crypt]>=3.1.5,<4
-hexkit[all]>=3.2.2,<4
+hexkit[all]>=3.3.0,<4
 
 crypt4gh>=1.7,<2
 
