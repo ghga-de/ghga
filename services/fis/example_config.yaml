@@ -20,6 +20,7 @@ kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
 log_format: null
 log_level: INFO
+log_traceback: true
 openapi_url: /openapi.json
 port: 8080
 private_key: dummy-key
