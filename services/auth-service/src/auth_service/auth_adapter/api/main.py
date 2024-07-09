@@ -55,6 +55,7 @@ from ..core.auth import (
     UserInfoError,
     get_user_info,
     internal_token_from_session,
+    log_auth_info,
 )
 from ..core.session_store import SessionState
 from ..core.verify_totp import verify_totp
@@ -249,6 +250,7 @@ async def post_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in"
         )
     await session_store.save_session(session)
+    log_auth_info(request, session)
     internal_token = internal_token_from_session(session)
     return pass_auth_response(request, f"Bearer {internal_token}")
 
@@ -285,6 +287,7 @@ async def put_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not registered"
         )
     await session_store.save_session(session)
+    log_auth_info(request, session)
     internal_token = internal_token_from_session(session)
     return pass_auth_response(request, f"Bearer {internal_token}")
 
@@ -408,6 +411,7 @@ async def ext_auth(
     if session:
         await session_store.save_session(session)
         if session.state is SessionState.AUTHENTICATED:
+            log_auth_info(request, session)
             internal_token = internal_token_from_session(session)
             return pass_auth_response(request, f"Bearer {internal_token}")
     return pass_auth_response(request)

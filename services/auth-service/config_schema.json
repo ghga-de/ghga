@@ -205,6 +205,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "max_iva_verification_attempts": {
       "default": 10,
       "description": "Maximum number of verification attempts for an IVA",

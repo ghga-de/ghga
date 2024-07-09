@@ -23,7 +23,7 @@ from functools import cached_property, lru_cache
 from typing import Any, NamedTuple
 
 import httpx
-from fastapi import status
+from fastapi import Request, status
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
 
@@ -237,6 +237,7 @@ def _fetch_user_info(access_token: str) -> dict[str, Any]:
     response = httpx.get(
         get_jwt_config().userinfo_endpoint,
         headers={"Authorization": f"Bearer {access_token}"},
+        timeout=TIMEOUT,
     )
     if response.status_code != status.HTTP_200_OK:
         raise UserInfoError(f"Cannot request userinfo: {response.reason_phrase}")
@@ -361,3 +362,20 @@ def internal_token_from_session(session: Session) -> str:
         "exp": exp,
     }
     return sign_and_encode_token(claims)
+
+
+def log_auth_info(request: Request, session: Session) -> None:
+    """Log additional authorization info.
+
+    Other info such as timestamp and correlation ID are already
+    logged by default using the hexkit logging setup.
+    """
+    log.info(
+        "User authorized",
+        extra={
+            "method": request.method,
+            "path": request.url.path,
+            "user": session.user_id,
+            "role": session.role,
+        },
+    )

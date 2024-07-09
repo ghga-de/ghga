@@ -15,8 +15,10 @@
 
 """Test the api module"""
 
+import logging
 import re
 from base64 import b64encode
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -522,3 +524,40 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     # make a delete request to a random path, with the CSRF token
     response = await client.delete("/some/path", headers=headers)
     assert_has_authorization_header(response, session)
+
+
+async def test_log_auth_info(
+    client_with_session: ClientWithSession, caplog: pytest.LogCaptureFixture
+):
+    """Test that the authorization information is logged."""
+    client, session = client_with_session[:2]
+    headers = headers_for_session(session)
+    response = await client.post(
+        AUTH_PATH + "/totp-token",
+        json={"user_id": session.user_id, "force": False},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    uri = response.json()["uri"]
+    secret = parse_qs(urlparse(uri).query)["secret"][0]
+    totp = get_valid_totp_code(secret)
+    response = await client.post(
+        AUTH_PATH + "/rpc/verify-totp",
+        headers={"X-Authorization": f"Bearer TOTP:{totp}", **headers},
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    caplog.set_level(logging.INFO)
+    caplog.clear()
+
+    response = await client.put("/some/path", headers=headers)
+    assert_has_authorization_header(response, session)
+
+    records = [record for record in caplog.records if record.module == "auth"]
+    assert len(records) == 1
+    record: Any = records[0]
+    assert record.message == "User authorized"
+    assert record.method == "PUT"
+    assert record.path == "/some/path"
+    assert record.user == session.user_id
+    assert record.role == session.role
