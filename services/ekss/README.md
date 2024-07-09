@@ -131,6 +131,8 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+
 - **`vault_url`** *(string)*: URL of the vault instance to connect to.
 
 

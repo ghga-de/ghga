@@ -46,6 +46,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "vault_url": {
       "description": "URL of the vault instance to connect to",
       "examples": [

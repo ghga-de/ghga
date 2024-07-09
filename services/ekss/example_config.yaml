@@ -9,6 +9,7 @@ generate_correlation_id: true
 host: 127.0.0.1
 log_format: null
 log_level: INFO
+log_traceback: true
 openapi_url: /openapi.json
 port: 8080
 server_private_key: '**********'
