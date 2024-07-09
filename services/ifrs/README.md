@@ -102,6 +102,8 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+
 - **`object_storages`** *(object)*: Can contain additional properties.
 
   - **Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.

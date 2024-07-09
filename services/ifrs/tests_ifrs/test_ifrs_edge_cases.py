@@ -18,10 +18,10 @@
 import logging
 
 import pytest
-from hexkit.providers.s3.testutils import (  # noqa: F401,
+from hexkit.providers.s3.testutils import (
     FileObject,
-    S3Fixture,
-    file_fixture,
+    S3Fixture,  # noqa: F401
+    tmp_file,  # noqa: F401
 )
 
 from ifrs.ports.inbound.file_registry import FileRegistryPort
@@ -41,7 +41,10 @@ async def test_register_with_empty_staging(joint_fixture: JointFixture):
         )
 
 
-async def test_reregistration(joint_fixture: JointFixture, tmp_file: FileObject):
+async def test_reregistration(
+    joint_fixture: JointFixture,
+    tmp_file: FileObject,  # noqa F811
+):
     """Test the re-registration of a file with identical metadata (should not result in
     an exception). Test PR/Push workflow message
     """
@@ -93,7 +96,7 @@ async def test_reregistration(joint_fixture: JointFixture, tmp_file: FileObject)
 async def test_reregistration_with_updated_metadata(
     caplog,
     joint_fixture: JointFixture,
-    tmp_file: FileObject,
+    tmp_file: FileObject,  # noqa: F811
 ):
     """Check that a re-registration of a file with updated metadata fails with the
     expected exception.
@@ -162,7 +165,8 @@ async def test_stage_non_existing_file(joint_fixture: JointFixture):
 
 
 async def test_stage_checksum_mismatch(
-    joint_fixture: JointFixture, tmp_file: FileObject
+    joint_fixture: JointFixture,
+    tmp_file: FileObject,  # noqa: F811
 ):
     """Check that requesting to stage a registered file to the outbox by specifying the
     wrong checksum fails with the expected exception.

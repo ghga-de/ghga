@@ -22,7 +22,7 @@ import requests
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3.testutils import (
     FileObject,
-    file_fixture,  # noqa: F401
+    tmp_file,  # noqa: F401
 )
 
 from tests_ifrs.fixtures.example_data import EXAMPLE_METADATA, EXAMPLE_METADATA_BASE
@@ -31,7 +31,10 @@ from tests_ifrs.fixtures.joint import JointFixture
 pytestmark = pytest.mark.asyncio()
 
 
-async def test_happy_journey(joint_fixture: JointFixture, tmp_file: FileObject):
+async def test_happy_journey(
+    joint_fixture: JointFixture,
+    tmp_file: FileObject,  # noqa: F811
+):
     """Simulates a typical, successful journey for upload, download, and deletion"""
     storage = joint_fixture.s3
     storage_alias = joint_fixture.endpoint_aliases.node1
