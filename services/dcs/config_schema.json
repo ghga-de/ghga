@@ -165,6 +165,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "object_storages": {
       "additionalProperties": {
         "$ref": "#/$defs/S3ObjectStorageNodeConfig"

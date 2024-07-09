@@ -25,9 +25,9 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_fixture,
 )
 from hexkit.providers.s3.testutils import (  # noqa: F401
-    file_fixture,  # function-scoped
     s3_container_fixture,
     s3_fixture,
+    tmp_file,  # function-scoped
 )
 
 # These are function-scoped but importing them here saves imports in test
