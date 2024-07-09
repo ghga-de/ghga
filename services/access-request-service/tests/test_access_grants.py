@@ -34,7 +34,7 @@ DOWNLOAD_ACCESS_URL = "http://test-access:1234"
 
 USER_ID = "some-user-id"
 IVA_ID = "some-iva-id"
-DATASET_ID = "some-dataset-id"
+DATASET_ID = "DS001"
 VALID_FROM = utc_datetime(2020, 1, 1, 0, 0)
 VALID_UNTIL = utc_datetime(2020, 12, 31, 23, 59)
 

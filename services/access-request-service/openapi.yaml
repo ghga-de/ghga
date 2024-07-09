@@ -22,6 +22,7 @@ components:
           title: Changed By
         dataset_id:
           description: ID of the dataset for which access is requested
+          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
           title: Dataset Id
           type: string
         email:
@@ -96,6 +97,7 @@ components:
           type: string
         dataset_id:
           description: ID of the dataset for which access is requested
+          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
           title: Dataset Id
           type: string
         email:
@@ -159,7 +161,7 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 2.0.2
+  version: 2.0.3
 openapi: 3.1.0
 paths:
   /access-requests:

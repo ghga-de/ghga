@@ -70,8 +70,8 @@ async def test_access_request_events(status: str):
     """Test that an event is published properly."""
     request = AccessRequest(
         id="unique_access_request_id",
-        user_id="user123",
-        dataset_id="dataset456",
+        user_id="user-123",
+        dataset_id="DS456",
         email="requester@example.com",
         request_text="Requesting access for research purposes",
         access_starts=now_as_utc(),

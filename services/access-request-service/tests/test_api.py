@@ -36,7 +36,7 @@ ONE_YEAR = timedelta(days=365)
 
 CREATION_DATA = {
     "user_id": "id-of-john-doe@ghga.de",
-    "dataset_id": "some-dataset",
+    "dataset_id": "DS001",
     "iva_id": "some-iva",
     "email": "me@john-doe.name",
     "request_text": "Can I access some dataset?",
@@ -140,6 +140,24 @@ async def test_create_access_request_that_is_too_long(
     assert response.json()["detail"] == "Access end date is invalid"
 
 
+async def test_create_access_request_with_invalid_dataset_id(
+    joint_fixture: JointFixture, auth_headers_doe: dict[str, str]
+):
+    """Test that an access request must have a valid dataset ID."""
+    response = await joint_fixture.rest_client.post(
+        "/access-requests",
+        json={
+            **CREATION_DATA,
+            "dataset_id": "This is not a valid dataset ID!",
+        },
+        headers=auth_headers_doe,
+    )
+    assert response.status_code == 422
+    msg = str(response.json()["detail"])
+    assert "dataset_id" in msg
+    assert "String should match pattern" in msg
+
+
 async def test_get_access_requests(
     joint_fixture: JointFixture,
     auth_headers_doe: dict[str, str],
@@ -176,7 +194,7 @@ async def test_get_access_requests(
     assert request["id"] == access_request_id
     assert request["user_id"] == "id-of-john-doe@ghga.de"
     assert request["iva_id"] == "some-iva"
-    assert request["dataset_id"] == "some-dataset"
+    assert request["dataset_id"] == "DS001"
     assert request["status"] == "pending"
 
     # get all requests as data steward
@@ -191,12 +209,12 @@ async def test_get_access_requests(
     # last made request comes first
     assert request["id"] == another_access_request_id
     assert request["user_id"] == "id-of-rod-steward@ghga.de"
-    assert request["dataset_id"] == "some-dataset"
+    assert request["dataset_id"] == "DS001"
     assert request["status"] == "pending"
     request = requests[1]
     assert request["id"] == access_request_id
     assert request["user_id"] == "id-of-john-doe@ghga.de"
-    assert request["dataset_id"] == "some-dataset"
+    assert request["dataset_id"] == "DS001"
     assert request["status"] == "pending"
 
 
@@ -245,13 +263,13 @@ async def test_filter_access_requests(
     assert len(response.json()) == 0
 
     response = await client.get(
-        "/access-requests?dataset_id=some-dataset", headers=auth_headers_doe
+        "/access-requests?dataset_id=DS001", headers=auth_headers_doe
     )
     assert response.status_code == 200
     assert len(response.json()) == 1
 
     response = await client.get(
-        "/access-requests?dataset_id=another-dataset", headers=auth_headers_doe
+        "/access-requests?dataset_id=DS002", headers=auth_headers_doe
     )
     assert response.status_code == 200
     assert len(response.json()) == 0
@@ -271,7 +289,7 @@ async def test_filter_access_requests(
     # combined filter
     response = await client.get(
         "/access-requests?"
-        "user_id=id-of-john-doe@ghga.de&dataset_id=some-dataset&status=pending",
+        "user_id=id-of-john-doe@ghga.de&dataset_id=DS001&status=pending",
         headers=auth_headers_doe,
     )
     assert response.status_code == 200
@@ -289,7 +307,7 @@ async def test_patch_access_request(
     httpx_mock.add_response(
         method="POST",
         url="http://access/users/id-of-john-doe@ghga.de"
-        "/ivas/some-iva/datasets/some-dataset",
+        "/ivas/some-iva/datasets/DS001",
         status_code=204,
     )
 
@@ -347,7 +365,7 @@ async def test_patch_access_request(
     assert request["id"] == access_request_id
     assert request["user_id"] == "id-of-john-doe@ghga.de"
     assert request["iva_id"] == "some-iva"
-    assert request["dataset_id"] == "some-dataset"
+    assert request["dataset_id"] == "DS001"
     assert request["status"] == "allowed"
     assert request["status_changed"]
     assert request["changed_by"] is None  # cannot see internals
@@ -364,7 +382,7 @@ async def test_patch_access_request(
     assert request["id"] == access_request_id
     assert request["user_id"] == "id-of-john-doe@ghga.de"
     assert request["iva_id"] == "some-iva"
-    assert request["dataset_id"] == "some-dataset"
+    assert request["dataset_id"] == "DS001"
     assert request["status"] == "allowed"
     assert request["status_changed"]
     assert request["changed_by"] == "id-of-rod-steward@ghga.de"  # can see internals
@@ -381,7 +399,7 @@ async def test_patch_access_request_with_another_iva(
     httpx_mock.add_response(
         method="POST",
         url="http://access/users/id-of-john-doe@ghga.de"
-        "/ivas/another-iva/datasets/some-dataset",
+        "/ivas/another-iva/datasets/DS001",
         status_code=204,
     )
 
@@ -415,7 +433,7 @@ async def test_patch_access_request_with_another_iva(
     assert request["user_id"] == "id-of-john-doe@ghga.de"
     # make sure that the IVA has been changed
     assert request["iva_id"] == "another-iva"
-    assert request["dataset_id"] == "some-dataset"
+    assert request["dataset_id"] == "DS001"
     assert request["status"] == "allowed"
     assert request["status_changed"]
     assert request["changed_by"] is None

@@ -18,9 +18,10 @@ in the API.
 """
 
 from enum import Enum
+from typing import Annotated
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 __all__ = [
     "AccessRequest",
@@ -45,6 +46,12 @@ class AccessRequestStatus(str, Enum):
     PENDING = "pending"
 
 
+# Accession format should be moved to the commons module
+Accession = Annotated[
+    str, StringConstraints(strip_whitespace=True, pattern="^[A-Z]{1,6}[0-9]{3,18}$")
+]
+
+
 class AccessRequestCreationData(BaseDto):
     """All data necessary to create an access request."""
 
@@ -54,7 +61,7 @@ class AccessRequestCreationData(BaseDto):
         description="ID of the IVA to be used for this request,"
         " but this can also be specified later",
     )
-    dataset_id: str = Field(
+    dataset_id: Accession = Field(
         default=..., description="ID of the dataset for which access is requested"
     )
     email: str = Field(

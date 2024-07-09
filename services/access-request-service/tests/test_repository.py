@@ -77,7 +77,7 @@ ACCESS_REQUESTS = [
     AccessRequest(
         id="request-id-1",
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -91,7 +91,7 @@ ACCESS_REQUESTS = [
     AccessRequest(
         id="request-id-2",
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="another-dataset",
+        dataset_id="DS002",
         email="me@john-doe.name",
         request_text="Can I access another dataset?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -105,7 +105,7 @@ ACCESS_REQUESTS = [
     AccessRequest(
         id="request-id-3",
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="yet-another-dataset",
+        dataset_id="DS003",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -119,7 +119,7 @@ ACCESS_REQUESTS = [
     AccessRequest(
         id="request-id-4",
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="new-dataset",
+        dataset_id="DS007",
         email="me@john-doe.name",
         request_text="Can I access a new dataset?",
         access_starts=utc_datetime(2021, 1, 1, 0, 0),
@@ -133,7 +133,7 @@ ACCESS_REQUESTS = [
     AccessRequest(
         id="request-id-5",
         user_id="id-of-jane-roe@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@jane-roe.name",
         request_text="Can I access the same dataset as Joe?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -148,7 +148,7 @@ ACCESS_REQUESTS = [
         id="request-id-6",
         user_id="id-of-john-doe@ghga.de",
         iva_id="iva-of-john",
-        dataset_id="yet-another-dataset",
+        dataset_id="DS003",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset using this IVA?",
         access_starts=utc_datetime(2021, 6, 1, 0, 0),
@@ -297,7 +297,7 @@ async def test_can_create_request():
     access_ends = access_starts + ONE_YEAR
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -311,7 +311,7 @@ async def test_can_create_request():
     assert request.id == "newly-created-id"
     assert request.user_id == "id-of-john-doe@ghga.de"
     assert request.iva_id is None
-    assert request.dataset_id == "some-dataset"
+    assert request.dataset_id == "DS001"
     assert request.email == "me@john-doe.name"
     assert request.request_text == "Can I access some dataset?"
     assert request.access_starts == request.request_created
@@ -340,7 +340,7 @@ async def test_can_create_request_with_an_iva():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         iva_id="some-iva_id",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -352,7 +352,7 @@ async def test_can_create_request_with_an_iva():
     assert request.id == "newly-created-id"
     assert request.user_id == "id-of-john-doe@ghga.de"
     assert request.iva_id == "some-iva_id"
-    assert request.dataset_id == "some-dataset"
+    assert request.dataset_id == "DS001"
 
     assert dao.last_upsert == request
 
@@ -363,7 +363,7 @@ async def test_cannot_create_request_for_somebody_else():
     access_ends = access_starts + ONE_YEAR
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-foo@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -380,7 +380,7 @@ async def test_silently_correct_request_that_is_too_early():
     access_ends = access_starts + 1.5 * ONE_YEAR
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -406,7 +406,7 @@ async def test_cannot_create_request_too_much_in_advance():
     access_ends = access_starts + ONE_YEAR
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -429,7 +429,7 @@ async def test_cannot_create_request_too_short():
     access_ends = access_starts + timedelta(days=29)
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -452,7 +452,7 @@ async def test_cannot_create_request_too_long():
     access_ends = access_starts + 2.5 * ONE_YEAR
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -515,14 +515,12 @@ async def test_data_steward_can_get_requests_of_specific_user():
 
 async def test_data_steward_can_get_requests_for_specific_dataset():
     """Test getting requests for a specific dataset."""
-    requests = await repository.get(
-        auth_context=auth_context_doe, dataset_id="another-dataset"
-    )
+    requests = await repository.get(auth_context=auth_context_doe, dataset_id="DS002")
     assert len(requests) == 1
     assert requests == [
         request.model_copy(update={"changed_by": None})  # data steward is hidden
         for request in ACCESS_REQUESTS
-        if request.dataset_id == "another-dataset"
+        if request.dataset_id == "DS002"
     ]
 
 
@@ -544,7 +542,7 @@ async def test_filtering_using_multiple_criteria():
     requests = await repository.get(
         auth_context=auth_context_steward,
         user_id="id-of-john-doe@ghga.de",
-        dataset_id="some-dataset",
+        dataset_id="DS001",
         status=AccessRequestStatus.ALLOWED,
     )
     assert len(requests) == 1
@@ -552,7 +550,7 @@ async def test_filtering_using_multiple_criteria():
         request
         for request in ACCESS_REQUESTS
         if request.user_id == "id-of-john-doe@ghga.de"
-        and request.dataset_id == "some-dataset"
+        and request.dataset_id == "DS001"
         and request.status == AccessRequestStatus.ALLOWED
     ]
 
@@ -591,7 +589,7 @@ async def test_set_status_to_allowed():
     assert event_publisher.events == [expected_event]
 
     assert access_grants.last_grant == (
-        "to id-of-john-doe@ghga.de with some-iva for new-dataset"
+        "to id-of-john-doe@ghga.de with some-iva for DS007"
         " from 2021-01-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
     )
 
@@ -628,7 +626,7 @@ async def test_set_status_to_allowed_reusing_iva():
     assert event_publisher.events == [expected_event]
 
     assert access_grants.last_grant == (
-        "to id-of-john-doe@ghga.de with iva-of-john for yet-another-dataset"
+        "to id-of-john-doe@ghga.de with iva-of-john for DS003"
         " from 2021-06-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
     )
 
@@ -667,7 +665,7 @@ async def test_set_status_to_allowed_overriding_iva():
     assert event_publisher.events == [expected_event]
 
     assert access_grants.last_grant == (
-        "to id-of-john-doe@ghga.de with some-other-iva-of-john for yet-another-dataset"
+        "to id-of-john-doe@ghga.de with some-other-iva-of-john for DS003"
         " from 2021-06-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
     )
 
@@ -709,9 +707,7 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
             auth_context=auth_context_steward,
         )
 
-    assert (
-        access_grants.last_grant == "to id-of-john-doe@ghga.de for new-dataset failed"
-    )
+    assert access_grants.last_grant == "to id-of-john-doe@ghga.de for DS007 failed"
 
     # make sure the status is not changed in this case, and no mails are sent out
     changed_request = dao.last_upsert

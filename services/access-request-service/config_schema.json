@@ -182,6 +182,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "auth_key": {
       "description": "The GHGA internal public key for validating the token signature.",
       "examples": [

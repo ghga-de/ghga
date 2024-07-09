@@ -76,7 +76,7 @@ class AccessGrantsAdapter(AccessGrantsPort):
         cls, *, config: AccessGrantsConfig
     ) -> AsyncGenerator["AccessGrantsAdapter", None]:
         """Setup AccessGrantsAdapter with the given config."""
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             yield cls(config=config, client=client)
 
     async def grant_download_access(  # noqa: PLR0913
@@ -96,9 +96,7 @@ class AccessGrantsAdapter(AccessGrantsPort):
                 "Invalid validity period"
             ) from error
         try:
-            response = await self._client.post(
-                url, content=validity.model_dump_json(), timeout=TIMEOUT
-            )
+            response = await self._client.post(url, content=validity.model_dump_json())
         except httpx.RequestError as error:
             raise self.AccessGrantsError(f"HTTP request error: {error}") from error
         if response.status_code != httpx.codes.NO_CONTENT:
