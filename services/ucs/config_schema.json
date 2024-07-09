@@ -229,6 +229,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "kafka_servers": {
       "description": "A list of connection strings to connect to Kafka bootstrap servers.",
       "examples": [
