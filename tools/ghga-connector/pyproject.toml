@@ -9,7 +9,7 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 1 - Planning",
     "Operating System :: POSIX :: Linux",
@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_connector"
-version = "1.3.0"
+version = "1.4.0"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
 dependencies = [
     "typer~=0.12",
     "crypt4gh>=1.6, <2",
-    "ghga-service-commons[api, crypt]>=3.1.1, <4",
+    "ghga-service-commons[crypt]>=3.1.1, <4",
     "hexkit[s3]>=3, <4",
     "rich>=13.7.1, <14",
 ]
@@ -60,7 +60,7 @@ src = [
     "examples",
     "scripts",
 ]
-target-version = "py312"
+target-version = "py39"
 
 [tool.ruff.lint]
 fixable = [
@@ -154,3 +154,24 @@ source = [
     "/workspace/src",
     "**/lib/python*/site-packages",
 ]
+
+[tool.tox]
+legacy_tox_ini = """
+    [tox]
+    env_list = py3{9,12}
+
+    [gh-actions]
+    python =
+        3.9: py39
+        3.10: py310
+        3.11: py311
+        3.12: py312
+
+    [testenv]
+    pass_env =
+        TC_HOST
+        DOCKER_HOST
+    deps =
+        --no-deps -r ./lock/requirements-dev.txt
+    commands = pytest {posargs}
+"""

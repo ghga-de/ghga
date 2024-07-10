@@ -27,7 +27,7 @@ import logging
 import os
 from datetime import datetime
 from enum import Enum
-from typing import Literal
+from typing import Literal, Union
 
 import httpx
 from fastapi import HTTPException, status
@@ -139,7 +139,7 @@ class HttpEnvelopeResponse(httpx.Response):
         super().__init__(content=envelope, status_code=status_code)
 
 
-def exception_handler(request: httpx.Request, exc: HttpException | HTTPException):
+def exception_handler(request: httpx.Request, exc: Union[HttpException, HTTPException]):
     """Transform HttpException data into a proper response object"""
     status_code = exc.status_code
 

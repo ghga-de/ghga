@@ -22,10 +22,10 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from types import TracebackType
+from typing import Union
 
 import crypt4gh.keys
 import typer
-from distutils.util import strtobool
 from ghga_service_commons.utils import crypt
 
 from ghga_connector import core
@@ -78,10 +78,15 @@ class WorkPackageInformation:
     package_id: str
 
 
+def strtobool(value: str) -> bool:
+    """Inplace replacement for distutils.utils"""
+    return value.lower() in ("y", "yes", "on", "1", "true", "t")
+
+
 def exception_hook(
     type_: BaseException,
     value: BaseException,
-    traceback: TracebackType | None,
+    traceback: Union[TracebackType, None],
     message_display: CLIMessageDisplay,
 ):
     """When debug mode is NOT enabled, gets called to perform final error handling

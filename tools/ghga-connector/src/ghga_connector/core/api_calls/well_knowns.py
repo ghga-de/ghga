@@ -22,7 +22,6 @@ import httpx
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.client import httpx_client
-from ghga_connector.core.constants import TIMEOUT
 
 
 @dataclass
@@ -65,7 +64,7 @@ class WKVSCaller:
 
         try:
             with httpx_client() as client:
-                response = client.get(url, timeout=TIMEOUT)  # verify is True by default
+                response = client.get(url)  # verify is True by default
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(request_error=request_error, url=url)
             raise exceptions.RequestFailedError(url=url) from request_error

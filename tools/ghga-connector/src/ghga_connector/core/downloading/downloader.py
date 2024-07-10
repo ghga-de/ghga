@@ -26,7 +26,6 @@ import httpx
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls import WorkPackageAccessor
-from ghga_connector.core.constants import TIMEOUT
 from ghga_connector.core.downloading.abstract_downloader import DownloaderBase
 from ghga_connector.core.downloading.api_calls import (
     get_download_url,
@@ -127,7 +126,7 @@ class Downloader(DownloaderBase):
         """Download a specific range of a file's content using a presigned download url."""
         headers = {"Range": f"bytes={start}-{end}"}
         try:
-            response = self._client.get(download_url, headers=headers, timeout=TIMEOUT)
+            response = self._client.get(download_url, headers=headers)
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(
                 request_error=request_error, url=download_url
@@ -159,7 +158,7 @@ class Downloader(DownloaderBase):
             max_workers=max_concurrent_downloads,
         )
 
-        for part_range, download_url in zip(part_ranges, url_response, strict=False):
+        for part_range, download_url in zip(part_ranges, url_response):
             kwargs: dict[str, Any] = {
                 "download_url": download_url.download_url,
                 "start": part_range.start,
@@ -181,9 +180,7 @@ class Downloader(DownloaderBase):
         url = url_and_headers.endpoint_url
         # Make function call to get download url
         try:
-            response = self._client.get(
-                url=url, headers=url_and_headers.headers, timeout=TIMEOUT
-            )
+            response = self._client.get(url=url, headers=url_and_headers.headers)
         except httpx.RequestError as request_error:
             raise exceptions.RequestFailedError(url=url) from request_error
 

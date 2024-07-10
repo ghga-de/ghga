@@ -15,6 +15,8 @@
 
 """This module provides all API calls related to downloading files."""
 
+from typing import Union
+
 import httpx
 
 from ghga_connector.core import exceptions
@@ -80,7 +82,7 @@ def get_download_url(
     *,
     client: httpx.Client,
     url_and_headers: UrlAndHeaders,
-) -> RetryResponse | URLResponse:
+) -> Union[RetryResponse, URLResponse]:
     """
     Perform a RESTful API call to retrieve a presigned download URL.
     Returns:

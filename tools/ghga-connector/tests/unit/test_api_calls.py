@@ -18,6 +18,7 @@
 
 from contextlib import nullcontext
 from pathlib import Path
+from typing import Union
 from unittest.mock import Mock
 
 import pytest
@@ -57,7 +58,7 @@ async def test_patch_multipart_upload(
     bad_url: bool,
     upload_id: str,
     upload_status: UploadStatus,
-    expected_exception: type[Exception | None],
+    expected_exception: type[Union[Exception, None]],
 ):
     """Test the patch_multipart_upload function"""
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
@@ -110,9 +111,9 @@ async def test_patch_multipart_upload(
     ],
 )
 async def test_get_part_upload_urls(
-    from_part: int | None,
+    from_part: Union[int, None],
     end_part: int,
-    expected_exception: type[Exception | None],
+    expected_exception: type[Union[Exception, None]],
 ):
     """Test the `get_part_upload_urls` generator for iterating through signed part urls"""
     upload_id = "example-upload"

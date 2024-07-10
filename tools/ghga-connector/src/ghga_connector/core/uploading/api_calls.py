@@ -24,7 +24,7 @@ import crypt4gh.keys
 import httpx
 
 from ghga_connector.core import exceptions
-from ghga_connector.core.constants import MAX_PART_NUMBER, TIMEOUT
+from ghga_connector.core.constants import MAX_PART_NUMBER
 from ghga_connector.core.http_translation import ResponseExceptionTranslator
 from ghga_connector.core.uploading.abstract_uploader import UploaderBase
 from ghga_connector.core.uploading.structs import UploadStatus
@@ -93,7 +93,7 @@ class Uploader(UploaderBase):
         # Make function call to get upload url
         try:
             response = await self._client.post(
-                url=url, headers=headers, content=serialized_data, timeout=TIMEOUT
+                url=url, headers=headers, content=serialized_data
             )
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(request_error=request_error, url=url)
@@ -131,7 +131,7 @@ class Uploader(UploaderBase):
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
         try:
-            response = await self._client.get(url=url, headers=headers, timeout=TIMEOUT)
+            response = await self._client.get(url=url, headers=headers)
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(request_error=request_error, url=url)
             raise exceptions.RequestFailedError(url=url) from request_error
@@ -168,9 +168,7 @@ class Uploader(UploaderBase):
 
         # Make function call to get upload url
         try:
-            response = await self._client.post(
-                url=url, headers=headers, timeout=TIMEOUT
-            )
+            response = await self._client.post(url=url, headers=headers)
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(request_error=request_error, url=url)
             raise exceptions.RequestFailedError(url=url) from request_error
@@ -236,7 +234,7 @@ class Uploader(UploaderBase):
         headers = {"Accept": "*/*", "Content-Type": "application/json"}
 
         try:
-            response = await self._client.get(url=url, headers=headers, timeout=TIMEOUT)
+            response = await self._client.get(url=url, headers=headers)
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(request_error=request_error, url=url)
             raise exceptions.RequestFailedError(url=url) from request_error
@@ -277,7 +275,7 @@ class Uploader(UploaderBase):
 
         try:
             response = await self._client.patch(
-                url=url, headers=headers, content=serialized_data, timeout=TIMEOUT
+                url=url, headers=headers, content=serialized_data
             )
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(request_error=request_error, url=url)
@@ -311,9 +309,7 @@ class Uploader(UploaderBase):
     async def upload_file_part(self, *, presigned_url: str, part: bytes) -> None:
         """Upload File"""
         try:
-            response = await self._client.put(
-                presigned_url, content=part, timeout=TIMEOUT
-            )
+            response = await self._client.put(presigned_url, content=part)
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(
                 request_error=request_error, url=presigned_url

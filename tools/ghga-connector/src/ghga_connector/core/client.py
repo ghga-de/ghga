@@ -18,6 +18,8 @@ from contextlib import asynccontextmanager, contextmanager
 
 import httpx
 
+from ghga_connector.core.constants import TIMEOUT
+
 
 class HttpxClientState:
     """Helper class to make max_retries user configurable"""
@@ -36,7 +38,7 @@ def httpx_client():
     """Yields a context manager httpx client and closes it afterward"""
     transport = httpx.HTTPTransport(retries=HttpxClientState.max_retries)
 
-    with httpx.Client(transport=transport) as client:
+    with httpx.Client(transport=transport, timeout=TIMEOUT) as client:
         yield client
 
 
@@ -45,5 +47,5 @@ async def async_client():
     """Yields a context manager async httpx client and closes it afterward"""
     transport = httpx.AsyncHTTPTransport(retries=HttpxClientState.max_retries)
 
-    async with httpx.AsyncClient(transport=transport) as client:
+    async with httpx.AsyncClient(transport=transport, timeout=TIMEOUT) as client:
         yield client

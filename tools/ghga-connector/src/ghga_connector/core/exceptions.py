@@ -389,6 +389,6 @@ class WellKnownValueNotFound(RuntimeError):
 
 def raise_if_connection_failed(request_error: httpx.RequestError, url: str):
     """Check if request exception is caused by hitting max retries and raise accordingly"""
-    if isinstance(request_error, httpx.ConnectError | httpx.ConnectTimeout):
+    if isinstance(request_error, (httpx.ConnectError, httpx.ConnectTimeout)):
         connection_failure = str(request_error.args[0])
         raise ConnectionFailedError(url=url, reason=connection_failure)

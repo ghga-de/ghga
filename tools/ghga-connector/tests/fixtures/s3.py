@@ -27,10 +27,9 @@ from hexkit.providers.s3 import S3Config, S3ObjectStorage
 from hexkit.providers.s3.testutils import (
     TEST_FILE_PATHS,
     FileObject,
-    config_from_localstack_container,
     upload_file,
 )
-from pydantic import PrivateAttr
+from pydantic import PrivateAttr, SecretStr
 from testcontainers.localstack import LocalStackContainer
 
 from . import state
@@ -80,6 +79,16 @@ EXISTING_OBJECTS_ = (
     DEFAULT_EXISTING_OBJECTS if existing_objects is None else existing_objects
 )
 NON_EXISTING_OBJECTS_ = DEFAULT_NON_EXISTING_OBJECTS
+
+
+def config_from_localstack_container(container: LocalStackContainer) -> S3Config:
+    """Prepares a S3Config from an instance of a localstack test container."""
+    s3_endpoint_url = container.get_url()
+    return S3Config(  # type: ignore [call-arg]
+        s3_endpoint_url=s3_endpoint_url,
+        s3_access_key_id="test",
+        s3_secret_access_key=SecretStr("test"),
+    )
 
 
 class CachedFileObject(FileObject):
