@@ -9,13 +9,11 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 1 - Planning",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
@@ -23,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wps"
-version = "2.0.2"
+version = "2.0.3"
 description = "Work Package Service"
 dependencies = [
-    "ghga-event-schemas~=3.1.0",
-    "ghga-service-commons[api,auth,crypt]>=3.1.3",
-    "hexkit[akafka,mongodb]>=3.0.0",
+    "ghga-event-schemas~=3.3.1",
+    "ghga-service-commons[api,auth,crypt]>=3.1.5",
+    "hexkit[akafka,mongodb]>=3.3.0",
     "httpx>=0.27",
     "typer>=0.12",
 ]
@@ -62,7 +60,7 @@ src = [
     "examples",
     "scripts",
 ]
-target-version = "py39"
+target-version = "py312"
 
 [tool.ruff.lint]
 fixable = [
@@ -87,6 +85,7 @@ ignore = [
     "D107",
     "D206",
     "D300",
+    "UP040",
 ]
 select = [
     "C90",

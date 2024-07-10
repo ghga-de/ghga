@@ -16,7 +16,7 @@
 
 """Test the creation of dataclasses and DTOs"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -118,8 +118,8 @@ def test_work_package():
         full_user_name="Dr. John Doe",
         email="john@home.org",
         token_hash="308eda9daf26b7446b284449a5895ab9a04ff30c129d4454e471cfb81bf5557d",
-        created=datetime(2022, 2, 2, 2, tzinfo=timezone.utc),  # pyright: ignore
-        expires=datetime(2022, 2, 2, 3, tzinfo=timezone.utc),  # pyright: ignore
+        created=datetime(2022, 2, 2, 2, tzinfo=UTC),  # pyright: ignore
+        expires=datetime(2022, 2, 2, 3, tzinfo=UTC),  # pyright: ignore
     )
     assert package.id == "some-work-package-id"
     assert package.full_user_name == "Dr. John Doe"

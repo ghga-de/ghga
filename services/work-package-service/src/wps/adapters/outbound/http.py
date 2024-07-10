@@ -54,13 +54,13 @@ class AccessCheckAdapter(AccessCheckPort):
         cls, *, config: AccessCheckConfig
     ) -> AsyncGenerator["AccessCheckAdapter", None]:
         """Setup AccessGrantsAdapter with the given config."""
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             yield cls(config=config, client=client)
 
     async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
         """Check whether the given user has download access for the given dataset."""
         url = f"{self._url}/users/{user_id}/datasets/{dataset_id}"
-        response = await self._client.get(url, timeout=TIMEOUT)
+        response = await self._client.get(url)
         if response.status_code == httpx.codes.OK:
             return response.json() is True
         if response.status_code == httpx.codes.NOT_FOUND:
@@ -70,7 +70,7 @@ class AccessCheckAdapter(AccessCheckPort):
     async def get_datasets_with_download_access(self, user_id: str) -> list[str]:
         """Get all datasets that the given user is allowed to download."""
         url = f"{self._url}/users/{user_id}/datasets"
-        response = await self._client.get(url, timeout=TIMEOUT)
+        response = await self._client.get(url)
         if response.status_code == httpx.codes.OK:
             return response.json()
         if response.status_code == httpx.codes.NOT_FOUND:

@@ -18,7 +18,6 @@
 
 import logging
 from datetime import timedelta
-from typing import Optional
 
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.crypt import encrypt
@@ -192,7 +191,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         work_package_id: str,
         *,
         check_valid: bool = True,
-        work_package_access_token: Optional[str] = None,
+        work_package_access_token: str | None = None,
     ) -> WorkPackage:
         """Get a work package with the given ID from the repository.
 
@@ -248,7 +247,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         work_package_id: str,
         file_id: str,
         check_valid: bool = True,
-        work_package_access_token: Optional[str] = None,
+        work_package_access_token: str | None = None,
     ) -> str:
         """Create a work order token for a given work package and file.
 
@@ -319,7 +318,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             raise dataset_not_found_error from error
 
     async def get_datasets(
-        self, *, auth_context: AuthContext, work_type: Optional[WorkType] = None
+        self, *, auth_context: AuthContext, work_type: WorkType | None = None
     ) -> list[Dataset]:
         """Get the list of all datasets accessible to the authenticated user.
 

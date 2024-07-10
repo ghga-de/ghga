@@ -20,6 +20,7 @@ import pytest
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest_httpx import HTTPXMock
 
 from .fixtures import (  # noqa: F401
@@ -35,7 +36,7 @@ from .fixtures import (  # noqa: F401
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET
 
-pytestmark = pytest.mark.asyncio(scope="session")
+pytestmark = pytest.mark.asyncio()
 
 
 CREATION_DATA = {
@@ -78,7 +79,7 @@ async def test_create_work_order_token(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
     httpx_mock: HTTPXMock,
-    populated_mongodb,
+    mongodb_populated: MongoDbFixture,
 ):
     """Test that work order tokens can be properly created."""
     # mock the access check for the test dataset
@@ -237,7 +238,7 @@ async def test_get_datasets_when_none_authorized(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
     httpx_mock: HTTPXMock,
-    populated_mongodb,
+    mongodb_populated: MongoDbFixture,
 ):
     """Test that no datasets are fetched when none are accessible."""
     # mock the access check for the test dataset
@@ -264,7 +265,7 @@ async def test_get_datasets(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
     httpx_mock: HTTPXMock,
-    populated_mongodb,
+    mongodb_populated: MongoDbFixture,
 ):
     """Test that the list of accessible datasets can be fetched."""
     # mock the access check for the test dataset

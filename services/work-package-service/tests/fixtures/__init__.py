@@ -93,26 +93,24 @@ def fixture_auth_context() -> AuthContext:
     return AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)  # type: ignore
 
 
-@pytest.fixture(name="config", scope="session")
-def fixture_config(
-    kafka_fixture: KafkaFixture, mongodb_fixture: MongoDbFixture
-) -> Config:
+@pytest.fixture(name="config")
+def fixture_config(kafka: KafkaFixture, mongodb: MongoDbFixture) -> Config:
     """Fixture for creating a test configuration."""
     return Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
         download_access_url="http://access",
         work_package_signing_key=SIGNING_KEY_PAIR.export_private(),  # pyright: ignore
-        **kafka_fixture.config.model_dump(),
-        **mongodb_fixture.config.model_dump(),
+        **kafka.config.model_dump(),
+        **mongodb.config.model_dump(),
     )
 
 
-@pytest_asyncio.fixture(name="repository", scope="session")
+@pytest_asyncio.fixture(name="repository")
 async def fixture_repository(
-    config: Config, mongodb_fixture: MongoDbFixture
+    config: Config, mongodb: MongoDbFixture
 ) -> WorkPackageRepository:
     """Fixture for creating a configured repository"""
-    dao_factory = mongodb_fixture.dao_factory
+    dao_factory = mongodb.dao_factory
     work_package_dao = await WorkPackageDaoConstructor.construct(
         config=config,
         dao_factory=dao_factory,
@@ -129,7 +127,7 @@ async def fixture_repository(
     )
 
 
-@pytest_asyncio.fixture(name="client", scope="session")
+@pytest_asyncio.fixture(name="client")
 async def fixture_client(config: Config) -> AsyncGenerator[AsyncTestClient, None]:
     """Get test client for the work package service."""
     async with prepare_rest_app(config=config) as app:

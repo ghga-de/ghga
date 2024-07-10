@@ -17,7 +17,7 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from fastapi import FastAPI
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
@@ -64,7 +64,7 @@ async def prepare_core(
 def _prepare_core_with_override(
     *,
     config: Config,
-    work_package_repo_override: Optional[WorkPackageRepositoryPort] = None,
+    work_package_repo_override: WorkPackageRepositoryPort | None = None,
 ) -> AbstractAsyncContextManager[WorkPackageRepositoryPort]:
     """Get context manager for preparing the core components or provide override."""
     return (
@@ -78,7 +78,7 @@ def _prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    work_package_repo_override: Optional[WorkPackageRepositoryPort] = None,
+    work_package_repo_override: WorkPackageRepositoryPort | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize an REST API app along with all its dependencies.
 
@@ -113,7 +113,7 @@ class Consumer(NamedTuple):
 async def prepare_consumer(
     *,
     config: Config,
-    work_package_repo_override: Optional[WorkPackageRepositoryPort] = None,
+    work_package_repo_override: WorkPackageRepositoryPort | None = None,
 ) -> AsyncGenerator[Consumer, None]:
     """Construct and initialize an event subscriber with all its dependencies.
 

@@ -46,6 +46,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "datasets_collection": {
       "default": "datasets",
       "description": "The name of the database collection for datasets",

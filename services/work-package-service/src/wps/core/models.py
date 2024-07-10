@@ -18,7 +18,6 @@ in the API.
 """
 
 from enum import Enum
-from typing import Optional
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -61,9 +60,7 @@ class Dataset(BaseDto):
     id: str = Field(default=..., description="ID of the dataset")
     stage: WorkType = Field(default=..., description="Current stage of this dataset.")
     title: str = Field(default=..., description="The title of the dataset.")
-    description: Optional[str] = Field(
-        ..., description="The description of the dataset."
-    )
+    description: str | None = Field(..., description="The description of the dataset.")
     files: list[DatasetFile] = Field(..., description="Files contained in the dataset.")
 
 
@@ -83,7 +80,7 @@ class WorkPackageCreationData(BaseDto):
 
     dataset_id: str
     type: WorkType
-    file_ids: Optional[list[str]] = Field(
+    file_ids: list[str] | None = Field(
         default=None,
         description="IDs of all included files."
         " If None, all files of the dataset are assumed as target.",

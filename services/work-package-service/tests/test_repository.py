@@ -19,6 +19,7 @@
 import pytest
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from wps.core.models import (
     WorkPackage,
@@ -38,11 +39,13 @@ from .fixtures import (  # noqa: F401
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET
 
-pytestmark = pytest.mark.asyncio(scope="session")
+pytestmark = pytest.mark.asyncio()
 
 
 async def test_work_package_and_token_creation(
-    repository: WorkPackageRepository, auth_context: AuthContext, empty_mongodb
+    repository: WorkPackageRepository,
+    auth_context: AuthContext,
+    mongodb: MongoDbFixture,
 ):
     """Test creating a work package and a work order token"""
     # announce dataset
@@ -200,7 +203,9 @@ async def test_work_package_and_token_creation(
 
 
 async def test_checking_accessible_datasets(
-    repository: WorkPackageRepository, auth_context: AuthContext, empty_mongodb
+    repository: WorkPackageRepository,
+    auth_context: AuthContext,
+    mongodb: MongoDbFixture,
 ):
     """Test checking the accessibility of datasets"""
     with pytest.raises(repository.DatasetNotFoundError):
@@ -216,7 +221,9 @@ async def test_checking_accessible_datasets(
     assert await repository.get_datasets(auth_context=auth_context) == [DATASET]
 
 
-async def test_deletion_of_datasets(repository: WorkPackageRepository, empty_mongodb):
+async def test_deletion_of_datasets(
+    repository: WorkPackageRepository, mongodb: MongoDbFixture
+):
     """Test deletion of existing datasets"""
     with pytest.raises(repository.DatasetNotFoundError):
         await repository.delete_dataset(DATASET.id)

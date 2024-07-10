@@ -22,6 +22,7 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from wps.config import Config
 from wps.inject import Consumer, prepare_consumer
@@ -32,7 +33,7 @@ from .fixtures import (  # noqa: F401
 )
 from .fixtures.datasets import DATASET, DATASET_DELETION_EVENT, DATASET_UPSERTION_EVENT
 
-pytestmark = pytest.mark.asyncio(scope="session")
+pytestmark = pytest.mark.asyncio()
 
 
 TIMEOUT = 10
@@ -40,7 +41,7 @@ RETRY_INTERVAL = 0.05
 RETRIES = round(TIMEOUT / RETRY_INTERVAL)
 
 
-@pytest_asyncio.fixture(name="consumer", scope="session")
+@pytest_asyncio.fixture(name="consumer")
 async def consumer(config: Config) -> AsyncGenerator[Consumer, None]:
     """Get a consumer object."""
     async with prepare_consumer(config=config) as consumer:
@@ -49,9 +50,9 @@ async def consumer(config: Config) -> AsyncGenerator[Consumer, None]:
 
 async def test_dataset_registration(
     config: Config,
-    kafka_fixture: KafkaFixture,
+    kafka: KafkaFixture,
     consumer: Consumer,
-    empty_mongodb,
+    mongodb: MongoDbFixture,
 ):
     """Test the registration of a dataset announced as an event."""
     repository, subscriber = consumer
@@ -61,7 +62,7 @@ async def test_dataset_registration(
         await repository.get_dataset("some-dataset-id")
 
     # register a dataset by publishing an event
-    await kafka_fixture.publish_event(
+    await kafka.publish_event(
         payload=DATASET_UPSERTION_EVENT.model_dump(),
         topic=config.dataset_change_event_topic,
         type_=config.dataset_upsertion_event_type,
@@ -90,7 +91,10 @@ async def test_dataset_registration(
 
 
 async def test_dataset_update(
-    config: Config, kafka_fixture: KafkaFixture, consumer: Consumer, populated_mongodb
+    config: Config,
+    kafka: KafkaFixture,
+    consumer: Consumer,
+    mongodb_populated: MongoDbFixture,
 ):
     """Test updating a dataset via an event."""
     repository, subscriber = consumer
@@ -104,7 +108,7 @@ async def test_dataset_update(
 
     updated_dataset = DATASET_UPSERTION_EVENT
     updated_dataset = updated_dataset.model_copy(update={"title": "Changed dataset 1"})
-    await kafka_fixture.publish_event(
+    await kafka.publish_event(
         payload=updated_dataset.model_dump(),
         topic=config.dataset_change_event_topic,
         type_=config.dataset_upsertion_event_type,
@@ -122,7 +126,10 @@ async def test_dataset_update(
 
 
 async def test_dataset_deletion(
-    config: Config, kafka_fixture: KafkaFixture, consumer: Consumer, populated_mongodb
+    config: Config,
+    kafka: KafkaFixture,
+    consumer: Consumer,
+    mongodb_populated: MongoDbFixture,
 ):
     """Test deleting a dataset via an event."""
     repository, subscriber = consumer
@@ -134,7 +141,7 @@ async def test_dataset_deletion(
     # delete the dataset again
 
     deleted_dataset = DATASET_DELETION_EVENT
-    await kafka_fixture.publish_event(
+    await kafka.publish_event(
         payload=deleted_dataset.model_dump(),
         topic=config.dataset_change_event_topic,
         type_=config.dataset_deletion_event_type,
