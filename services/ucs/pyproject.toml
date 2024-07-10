@@ -1,6 +1,6 @@
 [project]
 name = "ucs"
-version = "4.0.0"
+version = "4.0.1"
 description = "Upload Controller Service - manages uploads to an S3 inbox bucket."
 readme = "README.md"
 authors = [
