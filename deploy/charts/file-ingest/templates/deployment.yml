@@ -31,7 +31,7 @@ spec:
       {{- end }}
       containers:
       - image: "{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
-        {{- include "ghga-common.command-args" (list "fis")  | nindent 8 }}
+        {{- include "ghga-common.command-args" (list "run-rest")  | nindent 8 }}
         name: {{ .Release.Name }}
         securityContext:
           runAsUser: 1000
