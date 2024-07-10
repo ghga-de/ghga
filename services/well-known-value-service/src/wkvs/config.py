@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Config Parameter Modeling and Parsing"""
+
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
@@ -33,6 +34,10 @@ class WellKnownConfig(BaseSettings):
         description="URL to the root of the upload controller API.",
     )
     wps_api_url: str = Field(..., description="URL to the root of the WPS API.")
+    storage_aliases: dict = Field(
+        ...,
+        description="Mapping of storage alias to endpoint URL for all available S3 object storages",
+    )
 
 
 @config_from_yaml(prefix="wkvs")

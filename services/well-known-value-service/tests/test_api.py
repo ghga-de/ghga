@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Basic tests for the API"""
+
 import pytest
 from fastapi import status
 
@@ -56,7 +57,11 @@ async def test_non_configured_value(
     url = f"/values/{value_name}"
     response = await joint_fixture.rest_client.get(url)
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == f"The value {value_name} is not configured"
+    assert (
+        response.json()["detail"]
+        == f"The value {
+            value_name} is not configured"
+    )
 
 
 @pytest.mark.asyncio
@@ -69,4 +74,8 @@ async def test_retrieve_all_values(joint_fixture: JointFixture):  # noqa: F811
         "wps_api_url": "http://127.0.0.1",
         "dcs_api_url": "http://127.0.0.1/download",
         "ucs_api_url": "http://127.0.0.1/upload",
+        "storage_aliases": {
+            "storage1": "http://127.0.0.1/object_storage_1",
+            "storage2": "http://127.0.0.1/object_storage_2",
+        },
     }

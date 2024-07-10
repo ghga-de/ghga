@@ -46,6 +46,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "crypt4gh_public_key": {
       "description": "The GHGA crypt4gh public key.",
       "title": "Crypt4Gh Public Key",
@@ -65,6 +71,11 @@
       "description": "URL to the root of the WPS API.",
       "title": "Wps Api Url",
       "type": "string"
+    },
+    "storage_aliases": {
+      "description": "Mapping of storage alias to endpoint URL for all available S3 object storages",
+      "title": "Storage Aliases",
+      "type": "object"
     },
     "host": {
       "default": "127.0.0.1",
@@ -91,7 +102,7 @@
       "type": "integer"
     },
     "api_root_path": {
-      "default": "/",
+      "default": "",
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
       "title": "Api Root Path",
       "type": "string"
@@ -205,7 +216,8 @@
     "crypt4gh_public_key",
     "dcs_api_url",
     "ucs_api_url",
-    "wps_api_url"
+    "wps_api_url",
+    "storage_aliases"
   ],
   "title": "ModSettings",
   "type": "object"

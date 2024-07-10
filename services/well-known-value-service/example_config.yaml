@@ -1,4 +1,4 @@
-api_root_path: /
+api_root_path: ''
 auto_reload: false
 cors_allow_credentials: null
 cors_allowed_headers: null
@@ -11,10 +11,14 @@ generate_correlation_id: true
 host: 127.0.0.1
 log_format: null
 log_level: INFO
+log_traceback: true
 openapi_url: /openapi.json
 port: 8080
 service_instance_id: '001'
 service_name: wkvs
+storage_aliases:
+  storage1: http://127.0.0.1/object_storage_1
+  storage2: http://127.0.0.1/object_storage_2
 ucs_api_url: http://127.0.0.1/upload
 workers: 1
 wps_api_url: http://127.0.0.1
