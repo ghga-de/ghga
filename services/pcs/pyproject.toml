@@ -1,6 +1,6 @@
 [project]
 name = "pcs"
-version = "2.0.0"
+version = "2.0.1"
 description = "Purge Controller Service - a service to commission file deletions"
 readme = "README.md"
 authors = [
