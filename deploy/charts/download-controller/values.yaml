@@ -70,7 +70,6 @@ parameters:
     file_registered_event_topic: downloads
     file_registered_event_type: drs_object_registered
     files_to_delete_topic: purges
-    files_to_delete_type: files_to_delete
     files_to_register_topic: internal_registrations
     files_to_register_type: internal_file_registered
     host: "0.0.0.0"
@@ -90,8 +89,8 @@ parameters:
     service_instance_id: 'dcs_1'
     service_name: dcs
     unstaged_download_event_topic: downloads
-    unstaged_download_event_type: unstaged_drs_object_requested
     workers: 1
+    unstaged_download_collection: unstaged-download-requested
   rest:
     service_instance_id: 'rest.1'
   consumer:

@@ -48,8 +48,10 @@ parameters:
     openapi_url: /openapi.json
     port: 8080
     private_key: ""
-    publisher_topic: interrogations
-    publisher_type: validation_success
+    file_upload_validation_success_topic: interrogations
+    file_validations_collection: file-validations
+    db_connection_str: null
+    db_name: fis
     service_instance_id: rest.1
     service_name: fis
     source_bucket_id: staging

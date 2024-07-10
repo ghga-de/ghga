@@ -28,11 +28,8 @@ parameters:
     file_staged_event_topic: internal_registrations
     file_staged_event_type: internal_file_staged
     files_to_delete_topic: purges
-    files_to_delete_type: files_to_delete
     files_to_register_topic: interrogations
-    files_to_register_type: validation_success
     files_to_stage_topic: downloads
-    files_to_stage_type: unstaged_drs_object_requested
     service_instance_id: "consumer.1"
     service_name: internal_file_registry
     object_storages:
