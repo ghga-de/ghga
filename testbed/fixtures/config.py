@@ -104,7 +104,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
 
     # auth
     auth_key_file: Path = Path(__file__).parent.parent / ".devcontainer/auth.env"
-    auth_adapter_url: str = "http://auth:8080"
+    auth_adapter_url: str = "http://auth"
     auth_basic: str = ""  # for Basic Authentication
     upload_token: str = ""  # simple token for uploading metadata
     totp_digits: int = 6
@@ -122,16 +122,16 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     dsk_token_path: Path = Path.home() / ".ghga_data_steward_token.txt"
 
     # file ingest
-    fis_url: str = "http://fis:8080"
+    fis_url: str = "http://fis"
     fis_pubkey: str
 
     # metldata
     metldata_db_name: str = "metldata"
-    metldata_url: str = "http://metldata:8080"
+    metldata_url: str = "http://metldata"
 
     # ars
     ars_db_name: str = "ars"
-    ars_url: str = "http://ars:8080"
+    ars_url: str = "http://ars"
 
     # ums
     ums_db_name: str = "auth"
@@ -139,18 +139,18 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     ums_claims_collection: str = "claims"
     ums_user_tokens_collection: str = "user_tokens"
     ums_user_ivas_collection: str = "ivas"
-    ums_url: str = "http://ums:8080"
+    ums_url: str = "http://ums"
 
     # wps
     wps_db_name: str = "wps"
-    wps_url: str = "http://wps:8080"
+    wps_url: str = "http://wps"
 
     # ifrs
     ifrs_db_name: str = "ifrs"
     ifrs_metadata_collection: str = "file_metadata"
 
     # mass
-    mass_url: str = "http://mass:8080"
+    mass_url: str = "http://mass"
 
     # notification orchestration
     nos_db_name: str = "nos"
@@ -166,10 +166,10 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     ekss_url: str = "http://ekss"
 
     # dcs
-    dcs_url: str = "http://dcs:8080"
+    dcs_url: str = "http://dcs"
 
     # data portal ui
-    data_portal_ui_url: str = "http://data-portal-ui:8080"
+    data_portal_ui_url: str = "http://data-portal-ui"
 
     # vault
     vault_url: str = "http://vault:8200"
