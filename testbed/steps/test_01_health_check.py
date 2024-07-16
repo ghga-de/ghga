@@ -34,7 +34,12 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901
         health_endpoint += "/api/v2/messages"
     else:
         health_endpoint += "/health"
-    response = fixtures.http.get(health_endpoint)
+    try:
+        response = fixtures.http.get(health_endpoint)
+    except Exception as e:
+        print("cannot check", health_endpoint, e)
+        raise
+
     status_code = response.status_code
     expected_status = 404 if is_internal else 200
     if status_code == 200 and response.text.startswith("<!doctype html>"):

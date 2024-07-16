@@ -19,36 +19,12 @@
 from collections.abc import Generator
 
 from hexkit.providers.s3.provider import S3ObjectStorage
-from hexkit.providers.s3.testutils import S3Fixture as BaseS3Fixture
+from hexkit.providers.s3.testutils import S3Fixture
 from pytest import fixture
 
 from fixtures.config import Config
 
 __all__ = ["s3_fixture", "S3Fixture"]
-
-
-class S3Fixture(BaseS3Fixture):
-    """An augmented S3 fixture"""
-
-    config: Config
-
-    @property
-    def all_buckets(self) -> list[str]:
-        config = self.config
-        return [
-            config.inbox_bucket,
-            config.outbox_bucket,
-            config.staging_bucket,
-            config.permanent_bucket,
-        ]
-
-    async def empty_given_buckets(self, buckets: str | list[str]):
-        """Empty only the specified bucket(s)."""
-        if isinstance(buckets, str):
-            buckets = [buckets]
-        bucket_set = set(buckets)
-        exclude = [bucket for bucket in self.all_buckets if bucket not in bucket_set]
-        await self.empty_buckets(buckets_to_exclude=exclude)
 
 
 @fixture(name="s3", scope="session")

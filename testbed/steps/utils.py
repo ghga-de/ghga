@@ -73,6 +73,7 @@ def ingest_config_as_file(config: IngestConfig):
         "submission_store_dir": str(config.submission_store_dir),
         "input_dir": str(config.input_dir),
         "map_files_fields": config.map_files_fields,
+        "selected_storage_alias": "test",
     }
 
     return write_data_to_yaml(data=ingest_config)
@@ -93,15 +94,23 @@ def load_config_as_file(config: LoadConfig):
 def upload_config_as_file(config: Config, file_metadata_dir: Path):
     """Create upload config file for data steward kit files upload"""
     upload_config = {
-        "s3_endpoint_url": config.s3_endpoint_url,
-        "s3_access_key_id": config.s3_access_key_id,
-        "s3_secret_access_key": config.s3_secret_access_key.get_secret_value(),
-        "bucket_id": config.staging_bucket,
         "part_size": str(config.upload_part_size),
+        "object_storages": {
+            "test": {
+                "bucket_id": config.staging_bucket,
+                "credentials": {
+                    "s3_access_key_id": config.s3_access_key_id,
+                    "s3_secret_access_key": config.s3_secret_access_key.get_secret_value(),
+                },
+            }
+        },
+        "selected_storage_alias": "test",
         "output_dir": str(file_metadata_dir),
         "secret_ingest_baseurl": config.fis_url,
         "secret_ingest_pubkey": config.fis_pubkey,
     }
+    if config.wkvs_url:
+        upload_config["wkvs_api_url"] = config.wkvs_url
 
     return write_data_to_yaml(data=upload_config)
 

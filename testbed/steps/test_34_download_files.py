@@ -38,7 +38,9 @@ scenarios("../features/34_download_files.feature")
 @async_step
 async def download_buckets_empty(fixtures: JointFixture):
     config = fixtures.config
-    await fixtures.s3.empty_given_buckets([config.inbox_bucket, config.staging_bucket])
+    await fixtures.s3.empty_buckets(
+        buckets=[config.inbox_bucket, config.staging_bucket]
+    )
 
 
 @given("I have an empty working directory for the GHGA connector")

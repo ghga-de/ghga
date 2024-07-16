@@ -68,6 +68,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
         "wps",
         "mass",
         "nos",
+        "ns",
     ]
 
     # S3 config

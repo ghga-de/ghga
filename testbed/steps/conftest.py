@@ -244,6 +244,7 @@ async def reset_state(fixtures: JointFixture):
 @async_step
 async def reset_notifications(fixtures: JointFixture):
     """Delete all email notifications from the mail server."""
+    fixtures.mongo.empty_databases("ns")
     empty_mail_server(fixtures)  # reset mail server
 
 

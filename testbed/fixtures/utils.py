@@ -19,6 +19,7 @@ import hashlib
 import os
 import tempfile
 from contextlib import contextmanager
+from typing import Any
 
 import yaml
 
@@ -34,7 +35,7 @@ def temporary_file(file_path, content):
         os.remove(file_path)
 
 
-def write_data_to_yaml(data: dict[str, str], file_path=None):
+def write_data_to_yaml(data: dict[str, Any], file_path=None):
     """Serialize the given dictionary to a YAML file."""
     if not file_path:
         _, file_path = tempfile.mkstemp()  # pylint: disable=consider-using-with

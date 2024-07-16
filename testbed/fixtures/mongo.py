@@ -63,7 +63,7 @@ class MongoFixture(BaseMongoFixture):
             db_names = [db_names]
         if exclude_collections is None:
             exclude_collections = []
-        if isinstance(exclude_collections, str):
+        elif isinstance(exclude_collections, str):
             exclude_collections = [exclude_collections]
         excluded_collections = set(exclude_collections)
         for db_name in db_names:

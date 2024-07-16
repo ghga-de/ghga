@@ -143,7 +143,7 @@ def call_data_steward_kit_ingest(
 @async_step
 async def staging_bucket_is_empty(fixtures: JointFixture):
     config = fixtures.config
-    await fixtures.s3.empty_given_buckets([config.staging_bucket])
+    await fixtures.s3.empty_buckets(buckets=config.staging_bucket)
 
 
 @given("no file metadata exists")
@@ -237,6 +237,7 @@ def ingest_file_metadata(fixtures: JointFixture) -> IngestConfig:
         input_dir=fixtures.dsk.config.file_metadata_dir,
         submission_store_dir=fixtures.dsk.config.submission_store,
         map_files_fields=list(fixtures.dsk.config.metadata_file_fields),
+        selected_storage_alias="test",
     )
 
     ingest_config_path = ingest_config_as_file(config=ingest_config)

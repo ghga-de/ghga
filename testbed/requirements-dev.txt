@@ -2,7 +2,7 @@
 
 pre-commit>=3.7.1
 
-mypy>=1.10.0
+mypy>=1.10.1
 mypy-extensions>=1.0.0
 
-ruff>=0.4.8
+ruff>=0.5.2
