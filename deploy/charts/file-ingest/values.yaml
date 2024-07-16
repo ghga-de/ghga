@@ -63,7 +63,6 @@ parameters:
     vault_path: ekss
     vault_kube_role: null
     workers: 1
-    selected_storage_alias: staging
 
 shareProcessNamespace: false
 kafkaSecrets:
