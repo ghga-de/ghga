@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +16,12 @@
 
 """Defines the NotificationRecordDao, which manages notification records."""
 
+from typing import TypeAlias
+
 from hexkit.protocols.dao import (  # noqa: F401
     DaoNaturalId,
     ResourceNotFoundError,
 )
-from typing_extensions import TypeAlias
 
 from ns.core import models
 

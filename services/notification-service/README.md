@@ -33,13 +33,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-service):
 ```bash
-docker pull ghga/notification-service:1.1.0
+docker pull ghga/notification-service:1.1.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-service:1.1.0 .
+docker build -t ghga/notification-service:1.1.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -47,7 +47,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-service:1.1.0 --help
+docker run -p 8080:8080 ghga/notification-service:1.1.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -119,6 +119,8 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+
 - **`plaintext_email_template`** *(string)*: The plaintext template to use for email notifications.
 
 - **`html_email_template`** *(string)*: The HTML template to use for email notifications.
@@ -177,7 +179,7 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
 
 - **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, the a newly correlation ID will be generated and used in the event header. Default: `true`.
 

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +14,16 @@
 # limitations under the License.
 #
 """Defines fixtures for the tests"""
-import pytest
-from hexkit.providers.akafka.testutils import KafkaFixture, get_kafka_fixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture, get_mongodb_fixture
 
-from tests.fixtures.joint import get_joint_fixture
+from hexkit.providers.akafka.testutils import (  # noqa: F401
+    KafkaFixture,
+    kafka_container_fixture,
+    kafka_fixture,
+)
+from hexkit.providers.mongodb.testutils import (  # noqa: F401
+    MongoDbFixture,
+    mongodb_container_fixture,
+    mongodb_fixture,
+)
 
-kafka_fixture = get_kafka_fixture(scope="session")
-mongodb_fixture = get_mongodb_fixture(scope="session")
-joint_fixture = get_joint_fixture(scope="session")
-
-
-@pytest.fixture(autouse=True, scope="function")
-def reset_state(mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture):
-    """Reset the state of the system before each test"""
-    mongodb_fixture.empty_collections()
-    kafka_fixture.clear_topics()
+from tests.fixtures.joint import joint_fixture  # noqa: F401

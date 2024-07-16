@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 """Bundle test fixtures into one fixture"""
+
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
-from hexkit.custom_types import PytestScope
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -31,7 +31,7 @@ from tests.fixtures.config import SMTP_TEST_CONFIG, get_config
 
 @dataclass
 class JointFixture:
-    """Returned by joint_fixture_function"""
+    """Returned by joint_fixture"""
 
     config: Config
     kafka: KafkaFixture
@@ -40,30 +40,26 @@ class JointFixture:
     notifier: NotifierPort
 
 
-async def joint_fixture_function(
-    kafka_fixture: KafkaFixture,
-    mongodb_fixture: MongoDbFixture,
+@pytest_asyncio.fixture()
+async def joint_fixture(
+    kafka: KafkaFixture,
+    mongodb: MongoDbFixture,
 ) -> AsyncGenerator[JointFixture, None]:
     """A fixture that embeds all other fixtures for integration testing"""
     # merge configs from different sources with the default one:
-    config = get_config(
-        sources=[kafka_fixture.config, mongodb_fixture.config, SMTP_TEST_CONFIG]
-    )
+    config = get_config(sources=[kafka.config, mongodb.config, SMTP_TEST_CONFIG])
 
     # prepare the core and the event subscriber
-    async with prepare_core(config=config) as notifier:
-        async with prepare_event_subscriber(
+    async with (
+        prepare_core(config=config) as notifier,
+        prepare_event_subscriber(
             config=config, notifier_override=notifier
-        ) as event_subscriber:
-            yield JointFixture(
-                config=config,
-                kafka=kafka_fixture,
-                mongodb=mongodb_fixture,
-                event_subscriber=event_subscriber,
-                notifier=notifier,
-            )
-
-
-def get_joint_fixture(scope: PytestScope = "function"):
-    """Produce a joint fixture with desired scope"""
-    return pytest_asyncio.fixture(joint_fixture_function, scope=scope)
+        ) as event_subscriber,
+    ):
+        yield JointFixture(
+            config=config,
+            kafka=kafka,
+            mongodb=mongodb,
+            event_subscriber=event_subscriber,
+            notifier=notifier,
+        )

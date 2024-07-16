@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 """Contains a limited test server and testing functionality for local email verification."""
+
 from contextlib import asynccontextmanager
 from email import message_from_bytes
 from email.message import EmailMessage
@@ -74,10 +75,10 @@ def check_emails(received: Envelope, expected: EmailMessage):
     # I don't think we'll have an issue with non-unique content types.
     # If we do, you could look for something like the content-id as a UID
     for part in expected_payload:
-        content_type = part.get_content_type()
+        content_type = part.get_content_type()  # type: ignore
         for corresponding in received_payload:
-            if corresponding.get_content_type() == content_type:
-                assert part.as_bytes() == corresponding.as_bytes()
+            if corresponding.get_content_type() == content_type:  # type: ignore
+                assert part.as_bytes() == corresponding.as_bytes()  # type: ignore
 
 
 class EmailRecorder:

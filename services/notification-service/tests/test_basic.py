@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Test basic event consumption"""
+
 from hashlib import sha256
 from typing import cast
 
@@ -25,6 +26,8 @@ from ns.core.notifier import Notifier
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.server import DummyServer
 from tests.fixtures.utils import make_notification
+
+pytestmark = pytest.mark.asyncio()
 
 sample_notification = {
     "recipient_email": "test@example.com",
@@ -40,7 +43,6 @@ sample_notification = {
     "notification_details",
     [sample_notification],
 )
-@pytest.mark.asyncio(scope="session")
 async def test_email_construction(
     joint_fixture: JointFixture,
     notification_details,
@@ -80,7 +82,6 @@ async def test_email_construction(
     assert html_content.strip() == expected_html
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_failed_authentication(joint_fixture: JointFixture):
     """Change login credentials so authentication fails."""
     # Cast notifier type
@@ -114,7 +115,6 @@ async def test_failed_authentication(joint_fixture: JointFixture):
     assert not record_in_db.sent
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_consume_thru_send(joint_fixture: JointFixture):
     """Verify that the event is correctly translated into a basic email object"""
     await joint_fixture.kafka.publish_event(
@@ -137,7 +137,6 @@ async def test_consume_thru_send(joint_fixture: JointFixture):
         await joint_fixture.event_subscriber.run(forever=False)
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_helper_functions(joint_fixture: JointFixture):
     """Unit test for the _has_been_sent function, _create_notification_record,
     and _register_new_notification function.
@@ -192,7 +191,6 @@ async def test_helper_functions(joint_fixture: JointFixture):
     assert await joint_fixture.notifier._has_been_sent(hash_sum=actual_record.hash_sum)
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_idempotence_and_transmission(joint_fixture: JointFixture):
     """Consume identical events and verify that only one email is sent."""
     # Cast notifier type

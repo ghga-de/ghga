@@ -64,6 +64,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "plaintext_email_template": {
       "description": "The plaintext template to use for email notifications",
       "title": "Plaintext Email Template",
@@ -168,8 +174,10 @@
     "kafka_ssl_password": {
       "default": "",
       "description": "Optional password to be used for the client private key.",
+      "format": "password",
       "title": "Kafka Ssl Password",
-      "type": "string"
+      "type": "string",
+      "writeOnly": true
     },
     "generate_correlation_id": {
       "default": true,
