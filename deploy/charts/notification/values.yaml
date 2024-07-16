@@ -19,6 +19,8 @@ config_prefix: ns
 
 parameters:
   default:
+    db_connection_str: null
+    db_name: ns
     from_address: test@test.com
     html_email_template: >-
       <!DOCTYPE html>
