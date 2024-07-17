@@ -35,6 +35,7 @@ class VaultAdapter:
         """Initialized approle based client and login"""
         self._client = hvac.Client(url=config.vault_url, verify=config.vault_verify)
         self._path = config.vault_path
+        self._auth_mount_point = config.vault_auth_mount_point
         self._secrets_mount_point = config.vault_secrets_mount_point
 
         self._kube_role = config.vault_kube_role
@@ -63,8 +64,19 @@ class VaultAdapter:
         if self._kube_role:
             with self._service_account_token_path.open() as token_file:
                 jwt = token_file.read()
-            self._kube_adapter.login(role=self._kube_role, jwt=jwt)
+            if self._auth_mount_point:
+                self._kube_adapter.login(
+                    role=self._kube_role, jwt=jwt, mount_point=self._auth_mount_point
+                )
+            else:
+                self._kube_adapter.login(role=self._kube_role, jwt=jwt)
 
+        elif self._auth_mount_point:
+            self._client.auth.approle.login(
+                role_id=self._role_id,
+                secret_id=self._secret_id,
+                mount_point=self._auth_mount_point,
+            )
         else:
             self._client.auth.approle.login(
                 role_id=self._role_id, secret_id=self._secret_id
