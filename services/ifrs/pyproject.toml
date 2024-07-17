@@ -1,3 +1,9 @@
+[build-system]
+requires = [
+    "setuptools>=69",
+]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ifrs"
 version = "2.0.1"
@@ -20,22 +26,13 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ghga-de/internal-file-registry-service"
+Repository = "https://github.com/ghga-de/file-services-backend/tree/main/services/ifrs"
 
 [project.scripts]
 ifrs = "ifrs.__main__:run_forever"
 
 [project.license]
 text = "Apache 2.0"
-
-[build-system]
-requires = [
-    "setuptools>=67.7.2",
-]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.package-data]
-ifrs = ["py.typed"]
 
 [tool.setuptools.packages.find]
 where = [
