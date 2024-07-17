@@ -29,7 +29,7 @@ description = "Download Controller Service - a GA4GH DRS-compliant service for d
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/dcs"
+Repository = "https://github.com/ghga-de/file-services-backend/tree/main/services/dcs"
 
 [project.scripts]
 dcs = "dcs.__main__:cli"
