@@ -41,6 +41,7 @@ parameters:
     vault_secret_id: null
     vault_path: ekss
     vault_kube_role: null
+    vault_auth_mount_point: null
     workers: 1
 
 shareProcessNamespace: false
