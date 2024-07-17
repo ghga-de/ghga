@@ -28,7 +28,7 @@ description = "File Ingest Service - A lightweight service to propagate file upl
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/file-ingest-service"
+Repository = "https://github.com/ghga-de/file-services-backend/tree/main/services/fis"
 
 [project.scripts]
 fis = "fis.__main__:run"
