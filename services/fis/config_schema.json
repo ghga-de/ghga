@@ -142,6 +142,24 @@
       ],
       "title": "Vault Kube Role"
     },
+    "vault_auth_mount_point": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used.",
+      "examples": [
+        null,
+        "approle",
+        "kubernetes"
+      ],
+      "title": "Vault Auth Mount Point"
+    },
     "service_account_token_path": {
       "default": "/var/run/secrets/kubernetes.io/serviceaccount/token",
       "description": "Path to service account token used by kube auth adapter.",

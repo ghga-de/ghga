@@ -31,6 +31,7 @@ source_bucket_id: staging
 token_hashes:
 - abcdef
 - ghijkl
+vault_auth_mount_point: null
 vault_kube_role: dummy-role
 vault_path: ekss
 vault_role_id: '**********'

@@ -5,6 +5,9 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
+name = "fis"
+version = "3.1.0"
+description = "File Ingest Service - A lightweight service to propagate file upload metadata to the GHGA file backend services"
 readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
@@ -20,9 +23,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "fis"
-version = "3.0.0"
-description = "File Ingest Service - A lightweight service to propagate file upload metadata to the GHGA file backend services"
 
 [project.license]
 text = "Apache 2.0"
