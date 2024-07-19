@@ -69,6 +69,11 @@ def call_data_steward_kit_upload(
             timeout=60,
         )
 
+    if completed_upload.stdout:
+        print(completed_upload.stdout)
+    if "ERROR" in completed_upload.stderr or completed_upload.returncode:
+        print(completed_upload.stderr)
+
     assert not completed_upload.stdout
     assert "ERROR" not in completed_upload.stderr
     assert not completed_upload.returncode
@@ -106,6 +111,11 @@ def call_data_steward_kit_batch_upload(
             timeout=180,
         )
 
+    if completed_upload.stdout:
+        print(completed_upload.stdout)
+    if "ERROR" in completed_upload.stderr or completed_upload.returncode:
+        print(completed_upload.stderr)
+
     assert not completed_upload.stdout
     assert "ERROR" not in completed_upload.stderr
     assert not completed_upload.returncode
@@ -130,6 +140,11 @@ def call_data_steward_kit_ingest(
             text=True,
             timeout=10 * 60,
         )
+
+    if "Successfully" not in completed_ingest.stdout:
+        print(completed_ingest.stdout)
+    if "ERROR" in completed_ingest.stderr or completed_ingest.returncode:
+        print(completed_ingest.stderr)
 
     assert (
         completed_ingest.stdout.strip()
@@ -290,8 +305,11 @@ def check_metadata_documents(
 @then(parse("the file encryption secret is saved in the vault"))
 def check_secrets_in_vault(fixtures: JointFixture, file_objects: list[FileObject]):
     secret_ids = get_secret_ids(fixtures.dsk.config.file_metadata_dir, file_objects)
+    if not fixtures.config.vault_token:
+        return  # skip test if no vault token is provided
+    vault_keys = fixtures.vault.keys
     for secret_id in secret_ids:
-        assert bool(secret_id in fixtures.vault.keys) == True
+        assert secret_id in vault_keys
 
 
 @then(parse("the ingested files exist in the permanent bucket"))

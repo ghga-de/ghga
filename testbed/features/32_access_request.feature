@@ -14,8 +14,8 @@ Feature: 32 Access Request
 
     When "Dr. John Doe" requests access to the test dataset "DS_A"
     Then the response status code is "201"
-    And "Access Request Created" notification was sent to "Central Data Steward"
-    And "Access Request Registered" notification was sent to "Dr. John Doe"
+    And "Access Request Created" was sent to "Central Data Steward"
+    And "Access Request Registered" was sent to "Dr. John Doe"
 
   Scenario: Viewing the pending access request
 
@@ -41,6 +41,6 @@ Feature: 32 Access Request
     Then the response status code is "200"
     And there is one request for test dataset "DS_A" from "Dr. John Doe"
     And the status of the request from "Dr. John Doe" is "allowed"
-    And "Access Request Allowed" notification was sent to "Central Data Steward"
-    And "Access Request Accepted" notification was sent to "Dr. John Doe"
+    And "Access Request Allowed" was sent to "Central Data Steward"
+    And "Access Request Accepted" was sent to "Dr. John Doe"
     And set the state to "John Doe is allowed to download the test dataset"

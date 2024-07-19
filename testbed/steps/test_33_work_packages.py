@@ -15,6 +15,8 @@
 
 """Step definitions for creating work package tests in the frontend"""
 
+from time import sleep
+
 from .conftest import (
     Config,
     JointFixture,
@@ -69,6 +71,7 @@ def query_datasets_with_wps(fixtures: JointFixture, full_name: str):
     user_id = session.user_id
     url = f"{fixtures.config.wps_url}/users/{user_id}/datasets"
     headers = fixtures.auth.headers(session=session)
+    sleep(0.5)  # give some time for the access grants to be updated
     return fixtures.http.get(url, headers=headers)
 
 
@@ -77,13 +80,15 @@ def check_dataset_in_list(
     dataset_char: str, fixtures: JointFixture, response: Response
 ):
     data = response.json()
-    assert isinstance(data, list) and len(data) == 1
+    assert isinstance(data, list)
+    assert len(data) == 1
     dataset = data[0]
     assert isinstance(dataset, dict)
     assert dataset.get("stage") == "download"
     assert dataset.get("title") == f"The complete-{dataset_char} dataset"
     files = dataset.get("files")
-    assert files and isinstance(files, list)
+    assert files
+    assert isinstance(files, list)
     fixtures.state.set_state("dataset to be downloaded", f"DS_{dataset_char}")
 
 
@@ -96,13 +101,15 @@ def check_dataset_in_list(
 def create_work_package(full_name: str, fixtures: JointFixture, file_scope: str):
     response = query_datasets_with_wps(fixtures=fixtures, full_name=full_name)
     data = response.json()
-    assert isinstance(data, list) and len(data) == 1
+    assert isinstance(data, list)
+    assert len(data) == 1
     dataset = data[0]
     assert isinstance(dataset, dict)
     dataset_id = dataset.get("id")
     assert dataset_id
     files = dataset.get("files")
-    assert files and isinstance(files, list)
+    assert files
+    assert isinstance(files, list)
 
     if file_scope == "all":
         file_ids = None

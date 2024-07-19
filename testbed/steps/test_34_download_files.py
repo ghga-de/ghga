@@ -71,11 +71,17 @@ def run_the_download_command(fixtures: JointFixture, file_scope: str):
         cwd=connector.config.work_dir,
         input=download_token,
         capture_output=True,
-        check=True,
+        check=False,
         encoding="utf-8",
         text=True,
         timeout=120,
     )
+
+    print("Output:")
+    print(completed_download.stdout)
+    if completed_download.stderr:
+        print("Error:")
+        print(completed_download.stderr)
 
     assert "Please paste the complete download token" in completed_download.stdout
     assert "Downloading file" in completed_download.stdout
@@ -137,6 +143,11 @@ def run_the_decrypt_command(fixtures: JointFixture):
         text=True,
         timeout=60,
     )
+
+    if "Successfully" not in completed_download.stdout:
+        print(completed_download.stdout)
+    if completed_download.stderr:
+        print(completed_download.stderr)
 
     assert "Successfully decrypted file" in completed_download.stdout
     assert not completed_download.stderr

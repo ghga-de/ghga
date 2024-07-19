@@ -288,7 +288,7 @@ def check_item_count_in_list(results: list, expected_count):
     assert len(results) == expected_count
 
 
-@then(parse('"{notification_type}" notification was sent to "{full_name}"'))
+@then(parse('"{notification_type}" was sent to "{full_name}"'))
 def check_email_sent_to(
     notification_type: str,
     full_name: str,
@@ -305,13 +305,14 @@ def check_email_sent_to(
     url = f"{fixtures.config.mail_url}/api/v2/search"
     slept: float = 0
     subject = EXPECTED_NOTIFICATIONS.get(notification_type)
+    if "(" in full_name:
+        full_name, note = full_name.split("(", 1)
+        full_name, note = full_name.rstrip(), note.rstrip(")")
+    else:
+        note = ""
     email = fixtures.auth.get_email(full_name)
-    if notification_type != "account_details_changed":
-        # When the registered email changes, notification is sent to the original email
-        sub = fixtures.auth.get_sub(full_name)
-        all_changed_user_data = fixtures.state.get_state("changed user data") or {}
-        changed_user_data = all_changed_user_data.get(sub) or {}
-        email = changed_user_data.get("email", email)
+    if "new email" in note:
+        email = email.replace("@home", "@new-home")
     assert subject, f"Undefined notification type: {notification_type}"
     while slept < timeout:
         response = fixtures.http.get(
@@ -327,6 +328,10 @@ def check_email_sent_to(
             latest_notification = notifications[0]
             assert email in latest_notification.receiver
             assert latest_notification.is_recent()
+            # delete the notification from the mail server as already seen
+            url = f"{fixtures.config.mail_url}/api/v1/messages/{latest_notification.id}"
+            response = fixtures.http.delete(url, timeout=timeout)
+            assert response.status_code == 200
             return
         sleep(interval)
         slept += interval

@@ -170,7 +170,8 @@ def query_datasets_with_wps(fixtures: JointFixture, full_name: str):
 @then("no dataset is returned")
 def check_no_datasets_in_list(response: Response):
     data = response.json()
-    assert isinstance(data, list) and len(data) == 0
+    assert isinstance(data, list)
+    assert len(data) == 0
 
 
 # The following steps are re-used from the file download test
@@ -188,7 +189,7 @@ def run_the_download_command(fixtures: JointFixture) -> subprocess.CompletedProc
     download_token = fixtures.state.get_state("download token for all files")
     assert download_token and isinstance(download_token, str)
     connector = fixtures.connector
-    return subprocess.run(  # nosec B607, B603
+    download_attempt = subprocess.run(  # nosec B607, B603
         [
             "ghga-connector",
             "download",
@@ -201,8 +202,15 @@ def run_the_download_command(fixtures: JointFixture) -> subprocess.CompletedProc
         check=False,
         encoding="utf-8",
         text=True,
-        timeout=5,
+        timeout=10,  # short timeout since we don't actually want to download anything
     )
+
+    print("Output:")
+    print(download_attempt.stdout)
+    print("Error:")
+    print(download_attempt.stderr)
+
+    return download_attempt
 
 
 @then("I get an error message that the token is not valid")

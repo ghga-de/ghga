@@ -54,6 +54,7 @@ EXPECTED_NOTIFICATIONS = {
 class Notification(BaseModel):
     """A container for email notification data."""
 
+    id: str
     sender: EmailStr
     receiver: EmailStr
     created_time: datetime
@@ -218,6 +219,7 @@ def parse_notifications(raw_data: dict) -> list[Notification]:
     """Parse Email data from Mailhog into a sorted list of Notification instances."""
     return [
         Notification(
+            id=item["ID"],
             sender=item["Raw"]["From"],
             receiver=item["Raw"]["To"][0],
             created_time=datetime.fromisoformat(item["Created"]),

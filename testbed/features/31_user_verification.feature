@@ -16,8 +16,8 @@ Feature: 31 User Verification
 
     When "Dr. John Doe" requests verification for the IVA
     Then the response status code is "204"
-    And "IVA Code Requested" notification was sent to "Central Data Steward"
-    And "IVA Verification Requested" notification was sent to "Dr. John Doe"
+    And "IVA Code Requested" was sent to "Central Data Steward"
+    And "IVA Verification Requested" was sent to "Dr. John Doe"
 
   Scenario: Data Steward sends a verification code to the IVA
 
@@ -28,7 +28,7 @@ Feature: 31 User Verification
     Then "Data Steward" sends the verification code to the IVA
     And "Data Steward" confirms the transmission of verification code
     Then the response status code is "204"
-    And "IVA Code Transmitted" notification was sent to "Dr. John Doe"
+    And "IVA Code Transmitted" was sent to "Dr. John Doe"
 
   Scenario: User validates the IVA with verification code
 
@@ -38,4 +38,4 @@ Feature: 31 User Verification
     When "Dr. John Doe" retrieves the list of IVAs
     Then the expected item count is "1"
     And the state of IVA is "verified"
-    And "IVA Code Submitted" notification was sent to "Central Data Steward"
+    And "IVA Code Submitted" was sent to "Central Data Steward"

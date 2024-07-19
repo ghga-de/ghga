@@ -133,9 +133,10 @@ class TokenGenerator:
 
     def get_email(self, full_name: str) -> str:
         """Get the email address of the user with the given full name."""
-        name = self.split_title(full_name)[1]
-        mail_id = name.lower().replace(" ", ".")
-        return f"{mail_id}@{self.user_domain}"
+        if full_name == "Central Data Steward":
+            return "central@test.dev"
+        name = self.split_title(full_name)[1].lower().replace(" ", ".")
+        return f"{name}@{self.user_domain}"
 
     def headers(self, session: Session | None) -> dict[str, str]:
         """Get proper headers for the given session."""
@@ -282,7 +283,7 @@ class TokenGenerator:
         url = self.auth_adapter_url + "/totp-token"
         response = self.http.post(url, headers=headers, params={"force": force})
         status_code = response.status_code
-        if status_code == 401:
+        if status_code in (401, 403):
             detail = response.json()["detail"]
             return f"error: {detail}"
         assert status_code == 201, f"{status_code}, {response.text}"
@@ -346,6 +347,9 @@ class TokenGenerator:
             state_store=state_store,
             force=recreate_totp,
         )
+        assert not totp_token.startswith(
+            "error:"
+        ), f"Cannot authenticate {session.name}: {totp_token}"
         totp = self.generate_totp(totp_token)
         return self.verify_totp(totp, session_headers)
 

@@ -57,6 +57,11 @@ def call_data_steward_kit_submit(
         timeout=timeout,
     )
 
+    if completed_submit.stdout:
+        print(completed_submit.stdout)
+    if "ERROR" in completed_submit.stderr or completed_submit.returncode:
+        print(completed_submit.stderr)
+
     assert not completed_submit.stdout
     assert "ERROR" not in completed_submit.stderr
     assert not completed_submit.returncode

@@ -56,6 +56,11 @@ def run_the_load_command(fixtures: JointFixture):
             timeout=10 * 60,
         )
 
+        if completed_upload.stdout:
+            print(completed_upload.stdout)
+        if "ERROR" in completed_upload.stderr or completed_upload.returncode:
+            print(completed_upload.stderr)
+
         assert not completed_upload.stdout
         assert not "ERROR" in completed_upload.stderr
         assert not completed_upload.returncode
