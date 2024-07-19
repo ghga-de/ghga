@@ -34,7 +34,7 @@ async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient,
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,
         service_instance_id=kafka.config.service_instance_id,
-        include_apis=["users"],
+        provide_apis=["users"],
     )  # type: ignore
     app.dependency_overrides[get_config] = lambda: config
 
@@ -61,7 +61,7 @@ async def fixture_full_client(
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,
         service_instance_id=kafka.config.service_instance_id,
-        include_apis=["users"],
+        provide_apis=["users"],
     )
     app.dependency_overrides[get_config] = lambda: config
     assert app.router.lifespan_context

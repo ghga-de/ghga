@@ -39,7 +39,7 @@ def test_add_non_existing_data_steward(
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,
         service_instance_id=kafka.config.service_instance_id,
-        include_apis=["claims"],
+        provide_apis=["claims"],
         add_as_data_stewards=[
             {
                 "name": "John Doe",

@@ -505,12 +505,6 @@
       ],
       "title": "Cors Allowed Headers"
     },
-    "run_auth_adapter": {
-      "default": false,
-      "description": "Run as auth adapter",
-      "title": "Run Auth Adapter",
-      "type": "boolean"
-    },
     "api_ext_path": {
       "default": "/api/auth",
       "description": "external API path for the auth related endpoints (user, session and TOTP management)",
@@ -582,20 +576,34 @@
       "title": "Allow Write Paths",
       "type": "array"
     },
-    "include_apis": {
-      "default": [
-        "users"
+    "provide_apis": {
+      "default": [],
+      "description": "Which REST APIs should be provided.",
+      "examples": [
+        "[\"ext_auth\"]",
+        "[\"users\"]",
+        "[\"claims\"]"
       ],
-      "description": "If not run as auth adapter, which APIs should be provided. If no APIs are specified, run the event consumer.",
       "items": {
         "enum": [
+          "ext_auth",
           "users",
           "claims"
         ],
         "type": "string"
       },
-      "title": "Include Apis",
+      "title": "Provide APIs",
       "type": "array"
+    },
+    "run_consumer": {
+      "default": false,
+      "description": "Whether the service should run as an event consumer",
+      "examples": [
+        "false",
+        "true"
+      ],
+      "title": "Run Consumer",
+      "type": "boolean"
     },
     "add_as_data_stewards": {
       "default": [],

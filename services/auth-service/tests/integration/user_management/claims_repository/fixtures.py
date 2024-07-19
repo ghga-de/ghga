@@ -71,7 +71,7 @@ async def fixture_full_client(
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,
         service_instance_id=kafka.config.service_instance_id,
-        include_apis=["claims"],
+        provide_apis=["claims"],
         add_as_data_stewards=add_as_data_stewards,  # type: ignore
     )  # pyright: ignore
     await seed_database(config)

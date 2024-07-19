@@ -50,10 +50,10 @@ async def lifespan(app: FastAPI):
     We currently use it to seed the database with the data steward claims.
     """
     config = app.dependency_overrides.get(get_config, get_config)()
-    include_apis = config.include_apis
-    if "users" in include_apis:
+    apis = config.provide_apis
+    if "users" in apis:
         app.include_router(users_router)
-    if "claims" in include_apis:
+    if "claims" in apis:
         app.include_router(claims_router)
         await seed_data_steward_claims(config)
     yield

@@ -11,11 +11,11 @@ Authentication adapter and services used for the GHGA data portal
 
 This repository contains two services for the management, authentication and authorization of users of the GHGA data portal.
 
-These two services are described in the following sections. The setting `run_auth_adapter` can be used to determine which of the two services will be started.
+These two services are described in the following sections. The setting `provide_apis` can be used to determine which of the services will be started and which APIs these services should provide. The setting `run_consumer` should be set for the service instance that runs as an event consumer.
 
 ### Auth Adapter
 
-The `auth_adapter` sub-package contains the authentication service used by the API gateway via the ExtAuth protocol.
+The `auth_adapter` sub-package contains the authentication service used by the API gateway via the ExtAuth protocol. It is started when `provide_apis` contains the value `ext_auth`. No other APIs can be provided in that case.
 
 If a `path_prefix` has been configured for the AuthService in the API gateway, then the `api_root_path` must be set accordingly.
 
@@ -38,9 +38,9 @@ The `x-authorization` header is only needed when an additional HTTP Basic Auth i
 
 ### User Management
 
-The `user_management` sub-package contains the user data management service.
+The `user_management` sub-package contains the user data management service which is run when `provide_apis` does not contain `ext_auth`.
 
-The user management contains two APIs, the `users` API for the user registry, and the `claims` API for the claims repository. The setting `include_apis` can be used to specify which of the two APIs should be provided. For testing purposes, both APIs can be provided at the same time, but this is not recommended in production.
+The user management services can provide two APIs, the (public) `users` API for the user registry, and the (internal) `claims` API for the claims repository. The setting `provide_apis` can be used to specify which of the two APIs should be provided. For testing purposes, both APIs can be provided at the same time, but this is not recommended in production. If no API is specified, then only an health endpoint is provided.
 
 
 ## Installation
@@ -49,13 +49,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:2.4.8
+docker pull ghga/auth-service:2.5.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:2.4.8 .
+docker build -t ghga/auth-service:2.5.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -63,7 +63,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:2.4.8 --help
+docker run -p 8080:8080 ghga/auth-service:2.5.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -372,8 +372,6 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`run_auth_adapter`** *(boolean)*: Run as auth adapter. Default: `false`.
-
 - **`api_ext_path`** *(string)*: external API path for the auth related endpoints (user, session and TOTP management). Default: `"/api/auth"`.
 
 - **`auth_ext_keys`**: external public key set for auth adapter (used only by the auth adapter, determined using OIDC discovery if None). Default: `null`.
@@ -406,9 +404,42 @@ The service requires the following configuration parameters:
 
   - **Items** *(string)*
 
-- **`include_apis`** *(array)*: If not run as auth adapter, which APIs should be provided. If no APIs are specified, run the event consumer. Default: `["users"]`.
+- **`provide_apis`** *(array)*: Which REST APIs should be provided. Default: `[]`.
 
-  - **Items** *(string)*: Must be one of: `["users", "claims"]`.
+  - **Items** *(string)*: Must be one of: `["ext_auth", "users", "claims"]`.
+
+
+  Examples:
+
+  ```json
+  "[\"ext_auth\"]"
+  ```
+
+
+  ```json
+  "[\"users\"]"
+  ```
+
+
+  ```json
+  "[\"claims\"]"
+  ```
+
+
+- **`run_consumer`** *(boolean)*: Whether the service should run as an event consumer. Default: `false`.
+
+
+  Examples:
+
+  ```json
+  "false"
+  ```
+
+
+  ```json
+  "true"
+  ```
+
 
 - **`add_as_data_stewards`** *(array)*: a list of external IDs of data stewards or user objects to seed the claims repository with, all other data steward claims will be removed (only used with claims API). Default: `[]`.
 

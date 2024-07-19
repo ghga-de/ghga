@@ -36,8 +36,6 @@ db_name: dev-db
 docs_url: /docs
 generate_correlation_id: true
 host: 0.0.0.0
-include_apis:
-- users
 iva_events_topic: ivas
 iva_state_changed_event_type: iva_state_changed
 ivas_collection: ivas
@@ -59,7 +57,9 @@ oidc_userinfo_endpoint: https://login.aai.lifescience-ri.eu/oidc/userinfo
 openapi_url: /openapi.json
 organization_url: https://ghga.de/
 port: 8080
-run_auth_adapter: false
+provide_apis:
+- users
+run_consumer: false
 second_factor_recreated_event_type: second_factor_recreated
 service_instance_id: '1'
 service_name: auth_service

@@ -77,22 +77,39 @@ async def consume_events(config: Config = CONFIG):
         await event_subscriber.run()
 
 
+async def run_parallel(
+    service: str, run_consumer: bool = False, config: Config = CONFIG
+):
+    """Run REST API(s) and consumer in parallel.
+
+    When no API is specified, only the health endpoint will be available.
+    """
+    service_runner = run_server(
+        app=f"auth_service.{service}.api.main:app", config=config
+    )
+    if run_consumer:
+        await asyncio.gather(service_runner, consume_events(config=config))
+    else:
+        await service_runner
+
+
 def run(config: Config = CONFIG):
     """Run the service"""
     configure_logging(config=config)
     assert_tz_is_utc()
-    run_adapter = config.run_auth_adapter
-    service = "auth_adapter" if run_adapter else "user_management"
-    apis = config.include_apis
-    consumer = not run_adapter and not apis
-    mode = " and ".join(apis)
-    mode = f"with {mode} API" if mode else "as event consumer"
-    print(f"Starting {service} service {mode}")
-    asyncio.run(
-        consume_events(config=config)
-        if consumer
-        else run_server(app=f"auth_service.{service}.api.main:app", config=config)
-    )
+    apis = config.provide_apis
+    run_consumer = config.run_consumer
+    ext_auth = "ext_auth" in apis
+    if ext_auth and len(apis) > 1:
+        raise ValueError("ext_auth cannot be combined with other APIs")
+    service = "auth_adapter" if ext_auth else "user_management"
+    components = [f"{api} API" for api in apis]
+    if run_consumer:
+        components.append("event consumer")
+    if not components:
+        raise ValueError("must specify an API or run as event consumer")
+    print(f"Starting {service} service with {' and '.join(components)}")
+    asyncio.run(run_parallel(service, run_consumer, config=config))
 
 
 if __name__ == "__main__":

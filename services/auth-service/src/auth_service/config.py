@@ -65,8 +65,6 @@ class Config(
         default=SERVICE_NAME, description="Short name of this service"
     )
 
-    run_auth_adapter: bool = Field(default=False, description="Run as auth adapter")
-
     auth_key: str | None = Field(  # type: ignore
         default=None,
         description="internal public key for user management"
@@ -106,10 +104,17 @@ class Config(
         description="paths for writing that use their own authentication mechanism",
     )
 
-    include_apis: list[Literal["users", "claims"]] = Field(
-        default=["users"],
-        description="If not run as auth adapter, which APIs should be provided."
-        " If no APIs are specified, run the event consumer.",
+    provide_apis: list[Literal["ext_auth", "users", "claims"]] = Field(
+        default=[],
+        description="Which REST APIs should be provided.",
+        title="Provide APIs",
+        examples=['["ext_auth"]', '["users"]', '["claims"]'],
+    )
+
+    run_consumer: bool = Field(
+        default=False,
+        description="Whether the service should run as an event consumer",
+        examples=["false", "true"],
     )
 
     add_as_data_stewards: list[str | dict] = Field(
