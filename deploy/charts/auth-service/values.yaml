@@ -37,9 +37,10 @@ mapping:
 
 parameters:
   default:
-    # Specify execution mode as auth-adapter, user-registry or claims-repository
-    run_auth_adapter: null
-    include_apis: null
+    # wheter to run an event consumer
+    run_consumer: false
+    # which APIs to provide: auth-adapter, user-registry or claims-repository
+    provide_apis: []
 
     # Injected through Vault
     auth_ext_keys: null
