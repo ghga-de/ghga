@@ -18,10 +18,26 @@
 import httpx
 
 
-def check_url(api_url, *, wait_time=1) -> bool:
+def is_service_healthy(api_url: str, *, timeout_in_seconds: int = 5) -> bool:
+    """Check if the corresponding health endpoint is available"""
+    # Adjust url so the the health endpoint is actually called
+    api_url = api_url.rstrip("/")
+    if not api_url.endswith("/health"):
+        api_url += "/health"
+
+    return check_url(api_url=api_url, timeout_in_seconds=timeout_in_seconds)
+
+
+def check_url(api_url: str, *, timeout_in_seconds: int = 5) -> bool:
     """Checks, if an url is reachable within a certain time"""
     try:
-        httpx.get(url=api_url, timeout=wait_time)
+        response = httpx.get(url=api_url, timeout=timeout_in_seconds)
     except httpx.RequestError:
         return False
-    return True
+
+    status_code = response.status_code
+    if status_code != 200:
+        return False
+
+    content = response.json()
+    return "status" in content and content["status"].lower() == "ok"

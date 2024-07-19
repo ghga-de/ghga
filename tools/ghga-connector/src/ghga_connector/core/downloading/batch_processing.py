@@ -21,7 +21,7 @@ from pathlib import Path
 from time import sleep
 
 from ghga_connector.core import exceptions
-from ghga_connector.core.api_calls import WorkPackageAccessor, check_url
+from ghga_connector.core.api_calls import WorkPackageAccessor, is_service_healthy
 from ghga_connector.core.client import httpx_client
 from ghga_connector.core.downloading.api_calls import (
     URLResponse,
@@ -148,7 +148,7 @@ class StagingParameters:
 
     def check_api_available(self):
         """Get response from endpoint, else throw corresponding exception"""
-        if not check_url(self.api_url):
+        if not is_service_healthy(self.api_url):
             raise exceptions.ApiNotReachableError(api_url=self.api_url)
 
     def get_file_ids(self) -> list[str]:

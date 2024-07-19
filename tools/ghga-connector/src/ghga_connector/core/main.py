@@ -19,7 +19,7 @@
 from pathlib import Path
 
 from ghga_connector.core import exceptions
-from ghga_connector.core.api_calls import WorkPackageAccessor, check_url
+from ghga_connector.core.api_calls import WorkPackageAccessor, is_service_healthy
 from ghga_connector.core.client import async_client, httpx_client
 from ghga_connector.core.crypt import Crypt4GHDecryptor
 from ghga_connector.core.downloading import Downloader, run_download
@@ -54,7 +54,7 @@ async def upload(  # noqa: PLR0913
     if is_file_encrypted(file_path):
         raise exceptions.FileAlreadyEncryptedError(file_path=file_path)
 
-    if not check_url(api_url):
+    if not is_service_healthy(api_url):
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
     async with async_client() as client:
@@ -106,7 +106,7 @@ def download(  # noqa: PLR0913
     file_extension: str = "",
 ) -> None:
     """Core command to download a file. Can be called by CLI, GUI, etc."""
-    if not check_url(api_url):
+    if not is_service_healthy(api_url):
         raise exceptions.ApiNotReachableError(api_url=api_url)
 
     # construct file name with suffix, if given

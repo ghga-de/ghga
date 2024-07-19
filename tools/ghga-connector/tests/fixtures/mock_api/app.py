@@ -167,8 +167,16 @@ router = MockRouter(
 
 @router.get("/")
 def ready():
-    """Readyness probe."""
+    """Readiness probe."""
     return httpx.Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/health")
+def health():
+    """Used to test if this service is alive"""
+    return httpx.Response(
+        status_code=status.HTTP_200_OK, content=json.dumps({"status": "OK"})
+    )
 
 
 @router.get("/objects/{file_id}")
