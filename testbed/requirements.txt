@@ -1,6 +1,6 @@
 # All your requirements go here. Please adapt as needed:
 
-ghga-connector==1.4.0
+ghga-connector==1.4.1
 ghga-datasteward-kit==3.0.2
 
 ghga-event-schemas>=3.3.0,<4
