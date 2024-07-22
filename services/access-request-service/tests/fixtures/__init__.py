@@ -50,14 +50,12 @@ AUTH_CLAIMS_DOE = {
     "email": "john@home.org",
     "title": "Dr.",
     "id": "id-of-john-doe@ghga.de",
-    "status": "active",
 }
 
 AUTH_CLAIMS_STEWARD = {
     "name": "Rod Steward",
     "email": "steward@ghga.de",
     "id": "id-of-rod-steward@ghga.de",
-    "status": "active",
     "role": "data_steward@ghga.de",
 }
 

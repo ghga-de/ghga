@@ -16,14 +16,29 @@
 
 """Generate signing keys for testing"""
 
-from ghga_service_commons.utils.jwt_helpers import generate_jwk
+from ghga_service_commons.utils.jwt_helpers import (
+    generate_jwk,
+    sign_and_serialize_token,
+)
 
-ARS_AUTH_KEY = generate_jwk().export(private_key=False)
+AUTH_CLAIMS_STEWARD = {
+    "name": "Rod Steward",
+    "email": "steward@ghga.de",
+    "id": "id-of-rod-steward@ghga.de",
+    "role": "data_steward@ghga.de",
+}
+
+AUTH_KEY_PAIR = generate_jwk()
+
+ARS_AUTH_KEY = AUTH_KEY_PAIR.export(private_key=False)
+
+TOKEN = sign_and_serialize_token(AUTH_CLAIMS_STEWARD, AUTH_KEY_PAIR)
 
 
 def print_auth_key_env() -> None:
     """Print environment setting for the auth key."""
     print(f"{ARS_AUTH_KEY=!r}")
+    print("echo Bearer token:", TOKEN)
 
 
 if __name__ == "__main__":

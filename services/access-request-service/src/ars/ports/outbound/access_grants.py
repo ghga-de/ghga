@@ -33,7 +33,7 @@ class AccessGrantsPort(ABC):
         """Raised when there was an error in the validity period."""
 
     @abstractmethod
-    async def grant_download_access(  # noqa: PLR0913
+    async def grant_download_access(
         self,
         user_id: str,
         iva_id: str,

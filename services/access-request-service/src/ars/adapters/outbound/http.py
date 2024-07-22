@@ -79,7 +79,7 @@ class AccessGrantsAdapter(AccessGrantsPort):
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             yield cls(config=config, client=client)
 
-    async def grant_download_access(  # noqa: PLR0913
+    async def grant_download_access(
         self,
         user_id: str,
         iva_id: str,
