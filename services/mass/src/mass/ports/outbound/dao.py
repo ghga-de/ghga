@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,11 @@
 #
 
 """ResourceDao Port and DaoCollectionPort"""
+
 from abc import ABC, abstractmethod
+from typing import TypeAlias
 
 from hexkit.protocols.dao import DaoNaturalId
-from typing_extensions import TypeAlias
 
 from mass.core.models import Resource
 

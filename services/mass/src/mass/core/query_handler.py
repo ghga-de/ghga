@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
 """Contains implementation of a QueryHandler to field queries on metadata"""
 
 import logging
-from typing import Optional
 
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.provider import ResourceNotFoundError
@@ -69,15 +68,15 @@ class QueryHandler(QueryHandlerPort):
         except ResourceNotFoundError as err:
             raise self.ResourceNotFoundError(resource_id=resource_id) from err
 
-    async def handle_query(  # noqa: PLR0912, PLR0913, D102
+    async def handle_query(  # noqa: PLR0913, D102
         self,
         *,
         class_name: str,
         query: str,
         filters: list[models.Filter],
         skip: int = 0,
-        limit: Optional[int] = None,
-        sorting_parameters: Optional[list[models.SortingParameter]] = None,
+        limit: int | None = None,
+        sorting_parameters: list[models.SortingParameter] | None = None,
     ) -> models.QueryResults:
         # set empty list if not provided
         if not sorting_parameters:
@@ -130,7 +129,7 @@ class QueryHandler(QueryHandlerPort):
             break
 
         try:
-            query_results = models.QueryResults(**aggregator_results)
+            query_results = models.QueryResults(**aggregator_results)  # type: ignore
         except ValidationError as err:
             log.warning("Search results validation error: %s", err)
             raise self.ValidationError() from err

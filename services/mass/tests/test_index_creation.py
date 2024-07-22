@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 #
 
 """Test index creation"""
+
 import pytest
 from pymongo import TEXT
 
@@ -30,7 +31,7 @@ QUERY_STRING = "Backrub"
 
 
 @pytest.mark.parametrize("create_index_manually", (False, True))
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_index_creation(joint_fixture: JointFixture, create_index_manually: bool):
     """Test the index creation function."""
     # indexes will have been created in fixture setup, so we actually need to del those

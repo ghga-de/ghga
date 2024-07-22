@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
-from hexkit.custom_types import JsonObject, PytestScope
+from hexkit.custom_types import JsonObject
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -76,37 +76,29 @@ class JointFixture:
         return models.QueryResults(**response.json())
 
 
-async def joint_fixture_function(
-    mongodb_fixture: MongoDbFixture, kafka_fixture: KafkaFixture
+@pytest_asyncio.fixture
+async def joint_fixture(
+    mongodb: MongoDbFixture, kafka: KafkaFixture
 ) -> AsyncGenerator[JointFixture, None]:
-    """A fixture that embeds all other fixtures for API-level integration testing
-
-    **Do not call directly** Instead, use get_joint_fixture().
-    """
+    """A fixture that embeds all other fixtures for API-level integration testing."""
     # merge configs from different sources with the default one:
-    config = get_config(sources=[mongodb_fixture.config, kafka_fixture.config])
+    config = get_config(sources=[mongodb.config, kafka.config])
 
-    # create a DI container instance:translators
-    async with prepare_core(config=config) as query_handler:
-        async with (
-            prepare_rest_app(
-                config=config, query_handler_override=query_handler
-            ) as app,
-            prepare_event_subscriber(
-                config=config, query_handler_override=query_handler
-            ) as event_subscriber,
-        ):
-            async with AsyncTestClient(app=app) as rest_client:
-                yield JointFixture(
-                    config=config,
-                    query_handler=query_handler,
-                    event_subscriber=event_subscriber,
-                    kafka=kafka_fixture,
-                    mongodb=mongodb_fixture,
-                    rest_client=rest_client,
-                )
-
-
-def get_joint_fixture(scope: PytestScope = "function"):
-    """Produce a joint fixture with desired scope"""
-    return pytest_asyncio.fixture(joint_fixture_function, scope=scope)
+    async with (
+        prepare_core(config=config) as query_handler,
+        prepare_rest_app(config=config, query_handler_override=query_handler) as app,
+        prepare_event_subscriber(
+            config=config, query_handler_override=query_handler
+        ) as event_subscriber,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        joint_fixture = JointFixture(
+            config=config,
+            query_handler=query_handler,
+            event_subscriber=event_subscriber,
+            kafka=kafka,
+            mongodb=mongodb,
+            rest_client=rest_client,
+        )
+        await joint_fixture.load_test_data()
+        yield joint_fixture

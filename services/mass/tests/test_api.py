@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 """Tests to assess API functionality"""
 
 import logging
-from typing import Optional
 
 import httpx
 import pytest
@@ -28,14 +27,16 @@ from mass.core import models
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture
 
+pytestmark = pytest.mark.asyncio()
+
 
 def compare(
     *,
     results: models.QueryResults,
     count: int,
     hit_length: int,
-    hits: Optional[list[models.Resource]] = None,
-    facets: Optional[list[models.Facet]] = None,
+    hits: list[models.Resource] | None = None,
+    facets: list[models.Facet] | None = None,
 ) -> None:
     """Perform common comparisons for results"""
     assert results.count == count
@@ -57,7 +58,6 @@ def compare(
         assert results.hits == hits
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_health_check(joint_fixture: JointFixture):
     """Test that the health check endpoint works."""
     response = await joint_fixture.rest_client.get("/health")
@@ -66,7 +66,6 @@ async def test_health_check(joint_fixture: JointFixture):
     assert response.json() == {"status": "OK"}
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_search_options(joint_fixture: JointFixture):
     """Verify that we can request the configured resource class information correctly"""
     response = await joint_fixture.rest_client.get(url="/rpc/search-options")
@@ -74,7 +73,6 @@ async def test_search_options(joint_fixture: JointFixture):
     assert response.json() == joint_fixture.config.model_dump()["searchable_classes"]
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_malformed_document(
     joint_fixture: JointFixture, caplog: pytest.LogCaptureFixture
 ):
@@ -116,7 +114,6 @@ async def test_malformed_document(
         assert "type=string_type, input_value=42, input_type=int" in msg
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_search(joint_fixture: JointFixture):
     """Basic query to pull back all documents for class name"""
     search_parameters: JsonObject = {
@@ -130,7 +127,6 @@ async def test_search(joint_fixture: JointFixture):
     compare(results=results, count=3, hit_length=3)
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_search_with_limit(joint_fixture: JointFixture):
     """Make sure we get a count of 3 but only 1 hit"""
     search_parameters: JsonObject = {
@@ -159,7 +155,6 @@ async def test_search_with_limit(joint_fixture: JointFixture):
     compare(results=results, count=3, hit_length=1, hits=hits)
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_search_keywords(joint_fixture: JointFixture):
     """Make sure the query string is passed through intact"""
     search_parameters: JsonObject = {
@@ -173,7 +168,6 @@ async def test_search_keywords(joint_fixture: JointFixture):
     compare(results=results, count=2, hit_length=2)
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_search_filters(joint_fixture: JointFixture):
     """Make sure filters work"""
     search_parameters: JsonObject = {
@@ -187,7 +181,6 @@ async def test_search_filters(joint_fixture: JointFixture):
     compare(results=results, count=1, hit_length=1)
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_search_invalid_class(joint_fixture: JointFixture):
     """Verify that searching with a bad class name results in a 422"""
     search_parameters: JsonObject = {
@@ -202,7 +195,6 @@ async def test_search_invalid_class(joint_fixture: JointFixture):
         await joint_fixture.call_search_endpoint(search_parameters)
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_auto_recreation_of_indexes(
     joint_fixture: JointFixture, caplog: pytest.LogCaptureFixture
 ):

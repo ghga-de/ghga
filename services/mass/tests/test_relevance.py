@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
 #
 """Tests for relevance sorting"""
 
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -76,8 +76,8 @@ def sorted_reference_results(
     joint_fixture: JointFixture,
     *,
     query: str,
-    sorts: Optional[list[models.SortingParameter]] = None,
-    filters: Optional[list[dict[str, Any]]] = None,
+    sorts: list[models.SortingParameter] | None = None,
+    filters: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     """Used to independently retrieve and sort results by relevance and then id"""
     if not sorts:
@@ -86,7 +86,7 @@ def sorted_reference_results(
     results = joint_fixture.mongodb.client[joint_fixture.config.db_name][
         CLASS_NAME
     ].find({"$text": {"$search": query}}, {"score": {"$meta": "textScore"}})
-    results = [x for x in results]
+    results = [x for x in results]  # type: ignore
 
     if filters:
         for f in filters:
@@ -95,16 +95,16 @@ def sorted_reference_results(
 
             # the only top-level fields are "_id" and "score" -- all else is in "content"
             if field in ("_id", "score"):
-                results = [x for x in results if x[field] == value]
+                results = [x for x in results if x[field] == value]  # type: ignore
             else:
-                results = [x for x in results if x["content"][field] == value]
+                results = [x for x in results if x["content"][field] == value]  # type: ignore
 
-    sorted_results = multi_column_sort(results, sorts)
+    sorted_results = multi_column_sort(results, sorts)  # type: ignore
 
     return [result["_id"] for result in sorted_results]
 
 
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_happy_relevance(joint_fixture: JointFixture):
     """Make sure default works as expected"""
     query = "test"
@@ -127,7 +127,7 @@ async def test_happy_relevance(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
     """Make sure default Pydantic model parameter works as expected"""
     query = "test"
@@ -153,7 +153,7 @@ async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_with_absent_term(joint_fixture: JointFixture):
     """Make sure nothing is pulled back with an absent term (sanity check)"""
     search_parameters = {
@@ -169,7 +169,7 @@ async def test_with_absent_term(joint_fixture: JointFixture):
     assert results.count == 0
 
 
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_limited_term(joint_fixture: JointFixture):
     """Make sure only results with the term are retrieved"""
     query = "alternative"
@@ -189,7 +189,7 @@ async def test_limited_term(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_two_words(joint_fixture: JointFixture):
     """Test with two different terms that appear in different fields"""
     query = "alternative test"
@@ -209,7 +209,7 @@ async def test_two_words(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_with_filters(joint_fixture: JointFixture):
     """Test with filters applied but no sorting parameters"""
     query = "test"
@@ -234,7 +234,7 @@ async def test_with_filters(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_with_filters_and_sorts(joint_fixture: JointFixture):
     """Test with filters applied and at least one sorting parameter (not relevance)"""
     query = "test"

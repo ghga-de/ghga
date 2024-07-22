@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,6 @@
 #
 
 """Collection of tests that verify log output"""
-
-from typing import Union
 
 import pytest
 from ghga_event_schemas.pydantic_ import (
@@ -91,11 +89,11 @@ ERROR_LEVEL = "ERROR"
         "Deletion failure due to non-existent accession",
     ],
 )
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio
 async def test_event_sub_logging(
     joint_fixture: JointFixture,
     caplog,
-    resource: Union[SearchableResourceInfo, SearchableResource, MetadataDatasetID],
+    resource: SearchableResourceInfo | SearchableResource | MetadataDatasetID,
     event_type: str,
     expected_log_level: str,
     expected_log_message: str,

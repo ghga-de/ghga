@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,6 @@
 #
 
 """API endpoints"""
-
-from typing import Union
 
 from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
@@ -63,7 +61,7 @@ async def search_options(
 async def search(
     parameters: api_models.SearchParameters,
     query_handler: QueryHandlerDummy,
-) -> Union[models.QueryResults, None]:
+) -> models.QueryResults | None:
     """Perform search query"""
     try:
         results = await query_handler.handle_query(

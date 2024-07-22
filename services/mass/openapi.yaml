@@ -119,6 +119,7 @@ components:
             - items: {}
               type: array
             - type: object
+            - type: 'null'
           description: The actual content of the resource
           title: Content
           type: object

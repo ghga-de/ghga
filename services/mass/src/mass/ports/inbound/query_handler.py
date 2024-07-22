@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
 """Contains the port for a query handler"""
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from mass.core import models
 
@@ -76,8 +75,8 @@ class QueryHandlerPort(ABC):
         query: str,
         filters: list[models.Filter],
         skip: int = 0,
-        limit: Optional[int] = None,
-        sorting_parameters: Optional[list[models.SortingParameter]] = None,
+        limit: int | None = None,
+        sorting_parameters: list[models.SortingParameter] | None = None,
     ) -> models.QueryResults:
         """Processes a query
 

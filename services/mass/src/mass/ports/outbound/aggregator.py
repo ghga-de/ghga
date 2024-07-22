@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 """Contains the outbound ports for the Aggregator and AggregatorCollection classes"""
+
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from hexkit.custom_types import JsonObject
 
@@ -41,7 +41,7 @@ class AggregatorPort(ABC):
         filters: list[models.Filter],
         facet_fields: list[models.FacetLabel],
         skip: int = 0,
-        limit: Optional[int] = None,
+        limit: int | None = None,
         sorting_parameters: list[models.SortingParameter],
     ) -> JsonObject:
         """Applies an aggregation pipeline to a mongodb collection"""

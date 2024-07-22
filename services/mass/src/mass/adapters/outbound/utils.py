@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,9 @@
 #
 
 """Utility functions for building the aggregation pipeline used by query handler"""
+
 from collections import OrderedDict, defaultdict
-from typing import Any, Optional
+from typing import Any
 
 from hexkit.custom_types import JsonObject
 
@@ -62,7 +63,7 @@ def pipeline_facet_sort_and_paginate(
     *,
     facet_fields: list[models.FacetLabel],
     skip: int,
-    limit: Optional[int] = None,
+    limit: int | None = None,
     sorts: OrderedDict,
 ):
     """Uses a list of facetable property names to build the subquery for faceting"""
@@ -123,7 +124,7 @@ def build_pipeline(  # noqa: PLR0913
     filters: list[models.Filter],
     facet_fields: list[models.FacetLabel],
     skip: int = 0,
-    limit: Optional[int] = None,
+    limit: int | None = None,
     sorting_parameters: list[models.SortingParameter],
 ) -> list[JsonObject]:
     """Build aggregation pipeline based on query"""

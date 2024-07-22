@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,8 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from mass.core import models
 from tests.fixtures.joint import JointFixture
 
+pytestmark = pytest.mark.asyncio()
+
 
 @pytest.mark.parametrize(
     "resource_id,is_insert",
@@ -29,7 +31,6 @@ from tests.fixtures.joint import JointFixture
         ("1HotelAlpha-id", False),  # this ID exists in the test data already
     ],
 )
-@pytest.mark.asyncio(scope="session")
 async def test_resource_upsert(
     joint_fixture: JointFixture, resource_id: str, is_insert: bool
 ):
@@ -50,7 +51,7 @@ async def test_resource_upsert(
     # define a resource to be upserted
     resource = models.Resource(
         id_=resource_id,
-        content=content,
+        content=content,  # type: ignore
     )
 
     # put together event payload
@@ -84,7 +85,6 @@ async def test_resource_upsert(
     assert resource not in results_all.hits
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_resource_delete(joint_fixture: JointFixture):
     """Test resource deletion via event consumption"""
     # get all the documents in the collection

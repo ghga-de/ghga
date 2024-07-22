@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 #
 
 """Contains the ResourceDaoCollection, which houses a DAO for each resource class"""
+
 from hexkit.protocols.dao import DaoFactoryProtocol
 from pymongo import TEXT, MongoClient
 

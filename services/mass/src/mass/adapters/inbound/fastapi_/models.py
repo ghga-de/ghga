@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 """Models only used by the API"""
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -34,7 +33,7 @@ class SearchParameters(BaseModel):
     skip: int = Field(
         default=0, description="The number of results to skip for pagination"
     )
-    limit: Optional[int] = Field(
+    limit: int | None = Field(
         default=None, description="Limit the results to this number"
     )
     sorting_parameters: list[SortingParameter] = Field(

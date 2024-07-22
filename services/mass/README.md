@@ -32,13 +32,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/mass):
 ```bash
-docker pull ghga/mass:2.0.0
+docker pull ghga/mass:2.0.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/mass:2.0.0 .
+docker build -t ghga/mass:2.0.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -46,7 +46,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/mass:2.0.0 --help
+docker run -p 8080:8080 ghga/mass:2.0.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -97,6 +97,8 @@ The service requires the following configuration parameters:
   "%(asctime)s - Severity: %(levelno)s - %(msg)s"
   ```
 
+
+- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
 - **`searchable_classes`** *(object)*: A collection of searchable_classes with facetable properties. Can contain additional properties.
 
@@ -154,7 +156,7 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string)*: Optional password to be used for the client private key. Default: `""`.
+- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
 
 - **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
@@ -199,7 +201,7 @@ The service requires the following configuration parameters:
 
 - **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
 
-- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `"/"`.
+- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
 
 - **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
 

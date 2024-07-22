@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 """Contains concrete implementation of the Aggregator and its Factory"""
-from typing import Optional
 
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.provider import MongoDbConfig
@@ -45,7 +44,7 @@ class Aggregator(AggregatorPort):
         filters: list[models.Filter],
         facet_fields: list[models.FacetLabel],
         skip: int = 0,
-        limit: Optional[int] = None,
+        limit: int | None = None,
         sorting_parameters: list[models.SortingParameter],
     ) -> JsonObject:
         # don't carry out aggregation if the collection is empty

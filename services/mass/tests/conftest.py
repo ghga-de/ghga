@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,31 +14,15 @@
 # limitations under the License.
 #
 
-"""Setup for testing
+"""Import session-scoped container fixtures and function-scoped client fixtures."""
 
-Since we're using session-scoped fixtures, declare everything in here.
-"""
+from hexkit.providers.akafka.testutils import (  # noqa: F401
+    kafka_container_fixture,
+    kafka_fixture,
+)
+from hexkit.providers.mongodb.testutils import (  # noqa: F401
+    mongodb_container_fixture,
+    mongodb_fixture,
+)
 
-import asyncio
-
-import pytest
-from hexkit.providers.akafka.testutils import get_kafka_fixture
-from hexkit.providers.mongodb.testutils import get_mongodb_fixture
-
-from tests.fixtures.joint import JointFixture, get_joint_fixture
-
-
-@pytest.fixture(autouse=True)
-def reset_state(joint_fixture: JointFixture):
-    """Clear joint_fixture state before tests.
-
-    This is a function-level fixture because it needs to run in each test.
-    """
-    loop = asyncio.get_event_loop()
-    joint_fixture.remove_db_data()
-    loop.run_until_complete(joint_fixture.load_test_data())
-
-
-kafka_fixture = get_kafka_fixture("session")
-mongodb_fixture = get_mongodb_fixture("session")
-joint_fixture = get_joint_fixture("session")
+from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401

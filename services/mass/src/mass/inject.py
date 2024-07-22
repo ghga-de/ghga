@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +14,9 @@
 # limitations under the License.
 #
 """Module hosting the dependency injection container."""
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
@@ -53,7 +53,7 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[QueryHandlerPort, No
 
 
 def prepare_core_with_override(
-    *, config: Config, query_handler_override: Optional[QueryHandlerPort] = None
+    *, config: Config, query_handler_override: QueryHandlerPort | None = None
 ):
     """Resolve the query_handler context manager based on config and override (if any)."""
     return (
@@ -67,7 +67,7 @@ def prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    query_handler_override: Optional[QueryHandlerPort] = None,
+    query_handler_override: QueryHandlerPort | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize an REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -87,7 +87,7 @@ async def prepare_rest_app(
 async def prepare_event_subscriber(
     *,
     config: Config,
-    query_handler_override: Optional[QueryHandlerPort] = None,
+    query_handler_override: QueryHandlerPort | None = None,
 ) -> AsyncGenerator[KafkaEventSubscriber, None]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also

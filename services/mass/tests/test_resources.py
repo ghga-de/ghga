@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,15 @@
 
 """Basic tests for presence of resources/documents in the database"""
 
-
 import pytest
 
 from mass.core import models
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture
 
+pytestmark = pytest.mark.asyncio()
 
-@pytest.mark.asyncio(scope="session")
+
 async def test_basic_query(joint_fixture: JointFixture):
     """Make sure we can pull back the documents as expected"""
     # pull back all 3 test documents
@@ -34,7 +34,6 @@ async def test_basic_query(joint_fixture: JointFixture):
     assert results.count == 3
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_text_search(joint_fixture: JointFixture):
     """Test basic text search"""
     results_text = await joint_fixture.query_handler.handle_query(
@@ -45,7 +44,6 @@ async def test_text_search(joint_fixture: JointFixture):
     assert results_text.hits[0].id_ == "1HotelAlpha-id"
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_filters_work(joint_fixture: JointFixture):
     """Test a query with filters selected but no query string"""
     results_filtered = await joint_fixture.query_handler.handle_query(
@@ -70,7 +68,6 @@ async def test_filters_work(joint_fixture: JointFixture):
     assert results_multi_filter.hits[0].id_ == "1HotelAlpha-id"
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_facets_returned(joint_fixture: JointFixture):
     """Verify that facet fields are returned correctly"""
     results_faceted = await joint_fixture.query_handler.handle_query(
@@ -112,7 +109,6 @@ async def test_facets_returned(joint_fixture: JointFixture):
             assert kitchen_options[0].count == 1
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_limit_parameter(joint_fixture: JointFixture):
     """Test that the limit parameter works"""
     results_limited = await joint_fixture.query_handler.handle_query(
@@ -121,7 +117,6 @@ async def test_limit_parameter(joint_fixture: JointFixture):
     assert len(results_limited.hits) == 2
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_skip_parameter(joint_fixture: JointFixture):
     """Test that the skip parameter works"""
     results_skip = await joint_fixture.query_handler.handle_query(
@@ -131,7 +126,6 @@ async def test_skip_parameter(joint_fixture: JointFixture):
     assert [x.id_ for x in results_skip.hits] == ["2HotelBeta-id", "3zoo-id"]
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_all_parameters(joint_fixture: JointFixture):
     """Sanity check - make sure it all works together"""
     results_all = await joint_fixture.query_handler.handle_query(
@@ -146,7 +140,6 @@ async def test_all_parameters(joint_fixture: JointFixture):
     assert results_all.hits[0].id_ == "2HotelBeta-id"
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_resource_load(joint_fixture: JointFixture):
     """Test the load function in the query handler"""
     # get all the documents in the collection
@@ -187,7 +180,6 @@ async def test_resource_load(joint_fixture: JointFixture):
     assert validated_resource.content == resource.content
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_loading_non_configured_resource(joint_fixture: JointFixture):
     """Test that we get the right warning for loading a non-configured class_name"""
     # define and load a new resource
@@ -206,7 +198,6 @@ async def test_loading_non_configured_resource(joint_fixture: JointFixture):
         )
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_error_from_malformed_resource(joint_fixture: JointFixture):
     """Make sure we get an error when the DB has malformed content, since that has to be fixed"""
     # define and load a new resource without all the required facets
@@ -229,7 +220,6 @@ async def test_error_from_malformed_resource(joint_fixture: JointFixture):
         )
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_absent_resource(joint_fixture: JointFixture):
     """Make sure we get an error when looking for a resource type that doesn't exist"""
     with pytest.raises(joint_fixture.query_handler.ClassNotConfiguredError):
@@ -238,7 +228,6 @@ async def test_absent_resource(joint_fixture: JointFixture):
         )
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_resource_deletion(joint_fixture: JointFixture):
     """Make sure we can delete a resource.
 
@@ -264,7 +253,6 @@ async def test_resource_deletion(joint_fixture: JointFixture):
         assert resource.id_ != "1HotelAlpha-id"
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_resource_deletion_failure(joint_fixture: JointFixture):
     """Test for correct error when failing to delete a resource"""
     all_resources = await joint_fixture.query_handler.handle_query(
@@ -287,7 +275,6 @@ async def test_resource_deletion_failure(joint_fixture: JointFixture):
     assert all_resources_again.count == all_resources.count
 
 
-@pytest.mark.asyncio(scope="session")
 async def test_resource_deletion_not_configured(joint_fixture: JointFixture):
     """Test for correct error when trying to delete a non-configured resource"""
     with pytest.raises(joint_fixture.query_handler.ClassNotConfiguredError):

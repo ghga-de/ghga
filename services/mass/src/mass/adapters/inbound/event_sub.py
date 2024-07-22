@@ -1,4 +1,4 @@
-# Copyright 2021 - 2023 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Event subscriber details for searchable resource events"""
+
 import logging
 
 import ghga_event_schemas.pydantic_ as event_schemas
@@ -141,7 +142,8 @@ class EventSubTranslator(EventSubscriberProtocol):
         *,
         payload: JsonObject,
         type_: Ascii,
-        topic: Ascii,  # pylint: disable=unused-argument
+        topic: Ascii,
+        key: Ascii,
     ) -> None:
         """Consumes an event"""
         log.info(EVENT_RECEIVED_LOG_MESSAGE, type)
