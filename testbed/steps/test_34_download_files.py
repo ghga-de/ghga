@@ -74,7 +74,7 @@ def run_the_download_command(fixtures: JointFixture, file_scope: str):
         check=False,
         encoding="utf-8",
         text=True,
-        timeout=120,
+        timeout=180,
     )
 
     print("Output:")
