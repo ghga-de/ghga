@@ -4,8 +4,7 @@ metadata:
   name: {{ .Release.Name }}
   annotations:
     configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
-  labels:
-    app: {{ .Release.Name }}
+  {{- include "ghga-common.deployment-labels" .  | nindent 2 }}
 spec:
   revisionHistoryLimit: 1
   selector:
@@ -18,12 +17,7 @@ spec:
         {{- if .Values.podAnnotations }}
         {{- toYaml .Values.podAnnotations | nindent 8 }}
         {{- end }}
-      labels:
-        app: {{ .Release.Name }}
-        version: staging
-        {{- if .Values.podExtraLabels }}
-        {{- include "ghga-common.pod-extra-labels" .  | nindent 8 }}
-        {{- end }}
+      {{- include "ghga-common.pod-labels" .  | nindent 6 }}
     spec:
       serviceAccountName: {{ .Release.Name }}
       shareProcessNamespace: {{ .Values.shareProcessNamespace }}

@@ -46,7 +46,3 @@ kafkaSecrets:
 #  - name: dockerhub
 #  - name: ex
 imagePullSecretNames: []
-
-# Add extra labels to the service pod
-# podExtraLabels:
-#   my-label: my-value
