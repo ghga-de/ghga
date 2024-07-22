@@ -2,6 +2,54 @@
   "additionalProperties": false,
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
+    "token_hashes": {
+      "description": "List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.",
+      "examples": [
+        "7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Token Hashes",
+      "type": "array"
+    },
+    "db_prefix": {
+      "description": "Prefix to add to all database names used in the SMS.",
+      "examples": [
+        "testing-branch-name-"
+      ],
+      "title": "Db Prefix",
+      "type": "string"
+    },
+    "db_permissions": {
+      "default": [],
+      "description": "List of permissions that can be granted on a collection. Use * to signify 'all'. The format is '<db_name>.<collection_name>:<permissions>', e.g. 'db1.collection1.crud'. The permissions are 'r' for read and 'w' for write. '*' can be used to mean both read and write (or 'rw'). Deletion is a write operation. If db_permissions are not set, no operations are allowed on any database or collection.",
+      "examples": [
+        "db1.coll1:r",
+        "db1.coll1:w",
+        "db1.coll1:rw",
+        "db1.coll1:*",
+        "db2.*:r",
+        "db3.*:*",
+        "*.*:r",
+        "*.*:*"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Db Permissions",
+      "type": "array"
+    },
+    "db_connection_str": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "password",
+      "title": "Db Connection Str",
+      "type": "string",
+      "writeOnly": true
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -17,7 +65,7 @@
       "type": "string"
     },
     "service_name": {
-      "default": "my_microservice",
+      "default": "sms",
       "description": "Short name of this service",
       "title": "Service Name",
       "type": "string"
@@ -46,6 +94,12 @@
         "%(asctime)s - Severity: %(levelno)s - %(msg)s"
       ],
       "title": "Log Format"
+    },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
     },
     "host": {
       "default": "127.0.0.1",
@@ -179,21 +233,12 @@
       ],
       "title": "Generate Correlation Id",
       "type": "boolean"
-    },
-    "language": {
-      "default": "Croatian",
-      "description": "The language.",
-      "enum": [
-        "Greek",
-        "Croatian",
-        "French",
-        "German"
-      ],
-      "title": "Language",
-      "type": "string"
     }
   },
   "required": [
+    "token_hashes",
+    "db_prefix",
+    "db_connection_str",
     "service_instance_id"
   ],
   "title": "ModSettings",

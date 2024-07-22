@@ -1,37 +1,5 @@
 components:
   schemas:
-    Greeting:
-      description: A container storing a greeting for a specific person incl. metadata.
-      properties:
-        created_at:
-          description: The date/time when the message was created
-          format: date-time
-          title: Created At
-          type: string
-        isinformal:
-          description: Is the expression used in informal contexts?
-          title: Isinformal
-          type: boolean
-        language:
-          description: The language.
-          enum:
-          - Greek
-          - Croatian
-          - French
-          - German
-          title: Language
-          type: string
-        message:
-          description: The message content.
-          title: Message
-          type: string
-      required:
-      - message
-      - created_at
-      - language
-      - isinformal
-      title: Greeting
-      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -40,6 +8,26 @@ components:
           title: Detail
           type: array
       title: HTTPValidationError
+      type: object
+    UpsertionDetails:
+      description: Details for upserting documents in a collection.
+      properties:
+        documents:
+          anyOf:
+          - type: object
+          - items:
+              type: object
+            type: array
+          description: The document(s) to upsert.
+          title: Documents
+        id_field:
+          default: _id
+          description: The field to use as the document id.
+          title: Id Field
+          type: string
+      required:
+      - documents
+      title: UpsertionDetails
       type: object
     ValidationError:
       properties:
@@ -62,47 +50,53 @@ components:
       - type
       title: ValidationError
       type: object
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
 info:
-  title: FastAPI
-  version: 0.1.0
+  description: A service for basic infrastructure technology state management.
+  title: State Management Service
+  version: 1.0.0
 openapi: 3.1.0
 paths:
-  /:
+  /documents/permissions:
     get:
-      description: Greet the World.
-      operationId: index__get
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: Greet the world
-  /greet/{name}:
-    get:
-      description: Greet a person by name. You may choose a formal or an informal
-        greeting.The language for the greeting is configured in the backend.
-      operationId: greet_greet__name__get
-      parameters:
-      - in: path
-        name: name
-        required: true
-        schema:
-          title: Name
-          type: string
-      - in: query
-        name: isinformal
-        required: false
-        schema:
-          default: true
-          title: Isinformal
-          type: boolean
+      description: Returns the configured db permissions list.
+      operationId: get_db_permissions
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Greeting'
+                items:
+                  type: string
+                title: Response Get Db Permissions
+                type: array
+          description: Successful Response
+      summary: Returns the configured db permissions list.
+      tags:
+      - StateManagementService
+      - sms-mongodb
+  /documents/{namespace}:
+    delete:
+      description: Upserts the document(s) provided in the request body in the specified
+        collection.
+      operationId: delete_documents
+      parameters:
+      - description: 'The database and collection to query. Format: db_name.collection'
+        in: path
+        name: namespace
+        required: true
+        schema:
+          description: 'The database and collection to query. Format: db_name.collection'
+          examples:
+          - my_test_db.users
+          pattern: ^(?P<db>[^.\\/ \"$]{1,64})\.(?P<collection>[^$]{1,255})$
+          title: Namespace
+          type: string
+      responses:
+        '204':
           description: Successful Response
         '422':
           content:
@@ -110,4 +104,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-      summary: Greet a person
+      security:
+      - HTTPBearer: []
+      summary: Deletes all or some documents in the collection.
+      tags:
+      - StateManagementService
+      - sms-mongodb
+    get:
+      description: Returns all or some documents from the specified collection.
+      operationId: get_documents
+      parameters:
+      - description: 'The database and collection to query. Format: db_name.collection'
+        in: path
+        name: namespace
+        required: true
+        schema:
+          description: 'The database and collection to query. Format: db_name.collection'
+          examples:
+          - my_test_db.users
+          pattern: ^(?P<db>[^.\\/ \"$]{1,64})\.(?P<collection>[^$]{1,255})$
+          title: Namespace
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: object
+                title: Response Get Documents
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Returns all or some documents from the specified collection.
+      tags:
+      - StateManagementService
+      - sms-mongodb
+    put:
+      description: Upserts the document(s) provided in the request body in the specified
+        collection.
+      operationId: upsert_documents
+      parameters:
+      - description: 'The database and collection to query. Format: db_name.collection'
+        in: path
+        name: namespace
+        required: true
+        schema:
+          description: 'The database and collection to query. Format: db_name.collection'
+          examples:
+          - my_test_db.users
+          pattern: ^(?P<db>[^.\\/ \"$]{1,64})\.(?P<collection>[^$]{1,255})$
+          title: Namespace
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertionDetails'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Upserts the document(s) provided in the request body in thespecified
+        collection.
+      tags:
+      - StateManagementService
+      - sms-mongodb
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - StateManagementService
+      - sms-
+tags:
+- name: StateManagementService

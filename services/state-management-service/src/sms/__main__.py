@@ -13,8 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Short description of package."""  # Please adapt to package
+"""Entrypoint of the package."""
 
-from importlib.metadata import version
+import asyncio
 
-__version__ = version(__package__)
+from sms.main import run_rest_app
+
+
+def run():
+    """Run the service."""
+    asyncio.run(run_rest_app())
+
+
+if __name__ == "__main__":
+    run()

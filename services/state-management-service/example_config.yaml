@@ -4,14 +4,20 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+db_connection_str: '**********'
+db_permissions:
+- '*.*:rw'
+db_prefix: test_
 docs_url: /docs
 generate_correlation_id: true
 host: 127.0.0.1
-language: Greek
 log_format: null
 log_level: INFO
+log_traceback: true
 openapi_url: /openapi.json
 port: 8080
 service_instance_id: '1'
-service_name: my_microservice
+service_name: sms
+token_hashes:
+- 7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e
 workers: 1

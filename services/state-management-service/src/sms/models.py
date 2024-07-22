@@ -12,9 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Models used in the SMS"""
 
-"""
-This sub-package contains the main business functionality of this service.
+from collections.abc import Mapping
+from typing import Any
 
-It should not contain any service API-related code.
-"""
+from pydantic import BaseModel, Field
+
+DocumentType = Mapping[str, Any]
+Criteria = Mapping[str, Any]
+
+
+class UpsertionDetails(BaseModel):
+    """Details for upserting documents in a collection."""
+
+    id_field: str = Field(
+        default="_id", description="The field to use as the document id."
+    )
+    documents: DocumentType | list[DocumentType] = Field(
+        default=..., description="The document(s) to upsert."
+    )

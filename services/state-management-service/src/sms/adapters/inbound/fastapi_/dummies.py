@@ -12,22 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""A collection of dependency dummies that are used in view definitions but need to be
+replaced at runtime by actual dependencies.
+"""
 
-"""Entrypoint of the package."""
+from typing import Annotated
 
-import asyncio
+from fastapi import Depends
+from ghga_service_commons.api.di import DependencyDummy
 
-from ghga_service_commons.api import run_server
+from sms.config import Config
+from sms.ports.inbound.docs_handler import DocsHandlerPort
 
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
+config_dummy = DependencyDummy("config_dummy")
+docs_handler_port = DependencyDummy("docs_handler_port")
 
-
-def run(config: Config = CONFIG):
-    """Run the service."""
-    # Please adapt to package name
-    asyncio.run(run_server(app="my_microservice.__main__:app", config=config))
-
-
-if __name__ == "__main__":
-    run()
+ConfigDummy = Annotated[Config, Depends(config_dummy)]
+DocsHandlerPortDummy = Annotated[DocsHandlerPort, Depends(docs_handler_port)]
