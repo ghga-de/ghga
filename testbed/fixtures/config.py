@@ -208,5 +208,6 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
                     raise ValueError(f"Missing value for {attr}") from error
                 if "://" not in url:
                     url = base_url + "/" + url.lstrip("/")
-                    setattr(self, attr, url)
+                    # instance already frozen, can only be changed via dict
+                    self.__dict__[attr] = url
         return self
