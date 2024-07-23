@@ -16,12 +16,15 @@
 
 import json
 import logging
+from contextlib import suppress
 from typing import Literal, NamedTuple
 
 from sms.config import Config
 from sms.models import Criteria, DocumentType, UpsertionDetails
 from sms.ports.inbound.docs_handler import DocsHandlerPort
 from sms.ports.outbound.docs_dao import DocsDaoPort
+
+log = logging.getLogger(__name__)
 
 
 def log_and_raise_permissions_error(
@@ -33,7 +36,7 @@ def log_and_raise_permissions_error(
         f"'{operation.title()}' operations not allowed on db '{db_name}',"
         + f" collection '{collection}'. No rule found that matches '{rule}'",
     )
-    logging.error(
+    log.error(
         error,
         extra={"db_name": db_name, "collection": collection, "operation": operation},
     )
@@ -104,7 +107,7 @@ class DocsHandler(DocsHandlerPort):
                     parsed_criteria[key] = json.loads(value)
                 except json.JSONDecodeError as err:
                     error = self.CriteriaFormatError(key=key)
-                    logging.error(
+                    log.error(
                         error,
                         extra={"key": key, "value": value},
                     )
@@ -138,7 +141,7 @@ class DocsHandler(DocsHandlerPort):
             )
         except Exception as err:
             error = self.ReadOperationError(criteria=criteria)
-            logging.error(error)
+            log.error(error)
             raise error from err
 
         return results
@@ -185,14 +188,38 @@ class DocsHandler(DocsHandlerPort):
             )
         except Exception as err:
             error = self.UpsertionError(id_field=id_field)
-            logging.error(
+            log.error(
                 error,
                 extra={"documents": documents},
             )
             raise error from err
 
+    async def _delete(self, db_name: str, collection: str, criteria: Criteria) -> None:
+        """Delete documents satisfying the criteria. Called by the public delete method."""
+        if not self._permissions.can_write(db_name, collection):
+            log_and_raise_permissions_error(db_name, collection, "write")
+
+        full_db_name = f"{self._prefix}{db_name}"
+
+        try:
+            await self._docs_dao.delete(
+                db_name=full_db_name, collection=collection, criteria=criteria
+            )
+        except Exception as err:
+            error = self.DeletionError(criteria=criteria)
+            log.error(error)
+            raise error from err
+
     async def delete(self, db_name: str, collection: str, criteria: Criteria) -> None:
         """Delete documents satisfying the criteria.
+
+        If the wildcard for both db_name and collection is used, all data from all
+        collections is deleted. If a db is specified but the collection is a wildcard,
+        all collections in that db are deleted. However, deleting data from a specific
+        collection in all databases is not allowed in order to prevent accidental data
+        loss.
+
+        No error is raised if the db or collection does not exist.
 
         Args:
         - `db_name`: The name of the database.
@@ -204,17 +231,36 @@ class DocsHandler(DocsHandlerPort):
         - `OperationError`: If the operation fails in the database for any reason.
         - `CriteriaFormatError`: If the filter criteria format is invalid.
         """
-        if not self._permissions.can_write(db_name, collection):
-            log_and_raise_permissions_error(db_name, collection, "write")
+        to_delete: list[tuple[str, str]] = []
+
+        if collection == "*":
+            # Get a list of database and collection names for all dbs with the prefix
+            # if db is wildcard, otherwise just the collections under the specified db
+            db_map: dict[str, list[str]] = (
+                await self._docs_dao.get_db_map_for_prefix(prefix=self._prefix)
+                if db_name == "*"
+                else await self._docs_dao.get_db_map_for_prefix(
+                    prefix=self._prefix, db_name=db_name
+                )
+            )
+
+            # Make a list of tuples representing the (db, collection)s to delete
+            to_delete = [(db, collection) for db in db_map for collection in db_map[db]]
+        elif db_name == "*":
+            error = ValueError(
+                "Cannot use wildcard for db_name with specific collection"
+            )
+            log.error(error)
+            raise error
 
         parsed_criteria = self._parse_criteria(criteria)
-        full_db_name = f"{self._prefix}{db_name}"
-
-        try:
-            await self._docs_dao.delete(
-                db_name=full_db_name, collection=collection, criteria=parsed_criteria
+        if to_delete:
+            log.debug("Iteratively deleting data from these collections: %s", to_delete)
+            for db, coll in to_delete:
+                with suppress(PermissionError):
+                    await self._delete(db, coll, parsed_criteria)
+        else:
+            log.debug(
+                "Deleting data from a specific collection: %s", (db_name, collection)
             )
-        except Exception as err:
-            error = self.DeletionError(criteria=criteria)
-            logging.error(error)
-            raise error from err
+            await self._delete(db_name, collection, parsed_criteria)

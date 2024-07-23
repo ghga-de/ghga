@@ -9,3 +9,5 @@ db_permissions:
 - "testdb.writeonly:w"
 - "testdb.readwrite:rw"
 - "testdb.allops:*"
+- "testdb2.writeonly:w"
+- "testdb3.readonly:r"

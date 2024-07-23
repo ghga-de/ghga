@@ -82,9 +82,41 @@ class DocsDao(DocsDaoPort):
     ) -> None:
         """Delete documents satisfying the criteria.
 
+        No error is raised if the db or collection does not exist.
+
         Args:
         - `db_name`: The database name.
         - `collection`: The collection name.
         - `criteria`: The criteria to use for filtering the documents (mapping)
         """
         await self._client[db_name][collection].delete_many(criteria)
+
+    async def get_db_map_for_prefix(
+        self, *, prefix: str, db_name: str | None = None
+    ) -> dict[str, list[str]]:
+        """Get a dict containing a list of collections for each database, or a specific
+        database (if `db_name` is provided).
+
+        Only returns databases that start with the given prefix, and it returns the
+        database names with `prefix` stripped. An empty dict is returned if `prefix` is
+        empty. If `db_name` is provided but no collections exist, an empty list is
+        returned with the database name as the key.
+        """
+        if not prefix:
+            return {}
+
+        if db_name:
+            full_db_name = f"{prefix}{db_name}"
+            return {
+                db_name: sorted(
+                    await self._client[full_db_name].list_collection_names()
+                )
+            }
+
+        return {
+            db.removeprefix(prefix): sorted(
+                await self._client[db].list_collection_names()
+            )
+            for db in await self._client.list_database_names()
+            if db.startswith(prefix)
+        }

@@ -16,7 +16,7 @@
 """Test the DocDao class without any real"""
 
 from contextlib import nullcontext
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 
 import pytest
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -223,3 +223,43 @@ async def test_prefix_handling_wrt_permissions():
         upsertion_details=UpsertionDetails(documents=TEST_DOCS),
     )
     await docs_handler.delete(db_name=TEST_DB, collection=ALLOPS, criteria={})
+
+
+@pytest.mark.asyncio
+async def test_wildcard_deletion():
+    """Test deletion with wildcard arguments."""
+    docs_dao = AsyncMock(spec=DocsDaoPort)
+    docs_dao.delete = AsyncMock()
+    config = get_config()
+    docs_handler = DocsHandler(config=config, docs_dao=docs_dao)
+
+    # Test the invalid case of deleting a specific collection in all databases
+    with pytest.raises(ValueError):
+        await docs_handler.delete(db_name="*", collection=ALLOPS, criteria={})
+    docs_dao.delete.assert_not_awaited()
+    docs_dao.delete.reset_mock()
+
+    # Delete all collections in all databases that have write permissions
+    docs_dao.get_db_map_for_prefix.return_value = {
+        TEST_DB: [ALLOPS, READONLY, WRITEONLY],
+        "testdb2": [WRITEONLY],
+        "testdb3": [READONLY],
+    }
+    await docs_handler.delete(db_name="*", collection="*", criteria={})
+    assert docs_dao.delete.call_args_list == [
+        call(db_name=f"{config.db_prefix}{TEST_DB}", collection=ALLOPS, criteria={}),
+        call(db_name=f"{config.db_prefix}{TEST_DB}", collection=WRITEONLY, criteria={}),
+        call(db_name=f"{config.db_prefix}testdb2", collection=WRITEONLY, criteria={}),
+    ]
+
+    docs_dao.delete.reset_mock()
+
+    # Delete all collections in the testdb that have write permissions
+    docs_dao.get_db_map_for_prefix.return_value = {
+        TEST_DB: [ALLOPS, READONLY, WRITEONLY],
+    }
+    await docs_handler.delete(db_name=TEST_DB, collection="*", criteria={})
+    assert docs_dao.delete.call_args_list == [
+        call(db_name=f"{config.db_prefix}{TEST_DB}", collection=ALLOPS, criteria={}),
+        call(db_name=f"{config.db_prefix}{TEST_DB}", collection=WRITEONLY, criteria={}),
+    ]

@@ -88,7 +88,7 @@ async def test_get_docs(
     [
         (
             "?age={unquoted_key:53}",
-            "Check query parameters: The value for key 'age' is invalid.",
+            "The value for query parameter 'age' is invalid.",
         ),
         (
             "?age=34&age=33",
@@ -139,3 +139,46 @@ async def test_get_docs_permission_error(http_method: str):
         )
         assert response.status_code == 403
         assert response.json() == {"detail": message}
+
+
+async def test_deletion_on_nonexistent_resources(mongodb: MongoDbFixture):
+    """Test delete method on nonexistent dbs, collections.
+
+    There should not be any error raised.
+    """
+    base_config = get_config(sources=[mongodb.config])
+    db_permissions = ["*.*:*"]
+    new_config = base_config.model_copy(update={"db_permissions": db_permissions})
+    config = get_config(sources=[new_config])
+
+    async with (
+        prepare_rest_app(config=config) as app,
+        AsyncTestClient(app=app) as client,
+    ):
+        # Insert documents into testdb.allops
+        await client.put(
+            f"/documents/{ALLOPS}",
+            headers={"Authorization": VALID_BEARER_TOKEN},
+            json={"documents": ALL_TEST_DOCS},
+        )
+
+        # Delete nonexistent db contents with fully specified namespace
+        response = await client.delete(
+            "/documents/nonexistent.nonexistent",
+            headers={"Authorization": VALID_BEARER_TOKEN},
+        )
+        assert response.status_code == 204
+
+        # Delete nonexistent db contents with wildcard collection
+        response = await client.delete(
+            "/documents/nonexistent.*",
+            headers={"Authorization": VALID_BEARER_TOKEN},
+        )
+        assert response.status_code == 204
+
+        # Delete nonexistent collection contents
+        response = await client.delete(
+            "/documents/testdb.doesnotexist",
+            headers={"Authorization": VALID_BEARER_TOKEN},
+        )
+        assert response.status_code == 204

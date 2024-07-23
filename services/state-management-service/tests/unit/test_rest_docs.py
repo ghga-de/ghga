@@ -101,6 +101,8 @@ class DummyDocsHandler(DocsHandlerPort):
         self.calls.append(call)
         if collection == "permission_error":
             raise PermissionError()
+        if db_name == "*" and collection != "*":
+            raise ValueError("Cannot use wildcard for db_name with specific collection")
 
 
 @asynccontextmanager
@@ -378,3 +380,30 @@ async def test_criteria_format_error_handling(http_method: str):
         )
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "namespace, expected_status_code",
+    [
+        ("test.*", 204),
+        ("*.testcoll.ection", 422),
+        ("*.*", 204),
+    ],
+    ids=["AllCollectionsInOneDb", "Invalid", "AllCollectionsInAllDbs"],
+)
+async def test_wildcard_deletion(namespace: str, expected_status_code: int):
+    """Test that a wildcard deletion is handled correctly."""
+    dummy_docs_handler = DummyDocsHandler()
+    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+        response = await client.delete(
+            url=f"/documents/{namespace}",
+            headers={"Authorization": VALID_BEARER_TOKEN},
+        )
+
+    assert response.status_code == expected_status_code
+    db_name, collection = namespace.split(".", 1)
+    assert dummy_docs_handler.calls == [
+        DocsApiCallArgs(
+            method="delete", db_name=db_name, collection=collection, criteria={}
+        )
+    ]

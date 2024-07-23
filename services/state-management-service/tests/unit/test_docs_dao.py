@@ -80,3 +80,59 @@ async def test_all_ops(mongodb: MongoDbFixture):
         # Delete all docs
         await docs_dao.delete(db_name=TESTDB, collection=ALLOPS, criteria={})
         assert not await docs_dao.get(db_name=TESTDB, collection=ALLOPS, criteria={})
+
+
+async def test_get_db_map_for_prefix(mongodb: MongoDbFixture):
+    """Test get_db_map_for_prefix method on the docs dao."""
+    config = get_config(sources=[mongodb.config])
+
+    db_name1 = "db1"
+    db_name2 = "db2"
+    expected_db_map = {db_name1: ["test", "test2"], db_name2: ["test1"]}
+
+    async with DocsDao(config=config) as docs_dao:
+        # MongoDbFixture reset only empties collections, it doesn't delete them
+        # so we need to drop the databases manually to verify the functionality
+        for db in await docs_dao._client.list_database_names():
+            if db.startswith(config.db_prefix):
+                await docs_dao._client.drop_database(db)
+
+        # Insert documents to create the expected db_map
+        for db_name, colls in expected_db_map.items():
+            for coll in colls:
+                await docs_dao._client[f"{config.db_prefix}{db_name}"][coll].insert_one(
+                    {"key": "value"}
+                )
+
+        assert not await docs_dao.get_db_map_for_prefix(prefix="db")
+        assert not await docs_dao.get_db_map_for_prefix(prefix="")
+        db_map = await docs_dao.get_db_map_for_prefix(prefix=config.db_prefix)
+        assert db_map == expected_db_map
+
+        db1_map = await docs_dao.get_db_map_for_prefix(
+            prefix=config.db_prefix, db_name=db_name1
+        )
+
+        assert db1_map == {db_name1: ["test", "test2"]}
+
+        assert await docs_dao.get_db_map_for_prefix(
+            prefix=config.db_prefix, db_name="nonexistent"
+        ) == {"nonexistent": []}
+
+
+async def test_deletion_on_nonexistent_resources(mongodb: MongoDbFixture):
+    """Test delete method on nonexistent dbs, collections.
+
+    There should not be any error raised.
+    """
+    config = get_config(sources=[mongodb.config])
+
+    async with DocsDao(config=config) as docs_dao:
+        await docs_dao._client["exists"]["exists"].insert_one({"key": "value"})
+        # Delete nonexistent db contents
+        await docs_dao.delete(
+            db_name="nonexistent", collection="nonexistent", criteria={}
+        )
+
+        # Delete nonexistent collection contents
+        await docs_dao.delete(db_name="exists", collection="nonexistent", criteria={})

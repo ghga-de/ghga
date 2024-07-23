@@ -106,7 +106,8 @@ paths:
           description: Validation Error
       security:
       - HTTPBearer: []
-      summary: Deletes all or some documents in the collection.
+      summary: Deletes all or some documents in the collection. No error is raised
+        if db or collection do not exist.
       tags:
       - StateManagementService
       - sms-mongodb

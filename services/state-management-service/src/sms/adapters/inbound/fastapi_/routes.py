@@ -122,7 +122,7 @@ async def get_docs(
     except DocsHandlerPort.CriteriaFormatError as err:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Check query parameters: {err}",
+            detail=str(err),
         ) from err
 
 
@@ -171,7 +171,8 @@ async def upsert_docs(
     "/documents/{namespace}",
     operation_id="delete_documents",
     tags=["StateManagementService", "sms-mongodb"],
-    summary="Deletes all or some documents in the collection.",
+    summary="Deletes all or some documents in the collection. No error is raised if db"
+    + " or collection do not exist.",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_docs(
@@ -202,8 +203,8 @@ async def delete_docs(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(err),
         ) from err
-    except DocsHandlerPort.CriteriaFormatError as err:
+    except (DocsHandlerPort.CriteriaFormatError, ValueError) as err:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Check query parameters: {err}",
+            detail=str(err),
         ) from err
