@@ -1,3 +1,4 @@
+allow_empty_prefix: false
 api_root_path: ''
 auto_reload: false
 cors_allow_credentials: null

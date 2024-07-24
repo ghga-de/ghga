@@ -16,11 +16,12 @@
 """Config Parameter Modeling and Parsing."""
 
 from re import split
+from typing import Self
 
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 SERVICE_NAME: str = "sms"
@@ -39,6 +40,13 @@ class SmsConfig(BaseSettings):
         default=...,
         description="Prefix to add to all database names used in the SMS.",
         examples=["testing-branch-name-"],
+    )
+    allow_empty_prefix: bool = Field(
+        default=False,
+        description="Only set to True for local testing. If False, `db_prefix` cannot be"
+        + " empty. This is to prevent accidental deletion of others' data in shared"
+        + " environments, i.e. staging.",
+        examples=[True, False],
     )
     db_permissions: list[str] = Field(
         default=[],
@@ -73,7 +81,7 @@ class SmsConfig(BaseSettings):
 
     @field_validator("db_permissions")
     @classmethod
-    def validate_permissions(cls, value):
+    def validate_permissions(cls, value) -> list[str] | None:
         """Validate the permissions to make sure only 'r', 'w', 'rw', and '*' are used.
 
         Rules are normalized by unpacking '*' into 'rw'.
@@ -97,6 +105,15 @@ class SmsConfig(BaseSettings):
                 )
             normalized_rules.append(f"{db_name}.{collection}:{ops}")
         return normalized_rules
+
+    @model_validator(mode="after")
+    def validate_prefix(self) -> Self:
+        """Make sure `db_prefix` and `allow_empty_prefix` are compatible."""
+        if not self.db_prefix and not self.allow_empty_prefix:
+            raise ValueError(
+                "'db_prefix' cannot be blank if 'allow_empty_prefix' is False!"
+            )
+        return self
 
 
 @config_from_yaml(prefix=SERVICE_NAME)

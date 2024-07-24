@@ -17,7 +17,7 @@
 import pytest
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
-from sms.adapters.outbound.docs_dao import DocsDao
+from sms.adapters.outbound.docs_dao import DEFAULT_DBS, DocsDao
 from sms.models import DocumentType
 from tests.fixtures.config import get_config
 
@@ -82,42 +82,50 @@ async def test_all_ops(mongodb: MongoDbFixture):
         assert not await docs_dao.get(db_name=TESTDB, collection=ALLOPS, criteria={})
 
 
-async def test_get_db_map_for_prefix(mongodb: MongoDbFixture):
+@pytest.mark.parametrize(
+    "prefix, db_name_arg, expected",
+    [
+        ("db", "", {}),
+        ("", "", {"test_db1": ["test", "test2"], "test_db2": ["test1"]}),
+        (None, "", {"db1": ["test", "test2"], "db2": ["test1"]}),
+        (None, "db1", {"db1": ["test", "test2"]}),
+        (None, "nonexistent", {"nonexistent": []}),
+        ("", "test_db1", {"test_db1": ["test", "test2"]}),
+    ],
+)
+async def test_get_db_map_for_prefix(
+    mongodb: MongoDbFixture,
+    prefix: str | None,
+    db_name_arg: str,
+    expected: dict[str, list[str]],
+):
     """Test get_db_map_for_prefix method on the docs dao."""
     config = get_config(sources=[mongodb.config])
+    if prefix is None:
+        prefix = config.db_prefix
 
     db_name1 = "db1"
     db_name2 = "db2"
-    expected_db_map = {db_name1: ["test", "test2"], db_name2: ["test1"]}
+    db_map_prefix_set = {db_name1: ["test", "test2"], db_name2: ["test1"]}
 
     async with DocsDao(config=config) as docs_dao:
         # MongoDbFixture reset only empties collections, it doesn't delete them
         # so we need to drop the databases manually to verify the functionality
         for db in await docs_dao._client.list_database_names():
-            if db.startswith(config.db_prefix):
+            if db not in DEFAULT_DBS:
                 await docs_dao._client.drop_database(db)
 
         # Insert documents to create the expected db_map
-        for db_name, colls in expected_db_map.items():
+        for db_name, colls in db_map_prefix_set.items():
             for coll in colls:
                 await docs_dao._client[f"{config.db_prefix}{db_name}"][coll].insert_one(
                     {"key": "value"}
                 )
 
-        assert not await docs_dao.get_db_map_for_prefix(prefix="db")
-        assert not await docs_dao.get_db_map_for_prefix(prefix="")
-        db_map = await docs_dao.get_db_map_for_prefix(prefix=config.db_prefix)
-        assert db_map == expected_db_map
-
-        db1_map = await docs_dao.get_db_map_for_prefix(
-            prefix=config.db_prefix, db_name=db_name1
+        results = await docs_dao.get_db_map_for_prefix(
+            prefix=prefix, db_name=db_name_arg
         )
-
-        assert db1_map == {db_name1: ["test", "test2"]}
-
-        assert await docs_dao.get_db_map_for_prefix(
-            prefix=config.db_prefix, db_name="nonexistent"
-        ) == {"nonexistent": []}
+        assert results == expected
 
 
 async def test_deletion_on_nonexistent_resources(mongodb: MongoDbFixture):
