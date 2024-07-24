@@ -80,8 +80,7 @@ paths:
       - sms-mongodb
   /documents/{namespace}:
     delete:
-      description: Upserts the document(s) provided in the request body in the specified
-        collection.
+      description: No error is raised if the db or collection do not exist.
       operationId: delete_documents
       parameters:
       - description: 'The database and collection to query. Format: db_name.collection'
@@ -95,6 +94,21 @@ paths:
           pattern: ^(?P<db>[^.\\/ \"$]{1,64})\.(?P<collection>[^$]{1,255})$
           title: Namespace
           type: string
+      - description: Query parameters used to specify the documents affected by the
+          request.
+        in: query
+        name: criteria
+        required: false
+        schema:
+          additionalProperties: true
+          description: Query parameters used to specify the documents affected by
+            the request.
+          examples:
+          - '{"name": "John"}'
+          - '{"_id": {"$ne": "507f1f77bcf86cd799439011"}}'
+          - '{"age": {"$gt": 21}}'
+          title: Criteria
+          type: object
       responses:
         '204':
           description: Successful Response
@@ -106,8 +120,7 @@ paths:
           description: Validation Error
       security:
       - HTTPBearer: []
-      summary: Deletes all or some documents in the collection. No error is raised
-        if db or collection do not exist.
+      summary: Deletes all or some documents in the collection.
       tags:
       - StateManagementService
       - sms-mongodb
@@ -126,6 +139,21 @@ paths:
           pattern: ^(?P<db>[^.\\/ \"$]{1,64})\.(?P<collection>[^$]{1,255})$
           title: Namespace
           type: string
+      - description: Query parameters used to specify the documents affected by the
+          request.
+        in: query
+        name: criteria
+        required: false
+        schema:
+          additionalProperties: true
+          description: Query parameters used to specify the documents affected by
+            the request.
+          examples:
+          - '{"name": "John"}'
+          - '{"_id": {"$ne": "507f1f77bcf86cd799439011"}}'
+          - '{"age": {"$gt": 21}}'
+          title: Criteria
+          type: object
       responses:
         '200':
           content:

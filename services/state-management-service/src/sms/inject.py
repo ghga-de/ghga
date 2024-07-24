@@ -64,7 +64,7 @@ async def prepare_rest_app(
 
     async with prepare_docs_handler_with_override(
         config=config, docs_handler_override=docs_handler_override
-    ) as docs_dao:
+    ) as docs_handler:
         app.dependency_overrides[dummies.config_dummy] = lambda: config
-        app.dependency_overrides[dummies.docs_handler_port] = lambda: docs_dao
+        app.dependency_overrides[dummies.docs_handler_port] = lambda: docs_handler
         yield app
