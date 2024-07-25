@@ -164,8 +164,8 @@ async def test_login_with_unregistered_user(
     session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     store = await get_session_store(config=CONFIG)
-    session_dict = await store.get_session(session_id)
-    assert session_dict
+    session = await store.get_session(session_id)
+    assert session
     assert response.cookies.get(SESSION_COOKIE) == session_id
     assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
@@ -213,8 +213,8 @@ async def test_login_with_registered_user(
     session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     store = await get_session_store(config=CONFIG)
-    session_dict = await store.get_session(session_id)
-    assert session_dict
+    session = await store.get_session(session_id)
+    assert session
     assert response.cookies.get(SESSION_COOKIE) == session_id
     assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
@@ -244,8 +244,8 @@ async def test_login_with_registered_user_and_name_change(
     session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     store = await get_session_store(config=CONFIG)
-    session_dict = await store.get_session(session_id)
-    assert session_dict
+    session = await store.get_session(session_id)
+    assert session
     assert response.cookies.get(SESSION_COOKIE) == session_id
     assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
@@ -274,8 +274,8 @@ async def test_login_with_registered_user_with_title(
     session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
     store = await get_session_store(config=CONFIG)
-    session_dict = await store.get_session(session_id)
-    assert session_dict
+    session = await store.get_session(session_id)
+    assert session
     assert response.cookies.get(SESSION_COOKIE) == session_id
     assert response.headers.get("Set-Cookie") == expected_set_cookie(session_id)
     assert_session_header(
@@ -376,14 +376,14 @@ async def test_login_with_cookie_and_registered_user(bare_client: BareClient):
     setup_daos()
 
     store = await get_session_store(config=CONFIG)
-    session_dict = await store.create_session(
+    session = await store.create_session(
         ext_id="john@aai.org",
         user_id="john@ghga.de",
         user_name="John Doe",
         user_email="john@home.org",
     )
-    assert await store.get_session(session_dict.session_id)
-    headers = headers_for_session(session_dict)
+    assert await store.get_session(session.session_id)
+    headers = headers_for_session(session)
     response = await bare_client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -411,14 +411,14 @@ async def test_login_with_cookie_and_registered_data_steward(bare_client: BareCl
     )
 
     store = await get_session_store(config=CONFIG)
-    session_dict = await store.create_session(
+    session = await store.create_session(
         ext_id="james@aai.org",
         user_id="james@ghga.de",
         user_name="James Steward",
         user_email="james@home.org",
     )
-    assert await store.get_session(session_dict.session_id)
-    headers = headers_for_session(session_dict)
+    assert await store.get_session(session.session_id)
+    headers = headers_for_session(session)
     response = await bare_client.post(LOGIN_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -437,22 +437,34 @@ async def test_login_with_cookie_and_registered_data_steward(bare_client: BareCl
     )
 
 
-async def test_login_with_cookie_and_invalid_csrf_token(bare_client: BareClient):
-    """Test login request with session cookie and invalid CSRF token."""
+async def test_login_with_cookie_but_without_csrf_token(bare_client: BareClient):
+    """Test login request with session cookie but no CSRF token.
+
+    It should be possible to login from a new browser tab using the session cookie.
+    """
+    setup_daos()
+
     store = await get_session_store(config=CONFIG)
     session = await store.create_session(
-        ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
+        ext_id="john@aai.org",
+        user_id="john@ghga.de",
+        user_name="John Doe",
+        user_email="john@home.org",
     )
-    original_session = session.model_copy()
     assert await store.get_session(session.session_id)
     headers = headers_for_session(session)
-    headers["X-CSRF-Token"] += "-invalidated"
+    del headers["X-CSRF-Token"]
     response = await bare_client.post(LOGIN_PATH, headers=headers)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert "X-CSRF-Token" not in response.headers
-    assert response.json() == {"detail": "Invalid or missing CSRF token"}
-
-    assert await store.get_session(session.session_id) == original_session
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
     assert SESSION_COOKIE not in response.cookies
-    assert "X-Session" not in response.headers
+    assert_session_header(
+        response,
+        {
+            "id": "john@ghga.de",
+            "ext_id": "john@aai.org",
+            "name": "John Doe",
+            "email": "john@home.org",
+            "state": "Registered",
+        },
+    )

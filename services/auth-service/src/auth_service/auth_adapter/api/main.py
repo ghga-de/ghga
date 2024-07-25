@@ -125,8 +125,8 @@ add_allowed_routes()
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def login(  # noqa: C901, PLR0913
+    request: Request,
     session_store: SessionStoreDependency,
-    session: SessionDependency,
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
     claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
@@ -138,7 +138,12 @@ async def login(  # noqa: C901, PLR0913
     When creating a new user session based on an OIDC access token,
     first call the logout endpoint to remove an existing session cookie.
     """
+    session_id = request.cookies.get(SESSION_COOKIE)
+    session = await session_store.get_session(session_id) if session_id else None
     if session:
+        # We do not check the CSRF token here so that we can login
+        # from a different browser tab which does not know the token.
+        # This is ok since it is an request that does not modify state.
         session_created = False
     else:
         access_token = get_bearer_token(authorization, x_authorization)
@@ -171,6 +176,7 @@ async def login(  # noqa: C901, PLR0913
 
     async def _is_data_steward(user: User) -> bool:
         """Check whether the given user is a data steward."""
+        # if the user exists, the account is active at this point
         return await is_data_steward(user.id, claim_dao=claim_dao)
 
     async def _has_totp_token(user: User) -> bool:

@@ -23,12 +23,13 @@ from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import IvaDao, UserDao
 from auth_service.user_management.user_registry.models.ivas import IvaState
+from auth_service.user_management.user_registry.models.users import UserStatus
 
 from ..deps import ClaimDao
 from ..models.claims import VisaType
 from .claims import is_data_steward_claim, is_valid_claim
 
-__all__ = ["user_exists", "iva_exists", "is_data_steward"]
+__all__ = ["user_exists", "user_with_iva_exists", "is_data_steward"]
 
 
 async def user_exists(user_id: str, *, user_dao: UserDao) -> bool:
@@ -42,7 +43,18 @@ async def user_exists(user_id: str, *, user_dao: UserDao) -> bool:
     return True
 
 
-async def iva_exists(
+async def user_is_active(user_id: str, *, user_dao: UserDao) -> bool:
+    """Check whether the user with the given ID exists and is active."""
+    if not user_id:
+        return False
+    try:
+        user = await user_dao.get_by_id(user_id)
+    except ResourceNotFoundError:
+        return False
+    return user.status == UserStatus.ACTIVE
+
+
+async def user_with_iva_exists(
     user_id: str, iva_id: str, *, user_dao: UserDao, iva_dao: IvaDao
 ) -> bool:
     """Check whether the specified user exists and has the specified IVA.
@@ -60,7 +72,7 @@ async def iva_exists(
 
 
 async def iva_is_verified(user_id: str, iva_id: str, *, iva_dao: IvaDao) -> bool:
-    """Check that the specied IVA exists, belongs to the given user and is verified."""
+    """Check that the specified IVA exists, belongs to the given user and is verified."""
     if not user_id or not iva_id:
         return False
     try:
@@ -77,11 +89,11 @@ async def is_data_steward(
     user_dao: UserDao | None = None,
     now: Callable[[], UTCDatetime] = now_as_utc,
 ):
-    """Check whether the user with the given ID is a data steward.
+    """Check whether the user with the given ID is an active data steward.
 
-    If no User DAO is provided, the user is assumed to exist.
+    If no User DAO is provided, the user is assumed to exist and be active.
     """
-    if user_dao and not await user_exists(user_id, user_dao=user_dao):
+    if user_dao and not await user_is_active(user_id, user_dao=user_dao):
         return False
     async for claim in claim_dao.find_all(
         mapping={"user_id": user_id, "visa_type": VisaType.GHGA_ROLE}

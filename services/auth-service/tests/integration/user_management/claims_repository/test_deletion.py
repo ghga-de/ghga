@@ -52,7 +52,7 @@ async def test_deletion_handler(
     claim = Claim(
         id="some-claim-id",
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-        visa_value="https://ghga.de/datasets/some-dataset-id",
+        visa_value="https://ghga.de/datasets/DS0815",
         assertion_date=now,
         valid_from=now,
         valid_until=now + timedelta(1),
@@ -70,7 +70,7 @@ async def test_deletion_handler(
 
     event_type = config.dataset_deletion_event_type
     event_topic = config.dataset_deletion_event_topic
-    payload = {"accession": "some-dataset-id"}
+    payload = {"accession": "DS0815"}
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         caplog.set_level(logging.INFO)
@@ -85,7 +85,7 @@ async def test_deletion_handler(
         ]
         assert len(messages) == 2, messages
         assert messages[0].startswith('Consuming event of type "dataset_deleted"')
-        assert messages[1] == "Deleted 1 claims for dataset some-dataset-id"
+        assert messages[1] == "Deleted 1 claims for dataset DS0815"
         with pytest.raises(NoHitsFoundError):
             assert not await claim_dao.find_one(mapping={"user_id": "some-user-id"})
 
@@ -97,4 +97,4 @@ async def test_deletion_handler(
         messages = [message for message in messages if "correlation" not in message]
         assert len(messages) == 2, messages
         assert messages[0].startswith('Consuming event of type "dataset_deleted"')
-        assert messages[1] == "Deleted 0 claims for dataset some-dataset-id"
+        assert messages[1] == "Deleted 0 claims for dataset DS0815"

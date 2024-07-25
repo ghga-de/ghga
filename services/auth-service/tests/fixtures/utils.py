@@ -414,7 +414,7 @@ class DummyClaimDao:
                 id="data-access-claim-id",
                 user_id="john@ghga.de",
                 visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
-                visa_value="https://ghga.de/datasets/some-dataset-id",
+                visa_value="https://ghga.de/datasets/DS0815",
                 source="https://ghga.de",  # type: ignore
                 assertion_date=valid_date - timedelta(14),
                 asserted_by=AuthorityLevel.DAC,

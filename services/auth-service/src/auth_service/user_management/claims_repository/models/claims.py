@@ -16,13 +16,14 @@
 """Claims model classes used as DTOs and core entities."""
 
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
     EmailStr,
     Field,
     HttpUrl,
+    StringConstraints,
     ValidationInfo,
     field_serializer,
     field_validator,
@@ -31,6 +32,7 @@ from pydantic import (
 from . import BaseDto
 
 __all__ = [
+    "Accession",
     "AuthorityLevel",
     "Claim",
     "ClaimCreation",
@@ -43,6 +45,12 @@ __all__ = [
     "MatchClaim",
     "MatchType",
     "VisaType",
+]
+
+
+# Accession format should be moved to the commons module
+Accession = Annotated[
+    str, StringConstraints(strip_whitespace=True, pattern="^[A-Z]{1,6}[0-9]{3,18}$")
 ]
 
 

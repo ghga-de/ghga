@@ -23,9 +23,10 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from auth_service.user_management.claims_repository.core.utils import (
     is_data_steward,
-    iva_exists,
     iva_is_verified,
     user_exists,
+    user_is_active,
+    user_with_iva_exists,
 )
 from auth_service.user_management.claims_repository.ports.dao import ClaimDao
 from auth_service.user_management.user_registry.models.ivas import (
@@ -33,6 +34,7 @@ from auth_service.user_management.user_registry.models.ivas import (
     IvaState,
     IvaType,
 )
+from auth_service.user_management.user_registry.models.users import UserStatus
 from auth_service.user_management.user_registry.ports.dao import IvaDao, UserDao
 
 from ....fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
@@ -40,12 +42,24 @@ from ....fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
 pytestmark = pytest.mark.asyncio(scope="module")
 
 
-async def test_user_exists():
+@pytest.mark.parametrize("status", [UserStatus.ACTIVE, UserStatus.INACTIVE])
+async def test_user_exists(status: UserStatus):
     """Test that existence of users can be checked."""
-    user_dao = cast(UserDao, DummyUserDao(id_="some-internal-id"))
+    user_dao = cast(UserDao, DummyUserDao(id_="some-internal-id", status=status))
     assert await user_exists(None, user_dao=user_dao) is False  # type: ignore
     assert await user_exists("some-internal-id", user_dao=user_dao) is True
     assert await user_exists("other-internal-id", user_dao=user_dao) is False
+
+
+@pytest.mark.parametrize("status", [UserStatus.ACTIVE, UserStatus.INACTIVE])
+async def test_active_user_exists(status: UserStatus):
+    """Test that existence of active users can be checked."""
+    user_dao = cast(UserDao, DummyUserDao(id_="some-internal-id", status=status))
+    assert await user_is_active(None, user_dao=user_dao) is False  # type: ignore
+    assert await user_is_active("some-internal-id", user_dao=user_dao) is (
+        status == UserStatus.ACTIVE
+    )
+    assert await user_is_active("other-internal-id", user_dao=user_dao) is False
 
 
 async def test_iva_exists():
@@ -65,13 +79,13 @@ async def test_iva_exists():
         "iva_dao": DummyIvaDao([iva]),
     }
 
-    assert await iva_exists(None, None, **kwargs) is False  # type: ignore
-    assert await iva_exists(None, iva_id, **kwargs) is False  # type: ignore
-    assert await iva_exists(user_id, None, **kwargs) is False  # type: ignore
-    assert await iva_exists("other-user-id", iva_id, **kwargs) is False  # type: ignore
-    assert await iva_exists(user_id, "other-iva-id", **kwargs) is False  # type: ignore
+    assert await user_with_iva_exists(None, None, **kwargs) is False  # type: ignore
+    assert await user_with_iva_exists(None, iva_id, **kwargs) is False  # type: ignore
+    assert await user_with_iva_exists(user_id, None, **kwargs) is False  # type: ignore
+    assert await user_with_iva_exists("other-user-id", iva_id, **kwargs) is False  # type: ignore
+    assert await user_with_iva_exists(user_id, "other-iva-id", **kwargs) is False  # type: ignore
 
-    assert await iva_exists(user_id, iva_id, **kwargs) is True  # type: ignore
+    assert await user_with_iva_exists(user_id, iva_id, **kwargs) is True  # type: ignore
 
 
 async def test_iva_exists_when_it_belongs_to_a_different_user():
@@ -91,8 +105,8 @@ async def test_iva_exists_when_it_belongs_to_a_different_user():
         "iva_dao": DummyIvaDao([iva]),
     }
 
-    assert await iva_exists(user_id, iva_id, **kwargs) is False  # type: ignore
-    assert await iva_exists("other-user-id", iva_id, **kwargs) is False  # type: ignore
+    assert await user_with_iva_exists(user_id, iva_id, **kwargs) is False  # type: ignore
+    assert await user_with_iva_exists("other-user-id", iva_id, **kwargs) is False  # type: ignore
 
 
 @pytest.mark.parametrize("state", IvaState.__members__.values())
@@ -127,12 +141,13 @@ async def test_is_data_steward():
     dummy_claim_dao = DummyClaimDao()
     invalid_date = dummy_claim_dao.invalid_date
     claim_dao = cast(ClaimDao, dummy_claim_dao)
+    user_dao = cast(UserDao, DummyUserDao())
+    assert not await is_data_steward(
+        "john@ghga.de", user_dao=user_dao, claim_dao=claim_dao
+    )
     user_dao = cast(UserDao, DummyUserDao(id_="james@ghga.de"))
     assert await is_data_steward(
         "james@ghga.de", user_dao=user_dao, claim_dao=claim_dao
-    )
-    assert not await is_data_steward(
-        "john@ghga.de", user_dao=user_dao, claim_dao=claim_dao
     )
     assert not await is_data_steward(
         "james@ghga.de",
@@ -140,10 +155,16 @@ async def test_is_data_steward():
         claim_dao=claim_dao,
         now=lambda: invalid_date,
     )
-    user_dao = cast(UserDao, DummyUserDao("jane@ghga.de"))
+    user_dao = cast(UserDao, DummyUserDao(id_="jane@ghga.de"))
     assert not await is_data_steward(
         "james@ghga.de", user_dao=user_dao, claim_dao=claim_dao
     )
     assert not await is_data_steward(
         "john@ghga.de", user_dao=user_dao, claim_dao=claim_dao
+    )
+    user_dao = cast(
+        UserDao, DummyUserDao(id_="james@ghga.de", status=UserStatus.INACTIVE)
+    )
+    assert not await is_data_steward(
+        "james@ghga.de", user_dao=user_dao, claim_dao=claim_dao
     )

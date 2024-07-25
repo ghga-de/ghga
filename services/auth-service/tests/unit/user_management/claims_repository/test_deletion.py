@@ -34,14 +34,14 @@ async def test_deletion_handler(caplog: pytest.LogCaptureFixture):
     records = caplog.records
     claim_dao = DummyClaimDao()
     handler = DatasetDeletionHandler(claim_dao=claim_dao)  # type: ignore
-    await handler.handle_dataset_deletion(dataset_id="non-existing-dataset-id")
+    await handler.handle_dataset_deletion(dataset_id="DS0819")
     assert len(records) == 1
-    assert records[0].message == "Deleted 0 claims for dataset non-existing-dataset-id"
+    assert records[0].message == "Deleted 0 claims for dataset DS0819"
     caplog.clear()
-    await handler.handle_dataset_deletion(dataset_id="some-dataset-id")
+    await handler.handle_dataset_deletion(dataset_id="DS0815")
     assert len(records) == 1
-    assert records[0].message == "Deleted 1 claims for dataset some-dataset-id"
+    assert records[0].message == "Deleted 1 claims for dataset DS0815"
     caplog.clear()
-    await handler.handle_dataset_deletion(dataset_id="some-dataset-id")
+    await handler.handle_dataset_deletion(dataset_id="DS0815")
     assert len(records) == 1
-    assert records[0].message == "Deleted 0 claims for dataset some-dataset-id"
+    assert records[0].message == "Deleted 0 claims for dataset DS0815"
