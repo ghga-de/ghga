@@ -82,7 +82,7 @@ async def test_create_work_order_token(
     mongodb_populated: MongoDbFixture,
 ):
     """Test that work order tokens can be properly created."""
-    # mock the access check for the test dataset
+    # mock the access check for the test dataset to grant access
 
     httpx_mock.add_response(
         method="GET",
@@ -186,29 +186,29 @@ async def test_create_work_order_token(
     )
     assert response.status_code == status.HTTP_201_CREATED
 
-    token = response.json()
-    assert isinstance(token, str)
+    wot = response.json()
+    assert isinstance(wot, str)
 
     # decrypt the work order token
 
-    assert token and isinstance(token, str) and token.isascii()
-    token = decrypt(token)
+    assert wot and isinstance(wot, str) and wot.isascii()
+    wot = decrypt(wot)
 
     # validate the work order token
 
-    assert isinstance(token, str)
-    assert len(token) > 80
-    assert token.count(".") == 2
-    token_chars = token.replace(".", "").replace("-", "").replace("_", "")
-    assert token_chars.isalnum()
-    assert token_chars.isascii()
-    token_dict = decode_and_validate_token(token, SIGNING_KEY_PAIR.public())
+    assert isinstance(wot, str)
+    assert len(wot) > 80
+    assert wot.count(".") == 2
+    wot_chars = wot.replace(".", "").replace("-", "").replace("_", "")
+    assert wot_chars.isalnum()
+    assert wot_chars.isascii()
+    wot_dict = decode_and_validate_token(wot, SIGNING_KEY_PAIR.public())
 
     # check the content of the work order token
 
-    assert isinstance(token_dict, dict)
-    assert token_dict.pop("exp") - token_dict.pop("iat") == 30
-    assert token_dict == {
+    assert isinstance(wot_dict, dict)
+    assert wot_dict.pop("exp") - wot_dict.pop("iat") == 30
+    assert wot_dict == {
         "type": "download",
         "file_id": "file-id-3",
         "user_id": "john-doe@ghga.de",
@@ -216,6 +216,24 @@ async def test_create_work_order_token(
         "full_user_name": "Dr. John Doe",
         "email": "john@home.org",
     }
+
+    # mock the access check for the test dataset to revoke access
+
+    httpx_mock.reset(assert_all_responses_were_requested=True)
+    httpx_mock.add_response(
+        method="GET",
+        url="http://access/users/john-doe@ghga.de/datasets/some-dataset-id",
+        text="false",
+    )
+
+    # try to fetch a work order token again
+
+    response = await client.post(
+        f"/work-packages/{work_package_id}/files/file-id-3/work-order-tokens",
+        headers=headers_for_token(token),
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "Access has been revoked" in response.json()["detail"]
 
 
 async def test_get_datasets_unauthenticated(client: AsyncTestClient):

@@ -257,6 +257,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         - if check_valid is set and the work package has expired
         - if a work_package_access_token is specified and it does not match
           the token hash that is stored in the work package
+        - if the access permission has been revoked
         """
         extra = {  # only used for logging
             "work_package_id": work_package_id,

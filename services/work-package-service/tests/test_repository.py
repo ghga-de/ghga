@@ -201,6 +201,25 @@ async def test_work_package_and_token_creation(
         "email": package.email,
     }
 
+    # revoke access and check that work order token cannot be created any more
+    async def check_download_access_patched(user_id: str, dataset_id: str) -> bool:
+        assert user_id == package.user_id
+        assert dataset_id == package.dataset_id
+        return False
+
+    access = repository._access
+    _check_download_access_original = access.check_download_access
+    try:
+        access.check_download_access = check_download_access_patched  # type: ignore
+        with pytest.raises(repository.WorkPackageAccessError):
+            await repository.work_order_token(
+                work_package_id=work_package_id,
+                file_id="file-id-1",
+                work_package_access_token=wpat,
+            )
+    finally:
+        access.check_download_access = _check_download_access_original  # type: ignore
+
 
 async def test_checking_accessible_datasets(
     repository: WorkPackageRepository,

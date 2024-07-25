@@ -47,7 +47,6 @@ __all__ = [
     "fixture_config",
     "fixture_repository",
     "fixture_client",
-    "fixture_consumer",
     "headers_for_token",
     "non_mocked_hosts",
     "Consumer",
