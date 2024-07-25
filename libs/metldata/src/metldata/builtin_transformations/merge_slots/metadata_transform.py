@@ -33,7 +33,8 @@ from metldata.transform.base import MetadataTransformationError
 def apply_merge_instruction_to_resource(
     *, resource: Json, merge_instruction: SlotMergeInstruction
 ) -> Json:
-    """Merge slots in a metadata resource according to the given instruction.
+    """Merge slots in a metadata resource according to the given instruction. Duplicate
+    values are removed.
 
     Args:
         resource: The resource to transform.
@@ -57,13 +58,16 @@ def apply_merge_instruction_to_resource(
             + f" of target class {merge_instruction.class_name}."
         )
 
-    modified_resource[merge_instruction.target_slot] = []
+    merged = []
     for source_slot in merge_instruction.source_slots:
         content = lookup_slot_in_resource(resource=resource, slot_name=source_slot)
         if isinstance(content, list):
-            modified_resource[merge_instruction.target_slot].extend(content)
+            merged.extend(content)
         else:
-            modified_resource[merge_instruction.target_slot].append(content)
+            merged.append(content)
+
+    # Remove duplicates and assign to target slot
+    modified_resource[merge_instruction.target_slot] = list(dict.fromkeys(merged))
 
     return modified_resource
 
