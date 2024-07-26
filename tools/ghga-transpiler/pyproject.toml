@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_transpiler"
-version = "2.1.5"
+version = "2.2.0"
 description = "GHGA-Transpiler - excel to JSON converter"
 dependencies = [
     "typer >= 0.12",
