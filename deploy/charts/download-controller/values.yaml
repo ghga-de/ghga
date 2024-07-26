@@ -77,15 +77,17 @@ parameters:
     port: 8080
     presigned_url_expires_after: 10
     retry_access_after: 120
-    object_storages:
-      test:
-        bucket: outbox
-        credentials:
-          aws_config_ini: null
-          s3_endpoint_url: null
-          s3_access_key_id: null
-          s3_secret_access_key: null
-          s3_session_token: null
+    
+    object_storages: {}
+    #   test:
+    #     bucket: outbox
+    #     credentials:
+    #       aws_config_ini: null
+    #       s3_endpoint_url: null
+    #       s3_access_key_id: null
+    #       s3_secret_access_key: null
+    #       s3_session_token: null
+    
     service_instance_id: 'dcs_1'
     service_name: dcs
     unstaged_download_event_topic: downloads

@@ -32,15 +32,16 @@ parameters:
     files_to_stage_topic: downloads
     service_instance_id: "consumer.1"
     service_name: internal_file_registry
-    object_storages:
-      test:
-        bucket: permanent
-        credentials:
-          aws_config_ini: null
-          s3_access_key_id: null
-          s3_endpoint_url: null
-          s3_secret_access_key: null
-          s3_session_token: null
+
+    object_storages: {}
+    #   test:
+    #     bucket: permanent
+    #     credentials:
+    #       aws_config_ini: null
+    #       s3_endpoint_url: null
+    #       s3_access_key_id: null
+    #       s3_secret_access_key: null
+    #       s3_session_token: null
 
 shareProcessNamespace: false
 kafkaSecrets:
