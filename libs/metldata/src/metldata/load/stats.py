@@ -32,15 +32,20 @@ from metldata.load.aggregator import DbAggregator
 STATS_COLLECTION_NAME = "stats"
 
 
+# the following should be made configurable
+
+
 def get_stat_slot(resource_class: str) -> str | None:
     """Get the name of the slot that shall be used as grouping key."""
     if resource_class.endswith("File"):
         return "format"
-    if resource_class.endswith("Protocol"):
+    if resource_class.endswith("Protocol"):  # v1
         return "type"
-    if resource_class.endswith("Individual"):
-        return "sex"
-    return None
+    return {
+        "Individual": "sex",
+        "Sample": "type",
+        "ExperimentMethod": "instrument_model",  # v2
+    }.get(resource_class)
 
 
 async def create_stats_using_aggregator(
