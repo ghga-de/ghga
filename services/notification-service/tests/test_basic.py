@@ -16,10 +16,12 @@
 """Test basic event consumption"""
 
 import html
+import json
 from hashlib import sha256
 from typing import cast
 
 import pytest
+from hexkit.correlation import correlation_id_var
 
 from ns.adapters.outbound.smtp_client import SmtpClient
 from ns.core.models import NotificationRecord
@@ -30,6 +32,8 @@ from tests.fixtures.utils import make_notification
 
 pytestmark = pytest.mark.asyncio()
 
+TEST_CORRELATION_ID = "6914c8cd-1f18-43da-ac6c-c43cca3f36cc"
+
 sample_notification = {
     "recipient_email": "test@example.com",
     "email_cc": ["test2@test.com", "test3@test.com"],
@@ -38,6 +42,16 @@ sample_notification = {
     "recipient_name": "Yolanda Martinez",
     "plaintext_body": "Where are you, where are you, Yolanda?",
 }
+
+
+@pytest.fixture(autouse=True)
+def correlation_id_fixture():
+    """Provides a new correlation ID for each test case."""
+    # we cannot use an async fixture with set_correlation_id(),
+    # because it would run in a different context from the test
+    token = correlation_id_var.set(TEST_CORRELATION_ID)
+    yield
+    correlation_id_var.reset(token)
 
 
 @pytest.mark.parametrize(
@@ -61,7 +75,7 @@ async def test_email_construction(
     plaintext_body = msg.get_body(preferencelist="plain")
     assert plaintext_body is not None
 
-    plaintext_content = plaintext_body.get_content()  # type: ignore
+    plaintext_content = plaintext_body.get_content()
     expected_plaintext = (
         "Dear Yolanda Martinez,\n\nWhere are you, where are you, Yolanda?\n"
         + "\nWarm regards,\n\nThe GHGA Team"
@@ -71,7 +85,7 @@ async def test_email_construction(
     html_body = msg.get_body(preferencelist="html")
     assert html_body is not None
 
-    html_content = html_body.get_content()  # type: ignore
+    html_content = html_body.get_content()
     assert html_content is not None
 
     expected_html = (
@@ -149,9 +163,11 @@ async def test_helper_functions(joint_fixture: JointFixture):
     notification = make_notification(sample_notification)
 
     # manually create a NotificationRecord for the notification
+    concatenated = TEST_CORRELATION_ID + json.dumps(
+        notification.model_dump(), sort_keys=True
+    )
     expected_record = NotificationRecord(
-        hash_sum=sha256(notification.model_dump_json().encode("utf-8")).hexdigest(),
-        sent=False,
+        hash_sum=sha256(concatenated.encode("utf-8")).hexdigest(), sent=False
     )
 
     # Now create the record using the notifier's function and compare
@@ -198,6 +214,7 @@ async def test_idempotence_and_transmission(joint_fixture: JointFixture):
     joint_fixture.notifier = cast(Notifier, joint_fixture.notifier)
 
     notification_event = make_notification(sample_notification)
+
     await joint_fixture.kafka.publish_event(
         payload=notification_event.model_dump(),
         type_=joint_fixture.config.notification_event_type,
@@ -208,6 +225,12 @@ async def test_idempotence_and_transmission(joint_fixture: JointFixture):
     record = joint_fixture.notifier._create_notification_record(
         notification=notification_event
     )
+
+    # verify the hash is generated with the keys sorted and correlation ID prepended
+    concatenated = TEST_CORRELATION_ID + json.dumps(
+        notification_event.model_dump(), sort_keys=True
+    )
+    assert record.hash_sum == sha256(concatenated.encode("utf-8")).hexdigest()
 
     # the record hasn't been sent, so this should return False
     assert not await joint_fixture.notifier._has_been_sent(hash_sum=record.hash_sum)
@@ -267,7 +290,7 @@ async def test_html_escaping(joint_fixture: JointFixture):
     plaintext_body = msg.get_body(preferencelist="plain")
     assert plaintext_body is not None
 
-    plaintext_content = plaintext_body.get_content()  # type: ignore
+    plaintext_content = plaintext_body.get_content()
     expected_plaintext = (
         f"Dear {original_name},\n\n{original_body}\n"
         + "\nWarm regards,\n\nThe GHGA Team"
@@ -277,7 +300,7 @@ async def test_html_escaping(joint_fixture: JointFixture):
     html_body = msg.get_body(preferencelist="html")
     assert html_body is not None
 
-    html_content = html_body.get_content()  # type: ignore
+    html_content = html_body.get_content()
     assert html_content is not None
 
     expected_html = (

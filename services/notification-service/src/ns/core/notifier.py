@@ -16,6 +16,7 @@
 """Contains the concrete implementation of a NotifierPort"""
 
 import html
+import json
 import logging
 from contextlib import suppress
 from email.message import EmailMessage
@@ -24,6 +25,7 @@ from hashlib import sha256
 from string import Template
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from hexkit.correlation import get_correlation_id
 from pydantic import EmailStr, Field
 from pydantic_settings import BaseSettings
 
@@ -72,8 +74,11 @@ class Notifier(NotifierPort):
     def _create_notification_record(
         self, *, notification: event_schemas.Notification
     ) -> models.NotificationRecord:
-        """Creates a notification record from a notification event"""
-        hash_sum = sha256(notification.model_dump_json().encode("utf-8")).hexdigest()
+        """Creates a notification record from a notification event and correlation ID."""
+        correlation_id = get_correlation_id()
+        notification_str = json.dumps(notification.model_dump(), sort_keys=True)
+        concatenated = correlation_id + notification_str
+        hash_sum = sha256(concatenated.encode("utf-8")).hexdigest()
         return models.NotificationRecord(hash_sum=hash_sum, sent=False)
 
     async def _has_been_sent(self, *, hash_sum: str) -> bool:
