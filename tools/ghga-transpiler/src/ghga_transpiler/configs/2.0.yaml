@@ -39,6 +39,8 @@ worksheets:
           !!python/object/apply:ghga_transpiler.transformations.to_attributes []
         types:
           !!python/object/apply:ghga_transpiler.transformations.to_snake_case_list []
+        attributes:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
     sheet_name: Study
   - settings:
       end_column: 10
@@ -84,6 +86,8 @@ worksheets:
           !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
         biospecimen_storage:
           !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        attributes:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
     sheet_name: Sample
   - settings:
       end_column: 23
@@ -113,6 +117,8 @@ worksheets:
           !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
         sequencing_layout:
           !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        attributes:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
     sheet_name: ExperimentMethod
   - settings:
       end_column: 7
@@ -128,6 +134,8 @@ worksheets:
       transformations:
         experiments:
           !!python/object/apply:ghga_transpiler.transformations.to_list []
+        format:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
     sheet_name: ResearchDataFile
   - settings:
       end_column: 7
