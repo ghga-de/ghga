@@ -189,7 +189,7 @@ class DataRepository(DataRepositoryPort):
                 decrypted_sha256=drs_object.decrypted_sha256,
             )
 
-            await self._nonstaged_file_requested_dao.insert(unstaged_file_dto)
+            await self._nonstaged_file_requested_dao.upsert(unstaged_file_dto)
 
             # instruct to retry later:
             raise self.RetryAccessLaterError(
