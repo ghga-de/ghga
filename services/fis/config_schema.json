@@ -188,16 +188,16 @@
     "file_upload_validation_success_topic": {
       "description": "The name of the topic use to publish FileUploadValidationSuccess events.",
       "examples": [
-        "file_upload_validation_success"
+        "file-upload-validation-success"
       ],
       "title": "File Upload Validation Success Topic",
       "type": "string"
     },
     "file_validations_collection": {
-      "default": "file-validations",
+      "default": "fileValidations",
       "description": "The name of the collection used to store FileUploadValidationSuccess events.",
       "examples": [
-        "file-validations"
+        "fileValidations"
       ],
       "title": "File Validations Collection",
       "type": "string"

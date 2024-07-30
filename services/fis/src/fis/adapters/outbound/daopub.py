@@ -30,15 +30,15 @@ class OutboxDaoConfig(BaseSettings):
         description=(
             "The name of the topic use to publish FileUploadValidationSuccess events."
         ),
-        examples=["file_upload_validation_success"],
+        examples=["file-upload-validation-success"],
     )
 
     file_validations_collection: str = Field(
-        default="file-validations",
+        default="fileValidations",
         description=(
             "The name of the collection used to store FileUploadValidationSuccess events."
         ),
-        examples=["file-validations"],
+        examples=["fileValidations"],
     )
 
 
