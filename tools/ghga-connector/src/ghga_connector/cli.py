@@ -154,7 +154,7 @@ def retrieve_download_parameters(
 def get_work_package_information(
     my_private_key: bytes, message_display: core.AbstractMessageDisplay
 ):
-    """Fetch a work packge id and work package token and decrypt the token"""
+    """Fetch a work package id and work package token and decrypt the token"""
     # get work package access token and id from user input
     work_package_id, work_package_token = core.get_wps_token(
         max_tries=3, message_display=message_display
@@ -163,32 +163,6 @@ def get_work_package_information(
     return WorkPackageInformation(
         decrypted_token=decrypted_token, package_id=work_package_id
     )
-
-
-def init_file_stager(
-    *,
-    dcs_api_url: str,
-    file_ids_with_extension: dict[str, str],
-    message_display: CLIMessageDisplay,
-    output_dir: Path,
-    work_package_accessor: core.WorkPackageAccessor,
-) -> core.FileStager:
-    """Initialize file stager for download"""
-    io_handler = core.CliIoHandler()
-    staging_parameters = core.StagingParameters(
-        api_url=dcs_api_url,
-        file_ids_with_extension=file_ids_with_extension,
-        max_wait_time=CONFIG.max_wait_time,
-    )
-
-    file_stager = core.FileStager(
-        message_display=message_display,
-        io_handler=io_handler,
-        staging_parameters=staging_parameters,
-        work_package_accessor=work_package_accessor,
-    )
-    file_stager.check_and_stage(output_dir=output_dir)
-    return file_stager
 
 
 cli = typer.Typer(no_args_is_help=True)
@@ -282,15 +256,17 @@ def download(
         work_package_information=work_package_information,
     )
 
-    file_stager = init_file_stager(
+    stager = core.FileStager(
+        wanted_file_ids=list(parameters.file_ids_with_extension),
         dcs_api_url=parameters.dcs_api_url,
-        file_ids_with_extension=parameters.file_ids_with_extension,
-        message_display=message_display,
         output_dir=output_dir,
+        max_wait_time=CONFIG.max_wait_time,
+        message_display=message_display,
         work_package_accessor=parameters.work_package_accessor,
     )
-    while file_stager.file_ids_remain():
-        for file_id in file_stager.get_staged():
+    while not stager.finished:
+        staged_files = stager.get_staged_files()
+        for file_id in staged_files:
             message_display.display(f"Downloading file with id '{file_id}'...")
             core.download(
                 api_url=parameters.dcs_api_url,
@@ -302,7 +278,7 @@ def download(
                 message_display=message_display,
                 work_package_accessor=parameters.work_package_accessor,
             )
-        file_stager.update_staged_files()
+        staged_files.clear()
 
 
 @cli.command(no_args_is_help=True)

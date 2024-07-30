@@ -30,7 +30,6 @@ from .constants import (  # noqa: F401
 from .downloading.batch_processing import (  # noqa: F401
     CliIoHandler,
     FileStager,
-    StagingParameters,
 )
 from .main import decrypt_file, download, get_wps_token, upload  # noqa: F401
 from .message_display import AbstractMessageDisplay, MessageColors  # noqa: F401
