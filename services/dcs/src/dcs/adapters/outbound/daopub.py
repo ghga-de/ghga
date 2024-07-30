@@ -31,7 +31,7 @@ class OutboxDaoConfig(BaseSettings):
             "Name of the topic used for events indicating that a download was requested"
             + " for a file that is not yet available in the outbox."
         ),
-        examples=["file_downloads"],
+        examples=["file-downloads"],
     )
     unstaged_download_collection: str = Field(
         default=...,
@@ -40,7 +40,7 @@ class OutboxDaoConfig(BaseSettings):
             + " for a file that is not yet available in the outbox. The"
             + " value should use hyphens in place of underscores if needed."
         ),
-        examples=["unstaged-download-requested"],
+        examples=["unstagedDownloadRequested"],
     )
 
 

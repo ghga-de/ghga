@@ -35,7 +35,7 @@ class EventPubTranslatorConfig(BaseSettings):
             "Name of the topic used for events indicating that a download of a"
             + " specified file happened."
         ),
-        examples=["file_downloads"],
+        examples=["file-downloads"],
     )
     download_served_event_type: str = Field(
         default=...,
@@ -51,7 +51,7 @@ class EventPubTranslatorConfig(BaseSettings):
             "Name of the topic used for events indicating that a file has"
             + " been registered for download."
         ),
-        examples=["file_downloads"],
+        examples=["file-downloads"],
     )
     file_registered_event_type: str = Field(
         default=...,
@@ -65,7 +65,7 @@ class EventPubTranslatorConfig(BaseSettings):
         default=...,
         description="Name of the topic used for events indicating that a file has"
         + " been deleted.",
-        examples=["file_downloads"],
+        examples=["file-downloads"],
     )
     file_deleted_event_type: str = Field(
         default=...,

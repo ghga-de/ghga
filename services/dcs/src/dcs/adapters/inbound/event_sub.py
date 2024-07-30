@@ -47,7 +47,7 @@ class EventSubTranslatorConfig(BaseSettings):
             "The name of the topic to receive events informing about new files that shall"
             + " be made available for download."
         ),
-        examples=["internal_file_registry"],
+        examples=["internal-file-registry"],
     )
     files_to_register_type: str = Field(
         default=...,
@@ -109,7 +109,7 @@ class OutboxSubTranslatorConfig(BaseSettings):
     files_to_delete_topic: str = Field(
         default=...,
         description="The name of the topic to receive events informing about files to delete.",
-        examples=["file_deletions"],
+        examples=["file-deletions"],
     )
 
 
