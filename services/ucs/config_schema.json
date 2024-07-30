@@ -100,7 +100,7 @@
     "file_upload_received_topic": {
       "description": "The name of the topic use to publish FileUploadReceived events.",
       "examples": [
-        "file_upload_received"
+        "file-upload-received"
       ],
       "title": "File Upload Received Topic",
       "type": "string"
@@ -108,7 +108,7 @@
     "file_upload_received_collection": {
       "description": "The name of the collection used to store FileUploadReceived events. The value should use hyphens in place of underscores if needed.",
       "examples": [
-        "file-uploads"
+        "fileUploads"
       ],
       "title": "File Upload Received Collection",
       "type": "string"
@@ -116,7 +116,7 @@
     "file_deleted_event_topic": {
       "description": "Name of the topic used for events indicating that a file has been deleted.",
       "examples": [
-        "file_downloads"
+        "file-downloads"
       ],
       "title": "File Deleted Event Topic",
       "type": "string"
@@ -148,7 +148,7 @@
     "file_metadata_event_type": {
       "description": "The type used for events to receive new or changed metadata on files that are expected to be uploaded.",
       "examples": [
-        "file_metadata_upserts"
+        "file_metadata_upserted"
       ],
       "title": "File Metadata Event Type",
       "type": "string"
@@ -156,7 +156,7 @@
     "upload_accepted_event_topic": {
       "description": "Name of the topic to receive event that indicate that an upload was by downstream services.",
       "examples": [
-        "internal_file_registry"
+        "internal-file-registry"
       ],
       "title": "Upload Accepted Event Topic",
       "type": "string"
@@ -172,7 +172,7 @@
     "upload_rejected_event_topic": {
       "description": "Name of the topic used for events informing about rejection of an upload by downstream services due to validation failure.",
       "examples": [
-        "file_interrogation"
+        "file-interrogation"
       ],
       "title": "Upload Rejected Event Topic",
       "type": "string"
@@ -180,7 +180,7 @@
     "upload_rejected_event_type": {
       "description": "The type used for events informing about the failure of a file validation.",
       "examples": [
-        "file_validation_failure"
+        "file_validation_failed"
       ],
       "title": "Upload Rejected Event Type",
       "type": "string"

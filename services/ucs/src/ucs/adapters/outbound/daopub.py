@@ -28,7 +28,7 @@ class OutboxDaoConfig(BaseSettings):
     file_upload_received_topic: str = Field(
         default=...,
         description=("The name of the topic use to publish FileUploadReceived events."),
-        examples=["file_upload_received"],
+        examples=["file-upload-received"],
     )
 
     file_upload_received_collection: str = Field(
@@ -37,7 +37,7 @@ class OutboxDaoConfig(BaseSettings):
             "The name of the collection used to store FileUploadReceived events. The"
             + " value should use hyphens in place of underscores if needed."
         ),
-        examples=["file-uploads"],
+        examples=["fileUploads"],
     )
 
 
