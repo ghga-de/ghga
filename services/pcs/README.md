@@ -26,13 +26,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/purge-controller-service):
 ```bash
-docker pull ghga/purge-controller-service:2.0.1
+docker pull ghga/purge-controller-service:2.0.2
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/purge-controller-service:2.0.1 .
+docker build -t ghga/purge-controller-service:2.0.2 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -40,7 +40,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/purge-controller-service:2.0.1 --help
+docker run -p 8080:8080 ghga/purge-controller-service:2.0.2 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -57,13 +57,13 @@ pcs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`file_deletions_collection`** *(string)*: The name of the collection used to store file deletion requests. Default: `"file-deletions"`.
+- **`file_deletions_collection`** *(string)*: The name of the collection used to store file deletion requests. Default: `"fileDeletions"`.
 
 
   Examples:
 
   ```json
-  "file-deletions"
+  "fileDeletions"
   ```
 
 
@@ -73,7 +73,7 @@ The service requires the following configuration parameters:
   Examples:
 
   ```json
-  "file_deletions"
+  "file-deletions"
   ```
 
 

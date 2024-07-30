@@ -3,10 +3,10 @@
   "description": "Modifies the orginal Settings class provided by the user",
   "properties": {
     "file_deletions_collection": {
-      "default": "file-deletions",
+      "default": "fileDeletions",
       "description": "The name of the collection used to store file deletion requests.",
       "examples": [
-        "file-deletions"
+        "fileDeletions"
       ],
       "title": "File Deletions Collection",
       "type": "string"
@@ -14,7 +14,7 @@
     "files_to_delete_topic": {
       "description": "The name of the topic to receive events informing about files to delete.",
       "examples": [
-        "file_deletions"
+        "file-deletions"
       ],
       "title": "Files To Delete Topic",
       "type": "string"

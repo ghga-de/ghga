@@ -28,14 +28,14 @@ class OutboxDaoConfig(BaseSettings):
     """Configuration for the outbox DAO and publishing events"""
 
     file_deletions_collection: str = Field(
-        default="file-deletions",
+        default="fileDeletions",
         description="The name of the collection used to store file deletion requests.",
-        examples=["file-deletions"],
+        examples=["fileDeletions"],
     )
     files_to_delete_topic: str = Field(
         default=...,
         description="The name of the topic to receive events informing about files to delete.",
-        examples=["file_deletions"],
+        examples=["file-deletions"],
     )
 
 

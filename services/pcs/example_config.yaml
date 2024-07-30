@@ -5,10 +5,10 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 db_connection_str: '**********'
-db_name: dev_db
+db_name: dev
 docs_url: /docs
-file_deletions_collection: file-deletions
-files_to_delete_topic: file_deletions
+file_deletions_collection: fileDeletions
+files_to_delete_topic: file-deletions
 generate_correlation_id: true
 host: 127.0.0.1
 kafka_security_protocol: PLAINTEXT
