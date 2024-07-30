@@ -33,7 +33,7 @@ class EventPubTranslatorConfig(BaseSettings):
         ...,
         description="Name of the topic used for events indicating that a new file has"
         + " been internally registered.",
-        examples=["internal_file_registry"],
+        examples=["internal-file-registry"],
     )
     file_registered_event_type: str = Field(
         ...,
@@ -45,7 +45,7 @@ class EventPubTranslatorConfig(BaseSettings):
         ...,
         description="Name of the topic used for events indicating that a new file has"
         + " been internally registered.",
-        examples=["internal_file_registry"],
+        examples=["internal-file-registry"],
     )
     file_staged_event_type: str = Field(
         ...,
@@ -57,7 +57,7 @@ class EventPubTranslatorConfig(BaseSettings):
         ...,
         description="Name of the topic used for events indicating that a file has"
         + " been deleted.",
-        examples=["internal_file_registry"],
+        examples=["internal-file-registry"],
     )
     file_deleted_event_type: str = Field(
         ...,

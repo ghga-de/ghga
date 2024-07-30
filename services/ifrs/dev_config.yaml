@@ -1,5 +1,5 @@
 db_connection_str: "mongodb://mongodb:27017"
-db_name: "dev_db"
+db_name: "dev"
 object_storages:
   test:
     bucket: permanent
@@ -9,12 +9,12 @@ object_storages:
       s3_secret_access_key: test
 service_instance_id: "001"
 kafka_servers: ["kafka:9092"]
-files_to_register_topic: file_interrogation
-files_to_stage_topic: file_downloads
-files_to_delete_topic: file_deletions
-file_registered_event_topic: internal_file_registry
+files_to_register_topic: file-interrogations
+files_to_stage_topic: file-downloads
+files_to_delete_topic: file-deletions
+file_registered_event_topic: internal-file-registry
 file_registered_event_type: file_registered
-file_staged_event_topic: internal_file_registry
+file_staged_event_topic: internal-file-registry
 file_staged_event_type: file_staged_for_download
-file_deleted_event_topic: internal_file_registry
+file_deleted_event_topic: internal-file-registry
 file_deleted_event_type: file_deleted

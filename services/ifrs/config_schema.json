@@ -157,7 +157,7 @@
     "file_registered_event_topic": {
       "description": "Name of the topic used for events indicating that a new file has been internally registered.",
       "examples": [
-        "internal_file_registry"
+        "internal-file-registry"
       ],
       "title": "File Registered Event Topic",
       "type": "string"
@@ -173,7 +173,7 @@
     "file_staged_event_topic": {
       "description": "Name of the topic used for events indicating that a new file has been internally registered.",
       "examples": [
-        "internal_file_registry"
+        "internal-file-registry"
       ],
       "title": "File Staged Event Topic",
       "type": "string"
@@ -189,7 +189,7 @@
     "file_deleted_event_topic": {
       "description": "Name of the topic used for events indicating that a file has been deleted.",
       "examples": [
-        "internal_file_registry"
+        "internal-file-registry"
       ],
       "title": "File Deleted Event Topic",
       "type": "string"
@@ -205,7 +205,7 @@
     "files_to_delete_topic": {
       "description": "The name of the topic to receive events informing about files to delete.",
       "examples": [
-        "file_deletions"
+        "file-deletions"
       ],
       "title": "Files To Delete Topic",
       "type": "string"
@@ -213,7 +213,7 @@
     "files_to_register_topic": {
       "description": "The name of the topic to receive events informing about new files to register.",
       "examples": [
-        "file_interrogation"
+        "file-interrogations"
       ],
       "title": "Files To Register Topic",
       "type": "string"
@@ -221,7 +221,7 @@
     "files_to_stage_topic": {
       "description": "The name of the topic to receive events informing about files to stage.",
       "examples": [
-        "file_downloads"
+        "file-downloads"
       ],
       "title": "Files To Stage Topic",
       "type": "string"
