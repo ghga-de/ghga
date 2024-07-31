@@ -17,6 +17,7 @@
 """Config parameters and their defaults."""
 
 from ghga_service_commons.api import ApiConfigBase
+from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
@@ -33,6 +34,7 @@ class ArtifactLoaderAPIConfig(
     EventPubTranslatorConfig,
     KafkaConfig,
     MongoDbConfig,
+    LoggingConfig,
 ):
     """Config settings for the loader API."""
 

@@ -21,6 +21,7 @@ import functools
 
 import typer
 from ghga_service_commons.api import run_server
+from hexkit.log import configure_logging
 
 from metldata.combined import get_app
 from metldata.config import Config
@@ -43,5 +44,6 @@ def run_sync(coroutine):
 async def run_api() -> None:
     """Run the combined loader and query API."""
     config = Config()  # type: ignore
+    configure_logging(config=config)
     app = await get_app(config=config)
     await run_server(app=app, config=config)
