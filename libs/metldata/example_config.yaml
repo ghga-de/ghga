@@ -205,6 +205,7 @@ db_name: dev_db
 docs_url: /docs
 generate_correlation_id: true
 host: 127.0.0.1
+kafka_max_message_size: 1048576
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092

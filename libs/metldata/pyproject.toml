@@ -21,10 +21,10 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "metldata"
-version = "2.0.1"
+version = "2.1.0"
 description = "metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing."
 dependencies = [
-    "hexkit[akafka,mongodb] >=3, <4",
+    "hexkit[akafka,mongodb] ~= 3.5.0",
     "ghga-service-commons[api,auth] >=3.1.1, <4",
     "ghga-event-schemas >=3.0.0, <4",
     "typer>=0.12",
