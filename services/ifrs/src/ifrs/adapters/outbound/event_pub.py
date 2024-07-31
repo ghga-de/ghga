@@ -106,7 +106,7 @@ class EventPubTranslator(EventPublisherPort):
             key=file.file_id,
         )
 
-    async def file_staged_for_download(  # noqa: PLR0913
+    async def file_staged_for_download(
         self,
         *,
         file_id: str,
