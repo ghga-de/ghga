@@ -294,7 +294,50 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`retry_access_after`** *(integer)*: When trying to access a DRS object that is not yet in the outbox, instruct to retry after this many seconds. Default: `120`.
+- **`staging_speed`** *(integer)*: When trying to access a DRS object that is not yet in the outbox, assume that this many megabytes can be staged per second. Default: `100`.
+
+
+  Examples:
+
+  ```json
+  100
+  ```
+
+
+  ```json
+  500
+  ```
+
+
+- **`retry_after_min`** *(integer)*: When trying to access a DRS object that is not yet in the outbox, wait at least this number of seconds before trying again. Default: `5`.
+
+
+  Examples:
+
+  ```json
+  5
+  ```
+
+
+  ```json
+  10
+  ```
+
+
+- **`retry_after_max`** *(integer)*: When trying to access a DRS object that is not yet in the outbox, wait at most this number of seconds before trying again. Default: `300`.
+
+
+  Examples:
+
+  ```json
+  30
+  ```
+
+
+  ```json
+  300
+  ```
+
 
 - **`ekss_base_url`** *(string)*: URL containing host and port of the EKSS endpoint to retrieve personalized envelope from.
 
@@ -316,7 +359,25 @@ The service requires the following configuration parameters:
   ```
 
 
+  ```json
+  60
+  ```
+
+
 - **`cache_timeout`** *(integer)*: Time in days since last access after which a file present in the outbox should be unstaged and has to be requested from permanent storage again for the next request. Default: `7`.
+
+
+  Examples:
+
+  ```json
+  7
+  ```
+
+
+  ```json
+  30
+  ```
+
 
 - **`auth_key`** *(string)*: The GHGA internal public key for validating the token signature.
 

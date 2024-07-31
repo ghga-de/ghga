@@ -107,9 +107,9 @@ async def test_happy_journey(
     ):
         response = await joint_fixture.rest_client.get(f"/objects/{drs_id}", timeout=5)
     assert response.status_code == status.HTTP_202_ACCEPTED
-    assert (
-        int(response.headers["Retry-After"]) == joint_fixture.config.retry_access_after
-    )
+    retry_after = int(response.headers["Retry-After"])
+    # the example file is small, so we expect the minimum wait time
+    assert retry_after == joint_fixture.config.retry_after_min
 
     # place the requested file into the outbox bucket (it is not important here that
     # the file content does not match the announced decrypted_sha256 checksum):

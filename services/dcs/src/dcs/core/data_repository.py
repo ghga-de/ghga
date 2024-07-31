@@ -49,32 +49,52 @@ class DataRepositoryConfig(BaseSettings):
     """Config parameters needed for the DataRepository."""
 
     drs_server_uri: str = Field(
-        default=...,
-        description="The base of the DRS URI to access DRS objects. Has to start with 'drs://'"
-        + " and end with '/'.",
+        ...,
+        description="The base of the DRS URI to access DRS objects."
+        + " Has to start with 'drs://' and end with '/'.",
+        title="DRS server URI",
         examples=["drs://localhost:8080/"],
     )
-    retry_access_after: int = Field(
-        default=120,
-        description="When trying to access a DRS object that is not yet in the outbox, instruct"
-        + " to retry after this many seconds.",
+    staging_speed: int = Field(
+        100,
+        description="When trying to access a DRS object that is not yet in the outbox,"
+        + " assume that this many megabytes can be staged per second.",
+        title="Staging speed in MB/s",
+        examples=[100, 500],
+    )
+    retry_after_min: int = Field(
+        5,
+        description="When trying to access a DRS object that is not yet in the outbox,"
+        + " wait at least this number of seconds before trying again.",
+        title="Minimum retry time in seconds when staging",
+        examples=[5, 10],
+    )
+    retry_after_max: int = Field(
+        300,
+        description="When trying to access a DRS object that is not yet in the outbox,"
+        + " wait at most this number of seconds before trying again.",
+        title="Maximum retry time in seconds when staging",
+        examples=[30, 300],
     )
     ekss_base_url: str = Field(
-        default=...,
+        ...,
         description="URL containing host and port of the EKSS endpoint to retrieve"
         + " personalized envelope from",
+        title="EKSS base URL",
         examples=["http://ekss:8080/"],
     )
     presigned_url_expires_after: PositiveInt = Field(
-        default=...,
+        ...,
         description="Expiration time in seconds for presigned URLS. Positive integer required",
-        examples=[30],
+        title="Presigned URL expiration time in seconds",
+        examples=[30, 60],
     )
     cache_timeout: int = Field(
-        default=7,
+        7,
         description="Time in days since last access after which a file present in the "
         + "outbox should be unstaged and has to be requested from permanent storage again "
         + "for the next request.",
+        examples=[7, 30],
     )
 
     @field_validator("drs_server_uri")
@@ -94,7 +114,7 @@ class DataRepositoryConfig(BaseSettings):
 class DataRepository(DataRepositoryPort):
     """A service that manages a registry of DRS objects."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         config: DataRepositoryConfig,
@@ -191,10 +211,15 @@ class DataRepository(DataRepositoryPort):
 
             await self._nonstaged_file_requested_dao.upsert(unstaged_file_dto)
 
+            # calculate the required time in seconds based on the decrypted file size
+            # (actually the encrypted file is staged, but this is an estimate anyway)
+            config = self._config
+            bytes_per_second = config.staging_speed * 1e6  # config has MB/s
+            retry_after = round(drs_object.decrypted_size / bytes_per_second)
+            retry_after = max(retry_after, config.retry_after_min)
+            retry_after = min(retry_after, config.retry_after_max)
             # instruct to retry later:
-            raise self.RetryAccessLaterError(
-                retry_after=self._config.retry_access_after
-            )
+            raise self.RetryAccessLaterError(retry_after=retry_after)
 
         # Successfully staged, update access information now
         log.debug(f"Updating access time of for '{drs_id}'.")

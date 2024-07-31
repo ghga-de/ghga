@@ -57,9 +57,11 @@ object_storages:
 openapi_url: /openapi.json
 port: 8080
 presigned_url_expires_after: 30
-retry_access_after: 120
+retry_after_max: 300
+retry_after_min: 5
 service_instance_id: '001'
 service_name: dcs
+staging_speed: 100
 unstaged_download_collection: unstagedDownloadRequested
 unstaged_download_event_topic: file-downloads
 workers: 1

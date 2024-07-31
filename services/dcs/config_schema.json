@@ -324,13 +324,37 @@
       "examples": [
         "drs://localhost:8080/"
       ],
-      "title": "Drs Server Uri",
+      "title": "DRS server URI",
       "type": "string"
     },
-    "retry_access_after": {
-      "default": 120,
-      "description": "When trying to access a DRS object that is not yet in the outbox, instruct to retry after this many seconds.",
-      "title": "Retry Access After",
+    "staging_speed": {
+      "default": 100,
+      "description": "When trying to access a DRS object that is not yet in the outbox, assume that this many megabytes can be staged per second.",
+      "examples": [
+        100,
+        500
+      ],
+      "title": "Staging speed in MB/s",
+      "type": "integer"
+    },
+    "retry_after_min": {
+      "default": 5,
+      "description": "When trying to access a DRS object that is not yet in the outbox, wait at least this number of seconds before trying again.",
+      "examples": [
+        5,
+        10
+      ],
+      "title": "Minimum retry time in seconds when staging",
+      "type": "integer"
+    },
+    "retry_after_max": {
+      "default": 300,
+      "description": "When trying to access a DRS object that is not yet in the outbox, wait at most this number of seconds before trying again.",
+      "examples": [
+        30,
+        300
+      ],
+      "title": "Maximum retry time in seconds when staging",
       "type": "integer"
     },
     "ekss_base_url": {
@@ -338,21 +362,26 @@
       "examples": [
         "http://ekss:8080/"
       ],
-      "title": "Ekss Base Url",
+      "title": "EKSS base URL",
       "type": "string"
     },
     "presigned_url_expires_after": {
       "description": "Expiration time in seconds for presigned URLS. Positive integer required",
       "examples": [
-        30
+        30,
+        60
       ],
       "exclusiveMinimum": 0,
-      "title": "Presigned Url Expires After",
+      "title": "Presigned URL expiration time in seconds",
       "type": "integer"
     },
     "cache_timeout": {
       "default": 7,
       "description": "Time in days since last access after which a file present in the outbox should be unstaged and has to be requested from permanent storage again for the next request.",
+      "examples": [
+        7,
+        30
+      ],
       "title": "Cache Timeout",
       "type": "integer"
     },

@@ -6,7 +6,9 @@ drs_server_uri: drs://localhost:8080/
 host: 127.0.0.1
 openapi_url: /openapi.json
 port: 8080
-retry_access_after: 120
+retry_after_max: 10
+retry_after_min: 2
+staging_speed: 100
 presigned_url_expires_after: 30
 object_storages:
   test:
