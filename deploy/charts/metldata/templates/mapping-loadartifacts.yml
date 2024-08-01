@@ -7,7 +7,7 @@ spec:
   ambassador_id: {{ .Values.mapping.ambassador_id }}
   service: "{{ .Release.Name }}-svc:{{ .Values.port }}"
   hostname: {{ .Values.mapping.hostname }}
-  prefix: {{ .Values.mapping.prefix }}/rpc/load-artifacts
-  rewrite: {{ .Values.mapping.rewrite }}/rpc/load-artifacts
+  prefix: {{ .Values.mapping.prefix | trimSuffix "/" }}/rpc/load-artifacts
+  rewrite: {{ .Values.mapping.rewrite | trimSuffix "/" }}/rpc/load-artifacts
   timeout_ms: {{ .Values.mapping.timeout_ms_loadartifacts }}
 {{ end }}
