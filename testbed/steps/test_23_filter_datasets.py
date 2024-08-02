@@ -41,23 +41,25 @@ def check_alias_filter(response: Response):
 
 
 @when(
-    parse('I filter dataset with "{file_format}" study file format'),
+    parse('I filter dataset with "{file_format}" research data format'),
     target_fixture="response",
 )
 def filter_dataset_with_file_format(fixtures: JointFixture, file_format):
-    filters = [{"key": "study_files.format", "value": file_format}]
+    filters = [{"key": "research_data_files.format", "value": file_format}]
     return search_dataset_rpc(fixtures=fixtures, filters=filters)
 
 
-@when("I filter dataset with sequencing file alias", target_fixture="response")
-def filter_dataset_for_sequencing_process_file(fixtures: JointFixture):
-    filters = [{"key": "sequencing_process_files.alias", "value": "SEQ_FILE_6"}]
+@when(
+    "I filter dataset with individual supporting file alias", target_fixture="response"
+)
+def filter_dataset_for_individual_supporting_file(fixtures: JointFixture):
+    filters = [{"key": "individual_supporting_files.alias", "value": "INDV_SF_1"}]
     return search_dataset_rpc(fixtures=fixtures, filters=filters)
 
 
-@then("I get the expected results from sequencing file filter")
+@then("I get the expected results from individual supporting file filter")
 def check_sequencing_file_filter(response: Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]
-    assert hits[0]["content"]["alias"] == "DS_B"
+    assert hits[0]["content"]["alias"] == "DS_A"

@@ -42,7 +42,7 @@ def check_artifacts(response: Response):
     resolved_public_classes = artifacts["resolved_public"]["resource_classes"]
     assert "Dataset" in resolved_public_classes
     assert "EmbeddedDataset" not in resolved_public_classes
-    assert len(resolved_public_classes) == 20
+    assert len(resolved_public_classes) == 16
     embedded_public_classes = artifacts["embedded_public"]["resource_classes"]
     assert set(resolved_public_classes).issubset(embedded_public_classes)
     assert "EmbeddedDataset" in embedded_public_classes
@@ -65,4 +65,4 @@ def check_artifact(artifact_name: str, response: Response):
     assert artifact_info["name"] == artifact_name
     classes = artifact_info["resource_classes"]
     num_additional_classes = 1 if artifact_name.startswith("embedded") else 0
-    assert len(classes) == 20 + num_additional_classes
+    assert len(classes) == 16 + num_additional_classes

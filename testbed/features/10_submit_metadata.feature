@@ -8,15 +8,10 @@ Feature: 10 Submit Metadata
     And we have a valid metadata config YAML file
     Then no submission JSON files exist in the local submission store
 
-  Scenario: Submitting minimal metadata
-    Given we have a valid "minimal" research metadata JSON files
-    When "minimal" metadata is submitted to the submission store
+  Scenario: Submitting metadata
+    Given we have valid research metadata JSON files
+    When the metadata is submitted to the submission store
     Then one submission JSON file exists in the local submission store
-
-  Scenario: Submitting complete metadata
-    Given we have a valid "complete" research metadata JSON files
-    When "complete" metadata is submitted to the submission store
-    Then two submission JSON files exist in the local submission store
 
   Scenario: Finishing the metadata submission
     Then set the state to "metadata submission is completed"

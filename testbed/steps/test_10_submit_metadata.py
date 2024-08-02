@@ -67,9 +67,9 @@ def call_data_steward_kit_submit(
     assert not completed_submit.returncode
 
 
-@given(parse('we have a valid "{name}" research metadata JSON files'))
-def metadata_json_exist(name: str, fixtures: JointFixture):
-    metadata_json_path = fixtures.dsk.config.metadata_dir / f"{name}_metadata.json"
+@given("we have valid research metadata JSON files")
+def metadata_json_exist(fixtures: JointFixture):
+    metadata_json_path = fixtures.dsk.config.metadata_dir / "metadata.json"
     assert metadata_json_path.exists()
 
 
@@ -78,10 +78,10 @@ def metadata_config_exist(fixtures: JointFixture):
     assert fixtures.dsk.config.metadata_config_path.exists()
 
 
-@when(parse('"{name}" metadata is submitted to the submission store'))
-def submit_metadata(name: str, fixtures: JointFixture):
+@when("the metadata is submitted to the submission store")
+def submit_metadata(fixtures: JointFixture):
     workdir = fixtures.dsk.config.submission_registry
-    metadata_json_path = fixtures.dsk.config.metadata_dir / f"{name}_metadata.json"
+    metadata_json_path = fixtures.dsk.config.metadata_dir / "metadata.json"
     cwd = os.getcwd()
     os.chdir(workdir)
     call_data_steward_kit_submit(

@@ -29,41 +29,50 @@ from .conftest import (
 scenarios("../features/26_dataset_summary.feature")
 
 EXPECTED_SUMMARIES = {
-    "DS_3": {
-        "title": "The C dataset",
-        "types": ["A Type", "And yet another Type"],
-        "dac_email": "dac@dac.dac",
-        "description": "An interesting dataset C",
+    "DS_B": {
+        "title": "The complete-B dataset",
+        "dac_email": "dac_institute_a@dac.dac",
+        "types": ["And another Type"],
+        "description": "An interesting dataset B of complete example set",
         "samples_summary": {
-            "count": 0,
-            "stats": {"sex": [], "tissues": [], "phenotypic_features": []},
-        },
-        "studies_summary": {
             "count": 2,
             "stats": {
-                "accessions": 2,
-                "titles": "The A Study, The B Study",
+                "sex": [{"value": "MALE", "count": 1}],
+                "tissues": [
+                    {"value": "blood", "count": 1},
+                    {"value": "subcutaneous adipose tissue", "count": 1},
+                ],
+                "phenotypic_features": [{"value": "Leukemia", "count": 1}],
             },
         },
-        "sequencing_experiments_summary": {
-            "count": 0,
-            "stats": {"sequencing_protocols": []},
+        "studies_summary": {
+            "count": 1,
+            "stats": {"accessions": 1, "titles": "The B Study"},
+        },
+        "experiments_summary": {
+            "count": 2,
+            "stats": {"experiment_methods": [{"value": "454_GS", "count": 2}]},
         },
         "files_summary": {
-            "count": 20,
-            "stats": {"format": [{"value": "FASTQ", "count": 20}], "size": 58720716},
+            "count": 7,
+            "stats": {
+                "format": [{"value": "FASTQ", "count": 6}, {"value": "TXT", "count": 1}]
+            },
         },
     },
     "DS_A": {
         "title": "The complete-A dataset",
-        "types": ["Another Type", "A Type"],
         "dac_email": "dac_institute_a@dac.dac",
+        "types": ["Another Type", "A Type"],
         "description": "An interesting dataset A of complete example set",
         "samples_summary": {
-            "count": 1,
+            "count": 2,
             "stats": {
-                "sex": [{"value": "MALE_SEX_FOR_CLINICAL_USE", "count": 1}],
-                "tissues": [{"value": "blood", "count": 1}],
+                "sex": [{"value": "MALE", "count": 1}],
+                "tissues": [
+                    {"value": "blood", "count": 1},
+                    {"value": "subcutaneous adipose tissue", "count": 1},
+                ],
                 "phenotypic_features": [{"value": "Leukemia", "count": 1}],
             },
         },
@@ -71,22 +80,19 @@ EXPECTED_SUMMARIES = {
             "count": 1,
             "stats": {"accessions": 1, "titles": "The A Study"},
         },
-        "sequencing_experiments_summary": {
-            "count": 1,
-            "stats": {
-                "sequencing_protocols": [
-                    {"value": "ILLUMINA_NOVA_SEQ_6000", "count": 1}
-                ]
-            },
+        "experiments_summary": {
+            "count": 2,
+            "stats": {"experiment_methods": [{"value": "454_GS", "count": 2}]},
         },
         "files_summary": {
             "count": 7,
             "stats": {
                 "format": [
-                    {"value": "FASTQ", "count": 4},
-                    {"value": "VCF", "count": 3},
-                ],
-                "size": 1816,
+                    {"value": "FASTQ", "count": 3},
+                    {"value": "JSON", "count": 1},
+                    {"value": "TXT", "count": 1},
+                    {"value": "VCF", "count": 2},
+                ]
             },
         },
     },

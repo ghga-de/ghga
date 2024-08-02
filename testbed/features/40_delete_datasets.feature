@@ -10,10 +10,10 @@ Feature: 40 Deletion of datasets
     When the artifacts for the complete datasets are removed from the event store
     And metadata is loaded into the system
 
-    Then the stats in the database show only the minimal datasets
-    And only the minimal datasets exist as embedded datasets in the database
-    And searching for datasets without keyword finds only the minimal datasets
-    And only the minimal datasets are known to the work package service
+    Then dataset stats in the database are empty
+    And no datasets exist as embedded datasets in the database
+    And searching for datasets without keyword returns no datasets
+    And no datasets are known to the work package service
     And no access grants exist any more in the claims repository
 
   Scenario: Trying to download files again after removal of the datasets

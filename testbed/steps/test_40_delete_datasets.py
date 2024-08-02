@@ -74,72 +74,42 @@ def delete_artifacts_for_complete_datasets(fixtures: JointFixture):
 when("metadata is loaded into the system")(run_the_load_command)
 
 
-@then("the stats in the database show only the minimal datasets")
+@then("dataset stats in the database are empty")
 def check_dataset_stats_in_metldata_database(config: Config, mongo: MongoFixture):
     if config.use_api_gateway:
         return  # black-box testing: skip checking the database directly
     dataset_stats = mongo.wait_for_documents(
-        config.metldata_db_name, "art_stats_public_class_DatasetStats", {}
+        config.metldata_db_name, "art_stats_public_class_DatasetStats", {}, timeout=5
     )
-    assert dataset_stats
-    assert len(dataset_stats) == 4  # only the 4 minimal datasets remain
-    dataset_names = {
-        dataset.get("content", {})
-        .get("title", "?")
-        .removeprefix("The ")
-        .removesuffix(" dataset")
-        for dataset in dataset_stats
-    }
-    # complete-A and complete-B have been deleted, only the minimal datasets remain
-    assert dataset_names == {"A", "B", "C", "D"}
+    assert not dataset_stats
 
 
-@then("only the minimal datasets exist as embedded datasets in the database")
+@then("no datasets exist as embedded datasets in the database")
 def check_embedded_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
     if config.use_api_gateway:
         return  # black-box testing: skip checking the database directly
     embedded_datasets = mongo.wait_for_documents(
-        config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
+        config.metldata_db_name,
+        "art_embedded_public_class_EmbeddedDataset",
+        {},
+        timeout=5,
     )
-    assert embedded_datasets
-    assert len(embedded_datasets) == 4  # only the 4 minimal datasets remain
-    dataset_names = {
-        dataset.get("content", {})
-        .get("title", "?")
-        .removeprefix("The ")
-        .removesuffix(" dataset")
-        for dataset in embedded_datasets
-    }
-    # complete-A and complete-B have been deleted, only the minimal datasets remain
-    assert dataset_names == {"A", "B", "C", "D"}
+    assert not embedded_datasets
 
 
-@then("searching for datasets without keyword finds only the minimal datasets")
+@then("searching for datasets without keyword returns no datasets")
 def searching_yields_only_minimal_datasets(fixtures: JointFixture):
     response = search_dataset_rpc(fixtures=fixtures)
     results = response.json()
-    assert results["count"] == 4
-    # get an overview of all datasets
-    contents = [hit["content"] for hit in results["hits"]]
-    datasets = {content["alias"]: get_dataset_overview(content) for content in contents}
-    # check that only the minimal datasets and their files can be found
-    num_files = {alias: len(dataset["files"]) for alias, dataset in datasets.items()}
-    assert num_files == {"DS_1": 16, "DS_2": 6, "DS_3": 20, "DS_4": 10}
+    assert results["count"] == 0
 
 
-@then("only the minimal datasets are known to the work package service")
+@then("no datasets are known to the work package service")
 def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
     if config.use_api_gateway:
         return  # black-box testing: skip checking the database directly
-    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {})
-    assert datasets
-    assert len(datasets) == 4
-    dataset_names = {
-        dataset.get("title", "?").removeprefix("The ").removesuffix(" dataset")
-        for dataset in datasets
-    }
-    # complete-A and complete-B have been deleted, only the minimal datasets remain
-    assert dataset_names == {"A", "B", "C", "D"}
+    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, timeout=5)
+    assert not datasets
 
 
 @then("no access grants exist any more in the claims repository")

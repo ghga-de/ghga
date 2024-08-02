@@ -56,9 +56,9 @@ def announce_dataset(config: Config, mongo: MongoFixture):
         return
     datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=2)
     assert datasets
-    assert len(datasets) == 6
+    assert len(datasets) == 2
     titles = {dataset["title"][4:-8] for dataset in datasets}
-    assert titles == {"A", "B", "C", "D", "complete-A", "complete-B"}
+    assert titles == {"complete-A", "complete-B"}
 
 
 @when(parse('"{full_name}" lists the datasets'), target_fixture="response")

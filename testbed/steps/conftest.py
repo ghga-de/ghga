@@ -34,7 +34,6 @@ from fixtures import (  # noqa: RUF100
     StateStorage,
     VaultFixture,
     auth_fixture,
-    batch_file_fixture,
     config_fixture,
     connector_fixture,
     dsk_fixture,

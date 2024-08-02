@@ -2,10 +2,10 @@
 Feature: 27 Dataset Details
   As a user, I can show a dataset detail view
 
-  Scenario: View details of dataset 1
-    When I request the details of "DS_1" dataset
+  Scenario: View details of dataset A
+    When I request the details of "DS_A" dataset
     Then the response status code is "200"
-    And I get the details of "DS_1" dataset
+    And I get the details of "DS_A" dataset
 
   Scenario: View details of dataset B
     When I request the details of "DS_B" dataset

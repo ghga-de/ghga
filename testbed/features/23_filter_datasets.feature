@@ -15,16 +15,16 @@ Feature: 23 Filter Datasets
     And I get the expected results from alias filter
 
   Scenario: Filter dataset by FASTQ file format
-    When I filter dataset with "FASTQ" study file format
+    When I filter dataset with "FASTQ" research data format
     Then the response status code is "200"
-    And the expected hit count is "5"
+    And the expected hit count is "2"
 
  Scenario: Filter dataset by BAM file format
-    When I filter dataset with "BAM" study file format
+    When I filter dataset with "BAM" research data format
     Then the response status code is "200"
     And the expected hit count is "0"
 
   Scenario: Filter dataset for sequencing file
-    When I filter dataset with sequencing file alias
+    When I filter dataset with individual supporting file alias
     Then the response status code is "200"
-    And I get the expected results from sequencing file filter
+    And I get the expected results from individual supporting file filter

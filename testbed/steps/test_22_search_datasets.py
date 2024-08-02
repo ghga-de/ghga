@@ -46,19 +46,15 @@ def search_items_without_keyword(fixtures: JointFixture):
 @then("I get all the existing datasets")
 def check_search_without_keyword_results(state: StateStorage, response: Response):
     results = response.json()
-    assert results["count"] == 6
+    assert results["count"] == 2
     # get an overview of all datasets
     contents = [hit["content"] for hit in results["hits"]]
     datasets = {content["alias"]: get_dataset_overview(content) for content in contents}
     # check that datasets and their files are complete
     num_files = {alias: len(dataset["files"]) for alias, dataset in datasets.items()}
     assert num_files == {
-        "DS_1": 16,
-        "DS_2": 6,
-        "DS_3": 20,
-        "DS_4": 10,
         "DS_A": 7,
-        "DS_B": 12,
+        "DS_B": 7,
     }
     # memorize the overview of all datasets
     state.set_state("all available datasets", datasets)
@@ -75,18 +71,10 @@ def search_dataset(fixtures: JointFixture, keyword: str):
 @then("I get the expected results from study search")
 def check_study_search_result(response: Response):
     results = response.json()
-    assert results["count"] == 4
-    contents = [hit["content"] for hit in results["hits"]]
-    studies = {
-        content["alias"]: {study["title"] for study in content["studies"]}
-        for content in contents
-    }
-    assert studies == {
-        "DS_1": {"The A Study"},
-        "DS_2": {"The A Study"},
-        "DS_3": {"The A Study", "The B Study"},
-        "DS_A": {"The A Study"},
-    }
+    assert results["count"] == 1
+    content = results["hits"][0]["content"]
+    assert content["study"]["alias"] == "STUDY_A"
+    assert content["study"]["description"] == "A study that is the A study"
 
 
 @then("I get the expected results from description search")
@@ -94,4 +82,7 @@ def check_description_search_result(response: Response):
     results = response.json()
     assert results["count"] == 1
     hits = results["hits"]
-    assert hits[0]["content"]["description"] == "An interesting dataset C"
+    assert (
+        hits[0]["content"]["description"]
+        == "An interesting dataset B of complete example set"
+    )

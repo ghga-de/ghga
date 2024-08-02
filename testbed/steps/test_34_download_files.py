@@ -67,6 +67,7 @@ def run_the_download_command(fixtures: JointFixture, file_scope: str):
             "download",
             "--output-dir",
             str(connector.config.download_dir),
+            "--debug",
         ],
         cwd=connector.config.work_dir,
         input=download_token,
@@ -120,6 +121,7 @@ def files_are_downloaded(fixtures: JointFixture, file_scope: str):
             target_dir=download_dir,
             extension=file_extension,
             name=file_id,
+            alias=None,
             encrypted=True,
         )
 
@@ -135,6 +137,7 @@ def run_the_decrypt_command(fixtures: JointFixture):
             "decrypt",
             "--input-dir",
             str(connector.config.download_dir),
+            "--debug",
         ],
         cwd=connector.config.work_dir,
         capture_output=True,
@@ -164,21 +167,20 @@ def files_have_been_decrypted(
     assert dataset_alias in datasets
 
     dataset = datasets[dataset_alias]
-    dataset_files = {file["accession"]: file for file in dataset["files"].values()}
+    dataset_files = {
+        file["accession"]: alias for alias, file in dataset["files"].items()
+    }
 
     for file_ in downloaded_files:
         file_id = file_["id"]
         file_extension = file_["extension"]
 
-        dataset_file = dataset_files[file_id]
-        checksum = dataset_file["checksum"]
-        size = dataset_file["size"]
+        file_alias = dataset_files[file_id]
 
         verify_named_file(
             target_dir=fixtures.connector.config.download_dir,
             extension=file_extension,
             name=file_id,
+            alias=file_alias,
             encrypted=False,
-            checksum=checksum,
-            size_in_bytes=size,
         )

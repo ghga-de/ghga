@@ -129,8 +129,7 @@ def verify_named_file(
     name: str,
     extension: str,
     encrypted=False,
-    checksum: str | None = None,
-    size_in_bytes: int | None = None,
+    alias: str | None = None,
 ) -> None:
     """Verify a file with given parameters"""
     file_path = target_dir
@@ -142,20 +141,16 @@ def verify_named_file(
     assert len(matching) == 1, f"File {name} was not found"
 
     if not encrypted:
-        if size_in_bytes is None:
-            raise ValueError("size_in_bytes must be provided for non-encrypted files")
-
-        if checksum is None:
-            raise ValueError("checksum must be provided for non-encrypted files")
-
         file_path = matching[0]
 
-        file_size_in_bytes = file_path.stat().st_size
-        assert file_size_in_bytes == size_in_bytes
-
-        with open(file_path, "rb") as file:
-            file_checksum = calculate_checksum(file.read())
-        assert file_checksum == checksum
+        if alias:
+            # Note: We do not store or verify checksums for original files.
+            # However, we still need to test that the correct files are downloaded.
+            with open(file_path) as file:
+                first_line = next(file).rstrip()
+            # The first line containing file alias might be truncated by test file size.
+            # Therefore, we check if it is a prefix of the alias.
+            assert alias.startswith(first_line)
 
 
 def search_dataset_rpc(

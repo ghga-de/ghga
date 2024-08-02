@@ -75,7 +75,7 @@ def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
         config.metldata_db_name, "art_stats_public_class_DatasetStats", {}
     )
     assert datasets
-    assert len(datasets) == 6  # 4 from minimal and 2 from complete example
+    assert len(datasets) == 2  # 2 from the example metadata
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset["_id"]
@@ -89,14 +89,6 @@ def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
         }
         simplified_datasets[content["title"]] = simplified_dataset
     assert simplified_datasets == {
-        "The A dataset": {"types": "Another Type, A Type", "files": 16, "studies": 1},
-        "The B dataset": {"types": "And another Type", "files": 6, "studies": 1},
-        "The C dataset": {
-            "types": "A Type, And yet another Type",
-            "files": 20,
-            "studies": 2,
-        },
-        "The D dataset": {"types": "A Type", "files": 10, "studies": 1},
         "The complete-A dataset": {
             "types": "Another Type, A Type",
             "files": 7,
@@ -104,7 +96,7 @@ def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
         },
         "The complete-B dataset": {
             "types": "And another Type",
-            "files": 12,
+            "files": 7,
             "studies": 1,
         },
     }
@@ -119,7 +111,7 @@ def check_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
         config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
     )
     assert datasets
-    assert len(datasets) == 6  # 4 from minimal and 2 from complete example
+    assert len(datasets) == 2  # 2 from the example metadata
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset["_id"]
@@ -129,38 +121,18 @@ def check_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
         simplified_dataset = {
             "title": content["title"],
             "description": content["description"],
-            "study_files": len(content["study_files"]),
+            "files": len(content["files"]),
         }
         simplified_datasets[content["alias"]] = simplified_dataset
     assert simplified_datasets == {
-        "DS_1": {
-            "description": "An interesting dataset A",
-            "study_files": 16,
-            "title": "The A dataset",
-        },
-        "DS_2": {
-            "description": "An interesting dataset B",
-            "study_files": 6,
-            "title": "The B dataset",
-        },
-        "DS_3": {
-            "description": "An interesting dataset C",
-            "study_files": 20,
-            "title": "The C dataset",
-        },
-        "DS_4": {
-            "description": "An interesting dataset D",
-            "study_files": 10,
-            "title": "The D dataset",
-        },
         "DS_A": {
             "description": "An interesting dataset A of complete example set",
-            "study_files": 1,
+            "files": 7,
             "title": "The complete-A dataset",
         },
         "DS_B": {
             "description": "An interesting dataset B of complete example set",
-            "study_files": 0,
+            "files": 7,
             "title": "The complete-B dataset",
         },
     }
@@ -173,7 +145,7 @@ def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
         return
     datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {})
     assert datasets
-    assert len(datasets) == 6
+    assert len(datasets) == 2
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset.get("_id")
@@ -190,28 +162,12 @@ def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
         extensions = Counter(file.get("extension") for file in files)
         simplified_datasets[title] = {"description": description, "files": extensions}
     assert simplified_datasets == {
-        "The A dataset": {
-            "description": "An interesting dataset A",
-            "files": Counter({".fastq.gz": 16}),
-        },
-        "The B dataset": {
-            "description": "An interesting dataset B",
-            "files": Counter({".fastq.gz": 6}),
-        },
-        "The C dataset": {
-            "description": "An interesting dataset C",
-            "files": Counter({".fastq.gz": 20}),
-        },
-        "The D dataset": {
-            "description": "An interesting dataset D",
-            "files": Counter({".fastq.gz": 10}),
-        },
         "The complete-A dataset": {
             "description": "An interesting dataset A of complete example set",
-            "files": Counter({".fastq.gz": 4, ".vcf.gz": 3}),
+            "files": Counter({".fastq.gz": 3, ".vcf.gz": 2, ".json": 1, ".txt": 1}),
         },
         "The complete-B dataset": {
             "description": "An interesting dataset B of complete example set",
-            "files": Counter({".fastq.gz": 6, ".vcf.gz": 6}),
+            "files": Counter({".fastq.gz": 6, ".txt": 1}),
         },
     }

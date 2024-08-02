@@ -37,7 +37,8 @@ scenarios("../features/12_upload_files.feature")
 
 
 def call_data_steward_kit_upload(
-    file_object: FileObject,
+    file_alias: str,
+    file_path: str,
     config: Config,
     file_metadata_dir: Path,
     token_path: Path,
@@ -56,9 +57,9 @@ def call_data_steward_kit_upload(
                 "files",
                 "upload",
                 "--alias",
-                file_object.object_id,
+                file_alias,
                 "--input-path",
-                str(file_object.file_path),
+                file_path,
                 "--config-path",
                 upload_config_path,
             ],
@@ -169,45 +170,39 @@ def local_metadata_empty(fixtures: JointFixture):
 
 
 @when(
-    parse("the files for the minimal metadata are uploaded individually"),
+    parse('the files for the metadata are uploaded "{upload_type}"'),
     target_fixture="file_objects",
 )
-def upload_files_individually(
-    fixtures: JointFixture, file_fixture: list[FileObject]
+def upload_files_as_batch(
+    fixtures: JointFixture, file_fixture: FileBatch, upload_type: str
 ) -> list[FileObject]:
     file_metadata_dir = fixtures.dsk.config.file_metadata_dir
     file_metadata_dir.mkdir(exist_ok=True)
+    tsv_file = file_fixture.tsv_file
 
-    for file_object in file_fixture:
-        call_data_steward_kit_upload(
-            file_object=file_object,
+    if upload_type == "in batch":
+        call_data_steward_kit_batch_upload(
+            batch_files_tsv=tsv_file,
             config=fixtures.config,
             file_metadata_dir=file_metadata_dir,
             token_path=fixtures.config.dsk_token_path,
             token=fixtures.config.upload_token,
         )
-    return file_fixture
-
-
-@when(
-    "the files for the complete metadata are uploaded as a batch",
-    target_fixture="file_objects",
-)
-def upload_files_as_batch(
-    fixtures: JointFixture, batch_file_fixture: FileBatch
-) -> list[FileObject]:
-    file_metadata_dir = fixtures.dsk.config.file_metadata_dir
-    file_metadata_dir.mkdir(exist_ok=True)
-
-    tsv_file = batch_file_fixture.tsv_file
-    call_data_steward_kit_batch_upload(
-        batch_files_tsv=tsv_file,
-        config=fixtures.config,
-        file_metadata_dir=file_metadata_dir,
-        token_path=fixtures.config.dsk_token_path,
-        token=fixtures.config.upload_token,
-    )
-    return batch_file_fixture.file_objects
+    elif upload_type == "individually":
+        with open(tsv_file, encoding="utf-8") as fh:
+            for file_object in fh:
+                file_path, file_alias = file_object.strip().split("\t")
+                call_data_steward_kit_upload(
+                    file_alias=file_alias,
+                    file_path=file_path,
+                    config=fixtures.config,
+                    file_metadata_dir=file_metadata_dir,
+                    token_path=fixtures.config.dsk_token_path,
+                    token=fixtures.config.upload_token,
+                )
+    else:
+        raise ValueError(f"Unknown upload type: {upload_type}")
+    return file_fixture.file_objects
 
 
 @then(

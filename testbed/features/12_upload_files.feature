@@ -9,18 +9,13 @@ Feature: 12 Upload Files
 
   Scenario: Uploading files individually
 
-    When the files for the minimal metadata are uploaded individually
+    When the files for the metadata are uploaded "individually"
     Then the file metadata for each uploaded file exists
     And the uploaded files exist in the staging bucket
 
-    When the file metadata is ingested
-    Then the file metadata is stored in the internal file registry
-    And the file encryption secret is saved in the vault
-    And the ingested files exist in the permanent bucket
-
   Scenario: Batch uploading files
 
-    When the files for the complete metadata are uploaded as a batch
+    When the files for the metadata are uploaded "in batch"
     Then the file metadata for each uploaded file exists
     And the uploaded files exist in the staging bucket
 

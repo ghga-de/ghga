@@ -1,4 +1,5 @@
-# https://github.com/ghga-de/metadata-config/blob/5126b2c8a4d1a7366301fde79f52ccf497afcb6d/config.yaml
+# https://github.com/ghga-de/metadata-config/blob/main/configuration/metadata_config.yaml
+# 2024-07-26T10:42:39Z
 
 source_event_topic: source_events
 source_event_type: source_event
@@ -7,23 +8,19 @@ artifact_topic_prefix: artifact
 accession_store_path: accession_store
 prefix_mapping:
   Study: GHGAS
-  StudyFile: GHGAF
-  SampleFile: GHGAF
-  SequencingProcessFile: GHGAF
-  AnalysisProcessOutputFile: GHGAF
+  ExperimentMethod: GHGAQ
+  Experiment: GHGAX
+  ResearchDataFile: GHGAF
+  ProcessDataFile: GHGAF
+  ExperimentMethodSupportingFile: GHGAF
+  AnalysisMethodSupportingFile: GHGAF
+  IndividualSupportingFile: GHGAF
   DataAccessPolicy: GHGAP
   DataAccessCommittee: GHGAC
-  Analysis: GHGAZ
+  AnalysisMethod: GHGAZ
   Publication: GHGAU
-  AnalysisProcess: GHGAR
-  SequencingExperiment: GHGAX
-  Condition: GHGAK
-  LibraryPreparationProtocol: GHGAL
-  SequencingProtocol: GHGAQ
-  SequencingProcess: GHGAO
+  Analysis: GHGAR
   Individual: GHGAI
-  Trio: GHGAT
-  Biospecimen: GHGAM
   Sample: GHGAN
   Dataset: GHGAD
 suffix_length: 14
@@ -41,6 +38,10 @@ workflow_config:
             input_paths:
               - title
             function: StringCopy
+          - output_path: dac_email
+            input_paths:
+              - data_access_policy.data_access_committee.email
+            function: StringCopy
           - output_path: types
             input_paths:
               - types
@@ -49,102 +50,98 @@ workflow_config:
             input_paths:
               - description
             function: StringCopy
-          - output_path: dac_email
-            input_paths:
-              - data_access_policy.data_access_committee.email
-            function: StringCopy
           - output_path: samples_summary.count
             input_paths:
-              - study_files.study.conditions.samples
-              - sample_files.sample
-              - sequencing_process_files.sequencing_process.sample
-              - analysis_process_output_files.analysis_process.study_input_files.study.conditions.samples
-              - analysis_process_output_files.analysis_process.sample_input_files.sample
-              - analysis_process_output_files.analysis_process.sequencing_process_input_files.sequencing_process.sample
+              - research_data_files.experiments.sample
+              - individual_supporting_files.individual.samples
+              - experiment_method_supporting_files.experiment_method.experiments.sample
+              - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.sample
+              - process_data_files.analysis.research_data_files.experiments.sample
             function: Count
             visit_only_once:
               - Sample
           - output_path: samples_summary.stats.sex
             input_paths:
-              - study_files.study.conditions.samples.biospecimen.individual.sex
-              - sample_files.sample.biospecimen.individual.sex
-              - sequencing_process_files.sequencing_process.sample.biospecimen.individual.sex
+              - individual_supporting_files.individual.sex
+              - experiment_method_supporting_files.experiment_method.experiments.sample.individual.sex
+              - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.sample.individual.sex
+              - process_data_files.analysis.research_data_files.experiments.sample.individual.sex
+              - research_data_files.experiments.sample.individual.sex
             function: StringElementCount
             visit_only_once:
               - Individual
           - output_path: samples_summary.stats.tissues
             input_paths:
-              - study_files.study.conditions.samples.biospecimen.tissue
-              - sample_files.sample.biospecimen.tissue
-              - sequencing_process_files.sequencing_process.sample.biospecimen.tissue
+              - research_data_files.experiments.sample.biospecimen_tissue_term
+              - individual_supporting_files.individual.samples.biospecimen_tissue_term
+              - experiment_method_supporting_files.experiment_method.experiments.sample.biospecimen_tissue_term
+              - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.sample.biospecimen_tissue_term
+              - process_data_files.analysis.research_data_files.experiments.sample.biospecimen_tissue_term
             function: StringElementCount
             visit_only_once:
-              - Biospecimen
+              - Sample
           - output_path: samples_summary.stats.phenotypic_features
             input_paths:
-              - study_files.study.conditions.samples.biospecimen.individual.phenotypic_features
-              - sample_files.sample.biospecimen.individual.phenotypic_features
-              - sequencing_process_files.sequencing_process.sample.biospecimen.individual.phenotypic_features
+              - individual_supporting_files.individual.phenotypic_features_terms
+              - research_data_files.experiments.sample.individual.phenotypic_features_terms
+              - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.sample.individual.phenotypic_features_terms
+              - process_data_files.analysis.research_data_files.experiments.sample.individual.phenotypic_features_terms
+              - experiment_method_supporting_files.experiment_method.experiments.sample.phenotypic_features_terms
             function: StringElementCount
             visit_only_once:
-              - Biospecimen
+              - Individual
           - output_path: studies_summary.count
             input_paths:
-              - study_files.study
-              - sample_files.sample.condition.study
-              - sequencing_process_files.sequencing_process.sample.condition.study
+              - study
             function: Count
-            visit_only_once:
-              - Study
           - output_path: studies_summary.stats.accession
             input_paths:
-              - study_files.study.accession
-              - sample_files.sample.condition.study.accession
-              - sequencing_process_files.sequencing_process.sample.condition.study.accession
+              - study.accession
             function: StringListCopy
             visit_only_once:
               - Study
           - output_path: studies_summary.stats.title
             input_paths:
-              - study_files.study.title
-              - sample_files.sample.condition.study.title
-              - sequencing_process_files.sequencing_process.sample.condition.study.title
+              - study.title
             function: StringListCopy
             visit_only_once:
               - Study
-          - output_path: sequencing_experiments_summary.count
+          - output_path: experiments_summary.count
             input_paths:
-              - sequencing_process_files.sequencing_process.sequencing_experiment
+              - research_data_files.experiments
+              - individual_supporting_files.individual.samples.experiments
+              - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments
+              - process_data_files.analysis.research_data_files.experiments
+              - experiment_method_supporting_files.experiment_method.experiments
             function: Count
             visit_only_once:
-              - SequencingExperiment
-          - output_path: sequencing_experiments_summary.stats.sequencing_protocols
+              - Experiment
+          - output_path: experiments_summary.stats.experiment_methods
             input_paths:
-              - sequencing_process_files.sequencing_process.sequencing_experiment.sequencing_protocol.instrument_model
+              - experiment_method_supporting_files.experiment_method.experiments.experiment_method.instrument_model
+              - individual_supporting_files.individual.samples.experiments.experiment_method.instrument_model
+              - research_data_files.experiments.experiment_method.instrument_model
+              - process_data_files.analysis.research_data_files.experiments.experiment_method.instrument_model
+              - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.experiment_method.instrument_model
             function: StringElementCount
             visit_only_once:
-              - SequencingProtocol
+              - Experiment
           - output_path: files_summary.count
             input_paths:
-              - sequencing_process_files
-              - sample_files
-              - study_files
-              - analysis_process_output_files
+              - research_data_files
+              - process_data_files
+              - experiment_method_supporting_files
+              - analysis_method_supporting_files
+              - individual_supporting_files
             function: Count
           - output_path: files_summary.stats.format
             input_paths:
-              - sequencing_process_files.format
-              - sample_files.format
-              - study_files.format
-              - analysis_process_output_files.format
+              - research_data_files.format
+              - process_data_files.format
+              - experiment_method_supporting_files.format
+              - analysis_method_supporting_files.format
+              - individual_supporting_files.format
             function: StringElementCount
-          - output_path: files_summary.stats.size
-            input_paths:
-              - sequencing_process_files.size
-              - sample_files.size
-              - study_files.size
-              - analysis_process_output_files.size
-            function: IntegerSum
   add_accessions:
     accession_slot_name: accession
     accession_slot_description: The accession for an entity.
@@ -162,87 +159,126 @@ workflow_config:
               data_access_committee: DataAccessCommittee
   infer_multiway_references:
     inferred_ref_map:
-      Analysis:
-        analysis_processes:
-          path: "Analysis<(analysis)AnalysisProcess"
+      AnalysisMethod:
+        analyses:
+          path: "AnalysisMethod<(analysis_method)Analysis"
           multivalued: True
-      AnalysisProcess:
-        analysis_process_output_files:
-          path: "AnalysisProcess<(analysis_process)AnalysisProcessOutputFile"
+        analysis_method_supporting_files:
+          path: "AnalysisMethod<(analysis_method)AnalysisMethodSupportingFile"
           multivalued: True
-      SequencingProtocol:
-        sequencing_experiments:
-          path: "SequencingProtocol<(sequencing_protocol)SequencingExperiment"
-          multivalued: True
-      SequencingProcess:
-        sequencing_process_files:
-          path: "SequencingProcess<(sequencing_process)SequencingProcessFile"
-          multivalued: True
-      SequencingExperiment:
-        sequencing_processes:
-          path: "SequencingExperiment<(sequencing_experiment)SequencingProcess"
-          multivalued: True
-      LibraryPreparationProtocol:
-        sequencing_experiments:
-          path: "LibraryPreparationProtocol<(library_preparation_protocol)SequencingExperiment"
-          multivalued: True
-      Condition:
-        samples:
-          path: "Condition<(condition)Sample"
-          multivalued: True
-      Sample:
-        sample_files:
-          path: "Sample<(sample)SampleFile"
-          multivalued: True
-        sequencing_processes:
-          path: "Sample<(sample)SequencingProcess"
+      ResearchDataFile:
+        analyses:
+          path: "ResearchDataFile<(research_data_files)Analysis"
           multivalued: True
       Study:
-        conditions:
-          path: "Study<(study)Condition"
-          multivalued: True
-        study_files:
-          path: "Study<(study)StudyFile"
+        datasets:
+          path: "Study<(study)Dataset"
           multivalued: True
         publications:
           path: "Study<(study)Publication"
           multivalued: True
-      Biospecimen:
-        samples:
-          path: "Biospecimen<(biospecimen)Sample"
-          multivalued: True
       Individual:
-        biospecimens:
-          path: "Individual<(individual)Biospecimen"
+        samples:
+          path: "Individual<(individual)Sample"
+          multivalued: True
+        individual_supporting_files:
+          path: "Individual<(individual)IndividualSupportingFile"
+          multivalued: True
+      ExperimentMethod:
+        experiments:
+          path: "ExperimentMethod<(experiment_method)Experiment"
+          multivalued: True
+        experiment_method_supporting_files:
+          path: "ExperimentMethod<(experiment_method)ExperimentMethodSupportingFile"
+          multivalued: True
+      Sample:
+        experiments:
+          path: "Sample<(sample)Experiment"
+          multivalued: True
+      Experiment:
+        research_data_files:
+          path: "Experiment<(experiments)ResearchDataFile"
+          multivalued: True
+      Analysis:
+        process_data_files:
+          path: "Analysis<(analysis)ProcessDataFile"
           multivalued: True
       Dataset:
-        analysis_process_output_files:
-          path: "Dataset<(dataset)AnalysisProcessOutputFile"
-          multivalued: true
-        sequencing_process_files:
-          path: "Dataset<(dataset)SequencingProcessFile"
-          multivalued: true
-        study_files:
-          path: "Dataset<(dataset)StudyFile"
-          multivalued: true
-        studies:
-          path: "Dataset<(dataset)StudyFile(study)>Study"
-          multivalued: true
-        sample_files:
-          path: "Dataset<(dataset)SampleFile"
-          multivalued: true
-        samples:
-          path: "Dataset<(dataset)SampleFile(sample)>Sample"
-          multivalued: true
+        process_data_files:
+          path: "Dataset<(dataset)ProcessDataFile"
+          multivalued: True
+        experiment_method_supporting_files:
+          path: "Dataset<(dataset)ExperimentMethodSupportingFile"
+          multivalued: True
+        analysis_method_supporting_files:
+          path: "Dataset<(dataset)AnalysisMethodSupportingFile"
+          multivalued: True
+        individual_supporting_files:
+          path: "Dataset<(dataset)IndividualSupportingFile"
+          multivalued: True
+        research_data_files:
+          path: "Dataset<(dataset)ResearchDataFile"
+          multivalued: True
+        individual_supporting_file_samples:
+          path: "Dataset<(dataset)IndividualSupportingFile(individual)>Individual<(individual)Sample"
+          multivalued: True
+        experiment_method_supporting_file_samples:
+          path: "Dataset<(dataset)ExperimentMethodSupportingFile(experiment_method)>ExperimentMethod<(experiment_method)Experiment(sample)>Sample"
+          multivalued: True
+        processed_data_file_samples:
+          path: "Dataset<(dataset)ProcessDataFile(analysis)>Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment(sample)>Sample"
+          multivalued: True
+        analysis_method_supporting_file_samples:
+          path: "Dataset<(dataset)AnalysisMethodSupportingFile(analysis_method)>AnalysisMethod<(analysis_method)Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment(sample)>Sample"
+          multivalued: True
+        research_data_file_samples:
+          path: "Dataset<(dataset)ResearchDataFile(experiments)>Experiment(sample)>Sample"
+          multivalued: True
+        individual_supporting_file_experiments:
+          path: "Dataset<(dataset)IndividualSupportingFile(individual)>Individual<(individual)Sample<(sample)Experiment"
+          multivalued: True
+        experiment_method_supporting_file_experiments:
+          path: "Dataset<(dataset)ExperimentMethodSupportingFile(experiment_method)>ExperimentMethod<(experiment_method)Experiment"
+          multivalued: True
+        processed_data_file_experiments:
+          path: "Dataset<(dataset)ProcessDataFile(analysis)>Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment"
+          multivalued: True
+        analysis_method_supporting_file_experiments:
+          path: "Dataset<(dataset)AnalysisMethodSupportingFile(analysis_method)>AnalysisMethod<(analysis_method)Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment"
+          multivalued: True
+        research_data_file_experiments:
+          path: "Dataset<(dataset)ResearchDataFile(experiments)>Experiment"
+          multivalued: True
   merge_dataset_file_lists:
     merge_instructions:
       - class_name: Dataset
-        source_slots: [study_files, sample_files, analysis_process_output_files]
+        source_slots: [individual_supporting_file_experiments, experiment_method_supporting_file_experiments, processed_data_file_experiments, analysis_method_supporting_file_experiments, research_data_file_experiments]
+        target_slot: experiments
+        target_description: >-
+          All experiments associated with the dataset.
+      - class_name: Dataset
+        source_slots: [research_data_files, process_data_files, individual_supporting_files, experiment_method_supporting_files, analysis_method_supporting_files]
         target_slot: files
         target_description: >-
           All files associated with the dataset.
+      - class_name: Dataset
+        source_slots: [individual_supporting_file_samples, experiment_method_supporting_file_samples, processed_data_file_samples, analysis_method_supporting_file_samples, research_data_file_samples]
+        target_slot: samples
+        target_description: >-
+          All samples associated with the dataset.
   remove_restricted_metadata:
-    slots_to_delete: {}
+    slots_to_delete:
+      Dataset:
+      - individual_supporting_file_experiments
+      - experiment_method_supporting_file_experiments
+      - processed_data_file_experiments
+      - analysis_method_supporting_file_experiments
+      - research_data_file_experiments
+      - individual_supporting_file_samples
+      - experiment_method_supporting_file_samples
+      - processed_data_file_samples
+      - analysis_method_supporting_file_samples
+      - research_data_file_samples
   embed_public:
     embedding_profiles:
       - target_class: EmbeddedDataset
@@ -255,29 +291,26 @@ workflow_config:
             description: "Fully embedded data access policy."
             embedded_references:
               data_access_committee: DataAccessCommittee
-          studies: Study
-          study_files:
-            target_class: EmbeddedStudyFile
-            source_class: StudyFile
-            description: "Fully embedded study file."
+          process_data_files: ProcessDataFile
+          study:
+            target_class: EmbeddedStudy
+            source_class: Study
+            description: "Study with Publications embedded"
             embedded_references:
-              study: Study
-          samples: Sample
-          sample_files:
-            target_class: EmbeddedSampleFile
-            source_class: SampleFile
-            description: "Fully embedded sample file."
+              publications: Publication
+          experiments:
+            target_class: EmbeddedExperiment
+            source_class: Experiment
+            description: "Experiment with ExperimentMethod embedded"
             embedded_references:
-              sample: Sample
-          sequencing_process_files:
-            target_class: EmbeddedSequencingProcessFile
-            source_class: SequencingProcessFile
-            description: "Fully embedded sequencing process file."
+              experiment_method: ExperimentMethod
+          samples:
+            target_class: EmbeddedSample
+            source_class: Sample
+            description: "Sample with Individual embedded"
             embedded_references:
-              sequencing_process: SequencingProcess
-          analysis_process_output_files:
-            target_class: EmbeddedAnalysisProcessOutputFile
-            source_class: AnalysisProcessOutputFile
-            description: "Fully embedded analysis process output file."
-            embedded_references:
-              analysis_process: AnalysisProcess
+              individual: Individual
+          experiment_method_supporting_files: ExperimentMethodSupportingFile
+          analysis_method_supporting_files: AnalysisMethodSupportingFile
+          individual_supporting_files: IndividualSupportingFile
+          research_data_files: ResearchDataFile

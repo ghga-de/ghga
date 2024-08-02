@@ -30,7 +30,7 @@ from fixtures.config import Config
 from fixtures.dsk import DskFixture
 from fixtures.utils import calculate_checksum
 
-__all__ = ["FileBatch", "FileObject", "batch_file_fixture", "file_fixture"]
+__all__ = ["FileBatch", "FileObject", "file_fixture"]
 
 
 class FileBatch(BaseModel):
@@ -44,20 +44,19 @@ def create_named_file(
     target_dir: Path,
     config: Config,
     name: str,
-    file_size: int | None = None,
     alias: str | None = None,
-    checksum: str | None = None,
+    file_size: int | None = None,
 ) -> FileObject:
     """Create a file with given parameters"""
     file_path = target_dir / name
 
-    if not file_size:
-        file_size = config.default_file_size
     if not alias:
         alias = os.path.splitext(name)[0]
 
+    file_size = config.default_file_size if file_size is None else file_size
+
     with open(file_path, "wb") as file:
-        first_line = f"{name}\n".encode()
+        first_line = f"{alias}\n".encode()
         if file_size <= len(first_line):
             first_line = first_line[:file_size]
             file.write(first_line)
@@ -65,17 +64,6 @@ def create_named_file(
             remaining_bytes = file_size - len(first_line)
             content = first_line + b"\0" * remaining_bytes
             file.write(content)
-
-    # Validate created file with given checksum
-    if checksum:
-        with open(file_path, "rb") as file:
-            created_file_checksum = calculate_checksum(file.read())
-        if checksum != created_file_checksum:
-            raise RuntimeError(
-                f"Expected checksum {checksum}, "
-                f"but got {created_file_checksum} "
-                f"for file {file_path}."
-            )
 
     file_object = FileObject(
         file_path=Path(file_path),
@@ -86,39 +74,8 @@ def create_named_file(
 
 
 @fixture(name="file_fixture")
-def file_fixture(
-    config: Config, dsk: DskFixture
-) -> Generator[list[FileObject], None, None]:
-    """File fixture that provides temporary files for the minimal metadata."""
-    temp_dir = Path(tempfile.gettempdir())
-    metadata = json.loads(dsk.config.minimal_metadata_path.read_text())
-
-    created_files = []
-    for file_field in dsk.config.metadata_file_fields:
-        files = metadata[file_field]
-        for file_ in files:
-            file_object = create_named_file(
-                target_dir=temp_dir,
-                config=config,
-                name=file_["name"],
-                file_size=file_["size"],
-                alias=file_["alias"],
-                checksum=file_["checksum"],
-            )
-
-            created_files.append(file_object)
-
-    yield created_files
-
-    for file_object in created_files:
-        os.remove(file_object.file_path)
-
-
-@fixture(name="batch_file_fixture")
-def batch_file_fixture(
-    config: Config, dsk: DskFixture
-) -> Generator[FileBatch, None, None]:
-    """Batch file fixture that provides temporary files for the complete metadata."""
+def file_fixture(config: Config, dsk: DskFixture) -> Generator[FileBatch, None, None]:
+    """Batch file fixture that provides temporary files for the metadata."""
     temp_dir = Path(tempfile.gettempdir())
     metadata = json.loads(dsk.config.complete_metadata_path.read_text())
 
@@ -126,14 +83,23 @@ def batch_file_fixture(
     with open(dsk.config.files_to_upload_tsv, "w", encoding="utf-8") as tsv_file:
         for file_field in dsk.config.metadata_file_fields:
             files = metadata[file_field]
-            for file_ in files:
+            file_count = len(files)
+            file_sizes = (
+                [3]  # See create_named_file(), for file content/alias truncation.
+                + [
+                    round(config.default_file_size / (file_count - 1)) * i
+                    for i in range(1, file_count - 1)
+                ]
+                + [config.default_file_size]
+            )  # Distribution of file sizes to the file count: 1 to default_file_size
+
+            for i, file_ in enumerate(files):
                 file_object = create_named_file(
                     target_dir=temp_dir,
                     config=config,
                     name=file_["name"],
-                    file_size=file_["size"],
                     alias=file_["alias"],
-                    checksum=file_["checksum"],
+                    file_size=file_sizes[i],
                 )
 
                 created_files.append(file_object)

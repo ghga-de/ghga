@@ -39,48 +39,39 @@ def check_summary_statistics(response: Response):
     assert result["id"] == "global"
     resource_stats = result["resource_stats"]
     assert resource_stats == {
-        "Analysis": {"count": 1},
-        "AnalysisProcess": {"count": 9},
-        "AnalysisProcessOutputFile": {
-            "count": 9,
-            "stats": {"format": [{"count": 9, "value": "VCF"}]},
-        },
-        "Biospecimen": {"count": 2},
-        "Condition": {"count": 2},
-        "DataAccessCommittee": {"count": 2},
-        "DataAccessPolicy": {"count": 4},
-        "Dataset": {"count": 6},
-        "EmbeddedDataset": {"count": 6},
-        "Individual": {
-            "count": 3,
-            "stats": {
-                "sex": [
-                    {"count": 1, "value": "FEMALE_SEX_FOR_CLINICAL_USE"},
-                    {"count": 2, "value": "MALE_SEX_FOR_CLINICAL_USE"},
-                ]
-            },
-        },
-        "LibraryPreparationProtocol": {
+        "DataAccessCommittee": {"count": 1},
+        "Experiment": {"count": 2},
+        "IndividualSupportingFile": {
             "count": 1,
-            "stats": {"type": [{"count": 1, "value": "unknown"}]},
+            "stats": {"format": [{"count": 1, "value": "JSON"}]},
         },
-        "Publication": {"count": 2},
-        "Sample": {"count": 2},
-        "SampleFile": {"count": 0},
-        "SequencingExperiment": {"count": 1},
-        "SequencingProcess": {"count": 9},
-        "SequencingProcessFile": {
+        "Individual": {"count": 1, "stats": {"sex": [{"count": 1, "value": "MALE"}]}},
+        "Analysis": {"count": 2},
+        "Dataset": {"count": 2},
+        "Sample": {"count": 2, "stats": {"type": [{"count": 2, "value": "CF_DNA"}]}},
+        "ExperimentMethod": {
+            "count": 1,
+            "stats": {"instrument_model": [{"count": 1, "value": "454_GS"}]},
+        },
+        "Study": {"count": 2},
+        "ProcessDataFile": {
+            "count": 2,
+            "stats": {"format": [{"count": 2, "value": "VCF"}]},
+        },
+        "ResearchDataFile": {
             "count": 9,
             "stats": {"format": [{"count": 9, "value": "FASTQ"}]},
         },
-        "SequencingProtocol": {
+        "ExperimentMethodSupportingFile": {
             "count": 1,
-            "stats": {"type": [{"count": 1, "value": "DNA-seq"}]},
+            "stats": {"format": [{"count": 1, "value": "TXT"}]},
         },
-        "Study": {"count": 4},
-        "StudyFile": {
-            "count": 53,
-            "stats": {"format": [{"count": 53, "value": "FASTQ"}]},
+        "EmbeddedDataset": {"count": 2},
+        "Publication": {"count": 2},
+        "AnalysisMethod": {"count": 1},
+        "AnalysisMethodSupportingFile": {
+            "count": 1,
+            "stats": {"format": [{"count": 1, "value": "TXT"}]},
         },
-        "Trio": {"count": 1},
+        "DataAccessPolicy": {"count": 2},
     }

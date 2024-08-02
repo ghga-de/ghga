@@ -22,21 +22,21 @@ Feature: 22 Search Datasets
   Scenario: Search datasets with a common keyword
     When I search datasets with the "dataset" query
     Then the response status code is "200"
-    And the expected hit count is "6"
+    And the expected hit count is "2"
 
   Scenario: Search datasets with study alias
     When I search datasets with the "STUDY_A" query
     Then the response status code is "200"
-    And the expected hit count is "4"
+    And the expected hit count is "1"
     And I get the expected results from study search
 
   Scenario: Search datasets by keyword matching
     When I search datasets with the "An interesting dataset C" query
     Then the response status code is "200"
-    And the expected hit count is "6"
+    And the expected hit count is "2"
 
   Scenario: Search datasets with exact description
-    When I search datasets with the ""An interesting dataset C"" query
+    When I search datasets with the ""An interesting dataset B"" query
     Then the response status code is "200"
     And the expected hit count is "1"
     And I get the expected results from description search

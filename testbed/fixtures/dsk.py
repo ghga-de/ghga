@@ -42,14 +42,15 @@ class DskConfig(BaseSettings):
     metadata_config_path: Path = metadata_dir / "metadata_config.yaml"
     metadata_model_path: Path = metadata_dir / "metadata_model.yaml"
     minimal_metadata_path: Path = metadata_dir / "minimal_metadata.json"
-    complete_metadata_path: Path = metadata_dir / "complete_metadata.json"
+    complete_metadata_path: Path = metadata_dir / "metadata.json"
 
     metadata_model_file: str = "metadata_model.yaml"
     metadata_file_fields: tuple = (
-        "analysis_process_output_files",
-        "sample_files",
-        "sequencing_process_files",
-        "study_files",
+        "analysis_method_supporting_files",
+        "individual_supporting_files",
+        "experiment_method_supporting_files",
+        "research_data_files",
+        "process_data_files",
     )
 
     file_metadata_dir: Path = submission_registry / "file_metadata"
