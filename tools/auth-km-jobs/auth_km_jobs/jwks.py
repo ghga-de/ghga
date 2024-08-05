@@ -12,9 +12,9 @@ def fetch_external_jwks() -> str:
     """Fetch the JSON string with the external JWKS."""
     config_response = httpx.get(config.discovery_url, timeout=config.timeout)
     config_dict = config_response.json()
-    if not isinstance(config_dict, dict) or "version" not in config_dict:
+    if not isinstance(config_dict, dict) or "issuer" not in config_dict:
         raise ValueError("Unexpected discovery object")
-    jwks_uri = config_dict.get("jwks_uri")
+    jwks_uri = config_dict.get("jwks_uri")  # type: ignore
     if not jwks_uri or not isinstance(jwks_uri, str):
         raise ValueError("Cannot discover JWKS URI")
     if not jwks_uri.startswith(config.oidc_authority_url):

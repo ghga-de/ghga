@@ -137,12 +137,12 @@ Kubernetes service account token path.
 
 #### `AUTH_KM_JOBS_OIDC_AUTHORITY_URL`
 
-*Optional*, default value: `https://proxy.aai.lifescience-ri.eu/`
+*Optional*, default value: `https://login.aai.lifescience-ri.eu/oidc/`
 
 OIDC authority URL.
 
 #### `AUTH_KM_JOBS_DISCOVERY_URL`
 
-*Optional*, default value: `https://proxy.aai.lifescience-ri.eu/.well-known/openid-configuration`
+*Optional*, default value: `https://login.aai.lifescience-ri.eu/oidc/.well-known/openid-configuration`
 
 OIDC discovery URL.
