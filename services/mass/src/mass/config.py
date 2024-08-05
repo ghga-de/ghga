@@ -31,7 +31,8 @@ class SearchableClassesConfig(BaseSettings):
     """Provides configuration validation for the searchable_classes"""
 
     searchable_classes: dict[str, SearchableClass] = Field(
-        ..., description="A collection of searchable_classes with facetable properties"
+        ...,
+        description="A collection of searchable_classes with facetable and selected fields",
     )
 
 

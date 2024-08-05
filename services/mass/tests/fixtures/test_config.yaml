@@ -19,30 +19,40 @@ db_name: metadata-store
 searchable_classes:
   DatasetEmbedded:
     description: Dataset with embedded references.
-    facetable_properties:
+    facetable_fields:
       - key: category
         name: Category
       - key: field1
         name: Field 1
       - key: "has_object.type"
         name: Object Type
+    selected_fields:
+      - key: id_
+        name: ID
+      - key: type
+        name: Location Type
+      - key: "has_object.type"
+        name: Object Type
   EmptyCollection:
     description: An empty collection to test the index creation.
-    facetable_properties:
+    facetable_fields:
       - key: fun_fact
         name: Fun Fact
+    selected_fields: []
   SortingTests:
     description: Data for testing sorting functionality.
-    facetable_properties:
+    facetable_fields:
       - key: field
         name: Field
+    selected_fields: []
   RelevanceTests:
     description: Data for testing sorting by relevance.
-    facetable_properties:
+    facetable_fields:
       - key: field
         name: Field
       - key: data
         name: Data
+    selected_fields: []
 resource_change_event_topic: searchable_resources
 resource_deletion_event_type: searchable_resource_deleted
 resource_upsertion_event_type: searchable_resource_upserted

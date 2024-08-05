@@ -68,7 +68,7 @@ class QueryHandler(QueryHandlerPort):
         except ResourceNotFoundError as err:
             raise self.ResourceNotFoundError(resource_id=resource_id) from err
 
-    async def handle_query(  # noqa: PLR0913, D102
+    async def handle_query(  # noqa: PLR0913, C901, D102
         self,
         *,
         class_name: str,
@@ -90,18 +90,22 @@ class QueryHandler(QueryHandlerPort):
                 sorting_parameters = []
 
         # if id_ is not in sorting_parameters, add to end
-        if "id_" not in [param.field for param in sorting_parameters]:
+        if not any(param.field == "id_" for param in sorting_parameters):
             sorting_parameters.append(
                 models.SortingParameter(field="id_", order=models.SortOrder.ASCENDING)
             )
 
-        # get configured facet fields for given resource class
+        # get configured facet and selected fields for given resource class
         try:
-            facet_fields: list[models.FacetLabel] = self._config.searchable_classes[
-                class_name
-            ].facetable_properties
+            searchable_class = self._config.searchable_classes[class_name]
+            facet_fields: list[models.FieldLabel] = searchable_class.facetable_fields
+            selected_fields: list[models.FieldLabel] = searchable_class.selected_fields
         except KeyError as err:
             raise self.ClassNotConfiguredError(class_name=class_name) from err
+
+        # if id_ is not in selected_fields, add as first field
+        if selected_fields and not any(field.key == "id_" for field in selected_fields):
+            selected_fields.insert(0, models.FieldLabel(key="id_", name="ID"))
 
         # run the aggregation. Results will have {facets, count, hits} format
         aggregator = self._aggregator_collection.get_aggregator(class_name=class_name)
@@ -111,6 +115,7 @@ class QueryHandler(QueryHandlerPort):
                     query=query,
                     filters=filters,
                     facet_fields=facet_fields,
+                    selected_fields=selected_fields,
                     skip=skip,
                     limit=limit,
                     sorting_parameters=sorting_parameters,

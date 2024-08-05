@@ -42,17 +42,14 @@ async def test_resource_upsert(
     assert results_all.count > 0
 
     # define content of resource
-    content = {
+    content: dict = {
         "has_object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
         "field1": "something",
         "category": "test object",
     }
 
     # define a resource to be upserted
-    resource = models.Resource(
-        id_=resource_id,
-        content=content,  # type: ignore
-    )
+    resource = models.Resource(id_=resource_id, content=content)
 
     # put together event payload
     payload = event_schemas.SearchableResource(
@@ -80,6 +77,12 @@ async def test_resource_upsert(
         assert updated_resources.count - results_all.count == 1
     else:
         assert updated_resources.count == results_all.count
+
+    # remove unselected fields
+    content = resource.content  # type: ignore
+    del content["field1"]
+    del content["category"]
+    del content["has_object"]["id"]
 
     assert resource in updated_resources.hits
     assert resource not in results_all.hits

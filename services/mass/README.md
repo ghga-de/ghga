@@ -3,16 +3,20 @@
 
 # Mass
 
-Metadata Artifact Search Service  - A service for searching metadata artifacts and filtering results.
+Metadata Artifact Search Service - A service for searching metadata artifacts and filtering results.
 
 ## Description
 
 The Metadata Artifact Search Service uses search parameters to look for metadata.
 
 ### Quick Overview of API
-There are two available API endpoints that follow the RPC pattern (not REST):
-One endpoint ("GET /rpc/search-options") will return an overview of all metadata classes that can be targeted
-by a search. The actual search endpoint ("POST /rpc/search") can be used to search for these target classes using keywords. Hits will be reported in the context of the selected target class.
+The API provides two not strictly RESTful endpoints:
+
+One endpoint ("GET /search-options") will return an overview of all metadata classes
+that can be targeted by a search.
+
+The actual search endpoint ("GET /search") can be used to search for these target classes
+using keywords. Hits will be reported in the context of the selected target class.
 This means that target classes will be reported that match the specified search query,
 however, the target class might contain embedded other classes and the match might
 occur in these embedded classes, too.
@@ -32,13 +36,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/mass):
 ```bash
-docker pull ghga/mass:2.1.0
+docker pull ghga/mass:3.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/mass:2.1.0 .
+docker build -t ghga/mass:3.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -46,7 +50,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/mass:2.1.0 --help
+docker run -p 8080:8080 ghga/mass:3.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -100,7 +104,7 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`searchable_classes`** *(object)*: A collection of searchable_classes with facetable properties. Can contain additional properties.
+- **`searchable_classes`** *(object)*: A collection of searchable_classes with facetable and selected fields. Can contain additional properties.
 
   - **Additional properties**: Refer to *[#/$defs/SearchableClass](#%24defs/SearchableClass)*.
 
@@ -303,19 +307,23 @@ The service requires the following configuration parameters:
 ## Definitions
 
 
-- <a id="%24defs/FacetLabel"></a>**`FacetLabel`** *(object)*: Contains the key and corresponding user-friendly name for a facet.
+- <a id="%24defs/FieldLabel"></a>**`FieldLabel`** *(object)*: Contains the field name and corresponding user-friendly name.
 
-  - **`key`** *(string, required)*: The raw facet key, such as study.type.
+  - **`key`** *(string, required)*: The raw field name, such as study.type.
 
-  - **`name`** *(string)*: The user-friendly name for the facet. Default: `""`.
+  - **`name`** *(string)*: A user-friendly name for the field (leave empty to use the key). Default: `""`.
 
 - <a id="%24defs/SearchableClass"></a>**`SearchableClass`** *(object)*: Represents a searchable artifact or resource type.
 
   - **`description`** *(string, required)*: A brief description of the resource type.
 
-  - **`facetable_properties`** *(array, required)*: A list of of the facetable properties for the resource type.
+  - **`facetable_fields`** *(array)*: A list of the facetable fields for the resource type (leave empty to not use faceting). Default: `[]`.
 
-    - **Items**: Refer to *[#/$defs/FacetLabel](#%24defs/FacetLabel)*.
+    - **Items**: Refer to *[#/$defs/FieldLabel](#%24defs/FieldLabel)*.
+
+  - **`selected_fields`** *(array)*: A list of the returned fields for the resource type (leave empty to return all). Default: `[]`.
+
+    - **Items**: Refer to *[#/$defs/FieldLabel](#%24defs/FieldLabel)*.
 
 
 ### Usage:
@@ -353,17 +361,20 @@ It uses protocol/provider pairs and dependency injection mechanisms provided by 
 This service is currently designed to work with MongoDB and uses an aggregation pipeline to produce search results.
 
 Typical sequence of events is as follows:
+
 1. Requests are received by the API, then directed to the QueryHandler in the core.
 
-2. From there, the configuration is consulted to retrieve any facetable properties for the searched resource class.
+2. From there, the configuration is consulted to retrieve any facetable and selected fields for the searched resource class.
 
 3. The search parameters and facet fields are passed to the Aggregator, which builds and runs the aggregation pipeline on the appropriate collection. The aggregation pipeline is a series of stages run in sequence:
-   - The first stage runs a text match using the query string.
-   - The second stage applies a sort based on the IDs.
-   - The third stage applies any filters supplied in the search parameters.
-   - The fourth stage extract facets.
-   - The fifth/final stage transforms the results structure into {facets, hits, hit count}.
-4. Once retrieved in the Aggregator, the results are passed back to the QueryHandler where they are shoved into a QueryResults pydantic model for validation before finally being sent back to the API.
+   1. Run a text match using the query string.
+   2. Apply a sort based on the IDs.
+   3. Apply any filters supplied in the search parameters.
+   4. Extract the facets.
+   5. Keep only selected fields if some have been specified.
+   6. Transform the results structure into {facets, hits, hit count}.
+
+4. Once retrieved in the Aggregator, the results are passed back to the QueryHandler where they are shoved into a QueryResults Pydantic model for validation before finally being sent back to the API.
 
 
 ## Development

@@ -21,11 +21,14 @@ from hexkit.custom_types import JsonObject
 from pydantic import BaseModel, Field
 
 
-class FacetLabel(BaseModel):
-    """Contains the key and corresponding user-friendly name for a facet"""
+class FieldLabel(BaseModel):
+    """Contains the field name and corresponding user-friendly name"""
 
-    key: str = Field(..., description="The raw facet key, such as study.type")
-    name: str = Field(default="", description="The user-friendly name for the facet")
+    key: str = Field(..., description="The raw field name, such as study.type")
+    name: str = Field(
+        default="",
+        description="A user-friendly name for the field (leave empty to use the key)",
+    )
 
 
 class FacetOption(BaseModel):
@@ -35,7 +38,7 @@ class FacetOption(BaseModel):
     count: int = Field(..., description="The number of results matching the facet")
 
 
-class Facet(FacetLabel):
+class Facet(FieldLabel):
     """Represents a facet's key, name, and the discovered options for the facet"""
 
     options: list[FacetOption] = Field(
@@ -49,8 +52,15 @@ class SearchableClass(BaseModel):
     description: str = Field(
         ..., description="A brief description of the resource type"
     )
-    facetable_properties: list[FacetLabel] = Field(
-        ..., description="A list of of the facetable properties for the resource type"
+    facetable_fields: list[FieldLabel] = Field(
+        [],
+        description="A list of the facetable fields for the resource type"
+        " (leave empty to not use faceting)",
+    )
+    selected_fields: list[FieldLabel] = Field(
+        [],
+        description="A list of the returned fields for the resource type"
+        " (leave empty to return all)",
     )
 
 

@@ -15,12 +15,10 @@
 #
 """Tests for relevance sorting"""
 
-from typing import Any
-
 import pytest
 
 from mass.core import models
-from tests.fixtures.joint import JointFixture
+from tests.fixtures.joint import JointFixture, QueryParams
 
 CLASS_NAME: str = "RelevanceTests"
 RELEVANCE_SORT = models.SortingParameter(
@@ -77,7 +75,7 @@ def sorted_reference_results(
     *,
     query: str,
     sorts: list[models.SortingParameter] | None = None,
-    filters: list[dict[str, Any]] | None = None,
+    filters: list[models.Filter] | None = None,
 ) -> list[str]:
     """Used to independently retrieve and sort results by relevance and then id"""
     if not sorts:
@@ -88,16 +86,12 @@ def sorted_reference_results(
     ].find({"$text": {"$search": query}}, {"score": {"$meta": "textScore"}})
     results = [x for x in results]  # type: ignore
 
-    if filters:
-        for f in filters:
-            field = f["key"]
-            value = f["value"]
-
-            # the only top-level fields are "_id" and "score" -- all else is in "content"
-            if field in ("_id", "score"):
-                results = [x for x in results if x[field] == value]  # type: ignore
-            else:
-                results = [x for x in results if x["content"][field] == value]  # type: ignore
+    for f in filters or []:
+        # the only top-level fields are "_id" and "score" -- all else is in "content"
+        if f.key in ("_id", "score"):
+            results = [x for x in results if x[f.key] == f.value]  # type: ignore
+        else:
+            results = [x for x in results if x["content"][f.key] == f.value]  # type: ignore
 
     sorted_results = multi_column_sort(results, sorts)  # type: ignore
 
@@ -108,15 +102,9 @@ def sorted_reference_results(
 async def test_happy_relevance(joint_fixture: JointFixture):
     """Make sure default works as expected"""
     query = "test"
-    search_parameters = {
-        "class_name": CLASS_NAME,
-        "query": query,
-        "filters": [],
-    }
+    params: QueryParams = {"class_name": CLASS_NAME, "query": query}
 
-    results = await joint_fixture.call_search_endpoint(
-        search_parameters=search_parameters
-    )
+    results = await joint_fixture.call_search_endpoint(params)
     assert results.count == 5
 
     reference_ids = sorted_reference_results(
@@ -131,19 +119,14 @@ async def test_happy_relevance(joint_fixture: JointFixture):
 async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
     """Make sure default Pydantic model parameter works as expected"""
     query = "test"
-    search_parameters = {
+    params: QueryParams = {
         "class_name": CLASS_NAME,
         "query": query,
-        "filters": [],
-        "sorting_parameters": [
-            {"field": "query", "order": "relevance"},
-            {"field": "id_", "order": "descending"},
-        ],
+        "order_by": ["query", "id_"],
+        "sort": ["relevance", "descending"],
     }
 
-    results = await joint_fixture.call_search_endpoint(
-        search_parameters=search_parameters
-    )
+    results = await joint_fixture.call_search_endpoint(params)
     assert results.count == 5
 
     reference_ids = sorted_reference_results(
@@ -156,15 +139,9 @@ async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
 @pytest.mark.asyncio
 async def test_with_absent_term(joint_fixture: JointFixture):
     """Make sure nothing is pulled back with an absent term (sanity check)"""
-    search_parameters = {
-        "class_name": CLASS_NAME,
-        "query": "doesnotexistinourtests",
-        "filters": [],
-    }
+    params: QueryParams = {"class_name": CLASS_NAME, "query": "doesnotexistinourtests"}
 
-    results = await joint_fixture.call_search_endpoint(
-        search_parameters=search_parameters
-    )
+    results = await joint_fixture.call_search_endpoint(params)
 
     assert results.count == 0
 
@@ -173,15 +150,9 @@ async def test_with_absent_term(joint_fixture: JointFixture):
 async def test_limited_term(joint_fixture: JointFixture):
     """Make sure only results with the term are retrieved"""
     query = "alternative"
-    search_parameters = {
-        "class_name": CLASS_NAME,
-        "query": query,
-        "filters": [],
-    }
+    params: QueryParams = {"class_name": CLASS_NAME, "query": query}
 
-    results = await joint_fixture.call_search_endpoint(
-        search_parameters=search_parameters
-    )
+    results = await joint_fixture.call_search_endpoint(params)
 
     assert results.count == 2
     reference_ids = sorted_reference_results(joint_fixture, query=query)
@@ -193,15 +164,9 @@ async def test_limited_term(joint_fixture: JointFixture):
 async def test_two_words(joint_fixture: JointFixture):
     """Test with two different terms that appear in different fields"""
     query = "alternative test"
-    search_parameters = {
-        "class_name": CLASS_NAME,
-        "query": query,
-        "filters": [],
-    }
+    params: QueryParams = {"class_name": CLASS_NAME, "query": query}
 
-    results = await joint_fixture.call_search_endpoint(
-        search_parameters=search_parameters
-    )
+    results = await joint_fixture.call_search_endpoint(params)
 
     assert results.count == 5
     reference_ids = sorted_reference_results(joint_fixture, query=query)
@@ -213,22 +178,19 @@ async def test_two_words(joint_fixture: JointFixture):
 async def test_with_filters(joint_fixture: JointFixture):
     """Test with filters applied but no sorting parameters"""
     query = "test"
-    filters = [{"key": "field", "value": "some data"}]
-    search_parameters = {
+    filters = [models.Filter(key="field", value="some data")]
+    params: QueryParams = {
         "class_name": CLASS_NAME,
         "query": query,
-        "filters": filters,
+        "filter_by": [f.key for f in filters],
+        "value": [f.value for f in filters],
     }
 
-    results = await joint_fixture.call_search_endpoint(
-        search_parameters=search_parameters
-    )
+    results = await joint_fixture.call_search_endpoint(params)
 
     assert results.count == 1
     reference_ids = sorted_reference_results(
-        joint_fixture,
-        query=query,
-        filters=filters,
+        joint_fixture, query=query, filters=filters
     )
 
     assert [hit.id_ for hit in results.hits] == reference_ids
@@ -238,20 +200,17 @@ async def test_with_filters(joint_fixture: JointFixture):
 async def test_with_filters_and_sorts(joint_fixture: JointFixture):
     """Test with filters applied and at least one sorting parameter (not relevance)"""
     query = "test"
-    filters = [{"key": "data", "value": "test test test test test"}]
-    search_parameters = {
+    filters = [models.Filter(key="data", value="test test test test test")]
+    params: QueryParams = {
         "class_name": CLASS_NAME,
         "query": query,
-        "filters": filters,
-        "sorting_parameters": [
-            {"field": "field", "order": "ascending"},
-            {"field": "id_", "order": "descending"},
-        ],
+        "filter_by": [f.key for f in filters],
+        "value": [f.value for f in filters],
+        "order_by": ["field", "id_"],
+        "sort": ["ascending", "descending"],
     }
 
-    results = await joint_fixture.call_search_endpoint(
-        search_parameters=search_parameters
-    )
+    results = await joint_fixture.call_search_endpoint(params)
 
     assert results.count == 2
     reference_ids = sorted_reference_results(

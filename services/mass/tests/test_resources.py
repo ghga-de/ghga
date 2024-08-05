@@ -77,9 +77,9 @@ async def test_facets_returned(joint_fixture: JointFixture):
     )
 
     config = get_config()
-    facets: list[models.FacetLabel] = config.searchable_classes[
+    facets: list[models.FieldLabel] = config.searchable_classes[
         "DatasetEmbedded"
-    ].facetable_properties
+    ].facetable_fields
     facet_key_to_name = {x.key: x.name for x in facets}
 
     for facet in results_faceted.facets:
@@ -147,15 +147,14 @@ async def test_resource_load(joint_fixture: JointFixture):
         class_name="DatasetEmbedded", query="", filters=[]
     )
 
+    content: dict = {
+        "has_object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
+        "field1": "something",
+        "category": "test object",
+    }
+
     # define and load a new resource
-    resource = models.Resource(
-        id_="added-resource",
-        content={
-            "has_object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
-            "field1": "something",
-            "category": "test object",
-        },
-    )
+    resource = models.Resource(id_="added-resource", content=content)
 
     await joint_fixture.query_handler.load_resource(
         resource=resource, class_name="DatasetEmbedded"
@@ -177,7 +176,14 @@ async def test_resource_load(joint_fixture: JointFixture):
     assert len(target_search.hits) == 1
     validated_resource = target_search.hits[0]
     assert validated_resource.id_ == resource.id_
-    assert validated_resource.content == resource.content
+
+    # remove unselected fields
+    content = resource.content  # type: ignore
+    del content["field1"]
+    del content["category"]
+    del content["has_object"]["id"]
+
+    assert validated_resource.content == content
 
 
 async def test_loading_non_configured_resource(joint_fixture: JointFixture):

@@ -1,16 +1,16 @@
 {
   "$defs": {
-    "FacetLabel": {
-      "description": "Contains the key and corresponding user-friendly name for a facet",
+    "FieldLabel": {
+      "description": "Contains the field name and corresponding user-friendly name",
       "properties": {
         "key": {
-          "description": "The raw facet key, such as study.type",
+          "description": "The raw field name, such as study.type",
           "title": "Key",
           "type": "string"
         },
         "name": {
           "default": "",
-          "description": "The user-friendly name for the facet",
+          "description": "A user-friendly name for the field (leave empty to use the key)",
           "title": "Name",
           "type": "string"
         }
@@ -18,7 +18,7 @@
       "required": [
         "key"
       ],
-      "title": "FacetLabel",
+      "title": "FieldLabel",
       "type": "object"
     },
     "SearchableClass": {
@@ -29,18 +29,27 @@
           "title": "Description",
           "type": "string"
         },
-        "facetable_properties": {
-          "description": "A list of of the facetable properties for the resource type",
+        "facetable_fields": {
+          "default": [],
+          "description": "A list of the facetable fields for the resource type (leave empty to not use faceting)",
           "items": {
-            "$ref": "#/$defs/FacetLabel"
+            "$ref": "#/$defs/FieldLabel"
           },
-          "title": "Facetable Properties",
+          "title": "Facetable Fields",
+          "type": "array"
+        },
+        "selected_fields": {
+          "default": [],
+          "description": "A list of the returned fields for the resource type (leave empty to return all)",
+          "items": {
+            "$ref": "#/$defs/FieldLabel"
+          },
+          "title": "Selected Fields",
           "type": "array"
         }
       },
       "required": [
-        "description",
-        "facetable_properties"
+        "description"
       ],
       "title": "SearchableClass",
       "type": "object"
@@ -103,7 +112,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/SearchableClass"
       },
-      "description": "A collection of searchable_classes with facetable properties",
+      "description": "A collection of searchable_classes with facetable and selected fields",
       "title": "Searchable Classes",
       "type": "object"
     },

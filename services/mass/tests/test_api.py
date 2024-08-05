@@ -20,12 +20,11 @@ import logging
 
 import httpx
 import pytest
-from hexkit.custom_types import JsonObject
 from pymongo import MongoClient
 
 from mass.core import models
 from tests.fixtures.config import get_config
-from tests.fixtures.joint import JointFixture
+from tests.fixtures.joint import JointFixture, QueryParams
 
 pytestmark = pytest.mark.asyncio()
 
@@ -42,17 +41,15 @@ def compare(
     assert results.count == count
     assert len(results.hits) == hit_length
 
-    if not facets:
+    if facets:
+        assert results.facets == facets
+    else:
         config = get_config()
-
         dataset_embedded_class = config.searchable_classes["DatasetEmbedded"]
         assert dataset_embedded_class is not None
-
-        configured_facets = dataset_embedded_class.facetable_properties
+        configured_facets = dataset_embedded_class.facetable_fields
         assert len(results.facets) == len(configured_facets)
         assert {x.key for x in results.facets} == {x.key for x in configured_facets}
-    else:
-        assert results.facets == facets
 
     if hits:
         assert results.hits == hits
@@ -68,7 +65,7 @@ async def test_health_check(joint_fixture: JointFixture):
 
 async def test_search_options(joint_fixture: JointFixture):
     """Verify that we can request the configured resource class information correctly"""
-    response = await joint_fixture.rest_client.get(url="/rpc/search-options")
+    response = await joint_fixture.rest_client.get(url="/search-options")
 
     assert response.json() == joint_fixture.config.model_dump()["searchable_classes"]
 
@@ -92,18 +89,13 @@ async def test_malformed_document(
     await joint_fixture.query_handler.load_resource(
         resource=resource, class_name="DatasetEmbedded"
     )
-    search_parameters: JsonObject = {
-        "class_name": "DatasetEmbedded",
-        "query": "",
-        "filters": [],
-        "skip": 0,
-    }
+    params: QueryParams = {"class_name": "DatasetEmbedded"}
 
     with caplog.at_level(logging.WARNING):
         with pytest.raises(
             httpx.HTTPStatusError, match="500 Internal Server Error"
         ) as exc_info:
-            await joint_fixture.call_search_endpoint(search_parameters)
+            await joint_fixture.call_search_endpoint(params)
         assert (
             exc_info.value.response.json().get("detail")
             == "An error occurred during the search operation"
@@ -116,39 +108,22 @@ async def test_malformed_document(
 
 async def test_search(joint_fixture: JointFixture):
     """Basic query to pull back all documents for class name"""
-    search_parameters: JsonObject = {
-        "class_name": "DatasetEmbedded",
-        "query": "",
-        "filters": [],
-        "skip": 0,
-    }
+    params: QueryParams = {"class_name": "DatasetEmbedded"}
 
-    results = await joint_fixture.call_search_endpoint(search_parameters)
+    results = await joint_fixture.call_search_endpoint(params)
     compare(results=results, count=3, hit_length=3)
 
 
 async def test_search_with_limit(joint_fixture: JointFixture):
     """Make sure we get a count of 3 but only 1 hit"""
-    search_parameters: JsonObject = {
-        "class_name": "DatasetEmbedded",
-        "query": "",
-        "filters": [],
-        "skip": 0,
-        "limit": 1,
-    }
+    params: QueryParams = {"class_name": "DatasetEmbedded", "limit": 1}
 
-    results = await joint_fixture.call_search_endpoint(search_parameters)
+    results = await joint_fixture.call_search_endpoint(params)
     hit = {
         "id_": "1HotelAlpha-id",
         "content": {
-            "category": "hotel",
-            "field1": "Miami",
-            "has_object": {"id_": "HotelAlphaObject", "type": "piano"},
-            "has_rooms": [
-                {"id_": "HotelAlphaLarge", "type": "large room"},
-                {"id_": "HotelAlphaPoolside", "type": "poolside room"},
-            ],
             "type": "resort",
+            "has_object": {"type": "piano"},
         },
     }
     hits = [models.Resource(**hit)]  # type: ignore[arg-type]
@@ -157,58 +132,41 @@ async def test_search_with_limit(joint_fixture: JointFixture):
 
 async def test_search_keywords(joint_fixture: JointFixture):
     """Make sure the query string is passed through intact"""
-    search_parameters: JsonObject = {
-        "class_name": "DatasetEmbedded",
-        "query": "hotel",
-        "filters": [],
-        "skip": 0,
-    }
+    params: QueryParams = {"class_name": "DatasetEmbedded", "query": "hotel"}
 
-    results = await joint_fixture.call_search_endpoint(search_parameters)
+    results = await joint_fixture.call_search_endpoint(params)
     compare(results=results, count=2, hit_length=2)
 
 
 async def test_search_filters(joint_fixture: JointFixture):
     """Make sure filters work"""
-    search_parameters: JsonObject = {
+    params: QueryParams = {
         "class_name": "DatasetEmbedded",
-        "query": "",
-        "filters": [{"key": "has_object.type", "value": "piano"}],
-        "skip": 0,
+        "filter_by": ["has_object.type"],
+        "value": ["piano"],
     }
 
-    results = await joint_fixture.call_search_endpoint(search_parameters)
+    results = await joint_fixture.call_search_endpoint(params)
     compare(results=results, count=1, hit_length=1)
 
 
 async def test_search_invalid_class(joint_fixture: JointFixture):
     """Verify that searching with a bad class name results in a 422"""
-    search_parameters: JsonObject = {
-        "class_name": "InvalidClassName",
-        "query": "",
-        "filters": [],
-        "skip": 0,
-        "limit": 1,
-    }
+    params: QueryParams = {"class_name": "InvalidClassName", "limit": 1}
 
     with pytest.raises(httpx.HTTPStatusError, match="422 Unprocessable Entity"):
-        await joint_fixture.call_search_endpoint(search_parameters)
+        await joint_fixture.call_search_endpoint(params)
 
 
 async def test_auto_recreation_of_indexes(
     joint_fixture: JointFixture, caplog: pytest.LogCaptureFixture
 ):
     """Make sure the indexes are recreated on the fly when they were deleted"""
-    search_parameters: JsonObject = {
-        "class_name": "DatasetEmbedded",
-        "query": "hotel",
-        "filters": [],
-        "skip": 0,
-    }
+    params: QueryParams = {"class_name": "DatasetEmbedded", "query": "hotel"}
 
     # should not give a warning when indexes are present
     with caplog.at_level(logging.WARNING):
-        await joint_fixture.call_search_endpoint(search_parameters)
+        await joint_fixture.call_search_endpoint(params)
         assert not caplog.records
 
     # drop all text indexes
@@ -224,7 +182,7 @@ async def test_auto_recreation_of_indexes(
 
     # should work, but give a warning when indexes are recreated
     with caplog.at_level(logging.WARNING):
-        results = await joint_fixture.call_search_endpoint(search_parameters)
+        results = await joint_fixture.call_search_endpoint(params)
         compare(results=results, count=2, hit_length=2)
 
         assert len(caplog.records) == 1

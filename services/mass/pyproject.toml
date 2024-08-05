@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "mass"
-version = "2.1.0"
-description = "Metadata Artifact Search Service  - A service for searching metadata artifacts and filtering results."
+version = "3.0.0"
+description = "Metadata Artifact Search Service - A service for searching metadata artifacts and filtering results."
 dependencies = [
     "typer>=0.12",
-    "ghga-service-commons[api]>=3.0.0",
-    "ghga-event-schemas>=2.0.0",
+    "ghga-service-commons[api]>=3.1.5",
+    "ghga-event-schemas>=3.1.1",
     "hexkit[mongodb,akafka]>=3.5.0",
 ]
 

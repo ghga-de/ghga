@@ -18,12 +18,12 @@
 
 import glob
 import re
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Mapping
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
-from hexkit.custom_types import JsonObject
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -34,6 +34,8 @@ from mass.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from mass.ports.inbound.query_handler import QueryHandlerPort
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import get_resources_from_file
+
+QueryParams: TypeAlias = Mapping[str, int | str | list[str]]
 
 
 @dataclass
@@ -46,6 +48,7 @@ class JointFixture:
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     rest_client: AsyncTestClient
+    resources: dict[str, list[models.Resource]]
 
     def remove_db_data(self) -> None:
         """Delete everything in the database to start from a clean slate"""
@@ -60,20 +63,20 @@ class JointFixture:
             if match_obj:
                 collection_name = match_obj.group(1)
                 resources = get_resources_from_file(filename)
+                self.resources[collection_name] = resources
                 for resource in resources:
                     await self.query_handler.load_resource(
                         resource=resource, class_name=collection_name
                     )
 
-    async def call_search_endpoint(
-        self, search_parameters: JsonObject
-    ) -> models.QueryResults:
-        """Convenience function to call the /rpc/search endpoint"""
-        response = await self.rest_client.post(
-            url="/rpc/search", json=search_parameters
-        )
+    async def call_search_endpoint(self, params: QueryParams) -> models.QueryResults:
+        """Convenience function to call the /search endpoint"""
+        response = await self.rest_client.get(url="/search", params=params)
+        result = response.json()
+        assert result is not None, result
+        assert "detail" in result or "hits" in result, result
         response.raise_for_status()
-        return models.QueryResults(**response.json())
+        return models.QueryResults(**result)
 
 
 @pytest_asyncio.fixture
@@ -99,6 +102,7 @@ async def joint_fixture(
             kafka=kafka,
             mongodb=mongodb,
             rest_client=rest_client,
+            resources={},
         )
         await joint_fixture.load_test_data()
         yield joint_fixture

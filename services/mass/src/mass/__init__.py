@@ -15,6 +15,9 @@
 
 """A service for searching metadata artifacts and filtering results."""
 
-from importlib.metadata import version
+from importlib.metadata import distribution
 
-__version__ = version(__package__)
+dist = distribution(__package__)
+metadata = dist.metadata
+
+__version__ = dist.version

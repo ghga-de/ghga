@@ -16,108 +16,112 @@
 """Tests concerning the sorting functionality"""
 
 import pytest
-from hexkit.custom_types import JsonObject
 
 from mass.core import models
-from tests.fixtures.joint import JointFixture
+from tests.fixtures.joint import JointFixture, QueryParams
 
 CLASS_NAME = "SortingTests"
-BASIC_SORT_PARAMETERS = [
-    models.SortingParameter(field="id_", order=models.SortOrder.ASCENDING)
-]
 
 
-def multi_column_sort(
-    resources: list[models.Resource], sorts: list[models.SortingParameter]
+def sorted_resources(  # noqa: C901
+    resources: list[models.Resource],
+    order_by: list[str] | None = None,
+    sort: list[str] | None = None,
+    complete_resources: list[models.Resource] | None = None,
 ) -> list[models.Resource]:
-    """This is equivalent to nested sorted() calls.
+    """Sort resources by all specified fields.
 
-    This uses the same approach as the sorting function in test_relevance, but the
-    difference is that this function uses Resource models and doesn't work with the
-    relevance sorting parameter. There's no spot for a top-level text score parameter in
-    the resource model, which is why the relevance tests use a slightly different version
-    of this function.
+    This function simulates the sorting that is expected to be done by the database.
+    Since there's no spot for a top-level text score parameter in the resource model,
+    the relevance tests need to use a slightly different version of this function.
 
-    The sorting parameters are supplied in order of most significant to least significant,
-    so we take them off the front and apply sorted(). If there are more parameters to
-    apply (more sorts), we recurse until we apply the final parameter. The sorted lists
-    are passed back up the call chain.
+    In the case that some of the sorted fields are not part of the resources, the
+    complete resources which contain these missing fields must be passed as well.
     """
-    sorted_list = resources.copy()
-    sorts = sorts.copy()
+    if order_by is None:
+        order_by = []
+    if sort is None:
+        sort = []
+    assert len(order_by) == len(sort)
+    if "id_" not in order_by:
+        # implicitly add id_ at the end since we also do it in the query handler
+        order_by.append("id_")
+        sort.append("ascending")
 
-    parameter = sorts[0]
-    del sorts[0]
+    def sort_key(resource: models.Resource) -> tuple:
+        """Create a tuple that can be used as key for sorting the resource."""
+        if complete_resources:
+            for complete_resource in complete_resources:
+                if complete_resource.id_ == resource.id_:
+                    resource = complete_resource
+                    break
+            else:
+                assert False, f"{resource.id_} not found in complete resources"
+        key = []
+        for field, field_sort in zip(order_by, sort, strict=True):
+            resource_dict = resource.model_dump()
+            if field != "id_":
+                # the only top-level fields is "_id" -- all else is in "content"
+                resource_dict = resource_dict["content"]
+            # support dotted access
+            sub_fields = field.split(".")
+            sub_fields, field = sub_fields[:-1], sub_fields[-1]
+            for sub_field in sub_fields:
+                resource_dict = resource_dict.get(sub_field, {})
+            value = resource_dict.get(field)
+            # MongoDB returns nulls first, help Python to sort it properly
+            key_for_null = value is not None
+            if field_sort == "descending":
+                key_for_null = not key_for_null
+                if isinstance(value, str):
+                    value = tuple(-ord(c) for c in value)
+                elif isinstance(value, int | float):
+                    value = -value
+            key.append((key_for_null, value))
+        return tuple(key)
 
-    # sort descending for DESCENDING and RELEVANCE
-    reverse = parameter.order != models.SortOrder.ASCENDING
-
-    if len(sorts) > 0:
-        # if there are more sorting parameters, recurse to nest the sorts
-        sorted_list = multi_column_sort(sorted_list, sorts)
-
-    if parameter.field == "id_":
-        return sorted(
-            sorted_list,
-            key=lambda result: result.model_dump()[parameter.field],
-            reverse=reverse,
-        )
-    else:
-        # the only top-level fields is "_id" -- all else is in "content"
-        return sorted(
-            sorted_list,
-            key=lambda result: result.model_dump()["content"][parameter.field],
-            reverse=reverse,
-        )
+    # sort the reversed resources to not rely on the already given order
+    return sorted(reversed(resources), key=sort_key)
 
 
 @pytest.mark.asyncio
 async def test_api_without_sort_parameters(joint_fixture: JointFixture):
     """Make sure default Pydantic model parameter works as expected"""
-    search_parameters: JsonObject = {
-        "class_name": CLASS_NAME,
-        "query": "",
-        "filters": [],
-    }
+    params: QueryParams = {"class_name": CLASS_NAME}
 
-    results = await joint_fixture.call_search_endpoint(
-        search_parameters=search_parameters
-    )
+    results = await joint_fixture.call_search_endpoint(params)
     assert results.count > 0
-    expected = multi_column_sort(results.hits, BASIC_SORT_PARAMETERS)
+    expected = sorted_resources(results.hits)
     assert results.hits == expected
 
 
+@pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])
 @pytest.mark.asyncio
-async def test_sort_with_id_not_last(joint_fixture: JointFixture):
-    """Test sorting parameters that contain id_, but id_ is not final sorting field.
+async def test_sort_with_id_not_last(joint_fixture: JointFixture, reverse: bool):
+    """Test sorting parameters that contain id_, but not as the final sorting field.
 
     Since we modify sorting parameters based on presence of id_, make sure there aren't
     any bugs that will break the sort or query process.
     """
-    sorts = [
-        {"field": "id_", "order": "ascending"},
-        {"field": "field", "order": "descending"},
-    ]
-    search_parameters: JsonObject = {
+    order_by = ["id_", "field"]
+    sort = ["ascending", "descending"]
+    if reverse:
+        sort.reverse()
+    params: QueryParams = {
         "class_name": CLASS_NAME,
         "query": "",
         "filters": [],
-        "sorting_parameters": sorts,
+        "order_by": order_by,
+        "sort": sort,
     }
 
-    sorts_in_model_form = [
-        models.SortingParameter(
-            field=param["field"], order=models.SortOrder(param["order"])
-        )
-        for param in sorts
-    ]
-    results = await joint_fixture.call_search_endpoint(search_parameters)
-    assert results.hits == multi_column_sort(results.hits, sorts_in_model_form)
+    results = await joint_fixture.call_search_endpoint(params)
+    assert results.hits == sorted_resources(results.hits, order_by, sort)
 
 
+@pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])
 @pytest.mark.asyncio
-async def test_sort_with_params_but_not_id(joint_fixture: JointFixture):
+async def test_sort_with_params_but_not_id(joint_fixture: JointFixture, reverse: bool):
     """Test supplying sorting parameters but omitting id_.
 
     In order to provide consistent sorting, id_ should always be included. If it's not
@@ -125,17 +129,16 @@ async def test_sort_with_params_but_not_id(joint_fixture: JointFixture):
     any tie between otherwise equivalent keys. If it is included but is not the final
     field, then we should not modify the parameters.
     """
-    search_parameters: JsonObject = {
+    order_by = ["field"]
+    sort = ["descending" if reverse else "ascending"]
+    params: QueryParams = {
         "class_name": CLASS_NAME,
-        "query": "",
-        "filters": [],
-        "sorting_parameters": [
-            {"field": "field", "order": models.SortOrder.ASCENDING.value}
-        ],
+        "order_by": order_by,
+        "sort": sort,
     }
 
-    results = await joint_fixture.call_search_endpoint(search_parameters)
-    assert results.hits == multi_column_sort(results.hits, BASIC_SORT_PARAMETERS)
+    results = await joint_fixture.call_search_endpoint(params)
+    assert results.hits == sorted_resources(results.hits, order_by, sort)
 
 
 @pytest.mark.asyncio
@@ -146,52 +149,44 @@ async def test_sort_with_invalid_field(joint_fixture: JointFixture):
     value for it. If we sort with a truly invalid field, it should have no impact on the
     resulting sort order.
     """
-    search_parameters: JsonObject = {
+    params: QueryParams = {
         "class_name": CLASS_NAME,
-        "query": "",
-        "filters": [],
-        "sorting_parameters": [
-            {
-                "field": "some_bogus_field",
-                "order": models.SortOrder.ASCENDING.value,
-            }
-        ],
+        "order_by": ["some_bogus_field"],
+        "sort": ["ascending"],
     }
 
-    results = await joint_fixture.call_search_endpoint(search_parameters)
-    assert results.hits == multi_column_sort(results.hits, BASIC_SORT_PARAMETERS)
+    results = await joint_fixture.call_search_endpoint(params)
+    assert results.hits == sorted_resources(results.hits)
 
 
 @pytest.mark.parametrize("order", [-7, 17, "some_string"])
 @pytest.mark.asyncio
-async def test_sort_with_invalid_sort_order(joint_fixture: JointFixture, order):
+async def test_sort_with_invalid_sort_order(
+    joint_fixture: JointFixture, order: str | int
+):
     """Test supplying an invalid value for the sort order"""
-    search_parameters: JsonObject = {
+    params: QueryParams = {
         "class_name": CLASS_NAME,
-        "query": "",
-        "filters": [],
-        "sorting_parameters": [{"field": "field", "order": order}],
+        "order_by": ["field"],
+        "sort": [order],  # type: ignore
     }
 
-    response = await joint_fixture.rest_client.post(
-        url="/rpc/search", json=search_parameters
-    )
+    response = await joint_fixture.rest_client.get(url="/search", params=params)
     assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert "Input should be 'ascending', 'descending' or 'relevance'" in str(detail)
 
 
 @pytest.mark.asyncio
 async def test_sort_with_invalid_field_and_sort_order(joint_fixture: JointFixture):
     """Test with both invalid field name and invalid sort order."""
-    search_parameters: JsonObject = {
+    params: QueryParams = {
         "class_name": CLASS_NAME,
-        "query": "",
-        "filters": [],
-        "sorting_parameters": [{"field": "some_bogus_field", "order": -7}],
+        "order_by": ["some_bogus_field"],
+        "sort": ["also_bogus"],
     }
 
-    response = await joint_fixture.rest_client.post(
-        url="/rpc/search", json=search_parameters
-    )
+    response = await joint_fixture.rest_client.get(url="/search", params=params)
     assert response.status_code == 422
 
 
@@ -201,16 +196,105 @@ async def test_sort_with_duplicate_field(joint_fixture: JointFixture):
 
     This should be prevented by the pydantic model validator and raise an HTTP error.
     """
-    search_parameters: JsonObject = {
+    params = {
         "class_name": CLASS_NAME,
-        "query": "",
-        "filters": [],
-        "sorting_parameters": [
-            {"field": "field", "order": models.SortOrder.ASCENDING.value},
-            {"field": "field", "order": models.SortOrder.DESCENDING.value},
-        ],
+        "order_by": ["field", "field"],
+        "sort": [models.SortOrder.ASCENDING.value, models.SortOrder.DESCENDING.value],
     }
-    response = await joint_fixture.rest_client.post(
-        url="/rpc/search", json=search_parameters
-    )
+
+    response = await joint_fixture.rest_client.get(url="/search", params=params)
     assert response.status_code == 422
+    assert response.json()["detail"] == "Fields to order by must be unique"
+
+
+@pytest.mark.asyncio
+async def test_sort_with_missing_sort(joint_fixture: JointFixture):
+    """Supply sorting parameters with missing sort option.
+
+    This should be prevented by the pydantic model validator and raise an HTTP error.
+    """
+    params = {
+        "class_name": CLASS_NAME,
+        "order_by": ["field"],
+    }
+
+    response = await joint_fixture.rest_client.get(url="/search", params=params)
+    assert response.status_code == 422
+    details = response.json()["detail"]
+    assert details == "Number of fields to order by must match number of sort options"
+
+
+@pytest.mark.asyncio
+async def test_sort_with_superfluous_sort(joint_fixture: JointFixture):
+    """Supply sorting parameters with superfluous sort option.
+
+    This should be prevented by the pydantic model validator and raise an HTTP error.
+    """
+    params = {
+        "class_name": CLASS_NAME,
+        "order_by": ["field"],
+        "sort": [models.SortOrder.ASCENDING.value, models.SortOrder.DESCENDING.value],
+    }
+
+    response = await joint_fixture.rest_client.get(url="/search", params=params)
+    assert response.status_code == 422
+    details = response.json()["detail"]
+    assert details == "Number of fields to order by must match number of sort options"
+
+
+@pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])
+@pytest.mark.parametrize("field", ["type", "has_object.type"])
+@pytest.mark.asyncio
+async def test_sort_with_one_of_the_selected_fields(
+    joint_fixture: JointFixture, reverse: bool, field: str
+):
+    """Test sorting when fields are selected and one of them is used for sorting."""
+    class_name = "DatasetEmbedded"
+    selected = joint_fixture.config.searchable_classes[class_name].selected_fields
+    assert selected  # this resource has selected fields
+    assert any(f.key == field for f in selected)  # field is selected
+
+    order_by = [field]
+    sort = ["descending" if reverse else "ascending"]
+    params: QueryParams = {
+        "class_name": class_name,
+        "order_by": order_by,
+        "sort": sort,
+    }
+
+    results = await joint_fixture.call_search_endpoint(params)
+    assert results.hits == sorted_resources(results.hits, order_by, sort)
+
+
+@pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])
+@pytest.mark.parametrize("field", ["category", "field1"])
+@pytest.mark.asyncio
+async def test_sort_with_one_of_the_unselected_fields(
+    joint_fixture: JointFixture, reverse: bool, field: str
+):
+    """Test sorting when fields are selected but sorted by an unselected field."""
+    class_name = "DatasetEmbedded"
+    selected = joint_fixture.config.searchable_classes[class_name].selected_fields
+    assert selected  # this resource has selected fields
+    assert not any(f.key == field for f in selected)  # field is unselected
+
+    order_by = [field]
+    sort = ["descending" if reverse else "ascending"]
+    params: QueryParams = {
+        "class_name": class_name,
+        "order_by": order_by,
+        "sort": sort,
+    }
+
+    results = await joint_fixture.call_search_endpoint(params)
+
+    # make sure the field is not returned in the results
+    for resource in results.hits:
+        assert field not in resource.content
+
+    # therefore, we cannot just sort the results,
+    # but we need to fetch the field from the complete original resources
+    complete_resources = joint_fixture.resources[class_name]
+    assert results.hits == sorted_resources(
+        results.hits, order_by, sort, complete_resources
+    )
