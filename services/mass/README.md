@@ -24,8 +24,9 @@ occur in these embedded classes, too.
 Along with the hits, facet options are reported that can be used to filter down the hits by
 performing the same search query again but with specific facet selections being set.
 
-The search endpoint supports pagination to deal with large hit lists. Facet options can
-help avoid having to rely on this feature by filtering down the number of hits to a single page.
+The search endpoint supports pagination to deal with a large number of search results.
+Facet options can help avoid having to rely on this feature by filtering down the number
+of hits to a single page.
 
 For more information see the OpenAPI spec linked below.
 
@@ -317,11 +318,11 @@ The service requires the following configuration parameters:
 
   - **`description`** *(string, required)*: A brief description of the resource type.
 
-  - **`facetable_fields`** *(array)*: A list of the facetable fields for the resource type (leave empty to not use faceting). Default: `[]`.
+  - **`facetable_fields`** *(array)*: A list of the facetable fields for the resource type (leave empty to not use faceting, use dotted notation for nested fields). Default: `[]`.
 
     - **Items**: Refer to *[#/$defs/FieldLabel](#%24defs/FieldLabel)*.
 
-  - **`selected_fields`** *(array)*: A list of the returned fields for the resource type (leave empty to return all). Default: `[]`.
+  - **`selected_fields`** *(array)*: A list of the returned fields for the resource type (leave empty to return all, use dotted notation for nested fields). Default: `[]`.
 
     - **Items**: Refer to *[#/$defs/FieldLabel](#%24defs/FieldLabel)*.
 

@@ -128,7 +128,7 @@ components:
         facetable_fields:
           default: []
           description: A list of the facetable fields for the resource type (leave
-            empty to not use faceting)
+            empty to not use faceting, use dotted notation for nested fields)
           items:
             $ref: '#/components/schemas/FieldLabel'
           title: Facetable Fields
@@ -136,7 +136,7 @@ components:
         selected_fields:
           default: []
           description: A list of the returned fields for the resource type (leave
-            empty to return all)
+            empty to return all, use dotted notation for nested fields)
           items:
             $ref: '#/components/schemas/FieldLabel'
           title: Selected Fields
@@ -177,6 +177,7 @@ components:
 info:
   contact:
     email: contact@ghga.de
+    name: German Human Genome Phenome Archive (GHGA)
   license:
     name: Apache 2.0
   summary: A service for searching metadata artifacts and filtering results.

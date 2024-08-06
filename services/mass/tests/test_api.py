@@ -28,6 +28,8 @@ from tests.fixtures.joint import JointFixture, QueryParams
 
 pytestmark = pytest.mark.asyncio()
 
+CLASS_NAME = "NestedData"
+
 
 def compare(
     *,
@@ -45,7 +47,7 @@ def compare(
         assert results.facets == facets
     else:
         config = get_config()
-        dataset_embedded_class = config.searchable_classes["DatasetEmbedded"]
+        dataset_embedded_class = config.searchable_classes[CLASS_NAME]
         assert dataset_embedded_class is not None
         configured_facets = dataset_embedded_class.facetable_fields
         assert len(results.facets) == len(configured_facets)
@@ -80,16 +82,16 @@ async def test_malformed_document(
     resource = models.Resource(
         id_="added-resource",
         content={
-            "has_object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
-            "field1": 42,  # expected to be a string
+            "object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
+            "city": 42,  # expected to be a string
             "category": "test object",
         },
     )
 
     await joint_fixture.query_handler.load_resource(
-        resource=resource, class_name="DatasetEmbedded"
+        resource=resource, class_name=CLASS_NAME
     )
-    params: QueryParams = {"class_name": "DatasetEmbedded"}
+    params: QueryParams = {"class_name": CLASS_NAME}
 
     with caplog.at_level(logging.WARNING):
         with pytest.raises(
@@ -108,7 +110,7 @@ async def test_malformed_document(
 
 async def test_search(joint_fixture: JointFixture):
     """Basic query to pull back all documents for class name"""
-    params: QueryParams = {"class_name": "DatasetEmbedded"}
+    params: QueryParams = {"class_name": CLASS_NAME}
 
     results = await joint_fixture.call_search_endpoint(params)
     compare(results=results, count=3, hit_length=3)
@@ -116,14 +118,14 @@ async def test_search(joint_fixture: JointFixture):
 
 async def test_search_with_limit(joint_fixture: JointFixture):
     """Make sure we get a count of 3 but only 1 hit"""
-    params: QueryParams = {"class_name": "DatasetEmbedded", "limit": 1}
+    params: QueryParams = {"class_name": CLASS_NAME, "limit": 1}
 
     results = await joint_fixture.call_search_endpoint(params)
     hit = {
         "id_": "1HotelAlpha-id",
         "content": {
             "type": "resort",
-            "has_object": {"type": "piano"},
+            "object": {"type": "piano"},
         },
     }
     hits = [models.Resource(**hit)]  # type: ignore[arg-type]
@@ -132,7 +134,7 @@ async def test_search_with_limit(joint_fixture: JointFixture):
 
 async def test_search_keywords(joint_fixture: JointFixture):
     """Make sure the query string is passed through intact"""
-    params: QueryParams = {"class_name": "DatasetEmbedded", "query": "hotel"}
+    params: QueryParams = {"class_name": CLASS_NAME, "query": "hotel"}
 
     results = await joint_fixture.call_search_endpoint(params)
     compare(results=results, count=2, hit_length=2)
@@ -141,8 +143,8 @@ async def test_search_keywords(joint_fixture: JointFixture):
 async def test_search_filters(joint_fixture: JointFixture):
     """Make sure filters work"""
     params: QueryParams = {
-        "class_name": "DatasetEmbedded",
-        "filter_by": ["has_object.type"],
+        "class_name": CLASS_NAME,
+        "filter_by": ["object.type"],
         "value": ["piano"],
     }
 
@@ -162,7 +164,7 @@ async def test_auto_recreation_of_indexes(
     joint_fixture: JointFixture, caplog: pytest.LogCaptureFixture
 ):
     """Make sure the indexes are recreated on the fly when they were deleted"""
-    params: QueryParams = {"class_name": "DatasetEmbedded", "query": "hotel"}
+    params: QueryParams = {"class_name": CLASS_NAME, "query": "hotel"}
 
     # should not give a warning when indexes are present
     with caplog.at_level(logging.WARNING):

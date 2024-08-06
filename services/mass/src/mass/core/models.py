@@ -55,12 +55,12 @@ class SearchableClass(BaseModel):
     facetable_fields: list[FieldLabel] = Field(
         [],
         description="A list of the facetable fields for the resource type"
-        " (leave empty to not use faceting)",
+        " (leave empty to not use faceting, use dotted notation for nested fields)",
     )
     selected_fields: list[FieldLabel] = Field(
         [],
         description="A list of the returned fields for the resource type"
-        " (leave empty to return all)",
+        " (leave empty to return all, use dotted notation for nested fields)",
     )
 
 

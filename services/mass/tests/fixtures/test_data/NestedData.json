@@ -2,12 +2,13 @@
   "items": [
     {
       "category": "hotel",
-      "field1": "Miami",
-      "has_object": {
+      "city": "Miami",
+      "id_": "1HotelAlpha-id",
+      "object": {
         "id_": "HotelAlphaObject",
         "type": "piano"
       },
-      "has_rooms": [
+      "rooms": [
         {
           "id_": "HotelAlphaLarge",
           "type": "large room"
@@ -17,31 +18,30 @@
           "type": "poolside room"
         }
       ],
-      "id_": "1HotelAlpha-id",
       "type": "resort"
     },
     {
       "category": "hotel",
-      "field1": "Denver",
-      "has_object": {
+      "city": "Denver",
+      "id_": "2HotelBeta-id",
+      "object": {
         "id_": "HotelBetaObject",
         "type": "kitchen"
       },
-      "id_": "2HotelBeta-id",
       "type": "luxury"
     },
     {
-      "category": "zoo",
-      "field1": "Amsterdam",
-      "has_animal": {
+      "animal": {
         "id_": "ZooAnimal",
         "type": "giraffe"
       },
-      "has_object": {
+      "category": "zoo",
+      "city": "Amsterdam",
+      "id_": "3zoo-id",
+      "object": {
         "id_": "zoo-object",
         "type": "concessions stand"
-      },
-      "id_": "3zoo-id"
+      }
     }
   ]
 }

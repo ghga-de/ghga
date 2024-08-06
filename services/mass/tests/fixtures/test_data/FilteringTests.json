@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "eats": [
+        "bananas"
+      ],
+      "id_": "1",
+      "name": "Jack",
+      "species": "monkey"
+    },
+    {
+      "eats": [
+        "dog food",
+        "treats"
+      ],
+      "id_": "2",
+      "name": "Bruiser",
+      "species": "dog"
+    },
+    {
+      "eats": [
+        "spaghetti",
+        "meatballs"
+      ],
+      "id_": "3",
+      "name": "Lady",
+      "species": "dog"
+    },
+    {
+      "eats": [
+        "fish",
+        "lasagna",
+        "meatballs",
+        "spaghetti",
+        "treats"
+      ],
+      "id_": "4",
+      "name": "Garfield",
+      "species": "cat"
+    },
+    {
+      "eats": [
+        "fish",
+        "shrimp"
+      ],
+      "id_": "5",
+      "name": "Flipper",
+      "species": "dolphin"
+    }
+  ]
+}

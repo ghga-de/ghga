@@ -26,7 +26,13 @@ from mass.config import Config
 def get_configured_app(*, config: Config) -> FastAPI:
     """Create and configure a REST API application."""
     summary = metadata["Summary"]
-    author = metadata["Author"]
+    author = metadata.get("Author")
+    email = metadata["Author-email"]
+    if not author and email.endswith(">"):
+        # author is contained in Author-email
+        author, email = email.rsplit("<", 1)
+        author = author.strip().strip('"')
+        email = email[:-1]
     email = metadata["Author-email"]
     license = metadata["License"]
     title, summary = summary.split(" - ", 1)

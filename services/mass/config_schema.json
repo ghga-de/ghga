@@ -31,7 +31,7 @@
         },
         "facetable_fields": {
           "default": [],
-          "description": "A list of the facetable fields for the resource type (leave empty to not use faceting)",
+          "description": "A list of the facetable fields for the resource type (leave empty to not use faceting, use dotted notation for nested fields)",
           "items": {
             "$ref": "#/$defs/FieldLabel"
           },
@@ -40,7 +40,7 @@
         },
         "selected_fields": {
           "default": [],
-          "description": "A list of the returned fields for the resource type (leave empty to return all)",
+          "description": "A list of the returned fields for the resource type (leave empty to return all, use dotted notation for nested fields)",
           "items": {
             "$ref": "#/$defs/FieldLabel"
           },

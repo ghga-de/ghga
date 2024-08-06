@@ -39,7 +39,7 @@ BAD_CLASS_NAME_UPSERT = SearchableResource(
     accession="1HotelAlpha-id", class_name=BAD_CLASS_NAME, content={}
 )
 BAD_ACCESSION_DELETE = SearchableResourceInfo(
-    accession=BAD_ACCESSION, class_name="DatasetEmbedded"
+    accession=BAD_ACCESSION, class_name="NestedData"
 )
 UPSERT_EVENT = "upsert"
 DELETE_EVENT = "delete"
@@ -111,7 +111,7 @@ async def test_event_sub_logging(
     """
     # get all the documents in the collection
     all_results = await joint_fixture.query_handler.handle_query(
-        class_name="DatasetEmbedded",
+        class_name="NestedData",
         query="",
         filters=[],
     )

@@ -17,21 +17,21 @@
 db_connection_str: mongodb://localhost:27017
 db_name: metadata-store
 searchable_classes:
-  DatasetEmbedded:
+  NestedData:
     description: Dataset with embedded references.
     facetable_fields:
       - key: category
         name: Category
-      - key: field1
+      - key: city
         name: Field 1
-      - key: "has_object.type"
+      - key: "object.type"
         name: Object Type
     selected_fields:
       - key: id_
         name: ID
       - key: type
         name: Location Type
-      - key: "has_object.type"
+      - key: "object.type"
         name: Object Type
   EmptyCollection:
     description: An empty collection to test the index creation.
@@ -53,6 +53,14 @@ searchable_classes:
       - key: data
         name: Data
     selected_fields: []
+  FilteringTests:
+    description: Data for testing filtering on using single and multi-valued fields.
+    facetable_fields:
+      - key: species
+      - key: eats
+        name: Food
+    selected_fields:
+      - key: name
 resource_change_event_topic: searchable_resources
 resource_deletion_event_type: searchable_resource_deleted
 resource_upsertion_event_type: searchable_resource_upserted
