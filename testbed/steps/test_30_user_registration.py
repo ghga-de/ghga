@@ -36,15 +36,14 @@ scenarios("../features/30_user_registration.feature")
 def user_not_yet_registered(full_name: str, fixtures: JointFixture):
     registered_users = fixtures.state.get_state("registered users") or {}
     sub = fixtures.auth.get_sub(full_name)
-    if not fixtures.config.use_api_gateway:
-        fixtures.mongo.remove_document(
-            fixtures.config.ums_db_name,
-            fixtures.config.ums_users_collection,
-            {"ext_id": sub},
-        )
-        if sub in registered_users:
-            del registered_users[sub]
-            fixtures.state.set_state("registered users", registered_users)
+    fixtures.mongo.remove_documents(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_users_collection,
+        {"ext_id": sub},
+    )
+    if sub in registered_users:
+        del registered_users[sub]
+        fixtures.state.set_state("registered users", registered_users)
     assert sub not in registered_users
     changed_user_data = fixtures.state.get_state("changed user data") or {}
     if sub in changed_user_data:

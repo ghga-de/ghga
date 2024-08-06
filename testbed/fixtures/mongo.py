@@ -16,17 +16,16 @@
 
 """Fixture for testing code that uses the MongoDbDaoFactory provider."""
 
-from collections.abc import Generator, Mapping
+from collections.abc import Mapping
 from time import sleep
 from typing import Any
 
-from hexkit.providers.mongodb.provider import MongoDbDaoFactory
-from hexkit.providers.mongodb.testutils import MongoDbFixture as BaseMongoFixture
 from pymongo import MongoClient
-from pymongo.errors import ExecutionTimeout, OperationFailure
 from pytest import fixture
 
 from fixtures.config import Config
+from fixtures.http_client import HttpClient
+from fixtures.state_manager import StateManager
 
 __all__ = [
     "mongo_fixture",
@@ -38,8 +37,12 @@ TIMEOUT = 10  # timeout for database operations in seconds
 INTERVAL = 0.1  # interval for retrying database operations in seconds
 
 
-class MongoFixture(BaseMongoFixture):
-    """An augmented Mongo DB fixture containing a MongoClient"""
+class MongoFixture(StateManager):
+    """Fixture for managing MongoDB resources."""
+
+    def __init__(self, config: Config, http: HttpClient):
+        self.config = config
+        self.http = http
 
     config: Config
 
@@ -50,78 +53,74 @@ class MongoFixture(BaseMongoFixture):
     def empty_databases(
         self,
         db_names: str | list[str] | None = None,
-        exclude_collections: str | list[str] | None = None,
-    ):
-        """Drop all mongodb collections in the given database(s).
-
-        You can also specify collection(s) that should be excluded
-        from the operation, i.e. collections that should be kept.
-        """
+        collection_names: str | list[str] | None = None,
+    ) -> None:
+        """Delete all or some documents in the given namespace(s)"""
         if db_names is None:
             db_names = self.service_db_names
-        elif isinstance(db_names, str):
+
+        if isinstance(db_names, str):
             db_names = [db_names]
-        if exclude_collections is None:
-            exclude_collections = []
-        elif isinstance(exclude_collections, str):
-            exclude_collections = [exclude_collections]
-        excluded_collections = set(exclude_collections)
+
+        if isinstance(collection_names, str):
+            collection_names = [collection_names]
+        else:
+            collection_names = collection_names or ["*"]
+
         for db_name in db_names:
-            try:
-                db = self.client[db_name]
-                collection_names = db.list_collection_names()
-                for collection_name in collection_names:
-                    if collection_name not in excluded_collections:
-                        db.drop_collection(collection_name)
-            except (ExecutionTimeout, OperationFailure) as error:
-                raise RuntimeError(
-                    f"Could not drop collection(s) of Mongo database {db_name}"
-                ) from error
+            for collection_name in collection_names:
+                self.remove_documents(db_name=db_name, collection_name=collection_name)
 
     def find_document(
-        self, db_name: str, collection_name: str, mapping: Mapping[str, Any]
+        self,
+        db_name: str,
+        collection_name: str,
+        query: Mapping[str, Any] | None = None,
     ) -> dict[str, Any] | None:
-        """Return one document from the given collection matching the given filter."""
-        db = self.client[db_name]
-        collection = db.get_collection(collection_name)
-        return collection.find_one(mapping)
+        documents = self.find_documents(
+            db_name=db_name,
+            collection_name=collection_name,
+            query=query,
+        )
+        return documents[0] if documents else None
 
     def find_documents(
-        self, db_name: str, collection_name: str, mapping: Mapping[str, Any]
+        self,
+        db_name: str,
+        collection_name: str,
+        query: Mapping[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        """Return all documents from the given collection matching the given filter."""
-        db = self.client[db_name]
-        collection = db.get_collection(collection_name)
-        return list(collection.find(mapping))
+        """Return one document from the given collection matching the given filter."""
+        url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
+        if query:
+            query = self.stringify_query_params(query)
+        response = self.http.get(url, headers=self.auth_headers, params=query)
+        assert (
+            response.status_code == 200
+        ), f"Failed to retrieve document: {response.text}"
+        return response.json()
 
     def wait_for_document(
         self,
         db_name: str,
         collection_name: str,
-        mapping: Mapping[str, Any],
+        query: Mapping[str, Any],
         timeout: float = TIMEOUT,
     ) -> dict[str, Any] | None:
-        """Wait for a document.
-
-        Waits for at least one document from the given collection matching the given
-        filter to appear in the database. If it does not appear in the given timeout
-        (in seconds), then a value of None is returned. Otherwise, the document itself
-        will be returned (the first document found if there are multiple).
-        """
         documents = self.wait_for_documents(
             db_name=db_name,
             collection_name=collection_name,
-            mapping=mapping,
+            query=query,
             number=1,
             timeout=timeout,
         )
-        return None if documents is None else documents[0]
+        return documents[0] if documents else None
 
     def wait_for_documents(
         self,
         db_name: str,
         collection_name: str,
-        mapping: Mapping[str, Any],
+        query: Mapping[str, Any],
         number: int = 1,
         timeout: float = TIMEOUT,
         interval: float = INTERVAL,
@@ -135,36 +134,42 @@ class MongoFixture(BaseMongoFixture):
         """
         slept: float = 0
         while slept < timeout:
-            documents = self.find_documents(db_name, collection_name, mapping)
+            documents = self.find_documents(db_name, collection_name, query)
             if len(documents) >= number:
                 return documents
             sleep(interval)
             slept += interval
         return None
 
-    def replace_document(
+    def upsert_document(
         self, db_name: str, collection_name: str, document: Mapping[str, Any]
     ):
         """Replace one document in the given collection."""
-        db = self.client[db_name]
-        collection = db.get_collection(collection_name)
-        collection.replace_one({"_id": document["_id"]}, document, upsert=True)
+        url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
+        data = {"documents": document, "id_field": "_id"}
+        response = self.http.put(url, headers=self.auth_headers, json=data)
+        assert (
+            response.status_code == 204
+        ), f"Failed to replace document: {response.text}"
 
-    def remove_document(
-        self, db_name: str, collection_name: str, document: Mapping[str, Any]
+    def remove_documents(
+        self,
+        db_name: str,
+        collection_name: str,
+        query: Mapping[str, Any] | None = None,
     ):
         """Remove one document in the given collection with the given document."""
-        db = self.client[db_name]
-        collection = db.get_collection(collection_name)
-        collection.delete_many(document)
+        # Previous remove method uses regex so it was possible to delete multiple by keyword, with sms it's not possible
+        url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
+        if query:
+            query = self.stringify_query_params(query)
+        response = self.http.delete(url, headers=self.auth_headers, params=query)
+        assert (
+            response.status_code == 204
+        ), f"Failed to delete document: {response.text}"
 
 
 @fixture(name="mongo", scope="session")
-def mongo_fixture(config: Config) -> Generator[MongoFixture, None, None]:
+def mongo_fixture(config: Config, http: HttpClient) -> MongoFixture:
     """Pytest fixture for tests depending on the Mongo database."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    db_connection_str = str(config.db_connection_str.get_secret_value())
-    client: MongoClient = MongoClient(db_connection_str)
-    mongo = MongoFixture(client=client, config=config, dao_factory=dao_factory)
-    yield mongo
-    client.close()
+    return MongoFixture(config=config, http=http)

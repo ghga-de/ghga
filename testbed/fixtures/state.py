@@ -91,12 +91,12 @@ class MongoStateStorage(StateStorage):
         return (state or {}).get("value")
 
     def set_state(self, state_name: str, value: Any):
-        self.mongo.replace_document(
+        self.mongo.upsert_document(
             self.DB_NAME, self.COLLECTION_NAME, {"_id": state_name, "value": value}
         )
 
     def unset_state(self, state_regex: str):
-        self.mongo.remove_document(
+        self.mongo.remove_documents(
             self.DB_NAME, self.COLLECTION_NAME, {"_id": {"$regex": state_regex}}
         )
 

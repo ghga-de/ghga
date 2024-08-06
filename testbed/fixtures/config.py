@@ -20,13 +20,12 @@ from pathlib import Path
 
 from hexkit.config import config_from_yaml
 from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
 from hexkit.providers.s3 import S3Config
 from pydantic import Field, SecretStr, model_validator
 
 
 @config_from_yaml(prefix="tb")
-class Config(KafkaConfig, MongoDbConfig, S3Config):
+class Config(KafkaConfig, S3Config):
     """Config class for the test app."""
 
     # operation modes
@@ -52,11 +51,6 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     service_instance_id: str = "testbed-app-1"
     kafka_servers: list[str] = ["kafka:9092"]  # noqa: RUF012
 
-    # MongoDb config
-    db_connection_str: SecretStr = SecretStr(
-        "mongodb://testbed_user:testbed_key@mongodb"
-    )
-    db_name: str = "test-db"
     # databases that shall be dropped when running from scratch
     service_db_names: list[str] = [  # noqa: RUF012
         "ars",
@@ -97,6 +91,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
         "mass",
         "mail",
         "op",
+        "sms",
     ]
 
     # internal APIs
@@ -107,6 +102,7 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     auth_adapter_url: str = "http://auth"
     auth_basic: str = ""  # for Basic Authentication
     upload_token: str = ""  # simple token for uploading metadata
+    state_management_token: str = ""  # simple token for state management service
     totp_digits: int = 6
     totp_algorithm: str = "sha1"
     totp_interval: int = 30
@@ -175,6 +171,9 @@ class Config(KafkaConfig, MongoDbConfig, S3Config):
     vault_url: str = "http://vault:8200"
     vault_token: str = "dev-token"
     vault_path: str = "ekss"
+
+    # sms
+    sms_url: str = "http://sms"
 
     @model_validator(mode="after")
     def check_operation_modes(self):

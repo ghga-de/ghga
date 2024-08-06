@@ -68,9 +68,6 @@ def run_the_load_command(fixtures: JointFixture):
 
 @then("the stats for the datasets exist in the database")
 def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
-    if config.use_api_gateway:
-        # black-box testing: skip checking the database directly
-        return
     datasets = mongo.wait_for_documents(
         config.metldata_db_name, "art_stats_public_class_DatasetStats", {}
     )
@@ -104,9 +101,6 @@ def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
 
 @then("the test datasets exist as embedded dataset in the database")
 def check_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
-    if config.use_api_gateway:
-        # black-box testing: skip checking the database directly
-        return
     datasets = mongo.wait_for_documents(
         config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
     )
@@ -140,9 +134,6 @@ def check_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
 
 @then("the test datasets are known to the work package service")
 def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
-    if config.use_api_gateway:
-        # black-box testing: skip checking the database directly
-        return
     datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {})
     assert datasets
     assert len(datasets) == 2

@@ -31,6 +31,7 @@ from fixtures import (  # noqa: RUF100
     MongoFixture,
     Response,
     S3Fixture,
+    StateManager,
     StateStorage,
     VaultFixture,
     auth_fixture,
@@ -45,6 +46,7 @@ from fixtures import (  # noqa: RUF100
     mongo_fixture,
     s3_fixture,
     state_fixture,
+    state_manager_fixture,
     vault_fixture,
 )
 from pytest_bdd import (  # noqa: RUF100
@@ -200,21 +202,21 @@ def restore_data_stewardship(state: dict[str, Any], fixtures: JointFixture) -> N
     assert not fixtures.config.use_api_gateway
     user = state["user"]
     assert user
-    fixtures.mongo.replace_document(
+    fixtures.mongo.upsert_document(
         fixtures.config.ums_db_name,
         fixtures.config.ums_users_collection,
         user,
     )
     user = state["nos"]
     assert user
-    fixtures.mongo.replace_document(
+    fixtures.mongo.upsert_document(
         fixtures.config.nos_db_name,
         "users",
         user,
     )
     claim = state.get("claim")
     assert claim
-    fixtures.mongo.replace_document(
+    fixtures.mongo.upsert_document(
         fixtures.config.ums_db_name,
         fixtures.config.ums_claims_collection,
         claim,
@@ -227,14 +229,13 @@ async def reset_state(fixtures: JointFixture):
     """Reset all state used by the Archive Test Bed."""
     fixtures.state.reset_state()  # empty state database
     if not fixtures.config.use_api_gateway:
-        # When running the tests externally using the API gateway,
-        # we do not have access permissions to the state databases,
-        # so we rely on the deployment to start with a clean slate.
+        # When running the tests externally we have no access
+        # to object storage and kafka.
         await fixtures.s3.empty_buckets()  # empty object storage
         await fixtures.kafka.clear_topics()  # empty event queues
-        saved_data_steward = fetch_data_stewardship(fixtures)
-        fixtures.mongo.empty_databases()  # empty service databases
-        restore_data_stewardship(saved_data_steward, fixtures)
+    saved_data_steward = fetch_data_stewardship(fixtures)
+    fixtures.mongo.empty_databases()  # empty service databases
+    restore_data_stewardship(saved_data_steward, fixtures)
     fixtures.dsk.reset_work_dir()  # reset local submission registry
     empty_mail_server(fixtures)  # reset mail server
 

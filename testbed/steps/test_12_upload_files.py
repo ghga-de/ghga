@@ -282,15 +282,10 @@ def check_metadata_documents(
 
     assert accessions
 
-    if fixtures.config.use_api_gateway:
-        # if we use the API gateway, we cannot access the database directly
-        # and therefore just return the accessions
-        return accessions
-
     documents = fixtures.mongo.wait_for_documents(
         db_name=fixtures.config.ifrs_db_name,
         collection_name=fixtures.config.ifrs_metadata_collection,
-        mapping={"_id": {"$in": list(accessions)}},
+        query={"_id": {"$in": list(accessions)}},
         number=len(accessions),
     )
     assert documents

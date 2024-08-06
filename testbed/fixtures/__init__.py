@@ -31,6 +31,7 @@ from fixtures.kafka import KafkaFixture, kafka_fixture
 from fixtures.mongo import MongoFixture, mongo_fixture
 from fixtures.s3 import S3Fixture, s3_fixture
 from fixtures.state import StateStorage, state_fixture
+from fixtures.state_manager import StateManager, state_manager_fixture
 from fixtures.vault import VaultFixture, vault_fixture
 
 __all__ = [
@@ -45,11 +46,13 @@ __all__ = [
     "dsk_fixture",
     "connector_fixture",
     "state_fixture",
+    "state_manager_fixture",
     "Config",
     "HttpClient",
     "JointFixture",
     "Response",
     "StateStorage",
+    "StateManager",
     "vault_fixture",
     "iva_fixture",
 ]
@@ -105,5 +108,15 @@ def joint_fixture(
     """A fixture that collects all fixtures for integration testing."""
 
     return JointFixture(
-        config, http, kafka, mongo, s3, auth, dsk, connector, state, vault, iva
+        config,
+        http,
+        kafka,
+        mongo,
+        s3,
+        auth,
+        dsk,
+        connector,
+        state,
+        vault,
+        iva,
     )
