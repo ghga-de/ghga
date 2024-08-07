@@ -14,6 +14,15 @@
       ],
       "id_": "1",
       "name": "Jack",
+      "special": {
+        "features": [
+          {
+            "fur": {
+              "color": "brown"
+            }
+          }
+        ]
+      },
       "species": "monkey"
     },
     {
@@ -34,6 +43,15 @@
       ],
       "id_": "2",
       "name": "Bruiser",
+      "special": {
+        "features": [
+          {
+            "fur": {
+              "color": "light brown"
+            }
+          }
+        ]
+      },
       "species": "dog"
     },
     {
@@ -54,6 +72,18 @@
       ],
       "id_": "3",
       "name": "Lady",
+      "special": {
+        "features": [
+          {
+            "fur": {
+              "color": [
+                "cream",
+                "brown"
+              ]
+            }
+          }
+        ]
+      },
       "species": "dog"
     },
     {
@@ -80,6 +110,18 @@
       ],
       "id_": "4",
       "name": "Garfield",
+      "special": {
+        "features": [
+          {
+            "fur": {
+              "color": [
+                "orange",
+                "black"
+              ]
+            }
+          }
+        ]
+      },
       "species": "cat"
     },
     {
@@ -103,6 +145,15 @@
       ],
       "id_": "5",
       "name": "Flipper",
+      "special": {
+        "features": [
+          {
+            "fur": {
+              "color": "gray"
+            }
+          }
+        ]
+      },
       "species": "dolphin"
     }
   ]

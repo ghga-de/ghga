@@ -76,7 +76,7 @@ async def test_malformed_document(
     joint_fixture: JointFixture, caplog: pytest.LogCaptureFixture
 ):
     """Test behavior from API perspective upon querying when bad doc exists"""
-    joint_fixture.empty_database()
+    joint_fixture.purge_database()
 
     # define and load a new resource without all the required facets
     resource = models.Resource(

@@ -83,7 +83,7 @@ def sorted_reference_results(
     if not sorts:
         sorts = [RELEVANCE_SORT, ID_ASC]
 
-    results = joint_fixture.mongodb.client[joint_fixture.config.db_name][
+    results = joint_fixture.mongodb_client[joint_fixture.config.db_name][
         CLASS_NAME
     ].find({"$text": {"$search": query}}, {"score": {"$meta": "textScore"}})
     results = [x for x in results]  # type: ignore

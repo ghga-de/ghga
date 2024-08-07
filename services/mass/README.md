@@ -37,13 +37,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/mass):
 ```bash
-docker pull ghga/mass:3.0.1
+docker pull ghga/mass:3.0.2
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/mass:3.0.1 .
+docker build -t ghga/mass:3.0.2 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -51,7 +51,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/mass:3.0.1 --help
+docker run -p 8080:8080 ghga/mass:3.0.2 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -72,7 +72,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"mass"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -105,11 +105,11 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`searchable_classes`** *(object)*: A collection of searchable_classes with facetable and selected fields. Can contain additional properties.
+- **`searchable_classes`** *(object, required)*: A collection of searchable_classes with facetable and selected fields. Can contain additional properties.
 
   - **Additional properties**: Refer to *[#/$defs/SearchableClass](#%24defs/SearchableClass)*.
 
-- **`resource_change_event_topic`** *(string)*: Name of the event topic used to track resource deletion and upsertion events.
+- **`resource_change_event_topic`** *(string, required)*: Name of the event topic used to track resource deletion and upsertion events.
 
 
   Examples:
@@ -119,7 +119,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`resource_deletion_event_type`** *(string)*: The type to use for events with deletion instructions.
+- **`resource_deletion_event_type`** *(string, required)*: The type to use for events with deletion instructions.
 
 
   Examples:
@@ -129,7 +129,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`resource_upsertion_event_type`** *(string)*: The type to use for events with upsert instructions.
+- **`resource_upsertion_event_type`** *(string, required)*: The type to use for events with upsert instructions.
 
 
   Examples:
@@ -139,7 +139,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -193,7 +193,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -203,7 +203,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:

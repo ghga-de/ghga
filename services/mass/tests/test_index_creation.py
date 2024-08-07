@@ -35,17 +35,17 @@ QUERY_STRING = "Backrub"
 async def test_index_creation(joint_fixture: JointFixture, create_index_manually: bool):
     """Test the index creation function."""
     # indexes have been created in fixture setup, so delete them again
-    joint_fixture.empty_database()
+    joint_fixture.purge_database()
 
     # verify collection does not exist
-    database = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+    database = joint_fixture.mongodb_client[joint_fixture.config.db_name]
     assert CLASS_NAME not in database.list_collection_names()
 
-    # reset the flag so it actually runs the indexing function
-    joint_fixture.query_handler._dao_collection._indexes_created = False  # type: ignore
+    # let the query handler know that it needs to run the indexing function
+    joint_fixture.recreate_mongodb_indexes()
 
     # make sure we do not get an error when trying to query non-existent collection
-    results_without_coll = await joint_fixture.query_handler.handle_query(
+    results_without_coll = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query=QUERY_STRING,
         filters=[],
@@ -54,7 +54,7 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
     assert results_without_coll == models.QueryResults()
 
     # create collection without index
-    joint_fixture.mongodb.client[joint_fixture.config.db_name].create_collection(
+    joint_fixture.mongodb_client[joint_fixture.config.db_name].create_collection(
         CLASS_NAME
     )
 
@@ -69,7 +69,7 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
     )
 
     # Verify querying empty collection with query string gives empty results model
-    results_without_coll = await joint_fixture.query_handler.handle_query(
+    results_without_coll = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query=QUERY_STRING,
         filters=[],
@@ -90,7 +90,7 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
     assert any(index["name"] == f"$**_{TEXT}" for index in collection.list_indexes())
 
     # verify that supplying a query string doesn't result in an error
-    results_with_coll = await joint_fixture.query_handler.handle_query(
+    results_with_coll = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query=QUERY_STRING,
         filters=[],

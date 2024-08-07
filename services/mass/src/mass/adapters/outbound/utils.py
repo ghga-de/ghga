@@ -41,18 +41,6 @@ def pipeline_match_text_search(*, query: str) -> JsonObject:
     return {"$match": text_search}
 
 
-def args_for_getfield(*, root_object_name: str, field_name: str) -> tuple[str, str]:
-    """Fieldpath names can't have '.', so specify any nested fields with $getField"""
-    prefix = f"${root_object_name}"
-    specified_field = field_name
-    if "." in field_name:
-        pieces = field_name.split(".")
-        specified_field = pieces[-1]
-        prefix += "." + ".".join(pieces[:-1])
-
-    return prefix, specified_field
-
-
 def pipeline_match_filters_stage(*, filters: list[models.Filter]) -> JsonObject:
     """Build segment of pipeline to apply search filters"""
     filter_values = defaultdict(list)
@@ -95,35 +83,45 @@ def pipeline_facet_sort_and_paginate(
     segment: dict[str, list[JsonObject]] = {}
 
     for facet in facet_fields:
-        prefix, specified_field = args_for_getfield(
-            root_object_name="content", field_name=facet.key
-        )
         name = facet.name
         if not name:
             name = name_from_key(facet.key)
-        segment[name] = [
+        pipeline: list[JsonObject] = [
             {
                 "$unwind": {
-                    "path": prefix,
+                    "path": "$content",
                     "preserveNullAndEmptyArrays": True,
                 }
             },
-            {
-                "$unwind": {
-                    "path": f"{prefix}.{specified_field}",
-                    "preserveNullAndEmptyArrays": True,
-                }
-            },
-            {
-                "$group": {
-                    "_id": {"$getField": {"field": specified_field, "input": prefix}},
-                    "count": {"$sum": 1},
-                }
-            },
-            {"$addFields": {"value": "$_id"}},  # rename "_id" to "value" on each option
-            {"$unset": "_id"},
-            {"$sort": {"value": 1}},
         ]
+        path = "$content"
+        for field in facet.key.split("."):
+            path += f".{field}"
+            pipeline.append(
+                {
+                    "$unwind": {
+                        "path": path,
+                        "preserveNullAndEmptyArrays": True,
+                    }
+                },
+            )
+        path, field = path.rsplit(".", 1)
+        pipeline.extend(
+            (
+                {
+                    "$group": {
+                        "_id": {"$getField": {"field": field, "input": path}},
+                        "count": {"$sum": 1},
+                    }
+                },
+                {
+                    "$addFields": {"value": "$_id"}
+                },  # rename "_id" to "value" on each option
+                {"$unset": "_id"},
+                {"$sort": {"value": 1}},
+            )
+        )
+        segment[name] = pipeline
 
     # this is the total number of hits, but pagination can mean only a few are returned
     segment["count"] = [{"$count": "total"}]

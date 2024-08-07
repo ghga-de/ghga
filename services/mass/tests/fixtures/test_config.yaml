@@ -61,6 +61,8 @@ searchable_classes:
         name: Food
       - key: friends.name
         name: Friend
+      - key: special.features.fur.color
+        name: Fur color
     selected_fields:
       - key: name
 resource_change_event_topic: searchable_resources

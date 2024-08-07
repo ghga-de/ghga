@@ -18,6 +18,7 @@
 import pytest
 
 from mass.core import models
+from mass.ports.inbound.query_handler import QueryHandlerPort
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture
 
@@ -30,7 +31,7 @@ CLASS_NAME = "NestedData"
 async def test_basic_query(joint_fixture: JointFixture):
     """Make sure we can pull back the documents as expected"""
     # pull back all 3 test documents
-    results = await joint_fixture.query_handler.handle_query(
+    results = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[]
     )
 
@@ -39,7 +40,7 @@ async def test_basic_query(joint_fixture: JointFixture):
 
 async def test_text_search(joint_fixture: JointFixture):
     """Test basic text search"""
-    results_text = await joint_fixture.query_handler.handle_query(
+    results_text = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="poolside", filters=[]
     )
 
@@ -49,7 +50,7 @@ async def test_text_search(joint_fixture: JointFixture):
 
 async def test_filters_work(joint_fixture: JointFixture):
     """Test a query with filters selected but no query string"""
-    results_filtered = await joint_fixture.query_handler.handle_query(
+    results_filtered = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query="",
         filters=[models.Filter(key="city", value="Amsterdam")],
@@ -58,7 +59,7 @@ async def test_filters_work(joint_fixture: JointFixture):
     assert results_filtered.count == 1
     assert results_filtered.hits[0].id_ == "3zoo-id"
 
-    results_multi_filter = await joint_fixture.query_handler.handle_query(
+    results_multi_filter = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query="",
         filters=[
@@ -73,7 +74,7 @@ async def test_filters_work(joint_fixture: JointFixture):
 
 async def test_facets_returned(joint_fixture: JointFixture):
     """Verify that facet fields are returned correctly"""
-    results_faceted = await joint_fixture.query_handler.handle_query(
+    results_faceted = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query="",
         filters=[models.Filter(key="category", value="hotel")],
@@ -114,7 +115,7 @@ async def test_facets_returned(joint_fixture: JointFixture):
 
 async def test_limit_parameter(joint_fixture: JointFixture):
     """Test that the limit parameter works"""
-    results_limited = await joint_fixture.query_handler.handle_query(
+    results_limited = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[], limit=2
     )
     assert len(results_limited.hits) == 2
@@ -122,7 +123,7 @@ async def test_limit_parameter(joint_fixture: JointFixture):
 
 async def test_skip_parameter(joint_fixture: JointFixture):
     """Test that the skip parameter works"""
-    results_skip = await joint_fixture.query_handler.handle_query(
+    results_skip = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[], skip=1
     )
     assert len(results_skip.hits) == 2
@@ -131,7 +132,7 @@ async def test_skip_parameter(joint_fixture: JointFixture):
 
 async def test_all_parameters(joint_fixture: JointFixture):
     """Sanity check - make sure it all works together"""
-    results_all = await joint_fixture.query_handler.handle_query(
+    results_all = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query="hotel",
         filters=[models.Filter(key="category", value="hotel")],
@@ -146,7 +147,7 @@ async def test_all_parameters(joint_fixture: JointFixture):
 async def test_resource_load(joint_fixture: JointFixture):
     """Test the load function in the query handler"""
     # get all the documents in the collection
-    results_all = await joint_fixture.query_handler.handle_query(
+    results_all = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[]
     )
 
@@ -162,12 +163,12 @@ async def test_resource_load(joint_fixture: JointFixture):
     await joint_fixture.load_resource(resource=resource, class_name=CLASS_NAME)
 
     # make sure the new resource is added to the collection
-    results_after_load = await joint_fixture.query_handler.handle_query(
+    results_after_load = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[]
     )
     assert results_after_load.count - results_all.count == 1
 
-    target_search = await joint_fixture.query_handler.handle_query(
+    target_search = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query="added-resource",
         filters=[],
@@ -199,7 +200,7 @@ async def test_loading_non_configured_resource(joint_fixture: JointFixture):
         },
     )
 
-    with pytest.raises(joint_fixture.query_handler.ClassNotConfiguredError):
+    with pytest.raises(QueryHandlerPort.ClassNotConfiguredError):
         await joint_fixture.load_resource(resource=resource, class_name="ThisWillBreak")
 
 
@@ -217,16 +218,14 @@ async def test_error_from_malformed_resource(joint_fixture: JointFixture):
 
     await joint_fixture.load_resource(resource=resource, class_name=CLASS_NAME)
 
-    with pytest.raises(joint_fixture.query_handler.ValidationError):
-        await joint_fixture.query_handler.handle_query(
-            class_name=CLASS_NAME, query="", filters=[]
-        )
+    with pytest.raises(QueryHandlerPort.ValidationError):
+        await joint_fixture.handle_query(class_name=CLASS_NAME, query="", filters=[])
 
 
 async def test_absent_resource(joint_fixture: JointFixture):
     """Make sure we get an error when looking for a resource type that doesn't exist"""
-    with pytest.raises(joint_fixture.query_handler.ClassNotConfiguredError):
-        await joint_fixture.query_handler.handle_query(
+    with pytest.raises(QueryHandlerPort.ClassNotConfiguredError):
+        await joint_fixture.handle_query(
             class_name="does_not_exist", query="", filters=[]
         )
 
@@ -236,7 +235,7 @@ async def test_resource_deletion(joint_fixture: JointFixture):
 
     Verify that the targeted resource is deleted and nothing else.
     """
-    all_resources = await joint_fixture.query_handler.handle_query(
+    all_resources = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[]
     )
 
@@ -246,7 +245,7 @@ async def test_resource_deletion(joint_fixture: JointFixture):
     )
 
     # see if deletion occurred, and make sure only one item was deleted
-    results_after_deletion = await joint_fixture.query_handler.handle_query(
+    results_after_deletion = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[]
     )
     assert all_resources.count - results_after_deletion.count == 1
@@ -258,20 +257,20 @@ async def test_resource_deletion(joint_fixture: JointFixture):
 
 async def test_resource_deletion_failure(joint_fixture: JointFixture):
     """Test for correct error when failing to delete a resource"""
-    all_resources = await joint_fixture.query_handler.handle_query(
+    all_resources = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[]
     )
 
     assert all_resources.count > 0
 
     # try to delete a resource that doesn't exist
-    with pytest.raises(joint_fixture.query_handler.ResourceNotFoundError):
+    with pytest.raises(QueryHandlerPort.ResourceNotFoundError):
         await joint_fixture.delete_resource(
             resource_id="not-here", class_name=CLASS_NAME
         )
 
     # verify that nothing was actually deleted
-    all_resources_again = await joint_fixture.query_handler.handle_query(
+    all_resources_again = await joint_fixture.handle_query(
         class_name=CLASS_NAME, query="", filters=[]
     )
 
@@ -280,7 +279,7 @@ async def test_resource_deletion_failure(joint_fixture: JointFixture):
 
 async def test_resource_deletion_not_configured(joint_fixture: JointFixture):
     """Test for correct error when trying to delete a non-configured resource"""
-    with pytest.raises(joint_fixture.query_handler.ClassNotConfiguredError):
+    with pytest.raises(QueryHandlerPort.ClassNotConfiguredError):
         await joint_fixture.delete_resource(
             resource_id="1HotelAlpha-id", class_name="Not-Configured"
         )
