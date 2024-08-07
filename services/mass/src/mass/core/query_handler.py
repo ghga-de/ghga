@@ -47,7 +47,7 @@ class QueryHandler(QueryHandlerPort):
 
     async def load_resource(  # noqa: D102
         self, *, resource: models.Resource, class_name: str
-    ):
+    ) -> None:
         if class_name not in self._config.searchable_classes:
             raise self.ClassNotConfiguredError(class_name=class_name)
 
@@ -57,7 +57,7 @@ class QueryHandler(QueryHandlerPort):
 
         await dao.upsert(resource)
 
-    async def delete_resource(self, *, resource_id: str, class_name: str):  # noqa: D102
+    async def delete_resource(self, *, resource_id: str, class_name: str) -> None:  # noqa: D102
         if class_name not in self._config.searchable_classes:
             raise self.ClassNotConfiguredError(class_name=class_name)
 
@@ -68,7 +68,7 @@ class QueryHandler(QueryHandlerPort):
         except ResourceNotFoundError as err:
             raise self.ResourceNotFoundError(resource_id=resource_id) from err
 
-    async def handle_query(  # noqa: PLR0913, C901, D102
+    async def handle_query(  # noqa: D102, PLR0913
         self,
         *,
         class_name: str,
@@ -102,10 +102,6 @@ class QueryHandler(QueryHandlerPort):
             selected_fields: list[models.FieldLabel] = searchable_class.selected_fields
         except KeyError as err:
             raise self.ClassNotConfiguredError(class_name=class_name) from err
-
-        # if id_ is not in selected_fields, add as first field
-        if selected_fields and not any(field.key == "id_" for field in selected_fields):
-            selected_fields.insert(0, models.FieldLabel(key="id_", name="ID"))
 
         # run the aggregation. Results will have {facets, count, hits} format
         aggregator = self._aggregator_collection.get_aggregator(class_name=class_name)

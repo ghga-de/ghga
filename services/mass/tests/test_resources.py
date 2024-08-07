@@ -159,9 +159,7 @@ async def test_resource_load(joint_fixture: JointFixture):
     # define and load a new resource
     resource = models.Resource(id_="added-resource", content=content)
 
-    await joint_fixture.query_handler.load_resource(
-        resource=resource, class_name=CLASS_NAME
-    )
+    await joint_fixture.load_resource(resource=resource, class_name=CLASS_NAME)
 
     # make sure the new resource is added to the collection
     results_after_load = await joint_fixture.query_handler.handle_query(
@@ -202,9 +200,7 @@ async def test_loading_non_configured_resource(joint_fixture: JointFixture):
     )
 
     with pytest.raises(joint_fixture.query_handler.ClassNotConfiguredError):
-        await joint_fixture.query_handler.load_resource(
-            resource=resource, class_name="ThisWillBreak"
-        )
+        await joint_fixture.load_resource(resource=resource, class_name="ThisWillBreak")
 
 
 async def test_error_from_malformed_resource(joint_fixture: JointFixture):
@@ -219,9 +215,7 @@ async def test_error_from_malformed_resource(joint_fixture: JointFixture):
         },
     )
 
-    await joint_fixture.query_handler.load_resource(
-        resource=resource, class_name=CLASS_NAME
-    )
+    await joint_fixture.load_resource(resource=resource, class_name=CLASS_NAME)
 
     with pytest.raises(joint_fixture.query_handler.ValidationError):
         await joint_fixture.query_handler.handle_query(
@@ -247,7 +241,7 @@ async def test_resource_deletion(joint_fixture: JointFixture):
     )
 
     assert all_resources.count > 1
-    await joint_fixture.query_handler.delete_resource(
+    await joint_fixture.delete_resource(
         resource_id="1HotelAlpha-id", class_name=CLASS_NAME
     )
 
@@ -272,7 +266,7 @@ async def test_resource_deletion_failure(joint_fixture: JointFixture):
 
     # try to delete a resource that doesn't exist
     with pytest.raises(joint_fixture.query_handler.ResourceNotFoundError):
-        await joint_fixture.query_handler.delete_resource(
+        await joint_fixture.delete_resource(
             resource_id="not-here", class_name=CLASS_NAME
         )
 
@@ -287,6 +281,6 @@ async def test_resource_deletion_failure(joint_fixture: JointFixture):
 async def test_resource_deletion_not_configured(joint_fixture: JointFixture):
     """Test for correct error when trying to delete a non-configured resource"""
     with pytest.raises(joint_fixture.query_handler.ClassNotConfiguredError):
-        await joint_fixture.query_handler.delete_resource(
+        await joint_fixture.delete_resource(
             resource_id="1HotelAlpha-id", class_name="Not-Configured"
         )

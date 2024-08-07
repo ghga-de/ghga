@@ -57,7 +57,7 @@ class QueryHandlerPort(ABC):
             )
 
     @abstractmethod
-    async def delete_resource(self, *, resource_id: str, class_name: str):
+    async def delete_resource(self, *, resource_id: str, class_name: str) -> None:
         """Delete resource with given ID and class name from the database
 
         Raises:
@@ -94,7 +94,7 @@ class QueryHandlerPort(ABC):
         *,
         resource: models.Resource,
         class_name: str,
-    ):
+    ) -> None:
         """Load a resource into the database.
 
         Raises:

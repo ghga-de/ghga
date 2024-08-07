@@ -39,38 +39,63 @@ QueryParams: TypeAlias = Mapping[str, int | str | list[str]]
 
 
 @dataclass
+class State:
+    """The current state of the database and the event topics"""
+
+    database_dirty: bool
+    events_dirty: bool
+    resources: dict[str, list[models.Resource]]
+
+
+state = State(database_dirty=True, events_dirty=True, resources={})
+
+
+@dataclass
 class JointFixture:
-    """Returned by the `joint_fixture`."""
+    """A fixture embedding all other fixtures."""
 
     config: Config
     query_handler: QueryHandlerPort
-    event_subscriber: KafkaEventSubscriber
-    kafka: KafkaFixture
     mongodb: MongoDbFixture
+    kafka: KafkaFixture
     rest_client: AsyncTestClient
+    event_subscriber: KafkaEventSubscriber
     resources: dict[str, list[models.Resource]]
 
-    def remove_db_data(self) -> None:
-        """Delete everything in the database to start from a clean slate"""
+    def empty_database(self) -> None:
+        """Empty the database."""
         self.mongodb.empty_collections()
+        state.database_dirty = True
 
     async def load_test_data(self) -> None:
-        """Populate a collection for each file in test_data"""
+        """Populate a collection for each file in test_data."""
         filename_pattern = re.compile(r"/(\w+)\.json")
         self.query_handler._dao_collection._indexes_created = False  # type: ignore
         for filename in glob.glob("tests/fixtures/test_data/*.json"):
             match_obj = re.search(filename_pattern, filename)
             if match_obj:
                 collection_name = match_obj.group(1)
-                resources = get_resources_from_file(filename)
-                self.resources[collection_name] = resources
+                resources = state.resources.get(collection_name)
+                if resources is None:
+                    resources = get_resources_from_file(filename)
+                    state.resources[collection_name] = resources
                 for resource in resources:
                     await self.query_handler.load_resource(
                         resource=resource, class_name=collection_name
                     )
 
+    async def reset_state(self) -> None:
+        """Reset the state of the database and event topics if needed."""
+        if state.events_dirty:
+            await self.kafka.clear_topics()
+            state.events_dirty = False
+        if state.database_dirty:
+            self.mongodb.empty_collections()
+            await self.load_test_data()
+            state.database_dirty = False
+
     async def call_search_endpoint(self, params: QueryParams) -> models.QueryResults:
-        """Convenience function to call the /search endpoint"""
+        """Call the search endpoint (convenience method)."""
         response = await self.rest_client.get(url="/search", params=params)
         result = response.json()
         assert result is not None, result
@@ -78,12 +103,24 @@ class JointFixture:
         response.raise_for_status()
         return models.QueryResults(**result)
 
+    async def delete_resource(self, resource_id: str, class_name: str) -> None:
+        """Delete a resource and mark the database as dirty."""
+        await self.query_handler.delete_resource(
+            resource_id=resource_id, class_name=class_name
+        )
+        state.database_dirty = True
 
-@pytest_asyncio.fixture
+    async def load_resource(self, resource: models.Resource, class_name: str) -> None:
+        """Load a resource and mark the database as dirty."""
+        await self.query_handler.load_resource(resource=resource, class_name=class_name)
+        state.database_dirty = True
+
+
+@pytest_asyncio.fixture()
 async def joint_fixture(
     mongodb: MongoDbFixture, kafka: KafkaFixture
 ) -> AsyncGenerator[JointFixture, None]:
-    """A fixture that embeds all other fixtures for API-level integration testing."""
+    """Function scoped joint fixture for API-level integration testing."""
     # merge configs from different sources with the default one:
     config = get_config(sources=[mongodb.config, kafka.config])
 
@@ -102,7 +139,7 @@ async def joint_fixture(
             kafka=kafka,
             mongodb=mongodb,
             rest_client=rest_client,
-            resources={},
+            resources=state.resources,
         )
-        await joint_fixture.load_test_data()
+        await joint_fixture.reset_state()
         yield joint_fixture

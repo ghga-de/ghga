@@ -20,6 +20,8 @@ import pytest
 from mass.core import models
 from tests.fixtures.joint import JointFixture, QueryParams
 
+pytestmark = pytest.mark.asyncio()
+
 CLASS_NAME: str = "RelevanceTests"
 RELEVANCE_SORT = models.SortingParameter(
     field="score", order=models.SortOrder.RELEVANCE
@@ -98,7 +100,6 @@ def sorted_reference_results(
     return [result["_id"] for result in sorted_results]
 
 
-@pytest.mark.asyncio
 async def test_happy_relevance(joint_fixture: JointFixture):
     """Make sure default works as expected"""
     query = "test"
@@ -115,7 +116,6 @@ async def test_happy_relevance(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio
 async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
     """Make sure default Pydantic model parameter works as expected"""
     query = "test"
@@ -136,7 +136,6 @@ async def test_happy_relevance_descending_id(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio
 async def test_with_absent_term(joint_fixture: JointFixture):
     """Make sure nothing is pulled back with an absent term (sanity check)"""
     params: QueryParams = {"class_name": CLASS_NAME, "query": "doesnotexistinourtests"}
@@ -146,7 +145,6 @@ async def test_with_absent_term(joint_fixture: JointFixture):
     assert results.count == 0
 
 
-@pytest.mark.asyncio
 async def test_limited_term(joint_fixture: JointFixture):
     """Make sure only results with the term are retrieved"""
     query = "alternative"
@@ -160,7 +158,6 @@ async def test_limited_term(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio
 async def test_two_words(joint_fixture: JointFixture):
     """Test with two different terms that appear in different fields"""
     query = "alternative test"
@@ -174,7 +171,6 @@ async def test_two_words(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio
 async def test_with_filters(joint_fixture: JointFixture):
     """Test with filters applied but no sorting parameters"""
     query = "test"
@@ -196,7 +192,6 @@ async def test_with_filters(joint_fixture: JointFixture):
     assert [hit.id_ for hit in results.hits] == reference_ids
 
 
-@pytest.mark.asyncio
 async def test_with_filters_and_sorts(joint_fixture: JointFixture):
     """Test with filters applied and at least one sorting parameter (not relevance)"""
     query = "test"

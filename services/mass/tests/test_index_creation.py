@@ -31,11 +31,11 @@ QUERY_STRING = "Backrub"
 
 
 @pytest.mark.parametrize("create_index_manually", [False, True], ids=["auto", "manual"])
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_index_creation(joint_fixture: JointFixture, create_index_manually: bool):
     """Test the index creation function."""
-    # indexes will have been created in fixture setup, so we actually need to del those
-    joint_fixture.remove_db_data()
+    # indexes have been created in fixture setup, so delete them again
+    joint_fixture.empty_database()
 
     # verify collection does not exist
     database = joint_fixture.mongodb.client[joint_fixture.config.db_name]
@@ -84,9 +84,7 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
         )
 
     # load a resource
-    await joint_fixture.query_handler.load_resource(
-        resource=RESOURCE, class_name=CLASS_NAME
-    )
+    await joint_fixture.load_resource(resource=RESOURCE, class_name=CLASS_NAME)
 
     # verify the text index exists now
     assert any(index["name"] == f"$**_{TEXT}" for index in collection.list_indexes())

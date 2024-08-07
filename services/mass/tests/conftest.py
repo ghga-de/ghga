@@ -17,12 +17,18 @@
 """Import session-scoped container fixtures and function-scoped client fixtures."""
 
 from hexkit.providers.akafka.testutils import (  # noqa: F401
+    get_persistent_kafka_fixture,
     kafka_container_fixture,
-    kafka_fixture,
 )
 from hexkit.providers.mongodb.testutils import (  # noqa: F401
+    get_persistent_mongodb_fixture,
     mongodb_container_fixture,
-    mongodb_fixture,
 )
 
-from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
+from tests.fixtures.joint import (  # noqa: F401
+    JointFixture,
+    joint_fixture,
+)
+
+mongodb = get_persistent_mongodb_fixture()
+kafka = get_persistent_kafka_fixture()

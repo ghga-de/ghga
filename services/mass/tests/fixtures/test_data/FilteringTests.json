@@ -4,6 +4,14 @@
       "eats": [
         "bananas"
       ],
+      "friends": [
+        {
+          "name": "Hector"
+        },
+        {
+          "name": "Jack"
+        }
+      ],
       "id_": "1",
       "name": "Jack",
       "species": "monkey"
@@ -13,6 +21,17 @@
         "dog food",
         "treats"
       ],
+      "friends": [
+        {
+          "name": "Elle"
+        },
+        {
+          "name": "Jack"
+        },
+        {
+          "name": "Paulette"
+        }
+      ],
       "id_": "2",
       "name": "Bruiser",
       "species": "dog"
@@ -21,6 +40,17 @@
       "eats": [
         "spaghetti",
         "meatballs"
+      ],
+      "friends": [
+        {
+          "name": "Jog"
+        },
+        {
+          "name": "Tramp"
+        },
+        {
+          "name": "Trusty"
+        }
       ],
       "id_": "3",
       "name": "Lady",
@@ -34,6 +64,20 @@
         "spaghetti",
         "treats"
       ],
+      "friends": [
+        {
+          "name": "Arlene"
+        },
+        {
+          "name": "Jack"
+        },
+        {
+          "name": "Jon"
+        },
+        {
+          "name": "Odie"
+        }
+      ],
       "id_": "4",
       "name": "Garfield",
       "species": "cat"
@@ -42,6 +86,20 @@
       "eats": [
         "fish",
         "shrimp"
+      ],
+      "friends": [
+        {
+          "name": "Buddy"
+        },
+        {
+          "name": "Jon"
+        },
+        {
+          "name": "Peter"
+        },
+        {
+          "name": "Sandy"
+        }
       ],
       "id_": "5",
       "name": "Flipper",

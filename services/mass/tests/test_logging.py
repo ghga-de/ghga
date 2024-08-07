@@ -89,7 +89,7 @@ ERROR_LEVEL = "ERROR"
         "Deletion failure due to non-existent accession",
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_event_sub_logging(
     joint_fixture: JointFixture,
     caplog,

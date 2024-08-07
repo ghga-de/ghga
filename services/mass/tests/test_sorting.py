@@ -20,6 +20,8 @@ import pytest
 from mass.core import models
 from tests.fixtures.joint import JointFixture, QueryParams
 
+pytestmark = pytest.mark.asyncio()
+
 CLASS_NAME = "SortingTests"
 
 
@@ -84,7 +86,6 @@ def sorted_resources(  # noqa: C901
     return sorted(reversed(resources), key=sort_key)
 
 
-@pytest.mark.asyncio
 async def test_api_without_sort_parameters(joint_fixture: JointFixture):
     """Make sure default Pydantic model parameter works as expected"""
     params: QueryParams = {"class_name": CLASS_NAME}
@@ -96,7 +97,6 @@ async def test_api_without_sort_parameters(joint_fixture: JointFixture):
 
 
 @pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])
-@pytest.mark.asyncio
 async def test_sort_with_id_not_last(joint_fixture: JointFixture, reverse: bool):
     """Test sorting parameters that contain id_, but not as the final sorting field.
 
@@ -120,7 +120,6 @@ async def test_sort_with_id_not_last(joint_fixture: JointFixture, reverse: bool)
 
 
 @pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])
-@pytest.mark.asyncio
 async def test_sort_with_params_but_not_id(joint_fixture: JointFixture, reverse: bool):
     """Test supplying sorting parameters but omitting id_.
 
@@ -141,7 +140,6 @@ async def test_sort_with_params_but_not_id(joint_fixture: JointFixture, reverse:
     assert results.hits == sorted_resources(results.hits, order_by, sort)
 
 
-@pytest.mark.asyncio
 async def test_sort_with_invalid_field(joint_fixture: JointFixture):
     """Test supplying an invalid field name as a sort field.
 
@@ -160,7 +158,6 @@ async def test_sort_with_invalid_field(joint_fixture: JointFixture):
 
 
 @pytest.mark.parametrize("order", [-7, 17, "some_string"])
-@pytest.mark.asyncio
 async def test_sort_with_invalid_sort_order(
     joint_fixture: JointFixture, order: str | int
 ):
@@ -177,7 +174,6 @@ async def test_sort_with_invalid_sort_order(
     assert "Input should be 'ascending', 'descending' or 'relevance'" in str(detail)
 
 
-@pytest.mark.asyncio
 async def test_sort_with_invalid_field_and_sort_order(joint_fixture: JointFixture):
     """Test with both invalid field name and invalid sort order."""
     params: QueryParams = {
@@ -190,7 +186,6 @@ async def test_sort_with_invalid_field_and_sort_order(joint_fixture: JointFixtur
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_sort_with_duplicate_field(joint_fixture: JointFixture):
     """Supply sorting parameters with two instances of the same sort field.
 
@@ -207,7 +202,6 @@ async def test_sort_with_duplicate_field(joint_fixture: JointFixture):
     assert response.json()["detail"] == "Fields to order by must be unique"
 
 
-@pytest.mark.asyncio
 async def test_sort_with_missing_sort(joint_fixture: JointFixture):
     """Supply sorting parameters with missing sort option.
 
@@ -224,7 +218,6 @@ async def test_sort_with_missing_sort(joint_fixture: JointFixture):
     assert details == "Number of fields to order by must match number of sort options"
 
 
-@pytest.mark.asyncio
 async def test_sort_with_superfluous_sort(joint_fixture: JointFixture):
     """Supply sorting parameters with superfluous sort option.
 
@@ -244,7 +237,6 @@ async def test_sort_with_superfluous_sort(joint_fixture: JointFixture):
 
 @pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])
 @pytest.mark.parametrize("field", ["type", "object.type"])
-@pytest.mark.asyncio
 async def test_sort_with_one_of_the_selected_fields(
     joint_fixture: JointFixture, reverse: bool, field: str
 ):
@@ -268,7 +260,6 @@ async def test_sort_with_one_of_the_selected_fields(
 
 @pytest.mark.parametrize("reverse", [False, True], ids=["normal", "reversed"])
 @pytest.mark.parametrize("field", ["category", "city"])
-@pytest.mark.asyncio
 async def test_sort_with_one_of_the_unselected_fields(
     joint_fixture: JointFixture, reverse: bool, field: str
 ):

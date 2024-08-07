@@ -76,7 +76,7 @@ async def test_malformed_document(
     joint_fixture: JointFixture, caplog: pytest.LogCaptureFixture
 ):
     """Test behavior from API perspective upon querying when bad doc exists"""
-    joint_fixture.remove_db_data()
+    joint_fixture.empty_database()
 
     # define and load a new resource without all the required facets
     resource = models.Resource(
@@ -88,9 +88,7 @@ async def test_malformed_document(
         },
     )
 
-    await joint_fixture.query_handler.load_resource(
-        resource=resource, class_name=CLASS_NAME
-    )
+    await joint_fixture.load_resource(resource=resource, class_name=CLASS_NAME)
     params: QueryParams = {"class_name": CLASS_NAME}
 
     with caplog.at_level(logging.WARNING):

@@ -32,7 +32,7 @@ SORT_ORDER_CONVERSION: JsonObject = {
 
 def name_from_key(key: str) -> str:
     """Auto generate a suitable name from a key"""
-    return key.title().replace("_", " ")
+    return key.title().replace("_", " ").replace(".", " ")
 
 
 def pipeline_match_text_search(*, query: str) -> JsonObject:
@@ -104,6 +104,12 @@ def pipeline_facet_sort_and_paginate(
         segment[name] = [
             {
                 "$unwind": {
+                    "path": prefix,
+                    "preserveNullAndEmptyArrays": True,
+                }
+            },
+            {
+                "$unwind": {
                     "path": f"{prefix}.{specified_field}",
                     "preserveNullAndEmptyArrays": True,
                 }
@@ -116,6 +122,7 @@ def pipeline_facet_sort_and_paginate(
             },
             {"$addFields": {"value": "$_id"}},  # rename "_id" to "value" on each option
             {"$unset": "_id"},
+            {"$sort": {"value": 1}},
         ]
 
     # this is the total number of hits, but pagination can mean only a few are returned
@@ -185,12 +192,21 @@ def build_pipeline(  # noqa: PLR0913
         pipeline.append(pipeline_match_filters_stage(filters=filters))
 
     # turn the selected fields into a formatted pipeline $project
-    project: dict[str, int] = dict.fromkeys(
-        [
-            field.key if field.key == "id_" else f"content.{field.key}"
-            for field in selected_fields
-        ],
-        1,
+
+    project: dict[str, int] | None = (
+        dict.fromkeys(
+            (
+                "id_",
+                *(
+                    f"content.{field.key}"
+                    for field in selected_fields
+                    if field.key != "id_"
+                ),
+            ),
+            1,
+        )
+        if selected_fields
+        else None
     )
 
     # turn the sorting parameters into a formatted pipeline $sort
