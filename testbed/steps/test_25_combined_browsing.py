@@ -16,7 +16,7 @@
 """Step definitions for combination of searching, filtering and pagination"""
 
 from .conftest import JointFixture, parse, scenarios, when
-from .utils import search_dataset_rpc
+from .utils import search_dataset
 
 scenarios("../features/25_combined_browsing.feature")
 
@@ -30,7 +30,7 @@ def search_items_with_pagination(
 ):
     limit = size
     skip = (page - 1) * size
-    return search_dataset_rpc(fixtures=fixtures, query=query, limit=limit, skip=skip)
+    return search_dataset(fixtures=fixtures, query=query, limit=limit, skip=skip)
 
 
 @when(
@@ -38,14 +38,14 @@ def search_items_with_pagination(
     target_fixture="response",
 )
 def search_and_filter_dataset(fixtures: JointFixture, query: str, dataset_type: str):
-    filters = [{"key": "types", "value": dataset_type}]
-    return search_dataset_rpc(fixtures=fixtures, filters=filters, query=query)
+    filters = {"types": dataset_type}
+    return search_dataset(fixtures=fixtures, filters=filters, query=query)
 
 
 @when(
     parse('I filter dataset with type "{dataset_type}"'),
     target_fixture="response",
 )
-def search_dataset(fixtures: JointFixture, dataset_type):
-    filters = [{"key": "types", "value": dataset_type}]
-    return search_dataset_rpc(fixtures=fixtures, filters=filters)
+def search_dataset_with_type(fixtures: JointFixture, dataset_type):
+    filters = {"types": dataset_type}
+    return search_dataset(fixtures=fixtures, filters=filters)

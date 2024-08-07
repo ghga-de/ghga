@@ -16,7 +16,7 @@
 """Step definitions for pagination of datasets in the frontend"""
 
 from .conftest import JointFixture, parse, scenarios, when
-from .utils import search_dataset_rpc
+from .utils import search_dataset
 
 scenarios("../features/24_paginate_datasets.feature")
 
@@ -28,4 +28,4 @@ scenarios("../features/24_paginate_datasets.feature")
 def request_page_with_page_size(fixtures: JointFixture, page_num: int, page_size: int):
     limit = page_size
     skip = (page_num - 1) * page_size
-    return search_dataset_rpc(fixtures=fixtures, limit=limit, skip=skip)
+    return search_dataset(fixtures=fixtures, limit=limit, skip=skip)

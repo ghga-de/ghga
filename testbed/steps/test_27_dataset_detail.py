@@ -27,7 +27,7 @@ from .conftest import (
     then,
     when,
 )
-from .utils import get_dataset_overview
+from .utils import get_dataset_search_summary
 
 scenarios("../features/27_dataset_details.feature")
 
@@ -37,13 +37,13 @@ def get_dataset_details(
 ) -> Response:
     datasets = state.get_state("all available datasets")
     if alias == "non-existing":
-        resource_id = alias
+        accession = alias
     else:
         assert alias in datasets
-        resource_id = datasets[alias]["accession"]
+        accession = datasets[alias]["accession"]
     url = (
         f"{config.metldata_url}/artifacts/"
-        f"embedded_public/classes/EmbeddedDataset/resources/{resource_id}"
+        f"embedded_public/classes/EmbeddedDataset/resources/{accession}"
     )
     return http.get(url)
 
@@ -62,8 +62,15 @@ def check_dataset_details(alias: str, response: Response, state: StateStorage):
     assert alias == result.get("alias")
     datasets = state.get_state("all available datasets")
     assert alias in datasets
-    overview = get_dataset_overview(result)
-    assert overview == datasets[alias]
+    dataset = datasets[alias]
+    details = dataset.pop("details", None)
+    if details:
+        assert result == details
+    else:
+        summary_result = get_dataset_search_summary(result)
+        assert summary_result == dataset
+        dataset["details"] = result  # memorize details of the dataset
+        datasets = state.set_state("all available datasets", datasets)
 
 
 @when(

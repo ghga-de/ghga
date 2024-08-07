@@ -66,3 +66,29 @@ def check_artifact(artifact_name: str, response: Response):
     classes = artifact_info["resource_classes"]
     num_additional_classes = 1 if artifact_name.startswith("embedded") else 0
     assert len(classes) == 16 + num_additional_classes
+
+
+@when("I request info on the searchable classes", target_fixture="response")
+def request_info_on_searchable_classes(config: Config, http: HttpClient):
+    url = f"{config.mass_url}/search-options"
+    return http.get(url)
+
+
+@then("I get the expected info on the searchable classes")
+def check_searchable_classes(response: Response):
+    searchable_classes = response.json()
+    assert isinstance(searchable_classes, dict)
+    print(searchable_classes)
+    assert searchable_classes == {
+        "EmbeddedDataset": {
+            "description": "Dataset grouping files under controlled access",
+            "facetable_fields": [
+                {"key": "study.title", "name": "Study"},
+                {"key": "study.types", "name": "Study type"},
+            ],
+            "selected_fields": [
+                {"key": "alias", "name": "Dataset alias"},
+                {"key": "title", "name": "Dataset title"},
+            ],
+        }
+    }

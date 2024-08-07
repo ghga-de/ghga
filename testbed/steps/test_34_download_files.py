@@ -98,11 +98,16 @@ def files_are_downloaded(fixtures: JointFixture, file_scope: str):
     dataset_alias = fixtures.state.get_state("dataset to be downloaded")
     datasets = fixtures.state.get_state("all available datasets")
 
+    # get all file accessions that belong to the dataset
     assert dataset_alias in datasets
-
     dataset = datasets[dataset_alias]
+    assert "details" in dataset
+    details = dataset["details"]
     dataset_file_accessions = set(
-        file["accession"] for file in dataset["files"].values()
+        value["accession"]
+        for key in details
+        if key.endswith("_files")
+        for value in details[key]
     )
 
     download_dir = fixtures.connector.config.download_dir
@@ -164,18 +169,23 @@ def files_have_been_decrypted(
     datasets = fixtures.state.get_state("all available datasets")
     dataset_alias = fixtures.state.get_state("dataset to be downloaded")
 
+    # get all file aliases that belong to the dataset
     assert dataset_alias in datasets
-
     dataset = datasets[dataset_alias]
-    dataset_files = {
-        file["accession"]: alias for alias, file in dataset["files"].items()
+    assert "details" in dataset
+    details = dataset["details"]
+    dataset_file_aliases = {
+        value["accession"]: value["alias"]
+        for key in details
+        if key.endswith("_files")
+        for value in details[key]
     }
 
     for file_ in downloaded_files:
         file_id = file_["id"]
         file_extension = file_["extension"]
 
-        file_alias = dataset_files[file_id]
+        file_alias = dataset_file_aliases[file_id]
 
         verify_named_file(
             target_dir=fixtures.connector.config.download_dir,

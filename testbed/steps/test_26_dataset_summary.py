@@ -105,13 +105,13 @@ def request_dataset_summary(
 ) -> Response:
     datasets = state.get_state("all available datasets")
     if alias == "non-existing":
-        resource_id = alias
+        accession = alias
     else:
         assert alias in datasets
-        resource_id = datasets[alias]["accession"]
+        accession = datasets[alias]["accession"]
     url = (
         f"{config.metldata_url}/artifacts/"
-        f"stats_public/classes/DatasetStats/resources/{resource_id}"
+        f"stats_public/classes/DatasetStats/resources/{accession}"
     )
     return http.get(url)
 

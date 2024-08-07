@@ -24,15 +24,14 @@ from .conftest import (
     then,
     when,
 )
-from .utils import get_dataset_overview, search_dataset_rpc
+from .utils import search_dataset
 
 scenarios("../features/22_search_datasets.feature")
 
 
-@when("I search documents with invalid query format", target_fixture="response")
+@when("I search documents with an unknown class name", target_fixture="response")
 def search_with_invalid_query(fixtures: JointFixture):
-    invalid_query = {"Invalid": "Query"}
-    return search_dataset_rpc(fixtures=fixtures, query=invalid_query)  # type: ignore
+    return search_dataset(fixtures=fixtures, class_name="Invalid")
 
 
 @when(
@@ -40,23 +39,53 @@ def search_with_invalid_query(fixtures: JointFixture):
     target_fixture="response",
 )
 def search_items_without_keyword(fixtures: JointFixture):
-    return search_dataset_rpc(fixtures=fixtures)
+    return search_dataset(fixtures=fixtures, sorts={"alias": "ascending"})
 
 
 @then("I get all the existing datasets")
 def check_search_without_keyword_results(state: StateStorage, response: Response):
     results = response.json()
-    assert results["count"] == 2
-    # get an overview of all datasets
-    contents = [hit["content"] for hit in results["hits"]]
-    datasets = {content["alias"]: get_dataset_overview(content) for content in contents}
-    # check that datasets and their files are complete
-    num_files = {alias: len(dataset["files"]) for alias, dataset in datasets.items()}
-    assert num_files == {
-        "DS_A": 7,
-        "DS_B": 7,
+    hits = results["hits"]
+    assert isinstance(hits, list)
+    datasets = {}  # mapping from alias to search summary
+    for i, hit in enumerate(hits):
+        accession = hit.pop("id_")
+        assert accession.startswith("GHGAD")
+        hit = hit.pop("content")
+        hits[i] = hit
+        summary = hit.copy()
+        summary["accession"] = accession
+        alias = summary.pop("alias")
+        datasets[alias] = summary
+    # TODO: sorting options should be done in mass and removed here
+    for facet in results["facets"]:
+        facet["options"].sort(key=lambda x: x["value"])
+    assert results == {
+        "facets": [
+            {
+                "key": "study.title",
+                "name": "Study",
+                "options": [
+                    {"value": "The A Study", "count": 1},
+                    {"value": "The B Study", "count": 1},
+                ],
+            },
+            {
+                "key": "study.types",
+                "name": "Study type",
+                "options": [
+                    {"value": "SYNTHETIC_GENOMICS", "count": 1},
+                    {"value": "WHOLE_GENOME_SEQUENCING", "count": 2},
+                ],
+            },
+        ],
+        "count": 2,
+        "hits": [
+            {"alias": "DS_A", "title": "The complete-A dataset"},
+            {"alias": "DS_B", "title": "The complete-B dataset"},
+        ],
     }
-    # memorize the overview of all datasets
+    # memorize the overview of all datasets as mapping from alias to search summary
     state.set_state("all available datasets", datasets)
 
 
@@ -64,17 +93,15 @@ def check_search_without_keyword_results(state: StateStorage, response: Response
     parse('I search datasets with the "{keyword}" query'),
     target_fixture="response",
 )
-def search_dataset(fixtures: JointFixture, keyword: str):
-    return search_dataset_rpc(fixtures=fixtures, query=keyword)
+def search_dataset_with_keyword(fixtures: JointFixture, keyword: str):
+    return search_dataset(fixtures=fixtures, query=keyword)
 
 
-@then("I get the expected results from study search")
-def check_study_search_result(response: Response):
+@then(parse('I get only dataset "{alias}" as search result'))
+def check_study_search_result(alias: str, response: Response):
     results = response.json()
     assert results["count"] == 1
-    content = results["hits"][0]["content"]
-    assert content["study"]["alias"] == "STUDY_A"
-    assert content["study"]["description"] == "A study that is the A study"
+    assert results["hits"][0]["content"]["alias"] == alias
 
 
 @then("I get the expected results from description search")

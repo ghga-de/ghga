@@ -18,3 +18,8 @@ Feature: 21 Examine Artifacts
   Scenario: Examining a non-existing artifact type
     When I request info on the "non_existing" artifact
     Then the response status code is "404"
+
+  Scenario: Examining the searchable classes
+    When I request info on the searchable classes
+    Then the response status code is "200"
+    And I get the expected info on the searchable classes

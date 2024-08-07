@@ -32,7 +32,7 @@ from .conftest import (
 )
 from .test_13_load_metadata import run_the_load_command
 from .test_34_download_files import clean_connector_work_dir, keys_are_made_available
-from .utils import get_dataset_overview, search_dataset_rpc
+from .utils import get_dataset_overview, search_dataset
 
 scenarios("../features/40_delete_datasets.feature")
 
@@ -95,7 +95,7 @@ def check_embedded_datasets_in_metldata_database(config: Config, mongo: MongoFix
 
 @then("searching for datasets without keyword returns no datasets")
 def searching_yields_only_minimal_datasets(fixtures: JointFixture):
-    response = search_dataset_rpc(fixtures=fixtures)
+    response = search_dataset(fixtures=fixtures)
     results = response.json()
     assert results["count"] == 0
 

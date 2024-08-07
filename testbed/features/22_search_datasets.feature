@@ -5,8 +5,8 @@ Feature: 22 Search Datasets
   Background:
     Given we have the state "metadata has been loaded into the system"
 
-  Scenario: Verify searching with invalid query
-    When I search documents with invalid query format
+  Scenario: Verify searching with an unknown class name
+    When I search documents with an unknown class name
     Then the response status code is "422"
 
   Scenario: Search datasests without any keyword
@@ -28,7 +28,7 @@ Feature: 22 Search Datasets
     When I search datasets with the "STUDY_A" query
     Then the response status code is "200"
     And the expected hit count is "1"
-    And I get the expected results from study search
+    And I get only dataset "DS_A" as search result
 
   Scenario: Search datasets by keyword matching
     When I search datasets with the "An interesting dataset C" query
@@ -39,4 +39,4 @@ Feature: 22 Search Datasets
     When I search datasets with the ""An interesting dataset B"" query
     Then the response status code is "200"
     And the expected hit count is "1"
-    And I get the expected results from description search
+    And I get only dataset "DS_B" as search result

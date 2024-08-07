@@ -15,21 +15,21 @@
 
 """Step definitions for filtering metadata in the frontend"""
 
-from .conftest import Config, JointFixture, Response, parse, scenarios, then, when
-from .utils import search_dataset_rpc
+from .conftest import JointFixture, Response, parse, scenarios, then, when
+from .utils import search_dataset
 
 scenarios("../features/23_filter_datasets.feature")
 
 
 @when("I query documents with invalid class name", target_fixture="response")
 def query_with_invalid_class(fixtures: JointFixture):
-    return search_dataset_rpc(fixtures=fixtures, class_name="InvalidClass")
+    return search_dataset(fixtures=fixtures, class_name="InvalidClass")
 
 
 @when("I filter dataset with alias", target_fixture="response")
 def filter_dataset_with_alias(fixtures: JointFixture):
-    filters = [{"key": "alias", "value": "DS_A"}]
-    return search_dataset_rpc(fixtures=fixtures, filters=filters)
+    filters = {"alias": "DS_A"}
+    return search_dataset(fixtures=fixtures, filters=filters)
 
 
 @then("I get the expected results from alias filter")
@@ -45,16 +45,16 @@ def check_alias_filter(response: Response):
     target_fixture="response",
 )
 def filter_dataset_with_file_format(fixtures: JointFixture, file_format):
-    filters = [{"key": "research_data_files.format", "value": file_format}]
-    return search_dataset_rpc(fixtures=fixtures, filters=filters)
+    filters = {"research_data_files.format": file_format}
+    return search_dataset(fixtures=fixtures, filters=filters)
 
 
 @when(
     "I filter dataset with individual supporting file alias", target_fixture="response"
 )
 def filter_dataset_for_individual_supporting_file(fixtures: JointFixture):
-    filters = [{"key": "individual_supporting_files.alias", "value": "INDV_SF_1"}]
-    return search_dataset_rpc(fixtures=fixtures, filters=filters)
+    filters = {"individual_supporting_files.alias": "INDV_SF_1"}
+    return search_dataset(fixtures=fixtures, filters=filters)
 
 
 @then("I get the expected results from individual supporting file filter")

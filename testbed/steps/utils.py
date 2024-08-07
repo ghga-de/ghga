@@ -16,18 +16,20 @@
 """Utilities used in step functions"""
 
 import json
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
-from fixtures import Config, JointFixture
-from fixtures.utils import calculate_checksum, write_data_to_yaml
+from fixtures import Config, JointFixture, Response
+from fixtures.utils import write_data_to_yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig
 from ghga_datasteward_kit.loading import LoadConfig
-from hexkit.custom_types import JsonObject
 from hexkit.providers.s3.testutils import FileObject
 from pydantic import BaseModel, EmailStr
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
+DATASET_SEARCH_RESULT_KEYS = {"accession", "title"}
 FILE_OVERVIEW_KEYS = {
     "accession",
     "checksum",
@@ -153,30 +155,47 @@ def verify_named_file(
             assert alias.startswith(first_line)
 
 
-def search_dataset_rpc(
+def search_dataset(  # noqa: C901
     fixtures: JointFixture,
-    filters: list[dict[str, str]] | None = None,
     query: str | None = None,
-    class_name: str = "EmbeddedDataset",
+    filters: Mapping[str, str | int | list[str | int]] | None = None,
+    sorts: Mapping[str, str] | None = None,
     limit: int | None = None,
     skip: int | None = None,
-):
+    class_name: str = "EmbeddedDataset",
+) -> Response:
     """Send a search request to the metadata artifact search service."""
-    search_parameters: JsonObject = {
-        "class_name": class_name,
-        **{
-            key: value
-            for key, value in {
-                "limit": limit,
-                "query": query,
-                "skip": skip,
-                "filters": filters,
-            }.items()
-            if value is not None
-        },
-    }
-    url = f"{fixtures.config.mass_url}/rpc/search"
-    return fixtures.http.post(url, json=search_parameters)
+    params: dict[str, str | int | list[str | int]] = {"class_name": class_name}
+    if query:
+        params["query"] = query
+    if limit:
+        params["limit"] = limit
+    if skip is not None:
+        params["skip"] = skip
+    if filters:
+        filter_by: Any = []
+        value: Any = []
+        for filter_key, filter_values in filters.items():
+            if not isinstance(filter_values, list):
+                filter_values = [filter_values]
+            for filter_value in filter_values:
+                filter_by.append(filter_key)
+                value.append(filter_value)
+        if len(value) == 1:
+            filter_by = filter_by[0]
+            value = value[0]
+        params["filter_by"] = filter_by
+        params["value"] = value
+    if sorts:
+        order_by: Any = list(sorts)
+        sort: Any = list(sorts.values())
+        if len(order_by) == 1:
+            order_by = order_by[0]
+            sort = sort[0]
+        params["order_by"] = order_by
+        params["sort"] = sort
+    url = f"{fixtures.config.mass_url}/search"
+    return fixtures.http.get(url, params=params)
 
 
 def get_dataset_overview(content: dict) -> dict:
@@ -196,6 +215,15 @@ def get_dataset_overview(content: dict) -> dict:
                 }
     simplified["files"] = files
     return simplified
+
+
+def get_dataset_search_summary(content: dict) -> dict:
+    """Condense a dataset content dict to a dataset search summary dict."""
+    return {
+        key: value
+        for key, value in content.items()
+        if key in DATASET_SEARCH_RESULT_KEYS
+    }
 
 
 def get_secret_ids(file_metadata_dir: Path, file_objects: list[FileObject]) -> set[str]:
