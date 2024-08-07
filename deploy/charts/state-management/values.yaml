@@ -1,0 +1,62 @@
+args: []
+command: []
+horizontalPodAutoscaler:
+  enabled: false
+  averageCpuUtilization: 75
+  averageMemoryUtilization: 75
+image:
+  name: "ghga/state-management-service"
+podAnnotations: {}
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256M"
+  requests:
+    cpu: "100m"
+    memory: "64M"
+
+config_prefix: sms
+
+ingress:
+  enabled: false
+  annotations: {}
+  hostname: ""
+  prefix: /
+  tls:
+    enabled: false
+    secretName: ""
+
+mapping:
+  enabled: false
+  hostname: ""
+  prefix: /
+  rewrite: null
+  ambassador_id: null
+  timeout_ms: null
+
+parameters:
+  default:
+    api_root_path: ""
+    docs_url: /docs
+    openapi_url: /openapi.json
+    host: 0.0.0.0
+    port: 8080
+    db_connection_str: null
+    db_permissions:
+    - "*.*:*"
+    allow_empty_prefix: true
+    db_prefix: ""
+    token_hashes: []
+    service_instance_id: 'rest.1'
+    service_name: sms
+    log_level: DEBUG
+
+shareProcessNamespace: false
+kafkaSecrets:
+  enabled: false
+
+# Used to add image pull secrets to deployment
+# imagePullSecretNames:
+#  - name: dockerhub
+#  - name: ex
+imagePullSecretNames: []
