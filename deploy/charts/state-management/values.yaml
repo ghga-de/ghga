@@ -16,6 +16,7 @@ resources:
     memory: "64M"
 
 config_prefix: sms
+port: "8080"
 
 ingress:
   enabled: false
