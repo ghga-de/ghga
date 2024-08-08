@@ -43,7 +43,7 @@ def search_and_filter_dataset(fixtures: JointFixture, query: str, dataset_type: 
 
 
 @when(
-    parse('I filter dataset with type "{dataset_type}"'),
+    parse('I filter datasets with type "{dataset_type}"'),
     target_fixture="response",
 )
 def search_dataset_with_type(fixtures: JointFixture, dataset_type):

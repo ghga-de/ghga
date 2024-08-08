@@ -28,6 +28,54 @@ from .utils import search_dataset
 
 scenarios("../features/22_search_datasets.feature")
 
+SEARCH_ALL_DATASETS = {
+    "facets": [
+        {
+            "key": "study.types",
+            "name": "Study type",
+            "options": [
+                {"value": "SYNTHETIC_GENOMICS", "count": 1},
+                {"value": "WHOLE_GENOME_SEQUENCING", "count": 2},
+            ],
+        },
+        {
+            "key": "experiments.experiment_method.instrument_model",
+            "name": "Platform",
+            "options": [{"value": "454_GS", "count": 2}],
+        },
+        {
+            "key": "experiments.experiment_method.type",
+            "name": "Experiment",
+            "options": [{"value": "DNA-seq", "count": 2}],
+        },
+        {
+            "key": "experiments.experiment_method.library_type",
+            "name": "Analysis level",
+            "options": [{"value": "WGS", "count": 2}],
+        },
+        {
+            "key": "experiments.experiment_method.sequencing_layout",
+            "name": "Sequencing mode",
+            "options": [{"value": "SE", "count": 2}],
+        },
+        {
+            "key": "samples.individual.diagnosis_terms",
+            "name": "Diagnosis",
+            "options": [{"value": "Myeloid leukaemia", "count": 2}],
+        },
+        {
+            "key": "data_access_policy.alias",
+            "name": "Access policy",
+            "options": [{"value": "DAP_1", "count": 1}, {"value": "DAP_2", "count": 1}],
+        },
+    ],
+    "count": 2,
+    "hits": [
+        {"alias": "DS_A", "title": "The complete-A dataset"},
+        {"alias": "DS_B", "title": "The complete-B dataset"},
+    ],
+}
+
 
 @when("I search documents with an unknown class name", target_fixture="response")
 def search_with_invalid_query(fixtures: JointFixture):
@@ -57,34 +105,7 @@ def check_search_without_keyword_results(state: StateStorage, response: Response
         summary["accession"] = accession
         alias = summary.pop("alias")
         datasets[alias] = summary
-    # TODO: sorting options should be done in mass and removed here
-    for facet in results["facets"]:
-        facet["options"].sort(key=lambda x: x["value"])
-    assert results == {
-        "facets": [
-            {
-                "key": "study.title",
-                "name": "Study",
-                "options": [
-                    {"value": "The A Study", "count": 1},
-                    {"value": "The B Study", "count": 1},
-                ],
-            },
-            {
-                "key": "study.types",
-                "name": "Study type",
-                "options": [
-                    {"value": "SYNTHETIC_GENOMICS", "count": 1},
-                    {"value": "WHOLE_GENOME_SEQUENCING", "count": 2},
-                ],
-            },
-        ],
-        "count": 2,
-        "hits": [
-            {"alias": "DS_A", "title": "The complete-A dataset"},
-            {"alias": "DS_B", "title": "The complete-B dataset"},
-        ],
-    }
+    assert results == SEARCH_ALL_DATASETS
     # memorize the overview of all datasets as mapping from alias to search summary
     state.set_state("all available datasets", datasets)
 
@@ -95,13 +116,6 @@ def check_search_without_keyword_results(state: StateStorage, response: Response
 )
 def search_dataset_with_keyword(fixtures: JointFixture, keyword: str):
     return search_dataset(fixtures=fixtures, query=keyword)
-
-
-@then(parse('I get only dataset "{alias}" as search result'))
-def check_study_search_result(alias: str, response: Response):
-    results = response.json()
-    assert results["count"] == 1
-    assert results["hits"][0]["content"]["alias"] == alias
 
 
 @then("I get the expected results from description search")

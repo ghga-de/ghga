@@ -270,22 +270,32 @@ def empty_mail_server(fixtures: JointFixture):
     fixtures.http.delete(f"{fixtures.config.mail_url}/api/v1/messages")
 
 
-@then(parse('the expected hit count is "{count:d}"'))
-def check_hit_count(count: int, response: Response):
+@then(parse('I get only dataset "{alias}" as search result'))
+def check_study_search_result(alias: str, response: Response):
+    results = response.json()
+    assert results["count"] == 1
+    assert results["hits"][0]["content"]["alias"] == alias
+
+
+@then(parse('I get "{count:d}" search results'))
+def check_number_of_search_results(count: int, response: Response):
     results = response.json()
     assert results["count"] == count
+    assert len(results["hits"]) == count
 
 
-@then(parse('I receive "{item_count:d}" item'))
-@then(parse('I receive "{item_count:d}" items'))
-def check_received_item_count(response: Response, item_count):
+@then(parse('I get "{page_count:d}" out of "{total_count:d}" search results'))
+def check_number_of_search_results_on_the_page(
+    page_count: int, total_count: int, response: Response
+):
     results = response.json()
-    assert len(results["hits"]) == item_count
+    assert results["count"] == total_count
+    assert len(results["hits"]) == page_count
 
 
-@then(parse('the expected item count is "{expected_count:d}"'))
-def check_item_count_in_list(results: list, expected_count):
-    assert len(results) == expected_count
+@then(parse('the expected item count is "{count:d}"'))
+def check_item_count_in_list(count: int, results: list):
+    assert len(results) == count
 
 
 @then(parse('"{notification_type}" was sent to "{full_name}"'))

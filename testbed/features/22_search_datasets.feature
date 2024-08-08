@@ -17,26 +17,24 @@ Feature: 22 Search Datasets
   Scenario: Search datasets with a word not found in
     When I search datasets with the "hotel" query
     Then the response status code is "200"
-    And the expected hit count is "0"
+    And I get "0" search results
 
   Scenario: Search datasets with a common keyword
     When I search datasets with the "dataset" query
     Then the response status code is "200"
-    And the expected hit count is "2"
+    And I get "2" search results
 
   Scenario: Search datasets with study alias
     When I search datasets with the "STUDY_A" query
     Then the response status code is "200"
-    And the expected hit count is "1"
     And I get only dataset "DS_A" as search result
 
   Scenario: Search datasets by keyword matching
     When I search datasets with the "An interesting dataset C" query
     Then the response status code is "200"
-    And the expected hit count is "2"
+    And I get "2" search results
 
   Scenario: Search datasets with exact description
     When I search datasets with the ""An interesting dataset B"" query
     Then the response status code is "200"
-    And the expected hit count is "1"
     And I get only dataset "DS_B" as search result

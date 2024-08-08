@@ -9,22 +9,53 @@ Feature: 23 Filter Datasets
     When I query documents with invalid class name
     Then the response status code is "422"
 
-  Scenario: Filter dataset by alias
-    When I filter dataset with alias
+  Scenario: Filter datasets by alias
+    When I filter datasets with alias "DS_B"
     Then the response status code is "200"
-    And I get the expected results from alias filter
+    And I get only dataset "DS_B" as search result
 
-  Scenario: Filter dataset by FASTQ file format
-    When I filter dataset with "FASTQ" research data format
+  Scenario: Filter datasets by study type
+    When I filter datasets with the study type "EXOME_SEQUENCING"
     Then the response status code is "200"
-    And the expected hit count is "2"
+    And I get "0" search results
 
- Scenario: Filter dataset by BAM file format
-    When I filter dataset with "BAM" research data format
+    When I filter datasets with the study type "SYNTHETIC_GENOMICS"
     Then the response status code is "200"
-    And the expected hit count is "0"
+    And I get only dataset "DS_A" as search result
 
-  Scenario: Filter dataset for sequencing file
-    When I filter dataset with individual supporting file alias
+    When I filter datasets with the study type "WHOLE_GENOME_SEQUENCING"
     Then the response status code is "200"
-    And I get the expected results from individual supporting file filter
+    And  I get "2" search results
+
+  Scenario: Filter datasets by diagnosis
+    When I filter datasets containing the diagnosis "Lymphocytic leukemia"
+    Then the response status code is "200"
+    And  I get "0" search results
+
+    When I filter datasets containing the diagnosis "Myeloid leukaemia"
+    Then the response status code is "200"
+    And  I get "2" search results
+
+  Scenario: Filter datasets by platform
+    When I filter datasets using the platform "ILLUMINA_HISEQ_X"
+    Then the response status code is "200"
+    And  I get "0" search results
+
+    When I filter datasets using the platform "454_GS"
+    Then the response status code is "200"
+    And  I get "2" search results
+
+  Scenario: Filter datasets by FASTQ file format
+    When I filter datasets with "FASTQ" research data format
+    Then the response status code is "200"
+    And  I get "2" search results
+
+ Scenario: Filter datasets by BAM file format
+    When I filter datasets with "BAM" research data format
+    Then the response status code is "200"
+    And  I get "0" search results
+
+  Scenario: Filter datasets for sequencing file
+    When I filter datasets with individual supporting file alias
+    Then the response status code is "200"
+    And I get only dataset "DS_A" as search result

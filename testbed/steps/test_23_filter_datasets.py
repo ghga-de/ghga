@@ -26,22 +26,41 @@ def query_with_invalid_class(fixtures: JointFixture):
     return search_dataset(fixtures=fixtures, class_name="InvalidClass")
 
 
-@when("I filter dataset with alias", target_fixture="response")
-def filter_dataset_with_alias(fixtures: JointFixture):
-    filters = {"alias": "DS_A"}
+@when(parse('I filter datasets with alias "{alias}"'), target_fixture="response")
+def filter_datasets_with_alias(alias: str, fixtures: JointFixture):
+    filters = {"alias": alias}
     return search_dataset(fixtures=fixtures, filters=filters)
 
 
-@then("I get the expected results from alias filter")
-def check_alias_filter(response: Response):
-    results = response.json()
-    assert results["count"] == 1
-    hits = results["hits"]
-    assert hits[0]["content"]["alias"] == "DS_A"
+@when(
+    parse('I filter datasets with the study type "{study_type}"'),
+    target_fixture="response",
+)
+def filter_datasets_by_study_type(study_type: str, fixtures: JointFixture):
+    filters = {"study.types": study_type}
+    return search_dataset(fixtures=fixtures, filters=filters)
 
 
 @when(
-    parse('I filter dataset with "{file_format}" research data format'),
+    parse('I filter datasets containing the diagnosis "{diagnosis}"'),
+    target_fixture="response",
+)
+def filter_datasets_by_diagnosis(diagnosis: str, fixtures: JointFixture):
+    filters = {"samples.individual.diagnosis_terms": diagnosis}
+    return search_dataset(fixtures=fixtures, filters=filters)
+
+
+@when(
+    parse('I filter datasets using the platform "{platform}"'),
+    target_fixture="response",
+)
+def filter_datasets_by_platform(platform: str, fixtures: JointFixture):
+    filters = {"experiments.experiment_method.instrument_model": platform}
+    return search_dataset(fixtures=fixtures, filters=filters)
+
+
+@when(
+    parse('I filter datasets with "{file_format}" research data format'),
     target_fixture="response",
 )
 def filter_dataset_with_file_format(fixtures: JointFixture, file_format):
@@ -50,16 +69,8 @@ def filter_dataset_with_file_format(fixtures: JointFixture, file_format):
 
 
 @when(
-    "I filter dataset with individual supporting file alias", target_fixture="response"
+    "I filter datasets with individual supporting file alias", target_fixture="response"
 )
 def filter_dataset_for_individual_supporting_file(fixtures: JointFixture):
     filters = {"individual_supporting_files.alias": "INDV_SF_1"}
     return search_dataset(fixtures=fixtures, filters=filters)
-
-
-@then("I get the expected results from individual supporting file filter")
-def check_sequencing_file_filter(response: Response):
-    results = response.json()
-    assert results["count"] == 1
-    hits = results["hits"]
-    assert hits[0]["content"]["alias"] == "DS_A"

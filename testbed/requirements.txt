@@ -9,7 +9,10 @@ hexkit[all]>=3.4.0,<4
 
 crypt4gh>=1.7,<2
 
-pytest>=8.2.2,<9
+# pytest-bdd currently does not work properly with pytest >= 8
+# therefore we need to pin pytest to an older version until this is fixed
+# see https://github.com/pytest-dev/pytest-bdd/issues/689
+pytest>=7.4.4,<8
 pytest-asyncio>=0.23.7,<0.24
 pytest-bdd>=7.2.0,<8
 pytest-cov>=5.0.0,<6

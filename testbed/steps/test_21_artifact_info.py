@@ -78,13 +78,26 @@ def request_info_on_searchable_classes(config: Config, http: HttpClient):
 def check_searchable_classes(response: Response):
     searchable_classes = response.json()
     assert isinstance(searchable_classes, dict)
-    print(searchable_classes)
     assert searchable_classes == {
         "EmbeddedDataset": {
             "description": "Dataset grouping files under controlled access",
             "facetable_fields": [
-                {"key": "study.title", "name": "Study"},
                 {"key": "study.types", "name": "Study type"},
+                {
+                    "key": "experiments.experiment_method.instrument_model",
+                    "name": "Platform",
+                },
+                {"key": "experiments.experiment_method.type", "name": "Experiment"},
+                {
+                    "key": "experiments.experiment_method.library_type",
+                    "name": "Analysis level",
+                },
+                {
+                    "key": "experiments.experiment_method.sequencing_layout",
+                    "name": "Sequencing mode",
+                },
+                {"key": "samples.individual.diagnosis_terms", "name": "Diagnosis"},
+                {"key": "data_access_policy.alias", "name": "Access policy"},
             ],
             "selected_fields": [
                 {"key": "alias", "name": "Dataset alias"},
