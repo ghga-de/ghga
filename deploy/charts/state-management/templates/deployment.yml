@@ -8,8 +8,7 @@ metadata:
 spec:
   revisionHistoryLimit: 1
   selector:
-    matchLabels:
-      app: {{ .Release.Name }}
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -39,7 +38,8 @@ spec:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
         ports:
-        - containerPort: {{ .Values.port }}
+        - name: http
+          containerPort: {{ .Values.port }}
         resources:
           limits:
             cpu: {{ .Values.resources.limits.cpu }}
