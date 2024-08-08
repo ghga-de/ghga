@@ -46,9 +46,7 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
 
     # make sure we do not get an error when trying to query non-existent collection
     results_without_coll = await joint_fixture.handle_query(
-        class_name=CLASS_NAME,
-        query=QUERY_STRING,
-        filters=[],
+        class_name=CLASS_NAME, query=QUERY_STRING
     )
     # should have received empty results model
     assert results_without_coll == models.QueryResults()
@@ -72,7 +70,6 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
     results_without_coll = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query=QUERY_STRING,
-        filters=[],
     )
     assert results_without_coll == models.QueryResults()
 
@@ -91,9 +88,7 @@ async def test_index_creation(joint_fixture: JointFixture, create_index_manually
 
     # verify that supplying a query string doesn't result in an error
     results_with_coll = await joint_fixture.handle_query(
-        class_name=CLASS_NAME,
-        query=QUERY_STRING,
-        filters=[],
+        class_name=CLASS_NAME, query=QUERY_STRING
     )
 
     assert results_with_coll.count == 1

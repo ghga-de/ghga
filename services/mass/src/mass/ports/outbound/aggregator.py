@@ -37,13 +37,13 @@ class AggregatorPort(ABC):
     async def aggregate(  # noqa: PLR0913
         self,
         *,
+        selected_fields: list[models.FieldLabel],
+        facet_fields: list[models.FieldLabel],
         query: str,
         filters: list[models.Filter],
-        facet_fields: list[models.FieldLabel],
-        selected_fields: list[models.FieldLabel],
+        sorting_parameters: list[models.SortingParameter],
         skip: int = 0,
         limit: int | None = None,
-        sorting_parameters: list[models.SortingParameter],
     ) -> JsonObject:
         """Applies an aggregation pipeline to a mongodb collection"""
         ...

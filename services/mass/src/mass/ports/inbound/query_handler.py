@@ -72,11 +72,11 @@ class QueryHandlerPort(ABC):
         self,
         *,
         class_name: str,
-        query: str,
-        filters: list[models.Filter],
+        query: str = "",
+        filters: list[models.Filter] | None = None,
+        sorting_parameters: list[models.SortingParameter] | None = None,
         skip: int = 0,
         limit: int | None = None,
-        sorting_parameters: list[models.SortingParameter] | None = None,
     ) -> models.QueryResults:
         """Processes a query
 

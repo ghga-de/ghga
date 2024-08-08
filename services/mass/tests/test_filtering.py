@@ -31,7 +31,7 @@ async def test_facets(joint_fixture: JointFixture):
     results = await joint_fixture.call_search_endpoint(params)
 
     facets = results.facets
-    assert len(facets) == 4
+    assert len(facets) == 6
 
     facet = facets[0]
     assert facet.key == "species"
@@ -78,6 +78,36 @@ async def test_facets(joint_fixture: JointFixture):
     assert list(options) == sorted(options)
 
     facet = facets[3]
+    assert facet.key == "items.type"
+    assert facet.name == "Item"
+    options = {option.value: option.count for option in facet.options}
+    assert options == {
+        "bowl": 3,  # only three animals have bowls
+        "coin": 1,
+        "collar": 2,  # only two animals wear collars
+        "pistol": 1,
+        "shirt": 3,
+    }
+    assert list(options) == sorted(options)
+
+    facet = facets[4]
+    assert facet.key == "items.color"
+    assert facet.name == "Item color"
+    options = {option.value: option.count for option in facet.options}
+    assert options == {
+        "blue": 1,
+        "brown": 1,
+        "gold": 2,
+        "green": 1,
+        "pink": 1,  # only one animal has a pink item
+        "red": 2,  # but two animals have a red item
+        "silver": 1,
+        "white": 2,
+        "yellow": 1,
+    }
+    assert list(options) == sorted(options)
+
+    facet = facets[5]
     assert facet.key == "special.features.fur.color"
     assert facet.name == "Fur color"
     options = {option.value: option.count for option in facet.options}
@@ -115,7 +145,7 @@ async def test_single_valued_with_with_single_filter(
 
     # Check that the facet only contains the filtered values
     facets = results.facets
-    assert len(facets) == 4
+    assert len(facets) == 6
     facet = facets[0]
     assert facet.key == "species"
     assert facet.name == "Species"
@@ -152,7 +182,7 @@ async def test_multi_valued_with_with_single_filter(
 
     # Check that the facet only contains the filtered values
     facets = results.facets
-    assert len(facets) == 4
+    assert len(facets) == 6
     facet = facets[1]
     assert facet.key == "eats"
     assert facet.name == "Food"
@@ -183,7 +213,7 @@ async def test_multiple_filters(joint_fixture: JointFixture):
     # Query cats, dogs or monkeys that eat fish or bananas
     params: QueryParams = {
         "class_name": CLASS_NAME,
-        "filter_by": ["species", "species", "species", "eats", "eats"],
+        "filter_by": ["species"] * 3 + ["eats"] * 2,
         "value": ["cat", "dog", "monkey", "fish", "bananas"],
     }
 
@@ -222,7 +252,7 @@ async def test_filter_for_common_friend(
 
     # Check that the facet contains the friend in question
     facets = results.facets
-    assert len(facets) == 4
+    assert len(facets) == 6
     facet = facets[2]
     assert facet.key == "friends.name"
     assert facet.name == "Friend"
@@ -246,7 +276,7 @@ async def test_filter_for_couple_of_friends(joint_fixture: JointFixture):
 
     # Check that the facet contains the selected friends and all their co-friends
     facets = results.facets
-    assert len(facets) == 4
+    assert len(facets) == 6
     facet = facets[2]
     assert facet.key == "friends.name"
     assert facet.name == "Friend"
@@ -254,6 +284,60 @@ async def test_filter_for_couple_of_friends(joint_fixture: JointFixture):
     co_friends = "Buddy Hector Jack Jog Jon Peter Sandy Tramp Trusty".split()
     assert option_values == co_friends
     assert all(option.count == 1 for option in facet.options)
+
+
+async def test_filter_animals_with_collars(joint_fixture: JointFixture):
+    """Test that we can search for animals wearing collars"""
+    params: QueryParams = {
+        "class_name": CLASS_NAME,
+        "filter_by": "items.type",
+        "value": "collar",
+    }
+
+    results = await joint_fixture.call_search_endpoint(params)
+
+    # only Bruiser and Lady wear collars, Garfield does not
+    returned_names = [resource.content["name"] for resource in results.hits]
+    assert returned_names == ["Bruiser", "Lady"]
+
+    # Check that the facet also has their other items
+    facets = results.facets
+    assert len(facets) == 6
+    facet = facets[3]
+    assert facet.name == "Item"
+    option_values = [option.value for option in facet.options]
+    assert option_values == ["bowl", "collar", "shirt"]
+    assert all(option.count == 2 for option in facet.options)
+
+    # Check the colors of all of their items
+    facet = facets[4]
+    assert facet.name == "Item color"
+    option_values = [option.value for option in facet.options]
+    print(facet.options)
+    assert option_values == ["blue", "brown", "gold", "green", "pink", "white"]
+    assert all(option.count == 1 for option in facet.options)
+
+    # Check that we also see what these two like to eat
+    facet = facets[1]
+    assert facet.name == "Food"
+    option_values = [option.value for option in facet.options]
+    assert option_values == ["dog food", "meatballs", "spaghetti", "treats"]
+    assert all(option.count == 1 for option in facet.options)
+
+
+async def test_filter_animals_with_collars_or_pistols(joint_fixture: JointFixture):
+    """Test that we can search for animals with collars or pistols"""
+    params: QueryParams = {
+        "class_name": CLASS_NAME,
+        "filter_by": ["items.type"] * 2,
+        "value": ["collar", "pistol"],
+    }
+
+    results = await joint_fixture.call_search_endpoint(params)
+
+    # only Bruiser and Lady wear collars, only Jack has a pistol
+    returned_names = [resource.content["name"] for resource in results.hits]
+    assert returned_names == ["Jack", "Bruiser", "Lady"]
 
 
 @pytest.mark.parametrize(
@@ -283,8 +367,8 @@ async def test_filter_for_fur_color(
 
     # Check that the facet contains the color in question
     facets = results.facets
-    assert len(facets) == 4
-    facet = facets[3]
+    assert len(facets) == 6
+    facet = facets[5]
     assert facet.key == "special.features.fur.color"
     assert facet.name == "Fur color"
     if names:

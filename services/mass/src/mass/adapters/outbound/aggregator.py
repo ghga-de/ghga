@@ -40,13 +40,13 @@ class Aggregator(AggregatorPort):
     async def aggregate(  # noqa: PLR0913, D102
         self,
         *,
+        selected_fields: list[models.FieldLabel],
+        facet_fields: list[models.FieldLabel],
         query: str,
         filters: list[models.Filter],
-        facet_fields: list[models.FieldLabel],
-        selected_fields: list[models.FieldLabel],
+        sorting_parameters: list[models.SortingParameter],
         skip: int = 0,
         limit: int | None = None,
-        sorting_parameters: list[models.SortingParameter],
     ) -> JsonObject:
         # don't carry out aggregation if the collection is empty
         if not await self._collection.find_one():

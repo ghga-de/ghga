@@ -68,17 +68,19 @@ class QueryHandler(QueryHandlerPort):
         except ResourceNotFoundError as err:
             raise self.ResourceNotFoundError(resource_id=resource_id) from err
 
-    async def handle_query(  # noqa: D102, PLR0913
+    async def handle_query(  # noqa: C901, D102, PLR0913
         self,
         *,
         class_name: str,
-        query: str,
-        filters: list[models.Filter],
+        query: str = "",
+        filters: list[models.Filter] | None = None,
+        sorting_parameters: list[models.SortingParameter] | None = None,
         skip: int = 0,
         limit: int | None = None,
-        sorting_parameters: list[models.SortingParameter] | None = None,
     ) -> models.QueryResults:
         # set empty list if not provided
+        if filters is None:
+            filters = []
         if not sorting_parameters:
             if query:
                 sorting_parameters = [

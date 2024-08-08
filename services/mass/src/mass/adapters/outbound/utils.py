@@ -111,12 +111,11 @@ def pipeline_facet_sort_and_paginate(
                 {
                     "$group": {
                         "_id": {"$getField": {"field": field, "input": path}},
-                        "count": {"$sum": 1},
+                        "uniqueIds": {"$addToSet": "$_id"},
                     }
                 },
-                {
-                    "$addFields": {"value": "$_id"}
-                },  # rename "_id" to "value" on each option
+                {"$match": {"_id": {"$ne": None}}},
+                {"$addFields": {"value": "$_id", "count": {"$size": "$uniqueIds"}}},
                 {"$unset": "_id"},
                 {"$sort": {"value": 1}},
             )
@@ -169,13 +168,13 @@ def pipeline_project(*, facet_fields: list[models.FieldLabel]) -> JsonObject:
 
 def build_pipeline(  # noqa: PLR0913
     *,
-    query: str,
-    filters: list[models.Filter],
     facet_fields: list[models.FieldLabel],
     selected_fields: list[models.FieldLabel],
+    query: str,
+    filters: list[models.Filter],
+    sorting_parameters: list[models.SortingParameter],
     skip: int = 0,
     limit: int | None = None,
-    sorting_parameters: list[models.SortingParameter],
 ) -> list[JsonObject]:
     """Build aggregation pipeline based on query"""
     pipeline: list[JsonObject] = []

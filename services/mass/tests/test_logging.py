@@ -110,11 +110,7 @@ async def test_event_sub_logging(
     Constants are defined above in an effort to keep code redundancy down.
     """
     # get all the documents in the collection
-    all_results = await joint_fixture.handle_query(
-        class_name="NestedData",
-        query="",
-        filters=[],
-    )
+    all_results = await joint_fixture.handle_query(class_name="NestedData")
 
     assert all_results.count > 0
 

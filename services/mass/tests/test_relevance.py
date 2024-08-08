@@ -75,9 +75,9 @@ def multi_column_sort(
 def sorted_reference_results(
     joint_fixture: JointFixture,
     *,
-    query: str,
-    sorts: list[models.SortingParameter] | None = None,
+    query: str = "",
     filters: list[models.Filter] | None = None,
+    sorts: list[models.SortingParameter] | None = None,
 ) -> list[str]:
     """Used to independently retrieve and sort results by relevance and then id"""
     if not sorts:

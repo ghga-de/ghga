@@ -131,11 +131,11 @@ class JointFixture:
     async def handle_query(
         self,
         class_name: str,
-        query: str,
-        filters: list[models.Filter],
+        query: str = "",
+        filters: list[models.Filter] | None = None,
+        sorting_parameters: list[models.SortingParameter] | None = None,
         skip: int = 0,
         limit: int | None = None,
-        sorting_parameters: list[models.SortingParameter] | None = None,
     ) -> models.QueryResults:
         """Handle a query."""
         return await self._query_handler.handle_query(

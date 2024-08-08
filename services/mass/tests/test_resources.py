@@ -31,9 +31,7 @@ CLASS_NAME = "NestedData"
 async def test_basic_query(joint_fixture: JointFixture):
     """Make sure we can pull back the documents as expected"""
     # pull back all 3 test documents
-    results = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[]
-    )
+    results = await joint_fixture.handle_query(class_name=CLASS_NAME)
 
     assert results.count == 3
 
@@ -41,7 +39,7 @@ async def test_basic_query(joint_fixture: JointFixture):
 async def test_text_search(joint_fixture: JointFixture):
     """Test basic text search"""
     results_text = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="poolside", filters=[]
+        class_name=CLASS_NAME, query="poolside"
     )
 
     assert results_text.count == 1
@@ -52,7 +50,6 @@ async def test_filters_work(joint_fixture: JointFixture):
     """Test a query with filters selected but no query string"""
     results_filtered = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
-        query="",
         filters=[models.Filter(key="city", value="Amsterdam")],
     )
 
@@ -61,7 +58,6 @@ async def test_filters_work(joint_fixture: JointFixture):
 
     results_multi_filter = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
-        query="",
         filters=[
             models.Filter(key="category", value="hotel"),
             models.Filter(key="object.type", value="piano"),
@@ -76,7 +72,6 @@ async def test_facets_returned(joint_fixture: JointFixture):
     """Verify that facet fields are returned correctly"""
     results_faceted = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
-        query="",
         filters=[models.Filter(key="category", value="hotel")],
     )
 
@@ -84,7 +79,9 @@ async def test_facets_returned(joint_fixture: JointFixture):
     facets: list[models.FieldLabel] = config.searchable_classes[
         "NestedData"
     ].facetable_fields
-    facet_key_to_name = {x.key: x.name for x in facets}
+    facet_key_to_name = {
+        x.key: x.name or x.key.replace(".", " ").title() for x in facets
+    }
 
     for facet in results_faceted.facets:
         assert facet.key in facet_key_to_name
@@ -115,17 +112,13 @@ async def test_facets_returned(joint_fixture: JointFixture):
 
 async def test_limit_parameter(joint_fixture: JointFixture):
     """Test that the limit parameter works"""
-    results_limited = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[], limit=2
-    )
+    results_limited = await joint_fixture.handle_query(class_name=CLASS_NAME, limit=2)
     assert len(results_limited.hits) == 2
 
 
 async def test_skip_parameter(joint_fixture: JointFixture):
     """Test that the skip parameter works"""
-    results_skip = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[], skip=1
-    )
+    results_skip = await joint_fixture.handle_query(class_name=CLASS_NAME, skip=1)
     assert len(results_skip.hits) == 2
     assert [x.id_ for x in results_skip.hits] == ["2HotelBeta-id", "3zoo-id"]
 
@@ -147,9 +140,7 @@ async def test_all_parameters(joint_fixture: JointFixture):
 async def test_resource_load(joint_fixture: JointFixture):
     """Test the load function in the query handler"""
     # get all the documents in the collection
-    results_all = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[]
-    )
+    results_all = await joint_fixture.handle_query(class_name=CLASS_NAME)
 
     content: dict = {
         "object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
@@ -163,16 +154,12 @@ async def test_resource_load(joint_fixture: JointFixture):
     await joint_fixture.load_resource(resource=resource, class_name=CLASS_NAME)
 
     # make sure the new resource is added to the collection
-    results_after_load = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[]
-    )
+    results_after_load = await joint_fixture.handle_query(class_name=CLASS_NAME)
     assert results_after_load.count - results_all.count == 1
 
     target_search = await joint_fixture.handle_query(
         class_name=CLASS_NAME,
         query="added-resource",
-        filters=[],
-        skip=0,
         limit=0,
     )
     assert len(target_search.hits) == 1
@@ -194,9 +181,10 @@ async def test_loading_non_configured_resource(joint_fixture: JointFixture):
     resource = models.Resource(
         id_="added-resource",
         content={
-            "object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
+            "object": {"type": "added-resource-object", "id": "4-added"},
             "city": "something",
             "category": "test object",
+            "type": "added",
         },
     )
 
@@ -204,30 +192,46 @@ async def test_loading_non_configured_resource(joint_fixture: JointFixture):
         await joint_fixture.load_resource(resource=resource, class_name="ThisWillBreak")
 
 
-async def test_error_from_malformed_resource(joint_fixture: JointFixture):
-    """Make sure we get an error when the DB has malformed content, since that has to be fixed"""
-    # define and load a new resource without all the required facets
+async def test_missing_fields_are_ignored(joint_fixture: JointFixture):
+    """Make sure we do not get an error if fields are missing from some resource"""
+    results = await joint_fixture.handle_query(class_name=CLASS_NAME)
+    count = results.count
+
+    # define and load a new resource missing the "city" facet
+    # and missing the top level type field, which is selected but not a facet
     resource = models.Resource(
         id_="added-resource",
         content={
-            "object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
-            "field3": "something",  # expects city to exist
-            "category": "test object",
+            "object": {
+                "type": "spurious",
+                "id": "added-object",
+            },
+            "added-field": True,
         },
     )
-
     await joint_fixture.load_resource(resource=resource, class_name=CLASS_NAME)
 
-    with pytest.raises(QueryHandlerPort.ValidationError):
-        await joint_fixture.handle_query(class_name=CLASS_NAME, query="", filters=[])
+    # this should still return all valid facets
+    results = await joint_fixture.handle_query(class_name=CLASS_NAME)
+    facets = results.facets
+    assert len(facets) == 3
+    assert facets[1].key == "city"
+    assert len(facets[1].options) == 3
+
+    # and the malformed resource should still be in the results
+    assert results.count == count + 1
+    for resource in results.hits:
+        if resource.id_ == "added-resource":
+            assert resource.content == {"object": {"type": "spurious"}}
+            break
+    else:
+        assert False, "the added resource was not returned"
 
 
 async def test_absent_resource(joint_fixture: JointFixture):
     """Make sure we get an error when looking for a resource type that doesn't exist"""
     with pytest.raises(QueryHandlerPort.ClassNotConfiguredError):
-        await joint_fixture.handle_query(
-            class_name="does_not_exist", query="", filters=[]
-        )
+        await joint_fixture.handle_query(class_name="does_not_exist")
 
 
 async def test_resource_deletion(joint_fixture: JointFixture):
@@ -235,9 +239,7 @@ async def test_resource_deletion(joint_fixture: JointFixture):
 
     Verify that the targeted resource is deleted and nothing else.
     """
-    all_resources = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[]
-    )
+    all_resources = await joint_fixture.handle_query(class_name=CLASS_NAME)
 
     assert all_resources.count > 1
     await joint_fixture.delete_resource(
@@ -245,9 +247,7 @@ async def test_resource_deletion(joint_fixture: JointFixture):
     )
 
     # see if deletion occurred, and make sure only one item was deleted
-    results_after_deletion = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[]
-    )
+    results_after_deletion = await joint_fixture.handle_query(class_name=CLASS_NAME)
     assert all_resources.count - results_after_deletion.count == 1
 
     # make extra sure the resource that got deleted was the correct one
@@ -257,9 +257,7 @@ async def test_resource_deletion(joint_fixture: JointFixture):
 
 async def test_resource_deletion_failure(joint_fixture: JointFixture):
     """Test for correct error when failing to delete a resource"""
-    all_resources = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[]
-    )
+    all_resources = await joint_fixture.handle_query(class_name=CLASS_NAME)
 
     assert all_resources.count > 0
 
@@ -270,9 +268,7 @@ async def test_resource_deletion_failure(joint_fixture: JointFixture):
         )
 
     # verify that nothing was actually deleted
-    all_resources_again = await joint_fixture.handle_query(
-        class_name=CLASS_NAME, query="", filters=[]
-    )
+    all_resources_again = await joint_fixture.handle_query(class_name=CLASS_NAME)
 
     assert all_resources_again.count == all_resources.count
 

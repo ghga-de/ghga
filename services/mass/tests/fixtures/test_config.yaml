@@ -21,37 +21,29 @@ searchable_classes:
     description: Dataset with embedded references.
     facetable_fields:
       - key: category
-        name: Category
       - key: city
-        name: Field 1
-      - key: "object.type"
-        name: Object Type
+      - key: object.type
     selected_fields:
       - key: id_
         name: ID
       - key: type
-        name: Location Type
-      - key: "object.type"
-        name: Object Type
+        name: Location ype
+      - key: object.type
   EmptyCollection:
     description: An empty collection to test the index creation.
     facetable_fields:
       - key: fun_fact
-        name: Fun Fact
     selected_fields: []
   SortingTests:
     description: Data for testing sorting functionality.
     facetable_fields:
       - key: field
-        name: Field
     selected_fields: []
   RelevanceTests:
     description: Data for testing sorting by relevance.
     facetable_fields:
       - key: field
-        name: Field
       - key: data
-        name: Data
     selected_fields: []
   FilteringTests:
     description: Data for testing filtering on using single and multi-valued fields.
@@ -61,6 +53,10 @@ searchable_classes:
         name: Food
       - key: friends.name
         name: Friend
+      - key: items.type
+        name: Item
+      - key: items.color
+        name: Item color
       - key: special.features.fur.color
         name: Fur color
     selected_fields:

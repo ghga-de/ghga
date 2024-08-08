@@ -13,6 +13,20 @@
         }
       ],
       "id_": "1",
+      "items": [
+        {
+          "color": "gold",
+          "type": "coin"
+        },
+        {
+          "color": "silver",
+          "type": "pistol"
+        },
+        {
+          "color": "red",
+          "type": "shirt"
+        }
+      ],
       "name": "Jack",
       "special": {
         "features": [
@@ -42,6 +56,20 @@
         }
       ],
       "id_": "2",
+      "items": [
+        {
+          "color": "pink",
+          "type": "collar"
+        },
+        {
+          "color": "pink",
+          "type": "shirt"
+        },
+        {
+          "color": "pink",
+          "type": "bowl"
+        }
+      ],
       "name": "Bruiser",
       "special": {
         "features": [
@@ -71,6 +99,32 @@
         }
       ],
       "id_": "3",
+      "items": [
+        {
+          "color": "blue",
+          "type": "collar"
+        },
+        {
+          "color": "green",
+          "type": "collar"
+        },
+        {
+          "color": "brown",
+          "type": "collar"
+        },
+        {
+          "color": "gold",
+          "type": "collar"
+        },
+        {
+          "color": "blue",
+          "type": "shirt"
+        },
+        {
+          "color": "white",
+          "type": "bowl"
+        }
+      ],
       "name": "Lady",
       "special": {
         "features": [
@@ -109,6 +163,20 @@
         }
       ],
       "id_": "4",
+      "items": [
+        {
+          "color": "red",
+          "type": "bowl"
+        },
+        {
+          "color": "white",
+          "type": "bowl"
+        },
+        {
+          "color": "yellow",
+          "type": "bowl"
+        }
+      ],
       "name": "Garfield",
       "special": {
         "features": [
@@ -144,6 +212,7 @@
         }
       ],
       "id_": "5",
+      "items": [],
       "name": "Flipper",
       "special": {
         "features": [
