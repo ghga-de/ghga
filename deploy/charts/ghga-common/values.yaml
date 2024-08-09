@@ -2,7 +2,12 @@ exports:
   defaults:
     serviceaccount:
       create: true
-
+    
+    # Ports which should be exposed in pod
+    ports:
+      - name: http
+        containerPort: 8080
+        protocol: TCP
 
     service:
       type: ClusterIP
