@@ -1,15 +1,1 @@
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: {{ .Release.Name }}
-    version: "1"
-  name: {{ .Release.Name }}-svc
-spec:
-  type: ClusterIP
-  ports:
-    - name: tcp-web
-      port: {{ .Values.service.port }}
-      targetPort: {{ if .Values.parameters.default }}{{ .Values.parameters.default.port }}{{ else }}{{ .Values.parameters.port }}{{ end }}
-  selector:
-    app: {{ .Release.Name }}
+{{- include "ghga-common.service" . }}

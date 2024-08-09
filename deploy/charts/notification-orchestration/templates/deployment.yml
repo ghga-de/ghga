@@ -8,8 +8,7 @@ metadata:
 spec:
   revisionHistoryLimit: 1
   selector:
-    matchLabels:
-      app: {{ .Release.Name }}
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:

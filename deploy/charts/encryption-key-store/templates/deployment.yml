@@ -8,8 +8,7 @@ metadata:
 spec:
   revisionHistoryLimit: 1
   selector:
-    matchLabels:
-      app: {{ .Release.Name }}
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -38,8 +37,7 @@ spec:
           readOnlyRootFilesystem: true
           runAsNonRoot: true
           allowPrivilegeEscalation: false
-        ports:
-        - containerPort: {{ .Values.port }}
+        ports: {{- include "common.tplvalues.render" (dict "value" .Values.ports "context" $) | nindent 8}}
         resources:
           limits:
             cpu: {{ .Values.resources.limits.cpu }}

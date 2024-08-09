@@ -37,9 +37,7 @@ spec:
           readOnlyRootFilesystem: true
           runAsNonRoot: true
           allowPrivilegeEscalation: false
-        ports:
-        - name: http
-          containerPort: {{ .Values.port }}
+        ports: {{- include "common.tplvalues.render" (dict "value" .Values.ports "context" $) | nindent 8}}
         resources:
           limits:
             cpu: {{ .Values.resources.limits.cpu }}
