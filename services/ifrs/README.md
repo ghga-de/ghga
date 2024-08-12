@@ -36,13 +36,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/internal-file-registry-service):
 ```bash
-docker pull ghga/internal-file-registry-service:2.0.2
+docker pull ghga/internal-file-registry-service:2.0.3
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/internal-file-registry-service:2.0.2 .
+docker build -t ghga/internal-file-registry-service:2.0.3 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -50,7 +50,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/internal-file-registry-service:2.0.2 --help
+docker run -p 8080:8080 ghga/internal-file-registry-service:2.0.3 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -71,7 +71,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"internal_file_registry"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -104,11 +104,11 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`object_storages`** *(object)*: Can contain additional properties.
+- **`object_storages`** *(object, required)*: Can contain additional properties.
 
   - **Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
 
-- **`file_registered_event_topic`** *(string)*: Name of the topic used for events indicating that a new file has been internally registered.
+- **`file_registered_event_topic`** *(string, required)*: Name of the topic used for events indicating that a new file has been internally registered.
 
 
   Examples:
@@ -118,7 +118,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_registered_event_type`** *(string)*: The type used for events indicating that a new file has been internally registered.
+- **`file_registered_event_type`** *(string, required)*: The type used for events indicating that a new file has been internally registered.
 
 
   Examples:
@@ -128,7 +128,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_staged_event_topic`** *(string)*: Name of the topic used for events indicating that a new file has been internally registered.
+- **`file_staged_event_topic`** *(string, required)*: Name of the topic used for events indicating that a new file has been internally registered.
 
 
   Examples:
@@ -138,7 +138,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_staged_event_type`** *(string)*: The type used for events indicating that a new file has been internally registered.
+- **`file_staged_event_type`** *(string, required)*: The type used for events indicating that a new file has been internally registered.
 
 
   Examples:
@@ -148,7 +148,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deleted_event_topic`** *(string)*: Name of the topic used for events indicating that a file has been deleted.
+- **`file_deleted_event_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -158,7 +158,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deleted_event_type`** *(string)*: The type used for events indicating that a file has been deleted.
+- **`file_deleted_event_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -168,7 +168,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_delete_topic`** *(string)*: The name of the topic to receive events informing about files to delete.
+- **`files_to_delete_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
 
 
   Examples:
@@ -178,7 +178,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_register_topic`** *(string)*: The name of the topic to receive events informing about new files to register.
+- **`files_to_register_topic`** *(string, required)*: The name of the topic to receive events informing about new files to register.
 
 
   Examples:
@@ -188,7 +188,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_stage_topic`** *(string)*: The name of the topic to receive events informing about files to stage.
+- **`files_to_stage_topic`** *(string, required)*: The name of the topic to receive events informing about files to stage.
 
 
   Examples:
@@ -198,7 +198,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -237,7 +237,22 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -247,7 +262,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
