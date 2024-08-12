@@ -67,7 +67,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_delete_topic`** *(string)*: The name of the topic to receive events informing about files to delete.
+- **`files_to_delete_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
 
 
   Examples:
@@ -81,7 +81,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"pcs"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -114,11 +114,11 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`token_hashes`** *(array)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.
+- **`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.
 
   - **Items** *(string)*
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -157,7 +157,22 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -167,7 +182,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
