@@ -46,7 +46,7 @@ ucs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`file_upload_received_topic`** *(string)*: The name of the topic use to publish FileUploadReceived events.
+- **`file_upload_received_topic`** *(string, required)*: The name of the topic use to publish FileUploadReceived events.
 
 
   Examples:
@@ -56,7 +56,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_upload_received_collection`** *(string)*: The name of the collection used to store FileUploadReceived events. The value should use hyphens in place of underscores if needed.
+- **`file_upload_received_collection`** *(string, required)*: The name of the collection used to store FileUploadReceived events. The value should use hyphens in place of underscores if needed.
 
 
   Examples:
@@ -66,7 +66,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deleted_event_topic`** *(string)*: Name of the topic used for events indicating that a file has been deleted.
+- **`file_deleted_event_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -76,7 +76,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deleted_event_type`** *(string)*: The type used for events indicating that a file has been deleted.
+- **`file_deleted_event_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -86,7 +86,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_delete_topic`** *(string)*: The name of the topic for events informing about files to be deleted.
+- **`files_to_delete_topic`** *(string, required)*: The name of the topic for events informing about files to be deleted.
 
 
   Examples:
@@ -96,7 +96,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_metadata_event_topic`** *(string)*: Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.
+- **`file_metadata_event_topic`** *(string, required)*: Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.
 
 
   Examples:
@@ -106,7 +106,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_metadata_event_type`** *(string)*: The type used for events to receive new or changed metadata on files that are expected to be uploaded.
+- **`file_metadata_event_type`** *(string, required)*: The type used for events to receive new or changed metadata on files that are expected to be uploaded.
 
 
   Examples:
@@ -116,7 +116,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`upload_accepted_event_topic`** *(string)*: Name of the topic to receive event that indicate that an upload was by downstream services.
+- **`upload_accepted_event_topic`** *(string, required)*: Name of the topic to receive event that indicate that an upload was by downstream services.
 
 
   Examples:
@@ -126,7 +126,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`upload_accepted_event_type`** *(string)*: The type used for event that indicate that an upload was by downstream services.
+- **`upload_accepted_event_type`** *(string, required)*: The type used for event that indicate that an upload was by downstream services.
 
 
   Examples:
@@ -136,7 +136,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`upload_rejected_event_topic`** *(string)*: Name of the topic used for events informing about rejection of an upload by downstream services due to validation failure.
+- **`upload_rejected_event_topic`** *(string, required)*: Name of the topic used for events informing about rejection of an upload by downstream services due to validation failure.
 
 
   Examples:
@@ -146,7 +146,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`upload_rejected_event_type`** *(string)*: The type used for events informing about the failure of a file validation.
+- **`upload_rejected_event_type`** *(string, required)*: The type used for events informing about the failure of a file validation.
 
 
   Examples:
@@ -160,7 +160,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"ucs"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -193,7 +193,7 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -232,11 +232,26 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`object_storages`** *(object)*: Can contain additional properties.
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+- **`object_storages`** *(object, required)*: Can contain additional properties.
 
   - **Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -246,7 +261,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
