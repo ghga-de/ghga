@@ -52,13 +52,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/work-package-service):
 ```bash
-docker pull ghga/work-package-service:2.0.4
+docker pull ghga/work-package-service:2.0.5
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/work-package-service:2.0.4 .
+docker build -t ghga/work-package-service:2.0.5 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -66,7 +66,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/work-package-service:2.0.4 --help
+docker run -p 8080:8080 ghga/work-package-service:2.0.5 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -87,7 +87,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"wps"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -126,7 +126,7 @@ The service requires the following configuration parameters:
 
 - **`work_package_valid_days`** *(integer)*: How many days a work package (and its access token) stays valid. Default: `30`.
 
-- **`work_package_signing_key`** *(string, format: password)*: The private key for signing work order tokens.
+- **`work_package_signing_key`** *(string, format: password, required)*: The private key for signing work order tokens.
 
 
   Examples:
@@ -136,7 +136,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -148,7 +148,7 @@ The service requires the following configuration parameters:
 
 - **`db_name`** *(string)*: Default: `"work-packages"`.
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -187,7 +187,22 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_change_event_topic`** *(string)*: Name of the topic for events that inform about datasets.
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+- **`dataset_change_event_topic`** *(string, required)*: Name of the topic for events that inform about datasets.
 
 
   Examples:
@@ -197,7 +212,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_upsertion_event_type`** *(string)*: The type of events that inform about new and changed datasets.
+- **`dataset_upsertion_event_type`** *(string, required)*: The type of events that inform about new and changed datasets.
 
 
   Examples:
@@ -207,7 +222,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_deletion_event_type`** *(string)*: The type of events that inform about deleted datasets.
+- **`dataset_deletion_event_type`** *(string, required)*: The type of events that inform about deleted datasets.
 
 
   Examples:
@@ -217,7 +232,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`download_access_url`** *(string)*: URL pointing to the internal download access API.
+- **`download_access_url`** *(string, required)*: URL pointing to the internal download access API.
 
 
   Examples:
@@ -227,7 +242,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`auth_key`** *(string)*: The GHGA internal public key for validating the token signature.
+- **`auth_key`** *(string, required)*: The GHGA internal public key for validating the token signature.
 
 
   Examples:
