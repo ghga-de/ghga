@@ -74,7 +74,7 @@ dcs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`unstaged_download_event_topic`** *(string)*: Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.
+- **`unstaged_download_event_topic`** *(string, required)*: Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.
 
 
   Examples:
@@ -84,7 +84,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`unstaged_download_collection`** *(string)*: The type used for event indicating that a download was requested for a file that is not yet available in the outbox. The value should use hyphens in place of underscores if needed.
+- **`unstaged_download_collection`** *(string, required)*: The type used for event indicating that a download was requested for a file that is not yet available in the outbox. The value should use hyphens in place of underscores if needed.
 
 
   Examples:
@@ -94,7 +94,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_delete_topic`** *(string)*: The name of the topic to receive events informing about files to delete.
+- **`files_to_delete_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
 
 
   Examples:
@@ -108,7 +108,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"dcs"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -141,11 +141,11 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`object_storages`** *(object)*: Can contain additional properties.
+- **`object_storages`** *(object, required)*: Can contain additional properties.
 
   - **Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
 
-- **`files_to_register_topic`** *(string)*: The name of the topic to receive events informing about new files that shall be made available for download.
+- **`files_to_register_topic`** *(string, required)*: The name of the topic to receive events informing about new files that shall be made available for download.
 
 
   Examples:
@@ -155,7 +155,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_register_type`** *(string)*: The type used for events informing about new files that shall be made available for download.
+- **`files_to_register_type`** *(string, required)*: The type used for events informing about new files that shall be made available for download.
 
 
   Examples:
@@ -165,7 +165,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`download_served_event_topic`** *(string)*: Name of the topic used for events indicating that a download of a specified file happened.
+- **`download_served_event_topic`** *(string, required)*: Name of the topic used for events indicating that a download of a specified file happened.
 
 
   Examples:
@@ -175,7 +175,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`download_served_event_type`** *(string)*: The type used for event indicating that a download of a specified file happened.
+- **`download_served_event_type`** *(string, required)*: The type used for event indicating that a download of a specified file happened.
 
 
   Examples:
@@ -185,7 +185,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_registered_event_topic`** *(string)*: Name of the topic used for events indicating that a file has been registered for download.
+- **`file_registered_event_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
 
 
   Examples:
@@ -195,7 +195,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_registered_event_type`** *(string)*: The type used for event indicating that that a file has been registered for download.
+- **`file_registered_event_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
 
 
   Examples:
@@ -205,7 +205,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deleted_event_topic`** *(string)*: Name of the topic used for events indicating that a file has been deleted.
+- **`file_deleted_event_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -215,7 +215,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deleted_event_type`** *(string)*: The type used for events indicating that a file has been deleted.
+- **`file_deleted_event_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -225,7 +225,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -264,7 +264,22 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -274,7 +289,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
@@ -284,7 +299,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`drs_server_uri`** *(string)*: The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'.
+- **`drs_server_uri`** *(string, required)*: The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'.
 
 
   Examples:
@@ -339,7 +354,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`ekss_base_url`** *(string)*: URL containing host and port of the EKSS endpoint to retrieve personalized envelope from.
+- **`ekss_base_url`** *(string, required)*: URL containing host and port of the EKSS endpoint to retrieve personalized envelope from.
 
 
   Examples:
@@ -349,7 +364,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`presigned_url_expires_after`** *(integer)*: Expiration time in seconds for presigned URLS. Positive integer required. Exclusive minimum: `0`.
+- **`presigned_url_expires_after`** *(integer, required)*: Expiration time in seconds for presigned URLS. Positive integer required. Exclusive minimum: `0`.
 
 
   Examples:
@@ -379,7 +394,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`auth_key`** *(string)*: The GHGA internal public key for validating the token signature.
+- **`auth_key`** *(string, required)*: The GHGA internal public key for validating the token signature.
 
 
   Examples:
