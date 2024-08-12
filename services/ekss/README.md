@@ -100,7 +100,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"encryption_key_store"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
 
   Examples:
@@ -133,7 +133,7 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`vault_url`** *(string)*: URL of the vault instance to connect to.
+- **`vault_url`** *(string, required)*: URL of the vault instance to connect to.
 
 
   Examples:
@@ -191,7 +191,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_path`** *(string)*: Path without leading or trailing slashes where secrets should be stored in the vault.
+- **`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
 
 - **`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
 
@@ -354,7 +354,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`server_private_key`** *(string, format: password)*: Base64 encoded server Crypt4GH private key.
+- **`server_private_key`** *(string, format: password, required)*: Base64 encoded server Crypt4GH private key.
 
 
   Examples:
@@ -364,7 +364,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`server_public_key`** *(string)*: Base64 encoded server Crypt4GH public key.
+- **`server_public_key`** *(string, required)*: Base64 encoded server Crypt4GH public key.
 
 
   Examples:
