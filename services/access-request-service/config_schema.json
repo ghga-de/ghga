@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Modifies the orginal Settings class provided by the user",
+  "description": "Modifies the original Settings class provided by the user",
   "properties": {
     "access_upfront_max_days": {
       "default": 180,
@@ -132,6 +132,17 @@
       ],
       "title": "Generate Correlation Id",
       "type": "boolean"
+    },
+    "kafka_max_message_size": {
+      "default": 1048576,
+      "description": "The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this.",
+      "examples": [
+        1048576,
+        16777216
+      ],
+      "exclusiveMinimum": 0,
+      "title": "Kafka Max Message Size",
+      "type": "integer"
     },
     "db_connection_str": {
       "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
