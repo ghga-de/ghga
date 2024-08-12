@@ -49,13 +49,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:2.5.1
+docker pull ghga/auth-service:2.5.2
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:2.5.1 .
+docker build -t ghga/auth-service:2.5.2 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -63,7 +63,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:2.5.1 --help
+docker run -p 8080:8080 ghga/auth-service:2.5.2 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -104,7 +104,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Short name of this service. Default: `"auth_service"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
 
   Examples:
@@ -114,7 +114,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -153,7 +153,22 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:

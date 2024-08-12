@@ -39,6 +39,7 @@ host: 0.0.0.0
 iva_events_topic: ivas
 iva_state_changed_event_type: iva_state_changed
 ivas_collection: ivas
+kafka_max_message_size: 1048576
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
