@@ -11,6 +11,7 @@ file_upload_validation_success_topic: file-upload-validation-success
 file_validations_collection: fileValidations
 generate_correlation_id: true
 host: 127.0.0.1
+kafka_max_message_size: 1048576
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092

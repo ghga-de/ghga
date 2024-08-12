@@ -50,7 +50,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"fis"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -83,7 +83,7 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`vault_url`** *(string)*: URL of the vault instance to connect to.
+- **`vault_url`** *(string, required)*: URL of the vault instance to connect to.
 
 
   Examples:
@@ -141,7 +141,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_path`** *(string)*: Path without leading or trailing slashes where secrets should be stored in the vault.
+- **`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
 
 - **`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
 
@@ -197,15 +197,15 @@ The service requires the following configuration parameters:
 
 - **`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
 
-- **`private_key`** *(string)*: Base64 encoded private key of the keypair whose public key is used to encrypt the payload.
+- **`private_key`** *(string, required)*: Base64 encoded private key of the keypair whose public key is used to encrypt the payload.
 
-- **`source_bucket_id`** *(string)*: ID of the bucket the object(s) corresponding to the upload metadata have been uploaded to. This should currently point to the staging bucket.
+- **`source_bucket_id`** *(string, required)*: ID of the bucket the object(s) corresponding to the upload metadata have been uploaded to. This should currently point to the staging bucket.
 
-- **`token_hashes`** *(array)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.
+- **`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.
 
   - **Items** *(string)*
 
-- **`file_upload_validation_success_topic`** *(string)*: The name of the topic use to publish FileUploadValidationSuccess events.
+- **`file_upload_validation_success_topic`** *(string, required)*: The name of the topic use to publish FileUploadValidationSuccess events.
 
 
   Examples:
@@ -332,7 +332,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -356,7 +356,22 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -366,7 +381,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
