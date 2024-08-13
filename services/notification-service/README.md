@@ -33,13 +33,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-service):
 ```bash
-docker pull ghga/notification-service:1.1.3
+docker pull ghga/notification-service:1.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-service:1.1.3 .
+docker build -t ghga/notification-service:1.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -47,7 +47,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-service:1.1.3 --help
+docker run -p 8080:8080 ghga/notification-service:1.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -131,9 +131,21 @@ The service requires the following configuration parameters:
 
 - **`smtp_port`** *(integer)*: The port for the mail server connection.
 
-- **`login_user`** *(string)*: The login username or email.
+- **`login_user`**: The login username or email. Default: `null`.
 
-- **`login_password`** *(string, format: password)*: The login password.
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
+- **`login_password`**: The login password. Default: `null`.
+
+  - **Any of**
+
+    - *string, format: password*
+
+    - *null*
 
 - **`use_starttls`** *(boolean)*: Boolean flag indicating the use of STARTTLS. Default: `true`.
 

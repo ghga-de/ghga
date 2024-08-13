@@ -29,7 +29,7 @@ from ns.config import Config
 class Authenticator:
     """Basic authenticator so we can test error handling for failed authentication"""
 
-    def __init__(self, user: str, password: str):
+    def __init__(self, user: str | None, password: str | None):
         self._user = user
         self._password = password
 
@@ -38,10 +38,9 @@ class Authenticator:
         login = str(auth_data.login, encoding="utf-8")
         password = str(auth_data.password, encoding="utf-8")
 
-        if login == self._user and password == self._password:
-            return AuthResult(success=True)
+        authenticated = login == self._user and password == self._password
 
-        return AuthResult(success=False, handled=False)
+        return AuthResult(success=authenticated, handled=False)
 
 
 class CustomHandler(Sink):
@@ -111,7 +110,8 @@ class DummyServer:
         """Assign config"""
         self._config = config
         self.login = self._config.login_user
-        self.password = self._config.login_password.get_secret_value()
+        password = self._config.login_password
+        self.password = password.get_secret_value() if password else None
 
     def _record_email(
         self, *, expected_email: EmailMessage, controller: Controller

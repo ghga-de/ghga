@@ -97,16 +97,32 @@
       "type": "integer"
     },
     "login_user": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "The login username or email",
-      "title": "Login User",
-      "type": "string"
+      "title": "Login User"
     },
     "login_password": {
+      "anyOf": [
+        {
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "The login password",
-      "format": "password",
-      "title": "Login Password",
-      "type": "string",
-      "writeOnly": true
+      "title": "Login Password"
     },
     "use_starttls": {
       "default": true,
@@ -199,8 +215,6 @@
     "from_address",
     "smtp_host",
     "smtp_port",
-    "login_user",
-    "login_password",
     "notification_event_topic",
     "notification_event_type",
     "kafka_servers"

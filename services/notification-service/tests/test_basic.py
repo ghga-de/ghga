@@ -17,13 +17,17 @@
 
 import html
 import json
+import smtplib
+from contextlib import contextmanager
+from email.message import EmailMessage
 from hashlib import sha256
 from typing import cast
+from unittest.mock import Mock
 
 import pytest
 from hexkit.correlation import correlation_id_var
 
-from ns.adapters.outbound.smtp_client import SmtpClient
+from ns.adapters.outbound.smtp_client import SmtpClient, SmtpClientConfig
 from ns.core.models import NotificationRecord
 from ns.core.notifier import Notifier
 from tests.fixtures.joint import JointFixture
@@ -54,10 +58,7 @@ def correlation_id_fixture():
     correlation_id_var.reset(token)
 
 
-@pytest.mark.parametrize(
-    "notification_details",
-    [sample_notification],
-)
+@pytest.mark.parametrize("notification_details", [sample_notification])
 async def test_email_construction(
     joint_fixture: JointFixture,
     notification_details,
@@ -97,8 +98,74 @@ async def test_email_construction(
     assert html_content.strip() == expected_html
 
 
+async def test_bad_login_config():
+    """Verify that we get an error if credentials are misconfigured"""
+    with pytest.raises(ValueError):
+        SmtpClientConfig(
+            smtp_host="127.0.0.1",
+            smtp_port=587,
+            login_user="test",
+            login_password=None,
+        )
+
+    with pytest.raises(ValueError):
+        SmtpClientConfig(
+            smtp_host="127.0.0.1",
+            smtp_port=587,
+            login_user=None,
+            login_password="test",  # type: ignore
+        )
+
+
+@pytest.mark.parametrize(
+    "username, password",
+    [
+        ("bob@bobswebsite.com", "passw0rd"),
+        ("bob@bobswebsite.com", ""),
+        ("", "passw0rd"),
+        (None, None),
+    ],
+    ids=["WithUsernameAndPassword", "BlankPassword", "BlankUsername", "NoAuth"],
+)
+async def test_smtp_authentication(username: str | None, password: str | None):
+    """Verify that authentication is only used when credentials are configured."""
+    config = SmtpClientConfig(
+        smtp_host="127.0.0.1",
+        smtp_port=587,
+        login_user=username,
+        login_password=password,  # type: ignore
+    )
+
+    mock_server = Mock(spec=smtplib.SMTP)
+    mock_server.noop.side_effect = lambda: (250, b"")
+
+    smtp_client = SmtpClient(config=config)
+
+    @contextmanager
+    def get_mock_server():
+        yield mock_server
+
+    smtp_client.get_connection = get_mock_server  # type: ignore [method-assign]
+
+    message = EmailMessage()
+    message["To"] = "to@example.com"
+    message["Subject"] = "Test"
+    message["From"] = "from@example.com"
+
+    smtp_client.send_email_message(message)
+
+    # Verify that 'login' is only called when credentials are set
+    if username is not None and password is not None:
+        mock_server.login.assert_called()
+    else:
+        mock_server.login.assert_not_called()
+
+    # Verify that 'send_message' is called regardless
+    mock_server.send_message.assert_called()
+
+
 async def test_failed_authentication(joint_fixture: JointFixture):
-    """Change login credentials so authentication fails."""
+    """Test that we raise the expected error when auth fails on a secured SMTP server."""
     # Cast notifier type
     joint_fixture.notifier = cast(Notifier, joint_fixture.notifier)
 
