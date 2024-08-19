@@ -30,6 +30,7 @@ __all__ = ["http_fixture", "HttpClient", "Response"]
 TIMEOUT = 10  # timeout for HTTP requests in seconds
 
 EXT_AUTH_APIS = ["ars", "dcs", "wps", "ums"]  # APIs that need ExtAuth
+BASIC_AUTH_EXCLUDED_APIS = ["sms"]
 
 
 class HttpClient(Client):
@@ -60,6 +61,9 @@ def http_fixture(config: Config) -> Generator[HttpClient, None, None]:  # noqa: 
     else:
         auth_basic = None
     ext_auth_urls = tuple(getattr(config, f"{api}_url") for api in EXT_AUTH_APIS)
+    basic_auth_excluded_urls = tuple(
+        getattr(config, f"{api}_url") for api in BASIC_AUTH_EXCLUDED_APIS
+    )
 
     def request_hook(request):
         """HTTPX request hook for testing.
@@ -75,7 +79,7 @@ def http_fixture(config: Config) -> Generator[HttpClient, None, None]:  # noqa: 
         auth = headers.get("Authorization")
         session = headers.get("Cookie")
 
-        if auth_basic:
+        if auth_basic and not url.startswith(basic_auth_excluded_urls):
             headers["Authorization"] = auth_basic
             auth_methods = "with basic"
             if auth:

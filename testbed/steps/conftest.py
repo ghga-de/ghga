@@ -170,7 +170,6 @@ def empty_totp_token_store(fixtures: JointFixture):
 
 def fetch_data_stewardship(fixtures: JointFixture) -> dict[str, Any]:
     """Fetch the data steward and the corresponding claim from the database."""
-    assert not fixtures.config.use_api_gateway
     state = {}
     claim = fixtures.mongo.find_document(
         fixtures.config.ums_db_name,
@@ -199,7 +198,6 @@ def fetch_data_stewardship(fixtures: JointFixture) -> dict[str, Any]:
 
 def restore_data_stewardship(state: dict[str, Any], fixtures: JointFixture) -> None:
     """Put the data steward and the corresponding claim back into the database."""
-    assert not fixtures.config.use_api_gateway
     user = state["user"]
     assert user
     fixtures.mongo.upsert_document(
