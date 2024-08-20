@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Modifies the orginal Settings class provided by the user",
+  "description": "Modifies the original Settings class provided by the user",
   "properties": {
     "log_level": {
       "default": "INFO",

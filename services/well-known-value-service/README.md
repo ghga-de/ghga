@@ -17,13 +17,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/well-known-value-service):
 ```bash
-docker pull ghga/well-known-value-service:1.1.0
+docker pull ghga/well-known-value-service:1.1.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/well-known-value-service:1.1.0 .
+docker build -t ghga/well-known-value-service:1.1.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -31,7 +31,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/well-known-value-service:1.1.0 --help
+docker run -p 8080:8080 ghga/well-known-value-service:1.1.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -52,7 +52,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"wkvs"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
 
   Examples:
@@ -85,15 +85,15 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`crypt4gh_public_key`** *(string)*: The GHGA crypt4gh public key.
+- **`crypt4gh_public_key`** *(string, required)*: The GHGA crypt4gh public key.
 
-- **`dcs_api_url`** *(string)*: URL to the root of the DRS-compatible DCS API.
+- **`dcs_api_url`** *(string, required)*: URL to the root of the DRS-compatible DCS API.
 
-- **`ucs_api_url`** *(string)*: URL to the root of the upload controller API.
+- **`ucs_api_url`** *(string, required)*: URL to the root of the upload controller API.
 
-- **`wps_api_url`** *(string)*: URL to the root of the WPS API.
+- **`wps_api_url`** *(string, required)*: URL to the root of the WPS API.
 
-- **`storage_aliases`** *(object)*: Mapping of storage alias to endpoint URL for all available S3 object storages.
+- **`storage_aliases`** *(object, required)*: Mapping of storage alias to endpoint URL for all available S3 object storages.
 
 - **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 

@@ -40,8 +40,11 @@ class WellKnownConfig(BaseSettings):
     )
 
 
-@config_from_yaml(prefix="wkvs")
+SERVICE_NAME: str = "wkvs"
+
+
+@config_from_yaml(prefix=SERVICE_NAME)
 class Config(ApiConfigBase, WellKnownConfig, LoggingConfig):
     """Config parameters and their defaults."""
 
-    service_name: str = "wkvs"
+    service_name: str = SERVICE_NAME
