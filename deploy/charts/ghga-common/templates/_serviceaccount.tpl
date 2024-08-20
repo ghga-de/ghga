@@ -1,5 +1,5 @@
 {{- define "ghga-common.serviceaccount" -}}
-{{- if .Values.serviceaccount.create }}
+{{- if .Values.serviceAccount.create }}
 ---
 apiVersion: v1
 kind: ServiceAccount
