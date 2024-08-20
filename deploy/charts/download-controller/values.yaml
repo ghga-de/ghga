@@ -1,31 +1,15 @@
-podAnnotations: {}
-command: []
-args: []
 horizontalPodAutoscaler:
   enabled: false
-  averageCpuUtilization: 75
-  averageMemoryUtilization: 75
+
 image:
-  name: "ghga/download-controller-service"
-port: "8080"
-resources:
-  limits:
-    cpu: 1500m
-    memory: 2048M
-  requests:
-    cpu: 100m
-    memory: 256M
+  repository: "ghga/download-controller-service"
+  registry: ""
+  tag: 2.0.1
 
 config_prefix: dcs
 
 ingress:
   enabled: false
-  annotations: {}
-  hostname: ""
-  prefix: /
-  tls:
-    enabled: false
-    secretName: ""
 
 mapping:
   enabled: false
@@ -77,7 +61,6 @@ parameters:
     port: 8080
     presigned_url_expires_after: 10
     retry_access_after: 120
-
     object_storages: {}
     #   test:
     #     bucket: outbox
@@ -98,12 +81,19 @@ parameters:
   consumer:
     service_instance_id: 'consumer.1'
 
-shareProcessNamespace: false
 kafkaSecrets:
   enabled: false
 
-# Used to add image pull secrets to deployment
-# imagePullSecretNames:
-#  - name: dockerhub
-#  - name: ex
-imagePullSecretNames: []
+containers:
+- name: rest
+  type: "rest"
+  cmd: dcs run-rest
+  config:
+    name: parameters-rest
+    key: parameters-rest
+- name: consumer
+  type: "consumer"
+  cmd: dcs consume-events
+  config:
+    name: parameters-consumer
+    key: parameters-consumer
