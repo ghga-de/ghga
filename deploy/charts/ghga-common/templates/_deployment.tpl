@@ -36,7 +36,7 @@ spec:
       annotations:
         configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- .Values.podAnnotations | toYaml | nindent 8 }}
         {{- end }}
         helm.sh/revision: {{ .Release.Revision | quote }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
