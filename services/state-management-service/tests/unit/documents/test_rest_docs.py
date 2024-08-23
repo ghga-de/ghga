@@ -16,103 +16,23 @@
 """Test the REST API endpoints for /documents/"""
 
 from collections.abc import Mapping
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from ghga_service_commons.api.testing import AsyncTestClient
 
-from sms.config import Config
 from sms.core.docs_handler import DocsHandler
-from sms.inject import prepare_rest_app
-from sms.models import Criteria, DocumentType, UpsertionDetails
+from sms.models import DocumentType, UpsertionDetails
 from sms.ports.inbound.docs_handler import DocsHandlerPort
 from sms.ports.outbound.docs_dao import DocsDaoPort
 from tests.fixtures.config import DEFAULT_TEST_CONFIG
+from tests.fixtures.dummies import DocsApiCallArgs, DummyDocsHandler
+from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client
 
 pytestmark = pytest.mark.asyncio()
-VALID_BEARER_TOKEN = "Bearer 43fadc91-b98f-4925-bd31-1b054b13dc55"
+
 TEST_URL = "/documents/testdb.testcollection"
 PERMISSION_ERROR_URL = "/documents/testdb.permission_error"
-
-
-@dataclass
-class DocsApiCallArgs:
-    """Encapsulates all the params used in a /documents/ API call of any kind."""
-
-    method: str
-    db_name: str
-    collection: str
-    criteria: Criteria | None = None
-    upsertion_details: UpsertionDetails | None = None
-
-
-class DummyDocsHandler(DocsHandlerPort):
-    """Dummy DocsDao implementation for unit testing."""
-
-    calls: list[DocsApiCallArgs]
-
-    def __init__(self):
-        self.calls = []
-
-    async def get(self, db_name: str, collection: str, criteria: Criteria):
-        """Dummy get implementation. It records the call and returns an empty list.
-
-        Optionally, it raises a PermissionError if the collection is named "permission_error".
-        """
-        call = DocsApiCallArgs(
-            method="get", db_name=db_name, collection=collection, criteria=criteria
-        )
-        self.calls.append(call)
-        if collection == "permission_error":
-            raise PermissionError()
-        return [{}]
-
-    async def upsert(
-        self,
-        db_name: str,
-        collection: str,
-        upsertion_details: UpsertionDetails,
-    ):
-        """Dummy upsert implementation. It records the call.
-
-        Optionally, it raises a PermissionError if the collection is named "permission_error".
-        """
-        call = DocsApiCallArgs(
-            method="put",
-            db_name=db_name,
-            collection=collection,
-            upsertion_details=upsertion_details,
-        )
-        self.calls.append(call)
-        if collection == "permission_error":
-            raise PermissionError()
-
-    async def delete(self, db_name: str, collection: str, criteria: Criteria):
-        """Dummy delete implementation. It records the call.
-
-        Optionally, it raises a PermissionError if the collection is named "permission_error".
-        """
-        call = DocsApiCallArgs(
-            method="delete", db_name=db_name, collection=collection, criteria=criteria
-        )
-        self.calls.append(call)
-        if collection == "permission_error":
-            raise PermissionError()
-        if db_name == "*" and collection != "*":
-            raise ValueError("Cannot use wildcard for db_name with specific collection")
-
-
-@asynccontextmanager
-async def get_rest_client(config: Config, docs_handler_override: DocsHandlerPort):
-    """Prepare a REST API client for testing."""
-    async with prepare_rest_app(
-        config=config, docs_handler_override=docs_handler_override
-    ) as app:
-        async with AsyncTestClient(app) as client:
-            yield client
 
 
 async def test_health_check():
@@ -193,7 +113,8 @@ async def test_unauthenticated_calls(http_method: str, headers: dict[str, str]):
 )
 async def test_authenticated_valid_calls(http_method: str, expected_status_code: int):
     """Verify authenticated calls are successfully passed to the handler."""
-    dummy_docs_handler = DummyDocsHandler()
+    # Create dummy docs handler populated with the db/collection we'll query to avoid errors
+    dummy_docs_handler = DummyDocsHandler(state={"testdb": {"testcollection": {}}})
     async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
         method_to_call = getattr(client, http_method)
 
@@ -244,11 +165,12 @@ async def test_calls_with_query_params(
     as_dict: Mapping[str, str],
 ):
     """Verify calls with query parameters (GET and DELETE)."""
-    dummy_docs_handler = DummyDocsHandler()
+    # Create dummy docs handler populated with the db/collection we'll query to avoid errors
+    dummy_docs_handler = DummyDocsHandler(state={"testdb": {"testcollection": {}}})
     async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
         method_to_call = getattr(client, http_method)
         response = await method_to_call(
-            url=f"/documents/testdb.testcollection?{query_string}",
+            url=f"{TEST_URL}?{query_string}",
             headers={"Authorization": VALID_BEARER_TOKEN},
         )
 
@@ -407,3 +329,25 @@ async def test_wildcard_deletion(namespace: str, expected_status_code: int):
             method="delete", db_name=db_name, collection=collection, criteria={}
         )
     ]
+
+
+async def test_missing_db():
+    """Test that a missing DB results in a 404 error."""
+    dummy_docs_handler = DummyDocsHandler(state={"somedb": {"testcollection": {}}})
+    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+        response = await client.get(
+            url=TEST_URL,
+            headers={"Authorization": VALID_BEARER_TOKEN},
+        )
+        assert response.status_code == 404
+
+
+async def test_missing_collection():
+    """Test that a missing collection results in a 404 error."""
+    dummy_docs_handler = DummyDocsHandler(state={"testdb": {"somecollection": {}}})
+    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+        response = await client.get(
+            url=TEST_URL,
+            headers={"Authorization": VALID_BEARER_TOKEN},
+        )
+        assert response.status_code == 404

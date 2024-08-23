@@ -55,6 +55,14 @@ class DocsHandlerPort(ABC):
         def __init__(self, *, key: str):
             super().__init__(f"The value for query parameter '{key}' is invalid.")
 
+    class NamespaceNotFoundError(RuntimeError):
+        """Raised when a database or collection does not exist."""
+
+        def __init__(self, db_name: str, collection: str | None = None):
+            collection_bit = f" collection '{collection}' in " if collection else " "
+            msg = f"The{collection_bit}database '{db_name}' does not exist."
+            super().__init__(msg)
+
     @abstractmethod
     async def get(
         self, db_name: str, collection: str, criteria: Criteria
@@ -68,8 +76,10 @@ class DocsHandlerPort(ABC):
 
         Raises:
         - `PermissionError`: If the operation is not allowed per configuration.
-        - `OperationError`: If the operation fails in the database for any reason.
         - `CriteriaFormatError`: If the filter criteria format is invalid.
+        - `NamespaceNotFoundError`: If the operation is allowed, but the either the
+        database or collection does not exist.
+        - `OperationError`: If the operation fails in the database for any other reason.
         """
         ...
 

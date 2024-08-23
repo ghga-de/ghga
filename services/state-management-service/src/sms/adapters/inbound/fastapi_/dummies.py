@@ -23,9 +23,12 @@ from ghga_service_commons.api.di import DependencyDummy
 
 from sms.config import Config
 from sms.ports.inbound.docs_handler import DocsHandlerPort
+from sms.ports.inbound.objects_handler import ObjectsHandlerPort
 
 config_dummy = DependencyDummy("config_dummy")
 docs_handler_port = DependencyDummy("docs_handler_port")
+objects_handler_port = DependencyDummy("objects_handler_port")
 
 ConfigDummy = Annotated[Config, Depends(config_dummy)]
 DocsHandlerPortDummy = Annotated[DocsHandlerPort, Depends(docs_handler_port)]
+ObjectsHandlerPortDummy = Annotated[ObjectsHandlerPort, Depends(objects_handler_port)]

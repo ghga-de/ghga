@@ -1,7 +1,109 @@
 {
+  "$defs": {
+    "S3Config": {
+      "additionalProperties": false,
+      "description": "S3-specific config params.\nInherit your config class from this class if you need\nto talk to an S3 service in the backend.\n\nArgs:\n    s3_endpoint_url (str): The URL to the S3 endpoint.\n    s3_access_key_id (str):\n        Part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    s3_secret_access_key (str):\n        Part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    s3_session_token (Optional[str]):\n        Optional part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    aws_config_ini (Optional[Path]):\n        Path to a config file for specifying more advanced S3 parameters.\n        This should follow the format described here:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file\n        Defaults to None.",
+      "properties": {
+        "s3_endpoint_url": {
+          "description": "URL to the S3 API.",
+          "examples": [
+            "http://localhost:4566"
+          ],
+          "title": "S3 Endpoint Url",
+          "type": "string"
+        },
+        "s3_access_key_id": {
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-access-key-id"
+          ],
+          "title": "S3 Access Key Id",
+          "type": "string"
+        },
+        "s3_secret_access_key": {
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-secret-access-key"
+          ],
+          "format": "password",
+          "title": "S3 Secret Access Key",
+          "type": "string",
+          "writeOnly": true
+        },
+        "s3_session_token": {
+          "anyOf": [
+            {
+              "format": "password",
+              "type": "string",
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
+          "examples": [
+            "my-session-token"
+          ],
+          "title": "S3 Session Token"
+        },
+        "aws_config_ini": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file",
+          "examples": [
+            "~/.aws/config"
+          ],
+          "title": "Aws Config Ini"
+        }
+      },
+      "required": [
+        "s3_endpoint_url",
+        "s3_access_key_id",
+        "s3_secret_access_key"
+      ],
+      "title": "S3Config",
+      "type": "object"
+    },
+    "S3ObjectStorageNodeConfig": {
+      "additionalProperties": false,
+      "description": "Configuration for one specific object storage node and one bucket in it.\n\nThe bucket is the main bucket that the service is responsible for.",
+      "properties": {
+        "bucket": {
+          "title": "Bucket",
+          "type": "string"
+        },
+        "credentials": {
+          "$ref": "#/$defs/S3Config"
+        }
+      },
+      "required": [
+        "bucket",
+        "credentials"
+      ],
+      "title": "S3ObjectStorageNodeConfig",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
-  "description": "Modifies the orginal Settings class provided by the user",
+  "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "object_storages": {
+      "additionalProperties": {
+        "$ref": "#/$defs/S3ObjectStorageNodeConfig"
+      },
+      "title": "Object Storages",
+      "type": "object"
+    },
     "token_hashes": {
       "description": "List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.",
       "examples": [
@@ -246,6 +348,7 @@
     }
   },
   "required": [
+    "object_storages",
     "token_hashes",
     "db_prefix",
     "db_connection_str",

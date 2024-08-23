@@ -126,8 +126,10 @@ class DocsHandler(DocsHandlerPort):
 
         Raises:
         - `PermissionError`: If the operation is not allowed per configuration.
-        - `OperationError`: If the operation fails in the database for any reason.
         - `CriteriaFormatError`: If the filter criteria format is invalid.
+        - `NamespaceNotFoundError`: If the operation is allowed, but the either the
+        database or collection does not exist.
+        - `OperationError`: If the operation fails in the database for any other reason.
         """
         if not self._permissions.can_read(db_name, collection):
             log_and_raise_permissions_error(db_name, collection, "read")
@@ -139,6 +141,16 @@ class DocsHandler(DocsHandlerPort):
             results = await self._docs_dao.get(
                 db_name=full_db_name, collection=collection, criteria=parsed_criteria
             )
+        except DocsDaoPort.DbNotFoundError as err:
+            namespace_error = self.NamespaceNotFoundError(db_name=db_name)
+            log.error(namespace_error)
+            raise namespace_error from err
+        except DocsDaoPort.CollectionNotFoundError as err:
+            namespace_error = self.NamespaceNotFoundError(
+                db_name=db_name, collection=collection
+            )
+            log.error(namespace_error)
+            raise namespace_error from err
         except Exception as err:
             error = self.ReadOperationError(criteria=criteria)
             log.error(error)

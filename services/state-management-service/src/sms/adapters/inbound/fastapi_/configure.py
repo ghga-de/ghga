@@ -40,6 +40,7 @@ def get_configured_app(*, config: ApiConfigBase) -> FastAPI:
     """Create and configure a REST API application."""
     app = FastAPI()
     app.include_router(router)
+
     configure_app(app, config=config)
 
     def custom_openapi():

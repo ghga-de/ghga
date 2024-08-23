@@ -53,7 +53,17 @@ class DocsDao(DocsDaoPort):
         - `db_name`: The database name.
         - `collection`: The collection name.
         - `criteria`: The criteria to use for filtering the documents (mapping)
+
+        Raises:
+        - `DbNotFoundError`: If the database does not exist.
+        - `CollectionNotFoundError`: If the collection does not exist.
         """
+        # Ensure the DB and collection exist before querying
+        if db_name not in await self._client.list_database_names():
+            raise self.DbNotFoundError(db_name=db_name)
+        if collection not in await self._client[db_name].list_collection_names():
+            raise self.CollectionNotFoundError(db_name=db_name, collection=collection)
+
         return [x async for x in self._client[db_name][collection].find(criteria)]
 
     async def upsert(

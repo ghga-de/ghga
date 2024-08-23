@@ -33,10 +33,8 @@ async def test_all_ops(mongodb: MongoDbFixture):
 
     # Verify the db is empty
     async with DocsDao(config=config) as docs_dao:
-        initial_contents = await docs_dao.get(
-            db_name=TESTDB, collection=ALLOPS, criteria={}
-        )
-        assert not initial_contents
+        with pytest.raises(DocsDao.DbNotFoundError):
+            await docs_dao.get(db_name=TESTDB, collection=ALLOPS, criteria={})
 
         # Insert docs
         docs_to_insert: list[DocumentType] = [

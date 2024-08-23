@@ -22,6 +22,18 @@ from sms.models import Criteria, DocumentType
 class DocsDaoPort(ABC):
     """Port definition for a Doc Handler"""
 
+    class DbNotFoundError(RuntimeError):
+        """Raised when a database does not exist."""
+
+        def __init__(self, *, db_name: str):
+            super().__init__(f"Database '{db_name}' not found.")
+
+    class CollectionNotFoundError(RuntimeError):
+        """Raised when a collection does not exist."""
+
+        def __init__(self, *, db_name: str, collection: str):
+            super().__init__(f"Collection '{collection}' not found in db '{db_name}'.")
+
     @abstractmethod
     async def get(
         self, *, db_name: str, collection: str, criteria: Criteria
@@ -32,6 +44,10 @@ class DocsDaoPort(ABC):
         - `db_name`: The database name.
         - `collection`: The collection name.
         - `criteria`: The criteria to use for filtering the documents (mapping)
+
+        Raises:
+        - `DbNotFoundError`: If the database does not exist.
+        - `CollectionNotFoundError`: If the collection does not exist.
         """
         ...
 

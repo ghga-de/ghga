@@ -15,41 +15,26 @@
 """Config-related tests."""
 
 import pytest
-from pydantic import SecretStr
 
 from sms.config import Config
+from tests.fixtures.config import DEFAULT_TEST_CONFIG
+
+
+def adapt_default_config(config: dict) -> dict:
+    """Adapt the default config to the test's needs."""
+    test_config = DEFAULT_TEST_CONFIG.model_dump()
+    test_config.update(config)
+    return test_config
 
 
 def test_prefix_config():
     """Make sure you can't accidentally configure an empty prefix."""
     with pytest.raises(ValueError):
-        Config(
-            token_hashes=[],
-            db_connection_str=SecretStr(""),
-            db_prefix="",
-            service_instance_id="1",
-        )
+        vals = adapt_default_config({"db_prefix": ""})
+        Config(**vals)
 
-    Config(
-        token_hashes=[],
-        db_connection_str=SecretStr(""),
-        db_prefix="",
-        allow_empty_prefix=True,
-        service_instance_id="1",
-    )
+    Config(**adapt_default_config({"db_prefix": "", "allow_empty_prefix": True}))
 
-    Config(
-        token_hashes=[],
-        db_connection_str=SecretStr(""),
-        db_prefix="test",
-        allow_empty_prefix=True,
-        service_instance_id="1",
-    )
+    Config(**adapt_default_config({"db_prefix": "test", "allow_empty_prefix": True}))
 
-    Config(
-        token_hashes=[],
-        db_connection_str=SecretStr(""),
-        db_prefix="test",
-        allow_empty_prefix=False,
-        service_instance_id="1",
-    )
+    Config(**adapt_default_config({"db_prefix": "test", "allow_empty_prefix": False}))

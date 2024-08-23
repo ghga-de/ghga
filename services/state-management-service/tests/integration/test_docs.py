@@ -24,10 +24,11 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from sms.inject import prepare_rest_app
 from sms.models import DocumentType
 from tests.fixtures.config import get_config
+from tests.fixtures.utils import VALID_BEARER_TOKEN
 
 pytestmark = pytest.mark.asyncio
 
-VALID_BEARER_TOKEN = "Bearer 43fadc91-b98f-4925-bd31-1b054b13dc55"
+
 ALLOPS = "testdb.allops"
 
 SALLY: DocumentType = {"_id": 1, "name": "sally", "age": 23}

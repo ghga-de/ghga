@@ -13,19 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test the DocDao class without any real"""
+"""Test the DocsHandler class directly without an actual DB instance."""
 
 from contextlib import nullcontext
 from unittest.mock import AsyncMock, call
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from sms.core.docs_handler import DocsHandler, Permissions
-from sms.inject import prepare_docs_handler
 from sms.models import Criteria, DocumentType, UpsertionDetails
 from sms.ports.outbound.docs_dao import DocsDaoPort
-from tests.fixtures.config import get_config
+from tests.fixtures.config import DEFAULT_TEST_CONFIG, get_config
 
 TEST_DOCS: list[DocumentType] = [
     {"_id": "1", "test": "test"},
@@ -104,19 +102,17 @@ def test_permissions():
     ],
 )
 @pytest.mark.asyncio
-async def test_read(
-    mongodb: MongoDbFixture,
+async def test_read_permissions(
     db_name: str,
     collection: str,
     error: type[Exception] | None,
 ):
-    """Make sure we get a permission error when trying to read a write-only collection."""
-    config = get_config(sources=[mongodb.config])
+    """Make sure .get() raises PermissionErrors appropriately."""
+    docs_dao = AsyncMock(spec=DocsDaoPort)
+    docs_handler = DocsHandler(config=DEFAULT_TEST_CONFIG, docs_dao=docs_dao)
 
-    async with prepare_docs_handler(config=config) as docs_handler:
-        # Attempt read
-        with pytest.raises(error) if error else nullcontext():
-            await docs_handler.get(db_name=db_name, collection=collection, criteria={})
+    with pytest.raises(error) if error else nullcontext():
+        await docs_handler.get(db_name=db_name, collection=collection, criteria={})
 
 
 @pytest.mark.parametrize(
@@ -140,31 +136,30 @@ async def test_read(
 )
 @pytest.mark.asyncio
 async def test_write(
-    mongodb: MongoDbFixture,
     db_name: str,
     collection: str,
     error: type[Exception] | None,
 ):
-    """Make sure we get a permission error when trying to write to a read-only collection."""
-    config = get_config(sources=[mongodb.config])
+    """Make sure .upsert() and .delete() raise PermissionErrors appropriately."""
+    docs_dao = AsyncMock(spec=DocsDaoPort)
+    docs_handler = DocsHandler(config=DEFAULT_TEST_CONFIG, docs_dao=docs_dao)
 
     upsertion_details = UpsertionDetails(documents=TEST_DOCS)
-    async with prepare_docs_handler(config=config) as docs_handler:
-        with pytest.raises(error) if error else nullcontext():
-            # Attempt upsert
-            await docs_handler.upsert(
-                db_name=db_name,
-                collection=collection,
-                upsertion_details=upsertion_details,
-            )
+    with pytest.raises(error) if error else nullcontext():
+        # Attempt upsert
+        await docs_handler.upsert(
+            db_name=db_name,
+            collection=collection,
+            upsertion_details=upsertion_details,
+        )
 
-        with pytest.raises(error) if error else nullcontext():
-            # Attempt delete
-            await docs_handler.delete(
-                db_name=db_name,
-                collection=collection,
-                criteria={},
-            )
+    with pytest.raises(error) if error else nullcontext():
+        # Attempt delete
+        await docs_handler.delete(
+            db_name=db_name,
+            collection=collection,
+            criteria={},
+        )
 
 
 @pytest.mark.asyncio
@@ -175,8 +170,7 @@ async def test_dao_error_handling():
     docs_dao.upsert.side_effect = DocsHandler.OperationError()
     docs_dao.delete.side_effect = DocsHandler.OperationError()
 
-    config = get_config()
-    docs_handler = DocsHandler(config=config, docs_dao=docs_dao)
+    docs_handler = DocsHandler(config=DEFAULT_TEST_CONFIG, docs_dao=docs_dao)
     with pytest.raises(DocsHandler.OperationError):
         await docs_handler.get(db_name=TEST_DB, collection=ALLOPS, criteria={})
 
@@ -195,7 +189,7 @@ async def test_dao_error_handling():
 async def test_prefix_handling_wrt_permissions():
     """Test that the prefix is correctly handled."""
     # Make sure the db_prefix is not empty
-    config = get_config()
+    config = DEFAULT_TEST_CONFIG
     assert config.db_prefix
     docs_handler = DocsHandler(config=config, docs_dao=AsyncMock())
 
@@ -263,3 +257,29 @@ async def test_wildcard_deletion():
         call(db_name=f"{config.db_prefix}{TEST_DB}", collection=ALLOPS, criteria={}),
         call(db_name=f"{config.db_prefix}{TEST_DB}", collection=WRITEONLY, criteria={}),
     ]
+
+
+@pytest.mark.asyncio()
+async def test_db_not_found_error():
+    """Test the DbNotFoundError class."""
+    docs_dao = AsyncMock(spec=DocsDaoPort)
+
+    docs_dao.get.side_effect = DocsDaoPort.DbNotFoundError(db_name=TEST_DB)
+
+    with pytest.raises(DocsHandler.NamespaceNotFoundError):
+        docs_handler = DocsHandler(config=get_config(), docs_dao=docs_dao)
+        await docs_handler.get(db_name=TEST_DB, collection=ALLOPS, criteria={})
+
+
+@pytest.mark.asyncio()
+async def test_collection_not_found_error():
+    """Test the CollectionNotFoundError class."""
+    docs_dao = AsyncMock(spec=DocsDaoPort)
+
+    docs_dao.get.side_effect = DocsDaoPort.CollectionNotFoundError(
+        db_name=TEST_DB, collection=ALLOPS
+    )
+
+    with pytest.raises(DocsHandler.NamespaceNotFoundError):
+        docs_handler = DocsHandler(config=get_config(), docs_dao=docs_dao)
+        await docs_handler.get(db_name=TEST_DB, collection=ALLOPS, criteria={})
