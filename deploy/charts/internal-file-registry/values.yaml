@@ -36,8 +36,8 @@ kafkaSecrets:
   enabled: false
 
 containers:
-- name: rest
-  type: "rest"
+- name: consumer
+  type: "consumer"
   cmd: ifrs
   config:
     name: parameters
