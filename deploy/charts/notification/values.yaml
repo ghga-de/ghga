@@ -43,8 +43,8 @@ kafkaSecrets:
   enabled: false
 
 containers:
-- name: rest
-  type: "rest"
+- name: consumer
+  type: "consumer"
   cmd: ns
   config:
     name: parameters
