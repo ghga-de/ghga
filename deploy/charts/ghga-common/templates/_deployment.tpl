@@ -58,7 +58,7 @@ spec:
       {{- end }}
       containers:
       {{- range $container := .Values.containers }}
-        - image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global) }}
+        - image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart ) }}
           imagePullPolicy: {{ default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }}
           {{- include "ghga-common.command-args" (list $container.cmd)  | nindent 10 }}
           {{- if $.Values.args }}
