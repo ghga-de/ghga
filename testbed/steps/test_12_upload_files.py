@@ -156,10 +156,9 @@ def call_data_steward_kit_ingest(
 
 
 @given("the staging bucket is empty")
-@async_step
-async def staging_bucket_is_empty(fixtures: JointFixture):
+def staging_bucket_is_empty(fixtures: JointFixture):
     config = fixtures.config
-    await fixtures.s3.empty_buckets(buckets=config.staging_bucket)
+    fixtures.s3.empty_buckets(buckets=config.staging_bucket)
 
 
 @given("no file metadata exists")
@@ -224,18 +223,14 @@ def metadata_files_exist(
 
 
 @then(parse("the uploaded files exist in the staging bucket"))
-@async_step
-async def check_uploaded_files_in_storage(
+def check_uploaded_files_in_storage(
     fixtures: JointFixture, uploaded_file_uuids: set[str]
 ):
     """Check that the uploaded files exist in the given bucket."""
-    if fixtures.config.use_api_gateway:
-        # black-box testing: cannot check staging bucket
-        return
     bucket_id = fixtures.config.staging_bucket
     for object_id in uploaded_file_uuids:
-        assert await fixtures.s3.storage.does_object_exist(
-            bucket_id=bucket_id, object_id=object_id
+        assert fixtures.s3.does_object_exist(
+            bucket=bucket_id, object_id=object_id
         ), f"{object_id} does not exist in the staging bucket"
 
 
@@ -303,13 +298,10 @@ def check_secrets_in_vault(fixtures: JointFixture, file_objects: list[FileObject
 
 
 @then(parse("the ingested files exist in the permanent bucket"))
-@async_step
-async def check_ingested_files_in_storage(fixtures: JointFixture, object_ids: set[str]):
+def check_ingested_files_in_storage(fixtures: JointFixture, object_ids: set[str]):
     """Check that the ingested files exist in the permanent bucket."""
-    if fixtures.config.use_api_gateway:
-        # black-box testing: cannot check permanent bucket
-        return
     for object_id in object_ids:
-        assert await fixtures.s3.storage.does_object_exist(
-            bucket_id=fixtures.config.permanent_bucket, object_id=object_id
+        assert fixtures.s3.does_object_exist(
+            bucket=fixtures.config.permanent_bucket,
+            object_id=object_id,
         ), f"{object_id} does not exist in the permanent bucket"

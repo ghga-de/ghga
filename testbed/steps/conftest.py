@@ -227,10 +227,9 @@ async def reset_state(fixtures: JointFixture):
     """Reset all state used by the Archive Test Bed."""
     fixtures.state.reset_state()  # empty state database
     if not fixtures.config.use_api_gateway:
-        # When running the tests externally we have no access
-        # to object storage and kafka.
-        await fixtures.s3.empty_buckets()  # empty object storage
+        # When running the tests externally we have no access to kafka.
         await fixtures.kafka.clear_topics()  # empty event queues
+    fixtures.s3.empty_buckets()  # empty object storages
     saved_data_steward = fetch_data_stewardship(fixtures)
     fixtures.mongo.empty_databases()  # empty service databases
     restore_data_stewardship(saved_data_steward, fixtures)
