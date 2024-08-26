@@ -112,7 +112,7 @@ kafkaSecrets:
 containers:
 - name: rest
   type: "rest"
-  cmd: ars
+  cmd: auth-service
   config:
     name: parameters
     key: parameters
