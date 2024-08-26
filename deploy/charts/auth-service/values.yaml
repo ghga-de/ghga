@@ -2,7 +2,7 @@ horizontalPodAutoscaler:
   enabled: false
 
 image:
-  name: "ghga/auth-service"
+  repository: "ghga/auth-service"
 
 config_prefix: auth_service
 
