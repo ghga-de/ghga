@@ -30,8 +30,8 @@ kafkaSecrets:
   enabled: false
 
 containers:
-- name: rest
-  type: "rest"
+- name: consumer
+  type: consumer
   cmd: nos
   config:
     name: parameters
