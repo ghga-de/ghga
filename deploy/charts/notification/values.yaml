@@ -1,19 +1,8 @@
-args: []
-command: []
 horizontalPodAutoscaler:
   enabled: false
-  averageCpuUtilization: 75
-  averageMemoryUtilization: 75
+
 image:
-  name: "ghga/notification-service"
-podAnnotations: {}
-resources:
-  limits:
-    cpu: "500m"
-    memory: "256M"
-  requests:
-    cpu: "100m"
-    memory: "64M"
+  repository: "ghga/notification-service"
 
 config_prefix: ns
 
@@ -50,12 +39,13 @@ parameters:
     smtp_port: 587
     use_starttls: false
 
-shareProcessNamespace: false
 kafkaSecrets:
   enabled: false
 
-# Used to add image pull secrets to deployment
-# imagePullSecretNames:
-#  - name: dockerhub
-#  - name: ex
-imagePullSecretNames: []
+containers:
+- name: rest
+  type: "rest"
+  cmd: ns
+  config:
+    name: parameters
+    key: parameters

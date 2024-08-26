@@ -1,37 +1,13 @@
-args: []
-command: []
 image:
-  name: "ghga/test-oidc-provider"
-podAnnotations: {}
-resources:
-  limits:
-    cpu: "500m"
-    memory: "256M"
-  requests:
-    cpu: "100m"
-    memory: "64M"
-
-service:
-  port: 80
+  repository: "ghga/test-oidc-provider"
 
 config_prefix: top
 
 ingress:
   enabled: false
-  annotations: {}
-  hostname: ""
-  prefix: /
-  tls:
-    enabled: false
-    secretName: ""
 
 mapping:
   enabled: false
-  hostname: ""
-  prefix: /
-  rewrite: null
-  ambassador_id: null
-  timeout_ms: null
 
 parameters:
   default:
@@ -56,12 +32,14 @@ parameters:
 
     service_instance_id: rest.1
 
-shareProcessNamespace: false
 kafkaSecrets:
   enabled: false
 
-# Used to add image pull secrets to deployment
-# imagePullSecretNames:
-#  - name: dockerhub
-#  - name: ex
-imagePullSecretNames: []
+
+containers:
+- name: rest
+  type: "rest"
+  cmd: top
+  config:
+    name: parameters
+    key: parameters
