@@ -30,5 +30,5 @@ containers:
   type: "rest"
   cmd: "python /service/configure_build_serve/run.py"
   config:
-    name: parameters-rest
-    key: parameters-rest
+    name: parameters
+    key: parameters
