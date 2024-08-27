@@ -6,7 +6,7 @@ metadata:
   name: {{ .Release.Name }}
 spec:
   ambassador_id: {{ .Values.mapping.ambassador_id }}
-  service: "{{ .Release.Name }}-svc:{{ .Values.port }}"
+  service: "{{ .Release.Name }}-svc:{{ .Values.mapping.port }}"
   hostname: {{ .Values.mapping.hostname }}
   prefix: {{ .Values.mapping.prefix }}
   rewrite: {{ .Values.mapping.rewrite }}
