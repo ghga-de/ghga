@@ -1,16 +1,7 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/access-request-service"
 
 config_prefix: ars
-
-ingress:
-  enabled: false
-
-mapping:
-  enabled: false
 
 parameters:
   default:
@@ -47,9 +38,6 @@ parameters:
     service_instance_id: 'rest.1'
     service_name: ars
     workers: 1
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: rest
