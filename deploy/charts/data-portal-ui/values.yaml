@@ -1,39 +1,7 @@
-args: []
-command: []
-horizontalPodAutoscaler:
-  enabled: false
-  averageCpuUtilization: 75
-  averageMemoryUtilization: 75
 image:
-  name: "ghga/data-portal-ui"
-podAnnotations: {}
-port: "8080"
-resources:
-  limits:
-    cpu: "1500m"
-    memory: "2048M"
-  requests:
-    cpu: "1000m"
-    memory: "1024M"
+  repository: "ghga/data-portal-ui"
 
 config_prefix: data_portal_ui
-
-ingress:
-  enabled: false
-  annotations: {}
-  hostname: ""
-  prefix: /
-  tls:
-    enabled: false
-    secretName: ""
-
-mapping:
-  enabled: false
-  hostname: ""
-  prefix: /
-  rewrite: null
-  ambassador_id: null
-  timeout_ms: null
 
 parameters:
   default:
@@ -52,10 +20,15 @@ parameters:
     oidc_userinfo_url: userinfo
     oidc_use_discovery: false
 
-shareProcessNamespace: false
 
-# Used to add image pull secrets to deployment
-# imagePullSecretNames:
-#  - name: dockerhub
-#  - name: ex
-imagePullSecretNames: []
+containerSecurityContext:
+  readOnlyRootFilesystem: false
+
+# Type needs to be fixed, it is used for exposed pods and probes
+containers:
+- name: rest
+  type: "rest"
+  cmd: "python /service/configure_build_serve/run.py"
+  config:
+    name: parameters-rest
+    key: parameters-rest
