@@ -138,9 +138,6 @@ exports:
 
     envVarsSecret: ""
 
-    autoscaling:
-      enabled: false
-
     service:
       type: ClusterIP
       ports:
@@ -151,3 +148,17 @@ exports:
 
     serviceAccount:
       create: true
+
+    autoscaling:
+      enabled: false
+      minReplicas: 3
+      maxReplicas: 5
+      targetCPU: 80
+      targetMemory: 80
+      metrics: []
+
+    ingress:
+      enabled: false
+
+    mapping:
+      enabled: false
