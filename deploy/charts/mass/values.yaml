@@ -1,16 +1,7 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/mass"
 
 config_prefix: mass
-
-ingress:
-  enabled: false
-
-mapping:
-  enabled: false
 
 parameters:
   default:
@@ -48,9 +39,6 @@ parameters:
     service_instance_id: 'rest.1'
   consumer:
     service_instance_id: 'consumer.1'
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: rest

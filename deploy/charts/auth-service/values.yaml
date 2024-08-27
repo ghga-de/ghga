@@ -1,16 +1,7 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/auth-service"
 
 config_prefix: auth_service
-
-ingress:
-  enabled: false
-
-mapping:
-  enabled: false
 
 parameters:
   default:
@@ -105,9 +96,6 @@ authService:
   emissary:
     enabled: false
     name: authentication
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: rest

@@ -1,6 +1,3 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/notification-orchestration-service"
 
@@ -25,9 +22,6 @@ parameters:
     user_events_topic: users
     file_registered_event_topic: internal_registrations
     file_registered_event_type: internal_file_registered
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: consumer

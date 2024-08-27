@@ -1,6 +1,3 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/encryption-key-store-service"
 
@@ -31,9 +28,6 @@ parameters:
     vault_kube_role: null
     vault_auth_mount_point: null
     workers: 1
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: rest

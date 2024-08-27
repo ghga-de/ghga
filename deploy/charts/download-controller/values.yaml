@@ -1,23 +1,9 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/download-controller-service"
   registry: ""
   tag: 2.0.1
 
 config_prefix: dcs
-
-ingress:
-  enabled: false
-
-mapping:
-  enabled: false
-  hostname: ""
-  prefix: /
-  rewrite: null
-  ambassador_id: null
-  timeout_ms: null
 
 parameters:
   default:
@@ -80,9 +66,6 @@ parameters:
     service_instance_id: 'rest.1'
   consumer:
     service_instance_id: 'consumer.1'
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: rest

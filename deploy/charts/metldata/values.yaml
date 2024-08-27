@@ -1,16 +1,7 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/metldata"
 
 config_prefix: metldata
-
-ingress:
-  enabled: false
-
-mapping:
-  enabled: false
 
 parameters:
   default:
@@ -38,9 +29,6 @@ parameters:
     resource_upsertion_type: searchable_resource_upserted
     service_instance_id: 'rest.1'
     workers: 1
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: rest

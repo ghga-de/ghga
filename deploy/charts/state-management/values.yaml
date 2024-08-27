@@ -1,16 +1,7 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/state-management-service"
 
 config_prefix: sms
-
-ingress:
-  enabled: false
-
-mapping:
-  enabled: false
 
 parameters:
   default:
@@ -28,9 +19,6 @@ parameters:
     service_instance_id: 'rest.1'
     service_name: sms
     log_level: DEBUG
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: rest

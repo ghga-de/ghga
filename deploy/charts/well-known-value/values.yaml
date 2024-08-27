@@ -1,16 +1,7 @@
-horizontalPodAutoscaler:
-  enabled: false
-
 image:
   repository: "ghga/well-known-value-service"
 
 config_prefix: wkvs
-
-ingress:
-  enabled: false
-
-mapping:
-  enabled: false
 
 parameters:
   default:
@@ -31,9 +22,6 @@ parameters:
     ucs_api_url: http://127.0.0.1/upload
     workers: 1
     wps_api_url: http://127.0.0.1
-
-kafkaSecrets:
-  enabled: false
 
 containers:
 - name: rest
