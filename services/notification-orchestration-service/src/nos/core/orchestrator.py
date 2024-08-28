@@ -282,7 +282,7 @@ class Orchestrator(OrchestratorPort):
             email=user.email,
             full_name=user.name,
             notification=notifications.ALL_IVAS_INVALIDATED_TO_USER.formatted(
-                email=self._config.central_data_stewardship_email
+                helpdesk_email=self._config.helpdesk_email
             ),
         )
 
@@ -365,7 +365,7 @@ class Orchestrator(OrchestratorPort):
                     email=existing_user.email,
                     full_name=update.name,
                     notification=notifications.USER_REREGISTERED_TO_USER.formatted(
-                        support_email=self._config.central_data_stewardship_email,
+                        helpdesk_email=self._config.helpdesk_email,
                         changed_details=changed_details,
                     ),
                 )
@@ -405,6 +405,6 @@ class Orchestrator(OrchestratorPort):
             email=user.email,
             full_name=user.name,
             notification=notifications.SECOND_FACTOR_RECREATED_TO_USER.formatted(
-                support_email=self._config.central_data_stewardship_email
+                helpdesk_email=self._config.helpdesk_email
             ),
         )

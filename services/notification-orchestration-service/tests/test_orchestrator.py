@@ -408,7 +408,7 @@ async def test_all_ivas_reset(joint_fixture: JointFixture):
     )
 
     # Define the event that should be published by the NOS when the trigger is consumed
-    ds_email = joint_fixture.config.central_data_stewardship_email
+    helpdesk_email = joint_fixture.config.helpdesk_email
     expected_notification = event_schemas.Notification(
         recipient_email=TEST_USER.email,
         recipient_name=TEST_USER.name,
@@ -417,7 +417,7 @@ async def test_all_ivas_reset(joint_fixture: JointFixture):
 All of your registered contact addresses now need re-verification due to the establishment
 of a new 2nd authentication factor.
 
-If you have any questions, please contact a Data Steward at GHGA: {ds_email}.
+If you have any questions, please contact the GHGA Helpdesk: {helpdesk_email}
 """,
     )
 
@@ -452,7 +452,7 @@ async def test_second_factor_recreated_notification(joint_fixture: JointFixture)
     # Define the event that should be published by the NOS when the trigger is consumed
     expected_notification_content = (
         notifications.SECOND_FACTOR_RECREATED_TO_USER.formatted(
-            support_email=joint_fixture.config.central_data_stewardship_email
+            helpdesk_email=joint_fixture.config.helpdesk_email
         )
     )
 

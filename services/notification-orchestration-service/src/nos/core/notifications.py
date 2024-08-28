@@ -61,7 +61,7 @@ ACCESS_REQUEST_CREATED_TO_USER = Notification(
     """
 Your request to download the dataset {dataset_id} has been registered.
 
-You should be contacted by one of our data stewards in the next three workdays.
+You should be contacted by one of our Data Stewards within the next three working days.
 """,
 )
 
@@ -81,6 +81,7 @@ We are glad to inform you that your request to download the dataset
 {dataset_id} has been accepted.
 
 You can now start downloading the dataset as explained in the GHGA Data Portal.
+For help, please see the guide at https://docs.ghga.de/data_portal/data_download/
 """,
 )
 
@@ -88,18 +89,17 @@ ACCESS_REQUEST_ALLOWED_TO_DS = Notification(
     "Data download access has been allowed",
     """
 The request by {full_user_name} to download the dataset
-{dataset_id} has now been registered as allowed
-and the access has been granted.
+{dataset_id} has been approved and access has been granted.
 """,
 )
 
 ACCESS_REQUEST_DENIED_TO_USER = Notification(
     "Your data download access request has been rejected",
     """
-Unfortunately, your request to download the dataset
-{dataset_id} has been rejected.
+Unfortunately, your request to download the dataset {dataset_id} has been rejected.
 
-Please contact our help desk for information about this decision.
+Please contact the Data Controller or Data Access Committee for information
+about this decision.
 """,
 )
 
@@ -107,8 +107,7 @@ ACCESS_REQUEST_DENIED_TO_DS = Notification(
     "Data download access has been rejected",
     """
 The request by {full_user_name} to download the dataset
-{dataset_id} has now been registered as rejected
-and the access has not been granted.
+{dataset_id} has been rejected and access has not been granted.
 """,
 )
 
@@ -123,7 +122,7 @@ ALL_IVAS_INVALIDATED_TO_USER = Notification(
 All of your registered contact addresses now need re-verification due to the establishment
 of a new 2nd authentication factor.
 
-If you have any questions, please contact a Data Steward at GHGA: {email}.
+If you have any questions, please contact the GHGA Helpdesk: {helpdesk_email}
 """,
 )
 
@@ -176,7 +175,7 @@ USER_REREGISTERED_TO_USER = Notification(
     """
 Your account details were recently updated. The changed details include: {changed_details}.
 
-If you did not make these changes or have questions, please contact the GHGA immediately at {support_email}.
+If you did not make these changes or have questions, please contact the GHGA Helpdesk immediately at {helpdesk_email}.
 """,
 )
 
@@ -185,6 +184,6 @@ SECOND_FACTOR_RECREATED_TO_USER = Notification(
     """
 The setup for authentication with a 2FA authenticator app has been changed.
 
-If you did not make these changes or have questions, please contact the GHGA immediately at {support_email}.
+If you did not make these changes or have questions, please contact the GHGA Helpdesk immediately at {helpdesk_email}.
 """,
 )

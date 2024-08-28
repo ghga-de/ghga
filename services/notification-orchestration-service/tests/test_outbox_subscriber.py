@@ -149,7 +149,7 @@ async def test_user_reregistration_notifications(
                 recipient_name=user.name,
                 plaintext_body=notifications.USER_REREGISTERED_TO_USER.text.format(
                     changed_details=" and ".join(sorted(changed_details.keys())),
-                    support_email=joint_fixture.config.central_data_stewardship_email,
+                    helpdesk_email=joint_fixture.config.helpdesk_email,
                 ),
             )
         )

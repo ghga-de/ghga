@@ -8,8 +8,10 @@ db_name: nos
 file_registered_event_topic: internal_file_registry
 file_registered_event_type: file_registered
 generate_correlation_id: true
+helpdesk_email: test@test.def
 iva_state_changed_event_topic: ivas
 iva_state_changed_event_type: iva_state_changed
+kafka_max_message_size: 1048576
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
@@ -19,6 +21,7 @@ kafka_ssl_keyfile: ''
 kafka_ssl_password: ''
 log_format: null
 log_level: INFO
+log_traceback: true
 notification_event_topic: notification_events
 notification_event_type: notification
 second_factor_recreated_event_topic: auth

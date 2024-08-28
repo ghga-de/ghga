@@ -53,3 +53,7 @@ class Config(
         default=...,
         description="The email address of the central data steward.",
     )
+
+    helpdesk_email: str = Field(
+        default=..., description="The email address of the GHGA Helpdesk."
+    )

@@ -20,13 +20,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-orchestration-service):
 ```bash
-docker pull ghga/notification-orchestration-service:1.0.2
+docker pull ghga/notification-orchestration-service:2.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-orchestration-service:1.0.2 .
+docker build -t ghga/notification-orchestration-service:2.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -34,7 +34,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-orchestration-service:1.0.2 --help
+docker run -p 8080:8080 ghga/notification-orchestration-service:2.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -51,7 +51,7 @@ nos --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -61,7 +61,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
@@ -71,7 +71,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`notification_event_topic`** *(string)*: Name of the topic used for notification events.
+- **`notification_event_topic`** *(string, required)*: Name of the topic used for notification events.
 
 
   Examples:
@@ -81,7 +81,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`notification_event_type`** *(string)*: The type used for notification events.
+- **`notification_event_type`** *(string, required)*: The type used for notification events.
 
 
   Examples:
@@ -93,7 +93,7 @@ The service requires the following configuration parameters:
 
 - **`user_events_topic`** *(string)*: The name of the topic containing user events. Default: `"users"`.
 
-- **`access_request_events_topic`** *(string)*: Name of the event topic used to consume access request events.
+- **`access_request_events_topic`** *(string, required)*: Name of the event topic used to consume access request events.
 
 
   Examples:
@@ -103,7 +103,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`access_request_created_event_type`** *(string)*: The type to use for access request created events.
+- **`access_request_created_event_type`** *(string, required)*: The type to use for access request created events.
 
 
   Examples:
@@ -113,7 +113,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`access_request_allowed_event_type`** *(string)*: The type to use for access request allowed events.
+- **`access_request_allowed_event_type`** *(string, required)*: The type to use for access request allowed events.
 
 
   Examples:
@@ -123,7 +123,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`access_request_denied_event_type`** *(string)*: The type to use for access request denied events.
+- **`access_request_denied_event_type`** *(string, required)*: The type to use for access request denied events.
 
 
   Examples:
@@ -133,7 +133,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_registered_event_topic`** *(string)*: The name of the topic containing internal file registration events.
+- **`file_registered_event_topic`** *(string, required)*: The name of the topic containing internal file registration events.
 
 
   Examples:
@@ -143,7 +143,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_registered_event_type`** *(string)*: The type used for events detailing internally file registrations.
+- **`file_registered_event_type`** *(string, required)*: The type used for events detailing internally file registrations.
 
 
   Examples:
@@ -153,7 +153,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`iva_state_changed_event_topic`** *(string)*: The name of the topic containing IVA events.
+- **`iva_state_changed_event_topic`** *(string, required)*: The name of the topic containing IVA events.
 
 
   Examples:
@@ -163,7 +163,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`iva_state_changed_event_type`** *(string)*: The type to use for iva state changed events.
+- **`iva_state_changed_event_type`** *(string, required)*: The type to use for iva state changed events.
 
 
   Examples:
@@ -173,7 +173,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`second_factor_recreated_event_topic`** *(string)*: The name of the topic containing second factor recreation events.
+- **`second_factor_recreated_event_topic`** *(string, required)*: The name of the topic containing second factor recreation events.
 
 
   Examples:
@@ -183,7 +183,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`second_factor_recreated_event_type`** *(string)*: The event type for recreation of the second factor for authentication.
+- **`second_factor_recreated_event_type`** *(string, required)*: The event type for recreation of the second factor for authentication.
 
 
   Examples:
@@ -195,7 +195,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: The Notification Orchestration Service controls the creation of notification events. Default: `"nos"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
 
   Examples:
@@ -205,7 +205,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -244,6 +244,21 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
 - **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
 - **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
@@ -267,7 +282,11 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`central_data_stewardship_email`** *(string)*: The email address of the central data steward.
+- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+
+- **`central_data_stewardship_email`** *(string, required)*: The email address of the central data steward.
+
+- **`helpdesk_email`** *(string, required)*: The email address of the GHGA Helpdesk.
 
 
 ### Usage:
