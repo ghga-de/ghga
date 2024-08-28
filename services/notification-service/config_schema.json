@@ -1,6 +1,31 @@
 {
+  "$defs": {
+    "SmtpAuthConfig": {
+      "description": "Model to encapsulate SMTP authentication details.",
+      "properties": {
+        "username": {
+          "description": "The login username or email",
+          "title": "Username",
+          "type": "string"
+        },
+        "password": {
+          "description": "The login password",
+          "format": "password",
+          "title": "Password",
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "username",
+        "password"
+      ],
+      "title": "SmtpAuthConfig",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
-  "description": "Modifies the orginal Settings class provided by the user",
+  "description": "Modifies the original Settings class provided by the user",
   "properties": {
     "db_connection_str": {
       "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
@@ -96,33 +121,17 @@
       "title": "Smtp Port",
       "type": "integer"
     },
-    "login_user": {
+    "smtp_auth": {
       "anyOf": [
         {
-          "type": "string"
+          "$ref": "#/$defs/SmtpAuthConfig"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "The login username or email",
-      "title": "Login User"
-    },
-    "login_password": {
-      "anyOf": [
-        {
-          "format": "password",
-          "type": "string",
-          "writeOnly": true
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "The login password",
-      "title": "Login Password"
+      "description": ""
     },
     "use_starttls": {
       "default": true,
@@ -204,6 +213,17 @@
       ],
       "title": "Generate Correlation Id",
       "type": "boolean"
+    },
+    "kafka_max_message_size": {
+      "default": 1048576,
+      "description": "The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this.",
+      "examples": [
+        1048576,
+        16777216
+      ],
+      "exclusiveMinimum": 0,
+      "title": "Kafka Max Message Size",
+      "type": "integer"
     }
   },
   "required": [

@@ -22,14 +22,20 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from email.message import EmailMessage
 from smtplib import SMTP, SMTPAuthenticationError, SMTPException
-from typing import Self
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings
 
 from ns.ports.outbound.smtp_client import SmtpClientPort
 
 log = logging.getLogger(__name__)
+
+
+class SmtpAuthConfig(BaseModel):
+    """Model to encapsulate SMTP authentication details."""
+
+    username: str = Field(default=..., description="The login username or email")
+    password: SecretStr = Field(default=..., description="The login password")
 
 
 class SmtpClientConfig(BaseSettings):
@@ -41,27 +47,10 @@ class SmtpClientConfig(BaseSettings):
     smtp_port: int = Field(
         default=..., description="The port for the mail server connection"
     )
-    login_user: str | None = Field(
-        default=None, description="The login username or email"
-    )
-    login_password: SecretStr | None = Field(
-        default=None, description="The login password"
-    )
+    smtp_auth: SmtpAuthConfig | None = Field(default=None, description="")
     use_starttls: bool = Field(
         default=True, description="Boolean flag indicating the use of STARTTLS"
     )
-
-    @model_validator(mode="after")
-    def validate_prefix(self) -> Self:
-        """Enforce setting both the user/pwd or leaving both unconfigured (`None`)"""
-        msg = "Login_user and login_password must be configured together or not at all."
-        nones = [
-            _
-            for _ in filter(lambda x: x is None, [self.login_user, self.login_password])
-        ]
-        if nones and len(nones) == 1:
-            raise ValueError(msg)
-        return self
 
 
 class SmtpClient(SmtpClientPort):
@@ -92,15 +81,11 @@ class SmtpClient(SmtpClientPort):
                     context = ssl.create_default_context()
                     server.starttls(context=context)
 
-                if (
-                    self._config.login_user is not None
-                    and self._config.login_password is not None
-                ):
+                if self._config.smtp_auth:
+                    username = self._config.smtp_auth.username
+                    password = self._config.smtp_auth.password.get_secret_value()
                     try:
-                        server.login(
-                            self._config.login_user,
-                            self._config.login_password.get_secret_value(),
-                        )
+                        server.login(username, password)
                     except SMTPAuthenticationError as err:
                         login_error = self.FailedLoginError()
                         log.critical(login_error)

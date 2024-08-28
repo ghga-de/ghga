@@ -33,13 +33,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-service):
 ```bash
-docker pull ghga/notification-service:1.2.0
+docker pull ghga/notification-service:2.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-service:1.2.0 .
+docker build -t ghga/notification-service:2.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -47,7 +47,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-service:1.2.0 --help
+docker run -p 8080:8080 ghga/notification-service:2.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -64,7 +64,7 @@ ns --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -74,7 +74,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
@@ -88,7 +88,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"ns"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -121,35 +121,27 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`plaintext_email_template`** *(string)*: The plaintext template to use for email notifications.
+- **`plaintext_email_template`** *(string, required)*: The plaintext template to use for email notifications.
 
-- **`html_email_template`** *(string)*: The HTML template to use for email notifications.
+- **`html_email_template`** *(string, required)*: The HTML template to use for email notifications.
 
-- **`from_address`** *(string, format: email)*: The sender's address.
+- **`from_address`** *(string, format: email, required)*: The sender's address.
 
-- **`smtp_host`** *(string)*: The mail server host to connect to.
+- **`smtp_host`** *(string, required)*: The mail server host to connect to.
 
-- **`smtp_port`** *(integer)*: The port for the mail server connection.
+- **`smtp_port`** *(integer, required)*: The port for the mail server connection.
 
-- **`login_user`**: The login username or email. Default: `null`.
-
-  - **Any of**
-
-    - *string*
-
-    - *null*
-
-- **`login_password`**: The login password. Default: `null`.
+- **`smtp_auth`**: . Default: `null`.
 
   - **Any of**
 
-    - *string, format: password*
+    - : Refer to *[#/$defs/SmtpAuthConfig](#%24defs/SmtpAuthConfig)*.
 
     - *null*
 
 - **`use_starttls`** *(boolean)*: Boolean flag indicating the use of STARTTLS. Default: `true`.
 
-- **`notification_event_topic`** *(string)*: Name of the event topic used to track notification events.
+- **`notification_event_topic`** *(string, required)*: Name of the event topic used to track notification events.
 
 
   Examples:
@@ -159,7 +151,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`notification_event_type`** *(string)*: The type to use for events containing content to be sent.
+- **`notification_event_type`** *(string, required)*: The type to use for events containing content to be sent.
 
 
   Examples:
@@ -169,7 +161,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -207,6 +199,30 @@ The service requires the following configuration parameters:
   false
   ```
 
+
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+## Definitions
+
+
+- <a id="%24defs/SmtpAuthConfig"></a>**`SmtpAuthConfig`** *(object)*: Model to encapsulate SMTP authentication details.
+
+  - **`username`** *(string, required)*: The login username or email.
+
+  - **`password`** *(string, format: password, required)*: The login password.
 
 
 ### Usage:

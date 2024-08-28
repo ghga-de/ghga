@@ -109,9 +109,9 @@ class DummyServer:
     def __init__(self, *, config: Config):
         """Assign config"""
         self._config = config
-        self.login = self._config.login_user
-        password = self._config.login_password
-        self.password = password.get_secret_value() if password else None
+        auth = self._config.smtp_auth
+        self.login = auth.username if auth else ""
+        self.password = auth.password.get_secret_value() if auth else ""
 
     def _record_email(
         self, *, expected_email: EmailMessage, controller: Controller

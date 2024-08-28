@@ -19,7 +19,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-from ns.adapters.outbound.smtp_client import SmtpClientConfig
+from ns.adapters.outbound.smtp_client import SmtpAuthConfig, SmtpClientConfig
 from ns.config import Config
 from tests.fixtures.utils import BASE_DIR, get_free_port
 
@@ -45,7 +45,6 @@ def get_config(
 SMTP_TEST_CONFIG = SmtpClientConfig(
     smtp_host="127.0.0.1",
     smtp_port=get_free_port(),
-    login_user="test@example.com",
-    login_password="test123",  # type: ignore
+    smtp_auth=SmtpAuthConfig(username="test@example.com", password="test123"),  # type: ignore
     use_starttls=False,
 )
