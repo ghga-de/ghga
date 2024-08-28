@@ -57,7 +57,7 @@ components:
 info:
   description: A service for basic infrastructure technology state management.
   title: State Management Service
-  version: 1.2.0
+  version: 1.3.0
 openapi: 3.1.0
 paths:
   /documents/permissions:
@@ -214,6 +214,47 @@ paths:
       tags:
       - StateManagementService
       - sms-mongodb
+  /events/:
+    delete:
+      description: If no topics are specified, all topics will be cleared, except
+        internal topics unless otherwise specified.
+      operationId: clear_topics
+      parameters:
+      - description: The topic(s) to clear.
+        in: query
+        name: topics
+        required: false
+        schema:
+          default: []
+          description: The topic(s) to clear.
+          items:
+            type: string
+          title: Topics
+          type: array
+      - description: Whether to exclude internal topics.
+        in: query
+        name: exclude_internal
+        required: false
+        schema:
+          default: true
+          description: Whether to exclude internal topics.
+          title: Exclude Internal
+          type: boolean
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Clear events from the given topic(s).
+      tags:
+      - StateManagementService
+      - sms-kafka
   /health:
     get:
       description: Used to test if this service is alive

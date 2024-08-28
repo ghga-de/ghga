@@ -19,6 +19,10 @@ from collections.abc import AsyncGenerator, Generator
 import pytest
 import pytest_asyncio
 from hexkit.custom_types import PytestScope
+from hexkit.providers.akafka.testutils import (  # noqa: F401
+    kafka_container_fixture,
+    kafka_fixture,
+)
 from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_container_fixture,
     mongodb_fixture,

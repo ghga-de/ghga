@@ -22,6 +22,7 @@ from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.providers.akafka import KafkaConfig
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
@@ -118,7 +119,13 @@ class SmsConfig(BaseSettings):
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, LoggingConfig, SmsConfig, S3ObjectStoragesConfig):
+class Config(
+    ApiConfigBase,
+    LoggingConfig,
+    SmsConfig,
+    S3ObjectStoragesConfig,
+    KafkaConfig,
+):
     """Config parameters and their defaults."""
 
     service_name: str = Field(

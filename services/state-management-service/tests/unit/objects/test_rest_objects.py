@@ -15,14 +15,12 @@
 
 """Test the objects-related REST API endpoints' behavior."""
 
-from unittest.mock import AsyncMock
-
 import pytest
 from hexkit.custom_types import JsonObject
 
 from tests.fixtures.config import DEFAULT_TEST_CONFIG
 from tests.fixtures.dummies import DummyObjectsHandler
-from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client
+from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client_with_mocks
 
 pytestmark = pytest.mark.asyncio()
 
@@ -68,14 +66,11 @@ async def test_does_object_exist(
     - Invalid bucket ID (error)
     - Invalid object ID (error)
     """
-    mock_docs_handler = AsyncMock()  # don't declare spec (to keep imports cleaner)
-
     dummy_objects_handler = DummyObjectsHandler(
         storages={DEFAULT_ALIAS: BASIC_STORAGE_MAP}
     )
-    async with get_rest_client(
+    async with get_rest_client_with_mocks(
         config=DEFAULT_TEST_CONFIG,
-        docs_handler_override=mock_docs_handler,
         objects_handler_override=dummy_objects_handler,
     ) as client:
         response = await client.get(
@@ -108,13 +103,11 @@ async def test_list_objects(
     - Bucket does not exist (error)
     - Invalid bucket ID (error)
     """
-    mock_docs_handler = AsyncMock()
     dummy_objects_handler = DummyObjectsHandler(
         storages={DEFAULT_ALIAS: {**BASIC_STORAGE_MAP, **EMPTY_STORAGE_MAP}}
     )
-    async with get_rest_client(
+    async with get_rest_client_with_mocks(
         config=DEFAULT_TEST_CONFIG,
-        docs_handler_override=mock_docs_handler,
         objects_handler_override=dummy_objects_handler,
     ) as client:
         response = await client.get(
@@ -144,15 +137,12 @@ async def test_delete_objects(bucket_id: str, status_code: int):
     - Bucket does not exist (should not raise an error)
     - Invalid bucket ID (error)
     """
-    mock_docs_handler = AsyncMock()
-
     # establish dummy with multiple objects
     dummy_objects_handler = DummyObjectsHandler(
         storages={DEFAULT_ALIAS: {**MULTI_OBJECT_MAP, **EMPTY_STORAGE_MAP}}
     )
-    async with get_rest_client(
+    async with get_rest_client_with_mocks(
         config=DEFAULT_TEST_CONFIG,
-        docs_handler_override=mock_docs_handler,
         objects_handler_override=dummy_objects_handler,
     ) as client:
         response = await client.delete(
@@ -170,13 +160,11 @@ async def test_delete_objects(bucket_id: str, status_code: int):
 
 async def test_auth():
     """Test that all /objects endpoints require authentication."""
-    mock_docs_handler = AsyncMock()
     dummy_objects_handler = DummyObjectsHandler(
         storages={DEFAULT_ALIAS: BASIC_STORAGE_MAP}
     )
-    async with get_rest_client(
+    async with get_rest_client_with_mocks(
         config=DEFAULT_TEST_CONFIG,
-        docs_handler_override=mock_docs_handler,
         objects_handler_override=dummy_objects_handler,
     ) as client:
         response = await client.get(
@@ -198,13 +186,11 @@ async def test_auth():
 
 async def test_operation_errors():
     """Verify that operation errors generate a 500 response."""
-    mock_docs_handler = AsyncMock()
     dummy_objects_handler = DummyObjectsHandler(
         storages={DEFAULT_ALIAS: BASIC_STORAGE_MAP}, raise_operation_error=True
     )
-    async with get_rest_client(
+    async with get_rest_client_with_mocks(
         config=DEFAULT_TEST_CONFIG,
-        docs_handler_override=mock_docs_handler,
         objects_handler_override=dummy_objects_handler,
     ) as client:
         response = await client.get(
@@ -234,13 +220,11 @@ async def test_operation_errors():
 
 async def test_alias_not_configured():
     """Test that the right error is raised in each method when the alias is not configured."""
-    mock_docs_handler = AsyncMock()
     dummy_objects_handler = DummyObjectsHandler(
         storages={DEFAULT_ALIAS: BASIC_STORAGE_MAP}
     )
-    async with get_rest_client(
+    async with get_rest_client_with_mocks(
         config=DEFAULT_TEST_CONFIG,
-        docs_handler_override=mock_docs_handler,
         objects_handler_override=dummy_objects_handler,
     ) as client:
         response = await client.get(

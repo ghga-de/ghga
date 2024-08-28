@@ -27,7 +27,7 @@ from sms.ports.inbound.docs_handler import DocsHandlerPort
 from sms.ports.outbound.docs_dao import DocsDaoPort
 from tests.fixtures.config import DEFAULT_TEST_CONFIG
 from tests.fixtures.dummies import DocsApiCallArgs, DummyDocsHandler
-from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client
+from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client_with_mocks
 
 pytestmark = pytest.mark.asyncio()
 
@@ -37,7 +37,9 @@ PERMISSION_ERROR_URL = "/documents/testdb.permission_error"
 
 async def test_health_check():
     """Test the health check endpoint."""
-    async with get_rest_client(DEFAULT_TEST_CONFIG, DummyDocsHandler()) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=DummyDocsHandler()
+    ) as client:
         response = await client.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "OK"}
@@ -45,7 +47,9 @@ async def test_health_check():
 
 async def test_permissions_retrieval():
     """Test the permissions retrieval endpoint."""
-    async with get_rest_client(DEFAULT_TEST_CONFIG, DummyDocsHandler()) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=DummyDocsHandler()
+    ) as client:
         response = await client.get("/documents/permissions")
         assert response.status_code == 200
         assert response.json() == DEFAULT_TEST_CONFIG.db_permissions
@@ -59,7 +63,9 @@ async def test_incorrect_namespace(namespace: str):
     """Test for error when supplying a namespace with the wrong format"""
     bad_namespace_url = f"/documents/{namespace}"
     error_code = 404 if "/" in namespace else 422
-    async with get_rest_client(DEFAULT_TEST_CONFIG, DummyDocsHandler()) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=DummyDocsHandler()
+    ) as client:
         response = await client.get(
             bad_namespace_url,
             headers={"Authorization": VALID_BEARER_TOKEN},
@@ -93,7 +99,9 @@ async def test_incorrect_namespace(namespace: str):
 async def test_unauthenticated_calls(http_method: str, headers: dict[str, str]):
     """Test unauthenticated calls, which should result in a 401 Unauthorized code."""
     dummy_docs_handler = DummyDocsHandler()
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         method_to_call = getattr(client, http_method)
         response = await method_to_call(TEST_URL, headers=headers)
 
@@ -115,7 +123,9 @@ async def test_authenticated_valid_calls(http_method: str, expected_status_code:
     """Verify authenticated calls are successfully passed to the handler."""
     # Create dummy docs handler populated with the db/collection we'll query to avoid errors
     dummy_docs_handler = DummyDocsHandler(state={"testdb": {"testcollection": {}}})
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         method_to_call = getattr(client, http_method)
 
         put_args: dict[str, Any] = (
@@ -167,7 +177,9 @@ async def test_calls_with_query_params(
     """Verify calls with query parameters (GET and DELETE)."""
     # Create dummy docs handler populated with the db/collection we'll query to avoid errors
     dummy_docs_handler = DummyDocsHandler(state={"testdb": {"testcollection": {}}})
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         method_to_call = getattr(client, http_method)
         response = await method_to_call(
             url=f"{TEST_URL}?{query_string}",
@@ -195,7 +207,9 @@ async def test_permission_errors(
 ):
     """Test that permission errors are handled correctly."""
     dummy_docs_handler = DummyDocsHandler()
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         method_to_call = getattr(client, http_method)
         put_args: dict[str, Any] = (
             {"json": {"documents": {}}} if http_method == "put" else {}
@@ -216,7 +230,9 @@ async def test_put_with_docs():
     dummy_docs_handler = DummyDocsHandler()
     docs_to_insert: list[DocumentType] = [{"name": "Alice"}, {"name": "Bob"}]
     upsertion_details = UpsertionDetails(documents=docs_to_insert)
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         response = await client.put(
             url=TEST_URL,
             headers={"Authorization": VALID_BEARER_TOKEN},
@@ -245,7 +261,7 @@ async def test_put_with_missing_id_field():
         {"name": "Bob"},
     ]
     upsertion_details = UpsertionDetails(documents=docs_to_insert)
-    async with get_rest_client(
+    async with get_rest_client_with_mocks(
         DEFAULT_TEST_CONFIG, docs_handler_override=docs_handler
     ) as client:
         response = await client.put(
@@ -265,7 +281,9 @@ async def test_failed_db_operation():
     dummy_docs_handler.upsert.side_effect = DocsHandlerPort.OperationError()
     dummy_docs_handler.delete.side_effect = DocsHandlerPort.OperationError()
 
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         response = await client.get(
             url=PERMISSION_ERROR_URL,
             headers={"Authorization": VALID_BEARER_TOKEN},
@@ -294,7 +312,9 @@ async def test_criteria_format_error_handling(http_method: str):
     dummy_docs_handler.get.side_effect = expected_error
     dummy_docs_handler.delete.side_effect = expected_error
 
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         method_to_call = getattr(client, http_method)
         response = await method_to_call(
             url=TEST_URL,
@@ -316,7 +336,9 @@ async def test_criteria_format_error_handling(http_method: str):
 async def test_wildcard_deletion(namespace: str, expected_status_code: int):
     """Test that a wildcard deletion is handled correctly."""
     dummy_docs_handler = DummyDocsHandler()
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         response = await client.delete(
             url=f"/documents/{namespace}",
             headers={"Authorization": VALID_BEARER_TOKEN},
@@ -334,7 +356,9 @@ async def test_wildcard_deletion(namespace: str, expected_status_code: int):
 async def test_missing_db():
     """Test that a missing DB results in a 404 error."""
     dummy_docs_handler = DummyDocsHandler(state={"somedb": {"testcollection": {}}})
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         response = await client.get(
             url=TEST_URL,
             headers={"Authorization": VALID_BEARER_TOKEN},
@@ -345,7 +369,9 @@ async def test_missing_db():
 async def test_missing_collection():
     """Test that a missing collection results in a 404 error."""
     dummy_docs_handler = DummyDocsHandler(state={"testdb": {"somecollection": {}}})
-    async with get_rest_client(DEFAULT_TEST_CONFIG, dummy_docs_handler) as client:
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
         response = await client.get(
             url=TEST_URL,
             headers={"Authorization": VALID_BEARER_TOKEN},

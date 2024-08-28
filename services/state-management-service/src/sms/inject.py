@@ -25,8 +25,10 @@ from sms.adapters.inbound.fastapi_.configure import get_configured_app
 from sms.adapters.outbound.docs_dao import DocsDao
 from sms.config import Config
 from sms.core.docs_handler import DocsHandler
+from sms.core.events_handler import EventsHandler
 from sms.core.objects_handler import ObjectsHandler, S3ObjectStorages
 from sms.ports.inbound.docs_handler import DocsHandlerPort
+from sms.ports.inbound.events_handler import EventsHandlerPort
 from sms.ports.inbound.objects_handler import ObjectsHandlerPort
 
 
@@ -74,6 +76,7 @@ async def prepare_rest_app(
     config: Config,
     docs_handler_override: DocsHandlerPort | None = None,
     objects_handler_override: ObjectsHandlerPort | None = None,
+    events_handler_override: EventsHandlerPort | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -85,6 +88,13 @@ async def prepare_rest_app(
         config=config, objects_handler_override=objects_handler_override
     )
     app.dependency_overrides[dummies.objects_handler_port] = lambda: objects_handler
+
+    events_handler = (
+        events_handler_override
+        if events_handler_override
+        else EventsHandler(config=config)
+    )
+    app.dependency_overrides[dummies.events_handler_port] = lambda: events_handler
 
     async with prepare_docs_handler_with_override(
         config=config, docs_handler_override=docs_handler_override

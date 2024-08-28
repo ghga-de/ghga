@@ -12,4 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Contains outbound port classes."""
+
+"""Defines the API of a class that interfaces between inbound requests and kafka."""
+
+from abc import ABC, abstractmethod
+
+
+class EventsHandlerPort(ABC):
+    """A class to manage the state of kafka events."""
+
+    @abstractmethod
+    async def clear_topics(self, *, topics: list[str], exclude_internal: bool = True):
+        """Clear messages from given topic(s).
+
+        If no topics are specified, all topics will be cleared, except internal topics
+        unless otherwise specified.
+        """
+        ...
