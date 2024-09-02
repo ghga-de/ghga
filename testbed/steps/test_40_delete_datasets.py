@@ -148,7 +148,9 @@ given("my Crypt4GH key pair has been stored in two key files")(keys_are_made_ava
     target_fixture="download_attempt",
 )
 def run_the_download_command(fixtures: JointFixture) -> subprocess.CompletedProcess:
-    download_token = fixtures.state.get_state("download token for all files")
+    download_token = fixtures.state.get_state(
+        "download token for all files in dataset A"
+    )
     assert download_token and isinstance(download_token, str)
     connector = fixtures.connector
     download_attempt = subprocess.run(  # nosec B607, B603

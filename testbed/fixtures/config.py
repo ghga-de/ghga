@@ -20,11 +20,26 @@ from pathlib import Path
 
 from hexkit.config import config_from_yaml
 from hexkit.providers.s3 import S3Config
-from pydantic import Field, SecretStr, model_validator
+from pydantic import BaseModel, Field, model_validator
+from pydantic_settings import BaseSettings
+
+
+class S3StorageConfig(BaseModel):
+    """Configuration for an S3 object storage."""
+
+    storage_alias: str
+    credentials: S3Config
+
+
+class ObjectStoragesConfig(BaseModel):
+    """Configuration for multiple S3 object storages."""
+
+    primary: S3StorageConfig
+    secondary: S3StorageConfig
 
 
 @config_from_yaml(prefix="tb")
-class Config(S3Config):
+class Config(BaseSettings):
     """Config class for the test app."""
 
     # operation modes
@@ -46,7 +61,7 @@ class Config(S3Config):
     default_file_size: int = 20 * upload_part_size**2
 
     # databases that shall be dropped when running from scratch
-    service_db_names: list[str] = [  # noqa: RUF012
+    service_db_names: list[str] = [
         "ars",
         "auth",
         "dcs",
@@ -57,12 +72,29 @@ class Config(S3Config):
         "mass",
         "nos",
         "ns",
+        "fis",
     ]
 
-    # S3 config
-    s3_endpoint_url: str = "http://localstack:4566"
-    s3_access_key_id: str = "testbed-key"
-    s3_secret_access_key: SecretStr = SecretStr("testbed-secret")
+    object_storages: ObjectStoragesConfig = ObjectStoragesConfig(
+        **{
+            "primary": {
+                "storage_alias": "primary",
+                "credentials": {
+                    "s3_endpoint_url": "http://localstack-1:4566",
+                    "s3_access_key_id": "testbed-key",
+                    "s3_secret_access_key": "testbed-secret",
+                },
+            },
+            "secondary": {
+                "storage_alias": "secondary",
+                "credentials": {
+                    "s3_endpoint_url": "http://localstack-2:4566",
+                    "s3_access_key_id": "testbed-key",
+                    "s3_secret_access_key": "testbed-secret",
+                },
+            },
+        }  # type: ignore
+    )
 
     # bucket names
     inbox_bucket: str = "inbox"
@@ -74,7 +106,7 @@ class Config(S3Config):
 
     # external base URL
     external_base_url: str = ""
-    external_apis: list[str] = [  # noqa: RUF012
+    external_apis: list[str] = [
         "wkvs",
         "dcs",
         "fis",
@@ -89,7 +121,7 @@ class Config(S3Config):
     ]
 
     # internal APIs
-    internal_apis: list[str] = ["ekss", "auth_adapter"]  # noqa: RUF012
+    internal_apis: list[str] = ["ekss", "auth_adapter"]
 
     # auth
     auth_key_file: Path = Path(__file__).parent.parent / ".devcontainer/auth.env"

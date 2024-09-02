@@ -123,8 +123,8 @@ def there_is_one_request(
 
 
 @when(
-    parse('"{approver_name}" allows the pending request from "{requester_name}"'),
-    target_fixture="response",
+    parse('"{approver_name}" allows the pending requests from "{requester_name}"'),
+    target_fixture="allowed_requests",
 )
 def allow_pending_request(
     approver_name: str, requester_name: str, fixtures: JointFixture
@@ -143,12 +143,27 @@ def allow_pending_request(
         if request["status"] == "pending"
         and request["full_user_name"] == requester_name
     ]
-    assert len(requests) == 1
-    request = requests[0]
-    request_id = request["id"]
-    url = f"{fixtures.config.ars_url}/access-requests/{request_id}"
-    data = {"status": "allowed"}
-    return fixtures.http.patch(url, headers=headers, json=data)
+    assert len(requests) == 2  # both for DS_A and DS_B
+    for request in requests:
+        request_id = request["id"]
+        url = f"{fixtures.config.ars_url}/access-requests/{request_id}"
+        data = {"status": "allowed"}
+        response = fixtures.http.patch(url, headers=headers, json=data)
+        assert response.status_code == 204
+    return requests
+
+
+@then("the user have access to the two test datasets")
+def user_has_access_to_datasets(fixtures: JointFixture, allowed_requests):
+    assert len(allowed_requests) == 2
+    available_datasets = fixtures.state.get_state("all available datasets")
+    requested_datasets = [request["dataset_id"] for request in allowed_requests]
+    datasets_with_access = {
+        alias: dataset["accession"]
+        for alias, dataset in available_datasets.items()
+        if dataset["accession"] in requested_datasets
+    }
+    fixtures.state.set_state("datasets users can access", datasets_with_access)
 
 
 @then(parse('the status of the request from "{name}" is "{status}"'))

@@ -16,6 +16,7 @@
 
 """Fixture for testing code that uses the FileObject provider."""
 
+import csv
 import json
 import os
 import tempfile
@@ -38,6 +39,39 @@ class FileBatch(BaseModel):
 
     file_objects: list[FileObject]
     tsv_file: Path
+
+
+def subset_file_batch_by_scope(file_batch: FileBatch, file_scope: str) -> FileBatch:
+    """Return subset of files in a FileBatch based on the file extension"""
+    if file_scope in {"vcf", "fastq"}:
+        extension = f".{file_scope}.gz"
+    elif file_scope in {"txt", "json"}:
+        extension = f".{file_scope}"
+    else:
+        raise ValueError(f"Unknown file scope: {file_scope}")
+
+    subset_file_objects = []
+    scoped_tsv_file = file_batch.tsv_file.parent / f"filtered_{file_scope}.tsv"
+    with open(file_batch.tsv_file) as infile, open(scoped_tsv_file, "w") as outfile:
+        reader = csv.reader(infile, delimiter="\t")
+        writer = csv.writer(outfile, delimiter="\t")
+
+        for row in reader:
+            file_path = row[0]
+            if file_path.endswith(extension):
+                writer.writerow(row)
+                file_object = next(
+                    (
+                        file_obj
+                        for file_obj in file_batch.file_objects
+                        if file_obj.file_path == Path(file_path)
+                    ),
+                    None,
+                )
+                if file_object:
+                    subset_file_objects.append(file_object)
+
+    return FileBatch(file_objects=subset_file_objects, tsv_file=Path(scoped_tsv_file))
 
 
 def create_named_file(
@@ -74,25 +108,36 @@ def create_named_file(
 
 
 @fixture(name="file_fixture")
-def file_fixture(config: Config, dsk: DskFixture) -> Generator[FileBatch, None, None]:
-    """Batch file fixture that provides temporary files for the metadata."""
+def file_fixture(
+    config: Config, dsk: DskFixture
+) -> Generator[dict[str, FileBatch], None, None]:
+    """Batch file fixture that provides temporary files for the metadata.
+
+    File sizes are distributed according to the number of files in the metadata.
+    """
     temp_dir = Path(tempfile.gettempdir())
     metadata = json.loads(dsk.config.complete_metadata_path.read_text())
+    datasets: dict[str, list[dict]] = {
+        dataset["alias"]: [] for dataset in metadata["datasets"]
+    }
+    assert set(datasets) == {"DS_A", "DS_B"}
+    for file_field in dsk.config.metadata_file_fields:
+        for file in metadata[file_field]:
+            datasets[file["dataset"]].append(file)
 
-    created_files = []
-    with open(dsk.config.files_to_upload_tsv, "w", encoding="utf-8") as tsv_file:
-        for file_field in dsk.config.metadata_file_fields:
-            files = metadata[file_field]
-            file_count = len(files)
+    file_batches: dict[str, FileBatch] = {}
+    for dataset, files in datasets.items():
+        files_to_upload_tsv = dsk.config.submission_registry / f"{dataset}_files.tsv"
+        created_files = []
+        with open(files_to_upload_tsv, "w", encoding="utf-8") as tsv_file:
             file_sizes = (
                 [3]  # See create_named_file(), for file content/alias truncation.
                 + [
-                    round(config.default_file_size / (file_count - 1)) * i
-                    for i in range(1, file_count - 1)
+                    round(config.default_file_size / (len(files) - 1)) * i
+                    for i in range(1, len(files) - 1)
                 ]
                 + [config.default_file_size]
-            )  # Distribution of file sizes to the file count: 1 to default_file_size
-
+            )  # Distribution of file sizes to the file count
             for i, file_ in enumerate(files):
                 file_object = create_named_file(
                     target_dir=temp_dir,
@@ -105,11 +150,16 @@ def file_fixture(config: Config, dsk: DskFixture) -> Generator[FileBatch, None, 
                 created_files.append(file_object)
                 tsv_file.write(f"{file_object.file_path}\t{file_object.object_id}\n")
 
-    file_batch = FileBatch(
-        file_objects=created_files, tsv_file=dsk.config.files_to_upload_tsv
-    )
+        file_batches.update(
+            {
+                dataset: FileBatch(
+                    file_objects=created_files, tsv_file=files_to_upload_tsv
+                )
+            }
+        )
 
-    yield file_batch
+    yield file_batches
 
-    for file_object in file_batch.file_objects:
-        os.remove(file_object.file_path)
+    for file_batch in file_batches.values():
+        for file_object in file_batch.file_objects:
+            os.remove(file_object.file_path)

@@ -54,7 +54,6 @@ class DskConfig(BaseSettings):
     )
 
     file_metadata_dir: Path = submission_registry / "file_metadata"
-    files_to_upload_tsv: Path = submission_registry / "files.tsv"
 
 
 class DskFixture:
@@ -80,8 +79,6 @@ class DskFixture:
             self.config.metadata_model_path,
             submission_registry_path / self.config.metadata_model_file,
         )
-        if os.path.exists(self.config.files_to_upload_tsv):
-            os.remove(self.config.files_to_upload_tsv)
 
 
 @fixture(name="dsk", scope="session")

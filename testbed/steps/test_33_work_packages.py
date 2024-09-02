@@ -69,35 +69,42 @@ def query_datasets_with_wps(fixtures: JointFixture, full_name: str):
     return fixtures.http.get(url, headers=headers)
 
 
-@then(parse('only the test dataset "{dataset_char}" is returned'))
-def check_dataset_in_list(
-    dataset_char: str, fixtures: JointFixture, response: Response
-):
+@then("the two test datasets are returned")
+def check_datasets_in_list(fixtures: JointFixture, response: Response):
+    datasets = fixtures.state.get_state("datasets users can access")
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == 1
-    dataset = data[0]
-    assert isinstance(dataset, dict)
-    assert dataset.get("stage") == "download"
-    assert dataset.get("title") == f"The complete-{dataset_char} dataset"
-    files = dataset.get("files")
-    assert files
-    assert isinstance(files, list)
-    fixtures.state.set_state("dataset to be downloaded", f"DS_{dataset_char}")
+    assert len(data) == 2
+    for dataset in data:
+        assert isinstance(dataset, dict)
+        assert dataset.get("stage") == "download"
+        assert (
+            dataset.get("id") in datasets.values()
+        )  # dataset ID is equal to the accession, not alias
+        files = dataset.get("files")
+        assert files
+        assert isinstance(files, list)
+    fixtures.state.set_state("datasets to be downloaded", datasets)
 
 
 @when(
     parse(
-        '"{full_name}" creates a work package for "{file_scope}" files in test dataset'
+        '"{full_name}" creates a work package for "{file_scope}" files in dataset "{dataset_char}"'
     ),
     target_fixture="response",
 )
-def create_work_package(full_name: str, fixtures: JointFixture, file_scope: str):
+def create_work_package(
+    full_name: str, fixtures: JointFixture, file_scope: str, dataset_char: str
+):
     response = query_datasets_with_wps(fixtures=fixtures, full_name=full_name)
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == 1
-    dataset = data[0]
+    assert len(data) == 2
+    dataset = next(
+        dataset
+        for dataset in data
+        if dataset["title"] == f"The complete-{dataset_char} dataset"
+    )
     assert isinstance(dataset, dict)
     dataset_id = dataset.get("id")
     assert dataset_id
@@ -114,7 +121,9 @@ def create_work_package(full_name: str, fixtures: JointFixture, file_scope: str)
     else:
         raise ValueError("Unknown file_scope {file_scope}")
 
-    fixtures.state.set_state(f"{file_scope} files to be downloaded", files)
+    fixtures.state.set_state(
+        f"{file_scope} files in dataset {dataset_char} to be downloaded", files
+    )
 
     data = {
         "dataset_id": dataset_id,
@@ -131,14 +140,20 @@ def create_work_package(full_name: str, fixtures: JointFixture, file_scope: str)
     return fixtures.http.post(url, headers=headers, json=data)
 
 
-@then(parse('the response contains a download token for "{file_scope}" files'))
-def check_download_token(fixtures: JointFixture, response: Response, file_scope: str):
+@then(
+    parse(
+        'the response contains a download token for "{file_scope}" files in dataset "{dataset_char}"'
+    )
+)
+def check_download_token(
+    fixtures: JointFixture, response: Response, file_scope: str, dataset_char: str
+):
     data = response.json()
     assert set(data) == {"id", "token"}
     id_, token = data["id"], data["token"]
     assert 20 <= len(id_) < 40 and 80 < len(token) < 120
     id_and_token = f"{id_}:{token}"
     fixtures.state.set_state(
-        f"download token for {file_scope} files",
+        f"download token for {file_scope} files in dataset {dataset_char}",
         id_and_token,
     )

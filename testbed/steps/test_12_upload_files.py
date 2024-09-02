@@ -22,8 +22,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from fixtures.config import Config
-from fixtures.file import FileBatch, FileObject
+from fixtures.config import Config, S3StorageConfig
+from fixtures.file import FileBatch, FileObject, subset_file_batch_by_scope
 from fixtures.utils import temporary_file
 from ghga_datasteward_kit.file_ingest import IngestConfig, alias_to_accession
 from metldata.submission_registry.submission_store import SubmissionStore
@@ -42,11 +42,13 @@ def call_data_steward_kit_upload(
     file_metadata_dir: Path,
     token_path: Path,
     token: str,
+    storage_config: S3StorageConfig,
 ):
     """Call DSKit upload command to upload a file"""
     upload_config_path = upload_config_as_file(
         config=config,
         file_metadata_dir=file_metadata_dir,
+        storage_config=storage_config,
     )
 
     with temporary_file(token_path, token) as _:
@@ -85,10 +87,13 @@ def call_data_steward_kit_batch_upload(
     file_metadata_dir: Path,
     token_path: Path,
     token: str,
+    storage_config: S3StorageConfig,
 ):
     """Call DSKit batch-upload command to upload listed files in TSV file"""
     upload_config_path = upload_config_as_file(
-        config=config, file_metadata_dir=file_metadata_dir
+        config=config,
+        file_metadata_dir=file_metadata_dir,
+        storage_config=storage_config,
     )
 
     with temporary_file(token_path, token) as _:
@@ -154,10 +159,9 @@ def call_data_steward_kit_ingest(
     assert not completed_ingest.returncode
 
 
-@given("the staging bucket is empty")
-def staging_bucket_is_empty(fixtures: JointFixture):
-    config = fixtures.config
-    fixtures.s3.empty_buckets(buckets=config.staging_bucket)
+@given("the staging buckets are empty")
+def staging_buckets_are_empty(fixtures: JointFixture):
+    fixtures.s3.empty_buckets(buckets=fixtures.config.staging_bucket)
 
 
 @given("no file metadata exists")
@@ -168,39 +172,75 @@ def local_metadata_empty(fixtures: JointFixture):
 
 
 @when(
-    parse('the files for the metadata are uploaded "{upload_type}"'),
+    parse(
+        'the files of dataset "{dataset_alias}" are uploaded to "{storage_name}" storage individually'
+    ),
     target_fixture="file_objects",
 )
-def upload_files_as_batch(
-    fixtures: JointFixture, file_fixture: FileBatch, upload_type: str
+def upload_files_individually(
+    fixtures: JointFixture,
+    file_fixture: dict[str, FileBatch],
+    dataset_alias: str,
+    storage_name: str,
 ) -> list[FileObject]:
     file_metadata_dir = fixtures.dsk.config.file_metadata_dir
     file_metadata_dir.mkdir(exist_ok=True)
-    tsv_file = file_fixture.tsv_file
 
-    if upload_type == "in batch":
-        call_data_steward_kit_batch_upload(
-            batch_files_tsv=tsv_file,
-            config=fixtures.config,
-            file_metadata_dir=file_metadata_dir,
-            token_path=fixtures.config.dsk_token_path,
-            token=fixtures.config.upload_token,
-        )
-    elif upload_type == "individually":
-        with open(tsv_file, encoding="utf-8") as fh:
-            for file_object in fh:
-                file_path, file_alias = file_object.strip().split("\t")
-                call_data_steward_kit_upload(
-                    file_alias=file_alias,
-                    file_path=file_path,
-                    config=fixtures.config,
-                    file_metadata_dir=file_metadata_dir,
-                    token_path=fixtures.config.dsk_token_path,
-                    token=fixtures.config.upload_token,
-                )
-    else:
-        raise ValueError(f"Unknown upload type: {upload_type}")
-    return file_fixture.file_objects
+    assert file_fixture.keys() == {"DS_A", "DS_B"}
+    assert dataset_alias in file_fixture, f"Dataset {dataset_alias} not found"
+
+    storage_config = fixtures.s3.get_storage_config(storage_name)
+    tsv_file = file_fixture[dataset_alias].tsv_file
+    with open(tsv_file, encoding="utf-8") as fh:
+        for file_object in fh:
+            file_path, file_alias = file_object.strip().split("\t")
+
+            call_data_steward_kit_upload(
+                file_alias=file_alias,
+                file_path=file_path,
+                config=fixtures.config,
+                file_metadata_dir=file_metadata_dir,
+                token_path=fixtures.config.dsk_token_path,
+                token=fixtures.config.upload_token,
+                storage_config=storage_config,
+            )
+    return file_fixture[dataset_alias].file_objects
+
+
+@when(
+    parse(
+        '"{file_scope}" files of dataset "{dataset_alias}" are uploaded to "{storage_name}" storage in batch'
+    ),
+    target_fixture="file_objects",
+)
+def upload_files_as_batch(
+    fixtures: JointFixture,
+    file_fixture: dict[str, FileBatch],
+    file_scope: str,
+    dataset_alias: str,
+    storage_name: str,
+) -> list[FileObject]:
+    file_metadata_dir = fixtures.dsk.config.file_metadata_dir
+    file_metadata_dir.mkdir(exist_ok=True)
+
+    assert file_fixture.keys() == {"DS_A", "DS_B"}
+    assert dataset_alias in file_fixture, f"Dataset {dataset_alias} not found"
+
+    file_batch = file_fixture[dataset_alias]
+    if file_scope != "all":
+        file_batch = subset_file_batch_by_scope(file_fixture[dataset_alias], file_scope)
+
+    storage_config = fixtures.s3.get_storage_config(storage_name)
+    tsv_file = file_batch.tsv_file
+    call_data_steward_kit_batch_upload(
+        batch_files_tsv=tsv_file,
+        config=fixtures.config,
+        file_metadata_dir=file_metadata_dir,
+        token_path=fixtures.config.dsk_token_path,
+        token=fixtures.config.upload_token,
+        storage_config=storage_config,
+    )
+    return file_batch.file_objects
 
 
 @then(
@@ -221,27 +261,36 @@ def metadata_files_exist(
     return file_uuids
 
 
-@then(parse("the uploaded files exist in the staging bucket"))
+@then(
+    parse('the uploaded files exist in the staging bucket of "{storage_name}" storage')
+)
 def check_uploaded_files_in_storage(
-    fixtures: JointFixture, uploaded_file_uuids: set[str]
+    fixtures: JointFixture, uploaded_file_uuids: set[str], storage_name: str
 ):
     """Check that the uploaded files exist in the given bucket."""
     bucket_id = fixtures.config.staging_bucket
+    storage_config = fixtures.s3.get_storage_config(storage_name)
     for object_id in uploaded_file_uuids:
         assert fixtures.s3.does_object_exist(
-            bucket=bucket_id, object_id=object_id
+            storage_alias=storage_config.storage_alias,
+            bucket=bucket_id,
+            object_id=object_id,
         ), f"{object_id} does not exist in the staging bucket"
 
 
-@when("the file metadata is ingested", target_fixture="ingest_config")
-def ingest_file_metadata(fixtures: JointFixture) -> IngestConfig:
+@when(
+    parse('the file metadata uploaded to "{storage_name}" storage is ingested'),
+    target_fixture="ingest_config",
+)
+def ingest_file_metadata(fixtures: JointFixture, storage_name: str) -> IngestConfig:
+    storage_config = fixtures.s3.get_storage_config(storage_name)
     ingest_config = IngestConfig(
         file_ingest_baseurl=fixtures.config.fis_url,
         file_ingest_pubkey=fixtures.config.fis_pubkey,
         input_dir=fixtures.dsk.config.file_metadata_dir,
         submission_store_dir=fixtures.dsk.config.submission_store,
         map_files_fields=list(fixtures.dsk.config.metadata_file_fields),
-        selected_storage_alias="test",
+        selected_storage_alias=storage_config.storage_alias,
     )
 
     ingest_config_path = ingest_config_as_file(config=ingest_config)
@@ -296,11 +345,19 @@ def check_secrets_in_vault(fixtures: JointFixture, file_objects: list[FileObject
         assert secret_id in vault_keys
 
 
-@then(parse("the ingested files exist in the permanent bucket"))
-def check_ingested_files_in_storage(fixtures: JointFixture, object_ids: set[str]):
+@then(
+    parse(
+        'the ingested files exist in the permanent bucket of "{storage_name}" storage'
+    )
+)
+def check_ingested_files_in_storage(
+    fixtures: JointFixture, object_ids: set[str], storage_name: str
+):
     """Check that the ingested files exist in the permanent bucket."""
+    storage_config = fixtures.s3.get_storage_config(storage_name)
     for object_id in object_ids:
         assert fixtures.s3.does_object_exist(
+            storage_alias=storage_config.storage_alias,
             bucket=fixtures.config.permanent_bucket,
             object_id=object_id,
         ), f"{object_id} does not exist in the permanent bucket"

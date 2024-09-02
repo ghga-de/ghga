@@ -7,21 +7,29 @@ Feature: 34 Download files
     And I have an empty working directory for the GHGA connector
     And my Crypt4GH key pair has been stored in two key files
 
-  Scenario: Downloading only vcf files
-    Given we have the state "download token for vcf files"
-    When I run the GHGA connector download command for "vcf" files
-    Then "vcf" files announced in metadata have been downloaded
+  Scenario: Downloading only vcf files in dataset A
+    Given we have the state "download token for vcf files in dataset A"
+    When I run the GHGA connector download command for "vcf" files in dataset "A"
+    Then "vcf" files in dataset "A" have been downloaded
 
     When I run the decrypt command of the GHGA connector
-    Then all downloaded files have been properly decrypted
+    Then all downloaded files in dataset "A" have been properly decrypted
 
-  Scenario: Downloading all files
-    Given we have the state "download token for all files"
-    When I run the GHGA connector download command for "all" files
-    Then "all" files announced in metadata have been downloaded
+  Scenario: Downloading all files in dataset A
+    Given we have the state "download token for all files in dataset A"
+    When I run the GHGA connector download command for "all" files in dataset "A"
+    Then "all" files in dataset "A" have been downloaded
 
     When I run the decrypt command of the GHGA connector
-    Then all downloaded files have been properly decrypted
+    Then all downloaded files in dataset "A" have been properly decrypted
+
+  Scenario: Downloading all files in dataset B
+    Given we have the state "download token for all files in dataset B"
+    When I run the GHGA connector download command for "all" files in dataset "B"
+    Then "all" files in dataset "B" have been downloaded
+
+    When I run the decrypt command of the GHGA connector
+    Then all downloaded files in dataset "B" have been properly decrypted
 
   Scenario: Finishing the download
     Then set the state to "files have been downloaded"

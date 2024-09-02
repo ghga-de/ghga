@@ -20,7 +20,7 @@ Feature: 40 Deletion of datasets
 
     Given I have an empty working directory for the GHGA connector
     And my Crypt4GH key pair has been stored in two key files
-    And we have the state "download token for all files"
+    And we have the state "download token for all files in dataset A"
 
     When I run the GHGA connector download command for all files
     Then I get an error message that the token is not valid

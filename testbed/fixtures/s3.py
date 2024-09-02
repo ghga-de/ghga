@@ -34,16 +34,26 @@ class S3Fixture(StateManager):
 
     config: Config
 
+    def get_storage_config(self, storage_name: str):
+        """Get the configuration for the given storage name.
+
+        The storage name is used in test scenarios to refer to the
+        configured storage node. The name might be different from the
+        actual alias of the storage node. The test bed relies on two
+        storage names: 'primary' and 'secondary'.
+        """
+        assert storage_name in [
+            "primary",
+            "secondary",
+        ], f"Invalid storage name: {storage_name}"
+        storage_config = getattr(self.config.object_storages, storage_name)
+        assert storage_config, f"Storage config for storage '{storage_name}' not found"
+        return storage_config
+
     def does_object_exist(
-        self,
-        bucket: str,
-        object_id: str,
-        storage_alias: str | None = None,
+        self, bucket: str, object_id: str, storage_alias: str
     ) -> bool:
         """Check if an object exists in a bucket."""
-        storage_alias = (
-            storage_alias or "test"
-        )  # Hardcoded value will be fixed in file federation implementation
         url = f"{self.config.sms_url}/objects/{storage_alias}/{bucket}/{object_id}"
         response = self.http.get(url, headers=self.auth_headers)
         return response.status_code == 200
@@ -65,9 +75,11 @@ class S3Fixture(StateManager):
         if isinstance(buckets, str):
             buckets = [buckets]
 
-        storage_aliases = storage_aliases or [
-            "test"
-        ]  # Hardcoded value will be fixed in file federation implementation
+        if storage_aliases is None:
+            storage_aliases = [
+                self.get_storage_config("primary").storage_alias,
+                self.get_storage_config("secondary").storage_alias,
+            ]
 
         if isinstance(storage_aliases, str):
             storage_aliases = [storage_aliases]

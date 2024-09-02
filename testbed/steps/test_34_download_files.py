@@ -52,9 +52,17 @@ def keys_are_made_available(connector: ConnectorFixture, config: Config):
     )
 
 
-@when(parse('I run the GHGA connector download command for "{file_scope}" files'))
-def run_the_download_command(fixtures: JointFixture, file_scope: str):
-    download_token = fixtures.state.get_state(f"download token for {file_scope} files")
+@when(
+    parse(
+        'I run the GHGA connector download command for "{file_scope}" files in dataset "{dataset_char}"'
+    )
+)
+def run_the_download_command(
+    fixtures: JointFixture, file_scope: str, dataset_char: str
+):
+    download_token = fixtures.state.get_state(
+        f"download token for {file_scope} files in dataset {dataset_char}"
+    )
     assert download_token and isinstance(download_token, str)
     connector = fixtures.connector
     completed_download = subprocess.run(  # nosec B607, B603
@@ -86,17 +94,19 @@ def run_the_download_command(fixtures: JointFixture, file_scope: str):
 
 
 @then(
-    parse('"{file_scope}" files announced in metadata have been downloaded'),
+    parse('"{file_scope}" files in dataset "{dataset_char}" have been downloaded'),
     target_fixture="downloaded_files",
 )
-def files_are_downloaded(fixtures: JointFixture, file_scope: str):
-    files = fixtures.state.get_state(f"{file_scope} files to be downloaded")
-    dataset_alias = fixtures.state.get_state("dataset to be downloaded")
+def files_are_downloaded(fixtures: JointFixture, file_scope: str, dataset_char: str):
+    files = fixtures.state.get_state(
+        f"{file_scope} files in dataset {dataset_char} to be downloaded"
+    )
+    dataset_aliases = fixtures.state.get_state("datasets to be downloaded")
     datasets = fixtures.state.get_state("all available datasets")
 
     # get all file accessions that belong to the dataset
-    assert dataset_alias in datasets
-    dataset = datasets[dataset_alias]
+    assert f"DS_{dataset_char}" in dataset_aliases
+    dataset = datasets[f"DS_{dataset_char}"]
     assert "details" in dataset
     details = dataset["details"]
     dataset_file_accessions = set(
@@ -158,16 +168,20 @@ def run_the_decrypt_command(fixtures: JointFixture):
     assert not completed_download.returncode
 
 
-@then("all downloaded files have been properly decrypted")
+@then(
+    parse(
+        'all downloaded files in dataset "{dataset_char}" have been properly decrypted'
+    )
+)
 def files_have_been_decrypted(
-    fixtures: JointFixture, downloaded_files: list[dict[str, str]]
+    fixtures: JointFixture, downloaded_files: list[dict[str, str]], dataset_char: str
 ):
     datasets = fixtures.state.get_state("all available datasets")
-    dataset_alias = fixtures.state.get_state("dataset to be downloaded")
+    dataset_aliases = fixtures.state.get_state("datasets to be downloaded")
 
     # get all file aliases that belong to the dataset
-    assert dataset_alias in datasets
-    dataset = datasets[dataset_alias]
+    assert f"DS_{dataset_char}" in dataset_aliases
+    dataset = datasets[f"DS_{dataset_char}"]
     assert "details" in dataset
     details = dataset["details"]
     dataset_file_aliases = {
