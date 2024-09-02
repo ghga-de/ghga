@@ -42,8 +42,7 @@ class StateManager:
     def stringify_query_params(query: Mapping[str, Any]):
         """Encode URL parameters to pass the state management API safely."""
         return {
-            k: quote(json.dumps(v)) if isinstance(v, dict) else v
-            for k, v in query.items()
+            k: json.dumps(v) if isinstance(v, dict) else v for k, v in query.items()
         }
 
 

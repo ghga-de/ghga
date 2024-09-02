@@ -16,21 +16,51 @@
 
 """Fixture for testing code that uses the Kafka-based provider."""
 
-from collections.abc import AsyncGenerator
+from typing import Union
 
-from hexkit.providers.akafka.provider import KafkaEventPublisher
-from hexkit.providers.akafka.testutils import KafkaFixture
-from pytest_asyncio import fixture as async_fixture
+from pytest import fixture
 
 from fixtures.config import Config
+from fixtures.http_client import HttpClient
+from fixtures.state_manager import StateManager
 
 __all__ = ["kafka_fixture", "KafkaFixture"]
 
 
-@async_fixture(name="kafka", scope="session")
-async def kafka_fixture(config: Config) -> AsyncGenerator[KafkaFixture, None]:
+class KafkaFixture(StateManager):
+    """Fixture for managing Kafka resources."""
+
+    def __init__(self, config: Config, http: HttpClient):
+        self.config = config
+        self.http = http
+
+    config: Config
+
+    def clear_topics(
+        self, topics: str | list[str] | None = None, exclude_internal: bool = True
+    ) -> None:
+        """Delete all messages in the given topics.
+
+        If no topics are specified, all topics will be cleared,
+        except internal topics unless otherwise specified.
+        """
+        url = f"{self.config.sms_url}/events/"
+        params: dict[str, bool | list[str]] = {}
+
+        if isinstance(topics, str):
+            topics = [topics]
+
+        if topics:
+            params["topics"] = topics
+
+        if not exclude_internal:
+            params["exclude_internal"] = exclude_internal
+
+        response = self.http.delete(url, headers=self.auth_headers, params=params)
+        assert response.status_code == 204, f"Failed to clear topics: {response.text}"
+
+
+@fixture(name="kafka", scope="session")
+def kafka_fixture(config: Config, http: HttpClient) -> KafkaFixture:
     """Pytest fixture for tests depending on the Kafka-based provider."""
-    async with KafkaEventPublisher.construct(config=config) as publisher:
-        yield KafkaFixture(
-            config=config, kafka_servers=config.kafka_servers, publisher=publisher
-        )
+    return KafkaFixture(config=config, http=http)

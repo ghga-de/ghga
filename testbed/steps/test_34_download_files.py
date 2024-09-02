@@ -22,7 +22,6 @@ from .conftest import (
     Config,
     ConnectorFixture,
     JointFixture,
-    async_step,
     given,
     parse,
     scenarios,

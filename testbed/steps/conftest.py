@@ -64,25 +64,6 @@ parse = parsers.parse  # pylint: disable=invalid-name
 # Helpers for async step functions
 
 
-def async_step(step):
-    """Decorator that converts an async step function to a normal one."""
-    signature = inspect.signature(step)
-    parameters = list(signature.parameters.values())
-    has_event_loop = any(parameter.name == "event_loop" for parameter in parameters)
-    if not has_event_loop:
-        parameters.append(
-            inspect.Parameter("event_loop", inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        )
-        step.__signature__ = signature.replace(parameters=parameters)
-
-    @wraps(step)
-    def run_step(*args, **kwargs):
-        loop = kwargs["event_loop"] if has_event_loop else kwargs.pop("event_loop")
-        return loop.run_until_complete(step(*args, **kwargs))
-
-    return run_step
-
-
 # Shared step functions
 
 
@@ -222,13 +203,10 @@ def restore_data_stewardship(state: dict[str, Any], fixtures: JointFixture) -> N
 
 
 @given("we start on a clean slate")
-@async_step
-async def reset_state(fixtures: JointFixture):
+def reset_state(fixtures: JointFixture):
     """Reset all state used by the Archive Test Bed."""
     fixtures.state.reset_state()  # empty state database
-    if not fixtures.config.use_api_gateway:
-        # When running the tests externally we have no access to kafka.
-        await fixtures.kafka.clear_topics()  # empty event queues
+    fixtures.kafka.clear_topics()  # empty event queues
     fixtures.s3.empty_buckets()  # empty object storages
     saved_data_steward = fetch_data_stewardship(fixtures)
     fixtures.mongo.empty_databases()  # empty service databases
@@ -238,8 +216,7 @@ async def reset_state(fixtures: JointFixture):
 
 
 @given("no notification has been sent yet")
-@async_step
-async def reset_notifications(fixtures: JointFixture):
+def reset_notifications(fixtures: JointFixture):
     """Delete all email notifications from the mail server."""
     fixtures.mongo.empty_databases("ns")
     empty_mail_server(fixtures)  # reset mail server

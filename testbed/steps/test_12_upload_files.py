@@ -27,11 +27,10 @@ from fixtures.file import FileBatch, FileObject
 from fixtures.utils import temporary_file
 from ghga_datasteward_kit.file_ingest import IngestConfig, alias_to_accession
 from metldata.submission_registry.submission_store import SubmissionStore
-from pytest import fixture
 
 from steps.utils import get_secret_ids, ingest_config_as_file, upload_config_as_file
 
-from .conftest import JointFixture, async_step, given, parse, scenarios, then, when
+from .conftest import JointFixture, given, parse, scenarios, then, when
 
 scenarios("../features/12_upload_files.feature")
 

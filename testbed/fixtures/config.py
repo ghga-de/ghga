@@ -19,13 +19,12 @@
 from pathlib import Path
 
 from hexkit.config import config_from_yaml
-from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.s3 import S3Config
 from pydantic import Field, SecretStr, model_validator
 
 
 @config_from_yaml(prefix="tb")
-class Config(KafkaConfig, S3Config):
+class Config(S3Config):
     """Config class for the test app."""
 
     # operation modes
@@ -45,11 +44,6 @@ class Config(KafkaConfig, S3Config):
     upload_part_size: int = 1024
     download_part_size: int = 8589934592
     default_file_size: int = 20 * upload_part_size**2
-
-    # Kafka config
-    service_name: str = "testbed_kafka"
-    service_instance_id: str = "testbed-app-1"
-    kafka_servers: list[str] = ["kafka:9092"]  # noqa: RUF012
 
     # databases that shall be dropped when running from scratch
     service_db_names: list[str] = [  # noqa: RUF012
