@@ -17,18 +17,16 @@
 
 """Tests for converting the workbook"""
 
-from ghga_transpiler import io
-from ghga_transpiler.core import convert_workbook
+from ghga_transpiler.transpile import transpile
 
-from .fixtures.test_data_objects.conversion_data import EXPECTED_CONVERSION
+from .fixtures.test_data_objects.conversion_data import EXPECTED_CONVERSION_DATAPACK
 from .fixtures.utils import get_project_root
 
 
 def test_convert_workbook() -> None:
-    """Function to test workbook to json conversion"""
+    """Function to test workbook to datapack conversion"""
     workbook_path = (
         get_project_root() / "tests" / "fixtures" / "workbooks" / "a_workbook.xlsx"
     )
-    ghga_workbook = io.read_workbook(workbook_path, "tests.fixtures.configs")
 
-    assert convert_workbook(ghga_workbook=ghga_workbook) == EXPECTED_CONVERSION
+    assert transpile(workbook_path) == EXPECTED_CONVERSION_DATAPACK

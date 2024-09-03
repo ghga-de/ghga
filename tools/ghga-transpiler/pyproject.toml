@@ -9,7 +9,7 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 1 - Planning",
     "Operating System :: POSIX :: Linux",
@@ -21,18 +21,15 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_transpiler"
-version = "2.2.1"
+version = "3.0.0"
 description = "GHGA-Transpiler - excel to JSON converter"
 dependencies = [
-    "typer >= 0.12",
     "openpyxl >= 3.1.2, == 3.*",
     "defusedxml >= 0.7, == 0.*",
-    "pydantic >=2.6, <3",
+    "pydantic >=2, <3",
     "PyYAML ~= 6.0",
     "semver == 3.*",
-    "exceptiongroup>=1.0.0; python_version < \"3.11\"",
-    "tomli>= 2.0.0; python_version < \"3.11\"",
-    "eval-type-backport==0.2.0; python_version < \"3.10\"",
+    "schemapack == 2.0.0-alpha.4",
 ]
 
 [project.license]
@@ -47,11 +44,6 @@ ghga-transpiler = "ghga_transpiler.__main__:run"
 [tool.setuptools.packages.find]
 where = [
     "src",
-]
-
-[tool.setuptools.package-data]
-"ghga_transpiler.configs" = [
-    "*.yaml",
 ]
 
 [tool.ruff]
@@ -69,6 +61,7 @@ src = [
     "examples",
     "scripts",
 ]
+target-version = "py312"
 
 [tool.ruff.lint]
 fixable = [

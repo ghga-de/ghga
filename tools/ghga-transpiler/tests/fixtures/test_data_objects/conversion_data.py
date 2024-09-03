@@ -15,34 +15,127 @@
 #
 #
 
-"""Data that are used in unit tests"""
+"""Data that is expected as output in unit tests"""
 
-EXPECTED_CONVERSION = {
-    "books": [
+from arcticfreeze import FrozenDict
+from schemapack.spec.datapack import DataPack, Resource
+
+EXPECTED_CONVERSION_DATAPACK = DataPack(
+    datapack="0.3.0",
+    resources=FrozenDict(
         {
-            "writer_name": "Albert Camus",
-            "book_name": "The Plague",
-            "isbn": "9780679720218",
-            "genre": ["PHILOSOPHICAL_NOVEL", "ABSURDIST_NOVEL"],
-            "set_in": "FRENCH_ALGERIA",
+            "books": FrozenDict(
+                {
+                    "Albert Camus": Resource(
+                        content=FrozenDict(
+                            {
+                                "book_name": "The Plague",
+                                "isbn": "9780679720218",
+                                "genre": ("PHILOSOPHICAL_NOVEL", "ABSURDIST_NOVEL"),
+                                "set_in": "FRENCH_ALGERIA",
+                            }
+                        ),
+                        relations=FrozenDict({}),
+                    ),
+                    "George Orwell": Resource(
+                        content=FrozenDict(
+                            {
+                                "book_name": "1984",
+                                "isbn": "9783548234106",
+                                "genre": ("DYSTOPIAN_NOVEL", "CAUTIONARY_TALE"),
+                                "set_in": "UNITED_KINGDOM",
+                            }
+                        ),
+                        relations=FrozenDict({}),
+                    ),
+                }
+            ),
+            "publisher": FrozenDict(
+                {
+                    "9780679720218": Resource(
+                        content=FrozenDict(
+                            {
+                                "publisher_names": ("Hamish Hamilton", "Stephen King"),
+                                "attributes": (
+                                    FrozenDict({"key": "page", "value": "100"}),
+                                    FrozenDict({"key": "cover", "value": "paperback"}),
+                                ),
+                            }
+                        ),
+                        relations=FrozenDict({"isbn": "9780679720218"}),
+                    ),
+                    "9783548234106": Resource(
+                        content=FrozenDict(
+                            {"publisher_names": ("Secker and Warburg",)}
+                        ),
+                        relations=FrozenDict({"isbn": "9783548234106"}),
+                    ),
+                }
+            ),
+        }
+    ),
+    rootResource=None,
+)
+
+EXPECTED_CONVERSION_JSON = {
+    "datapack": "0.3.0",
+    "resources": {
+        "books": {
+            "Albert Camus": {
+                "content": {
+                    "book_name": "The Plague",
+                    "genre": [
+                        "PHILOSOPHICAL_NOVEL",
+                        "ABSURDIST_NOVEL",
+                    ],
+                    "isbn": "9780679720218",
+                    "set_in": "FRENCH_ALGERIA",
+                }
+            },
+            "George Orwell": {
+                "content": {
+                    "book_name": "1984",
+                    "genre": [
+                        "DYSTOPIAN_NOVEL",
+                        "CAUTIONARY_TALE",
+                    ],
+                    "isbn": "9783548234106",
+                    "set_in": "UNITED_KINGDOM",
+                }
+            },
         },
-        {
-            "writer_name": "George Orwell",
-            "book_name": "1984",
-            "isbn": "9783548234106",
-            "genre": ["DYSTOPIAN_NOVEL", "CAUTIONARY_TALE"],
-            "set_in": "UNITED_KINGDOM",
+        "publisher": {
+            "9780679720218": {
+                "content": {
+                    "attributes": [
+                        {
+                            "key": "page",
+                            "value": "100",
+                        },
+                        {
+                            "key": "cover",
+                            "value": "paperback",
+                        },
+                    ],
+                    "publisher_names": [
+                        "Hamish Hamilton",
+                        "Stephen King",
+                    ],
+                },
+                "relations": {
+                    "isbn": "9780679720218",
+                },
+            },
+            "9783548234106": {
+                "content": {
+                    "publisher_names": [
+                        "Secker and Warburg",
+                    ],
+                },
+                "relations": {
+                    "isbn": "9783548234106",
+                },
+            },
         },
-    ],
-    "publisher": [
-        {
-            "isbn": "9780679720218",
-            "publisher_names": ["Hamish Hamilton", "Stephen King"],
-            "attributes": [
-                {"key": "page", "value": "100"},
-                {"key": "cover", "value": "paperback"},
-            ],
-        },
-        {"isbn": "9783548234106", "publisher_names": ["Secker and Warburg"]},
-    ],
+    },
 }

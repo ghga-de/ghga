@@ -26,5 +26,17 @@ class MissingWorkbookContent(KeyError):
     """Raised when any worksheet given in the config yaml does not exist in the spreadsheet"""
 
 
-class UnknownVersionError(RuntimeError):
-    """Raised when the version encountered in the workbook is unknown"""
+class WorkbookNotFound(FileNotFoundError):
+    """Raised when path to the workbook file not found on a path."""
+
+
+class MetaColumnNotFound(KeyError):
+    """Raised when the 'sheet' column holding the sheet names on the meta_sheets
+    (__column_meta, __sheet_meta) does not exist.
+    """
+
+
+class MetaColumnNotUnique(ValueError):
+    """Raised when the 'sheet' column holding the sheet names on the meta_sheets
+    (__column_meta, __sheet_meta) is not unique.
+    """

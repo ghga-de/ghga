@@ -19,37 +19,36 @@
 
 from __future__ import annotations
 
-import json
 import sys
-from importlib import resources
 from pathlib import Path
-from typing import TextIO
 
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
+from schemapack import dumps_datapack
+from schemapack.spec.datapack import DataPack
 
-from .core import GHGAWorkbook
+from .exceptions import WorkbookNotFound
 
 
-def read_workbook(
-    path: Path, configs_package: resources.Package = "ghga_transpiler.configs"
-) -> GHGAWorkbook:
+def read_workbook(path: Path) -> Workbook:
     """Function to read-in a workbook"""
-    return GHGAWorkbook(load_workbook(path), configs_package=configs_package)
+    try:
+        return load_workbook(path)
+    except FileNotFoundError as err:
+        raise WorkbookNotFound(f"Spreadsheet file not found on {path}") from err
 
 
-def _write_json(data: dict, file: TextIO):
-    """Write the data to the specified file in JSON format"""
-    json.dump(obj=data, fp=file, ensure_ascii=False, indent=4)
-
-
-def write_json(data: dict, path: Path | None, force: bool) -> None:
-    """Write the data provided as a dictionary to the specified output path or
-    to stdout if the path is None.
+def write_datapack(
+    data: DataPack, path: Path | None, yaml_format: bool, force: bool
+) -> None:
+    """Writes data as JSON to the specified output path or
+    to stdout if the path is None, or overwrites an existing output file if
+    'force' is True.
     """
+    datapack = dumps_datapack(data, yaml_format=yaml_format)
     if path is None:
-        _write_json(data, sys.stdout)
+        sys.stdout.write(datapack)
     elif path.exists() and not force:
         raise FileExistsError(f"File already exists: {path}")
     else:
         with open(file=path, mode="w", encoding="utf8") as outfile:
-            _write_json(data, outfile)
+            outfile.write(datapack)
