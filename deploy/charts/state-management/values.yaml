@@ -19,7 +19,15 @@ parameters:
     service_instance_id: 'rest.1'
     service_name: sms
     log_level: DEBUG
-
+    object_storages: {}
+    #   test:
+    #     bucket: permanent
+    #     credentials:
+    #       aws_config_ini: null
+    #       s3_endpoint_url: null
+    #       s3_access_key_id: null
+    #       s3_secret_access_key: null
+    #       s3_session_token: null
 containers:
 - name: rest
   type: "rest"

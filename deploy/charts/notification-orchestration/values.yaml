@@ -10,6 +10,7 @@ parameters:
     access_request_denied_event_type: access_request_denied
     access_request_events_topic: access_requests
     central_data_stewardship_email: ""
+    helpdesk_email: ""
     db_name: nos
     iva_state_changed_event_topic: ivas
     iva_state_changed_event_type: iva_state_changed
