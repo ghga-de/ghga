@@ -277,6 +277,9 @@ value. The schema will be modified by inserting the subschema at the specified p
 
 #### Transformation 2: Count References
 
+> [!IMPORTANT]  
+> The following transformations are expected to add a new property to the schema and data as specified under `target_content`. They shall validate that the path specified under `object_path` is valid, i.e. leads to a property of type `"object"` and that that object does not yet contain a property by the name specified under `property_name`. They shall then add that property with an appropriate subschema as required by the specific transformation.
+
 * The transformation shall count how many target objects are referenced from each source object given the relation name.
 * The transformation shall validate whether the target is defined with multiplicity and fail otherwise
 
