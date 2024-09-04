@@ -19,6 +19,7 @@ from contextlib import asynccontextmanager
 
 from aiokafka import TopicPartition
 from aiokafka.admin import AIOKafkaAdminClient, RecordsToDelete
+from hexkit.providers.akafka.provider.utils import generate_ssl_context
 
 from sms.config import Config
 from sms.ports.inbound.events_handler import EventsHandlerPort
@@ -33,7 +34,11 @@ class EventsHandler(EventsHandlerPort):
     @asynccontextmanager
     async def get_admin_client(self) -> AsyncGenerator[AIOKafkaAdminClient, None]:
         """Construct and return an instance of AIOKafkaAdminClient that is closed after use."""
-        admin_client = AIOKafkaAdminClient(bootstrap_servers=self._config.kafka_servers)
+        admin_client = AIOKafkaAdminClient(
+            bootstrap_servers=self._config.kafka_servers,
+            security_protocol=self._config.kafka_security_protocol,
+            ssl_context=generate_ssl_context(self._config),
+        )
         await admin_client.start()
         try:
             yield admin_client
