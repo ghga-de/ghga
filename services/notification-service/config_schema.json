@@ -139,6 +139,20 @@
       "title": "Use Starttls",
       "type": "boolean"
     },
+    "smtp_timeout": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": 60,
+      "description": "The maximum amount of time (in seconds) to wait for a connection to the SMTP server. If set to `None`, the operation will wait indefinitely.",
+      "title": "Smtp Timeout"
+    },
     "notification_event_topic": {
       "description": "Name of the event topic used to track notification events",
       "examples": [

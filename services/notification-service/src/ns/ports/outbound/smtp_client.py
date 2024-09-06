@@ -22,7 +22,14 @@ from email.message import EmailMessage
 class SmtpClientPort(ABC):
     """Abstract description of an SMTP client that can send email"""
 
-    class ConnectionError(RuntimeError):
+    class ConnectionAttemptError(RuntimeError):
+        """Raised when the attempt to reach the SMTP server times out or is blocked."""
+
+        def __init__(self):
+            message = "Attempt to connect to the SMTP server failed."
+            super().__init__(message)
+
+    class ServerPingError(RuntimeError):
         """To be raised when testing the connection fails"""
 
         def __init__(self):

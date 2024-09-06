@@ -22,10 +22,11 @@ from contextlib import contextmanager
 from email.message import EmailMessage
 from hashlib import sha256
 from typing import cast
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from hexkit.correlation import correlation_id_var
+from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import SecretStr
 
 from ns.adapters.outbound.smtp_client import (
@@ -35,6 +36,7 @@ from ns.adapters.outbound.smtp_client import (
 )
 from ns.core.models import NotificationRecord
 from ns.core.notifier import Notifier
+from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.server import DummyServer
 from tests.fixtures.utils import make_notification
@@ -210,7 +212,7 @@ async def test_consume_thru_send(joint_fixture: JointFixture):
         topic=joint_fixture.config.notification_event_topic,
     )
 
-    with pytest.raises(ConnectionRefusedError):
+    with pytest.raises(SmtpClient.ConnectionAttemptError):
         # the connection error tells us that the smtp_client tried to connect, which
         # means that the consumer successfully passed the event through the notifier
         # and on to the client for emailing.
@@ -375,3 +377,23 @@ async def test_html_escaping(joint_fixture: JointFixture):
         + "</body></html>"
     )
     assert html_content.strip() == expected_html
+
+
+@pytest.mark.parametrize("port", [443, 0])
+async def test_timeout(port: int):
+    """Test that the SMTP timeout works as expected."""
+    client_config = SmtpClientConfig(
+        smtp_auth=None, smtp_host="localhost", smtp_port=port, smtp_timeout=1
+    )
+    config = get_config(sources=[client_config])
+    smtp_client = SmtpClient(config=config)
+    dao_mock = AsyncMock()
+    dao_mock.get_by_id.side_effect = ResourceNotFoundError(id_="test")
+
+    notifier = Notifier(
+        config=config, smtp_client=smtp_client, notification_record_dao=dao_mock
+    )
+    with pytest.raises(smtp_client.ConnectionAttemptError):
+        await notifier.send_notification(
+            notification=make_notification(sample_notification)
+        )

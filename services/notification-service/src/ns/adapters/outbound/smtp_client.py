@@ -23,7 +23,7 @@ from contextlib import contextmanager
 from email.message import EmailMessage
 from smtplib import SMTP, SMTPAuthenticationError, SMTPException
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, PositiveFloat, SecretStr
 from pydantic_settings import BaseSettings
 
 from ns.ports.outbound.smtp_client import SmtpClientPort
@@ -51,6 +51,13 @@ class SmtpClientConfig(BaseSettings):
     use_starttls: bool = Field(
         default=True, description="Boolean flag indicating the use of STARTTLS"
     )
+    smtp_timeout: PositiveFloat | None = Field(
+        default=60,
+        description=(
+            "The maximum amount of time (in seconds) to wait for a connection to the"
+            + " SMTP server. If set to `None`, the operation will wait indefinitely."
+        ),
+    )
 
 
 class SmtpClient(SmtpClientPort):
@@ -63,8 +70,21 @@ class SmtpClient(SmtpClientPort):
     @contextmanager
     def get_connection(self) -> Generator[SMTP, None, None]:
         """Establish a connection to the SMTP server"""
-        with SMTP(self._config.smtp_host, self._config.smtp_port) as server:
-            yield server
+        timeout = self._config.smtp_timeout if self._config.smtp_timeout else None
+
+        try:
+            log.debug("Attempting to establish SMTP connection (timeout=%s).", timeout)
+            with (
+                SMTP(self._config.smtp_host, self._config.smtp_port, timeout=timeout)
+                if timeout
+                else SMTP(self._config.smtp_host, self._config.smtp_port) as server
+            ):
+                log.debug("STMP connection successfully established.")
+                yield server
+        except OSError as err:
+            # TimeoutError is a subclass of OSError, but a blocked port can result
+            # in a generic OSError without exhausting smtp_timeout
+            raise self.ConnectionAttemptError() from err
 
     def send_email_message(self, message: EmailMessage):
         """Send an email message.
@@ -85,6 +105,7 @@ class SmtpClient(SmtpClientPort):
                     username = self._config.smtp_auth.username
                     password = self._config.smtp_auth.password.get_secret_value()
                     try:
+                        log.debug("Authenticating against the SMTP server.")
                         server.login(username, password)
                     except SMTPAuthenticationError as err:
                         login_error = self.FailedLoginError()
@@ -92,12 +113,15 @@ class SmtpClient(SmtpClientPort):
                         raise login_error from err
 
                 # check for a connection
+                log.debug("Performing NOOP to verify SMTP connection.")
                 if server.noop()[0] != 250:
-                    connection_error = self.ConnectionError()
+                    connection_error = self.ServerPingError()
                     log.critical(connection_error)
                     raise connection_error
 
+                log.debug("NOOP successful, sending email.")
                 server.send_message(msg=message)
+                log.debug("Email sent.")
         except SMTPException as exc:
             error = self.GeneralSmtpException(error_info=exc.args[0])
             log.error(error, extra={"error_info": exc.args[0]})

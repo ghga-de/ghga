@@ -35,4 +35,5 @@ smtp_auth:
   username: test@test.com
 smtp_host: 127.0.0.1
 smtp_port: 587
+smtp_timeout: 60.0
 use_starttls: false

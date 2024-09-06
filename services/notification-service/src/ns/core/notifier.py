@@ -115,6 +115,7 @@ class Notifier(NotifierPort):
         await self._register_new_notification(notification_record=notification_record)
 
         message = self._construct_email(notification=notification)
+        log.info("Sending notification")
         self._smtp_client.send_email_message(message)
 
         # update the notification record to show that the notification has been sent.

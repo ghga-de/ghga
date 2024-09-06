@@ -10,6 +10,7 @@ smtp_auth:
   username: "test@test.com"
   password: test
 use_starttls: false
+smtp_timeout: 2
 from_address: "test@test.com"
 db_connection_str: "mongodb://mongodb:27017"
 db_name: "dev_db"
