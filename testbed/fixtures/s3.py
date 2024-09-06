@@ -24,6 +24,8 @@ from fixtures.state_manager import StateManager
 
 __all__ = ["s3_fixture", "S3Fixture"]
 
+DELETION_TIMEOUT = 60
+
 
 class S3Fixture(StateManager):
     """Fixture for managing S3 resources"""
@@ -87,7 +89,9 @@ class S3Fixture(StateManager):
         for storage_alias in storage_aliases:
             for bucket_id in buckets:
                 url = f"{self.config.sms_url}/objects/{storage_alias}/{bucket_id}"
-                response = self.http.delete(url, headers=self.auth_headers)
+                response = self.http.delete(
+                    url, headers=self.auth_headers, timeout=DELETION_TIMEOUT
+                )
                 assert (
                     response.status_code == 204
                 ), f"Failed to delete objects in {storage_alias}.{bucket_id}: {response.text}"
