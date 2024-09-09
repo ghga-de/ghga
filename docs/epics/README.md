@@ -64,3 +64,5 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (54) [Peacock Spider](./54-peacock-spider/technical_specification.md): File Information Service
 - (55) [Madagascan Sunset Moth](./55-madagascan-sunset-moth/technical_specification.md): Preliminary Storage Selection
 - (56) [Sphynx Cat](./56-sphynx-cat/technical_specification.md): Kakfa Dead Letter Queues
+- (57) [Monkfish](./57-monkfish/technical_specification.md): State Management Service
+- (58) [Poodle Moth](./58-poodle-moth/technical_specification.md): Storing Data as strings vs BSON in MongoDB
