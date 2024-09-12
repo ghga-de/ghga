@@ -24,7 +24,7 @@ from contextlib import nullcontext
 from filecmp import cmp
 from pathlib import Path
 from typing import Union
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import crypt4gh.keys
 import httpx
@@ -41,6 +41,7 @@ from ghga_connector.cli import (
     retrieve_upload_parameters,
 )
 from ghga_connector.core import exceptions, upload
+from ghga_connector.core.client import async_client
 from ghga_connector.core.constants import DEFAULT_PART_SIZE
 from ghga_connector.core.crypt import Crypt4GHEncryptor
 from tests.fixtures import state
@@ -66,6 +67,15 @@ ENVIRON_DEFAULTS = {
 }
 
 unintercepted_hosts: list[str] = []
+
+
+def wkvs_method_mock(value: str):
+    """Dummy to patch WVKS method"""
+
+    async def inner(self):
+        return value
+
+    return inner
 
 
 @pytest.fixture
@@ -115,7 +125,7 @@ async def test_multipart_download(
     monkeypatch.setattr("ghga_connector.core.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
-        Mock(return_value=dict(zip([big_object.object_id], [""]))),
+        AsyncMock(return_value=dict(zip([big_object.object_id], [""]))),
     )
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package._decrypt",
@@ -152,7 +162,7 @@ async def test_multipart_download(
             wps_api_url=api_url,
         ),
     ):
-        download(
+        await download(
             output_dir=tmp_path,
             my_public_key_path=Path(PUBLIC_KEY_FILE),
             my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -215,7 +225,7 @@ async def test_download(
     monkeypatch.setattr("ghga_connector.core.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
-        Mock(return_value=dict(zip([file.file_id], [""]))),
+        AsyncMock(return_value=dict(zip([file.file_id], [""]))),
     )
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.work_package._decrypt",
@@ -240,11 +250,10 @@ async def test_download(
     monkeypatch.setenv("FAKE_ENVELOPE", fake_envelope)
 
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
-
     for wkvs_method in ["get_wps_api_url", "get_dcs_api_url"]:
         monkeypatch.setattr(
             f"ghga_connector.core.api_calls.well_knowns.WKVSCaller.{wkvs_method}",
-            lambda x: api_url,
+            wkvs_method_mock(api_url),
         )
     with patch(
         "ghga_connector.cli.CONFIG",
@@ -265,7 +274,7 @@ async def test_download(
                         exceptions.UnauthorizedAPICallError,
                         match="This is not the token you're looking for.",
                     ):
-                        download(
+                        await download(
                             output_dir=output_dir,
                             my_public_key_path=Path(PUBLIC_KEY_FILE),
                             my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -279,7 +288,7 @@ async def test_download(
                         match="Endpoint file ID did not match file ID"
                         " announced in work order token",
                     ):
-                        download(
+                        await download(
                             output_dir=output_dir,
                             my_public_key_path=Path(PUBLIC_KEY_FILE),
                             my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -292,7 +301,7 @@ async def test_download(
                     if expected_exception
                     else nullcontext()
                 ):
-                    download(
+                    await download(
                         output_dir=output_dir,
                         my_public_key_path=Path(PUBLIC_KEY_FILE),
                         my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -382,21 +391,19 @@ async def test_upload(
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.well_knowns.WKVSCaller.get_ucs_api_url",
-        lambda x: api_url,
+        wkvs_method_mock(api_url),
     )
 
-    with patch("ghga_connector.cli.CONFIG", get_test_config()):
-        with (
-            pytest.raises(
-                expected_exception  # type: ignore
-            )
-            if expected_exception
-            else nullcontext()
-        ):
-            message_display = init_message_display(debug=True)
-            parameters = retrieve_upload_parameters()
+    with (
+        patch("ghga_connector.cli.CONFIG", get_test_config()),
+        pytest.raises(expected_exception) if expected_exception else nullcontext(),  # type: ignore
+    ):
+        message_display = init_message_display(debug=True)
+        async with async_client() as client:
+            parameters = await retrieve_upload_parameters(client=client)
             await upload(
                 api_url=parameters.ucs_api_url,
+                client=client,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
                 message_display=message_display,
@@ -406,16 +413,16 @@ async def test_upload(
                 part_size=DEFAULT_PART_SIZE,
             )
 
-            await s3_fixture.storage.complete_multipart_upload(
-                upload_id=upload_id,
-                bucket_id=uploadable_file.grouping_label,
-                object_id=uploadable_file.file_id,
-            )
+        await s3_fixture.storage.complete_multipart_upload(
+            upload_id=upload_id,
+            bucket_id=uploadable_file.grouping_label,
+            object_id=uploadable_file.file_id,
+        )
 
-            assert await s3_fixture.storage.does_object_exist(
-                bucket_id=uploadable_file.grouping_label,
-                object_id=uploadable_file.file_id,
-            )
+        assert await s3_fixture.storage.does_object_exist(
+            bucket_id=uploadable_file.grouping_label,
+            object_id=uploadable_file.file_id,
+        )
 
 
 @pytest.mark.parametrize(
@@ -481,17 +488,21 @@ async def test_multipart_upload(
     # create big temp file
     monkeypatch.setattr(
         "ghga_connector.core.api_calls.well_knowns.WKVSCaller.get_ucs_api_url",
-        lambda x: api_url,
+        wkvs_method_mock(api_url),
     )
-    with big_temp_file(file_size) as file:
-        with patch(
+    with (
+        big_temp_file(file_size) as file,
+        patch(
             "ghga_connector.cli.CONFIG",
             get_test_config(),
-        ):
-            message_display = init_message_display(debug=True)
-            parameters = retrieve_upload_parameters()
+        ),
+    ):
+        message_display = init_message_display(debug=True)
+        async with async_client() as client:
+            parameters = await retrieve_upload_parameters(client=client)
             await upload(
                 api_url=parameters.ucs_api_url,
+                client=client,
                 file_id=file_id,
                 file_path=Path(file.name),
                 message_display=message_display,

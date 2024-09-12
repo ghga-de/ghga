@@ -16,13 +16,13 @@
 
 """Config utilies."""
 
-from ghga_connector import core
 from ghga_connector.config import Config
+from ghga_connector.core.constants import DEFAULT_PART_SIZE
 
 DEFAULT_TEST_CONFIG = Config(
     max_retries=0,
     max_wait_time=2,
-    part_size=core.DEFAULT_PART_SIZE,
+    part_size=DEFAULT_PART_SIZE,
     wkvs_api_url="https://127.0.0.1",
 )
 

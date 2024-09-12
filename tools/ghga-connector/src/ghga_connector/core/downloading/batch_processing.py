@@ -19,9 +19,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from time import sleep, time
 
+import httpx
+
+from ghga_connector.config import Config
 from ghga_connector.core import exceptions
 from ghga_connector.core.api_calls import WorkPackageAccessor, is_service_healthy
-from ghga_connector.core.client import httpx_client
 from ghga_connector.core.downloading.api_calls import (
     RetryResponse,
     URLResponse,
@@ -132,50 +134,43 @@ class CliIoHandler(BatchIoHandler):
 class FileStager:
     """Utility class to deal with file staging in batch processing."""
 
-    # Successfully staged files with their download URLs and sizes
-    staged_urls: dict[str, URLResponse]
-    # Files that are currently being staged with retry times:
-    unstaged_retry_times: dict[str, float]
-    # Files that could not be staged because they cannot be found:
-    missing_files: list[str]
-
-    message_display: AbstractMessageDisplay
-    io_handler: BatchIoHandler
-    output_dir: Path
-    work_package_accessor: WorkPackageAccessor
-    max_wait_time: int
-
     def __init__(  # noqa: PLR0913
         self,
         *,
         wanted_file_ids: list[str],
         dcs_api_url: str,
         output_dir: Path,
-        max_wait_time: int,
         message_display: AbstractMessageDisplay,
         work_package_accessor: WorkPackageAccessor,
+        client: httpx.AsyncClient,
+        config: Config,
     ):
         """Initialize the FileStager."""
-        io_handler = CliIoHandler()
-        existing_file_ids = set(io_handler.check_output(location=output_dir))
+        self.io_handler = CliIoHandler()
+        existing_file_ids = set(self.io_handler.check_output(location=output_dir))
         if not is_service_healthy(dcs_api_url):
             raise exceptions.ApiNotReachableError(api_url=dcs_api_url)
         self.api_url = dcs_api_url
         self.message_display = message_display
         self.work_package_accessor = work_package_accessor
-        self.max_wait_time = max_wait_time
+        self.max_wait_time = config.max_wait_time
+        self.client = client
         self.time_started = now = time()
+
+        # Successfully staged files with their download URLs and sizes
         # in the beginning, consider all files as staged with a retry time of 0
-        self.staged_urls = {}
+        self.staged_urls: dict[str, URLResponse] = {}
+        # Files that are currently being staged with retry times:
         self.unstaged_retry_times = {
             file_id: now
             for file_id in wanted_file_ids
             if file_id not in existing_file_ids
         }
-        self.missing_files = []
+        # Files that could not be staged because they cannot be found:
+        self.missing_files: list[str] = []
         self.ignore_failed = False
 
-    def get_staged_files(self) -> dict[str, URLResponse]:
+    async def get_staged_files(self) -> dict[str, URLResponse]:
         """Get files that are already staged.
 
         Returns a dict with file IDs as keys and URLResponses as values.
@@ -185,7 +180,7 @@ class FileStager:
         staging_items = list(self.unstaged_retry_times.items())
         for file_id, retry_time in staging_items:
             if time() >= retry_time:
-                self._check_file(file_id=file_id)
+                await self._check_file(file_id=file_id)
         if not self.staged_urls and not self._handle_failures():
             sleep(1)
         self._check_timeout()
@@ -196,7 +191,7 @@ class FileStager:
         """Check whether work is finished, i.e. no staged or unstaged files remain."""
         return not (self.staged_urls or self.unstaged_retry_times)
 
-    def _check_file(self, file_id: str) -> None:
+    async def _check_file(self, file_id: str) -> None:
         """Check whether a file with the given file_id is staged.
 
         The method returns nothing, but adapts the internal state accordingly.
@@ -204,14 +199,14 @@ class FileStager:
         If files cannot be staged for other reason, a BadResponseCodeError is raised.
         """
         try:
-            with httpx_client() as client:
-                url_and_headers = get_file_authorization(
-                    file_id=file_id,
-                    work_package_accessor=self.work_package_accessor,
-                )
-                response = get_download_url(
-                    client=client, url_and_headers=url_and_headers
-                )
+            url_and_headers = await get_file_authorization(
+                file_id=file_id,
+                work_package_accessor=self.work_package_accessor,
+            )
+            response = await get_download_url(
+                client=self.client, url_and_headers=url_and_headers
+            )
+
         except exceptions.BadResponseCodeError as error:
             if error.response_code != 404:
                 raise

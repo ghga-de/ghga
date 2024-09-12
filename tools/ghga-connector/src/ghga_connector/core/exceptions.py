@@ -78,6 +78,10 @@ class DirectoryDoesNotExistError(RuntimeError):
 class DownloadError(RuntimeError):
     """Raised when an error is encountered during file download"""
 
+    def __init__(self, *, reason: str):
+        message = f"Download tasks did not complete successfully. Reason: {reason}"
+        super().__init__(message)
+
 
 class EncryptedSizeMismatch(RuntimeError):
     """Thrown when the actual encrypted size of a file does not match the computed one"""

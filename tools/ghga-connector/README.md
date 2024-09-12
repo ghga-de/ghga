@@ -26,13 +26,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
 ```bash
-docker pull ghga/ghga-connector:1.4.2
+docker pull ghga/ghga-connector:1.5.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-connector:1.4.2 .
+docker build -t ghga/ghga-connector:1.5.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -40,7 +40,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/ghga-connector:1.4.2 --help
+docker run -p 8080:8080 ghga/ghga-connector:1.5.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -57,13 +57,21 @@ ghga_connector --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`max_retries`** *(integer)*: Number of times to retry failed API calls. Default: `5`.
+- **`max_concurrent_downloads`** *(integer)*: Number of parallel downloader tasks for file parts. Exclusive minimum: `0`. Default: `5`.
 
-- **`max_wait_time`** *(integer)*: Maximal time in seconds to wait before quitting without a download. Default: `3600`.
+- **`max_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `5`.
 
-- **`part_size`** *(integer)*: The part size to use for download. Default: `16777216`.
+- **`max_wait_time`** *(integer)*: Maximum time in seconds to wait before quitting without a download. Exclusive minimum: `0`. Default: `3600`.
+
+- **`part_size`** *(integer)*: The part size to use for download. Exclusive minimum: `0`. Default: `16777216`.
 
 - **`wkvs_api_url`** *(string)*: URL to the root of the WKVS API. Should start with https://. Default: `"https://data.ghga.de/.well-known"`.
+
+- **`exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait for when using exponential backoff retry strategies. Minimum: `0`. Default: `60`.
+
+- **`retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 500, 502, 503, 504]`.
+
+  - **Items** *(integer)*: Minimum: `0`.
 
 
 ### Usage:

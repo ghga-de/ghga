@@ -66,6 +66,6 @@ class ProgressBar:
 
         self._progress.update(self._task_id, advance=size)
         # clamp progress bar to 100%
-        if self._progress.tasks[self._task_id].completed > self._file_size:
+        if self._progress.tasks[self._task_id].completed > self._file_size:  # noqa: PLR1730
             self._progress.tasks[self._task_id].completed = self._file_size
         self._progress.refresh()

@@ -1,22 +1,32 @@
 {
   "additionalProperties": false,
-  "description": "Modifies the orginal Settings class provided by the user",
+  "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "max_concurrent_downloads": {
+      "default": 5,
+      "description": "Number of parallel downloader tasks for file parts.",
+      "exclusiveMinimum": 0,
+      "title": "Max Concurrent Downloads",
+      "type": "integer"
+    },
     "max_retries": {
       "default": 5,
       "description": "Number of times to retry failed API calls.",
+      "minimum": 0,
       "title": "Max Retries",
       "type": "integer"
     },
     "max_wait_time": {
       "default": 3600,
-      "description": "Maximal time in seconds to wait before quitting without a download.",
+      "description": "Maximum time in seconds to wait before quitting without a download.",
+      "exclusiveMinimum": 0,
       "title": "Max Wait Time",
       "type": "integer"
     },
     "part_size": {
       "default": 16777216,
       "description": "The part size to use for download.",
+      "exclusiveMinimum": 0,
       "title": "Part Size",
       "type": "integer"
     },
@@ -25,6 +35,29 @@
       "description": "URL to the root of the WKVS API. Should start with https://",
       "title": "Wkvs Api Url",
       "type": "string"
+    },
+    "exponential_backoff_max": {
+      "default": 60,
+      "description": "Maximum number of seconds to wait for when using exponential backoff retry strategies.",
+      "minimum": 0,
+      "title": "Exponential Backoff Max",
+      "type": "integer"
+    },
+    "retry_status_codes": {
+      "default": [
+        408,
+        500,
+        502,
+        503,
+        504
+      ],
+      "description": "List of status codes that should trigger retrying a request.",
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Retry Status Codes",
+      "type": "array"
     }
   },
   "title": "ModSettings",

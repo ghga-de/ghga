@@ -20,16 +20,5 @@ It should not contain any service API-related code.
 
 from . import exceptions  # noqa: F401
 from .api_calls import WKVSCaller, WorkPackageAccessor  # noqa: F401
-from .client import HttpxClientState, httpx_client  # noqa: F401
-from .constants import (  # noqa: F401
-    DEFAULT_PART_SIZE,
-    MAX_PART_NUMBER,
-    MAX_RETRIES,
-    MAX_WAIT_TIME,
-)
-from .downloading.batch_processing import (  # noqa: F401
-    CliIoHandler,
-    FileStager,
-)
 from .main import decrypt_file, download, get_wps_token, upload  # noqa: F401
 from .message_display import AbstractMessageDisplay, MessageColors  # noqa: F401

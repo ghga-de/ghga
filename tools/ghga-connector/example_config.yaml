@@ -1,4 +1,12 @@
+exponential_backoff_max: 60
+max_concurrent_downloads: 5
 max_retries: 2
 max_wait_time: 3600
 part_size: 16777216
+retry_status_codes:
+- 408
+- 500
+- 502
+- 503
+- 504
 wkvs_api_url: https://127.0.0.1

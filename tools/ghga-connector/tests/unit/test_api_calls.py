@@ -17,6 +17,7 @@
 """Tests for API Calls"""
 
 from contextlib import nullcontext
+from functools import partial
 from pathlib import Path
 from typing import Union
 from unittest.mock import Mock
@@ -154,73 +155,84 @@ async def test_get_part_upload_urls(
                 break
 
 
-def test_get_wps_file_info(httpx_mock: HTTPXMock):
+@pytest.mark.asyncio
+async def test_get_wps_file_info(httpx_mock: HTTPXMock):
     """Test response handling with some mock - just make sure code paths work"""
     files = {"file_1": ".tar.gz"}
-    httpx_mock.add_response(json={"files": files}, status_code=200)
 
-    wp_id, wp_token = mock_wps_token(1, None)
-    work_package_accessor = WorkPackageAccessor(
-        access_token=wp_token,
-        api_url="http://127.0.0.1",
-        dcs_api_url="",
-        package_id=wp_id,
-        my_private_key=b"",
-        my_public_key=b"",
-    )
-    response = work_package_accessor.get_package_files()
-    assert response == files
-
-    httpx_mock.add_response(json={"files": files}, status_code=403)
-
-    with pytest.raises(NoWorkPackageAccessError):
-        wp_id, wp_token = mock_wps_token(1, None)
-        work_package_accessor = WorkPackageAccessor(
-            access_token=wp_token,
+    async with async_client() as client:
+        partial_accessor = partial(
+            WorkPackageAccessor,
             api_url="http://127.0.0.1",
+            client=client,
             dcs_api_url="",
-            package_id=wp_id,
             my_private_key=b"",
             my_public_key=b"",
         )
-        response = work_package_accessor.get_package_files()
 
-    httpx_mock.add_response(json={"files": files}, status_code=500)
-
-    with pytest.raises(InvalidWPSResponseError):
+        httpx_mock.add_response(json={"files": files}, status_code=200)
         wp_id, wp_token = mock_wps_token(1, None)
-        work_package_accessor = WorkPackageAccessor(
+        work_package_accessor = partial_accessor(
             access_token=wp_token,
-            api_url="http://127.0.0.1",
-            dcs_api_url="",
             package_id=wp_id,
-            my_private_key=b"",
-            my_public_key=b"",
         )
-        response = work_package_accessor.get_package_files()
+        response = await work_package_accessor.get_package_files()
+        assert response == files
+
+        httpx_mock.add_response(json={"files": files}, status_code=403)
+
+        with pytest.raises(NoWorkPackageAccessError):
+            wp_id, wp_token = mock_wps_token(1, None)
+            work_package_accessor = partial_accessor(
+                access_token=wp_token,
+                package_id=wp_id,
+            )
+            response = await work_package_accessor.get_package_files()
+
+        httpx_mock.add_response(json={"files": files}, status_code=500)
+
+        with pytest.raises(InvalidWPSResponseError):
+            wp_id, wp_token = mock_wps_token(1, None)
+            work_package_accessor = partial_accessor(
+                access_token=wp_token,
+                package_id=wp_id,
+            )
+            response = await work_package_accessor.get_package_files()
+
+        httpx_mock.add_response(json={"files": files}, status_code=501)
+
+        with pytest.raises(InvalidWPSResponseError):
+            wp_id, wp_token = mock_wps_token(1, None)
+            work_package_accessor = partial_accessor(
+                access_token=wp_token,
+                package_id=wp_id,
+            )
+            response = await work_package_accessor.get_package_files()
 
 
 @pytest.mark.asyncio
 async def test_wkvs_calls(httpx_mock: HTTPXMock):
     """Test handling of responses for WKVS api calls"""
     wkvs_url = "https://127.0.0.1"
-    wkvs_caller = WKVSCaller(wkvs_url)
 
-    with pytest.raises(WellKnownValueNotFound):
-        httpx_mock.add_response(status_code=404)
-        wkvs_caller.get_server_pubkey()
+    async with async_client() as client:
+        wkvs_caller = WKVSCaller(client=client, wkvs_url=wkvs_url)
 
-    with pytest.raises(KeyError):
-        httpx_mock.add_response(status_code=200, json={})
-        wkvs_caller.get_server_pubkey()
+        with pytest.raises(WellKnownValueNotFound):
+            httpx_mock.add_response(status_code=404)
+            await wkvs_caller.get_server_pubkey()
 
-    # test each call to CYA
-    for func, value_name in [
-        (wkvs_caller.get_dcs_api_url, "dcs_api_url"),
-        (wkvs_caller.get_server_pubkey, "crypt4gh_public_key"),
-        (wkvs_caller.get_ucs_api_url, "ucs_api_url"),
-        (wkvs_caller.get_wps_api_url, "wps_api_url"),
-    ]:
-        httpx_mock.add_response(json={value_name: "dummy-value"})
-        value = func()
-        assert value == "dummy-value"
+        with pytest.raises(KeyError):
+            httpx_mock.add_response(status_code=200, json={})
+            await wkvs_caller.get_server_pubkey()
+
+        # test each call to CYA
+        for func, value_name in [
+            (wkvs_caller.get_dcs_api_url, "dcs_api_url"),
+            (wkvs_caller.get_server_pubkey, "crypt4gh_public_key"),
+            (wkvs_caller.get_ucs_api_url, "ucs_api_url"),
+            (wkvs_caller.get_wps_api_url, "wps_api_url"),
+        ]:
+            httpx_mock.add_response(json={value_name: "dummy-value"})
+            value = await func()
+            assert value == "dummy-value"

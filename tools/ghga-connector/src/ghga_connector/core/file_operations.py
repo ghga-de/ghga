@@ -17,9 +17,10 @@
 """Contains calls of the Presigned URLs in order to Up- and Download Files"""
 
 import math
-from collections.abc import Iterator, Sequence
+from collections.abc import Generator, Iterator
 from io import BufferedReader
 from pathlib import Path
+from typing import Any
 
 from ghga_connector.core.structs import PartRange
 
@@ -42,7 +43,7 @@ def is_file_encrypted(file_path: Path):
 
 def calc_part_ranges(
     *, part_size: int, total_file_size: int, from_part: int = 1
-) -> Sequence[PartRange]:
+) -> Generator[PartRange, Any, Any]:
     """
     Calculate and return the ranges (start, end) of file parts as a list of tuples.
 
@@ -63,7 +64,7 @@ def calc_part_ranges(
             PartRange(start=part_size * full_part_number, stop=total_file_size - 1)
         )
 
-    return part_ranges
+    yield from part_ranges
 
 
 def get_segments(part: bytes, segment_size: int):

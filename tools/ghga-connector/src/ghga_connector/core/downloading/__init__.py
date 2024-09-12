@@ -17,4 +17,3 @@
 
 from .abstract_downloader import DownloaderBase  # noqa: F401
 from .downloader import Downloader  # noqa: F401
-from .main import run_download  # noqa: F401

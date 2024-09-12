@@ -327,7 +327,7 @@ class Uploader(UploaderBase):
 class ChunkedUploader:
     """Handler class dealing with upload functionality"""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         encryptor: Encryptor,

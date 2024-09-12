@@ -35,7 +35,7 @@ from ghga_connector.core.file_operations import get_segments, read_file_parts
 class Crypt4GHEncryptor(Encryptor):
     """Handles on the fly encryption and checksum calculation"""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         part_size: int,
         private_key_path: Path,

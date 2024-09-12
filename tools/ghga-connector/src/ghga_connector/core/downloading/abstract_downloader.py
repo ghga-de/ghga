@@ -16,38 +16,36 @@
 """Contains base class for download functionality"""
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterator, Sequence
-from queue import Queue
+from collections.abc import Coroutine
+from io import BufferedWriter
+from pathlib import Path
+from typing import Any
 
 from ghga_connector.core.downloading.structs import URLResponse
-from ghga_connector.core.message_display import AbstractMessageDisplay
 from ghga_connector.core.structs import PartRange
 
 
 class DownloaderBase(ABC):
-    """Base class defining the interface a downloader object needs to provide"""
+    """Base class defining the interface a downloader object needs to provide."""
 
     @abstractmethod
-    def await_download_url(
-        self,
-        *,
-        max_wait_time: int,
-        message_display: AbstractMessageDisplay,
-    ) -> URLResponse:
+    def download_file(self, *, output_path: Path, part_size: int):
+        """Download file to the specified location and manage lower level details."""
+
+    @abstractmethod
+    def await_download_url(self) -> Coroutine[URLResponse, Any, Any]:
         """Wait until download URL can be generated.
-        Returns a URLResponse with two attributes:
+        Returns a URLResponse containing two elements:
             1. the download url
             2. the file size in bytes
         """
 
     @abstractmethod
-    def get_download_urls(
-        self,
-    ) -> Iterator[URLResponse]:
-        """For a specific multi-part download, return an iterator to lazily obtain download URLs."""
+    def get_download_url(self) -> Coroutine[URLResponse, Any, Any]:
+        """Fetch a presigned URL from which file data can be downloaded."""
 
     @abstractmethod
-    def get_file_header_envelope(self) -> bytes:
+    def get_file_header_envelope(self) -> Coroutine[bytes, Any, Any]:
         """
         Perform a RESTful API call to retrieve a file header envelope.
         Returns:
@@ -55,23 +53,27 @@ class DownloaderBase(ABC):
         """
 
     @abstractmethod
-    def download_content_range(
-        self,
-        *,
-        download_url: str,
-        start: int,
-        end: int,
-        queue: Queue,
-    ) -> None:
-        """Download a specific range of a file's content using a presigned download url."""
+    async def download_to_queue(self, *, part_range: PartRange) -> None:
+        """
+        Start downloading file parts in parallel into a queue.
+        This should be wrapped into asyncio.task and is guarded by a semaphore to limit
+        the amount of ongoing parallel downloads to max_concurrent_downloads.
+        """
 
     @abstractmethod
-    def download_file_parts(
+    async def download_content_range(
         self,
         *,
-        url_response: Iterator[URLResponse],
-        max_concurrent_downloads: int,
-        part_ranges: Sequence[PartRange],
-        queue: Queue,
+        start: int,
+        end: int,
     ) -> None:
-        """Download all file parts specified by part_ranges"""
+        """Download a specific range of a file's content using a presigned url."""
+
+    @abstractmethod
+    async def drain_queue_to_file(
+        self, *, file_name: str, file: BufferedWriter, file_size: int, offset: int
+    ) -> None:
+        """Write downloaded file bytes from queue.
+        This should be started as asyncio.Task and awaited after the download_to_queue
+        tasks have been created/started.
+        """

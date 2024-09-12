@@ -29,7 +29,7 @@ from ghga_connector.core.downloading.structs import (
 )
 
 
-def _get_authorization(
+async def _get_authorization(
     file_id: str, work_package_accessor: WorkPackageAccessor, url: str
 ) -> UrlAndHeaders:
     """
@@ -37,7 +37,7 @@ def _get_authorization(
     given endpoint identified by the `url` passed
     """
     # fetch a work order token
-    decrypted_token = work_package_accessor.get_work_order_token(file_id=file_id)
+    decrypted_token = await work_package_accessor.get_work_order_token(file_id=file_id)
     # build headers
     headers = httpx.Headers(
         {
@@ -50,7 +50,7 @@ def _get_authorization(
     return UrlAndHeaders(endpoint_url=url, headers=headers)
 
 
-def get_envelope_authorization(
+async def get_envelope_authorization(
     file_id: str, work_package_accessor: WorkPackageAccessor
 ) -> UrlAndHeaders:
     """
@@ -59,12 +59,12 @@ def get_envelope_authorization(
     """
     # build url
     url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}/envelopes"
-    return _get_authorization(
+    return await _get_authorization(
         file_id=file_id, work_package_accessor=work_package_accessor, url=url
     )
 
 
-def get_file_authorization(
+async def get_file_authorization(
     file_id: str, work_package_accessor: WorkPackageAccessor
 ) -> UrlAndHeaders:
     """
@@ -73,14 +73,14 @@ def get_file_authorization(
     """
     # build URL
     url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}"
-    return _get_authorization(
+    return await _get_authorization(
         file_id=file_id, work_package_accessor=work_package_accessor, url=url
     )
 
 
-def get_download_url(
+async def get_download_url(
     *,
-    client: httpx.Client,
+    client: httpx.AsyncClient,
     url_and_headers: UrlAndHeaders,
 ) -> Union[RetryResponse, URLResponse]:
     """
@@ -95,7 +95,7 @@ def get_download_url(
     url = url_and_headers.endpoint_url
 
     try:
-        response = client.get(
+        response = await client.get(
             url=url, headers=url_and_headers.headers, timeout=TIMEOUT_LONG
         )
     except httpx.RequestError as request_error:

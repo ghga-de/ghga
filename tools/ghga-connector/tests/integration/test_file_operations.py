@@ -16,18 +16,20 @@
 
 """Test file operations"""
 
-from collections.abc import Iterator
-from queue import Empty, Queue
-from typing import Any
+from asyncio import create_task
 from unittest.mock import Mock
 
 import pytest
 
+from ghga_connector.cli import CLIMessageDisplay
 from ghga_connector.core.api_calls import WorkPackageAccessor
-from ghga_connector.core.client import httpx_client
+from ghga_connector.core.client import async_client
 from ghga_connector.core.downloading import Downloader
+from ghga_connector.core.downloading.downloader import TaskHandler
 from ghga_connector.core.downloading.structs import URLResponse
+from ghga_connector.core.exceptions import DownloadError
 from ghga_connector.core.file_operations import calc_part_ranges
+from ghga_connector.core.structs import PartRange
 from tests.fixtures.s3 import (  # noqa: F401
     S3Fixture,
     get_big_s3_object,
@@ -39,7 +41,8 @@ from tests.fixtures.s3 import (  # noqa: F401
 @pytest.mark.parametrize(
     "start, end, file_size",
     [
-        (0, 20 * 1024 * 1024 - 1, 20 * 1024 * 1024),  # download full file as one part
+        # download full file as one part
+        (0, 20 * 1024 * 1024 - 1, 20 * 1024 * 1024),
         (  # download intermediate part:
             5 * 1024 * 1024,
             10 * 1024 * 1024 - 1,
@@ -53,31 +56,44 @@ async def test_download_content_range(
     end: int,
     file_size: int,
     s3_fixture: S3Fixture,  # noqa: F811
+    monkeypatch,
 ):
     """Test the `download_content_range` function."""
     # prepare state and the expected result:
     big_object = await get_big_s3_object(s3_fixture, object_size=file_size)
-    download_url = await s3_fixture.storage.get_object_download_url(
-        object_id=big_object.object_id, bucket_id=big_object.bucket_id
+
+    async def download_url(self):
+        """Drop in for monkeypatching"""
+        download_url = await s3_fixture.storage.get_object_download_url(
+            object_id=big_object.object_id, bucket_id=big_object.bucket_id
+        )
+        return URLResponse(download_url=download_url, file_size=0)
+
+    monkeypatch.setattr(
+        "ghga_connector.core.downloading.downloader.Downloader.get_download_url",
+        download_url,
     )
     expected_bytes = big_object.content[start : end + 1]
 
-    queue: Queue = Queue(maxsize=10)
-
+    message_display = CLIMessageDisplay()
     # download content range with dedicated function:
-    with httpx_client() as client:
+    async with async_client() as client:
         # no work package accessor calls in download_content_range, just mock for correct type
         dummy_accessor = Mock(spec=WorkPackageAccessor)
         downloader = Downloader(
-            file_id=big_object.object_id,
-            work_package_accessor=dummy_accessor,
             client=client,
+            file_id=big_object.object_id,
+            max_concurrent_downloads=5,
+            max_wait_time=10,
+            work_package_accessor=dummy_accessor,
+            message_display=message_display,
         )
-        downloader.download_content_range(
-            download_url=download_url, start=start, end=end, queue=queue
-        )
+        await downloader.download_content_range(start=start, end=end)
 
-    obtained_start, obtained_bytes = queue.get()
+    result = await downloader._queue.get()
+    assert not isinstance(result, BaseException)
+
+    obtained_start, obtained_bytes = result
 
     assert start == obtained_start
     assert expected_bytes == obtained_bytes
@@ -85,12 +101,14 @@ async def test_download_content_range(
 
 @pytest.mark.parametrize(
     "part_size",
-    [5 * 1024 * 1024, 3 * 1024 * 1024, 1 * 1024 * 1024],
+    [1 * 1024 * 1024, 3 * 1024 * 1024, 5 * 1024 * 1024],
 )
 @pytest.mark.asyncio(scope="session")
 async def test_download_file_parts(
     part_size: int,
     s3_fixture: S3Fixture,  # noqa: F811
+    monkeypatch,
+    tmp_path,
 ):
     """Test the `download_file_parts` function."""
     # prepare state and the expected result:
@@ -98,47 +116,111 @@ async def test_download_file_parts(
     total_file_size = len(big_object.content)
     expected_bytes = big_object.content
 
-    download_url = await s3_fixture.storage.get_object_download_url(
-        object_id=big_object.object_id, bucket_id=big_object.bucket_id
+    async def download_url(self):
+        """Drop in for monkeypatching"""
+        download_url = await s3_fixture.storage.get_object_download_url(
+            object_id=big_object.object_id, bucket_id=big_object.bucket_id
+        )
+        return URLResponse(download_url=download_url, file_size=0)
+
+    monkeypatch.setattr(
+        "ghga_connector.core.downloading.downloader.Downloader.get_download_url",
+        download_url,
     )
-
-    def url_generator() -> Iterator[URLResponse]:
-        while True:
-            yield URLResponse(download_url=download_url, file_size=0)
-
-    url_responses = url_generator()
-
-    queue: Queue = Queue(maxsize=10)
-
     part_ranges = calc_part_ranges(part_size=part_size, total_file_size=total_file_size)
 
-    with httpx_client() as client:
-        # prepare kwargs:
-        kwargs: dict[str, Any] = {
-            "url_response": url_responses,
-            "queue": queue,
-            "part_ranges": part_ranges,
-            "max_concurrent_downloads": 5,
-        }
-
+    async with async_client() as client:
         # no work package accessor calls in download_file_parts, just mock for correct type
         dummy_accessor = Mock(spec=WorkPackageAccessor)
+        message_display = CLIMessageDisplay()
         downloader = Downloader(
-            file_id=big_object.object_id,
-            work_package_accessor=dummy_accessor,
             client=client,
+            file_id=big_object.object_id,
+            max_concurrent_downloads=5,
+            max_wait_time=10,
+            work_package_accessor=dummy_accessor,
+            message_display=message_display,
         )
-        # download file parts with dedicated function:
-        downloader.download_file_parts(**kwargs)
+        task_handler = TaskHandler()
 
-        obtained = 0
-        while obtained < len(expected_bytes):
-            try:
-                start, obtained_bytes = queue.get(block=False)
-            except Empty:
-                continue
-            obtained += len(obtained_bytes)
-            queue.task_done()
-            assert expected_bytes[start : start + part_size] == obtained_bytes
+        for part_range in part_ranges:
+            await task_handler.schedule(
+                downloader.download_to_queue(part_range=part_range)
+            )
 
-        assert obtained == len(expected_bytes)
+        file_path = tmp_path / "test.file"
+        with file_path.open("wb") as file:
+            dl_task = create_task(
+                downloader.drain_queue_to_file(
+                    file_name=file.name, file=file, file_size=total_file_size, offset=0
+                )
+            )
+            await dl_task
+
+        num_bytes_obtained = file_path.stat().st_size
+        assert num_bytes_obtained == len(expected_bytes)
+
+        # test exception in the beginning
+        downloader = Downloader(
+            client=client,
+            file_id=big_object.object_id,
+            max_concurrent_downloads=5,
+            max_wait_time=10,
+            work_package_accessor=dummy_accessor,
+            message_display=message_display,
+        )
+        task_handler = TaskHandler()
+        part_ranges = calc_part_ranges(
+            part_size=part_size, total_file_size=total_file_size
+        )
+
+        await task_handler.schedule(
+            downloader.download_to_queue(part_range=PartRange(-10000, -1))
+        )
+        await task_handler.schedule(
+            downloader.download_to_queue(part_range=next(part_ranges))
+        )
+
+        file_path = tmp_path / "test2.file"
+        with file_path.open("wb") as file:
+            dl_task = create_task(
+                downloader.drain_queue_to_file(
+                    file_name=file.name, file=file, file_size=total_file_size, offset=0
+                )
+            )
+            with pytest.raises(DownloadError):
+                await dl_task
+
+        # test exception at the end
+        downloader = Downloader(
+            client=client,
+            file_id=big_object.object_id,
+            max_concurrent_downloads=5,
+            max_wait_time=10,
+            work_package_accessor=dummy_accessor,
+            message_display=message_display,
+        )
+        task_handler = TaskHandler()
+        part_ranges = calc_part_ranges(
+            part_size=part_size, total_file_size=total_file_size
+        )
+        part_ranges = list(part_ranges)  # type: ignore
+        for idx, part_range in enumerate(part_ranges):
+            if idx == len(part_ranges) - 1:  # type: ignore
+                await task_handler.schedule(
+                    downloader.download_to_queue(part_range=PartRange(-10000, -1))
+                )
+            else:
+                await task_handler.schedule(
+                    downloader.download_to_queue(part_range=part_range)
+                )
+
+        file_path = tmp_path / "test3.file"
+        with file_path.open("wb") as file:
+            dl_task = create_task(
+                downloader.drain_queue_to_file(
+                    file_name=file.name, file=file, file_size=total_file_size, offset=0
+                )
+            )
+            with pytest.raises(DownloadError):
+                await dl_task

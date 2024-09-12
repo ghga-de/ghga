@@ -21,35 +21,36 @@ from typing import Any
 import httpx
 
 from ghga_connector.core import exceptions
-from ghga_connector.core.client import httpx_client
 
 
 @dataclass
 class WKVSCaller:
     """Class to facilitate calls to WKVS (mainly just avoid providing URL repeatedly)"""
 
+    client: httpx.AsyncClient
     wkvs_url: str  # base URL for the well-known-value-service
 
-    def get_server_pubkey(self) -> str:
+    async def get_server_pubkey(self) -> str:
         """Retrieve the GHGA Crypt4GH public key"""
-        return self._get_value("crypt4gh_public_key")
+        return await self._get_value("crypt4gh_public_key")
 
-    def get_wps_api_url(self) -> str:
+    async def get_wps_api_url(self) -> str:
         """Retrieve the API URL for the WPS"""
-        return self._get_api_url("wps")
+        return await self._get_api_url("wps")
 
-    def get_dcs_api_url(self) -> str:
+    async def get_dcs_api_url(self) -> str:
         """Retrieve the API URL for the DCS"""
-        return self._get_api_url("dcs")
+        return await self._get_api_url("dcs")
 
-    def get_ucs_api_url(self) -> str:
+    async def get_ucs_api_url(self) -> str:
         """Retrieve the API URL for the UCS"""
-        return self._get_api_url("ucs")
+        return await self._get_api_url("ucs")
 
-    def _get_api_url(self, api_name: str) -> Any:
-        return self._get_value(f"{api_name}_api_url").rstrip("/")
+    async def _get_api_url(self, api_name: str) -> Any:
+        url = await self._get_value(f"{api_name}_api_url")
+        return url.rstrip("/")
 
-    def _get_value(self, value_name: str) -> Any:
+    async def _get_value(self, value_name: str) -> Any:
         """Retrieve a value from the well-known-value-service.
 
         Args:
@@ -63,8 +64,7 @@ class WKVSCaller:
         url = f"{self.wkvs_url}/values/{value_name}"
 
         try:
-            with httpx_client() as client:
-                response = client.get(url)  # verify is True by default
+            response = await self.client.get(url)  # verify is True by default
         except httpx.RequestError as request_error:
             exceptions.raise_if_connection_failed(request_error=request_error, url=url)
             raise exceptions.RequestFailedError(url=url) from request_error
