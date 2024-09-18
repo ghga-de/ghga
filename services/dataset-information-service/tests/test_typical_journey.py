@@ -32,14 +32,41 @@ from tests.fixtures.joint import (
     mongodb_fixture,  # noqa: F401
 )
 
-FILE_ID = "test-file"
+FILE_ID_1 = "test-file"
+FILE_ID_2 = "test-file-2"
+FILE_ID_3 = "test-file-3"
 CHANGED_TYPE = "upserted"
 DECRYPTED_SHA256 = "fake-checksum"
 DECRYPTED_SIZE = 12345678
 
-INCOMING_PAYLOAD_MOCK = event_schemas.FileInternallyRegistered(
+
+FILE_1 = event_schemas.MetadataDatasetFile(
+    accession=FILE_ID_1, description="Test File", file_extension=".zip"
+)
+FILE_2 = event_schemas.MetadataDatasetFile(
+    accession=FILE_ID_2, description="Test File", file_extension=".zip"
+)
+FILE_3 = event_schemas.MetadataDatasetFile(
+    accession=FILE_ID_3, description="Test File", file_extension=".zip"
+)
+
+
+INCOMING_DATASET_PAYLOAD = event_schemas.MetadataDatasetOverview(
+    accession="test-dataset",
+    description="Test dataset",
+    title="Dataset for testing",
+    stage=event_schemas.MetadataDatasetStage.UPLOAD,
+    files=[FILE_1, FILE_2],
+)
+
+UPDATE_DATASET_PAYLOAD = INCOMING_DATASET_PAYLOAD.model_copy(
+    update={"files": [FILE_1, FILE_2, FILE_3]}
+)
+
+
+INCOMING_FILE_PAYLOAD = event_schemas.FileInternallyRegistered(
     s3_endpoint_alias="test-node",
-    file_id=FILE_ID,
+    file_id=FILE_ID_1,
     object_id="test-object",
     bucket_id="test-bucket",
     upload_date=now_as_utc().isoformat(),
@@ -52,38 +79,45 @@ INCOMING_PAYLOAD_MOCK = event_schemas.FileInternallyRegistered(
     decryption_secret_id="some-secret",
 )
 
-FILE_INFORMATION_MOCK = models.FileInformation(
-    file_id=FILE_ID, sha256_hash=DECRYPTED_SHA256, size=DECRYPTED_SIZE
+INCOMING_FILE_PAYLOAD_2 = INCOMING_FILE_PAYLOAD.model_copy(
+    update={"file_id": FILE_ID_2}
+)
+INCOMING_FILE_PAYLOAD_3 = INCOMING_FILE_PAYLOAD.model_copy(
+    update={"file_id": FILE_ID_3}
+)
+
+FILE_INFORMATION = models.FileInformation(
+    accession=FILE_ID_1, sha256_hash=DECRYPTED_SHA256, size=DECRYPTED_SIZE
 )
 
 pytestmark = pytest.mark.asyncio()
 
 
-async def test_normal_journey(
+async def test_file_information_journey(
     joint_fixture: JointFixture,  # noqa: F811
     caplog,
 ):
-    """Simulates a typical, successful API journey."""
+    """Simulates a typical file information API journey."""
     # Test population path
-    file_id = INCOMING_PAYLOAD_MOCK.file_id
+    file_id = INCOMING_FILE_PAYLOAD.file_id
 
     await joint_fixture.kafka.publish_event(
-        payload=INCOMING_PAYLOAD_MOCK.model_dump(),
+        payload=INCOMING_FILE_PAYLOAD.model_dump(),
         type_=joint_fixture.config.file_registered_event_type,
         topic=joint_fixture.config.file_registered_event_topic,
     )
     await joint_fixture.event_subscriber.run(forever=False)
 
     file_information = await joint_fixture.file_information_dao.get_by_id(file_id)
-    assert file_information == FILE_INFORMATION_MOCK
+    assert file_information == FILE_INFORMATION
 
     # Test reregistration of identical content
-    expected_message = f"Found existing information for file {file_id}"
+    expected_message = f"Found existing information for file {file_id}."
 
     caplog.clear()
     with caplog.at_level(level=logging.DEBUG, logger="dins.core.information_service"):
         await joint_fixture.kafka.publish_event(
-            payload=INCOMING_PAYLOAD_MOCK.model_dump(),
+            payload=INCOMING_FILE_PAYLOAD.model_dump(),
             type_=joint_fixture.config.file_registered_event_type,
             topic=joint_fixture.config.file_registered_event_topic,
         )
@@ -93,7 +127,7 @@ async def test_normal_journey(
 
     # Test reregistration of mismatching content
     mismatch_message = f"Mismatching information for the file with ID {file_id} has already been registered."
-    mismatch_mock = INCOMING_PAYLOAD_MOCK.model_copy(
+    mismatch_mock = INCOMING_FILE_PAYLOAD.model_copy(
         update={"decrypted_sha256": "other-fake-checksum"}
     )
 
@@ -114,7 +148,7 @@ async def test_normal_journey(
     url = f"{base_url}/{file_id}"
     response = await joint_fixture.rest_client.get(url)
     assert response.status_code == 200
-    assert models.FileInformation(**response.json()) == FILE_INFORMATION_MOCK
+    assert models.FileInformation(**response.json()) == FILE_INFORMATION
 
     # Test requesting invalid file information
     url = f"{base_url}/invalid"
@@ -136,3 +170,138 @@ async def test_normal_journey(
         file_information = await joint_fixture.file_information_dao.get_by_id(
             id_=file_id
         )
+
+
+async def test_dataset_information_journey(
+    joint_fixture: JointFixture,  # noqa: F811
+    caplog,
+):
+    """Simulates a typical dataset information API journey."""
+    # register dataset and verify
+    await joint_fixture.kafka.publish_event(
+        payload=INCOMING_DATASET_PAYLOAD.model_dump(),
+        type_=joint_fixture.config.dataset_upsertion_event_type,
+        topic=joint_fixture.config.dataset_event_topic,
+    )
+    await joint_fixture.event_subscriber.run(forever=False)
+
+    dataset_accession = INCOMING_DATASET_PAYLOAD.accession
+    dataset = await joint_fixture.dataset_information_dao.get_by_id(dataset_accession)
+    assert dataset.accession == dataset_accession
+    for file in INCOMING_DATASET_PAYLOAD.files:
+        assert file.accession in dataset.file_accessions
+
+    base_url = f"{joint_fixture.config.api_root_path}/dataset_information"
+    url = f"{base_url}/{dataset_accession}"
+    response = await joint_fixture.rest_client.get(url)
+    assert response.status_code == 200
+
+    dataset_information = response.json()
+    assert dataset_information["accession"] == dataset_accession
+    assert dataset_information["file_information"] == [
+        {"accession": FILE_ID_1},
+        {"accession": FILE_ID_2},
+    ]
+
+    # register actual file information
+    for file_payload in (
+        INCOMING_FILE_PAYLOAD,
+        INCOMING_FILE_PAYLOAD_2,
+        INCOMING_FILE_PAYLOAD_3,
+    ):
+        await joint_fixture.kafka.publish_event(
+            payload=file_payload.model_dump(),
+            type_=joint_fixture.config.file_registered_event_type,
+            topic=joint_fixture.config.file_registered_event_topic,
+        )
+        await joint_fixture.event_subscriber.run(forever=False)
+
+    # check again to verify that correct file information is returned now
+    response = await joint_fixture.rest_client.get(url)
+    assert response.status_code == 200
+
+    dataset_information = response.json()
+    assert dataset_information["accession"] == dataset_accession
+    assert dataset_information["file_information"] == [
+        {
+            "accession": FILE_ID_1,
+            "size": DECRYPTED_SIZE,
+            "sha256_hash": DECRYPTED_SHA256,
+        },
+        {
+            "accession": FILE_ID_2,
+            "size": DECRYPTED_SIZE,
+            "sha256_hash": DECRYPTED_SHA256,
+        },
+    ]
+
+    # update dataset to include file 3
+    caplog.clear()
+    with caplog.at_level(level=logging.INFO, logger="dins.core.information_service"):
+        await joint_fixture.kafka.publish_event(
+            payload=UPDATE_DATASET_PAYLOAD.model_dump(),
+            type_=joint_fixture.config.dataset_upsertion_event_type,
+            topic=joint_fixture.config.dataset_event_topic,
+        )
+        await joint_fixture.event_subscriber.run(forever=False)
+        assert len(caplog.messages) == 0
+
+    response = await joint_fixture.rest_client.get(url)
+    assert response.status_code == 200
+
+    dataset_information = response.json()
+    assert dataset_information["accession"] == dataset_accession
+    assert dataset_information["file_information"] == [
+        {
+            "accession": FILE_ID_1,
+            "size": DECRYPTED_SIZE,
+            "sha256_hash": DECRYPTED_SHA256,
+        },
+        {
+            "accession": FILE_ID_2,
+            "size": DECRYPTED_SIZE,
+            "sha256_hash": DECRYPTED_SHA256,
+        },
+        {
+            "accession": FILE_ID_3,
+            "size": DECRYPTED_SIZE,
+            "sha256_hash": DECRYPTED_SHA256,
+        },
+    ]
+
+    # delete file information
+    for file_id in (FILE_ID_1, FILE_ID_2, FILE_ID_3):
+        deletion_requested = event_schemas.FileDeletionRequested(file_id=file_id)
+
+        await joint_fixture.kafka.publish_event(
+            payload=deletion_requested.model_dump(),
+            type_=CHANGED_TYPE,
+            topic=joint_fixture.config.files_to_delete_topic,
+        )
+        await joint_fixture.outbox_subscriber.run(forever=False)
+
+    # check endpoint response again
+    response = await joint_fixture.rest_client.get(url)
+    assert response.status_code == 200
+
+    dataset_information = response.json()
+    assert dataset_information["accession"] == dataset_accession
+    assert dataset_information["file_information"] == [
+        {"accession": FILE_ID_1},
+        {"accession": FILE_ID_2},
+        {"accession": FILE_ID_3},
+    ]
+
+    # delete dataset
+    deletion_requested = event_schemas.MetadataDatasetID(accession=dataset_accession)
+
+    await joint_fixture.kafka.publish_event(
+        payload=deletion_requested.model_dump(),
+        type_=joint_fixture.config.dataset_deletion_event_type,
+        topic=joint_fixture.config.dataset_event_topic,
+    )
+    await joint_fixture.event_subscriber.run(forever=False)
+
+    # check endpoint response for a final time
+    response = await joint_fixture.rest_client.get(url)
+    assert response.status_code == 404

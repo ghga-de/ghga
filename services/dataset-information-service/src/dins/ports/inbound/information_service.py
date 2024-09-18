@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 
 import ghga_event_schemas.pydantic_ as event_schemas
 
-from dins.core.models import FileInformation
+from dins.core.models import DatasetFileInformation, FileInformation
 
 
 class InformationServicePort(ABC):
@@ -26,32 +26,53 @@ class InformationServicePort(ABC):
     metadata for files registered with the Internal File Registry service.
     """
 
-    class MismatchingInformationAlreadyRegistered(RuntimeError):
+    class MismatchingFileInformationAlreadyRegistered(RuntimeError):
         """Raised when the given file ID is already registered but the info doesn't match."""
 
         def __init__(self, *, file_id: str):
-            message = f"Mismatching information for the file with ID {
-                file_id} has already been registered."
+            message = f"Mismatching information for the file with ID {file_id} has already been registered."
+            super().__init__(message)
+
+    class DatasetNotFoundError(RuntimeError):
+        """Raised when information for a given file ID is not registered."""
+
+        def __init__(self, *, dataset_accession: str):
+            message = f"Mapping for the dataset with ID {dataset_accession} is not registered."
             super().__init__(message)
 
     class InformationNotFoundError(RuntimeError):
         """Raised when information for a given file ID is not registered."""
 
         def __init__(self, *, file_id: str):
-            message = f"Information for the file with ID {
-                file_id} is not registered."
+            message = f"Information for the file with ID {file_id} is not registered."
             super().__init__(message)
 
     @abstractmethod
-    async def deletion_requested(self, file_id: str):
+    async def delete_dataset_information(self, dataset_id: str):
+        """Delete dataset to file ID mapping when the corresponding dataset is deleted."""
+
+    @abstractmethod
+    async def delete_file_information(self, file_id: str):
         """Handle deletion requests for information associated with the given file ID."""
 
     @abstractmethod
-    async def register_information(
-        self, file_registered: event_schemas.FileInternallyRegistered
+    async def register_dataset_information(
+        self, dataset: event_schemas.MetadataDatasetOverview
+    ):
+        """Extract dataset to file ID mapping and store it."""
+
+    @abstractmethod
+    async def register_file_information(
+        self, file: event_schemas.FileInternallyRegistered
     ):
         """Store information for a file newly registered with the Internal File Registry."""
 
     @abstractmethod
-    async def serve_information(self, file_id: str) -> FileInformation:
+    async def serve_dataset_information(
+        self, dataset_id: str
+    ) -> DatasetFileInformation:
+        """Retrieve stored public information for the given dataset ID to be served by the API."""
+
+    @abstractmethod
+    async def serve_file_information(self, file_id: str) -> FileInformation:
         """Retrieve stored public information for the given file ID to be served by the API."""

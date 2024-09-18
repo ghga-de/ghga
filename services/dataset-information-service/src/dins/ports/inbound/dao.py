@@ -18,4 +18,5 @@ from hexkit.protocols.dao import DaoNaturalId
 
 from dins.core import models
 
+DatasetDaoPort = DaoNaturalId[models.DatasetFileAccessions]
 FileInformationDaoPort = DaoNaturalId[models.FileInformation]

@@ -6,6 +6,9 @@ kafka_servers: ["kafka:9092"]
 db_connection_str: "mongodb://mongodb:27017"
 db_name: "dev"
 
+dataset_event_topic: metadata-datasets
+dataset_deletion_event_type: dataset_deleted
+dataset_upsertion_event_type: dataset_created
 files_to_delete_topic: file_deletions
 file_registered_event_topic: internal_file_registry
 file_registered_event_type: file_registered

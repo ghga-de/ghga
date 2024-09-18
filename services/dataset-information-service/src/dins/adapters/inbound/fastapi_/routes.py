@@ -25,16 +25,26 @@ from dins.ports.inbound.information_service import InformationServicePort
 router = APIRouter()
 
 RESPONSES = {
+    "datasetInformation": {
+        "description": ("File information for all files in a dataset."),
+        "model": models.DatasetFileInformation,
+    },
+    "datasetNotFound": {
+        "description": (
+            "Exceptions by ID:\n- datasetNotFound: No information registered for the given dataset ID."
+        ),
+        "model": http_exceptions.HttpDatasetNotFoundError.get_body_model(),
+    },
     "fileInformation": {
         "description": (
-            "A configuration or external communication error has occurred and details "
-            + "should not be communicated to the client"
+            "File information consisting of file id/accession, sha256 checksum of the unencrypted"
+            "file content and file size of the unencrypted file in bytes.",
         ),
         "model": models.FileInformation,
     },
     "informationNotFound": {
         "description": (
-            "Exceptions by ID:\n- informationNotFound: No information registered for the given ID."
+            "Exceptions by ID:\n- informationNotFound: No information registered for the given file ID."
         ),
         "model": http_exceptions.HttpInformationNotFoundError.get_body_model(),
     },
@@ -44,7 +54,7 @@ RESPONSES = {
 @router.get(
     "/health",
     summary="health",
-    tags=["FileIngestService"],
+    tags=["DatasetInformationService"],
     status_code=200,
 )
 async def health():
@@ -53,13 +63,43 @@ async def health():
 
 
 @router.get(
-    "/file_information/{file_id}",
-    summary="Return public file information for the given file id, i.e. public accession.",
-    operation_id="getFileInformation",
-    tags=["FileIngestService"],
+    "/dataset_information/{dataset_id}",
+    summary="Return public file information for the given dataset id/accession.",
+    operation_id="getDatasetInformation",
+    tags=["DatasetInformationService"],
     status_code=status.HTTP_200_OK,
-    response_description="File information consisting of file id, sha256 checksum of"
-    " the unencrypted file content and file size of the unencrypted file in bytes.",
+    response_description="File information consisting of file id, sha256 checksum of the unencrypted file content and file size of the unencrypted file in bytes for all files in a dataset.",
+    responses={
+        status.HTTP_200_OK: RESPONSES["datasetInformation"],
+        status.HTTP_404_NOT_FOUND: RESPONSES["datasetNotFound"],
+    },
+)
+async def get_dataset_information(
+    dataset_id: str,
+    information_service: Annotated[
+        InformationServicePort, Depends(dummies.information_service_port)
+    ],
+):
+    """Retrieve and serve stored dataset information."""
+    try:
+        dataset_file_information = await information_service.serve_dataset_information(
+            dataset_id=dataset_id
+        )
+    except information_service.DatasetNotFoundError as error:
+        raise http_exceptions.HttpDatasetNotFoundError(dataset_id=dataset_id) from error
+
+    return http_responses.HttpDatasetInformationResponse(
+        dataset_information=dataset_file_information
+    )
+
+
+@router.get(
+    "/file_information/{file_id}",
+    summary="Return public file information for the given file id/accession.",
+    operation_id="getFileInformation",
+    tags=["DatasetInformationService"],
+    status_code=status.HTTP_200_OK,
+    response_description="File information consisting of file id, sha256 checksum of the unencrypted file content and file size of the unencrypted file in bytes.",
     responses={
         status.HTTP_200_OK: RESPONSES["fileInformation"],
         status.HTTP_404_NOT_FOUND: RESPONSES["informationNotFound"],
@@ -73,7 +113,9 @@ async def get_file_information(
 ):
     """Retrieve and serve stored file information."""
     try:
-        file_information = await information_service.serve_information(file_id=file_id)
+        file_information = await information_service.serve_file_information(
+            file_id=file_id
+        )
     except information_service.InformationNotFoundError as error:
         raise http_exceptions.HttpInformationNotFoundError(file_id=file_id) from error
 

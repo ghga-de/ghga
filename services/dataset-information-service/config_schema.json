@@ -148,6 +148,30 @@
       "title": "Db Name",
       "type": "string"
     },
+    "dataset_event_topic": {
+      "description": "Name of the topic for events that inform about datasets.",
+      "examples": [
+        "metadata-datasets"
+      ],
+      "title": "Dataset Event Topic",
+      "type": "string"
+    },
+    "dataset_upsertion_event_type": {
+      "description": "The type of events that inform about new and changed datasets.",
+      "examples": [
+        "dataset_created"
+      ],
+      "title": "Dataset Upsertion Event Type",
+      "type": "string"
+    },
+    "dataset_deletion_event_type": {
+      "description": "The type of events that inform about deleted datasets.",
+      "examples": [
+        "dataset_deleted"
+      ],
+      "title": "Dataset Deletion Event Type",
+      "type": "string"
+    },
     "file_registered_event_topic": {
       "description": "The name of the topic for events informing about new registered files for which the metadata should be made available.",
       "examples": [
@@ -294,6 +318,9 @@
     "kafka_servers",
     "db_connection_str",
     "db_name",
+    "dataset_event_topic",
+    "dataset_upsertion_event_type",
+    "dataset_deletion_event_type",
     "file_registered_event_topic",
     "file_registered_event_type"
   ],

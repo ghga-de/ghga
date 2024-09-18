@@ -42,7 +42,7 @@ from hexkit.providers.mongodb.testutils import (
     mongodb_fixture,
 )
 
-from dins.adapters.inbound.dao import get_file_information_dao
+from dins.adapters.inbound.dao import get_dataset_dao, get_file_information_dao
 from dins.config import Config
 from dins.inject import (
     prepare_core,
@@ -50,7 +50,7 @@ from dins.inject import (
     prepare_outbox_subscriber,
     prepare_rest_app,
 )
-from dins.ports.inbound.dao import FileInformationDaoPort
+from dins.ports.inbound.dao import DatasetDaoPort, FileInformationDaoPort
 from dins.ports.inbound.information_service import InformationServicePort
 from tests.fixtures.config import get_config
 
@@ -61,6 +61,7 @@ class JointFixture:
 
     config: Config
     information_service: InformationServicePort
+    dataset_information_dao: DatasetDaoPort
     file_information_dao: FileInformationDaoPort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
@@ -84,6 +85,7 @@ async def joint_fixture(
 
     dao_factory = MongoDbDaoFactory(config=config)
     file_information_dao = await get_file_information_dao(dao_factory=dao_factory)
+    dataset_information_dao = await get_dataset_dao(dao_factory=dao_factory)
 
     # prepare everything except the outbox subscriber
     async with (
@@ -103,6 +105,7 @@ async def joint_fixture(
         yield JointFixture(
             config=config,
             information_service=information_service,
+            dataset_information_dao=dataset_information_dao,
             file_information_dao=file_information_dao,
             rest_client=rest_client,
             event_subscriber=event_subscriber,

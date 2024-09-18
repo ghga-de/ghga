@@ -4,6 +4,9 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+dataset_deletion_event_type: dataset_deleted
+dataset_event_topic: metadata-datasets
+dataset_upsertion_event_type: dataset_created
 db_connection_str: '**********'
 db_name: dev
 docs_url: /docs

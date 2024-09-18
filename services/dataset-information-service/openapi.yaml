@@ -1,14 +1,47 @@
 components:
   schemas:
-    FileInformation:
-      description: 'Basic public information container for files registered with the
-        Internal File
-
-        Registry service.'
+    DatasetFileInformation:
+      description: Public information for a dataset.
       properties:
-        file_id:
+        accession:
+          description: Public accession of a dataset.
+          title: Accession
+          type: string
+        file_information:
+          description: Public information on all files belonging to a dataset or only
+            the accession, if no detailed information is available.
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/FileAccession'
+            - $ref: '#/components/schemas/FileInformation'
+          title: File Information
+          type: array
+      required:
+      - accession
+      - file_information
+      title: DatasetFileInformation
+      type: object
+    FileAccession:
+      description: 'Public identifier for one file information object.
+
+
+        Represents not-yet-populated or already deleted file information objects.'
+      properties:
+        accession:
           description: Public identifier of the file associated with the given information
-          title: File Id
+          title: Accession
+          type: string
+      required:
+      - accession
+      title: FileAccession
+      type: object
+    FileInformation:
+      description: Public information for files registered with the Internal File
+        Registry service.
+      properties:
+        accession:
+          description: Public identifier of the file associated with the given information
+          title: Accession
           type: string
         sha256_hash:
           description: SHA256 hash of the unencrypted file content encoded as hexadecimal
@@ -21,7 +54,7 @@ components:
           title: Size
           type: integer
       required:
-      - file_id
+      - accession
       - size
       - sha256_hash
       title: FileInformation
@@ -34,6 +67,37 @@ components:
           title: Detail
           type: array
       title: HTTPValidationError
+      type: object
+    HttpDatasetNotFoundError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpDatasetNotFoundErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: datasetNotFound
+          enum:
+          - datasetNotFound
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpDatasetNotFoundError
+      type: object
+    HttpDatasetNotFoundErrorData:
+      properties:
+        dataset_id:
+          title: Dataset Id
+          type: string
+      required:
+      - dataset_id
+      title: HttpDatasetNotFoundErrorData
       type: object
     HttpInformationNotFoundError:
       additionalProperties: false
@@ -92,6 +156,41 @@ info:
   version: 0.1.0
 openapi: 3.1.0
 paths:
+  /dataset_information/{dataset_id}:
+    get:
+      description: Retrieve and serve stored dataset information.
+      operationId: getDatasetInformation
+      parameters:
+      - in: path
+        name: dataset_id
+        required: true
+        schema:
+          title: Dataset Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetFileInformation'
+          description: File information for all files in a dataset.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpDatasetNotFoundError'
+          description: 'Exceptions by ID:
+
+            - datasetNotFound: No information registered for the given dataset ID.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Return public file information for the given dataset id/accession.
+      tags:
+      - DatasetInformationService
   /file_information/{file_id}:
     get:
       description: Retrieve and serve stored file information.
@@ -109,8 +208,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FileInformation'
-          description: A configuration or external communication error has occurred
-            and details should not be communicated to the client
+          description:
+          - File information consisting of file id/accession, sha256 checksum of the
+            unencryptedfile content and file size of the unencrypted file in bytes.
         '404':
           content:
             application/json:
@@ -118,16 +218,16 @@ paths:
                 $ref: '#/components/schemas/HttpInformationNotFoundError'
           description: 'Exceptions by ID:
 
-            - informationNotFound: No information registered for the given ID.'
+            - informationNotFound: No information registered for the given file ID.'
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-      summary: Return public file information for the given file id, i.e. public accession.
+      summary: Return public file information for the given file id/accession.
       tags:
-      - FileIngestService
+      - DatasetInformationService
   /health:
     get:
       description: Used to test if this service is alive
@@ -140,4 +240,4 @@ paths:
           description: Successful Response
       summary: health
       tags:
-      - FileIngestService
+      - DatasetInformationService

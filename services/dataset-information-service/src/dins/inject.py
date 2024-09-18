@@ -42,9 +42,12 @@ async def prepare_core(
 ) -> AsyncGenerator[InformationServicePort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     dao_factory = MongoDbDaoFactory(config=config)
+    dataset_dao = await dao.get_dataset_dao(dao_factory=dao_factory)
     file_information_dao = await dao.get_file_information_dao(dao_factory=dao_factory)
 
-    yield InformationService(file_information_dao=file_information_dao)
+    yield InformationService(
+        dataset_dao=dataset_dao, file_information_dao=file_information_dao
+    )
 
 
 def prepare_core_with_override(

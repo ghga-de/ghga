@@ -33,6 +33,21 @@ log = logging.getLogger(__name__)
 class EventSubTranslatorConfig(BaseSettings):
     """Config for publishing file upload-related events."""
 
+    dataset_event_topic: str = Field(
+        default=...,
+        description="Name of the topic for events that inform about datasets.",
+        examples=["metadata-datasets"],
+    )
+    dataset_upsertion_event_type: str = Field(
+        default=...,
+        description="The type of events that inform about new and changed datasets.",
+        examples=["dataset_created"],
+    )
+    dataset_deletion_event_type: str = Field(
+        default=...,
+        description="The type of events that inform about deleted datasets.",
+        examples=["dataset_deleted"],
+    )
     file_registered_event_topic: str = Field(
         default=...,
         description="The name of the topic for events informing about new registered files"
@@ -61,8 +76,15 @@ class EventSubTranslator(EventSubscriberProtocol):
         self._config = config
         self._information_service = information_service
 
-        self.topics_of_interest = [config.file_registered_event_topic]
-        self.types_of_interest = [config.file_registered_event_type]
+        self.topics_of_interest = [
+            config.dataset_event_topic,
+            config.file_registered_event_topic,
+        ]
+        self.types_of_interest = [
+            config.dataset_deletion_event_type,
+            config.dataset_upsertion_event_type,
+            config.file_registered_event_type,
+        ]
 
     async def _consume_validated(
         self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: str
@@ -78,6 +100,10 @@ class EventSubTranslator(EventSubscriberProtocol):
         """
         if type_ == self._config.file_registered_event_type:
             await self._consume_file_internally_registered(payload=payload)
+        elif type_ == self._config.dataset_upsertion_event_type:
+            await self._consume_dataset_upserted(payload=payload)
+        elif type_ == self._config.dataset_deletion_event_type:
+            await self._consume_dataset_deleted(payload=payload)
         else:
             raise RuntimeError(f"Unexpected event of type: {type_}")
 
@@ -91,8 +117,30 @@ class EventSubTranslator(EventSubscriberProtocol):
             schema=event_schemas.FileInternallyRegistered,
         )
 
-        await self._information_service.register_information(
-            file_registered=validated_payload
+        await self._information_service.register_file_information(
+            file=validated_payload
+        )
+
+    async def _consume_dataset_upserted(self, *, payload: JsonObject):
+        """Consume newly registered dataset to store file ID mapping."""
+        validated_payload = get_validated_payload(
+            payload=payload,
+            schema=event_schemas.MetadataDatasetOverview,
+        )
+
+        await self._information_service.register_dataset_information(
+            dataset=validated_payload
+        )
+
+    async def _consume_dataset_deleted(self, *, payload: JsonObject):
+        """Delete information for registered dataset mappings when a dataset is deleted."""
+        validated_payload = get_validated_payload(
+            payload=payload,
+            schema=event_schemas.MetadataDatasetID,
+        )
+
+        await self._information_service.delete_dataset_information(
+            dataset_id=validated_payload.accession
         )
 
 
@@ -127,7 +175,7 @@ class InformationDeletionRequestedListener(
         self, resource_id: str, update: event_schemas.FileDeletionRequested
     ) -> None:
         """Consume change event for File Deletion Requests."""
-        await self.information_service.deletion_requested(file_id=update.file_id)
+        await self.information_service.delete_file_information(file_id=update.file_id)
 
     async def deleted(self, resource_id: str) -> None:
         """Consume event indicating the deletion of a File Deletion Request."""

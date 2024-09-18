@@ -17,7 +17,7 @@
 from hexkit.protocols.dao import DaoFactoryProtocol
 
 from dins.core import models
-from dins.ports.inbound.dao import FileInformationDaoPort
+from dins.ports.inbound.dao import DatasetDaoPort, FileInformationDaoPort
 
 
 async def get_file_information_dao(
@@ -27,5 +27,14 @@ async def get_file_information_dao(
     return await dao_factory.get_dao(
         name="file_information",
         dto_model=models.FileInformation,
-        id_field="file_id",
+        id_field="accession",
+    )
+
+
+async def get_dataset_dao(*, dao_factory: DaoFactoryProtocol) -> DatasetDaoPort:
+    """Setup the DAOs using the specified provider of the DaoFactoryProtocol."""
+    return await dao_factory.get_dao(
+        name="datasetFileAccessions",
+        dto_model=models.DatasetFileAccessions,
+        id_field="accession",
     )

@@ -16,7 +16,21 @@
 
 from fastapi.responses import JSONResponse
 
-from dins.core.models import FileInformation
+from dins.core.models import DatasetFileInformation, FileInformation
+
+
+class HttpDatasetInformationResponse(JSONResponse):
+    """Return relevant public information for the requested dataset."""
+
+    response_id = "datasetInformation"
+
+    def __init__(
+        self, *, dataset_information: DatasetFileInformation, status_code: int = 200
+    ):
+        """Construct message and init the response."""
+        super().__init__(
+            content=dataset_information.model_dump(), status_code=status_code
+        )
 
 
 class HttpFileInformationResponse(JSONResponse):

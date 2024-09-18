@@ -19,6 +19,25 @@ from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import BaseModel
 
 
+class HttpDatasetNotFoundError(HttpCustomExceptionBase):
+    """Raised when a file with given ID could not be found."""
+
+    exception_id = "datasetNotFound"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        dataset_id: str
+
+    def __init__(self, *, dataset_id: str, status_code: int = 404):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=f"Information for the dataset with ID {dataset_id} is not registered.",
+            data={"dataset_id": dataset_id},
+        )
+
+
 class HttpInformationNotFoundError(HttpCustomExceptionBase):
     """Raised when a file with given ID could not be found."""
 
