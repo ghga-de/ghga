@@ -25,20 +25,10 @@ from unittest.mock import Mock
 import pytest
 from pytest_httpx import HTTPXMock
 
-from ghga_connector.core import WKVSCaller
-from ghga_connector.core.api_calls import WorkPackageAccessor
-from ghga_connector.core.client import async_client
-from ghga_connector.core.exceptions import (
-    CantChangeUploadStatusError,
-    ConnectionFailedError,
-    InvalidWPSResponseError,
-    MaxPartNoExceededError,
-    NoWorkPackageAccessError,
-    UploadNotRegisteredError,
-    WellKnownValueNotFound,
-)
-from ghga_connector.core.uploading import Uploader
+from ghga_connector.core import WorkPackageAccessor, async_client, exceptions
+from ghga_connector.core.api_calls.well_knowns import WKVSCaller
 from ghga_connector.core.uploading.structs import UploadStatus
+from ghga_connector.core.uploading.uploader import Uploader
 from tests.fixtures.utils import mock_wps_token
 
 
@@ -48,10 +38,25 @@ from tests.fixtures.utils import mock_wps_token
     [
         (False, "pending", UploadStatus.UPLOADED, None),
         (False, "uploaded", UploadStatus.CANCELLED, None),
-        (False, "pending", UploadStatus.CANCELLED, CantChangeUploadStatusError),
-        (False, "uploadable", UploadStatus.UPLOADED, CantChangeUploadStatusError),
-        (False, "not_uploadable", UploadStatus.UPLOADED, UploadNotRegisteredError),
-        (True, "uploaded", UploadStatus.UPLOADED, ConnectionFailedError),
+        (
+            False,
+            "pending",
+            UploadStatus.CANCELLED,
+            exceptions.CantChangeUploadStatusError,
+        ),
+        (
+            False,
+            "uploadable",
+            UploadStatus.UPLOADED,
+            exceptions.CantChangeUploadStatusError,
+        ),
+        (
+            False,
+            "not_uploadable",
+            UploadStatus.UPLOADED,
+            exceptions.UploadNotRegisteredError,
+        ),
+        (True, "uploaded", UploadStatus.UPLOADED, exceptions.ConnectionFailedError),
     ],
 )
 async def test_patch_multipart_upload(
@@ -65,11 +70,11 @@ async def test_patch_multipart_upload(
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
     if bad_url:
         httpx_mock.add_exception(
-            exception=ConnectionFailedError(
+            exception=exceptions.ConnectionFailedError(
                 url=f"{api_url}/uploads/{upload_id}", reason="Testing"
             )
         )
-    elif expected_exception == CantChangeUploadStatusError:
+    elif expected_exception == exceptions.CantChangeUploadStatusError:
         httpx_mock.add_response(
             status_code=400,
             json={
@@ -78,7 +83,7 @@ async def test_patch_multipart_upload(
                 "exception_id": "uploadNotPending",
             },
         )
-    elif expected_exception == UploadNotRegisteredError:
+    elif expected_exception == exceptions.UploadNotRegisteredError:
         httpx_mock.add_response(
             status_code=404,
             json={"data": {}, "description": "", "exception_id": "noSuchUpload"},
@@ -108,7 +113,7 @@ async def test_patch_multipart_upload(
     [
         (None, 10, None),
         (2, 10, None),
-        (9999, 10001, MaxPartNoExceededError),
+        (9999, 10001, exceptions.MaxPartNoExceededError),
     ],
 )
 async def test_get_part_upload_urls(
@@ -181,7 +186,7 @@ async def test_get_wps_file_info(httpx_mock: HTTPXMock):
 
         httpx_mock.add_response(json={"files": files}, status_code=403)
 
-        with pytest.raises(NoWorkPackageAccessError):
+        with pytest.raises(exceptions.NoWorkPackageAccessError):
             wp_id, wp_token = mock_wps_token(1, None)
             work_package_accessor = partial_accessor(
                 access_token=wp_token,
@@ -191,7 +196,7 @@ async def test_get_wps_file_info(httpx_mock: HTTPXMock):
 
         httpx_mock.add_response(json={"files": files}, status_code=500)
 
-        with pytest.raises(InvalidWPSResponseError):
+        with pytest.raises(exceptions.InvalidWPSResponseError):
             wp_id, wp_token = mock_wps_token(1, None)
             work_package_accessor = partial_accessor(
                 access_token=wp_token,
@@ -201,7 +206,7 @@ async def test_get_wps_file_info(httpx_mock: HTTPXMock):
 
         httpx_mock.add_response(json={"files": files}, status_code=501)
 
-        with pytest.raises(InvalidWPSResponseError):
+        with pytest.raises(exceptions.InvalidWPSResponseError):
             wp_id, wp_token = mock_wps_token(1, None)
             work_package_accessor = partial_accessor(
                 access_token=wp_token,
@@ -218,7 +223,7 @@ async def test_wkvs_calls(httpx_mock: HTTPXMock):
     async with async_client() as client:
         wkvs_caller = WKVSCaller(client=client, wkvs_url=wkvs_url)
 
-        with pytest.raises(WellKnownValueNotFound):
+        with pytest.raises(exceptions.WellKnownValueNotFound):
             httpx_mock.add_response(status_code=404)
             await wkvs_caller.get_server_pubkey()
 

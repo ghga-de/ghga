@@ -20,7 +20,7 @@ from pathlib import Path
 import crypt4gh.keys
 import crypt4gh.lib
 
-from ghga_connector.core.crypt.abstract_bases import Decryptor
+from .abstract_bases import Decryptor
 
 
 class Crypt4GHDecryptor(Decryptor):

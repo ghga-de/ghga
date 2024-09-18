@@ -40,10 +40,10 @@ from ghga_connector.cli import (
     init_message_display,
     retrieve_upload_parameters,
 )
-from ghga_connector.core import exceptions, upload
-from ghga_connector.core.client import async_client
-from ghga_connector.core.constants import DEFAULT_PART_SIZE
+from ghga_connector.constants import DEFAULT_PART_SIZE
+from ghga_connector.core import async_client, exceptions
 from ghga_connector.core.crypt import Crypt4GHEncryptor
+from ghga_connector.core.main import upload_file
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.app import router
@@ -122,13 +122,13 @@ async def test_multipart_download(
     big_object = await get_big_s3_object(s3_fixture, object_size=file_size)
 
     # The download function will ask the user for input.
-    monkeypatch.setattr("ghga_connector.core.get_wps_token", mock_wps_token)
+    monkeypatch.setattr("ghga_connector.cli.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
-        "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
+        "ghga_connector.core.work_package.WorkPackageAccessor.get_package_files",
         AsyncMock(return_value=dict(zip([big_object.object_id], [""]))),
     )
     monkeypatch.setattr(
-        "ghga_connector.core.api_calls.work_package._decrypt",
+        "ghga_connector.core.work_package._decrypt",
         lambda data, key: data,
     )
 
@@ -222,13 +222,13 @@ async def test_download(
         monkeypatch.setenv(name, value)
 
     # The download function will ask the user for input.
-    monkeypatch.setattr("ghga_connector.core.get_wps_token", mock_wps_token)
+    monkeypatch.setattr("ghga_connector.cli.get_wps_token", mock_wps_token)
     monkeypatch.setattr(
-        "ghga_connector.core.api_calls.work_package.WorkPackageAccessor.get_package_files",
+        "ghga_connector.core.work_package.WorkPackageAccessor.get_package_files",
         AsyncMock(return_value=dict(zip([file.file_id], [""]))),
     )
     monkeypatch.setattr(
-        "ghga_connector.core.api_calls.work_package._decrypt",
+        "ghga_connector.core.work_package._decrypt",
         lambda data, key: data,
     )
 
@@ -267,7 +267,7 @@ async def test_download(
             if file_name == "file_not_downloadable":
                 # check both 403 scenarios
                 with patch(
-                    "ghga_connector.core.api_calls.work_package._decrypt",
+                    "ghga_connector.core.work_package._decrypt",
                     lambda data, key: "authfail_normal",
                 ):
                     with pytest.raises(
@@ -280,7 +280,7 @@ async def test_download(
                             my_private_key_path=Path(PRIVATE_KEY_FILE),
                         )
                 with patch(
-                    "ghga_connector.core.api_calls.work_package._decrypt",
+                    "ghga_connector.core.work_package._decrypt",
                     lambda data, key: "file_id_mismatch",
                 ):
                     with pytest.raises(
@@ -401,7 +401,7 @@ async def test_upload(
         message_display = init_message_display(debug=True)
         async with async_client() as client:
             parameters = await retrieve_upload_parameters(client=client)
-            await upload(
+            await upload_file(
                 api_url=parameters.ucs_api_url,
                 client=client,
                 file_id=uploadable_file.file_id,
@@ -500,7 +500,7 @@ async def test_multipart_upload(
         message_display = init_message_display(debug=True)
         async with async_client() as client:
             parameters = await retrieve_upload_parameters(client=client)
-            await upload(
+            await upload_file(
                 api_url=parameters.ucs_api_url,
                 client=client,
                 file_id=file_id,

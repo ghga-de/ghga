@@ -22,8 +22,7 @@ import httpx
 from ghga_service_commons.utils.crypt import decrypt
 from tenacity import RetryError
 
-from ghga_connector.core import exceptions
-from ghga_connector.core.client import HttpxClientConfigurator
+from . import HttpxClientConfigurator, exceptions
 
 
 class WorkPackageAccessor:

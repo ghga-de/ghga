@@ -22,14 +22,15 @@ from unittest.mock import Mock
 import pytest
 
 from ghga_connector.cli import CLIMessageDisplay
-from ghga_connector.core.api_calls import WorkPackageAccessor
-from ghga_connector.core.client import async_client
-from ghga_connector.core.downloading import Downloader
-from ghga_connector.core.downloading.downloader import TaskHandler
-from ghga_connector.core.downloading.structs import URLResponse
+from ghga_connector.core import (
+    PartRange,
+    WorkPackageAccessor,
+    async_client,
+    calc_part_ranges,
+)
+from ghga_connector.core.downloading import URLResponse
+from ghga_connector.core.downloading.downloader import Downloader, TaskHandler
 from ghga_connector.core.exceptions import DownloadError
-from ghga_connector.core.file_operations import calc_part_ranges
-from ghga_connector.core.structs import PartRange
 from tests.fixtures.s3 import (  # noqa: F401
     S3Fixture,
     get_big_s3_object,
@@ -103,7 +104,7 @@ async def test_download_content_range(
     "part_size",
     [1 * 1024 * 1024, 3 * 1024 * 1024, 5 * 1024 * 1024],
 )
-@pytest.mark.asyncio(scope="session")
+@pytest.mark.asyncio(loop_scope="session")
 async def test_download_file_parts(
     part_size: int,
     s3_fixture: S3Fixture,  # noqa: F811

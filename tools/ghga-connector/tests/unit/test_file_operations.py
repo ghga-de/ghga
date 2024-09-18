@@ -26,8 +26,8 @@ import crypt4gh.keys
 import pytest
 from ghga_service_commons.utils.temp_files import big_temp_file
 
+from ghga_connector.core import is_file_encrypted, read_file_parts
 from ghga_connector.core.crypt import Crypt4GHDecryptor, Crypt4GHEncryptor
-from ghga_connector.core.file_operations import is_file_encrypted, read_file_parts
 
 
 @pytest.mark.parametrize("from_part", (None, 3))

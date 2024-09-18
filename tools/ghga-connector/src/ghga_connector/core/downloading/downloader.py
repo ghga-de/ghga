@@ -26,24 +26,24 @@ from typing import Any, Union
 import httpx
 from tenacity import RetryError
 
-from ghga_connector.core import exceptions
-from ghga_connector.core.api_calls import WorkPackageAccessor
-from ghga_connector.core.client import HttpxClientConfigurator
-from ghga_connector.core.downloading.abstract_downloader import DownloaderBase
-from ghga_connector.core.downloading.api_calls import (
+from ghga_connector.core import (
+    AbstractMessageDisplay,
+    HttpxClientConfigurator,
+    PartRange,
+    ResponseExceptionTranslator,
+    WorkPackageAccessor,
+    calc_part_ranges,
+    exceptions,
+)
+
+from .abstract_downloader import DownloaderBase
+from .api_calls import (
     get_download_url,
     get_envelope_authorization,
     get_file_authorization,
 )
-from ghga_connector.core.downloading.progress_bar import ProgressBar
-from ghga_connector.core.downloading.structs import (
-    RetryResponse,
-    URLResponse,
-)
-from ghga_connector.core.file_operations import calc_part_ranges
-from ghga_connector.core.http_translation import ResponseExceptionTranslator
-from ghga_connector.core.message_display import AbstractMessageDisplay
-from ghga_connector.core.structs import PartRange
+from .progress_bar import ProgressBar
+from .structs import RetryResponse, URLResponse
 
 
 class TaskHandler:

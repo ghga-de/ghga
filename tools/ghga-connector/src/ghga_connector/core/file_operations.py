@@ -22,7 +22,7 @@ from io import BufferedReader
 from pathlib import Path
 from typing import Any
 
-from ghga_connector.core.structs import PartRange
+from .structs import PartRange
 
 
 def is_file_encrypted(file_path: Path):

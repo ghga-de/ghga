@@ -19,8 +19,9 @@ from pathlib import Path
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.crypt import Crypt4GHEncryptor
-from ghga_connector.core.uploading.abstract_uploader import UploaderBase
-from ghga_connector.core.uploading.uploader import ChunkedUploader
+
+from .abstract_uploader import UploaderBase
+from .uploader import ChunkedUploader
 
 
 async def run_upload(  # noqa: PLR0913

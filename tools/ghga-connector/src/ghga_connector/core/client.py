@@ -25,7 +25,7 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
-from ghga_connector.core.constants import TIMEOUT
+from ghga_connector.constants import TIMEOUT
 
 
 class HttpxClientConfigurator:
@@ -41,9 +41,6 @@ class HttpxClientConfigurator:
         retry_status_codes: list[int],
     ):
         """Configure client retry handler with exponential backoff"""
-        # clamp to client timeout, else large values might be bothersome on retries
-        if exponential_backoff_max > TIMEOUT:
-            exponential_backoff_max = int(TIMEOUT)
         cls.retry_handler = AsyncRetrying(
             reraise=True,
             retry=(

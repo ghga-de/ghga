@@ -18,7 +18,14 @@ This sub-package contains the main business functionality of this service.
 It should not contain any service API-related code.
 """
 
-from . import exceptions  # noqa: F401
-from .api_calls import WKVSCaller, WorkPackageAccessor  # noqa: F401
-from .main import decrypt_file, download, get_wps_token, upload  # noqa: F401
+from .client import HttpxClientConfigurator, async_client, httpx_client  # noqa: F401
+from .file_operations import (  # noqa: F401
+    calc_part_ranges,
+    get_segments,
+    is_file_encrypted,
+    read_file_parts,
+)
+from .http_translation import ResponseExceptionTranslator  # noqa: F401
 from .message_display import AbstractMessageDisplay, MessageColors  # noqa: F401
+from .structs import PartRange  # noqa: F401
+from .work_package import WorkPackageAccessor  # noqa: F401

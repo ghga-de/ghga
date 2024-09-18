@@ -21,8 +21,9 @@ from io import BufferedWriter
 from pathlib import Path
 from typing import Any
 
-from ghga_connector.core.downloading.structs import URLResponse
-from ghga_connector.core.structs import PartRange
+from ghga_connector.core import PartRange
+
+from .structs import URLResponse
 
 
 class DownloaderBase(ABC):

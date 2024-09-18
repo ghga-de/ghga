@@ -20,7 +20,7 @@ from hexkit.config import config_from_yaml
 from pydantic import Field, NonNegativeInt, PositiveInt
 from pydantic_settings import BaseSettings
 
-from ghga_connector.core.constants import DEFAULT_PART_SIZE, MAX_RETRIES, MAX_WAIT_TIME
+from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_RETRIES, MAX_WAIT_TIME
 
 
 @config_from_yaml(prefix="ghga_connector")
@@ -52,3 +52,6 @@ class Config(BaseSettings):
         default=[408, 500, 502, 503, 504],
         description="List of status codes that should trigger retrying a request.",
     )
+
+
+CONFIG = Config()

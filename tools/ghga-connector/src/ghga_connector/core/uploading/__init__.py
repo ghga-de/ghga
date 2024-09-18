@@ -15,6 +15,4 @@
 #
 """This subpackage contains functionality to upload a file to GHGA"""
 
-from .api_calls import Uploader  # noqa: F401
-from .main import run_upload  # noqa: F401
-from .uploader import UploaderBase  # noqa: F401
+from .abstract_uploader import UploaderBase  # noqa: F401

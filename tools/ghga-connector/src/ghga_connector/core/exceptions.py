@@ -20,7 +20,7 @@ from pathlib import Path
 
 import httpx
 
-from ghga_connector.core.constants import MAX_PART_NUMBER
+from ghga_connector.constants import MAX_PART_NUMBER
 
 
 class AbortBatchProcessError(RuntimeError):

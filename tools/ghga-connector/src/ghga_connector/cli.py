@@ -28,15 +28,26 @@ import httpx
 import typer
 from ghga_service_commons.utils import crypt
 
-from ghga_connector import core
-from ghga_connector.config import Config
-from ghga_connector.core.client import HttpxClientConfigurator, async_client
+from ghga_connector.config import CONFIG
+from ghga_connector.core import (
+    AbstractMessageDisplay,
+    HttpxClientConfigurator,
+    MessageColors,
+    WorkPackageAccessor,
+    async_client,
+    exceptions,
+)
+from ghga_connector.core.api_calls import WKVSCaller
 from ghga_connector.core.downloading.batch_processing import FileStager
+from ghga_connector.core.main import (
+    decrypt_file,
+    download_files,
+    get_wps_token,
+    upload_file,
+)
 
-CONFIG = Config()
 
-
-class CLIMessageDisplay(core.AbstractMessageDisplay):
+class CLIMessageDisplay(AbstractMessageDisplay):
     """
     Command line writer message display implementation,
     using different color based on information type
@@ -44,15 +55,15 @@ class CLIMessageDisplay(core.AbstractMessageDisplay):
 
     def display(self, message: str):
         """Write message with default color to stdout"""
-        typer.secho(message, fg=core.MessageColors.DEFAULT)
+        typer.secho(message, fg=MessageColors.DEFAULT)
 
     def success(self, message: str):
         """Write message to stdout representing information about a successful operation"""
-        typer.secho(message, fg=core.MessageColors.SUCCESS)
+        typer.secho(message, fg=MessageColors.SUCCESS)
 
     def failure(self, message: str):
         """Write message to stderr representing information about a failed operation"""
-        typer.secho(message, fg=core.MessageColors.FAILURE, err=True)
+        typer.secho(message, fg=MessageColors.FAILURE, err=True)
 
 
 @dataclass
@@ -61,7 +72,7 @@ class DownloadParameters:
 
     dcs_api_url: str
     file_ids_with_extension: dict[str, str]
-    work_package_accessor: core.WorkPackageAccessor
+    work_package_accessor: WorkPackageAccessor
 
 
 @dataclass
@@ -116,7 +127,7 @@ def init_message_display(debug: bool = False) -> CLIMessageDisplay:
 
 async def retrieve_upload_parameters(client: httpx.AsyncClient) -> UploadParameters:
     """Configure httpx client and retrieve necessary parameters from WKVS"""
-    wkvs_caller = core.WKVSCaller(client=client, wkvs_url=CONFIG.wkvs_api_url)
+    wkvs_caller = WKVSCaller(client=client, wkvs_url=CONFIG.wkvs_api_url)
     ucs_api_url = await wkvs_caller.get_ucs_api_url()
     server_pubkey = await wkvs_caller.get_server_pubkey()
 
@@ -131,11 +142,11 @@ async def retrieve_download_parameters(
     work_package_information: WorkPackageInformation,
 ) -> DownloadParameters:
     """Run necessary API calls to configure file download"""
-    wkvs_caller = core.WKVSCaller(client=client, wkvs_url=CONFIG.wkvs_api_url)
+    wkvs_caller = WKVSCaller(client=client, wkvs_url=CONFIG.wkvs_api_url)
     dcs_api_url = await wkvs_caller.get_dcs_api_url()
     wps_api_url = await wkvs_caller.get_wps_api_url()
 
-    work_package_accessor = core.WorkPackageAccessor(
+    work_package_accessor = WorkPackageAccessor(
         access_token=work_package_information.decrypted_token,
         api_url=wps_api_url,
         client=client,
@@ -154,11 +165,11 @@ async def retrieve_download_parameters(
 
 
 def get_work_package_information(
-    my_private_key: bytes, message_display: core.AbstractMessageDisplay
+    my_private_key: bytes, message_display: AbstractMessageDisplay
 ):
     """Fetch a work package id and work package token and decrypt the token"""
     # get work package access token and id from user input
-    work_package_id, work_package_token = core.get_wps_token(
+    work_package_id, work_package_token = get_wps_token(
         max_tries=3, message_display=message_display
     )
     decrypted_token = crypt.decrypt(data=work_package_token, key=my_private_key)
@@ -197,7 +208,7 @@ async def upload(
     )
     async with async_client() as client:
         parameters = await retrieve_upload_parameters(client)
-        await core.upload(
+        await upload_file(
             api_url=parameters.ucs_api_url,
             client=client,
             file_id=file_id,
@@ -238,12 +249,10 @@ async def download(
 ):
     """Command to download files"""
     if not my_public_key_path.is_file():
-        raise core.exceptions.PubKeyFileDoesNotExistError(
-            public_key_path=my_public_key_path
-        )
+        raise exceptions.PubKeyFileDoesNotExistError(public_key_path=my_public_key_path)
 
     if not output_dir.is_dir():
-        raise core.exceptions.DirectoryDoesNotExistError(directory=output_dir)
+        raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
     my_public_key = crypt4gh.keys.get_public_key(filepath=my_public_key_path)
     my_private_key = crypt4gh.keys.get_private_key(
@@ -283,7 +292,7 @@ async def download(
             staged_files = await stager.get_staged_files()
             for file_id in staged_files:
                 message_display.display(f"Downloading file with id '{file_id}'...")
-                await core.download(
+                await download_files(
                     api_url=parameters.dcs_api_url,
                     client=client,
                     file_id=file_id,
@@ -325,13 +334,13 @@ def decrypt(  # noqa: PLR0912, C901
     message_display = init_message_display(debug=debug)
 
     if not input_dir.is_dir():
-        raise core.exceptions.DirectoryDoesNotExistError(directory=input_dir)
+        raise exceptions.DirectoryDoesNotExistError(directory=input_dir)
 
     if not output_dir:
         output_dir = input_dir
 
     if output_dir.exists() and not output_dir.is_dir():
-        raise core.exceptions.OutputPathIsNotDirectory(directory=output_dir)
+        raise exceptions.OutputPathIsNotDirectory(directory=output_dir)
 
     if not output_dir.exists():
         message_display.display(f"Creating output directory '{output_dir}'")
@@ -358,7 +367,7 @@ def decrypt(  # noqa: PLR0912, C901
 
         try:
             message_display.display(f"Decrypting file with id '{input_file}'...")
-            core.decrypt_file(
+            decrypt_file(
                 input_file=input_file,
                 output_file=output_file,
                 decryption_private_key_path=my_private_key_path,

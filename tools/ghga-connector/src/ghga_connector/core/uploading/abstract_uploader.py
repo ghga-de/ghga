@@ -18,7 +18,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 
-from ghga_connector.core.uploading.structs import UploadStatus
+from .structs import UploadStatus
 
 
 class UploaderBase(ABC):

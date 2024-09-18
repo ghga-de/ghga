@@ -17,7 +17,7 @@
 """Config utilies."""
 
 from ghga_connector.config import Config
-from ghga_connector.core.constants import DEFAULT_PART_SIZE
+from ghga_connector.constants import DEFAULT_PART_SIZE
 
 DEFAULT_TEST_CONFIG = Config(
     max_retries=0,

@@ -20,16 +20,18 @@ from pathlib import Path
 
 import httpx
 
-from ghga_connector.core import exceptions
-from ghga_connector.core.api_calls import WorkPackageAccessor, is_service_healthy
-from ghga_connector.core.crypt import Crypt4GHDecryptor
-from ghga_connector.core.downloading import Downloader
-from ghga_connector.core.file_operations import is_file_encrypted
-from ghga_connector.core.message_display import AbstractMessageDisplay
-from ghga_connector.core.uploading import Uploader, run_upload
+from . import exceptions
+from .api_calls import is_service_healthy
+from .crypt import Crypt4GHDecryptor
+from .downloading.downloader import Downloader
+from .file_operations import is_file_encrypted
+from .message_display import AbstractMessageDisplay
+from .uploading.main import run_upload
+from .uploading.uploader import Uploader
+from .work_package import WorkPackageAccessor
 
 
-async def upload(  # noqa: PLR0913
+async def upload_file(  # noqa: PLR0913
     *,
     api_url: str,
     client: httpx.AsyncClient,
@@ -91,7 +93,7 @@ async def upload(  # noqa: PLR0913
     message_display.success(f"File with id '{file_id}' has been successfully uploaded.")
 
 
-async def download(  # noqa: PLR0913
+async def download_files(  # noqa: PLR0913
     *,
     api_url: str,
     client: httpx.AsyncClient,

@@ -16,5 +16,6 @@
 """Subpackage containing all encryption/decryption related functionality"""
 
 from .abstract_bases import Decryptor, Encryptor  # noqa: F401
+from .checksums import Checksums  # noqa: F401
 from .decryption import Crypt4GHDecryptor  # noqa: F401
 from .encryption import Crypt4GHEncryptor  # noqa: F401

@@ -27,9 +27,10 @@ import crypt4gh.keys
 import crypt4gh.lib
 from nacl.bindings import crypto_aead_chacha20poly1305_ietf_encrypt
 
-from ghga_connector.core.crypt.abstract_bases import Encryptor
-from ghga_connector.core.crypt.checksums import Checksums
-from ghga_connector.core.file_operations import get_segments, read_file_parts
+from ghga_connector.core import get_segments, read_file_parts
+
+from .abstract_bases import Encryptor
+from .checksums import Checksums
 
 
 class Crypt4GHEncryptor(Encryptor):

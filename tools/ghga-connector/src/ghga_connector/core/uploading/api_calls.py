@@ -23,11 +23,11 @@ from pathlib import Path
 import crypt4gh.keys
 import httpx
 
-from ghga_connector.core import exceptions
-from ghga_connector.core.constants import MAX_PART_NUMBER
-from ghga_connector.core.http_translation import ResponseExceptionTranslator
-from ghga_connector.core.uploading.abstract_uploader import UploaderBase
-from ghga_connector.core.uploading.structs import UploadStatus
+from ghga_connector.constants import MAX_PART_NUMBER
+from ghga_connector.core import ResponseExceptionTranslator, exceptions
+
+from .abstract_uploader import UploaderBase
+from .structs import UploadStatus
 
 
 class Uploader(UploaderBase):

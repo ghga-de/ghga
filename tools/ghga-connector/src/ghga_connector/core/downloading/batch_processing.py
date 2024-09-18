@@ -22,15 +22,18 @@ from time import sleep, time
 import httpx
 
 from ghga_connector.config import Config
-from ghga_connector.core import exceptions
-from ghga_connector.core.api_calls import WorkPackageAccessor, is_service_healthy
-from ghga_connector.core.downloading.api_calls import (
-    RetryResponse,
-    URLResponse,
+from ghga_connector.core import (
+    AbstractMessageDisplay,
+    WorkPackageAccessor,
+    exceptions,
+)
+from ghga_connector.core.api_calls import is_service_healthy
+
+from .api_calls import (
     get_download_url,
     get_file_authorization,
 )
-from ghga_connector.core.message_display import AbstractMessageDisplay
+from .structs import RetryResponse, URLResponse
 
 
 class InputHandler(ABC):
