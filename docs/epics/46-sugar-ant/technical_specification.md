@@ -187,6 +187,7 @@ Additionally, the following RPC-style endpoints will be added:
     - `204 No Content`: state changed to `unverified`
     - `401 Unauthorized`: auth error (not a data steward)
     - `404 Not Found`: the IVA has not been found
+  - *should also send a notification to the user*
 - `POST /rpc/ivas/{iva_id}/request-code`
   - *request the verification of the specified IVA*
   - auth header: internal token
@@ -237,6 +238,8 @@ Additionally, the following RPC-style endpoints will be added:
 
 The `Claims` model must provide a new `iva_id` field, as also specified in the section on backend model changes below.
 
+This field must now always be set whenever a `CONTROLLED_ACCESS_GRANTS` or `GHGA_ROLE` claim is created. The claim is only considered valid if the corresponding IVA exists in a verified state.
+
 The claims repository currently has an endpoint
 
 - `POST /download-access/users/{user_id}/datasets/{dataset_id}`
@@ -250,6 +253,12 @@ The claims repository also has endpoints at
 - `GET /download-access/users/{user_id}/`
 
 The routes of these endpoints do not need to be changed. However, these endpoints must now also check that the corresponding claims are bound to IVAs that have been verified for the given user.
+
+Currently, the data stewards are defined via the configuration of the claims repository, which is used to seed the claims repository with data steward claims. This configuration needs to be extended to also include the type and value of an associated IVA. The code that seeds the repository will create not only the data steward claims, but also the associated users and IVAs if these do not exist. However, it will not set the IVA state to `verified`.
+
+This means that at least for one data steward, the verification of the corresponding IVA needs to be set manually in the database. This data steward can then also verify the IVAs of other data stewards via the API. The inter-service integration tests need to set the state of the first data steward via the "state management service" since this cannot be done with pure black-box testing via the API.
+
+ Note that the seeding process mentioned above first removes all existing data steward claims before adding the configured claims, but it keeps the existing data stewards and the IVAs including the state of these IVAs.
 
 ### Access Request Service
 
@@ -278,6 +287,8 @@ There are only the following two exceptions where the token will be also added b
    when requested by users to confirm a name an email change
   - the user must be already registered
   - the `id` field of the auth context will contain the internal id of the user, and it must correspond to the `user_id` in the path
+
+The `role` field is set in the "token exchange" code that converts the OIDC token to an internal access token. This code checks whether the current user is active and has a valid claim granting a GHGA role. In addition to checking the validity of the claim, the code now also needs to check whether the claim has the `iva_id` field set which is associated with an existing IVA in the verified state.
 
 ### Service Commons Library
 
@@ -406,9 +417,9 @@ Each existing IVA in the state `unverified` should have a button "request verifi
 
 After clicking "request verification", the state of the IVA should be moved from `unverified` to `code_requested`, a confirmation email should be sent to the user and a notification email should be sent to a data steward.
 
-After clicking "verify", the verification code should be requested from the user via an input field, and the state of the IVA should be moved from `code-transmitted` to `verified`. If this does not succeed, a corresponding error message must be shown to the user. After three failed attempts or when the verification code expired, users should be informed that they need to re-request the verification because the verification code expired.
+After clicking "verify", the verification code should be requested from the user via an input field, and the state of the IVA should be moved from `code-transmitted` to `verified`, but only if the verification succeeds. If this does not succeed, a corresponding error message must be shown to the user. After three failed attempts or when the verification code expired, users should be informed that they need to re-request the verification because the verification code is no longer valid.
 
-After the user requested verification, a data steward should have received a notification. The data steward should be able to access an "IVA browser" page that lists all users and their IVAs, similar to the "access request browser". The IVAs in the state `code_requested` or `code_created` should have a button "(Re)create code". After clicking the button, the IVA should be moved to the state `code_created` and a dialog should appear that shows the verification code and ask the data steward to send it to the user via the selected IVA. The dialog should have three buttons: "Cancel" would revert the creation of the code and reset the state to `code_requested`, "Send later" would do nothing, but remind the data steward to confirm the transmission of the code later, and "Confirm transmission" would move the IVA to the state `code-transmitted`. This will also notify the user via an email that the code has been transmitted. Of course the code itself should *not* be sent in the notification email since it is expected to be sent via the transmission channel specified in the IVA. The IVAs in the state `code_created` should also have a button "confirm transmission". All IVAs should also have a button "Invalidate" that would reset its state to `unverified`.
+After the user requested verification, a data steward should have received a notification. The data steward should be able to access an "IVA browser" page that lists all users and their IVAs, similar to the "access request browser". The IVAs in the state `code_requested` or `code_created` should have a button "(Re)create code". After clicking the button, the IVA should be moved to the state `code_created` and a dialog should appear that shows the verification code and ask the data steward to send it to the user via the selected IVA. The dialog should have three buttons: "Cancel" would revert the creation of the code and reset the state to `code_requested`, "Send later" would do nothing, but remind the data steward to confirm the transmission of the code later, and "Confirm transmission" would move the IVA to the state `code-transmitted`. This will also notify the user via an email that the code has been transmitted. Of course the code itself should *not* be sent in the notification email since it is expected to be sent via the transmission channel specified in the IVA. The IVAs in the state `code_created` should also have a button "Confirm transmission". All IVAs should also have a button "Invalidate" that would reset its state to `unverified` and inform the user via a notification.
 
 The RPC-style endpoints that can be used to move the state of the IVAs and send corresponding notifications are explained in the section "IVA Management" above.
 
