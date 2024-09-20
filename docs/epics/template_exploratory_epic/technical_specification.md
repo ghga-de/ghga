@@ -10,7 +10,7 @@ Epic planning and implementation follows the
 
 ## Principle Components of Exploration:
 
-Principal topics and components that shall be part of this exporation.
+Principal topics and components that shall be part of this exploration.
 Moreover, lists the questions that shall be answered.
 
 - \<Provide a list here.\>
