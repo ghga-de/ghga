@@ -16,6 +16,7 @@
 
 """Unit tests for the utils module."""
 
+from datetime import timedelta
 from typing import cast
 
 import pytest
@@ -39,7 +40,7 @@ from auth_service.user_management.user_registry.ports.dao import IvaDao, UserDao
 
 from ....fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
 
-pytestmark = pytest.mark.asyncio(scope="module")
+pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 
 @pytest.mark.parametrize("status", [UserStatus.ACTIVE, UserStatus.INACTIVE])
@@ -109,7 +110,7 @@ async def test_iva_exists_when_it_belongs_to_a_different_user():
     assert await user_with_iva_exists("other-user-id", iva_id, **kwargs) is False  # type: ignore
 
 
-@pytest.mark.parametrize("state", IvaState.__members__.values())
+@pytest.mark.parametrize("state", IvaState)
 async def test_iva_is_verified(state: IvaState):
     """Test that existence of verified IVAs for users can be checked."""
     user_id, iva_id = "some-user-id", "some-iva-id"
@@ -129,42 +130,176 @@ async def test_iva_is_verified(state: IvaState):
 
     assert await iva_is_verified(None, None, **kwargs) is False  # type: ignore
     assert await iva_is_verified(None, iva_id, **kwargs) is False  # type: ignore
-    assert await iva_is_verified(user_id, None, **kwargs) is False  # type: ignore
+    assert await iva_is_verified(user_id, None, **kwargs) is False
     assert await iva_is_verified("other-user-id", iva_id, **kwargs) is False
     assert await iva_is_verified(user_id, "other-iva-id", **kwargs) is False
     expected_verified = state == IvaState.VERIFIED
     assert await iva_is_verified(user_id, iva_id, **kwargs) is expected_verified
 
 
-async def test_is_data_steward():
-    """Test check that a user is a data steward."""
-    dummy_claim_dao = DummyClaimDao()
-    invalid_date = dummy_claim_dao.invalid_date
-    claim_dao = cast(ClaimDao, dummy_claim_dao)
-    user_dao = cast(UserDao, DummyUserDao())
-    assert not await is_data_steward(
-        "john@ghga.de", user_dao=user_dao, claim_dao=claim_dao
+@pytest.mark.parametrize("state", IvaState)
+async def test_is_data_steward_with_iva(state: IvaState):
+    """Data steward claim must have an IVA that is in the verified state."""
+    user_id = "james@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    now = now_as_utc()
+    iva = Iva(
+        id="data-steward-iva-id",
+        user_id=user_id,
+        value="123/456",
+        type=IvaType.PHONE,
+        state=state,
+        created=now,
+        changed=now,
     )
-    user_dao = cast(UserDao, DummyUserDao(id_="james@ghga.de"))
+    iva_dao = cast(IvaDao, DummyIvaDao([iva]))
+    expected_is_data_steward = state == IvaState.VERIFIED
+    assert (
+        await is_data_steward(
+            user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
+        )
+        == expected_is_data_steward
+    )
+
+
+async def test_is_data_steward_without_iva_id():
+    """Data steward claim must have an associated IVA ID."""
+    user_id = "james@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    claim = await claim_dao.get_by_id("data-steward-claim-id")
+    assert claim.iva_id == "data-steward-iva-id"
+    await claim_dao.update(claim.model_copy(update={"iva_id": None}))
+    claim = await claim_dao.get_by_id("data-steward-claim-id")
+    assert not claim.iva_id
+    iva_dao = cast(IvaDao, DummyIvaDao())
+    assert not await is_data_steward(
+        user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
+    )
+
+
+async def test_is_data_steward_with_non_existing_iva():
+    """Data steward claim must have an existing IVA."""
+    user_id = "james@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    iva_dao = cast(IvaDao, DummyIvaDao([]))
+    assert not await is_data_steward(
+        user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
+    )
+
+
+async def test_is_data_steward_with_wrong_claim():
+    """Data steward claim must have the proper type."""
+    user_id = "john@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    iva_dao = cast(IvaDao, DummyIvaDao())
+    assert not await is_data_steward(
+        user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
+    )
+
+
+async def test_is_data_steward_with_expired_claim():
+    """Data steward claim must have a claim that is not expired."""
+    user_id = "james@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    iva_dao = cast(IvaDao, DummyIvaDao())
+    claim = await claim_dao.get_by_id("data-steward-claim-id")
+    now = now_as_utc()
+    assert claim.valid_from <= now <= claim.valid_until
     assert await is_data_steward(
-        "james@ghga.de", user_dao=user_dao, claim_dao=claim_dao
+        user_id,
+        user_dao=user_dao,
+        iva_dao=iva_dao,
+        claim_dao=claim_dao,
+        now=lambda: now,
     )
     assert not await is_data_steward(
-        "james@ghga.de",
+        user_id,
         user_dao=user_dao,
+        iva_dao=iva_dao,
         claim_dao=claim_dao,
-        now=lambda: invalid_date,
+        now=lambda: claim.valid_from - timedelta(1),
     )
+    assert not await is_data_steward(
+        user_id,
+        user_dao=user_dao,
+        iva_dao=iva_dao,
+        claim_dao=claim_dao,
+        now=lambda: claim.valid_until + timedelta(1),
+    )
+
+
+async def test_is_data_steward_with_revoked_claim():
+    """Data steward claim must not have been revoked."""
+    user_id = "james@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    iva_dao = cast(IvaDao, DummyIvaDao())
+
+    assert await is_data_steward(
+        user_id,
+        user_dao=user_dao,
+        iva_dao=iva_dao,
+        claim_dao=claim_dao,
+    )
+
+    claim = await claim_dao.get_by_id("data-steward-claim-id")
+    assert claim.revocation_date is None
+    await claim_dao.update(claim.model_copy(update={"revocation_date": now_as_utc()}))
+    claim = await claim_dao.get_by_id("data-steward-claim-id")
+    assert claim.revocation_date
+
+    assert not await is_data_steward(
+        user_id,
+        user_dao=user_dao,
+        iva_dao=iva_dao,
+        claim_dao=claim_dao,
+    )
+
+
+async def test_is_data_steward_with_non_existing_user():
+    """Data steward claim must have an associated user."""
+    user_id = "james@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    iva_dao = cast(IvaDao, DummyIvaDao())
+
+    assert await is_data_steward(
+        user_id,
+        user_dao=user_dao,
+        iva_dao=iva_dao,
+        claim_dao=claim_dao,
+    )
+
     user_dao = cast(UserDao, DummyUserDao(id_="jane@ghga.de"))
     assert not await is_data_steward(
-        "james@ghga.de", user_dao=user_dao, claim_dao=claim_dao
+        user_id,
+        user_dao=user_dao,
+        iva_dao=iva_dao,
+        claim_dao=claim_dao,
     )
-    assert not await is_data_steward(
-        "john@ghga.de", user_dao=user_dao, claim_dao=claim_dao
-    )
-    user_dao = cast(
-        UserDao, DummyUserDao(id_="james@ghga.de", status=UserStatus.INACTIVE)
-    )
-    assert not await is_data_steward(
-        "james@ghga.de", user_dao=user_dao, claim_dao=claim_dao
-    )
+
+
+@pytest.mark.parametrize("status", UserStatus)
+async def test_is_data_steward_with_inactive_user(status: UserStatus):
+    """Data steward must have an active user status."""
+    user_id = "james@ghga.de"
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    iva_dao = cast(IvaDao, DummyIvaDao())
+
+    for status in UserStatus:
+        user_dao = cast(UserDao, DummyUserDao(id_=user_id, status=status))
+        expected_is_data_steward = status == UserStatus.ACTIVE
+        assert (
+            await is_data_steward(
+                user_id,
+                user_dao=user_dao,
+                iva_dao=iva_dao,
+                claim_dao=claim_dao,
+            )
+            == expected_is_data_steward
+        )

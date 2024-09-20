@@ -217,6 +217,5 @@ class SessionStore(SessionStorePort[Session]):
         created = session.created.timestamp()
         timeout_soft = max(0, int(last_used + timeout_soft - now + 0.5))
         timeout_hard = max(0, int(created + timeout_hard - now + 0.5))
-        if timeout_soft > timeout_hard:
-            timeout_soft = timeout_hard
+        timeout_soft = min(timeout_soft, timeout_hard)
         return (timeout_soft, timeout_hard)

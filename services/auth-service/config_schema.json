@@ -1,5 +1,16 @@
 {
   "$defs": {
+    "IvaType": {
+      "description": "The type of IVA",
+      "enum": [
+        "Phone",
+        "Fax",
+        "PostalAddress",
+        "InPerson"
+      ],
+      "title": "IvaType",
+      "type": "string"
+    },
     "TOTPAlgorithm": {
       "description": "Hash algorithm used for TOTP code generation",
       "enum": [
@@ -9,6 +20,45 @@
       ],
       "title": "TOTPAlgorithm",
       "type": "string"
+    },
+    "UserWithIVA": {
+      "additionalProperties": false,
+      "description": "User with external ID and associated IVA.",
+      "properties": {
+        "ext_id": {
+          "description": "The external ID of the user",
+          "title": "Ext Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "The full name of the user",
+          "title": "Name",
+          "type": "string"
+        },
+        "email": {
+          "description": "The email address of the user",
+          "title": "Email",
+          "type": "string"
+        },
+        "iva_type": {
+          "$ref": "#/$defs/IvaType",
+          "description": "The type of the validation address of the user"
+        },
+        "iva_value": {
+          "description": "The actual validation address of the user",
+          "title": "Iva Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ext_id",
+        "name",
+        "email",
+        "iva_type",
+        "iva_value"
+      ],
+      "title": "UserWithIVA",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -253,13 +303,8 @@
       "title": "Totp Image"
     },
     "totp_algorithm": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/TOTPAlgorithm"
-        }
-      ],
-      "default": "sha1",
-      "description": "Hash algorithm used for TOTP code generation"
+      "$ref": "#/$defs/TOTPAlgorithm",
+      "default": "sha1"
     },
     "totp_digits": {
       "default": 6,
@@ -618,16 +663,9 @@
     },
     "add_as_data_stewards": {
       "default": [],
-      "description": "a list of external IDs of data stewards or user objects to seed the claims repository with, all other data steward claims will be removed (only used with claims API)",
+      "description": "A list of of data stewards to seed the claims repository with. All other data steward claims will be removed. This is only used with the claims API.",
       "items": {
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "object"
-          }
-        ]
+        "$ref": "#/$defs/UserWithIVA"
       },
       "title": "Add As Data Stewards",
       "type": "array"

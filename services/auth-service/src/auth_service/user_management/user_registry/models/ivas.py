@@ -63,7 +63,7 @@ class IvaBasicData(BaseDto):
     """Basic IVA data"""
 
     type: IvaType = Field(default=..., description="The type of the IVA")
-    value: str = Field(default=..., description="The actual address")
+    value: str = Field(default=..., description="The actual validation address")
 
 
 class IvaWithState(IvaBasicData):

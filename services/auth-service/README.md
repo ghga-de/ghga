@@ -49,13 +49,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:2.5.2
+docker pull ghga/auth-service:2.6.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:2.5.2 .
+docker build -t ghga/auth-service:2.6.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -63,7 +63,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:2.5.2 --help
+docker run -p 8080:8080 ghga/auth-service:2.6.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -243,11 +243,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`totp_algorithm`**: Hash algorithm used for TOTP code generation. Default: `"sha1"`.
-
-  - **All of**
-
-    - : Refer to *[#/$defs/TOTPAlgorithm](#%24defs/TOTPAlgorithm)*.
+- **`totp_algorithm`**: Refer to *[#/$defs/TOTPAlgorithm](#%24defs/TOTPAlgorithm)*. Default: `"sha1"`.
 
 - **`totp_digits`** *(integer)*: Number of digits used for the TOTP code. Minimum: `6`. Maximum: `12`. Default: `6`.
 
@@ -456,15 +452,9 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`add_as_data_stewards`** *(array)*: a list of external IDs of data stewards or user objects to seed the claims repository with, all other data steward claims will be removed (only used with claims API). Default: `[]`.
+- **`add_as_data_stewards`** *(array)*: A list of of data stewards to seed the claims repository with. All other data steward claims will be removed. This is only used with the claims API. Default: `[]`.
 
-  - **Items**
-
-    - **Any of**
-
-      - *string*
-
-      - *object*
+  - **Items**: Refer to *[#/$defs/UserWithIVA](#%24defs/UserWithIVA)*.
 
 - **`oidc_authority_url`** *(string, format: uri)*: external OIDC authority URL used by the auth adapter. Default: `"https://login.aai.lifescience-ri.eu/oidc/"`.
 
@@ -485,7 +475,21 @@ The service requires the following configuration parameters:
 ## Definitions
 
 
+- <a id="%24defs/IvaType"></a>**`IvaType`** *(string)*: The type of IVA. Must be one of: `["Phone", "Fax", "PostalAddress", "InPerson"]`.
+
 - <a id="%24defs/TOTPAlgorithm"></a>**`TOTPAlgorithm`** *(string)*: Hash algorithm used for TOTP code generation. Must be one of: `["sha1", "sha256", "sha512"]`.
+
+- <a id="%24defs/UserWithIVA"></a>**`UserWithIVA`** *(object)*: User with external ID and associated IVA. Cannot contain additional properties.
+
+  - **`ext_id`** *(string, required)*: The external ID of the user.
+
+  - **`name`** *(string, required)*: The full name of the user.
+
+  - **`email`** *(string, required)*: The email address of the user.
+
+  - **`iva_type`**: The type of the validation address of the user. Refer to *[#/$defs/IvaType](#%24defs/IvaType)*.
+
+  - **`iva_value`** *(string, required)*: The actual validation address of the user.
 
 
 ### Usage:

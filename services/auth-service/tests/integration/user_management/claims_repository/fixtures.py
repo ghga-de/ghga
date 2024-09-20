@@ -27,6 +27,10 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from auth_service.config import Config
 from auth_service.deps import get_config, get_mongodb_dao_factory
 from auth_service.user_management.api.main import app, lifespan
+from auth_service.user_management.claims_repository.models.config import (
+    IvaType,
+    UserWithIVA,
+)
 from auth_service.user_management.user_registry.models.users import User, UserStatus
 
 data_steward = User(
@@ -38,7 +42,15 @@ data_steward = User(
     registration_date=now_as_utc(),
 )
 
-add_as_data_stewards = [data_steward.ext_id]
+add_as_data_stewards = [
+    UserWithIVA(
+        ext_id=data_steward.ext_id,
+        name=data_steward.name,
+        email=data_steward.email,
+        iva_type=IvaType.IN_PERSON,
+        iva_value="Epping Forest",
+    )
+]
 
 
 async def seed_database(config: Config) -> None:
@@ -72,8 +84,8 @@ async def fixture_full_client(
         service_name=kafka.config.service_name,
         service_instance_id=kafka.config.service_instance_id,
         provide_apis=["claims"],
-        add_as_data_stewards=add_as_data_stewards,  # type: ignore
-    )  # pyright: ignore
+        add_as_data_stewards=add_as_data_stewards,
+    )
     await seed_database(config)
     app.dependency_overrides[get_config] = lambda: config
     async with lifespan(app), FullClient(app) as client:

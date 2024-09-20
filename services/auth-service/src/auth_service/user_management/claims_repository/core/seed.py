@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Functions to seed the repository with user claims."""
+"""Functions to seed the claims repository with user claims."""
 
 import logging
 
@@ -24,27 +24,25 @@ from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
 
 from auth_service.config import Config
 from auth_service.deps import get_mongo_kafka_dao_factory, get_mongodb_dao_factory
-from auth_service.user_management.claims_repository.core.claims import (
-    create_data_steward_claim,
-)
-from auth_service.user_management.claims_repository.core.utils import (
-    is_data_steward_claim,
-)
 from auth_service.user_management.claims_repository.deps import (
     ClaimDao,
     get_claim_dao,
     get_claim_dao_factory,
 )
-from auth_service.user_management.claims_repository.models.claims import VisaType
 from auth_service.user_management.user_registry.deps import (
+    IvaDao,
     UserDao,
+    get_iva_dao,
     get_user_dao,
     get_user_dao_factory,
 )
-from auth_service.user_management.user_registry.models.users import (
-    User,
-    UserStatus,
-)
+from auth_service.user_management.user_registry.models.ivas import Iva, IvaBasicData
+from auth_service.user_management.user_registry.models.users import User, UserStatus
+
+from ..models.claims import VisaType
+from ..models.config import UserWithIVA
+from .claims import create_data_steward_claim
+from .utils import is_data_steward_claim
 
 __all__ = ["seed_data_steward_claims"]
 
@@ -61,14 +59,12 @@ async def _remove_existing_data_steward_claims(claim_dao: ClaimDao) -> None:
     log.info("Removed %d existing data steward claim(s).", num_removed_claims)
 
 
-async def _add_user_with_ext_id(user: str | dict, user_dao: UserDao) -> User:
+async def _add_user_with_ext_id(info: UserWithIVA, user_dao: UserDao) -> User:
     """Add a new user with the given external ID to the database."""
-    if not isinstance(user, dict):
-        raise TypeError("User data (name and email) is missing.")
     user_dto = User(
-        ext_id=user["ext_id"],
-        name=user["name"],
-        email=user["email"],
+        ext_id=info.ext_id,
+        name=info.name,
+        email=info.email,
         title=None,
         status=UserStatus.ACTIVE,
         registration_date=now_as_utc(),
@@ -77,35 +73,92 @@ async def _add_user_with_ext_id(user: str | dict, user_dao: UserDao) -> User:
     return user_dto
 
 
+def _check_data_steward_info(info: UserWithIVA, user: User) -> None:
+    """Verify that the data steward has the given name and email address.
+
+    This serves as a security check to ensure that the right user is configured.
+    """
+    if user.name != info.name:
+        raise ValueError(
+            f"Configured data steward with external ID {info.ext_id}"
+            f" has the name '{user.name}', expected was '{info.name}'"
+        )
+    if user.email != info.email:
+        raise ValueError(
+            f"Configured data steward with external ID {info.ext_id}"
+            f" has the email address <{user.email}>, expected was <{info.email}>"
+        )
+
+
+async def _add_iva_for_user(user_id: str, data: IvaBasicData, iva_dao: IvaDao) -> Iva:
+    """Add a new IVA for the given user with the given basic data."""
+    now = now_as_utc()
+    iva_dto = Iva(user_id=user_id, created=now, changed=now, **data.model_dump())
+    await iva_dao.insert(iva_dto)
+    return iva_dto
+
+
 async def _add_configured_data_steward_claims(
-    data_stewards: list[str | dict], user_dao: UserDao, claim_dao: ClaimDao
+    data_stewards: list[UserWithIVA],
+    user_dao: UserDao,
+    iva_dao: IvaDao,
+    claim_dao: ClaimDao,
 ) -> None:
     # add configured data steward claims
     for data_steward in data_stewards:
-        ext_id = (
-            data_steward.get("ext_id")
-            if isinstance(data_steward, dict)
-            else data_steward
-        )
-        if not ext_id:
-            log.warning("External ID of data steward is missing: %r.", data_steward)
-            continue
+        # add the data steward as a user
+        ext_id = data_steward.ext_id
         try:
             user = await user_dao.find_one(mapping={"ext_id": ext_id})
         except MultipleHitsFoundError:
-            log.warning("External ID %r is not unique in the user registry.", ext_id)
-            continue
+            log.error("External ID %r is not unique in the user registry.", ext_id)
+            raise
         except NoHitsFoundError:
             try:
                 user = await _add_user_with_ext_id(data_steward, user_dao=user_dao)
             except Exception as error:
-                log.warning(
+                log.error(
                     "Could not add new user with external ID %r: %s", ext_id, error
                 )
-                continue
-            else:
-                log.warning("Added missing data steward with external ID %r.", ext_id)
-        claim = create_data_steward_claim(user.id)
+                raise
+            log.warning("Added missing data steward with external ID %r.", ext_id)
+        else:
+            _check_data_steward_info(data_steward, user)
+        # add the IVA of the data steward
+        iva_data = IvaBasicData(
+            type=data_steward.iva_type, value=data_steward.iva_value
+        )
+        try:
+            iva = await iva_dao.find_one(
+                mapping={
+                    "user_id": user.id,
+                    "type": iva_data.type,
+                    "value": iva_data.value,
+                }
+            )
+        except MultipleHitsFoundError:
+            log.error(
+                "IVA %s: %r is not unique for user with external ID %r.",
+                iva_data.type,
+                iva_data.value,
+                ext_id,
+            )
+            raise
+        except NoHitsFoundError:
+            try:
+                iva = await _add_iva_for_user(user.id, iva_data, iva_dao=iva_dao)
+            except Exception as error:
+                log.error(
+                    "Could not add new IVA for user with external ID %r: %s",
+                    ext_id,
+                    error,
+                )
+                raise
+            log.warning(
+                "Added missing IVA for data steward with external ID %r.", ext_id
+            )
+        # add the data steward claim for that user and that IVA
+        claim = create_data_steward_claim(user.id, iva.id)
         await claim_dao.insert(claim)
         log.info("Added data steward role for %r to the claims repository.", ext_id)
 
@@ -123,19 +176,18 @@ async def seed_data_steward_claims(config: Config) -> None:
         log.warning("No data stewards are defined in the configuration.")
     async with set_new_correlation_id():
         async for dao_publisher_factory in get_mongo_kafka_dao_factory(config=config):
-            user_dao = await get_user_dao(
-                dao_factory=get_user_dao_factory(
-                    config=config,
-                    dao_publisher_factory=dao_publisher_factory,
-                )
+            user_dao_factory = get_user_dao_factory(
+                config=config,
+                dao_publisher_factory=dao_publisher_factory,
             )
-            claim_dao = await get_claim_dao(
-                dao_factory=get_claim_dao_factory(
-                    config=config,
-                    dao_factory=get_mongodb_dao_factory(config=config),
-                )
+            user_dao = await get_user_dao(dao_factory=user_dao_factory)
+            iva_dao = await get_iva_dao(dao_factory=user_dao_factory)
+            claim_dao_factory = get_claim_dao_factory(
+                config=config,
+                dao_factory=get_mongodb_dao_factory(config=config),
             )
+            claim_dao = await get_claim_dao(dao_factory=claim_dao_factory)
             await _remove_existing_data_steward_claims(claim_dao=claim_dao)
             await _add_configured_data_steward_claims(
-                data_stewards, user_dao=user_dao, claim_dao=claim_dao
+                data_stewards, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
             )

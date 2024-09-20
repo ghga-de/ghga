@@ -71,7 +71,7 @@ async def user_with_iva_exists(
     return iva.user_id == user_id
 
 
-async def iva_is_verified(user_id: str, iva_id: str, *, iva_dao: IvaDao) -> bool:
+async def iva_is_verified(user_id: str, iva_id: str | None, *, iva_dao: IvaDao) -> bool:
     """Check that the specified IVA exists, belongs to the given user and is verified."""
     if not user_id or not iva_id:
         return False
@@ -86,18 +86,24 @@ async def is_data_steward(
     user_id: str,
     *,
     claim_dao: ClaimDao,
+    iva_dao: IvaDao,
     user_dao: UserDao | None = None,
     now: Callable[[], UTCDatetime] = now_as_utc,
 ):
     """Check whether the user with the given ID is an active data steward.
 
     If no User DAO is provided, the user is assumed to exist and be active.
+    We also require that the data steward claim has a verified associated IVA.
     """
     if user_dao and not await user_is_active(user_id, user_dao=user_dao):
         return False
     async for claim in claim_dao.find_all(
         mapping={"user_id": user_id, "visa_type": VisaType.GHGA_ROLE}
     ):
-        if is_valid_claim(claim, now=now) and is_data_steward_claim(claim):
+        if (
+            is_valid_claim(claim, now=now)
+            and is_data_steward_claim(claim)
+            and await iva_is_verified(user_id, claim.iva_id, iva_dao=iva_dao)
+        ):
             return True
     return False

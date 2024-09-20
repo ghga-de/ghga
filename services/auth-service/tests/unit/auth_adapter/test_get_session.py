@@ -25,7 +25,7 @@ from auth_service.auth_adapter.adapters.memory_session_store import MemorySessio
 from auth_service.auth_adapter.deps import SESSION_COOKIE, get_session
 from auth_service.config import CONFIG
 
-pytestmark = pytest.mark.asyncio(scope="module")
+pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 CSRF_TOKEN_HEADER = "X-CSRF-Token"
 

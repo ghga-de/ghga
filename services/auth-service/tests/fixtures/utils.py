@@ -315,9 +315,31 @@ class DummyIvaDao:
 
     ivas: list[Iva]
 
-    def __init__(self, ivas: list[Iva] | None = None):
+    def __init__(self, ivas: list[Iva] | None = None, state=IvaState.VERIFIED):
         """Initialize the DummyIvaDao."""
-        self.ivas = ivas if ivas else []
+        if ivas is None:
+            now = now_as_utc()
+            ivas = [
+                Iva(
+                    id="data-steward-iva-id",
+                    user_id="james@ghga.de",
+                    value="Nice to meet you",
+                    type=IvaType.IN_PERSON,
+                    state=state,
+                    created=now,
+                    changed=now,
+                ),
+                Iva(
+                    id="data-steward-iva-id",
+                    user_id="john@ghga.de",
+                    value="123/456",
+                    type=IvaType.PHONE,
+                    state=state,
+                    created=now,
+                    changed=now,
+                ),
+            ]
+        self.ivas = ivas
 
     async def get_by_id(self, id_: str) -> Iva:
         """Get a dummy IVA via its ID."""
@@ -401,6 +423,7 @@ class DummyClaimDao:
             Claim(
                 id="data-steward-claim-id",
                 user_id="james@ghga.de",
+                iva_id="data-steward-iva-id",
                 visa_type=VisaType.GHGA_ROLE,
                 visa_value="data_steward@some.org",
                 source="https://ghga.de",  # type: ignore
@@ -413,6 +436,7 @@ class DummyClaimDao:
             Claim(
                 id="data-access-claim-id",
                 user_id="john@ghga.de",
+                iva_id="data-access-iva-id",
                 visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
                 visa_value="https://ghga.de/datasets/DS0815",
                 source="https://ghga.de",  # type: ignore
@@ -430,6 +454,15 @@ class DummyClaimDao:
             if claim.id == id_:
                 return claim
         raise ResourceNotFoundError(id_=id_)
+
+    async def update(self, dto: Claim) -> None:
+        """Update a claim."""
+        for index, claim in enumerate(self.claims):
+            if claim.id == dto.id:
+                self.claims[index] = dto
+                break
+        else:
+            raise ResourceNotFoundError(id_=dto.id)
 
     async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[Claim]:
         """Find all dummy user claims."""
@@ -477,7 +510,7 @@ class DummyUserRegistry(UserRegistry):
     def __init__(self, *, config: UserRegistryConfig = CONFIG):
         """Initialize the DummyUserRegistry."""
         self.dummy_user_dao = DummyUserDao()
-        self.dummy_iva_dao = DummyIvaDao()
+        self.dummy_iva_dao = DummyIvaDao([])
         event_publisher = DummyEventPublisher()
         super().__init__(
             config=config,

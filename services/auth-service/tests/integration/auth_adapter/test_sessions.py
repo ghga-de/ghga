@@ -18,6 +18,7 @@
 
 import json
 from base64 import b64encode
+from collections.abc import Mapping
 
 import pytest
 from fastapi import status
@@ -32,15 +33,17 @@ from auth_service.auth_adapter.deps import (
 )
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import get_claim_dao
-from auth_service.user_management.user_registry.deps import get_user_dao
+from auth_service.user_management.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_management.user_registry.models.users import UserStatus
 
 from ...fixtures.utils import (
     RE_USER_INFO_URL,
     USER_INFO,
     DummyClaimDao,
+    DummyIvaDao,
     DummyUserDao,
     DummyUserTokenDao,
+    IvaState,
     create_access_token,
     headers_for_session,
 )
@@ -63,17 +66,24 @@ def expected_set_cookie(session_id: str) -> str:
     return f"session={session_id}; HttpOnly; Path=/; SameSite=lax; Secure"
 
 
-def setup_daos(**user_args: str) -> None:
+def setup_daos(
+    iva_state: IvaState = IvaState.VERIFIED,
+    **user_args: str,
+) -> None:
     """Setup the dummy DAOs for the tests."""
     user_dao = DummyUserDao(**user_args)
     main.app.dependency_overrides[get_user_dao] = lambda: user_dao
     user_token_dao = DummyUserTokenDao()
     main.app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
+    iva_dao = DummyIvaDao(state=iva_state)
+    main.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
     claim_dao = DummyClaimDao()
     main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
 
-def assert_session_header(response: Response, expected: dict[str, str | int]) -> None:
+def assert_session_header(
+    response: Response, expected: Mapping[str, str | int]
+) -> None:
     """Assert that the response session header is as expected."""
     session_header = response.headers.get("X-Session")
     assert session_header
@@ -400,7 +410,10 @@ async def test_login_with_cookie_and_registered_user(bare_client: BareClient):
     )
 
 
-async def test_login_with_cookie_and_registered_data_steward(bare_client: BareClient):
+@pytest.mark.parametrize("iva_state", IvaState)
+async def test_login_with_cookie_and_registered_data_steward(
+    iva_state: IvaState, bare_client: BareClient
+):
     """Test login request with session cookie for a registered data steward."""
     setup_daos(
         id_="james@ghga.de",
@@ -408,6 +421,7 @@ async def test_login_with_cookie_and_registered_data_steward(bare_client: BareCl
         name="James Steward",
         email="james@home.org",
         title="Dr.",
+        iva_state=iva_state,
     )
 
     store = await get_session_store(config=CONFIG)
@@ -423,18 +437,17 @@ async def test_login_with_cookie_and_registered_data_steward(bare_client: BareCl
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     assert SESSION_COOKIE not in response.cookies
-    assert_session_header(
-        response,
-        {
-            "id": "james@ghga.de",
-            "ext_id": "james@aai.org",
-            "name": "James Steward",
-            "email": "james@home.org",
-            "state": "Registered",
-            "title": "Dr.",
-            "role": "data_steward",
-        },
-    )
+    expected_session_header = {
+        "id": "james@ghga.de",
+        "ext_id": "james@aai.org",
+        "name": "James Steward",
+        "email": "james@home.org",
+        "state": "Registered",
+        "title": "Dr.",
+    }
+    if iva_state == IvaState.VERIFIED:
+        expected_session_header["role"] = "data_steward"
+    assert_session_header(response, expected_session_header)
 
 
 async def test_login_with_cookie_but_without_csrf_token(bare_client: BareClient):

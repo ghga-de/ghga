@@ -28,6 +28,7 @@ from pydantic import AnyUrl, Field, HttpUrl, field_validator
 
 from auth_service.auth_adapter.core.session_store import SessionConfig
 from auth_service.auth_adapter.core.totp import TOTPConfig
+from auth_service.user_management.claims_repository.models.config import UserWithIVA
 from auth_service.user_management.claims_repository.translators.dao import (
     ClaimDaoConfig,
 )
@@ -117,11 +118,11 @@ class Config(
         examples=["false", "true"],
     )
 
-    add_as_data_stewards: list[str | dict] = Field(
+    add_as_data_stewards: list[UserWithIVA] = Field(
         default=[],
-        description="a list of external IDs of data stewards or user objects"
-        " to seed the claims repository with,"
-        " all other data steward claims will be removed (only used with claims API)",
+        description="A list of of data stewards to seed the claims repository with."
+        " All other data steward claims will be removed."
+        " This is only used with the claims API.",
     )
 
     oidc_authority_url: HttpUrl = Field(

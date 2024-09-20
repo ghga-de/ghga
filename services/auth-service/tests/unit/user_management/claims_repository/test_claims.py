@@ -92,8 +92,11 @@ def test_is_internal_claim():
 
 def test_create_data_steward_claim():
     """Test that a data steward claim can be created."""
-    created_claim = create_data_steward_claim(user_id="some-user-id")
+    created_claim = create_data_steward_claim(
+        user_id="some-user-id", iva_id="some-claim_id"
+    )
     assert created_claim.user_id == "some-user-id"
+    assert created_claim.iva_id == "some-claim_id"
     full_claim = Claim(id="some-claim-id", **created_claim.model_dump())
     assert is_valid_claim(full_claim)
     assert is_data_steward_claim(full_claim)

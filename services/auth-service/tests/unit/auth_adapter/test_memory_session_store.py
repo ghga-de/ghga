@@ -31,7 +31,7 @@ USER2_KWARGS = dict(
     ext_id="jane@aai.org", user_name="Jane Roe", user_email="jane@home.org"
 )
 
-pytestmark = pytest.mark.asyncio(scope="module")
+pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 
 class MemorySessionStoreWithControlledTime(MemorySessionStore):

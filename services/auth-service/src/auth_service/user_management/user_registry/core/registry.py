@@ -266,7 +266,7 @@ class UserRegistry(UserRegistryPort):
         May raise an IvaRetrievalError.
         """
         ivas = await self._get_ivas(user_id=user_id, state=state)
-        external_fields = IvaData.model_fields
+        external_fields = set(IvaData.model_fields)
         return [IvaData(**iva.model_dump(include=external_fields)) for iva in ivas]
 
     async def get_ivas_with_users(
@@ -290,7 +290,7 @@ class UserRegistry(UserRegistryPort):
         except Exception as error:
             log.error("Could not retrieve users for IVAs: %s", error)
             raise self.IvaRetrievalError(user_id=user_id, state=state) from error
-        external_fields = IvaData.model_fields
+        external_fields = set(IvaData.model_fields)
         ivas_with_users: list[IvaAndUserData] = []
         for iva in ivas:
             try:

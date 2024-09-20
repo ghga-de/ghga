@@ -48,7 +48,7 @@ pytestmark = [
         (default_config, custom_config),
         ids=("default_config", "custom_config"),
     ),
-    pytest.mark.asyncio(scope="package"),
+    pytest.mark.asyncio(loop_scope="package"),
 ]
 
 

@@ -745,6 +745,7 @@ async def test_get_claims_for_seeded_data_steward(full_client: FullClient):
     claim = claims[0]
 
     assert claim.pop("id")
+    assert claim.pop("iva_id")
     assertion_date = claim.pop("assertion_date")
     assert claim.pop("creation_date") == assertion_date
     assert claim.pop("valid_from") == assertion_date
@@ -754,7 +755,6 @@ async def test_get_claims_for_seeded_data_steward(full_client: FullClient):
         "conditions": None,
         "revocation_date": None,
         "user_id": "the-id-of-rod-steward",
-        "iva_id": None,
         "source": "https://ghga.de",
         "sub_source": None,
         "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",

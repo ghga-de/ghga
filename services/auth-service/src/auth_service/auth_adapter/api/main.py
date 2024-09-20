@@ -40,8 +40,10 @@ from auth_service.user_management.claims_repository.core.utils import is_data_st
 from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 from auth_service.user_management.user_registry.deps import (
     Depends,
+    IvaDao,
     UserDao,
     UserRegistryPort,
+    get_iva_dao,
     get_user_dao,
     get_user_registry,
 )
@@ -130,6 +132,7 @@ async def login(  # noqa: C901, PLR0913
     user_dao: Annotated[UserDao, Depends(get_user_dao)],
     token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
     claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    iva_dao: Annotated[IvaDao, Depends(get_iva_dao)],
     authorization: Annotated[str | None, Header()] = None,
     x_authorization: Annotated[str | None, Header()] = None,
 ) -> Response:
@@ -175,9 +178,12 @@ async def login(  # noqa: C901, PLR0913
         )
 
     async def _is_data_steward(user: User) -> bool:
-        """Check whether the given user is a data steward."""
+        """Check whether the given user is a data steward.
+
+        This includes the check whether a corresponding IVA has been verified.
+        """
         # if the user exists, the account is active at this point
-        return await is_data_steward(user.id, claim_dao=claim_dao)
+        return await is_data_steward(user.id, iva_dao=iva_dao, claim_dao=claim_dao)
 
     async def _has_totp_token(user: User) -> bool:
         """Check whether the given user has a TOTP token."""

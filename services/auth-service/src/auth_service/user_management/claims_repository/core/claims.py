@@ -44,7 +44,10 @@ DATASET_PREFIX = str(INTERNAL_SOURCE).rstrip("/") + "/datasets/"
 
 
 def is_valid_claim(claim: Claim, now: Callable[[], UTCDatetime] = now_as_utc) -> bool:
-    """Check whether the given claim is currently valid."""
+    """Check whether the given claim is currently valid.
+
+    This function does not check the existence and status of an associated IVA.
+    """
     return not claim.revocation_date and claim.valid_from <= now() <= claim.valid_until
 
 
@@ -63,8 +66,10 @@ def is_internal_claim(claim: Claim, visa_type: VisaType) -> bool:
 # Data Steward Claims
 
 
-def create_data_steward_claim(user_id: str, valid_days=365) -> ClaimFullCreation:
-    """Create a claim for a data steward."""
+def create_data_steward_claim(
+    user_id: str, iva_id: str | None = None, valid_days=365
+) -> ClaimFullCreation:
+    """Create a claim for a data steward with the given IVA."""
     valid_from = now_as_utc()
     valid_until = now_as_utc() + timedelta(days=valid_days)
     return ClaimFullCreation(
@@ -80,11 +85,15 @@ def create_data_steward_claim(user_id: str, valid_days=365) -> ClaimFullCreation
         user_id=user_id,
         creation_date=valid_from,
         revocation_date=None,
+        iva_id=iva_id,
     )
 
 
 def is_data_steward_claim(claim: Claim) -> bool:
-    """Check whether the given claim asserts a data steward role."""
+    """Check whether the given claim asserts a data steward role.
+
+    This function does not check the existence and status of an associated IVA.
+    """
     if not is_internal_claim(claim, VisaType.GHGA_ROLE):
         return False
     visa_value = claim.visa_value
