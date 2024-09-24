@@ -12,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Short description of package"""
 
-"""
-This sub-package contains the main business functionality of this service.
+from importlib.metadata import version
 
-It should not contain any service API-related code.
-"""
+__version__ = version(__package__)

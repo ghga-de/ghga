@@ -1,36 +1,30 @@
 components:
   schemas:
-    Greeting:
-      description: A container storing a greeting for a specific person incl. metadata.
+    FileInformation:
+      description: 'Basic public information container for files registered with the
+        Internal File
+
+        Registry service.'
       properties:
-        created_at:
-          description: The date/time when the message was created
-          format: date-time
-          title: Created At
+        file_id:
+          description: Public identifier of the file associated with the given information
+          title: File Id
           type: string
-        isinformal:
-          description: Is the expression used in informal contexts?
-          title: Isinformal
-          type: boolean
-        language:
-          description: The language.
-          enum:
-          - Greek
-          - Croatian
-          - French
-          - German
-          title: Language
+        sha256_hash:
+          description: SHA256 hash of the unencrypted file content encoded as hexadecimal  values
+            as produced by hashlib.hexdigest().
+          title: Sha256 Hash
           type: string
-        message:
-          description: The message content.
-          title: Message
-          type: string
+        size:
+          description: Size of the unencrypted file in bytes.
+          exclusiveMinimum: 0.0
+          title: Size
+          type: integer
       required:
-      - message
-      - created_at
-      - language
-      - isinformal
-      title: Greeting
+      - file_id
+      - size
+      - sha256_hash
+      title: FileInformation
       type: object
     HTTPValidationError:
       properties:
@@ -40,6 +34,37 @@ components:
           title: Detail
           type: array
       title: HTTPValidationError
+      type: object
+    HttpInformationNotFoundError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpInformationNotFoundErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: informationNotFound
+          enum:
+          - informationNotFound
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpInformationNotFoundError
+      type: object
+    HttpInformationNotFoundErrorData:
+      properties:
+        file_id:
+          title: File Id
+          type: string
+      required:
+      - file_id
+      title: HttpInformationNotFoundErrorData
       type: object
     ValidationError:
       properties:
@@ -67,47 +92,52 @@ info:
   version: 0.1.0
 openapi: 3.1.0
 paths:
-  /:
+  /file_information/{file_id}:
     get:
-      description: Greet the World.
-      operationId: index__get
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: Greet the world
-  /greet/{name}:
-    get:
-      description: Greet a person by name. You may choose a formal or an informal
-        greeting.The language for the greeting is configured in the backend.
-      operationId: greet_greet__name__get
+      description: Retrieve and serve stored file information.
+      operationId: getFileInformation
       parameters:
       - in: path
-        name: name
+        name: file_id
         required: true
         schema:
-          title: Name
+          title: File Id
           type: string
-      - in: query
-        name: isinformal
-        required: false
-        schema:
-          default: true
-          title: Isinformal
-          type: boolean
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Greeting'
-          description: Successful Response
+                $ref: '#/components/schemas/FileInformation'
+          description: A configuration or external communication error has occurred
+            and details should not be communicated to the client
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpInformationNotFoundError'
+          description: 'Exceptions by ID:
+
+            - informationNotFound: No information registered for the given ID.'
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-      summary: Greet a person
+      summary: Return public file information for the given file id, i.e. public accession.
+      tags:
+      - FileIngestService
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - FileIngestService

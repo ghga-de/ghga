@@ -12,9 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+"""A collection of dependency dummies that are used in view definitions but need to be
+replaced at runtime by actual dependencies.
+"""
 
-"""General testing utilities"""
+from typing import Annotated
 
-from pathlib import Path
+from fastapi import Depends
+from ghga_service_commons.api.di import DependencyDummy
 
-BASE_DIR = Path(__file__).parent.resolve()
+from dins.ports.inbound.information_service import InformationServicePort
+
+information_service_port = DependencyDummy("information_service")
+
+InformationServiceDummy = Annotated[
+    InformationServicePort, Depends(information_service_port)
+]

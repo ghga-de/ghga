@@ -12,13 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Entrypoint of the package"""
 
-"""Test dummy."""
-
-from my_microservice.core.greeting import generate_greeting
+from dins.cli import cli
 
 
-def test_dummy():
-    """A very simple example test."""
-    greeting = generate_greeting("monde", "French", True)
-    assert greeting.message == "Salut monde!"
+def run():
+    """Run the service"""
+    cli()
+
+
+if __name__ == "__main__":
+    run()

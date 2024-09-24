@@ -12,9 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Models for internal representation"""
 
-"""General testing utilities"""
+from pydantic import BaseModel, Field, PositiveInt
 
-from pathlib import Path
 
-BASE_DIR = Path(__file__).parent.resolve()
+class FileInformation(BaseModel):
+    """Basic public information container for files registered with the Internal File
+    Registry service.
+    """
+
+    file_id: str = Field(
+        ...,
+        description="Public identifier of the file associated with the given information",
+    )
+    size: PositiveInt = Field(..., description="Size of the unencrypted file in bytes.")
+    sha256_hash: str = Field(
+        ...,
+        description="SHA256 hash of the unencrypted file content encoded as hexadecimal "
+        " values as produced by hashlib.hexdigest().",
+    )
