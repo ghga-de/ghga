@@ -254,8 +254,19 @@ class Orchestrator(OrchestratorPort):
     ):
         """Send notifications for IVAs set to 'unverified'.
 
-        This happens when the user exceeds the allotted time to submit their IVA code.
+        This usually happens when the user exceeds the allotted time to submit their IVA
+        code or exhausts all the allotted verification attempts.
         """
+        # send a notification to the user
+        await self._notification_emitter.notify(
+            email=user.email,
+            full_name=user.name,
+            notification=notifications.IVA_UNVERIFIED_TO_USER.formatted(
+                helpdesk_email=self._config.helpdesk_email
+            ),
+        )
+
+        # send a notification to the data steward
         await self._notification_emitter.notify(
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,

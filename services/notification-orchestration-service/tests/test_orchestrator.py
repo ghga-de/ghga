@@ -310,7 +310,7 @@ async def test_file_registered(joint_fixture: JointFixture):
         ),
         (
             event_schemas.IvaState.UNVERIFIED,
-            None,
+            notifications.IVA_UNVERIFIED_TO_USER,
             notifications.IVA_UNVERIFIED_TO_DS,
         ),
     ],
@@ -348,7 +348,9 @@ async def test_iva_state_change(
             recipient_email=TEST_USER.email,
             subject=expected_user_notification.subject,
             recipient_name=TEST_USER.name,
-            plaintext_body=expected_user_notification.text,
+            plaintext_body=expected_user_notification.text.format(
+                helpdesk_email=joint_fixture.config.helpdesk_email,
+            ),
         )
         if expected_user_notification
         else None

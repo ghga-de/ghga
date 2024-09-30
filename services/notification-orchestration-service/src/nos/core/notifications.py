@@ -160,6 +160,17 @@ The specified contact email address is: {email}.
 """,
 )
 
+IVA_UNVERIFIED_TO_USER = Notification(
+    "Contact Address Invalidation",
+    """
+One of your contact addresses has been invalidated due to failed verification.
+
+To see each of your current contact addresses alongside its verification status, please visit your account page.
+
+If you have any questions, please contact the GHGA Helpdesk: {helpdesk_email}
+""",
+)
+
 IVA_UNVERIFIED_TO_DS = Notification(
     "IVA Unverified",
     """
