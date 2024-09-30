@@ -30,26 +30,13 @@ from .conftest import (
 )
 from .utils import verify_named_file
 
-scenarios("../features/34_download_files.feature")
+scenarios("../features/340_download_files.feature")
 
 
 @given("the download buckets are empty")
 def download_buckets_empty(fixtures: JointFixture):
     config = fixtures.config
     fixtures.s3.empty_buckets(buckets=[config.inbox_bucket, config.staging_bucket])
-
-
-@given("I have an empty working directory for the GHGA connector")
-def clean_connector_work_dir(connector: ConnectorFixture):
-    connector.reset_work_dir()
-
-
-@given("my Crypt4GH key pair has been stored in two key files")
-def keys_are_made_available(connector: ConnectorFixture, config: Config):
-    connector.store_keys(
-        public_key=config.user_public_crypt4gh_key,
-        private_key=config.user_private_crypt4gh_key,
-    )
 
 
 @when(

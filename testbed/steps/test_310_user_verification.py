@@ -15,6 +15,7 @@
 
 """Step definitions for testing independent verification addresses"""
 
+import pytest
 from fixtures.iva import IVA
 
 from .conftest import (
@@ -27,7 +28,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/31_user_verification.feature")
+scenarios("../features/310_user_verification.feature")
 
 
 # Types are case-sensitive as they are requested by the API

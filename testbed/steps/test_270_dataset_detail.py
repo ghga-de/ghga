@@ -29,7 +29,7 @@ from .conftest import (
 )
 from .utils import get_dataset_search_summary
 
-scenarios("../features/27_dataset_details.feature")
+scenarios("../features/270_dataset_details.feature")
 
 
 def get_dataset_details(

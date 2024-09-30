@@ -33,7 +33,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/32_access_request.feature")
+scenarios("../features/320_access_request.feature")
 
 
 @given("no access requests have been made yet")

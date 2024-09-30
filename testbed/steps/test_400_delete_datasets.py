@@ -24,17 +24,15 @@ from .conftest import (
     JointFixture,
     MongoFixture,
     Response,
-    given,
     parse,
     scenarios,
     then,
     when,
 )
-from .test_13_load_metadata import run_the_load_command
-from .test_34_download_files import clean_connector_work_dir, keys_are_made_available
+from .test_130_load_metadata import run_the_load_command
 from .utils import get_dataset_overview, search_dataset
 
-scenarios("../features/40_delete_datasets.feature")
+scenarios("../features/400_delete_datasets.feature")
 
 
 def is_dataset_a_and_b(event_file: Path) -> bool:
@@ -134,13 +132,6 @@ def check_no_datasets_in_list(response: Response):
     data = response.json()
     assert isinstance(data, list)
     assert len(data) == 0
-
-
-# The following steps are re-used from the file download test
-given("I have an empty working directory for the GHGA connector")(
-    clean_connector_work_dir
-)
-given("my Crypt4GH key pair has been stored in two key files")(keys_are_made_available)
 
 
 @when(

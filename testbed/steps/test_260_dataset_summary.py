@@ -26,7 +26,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/26_dataset_summary.feature")
+scenarios("../features/260_dataset_summary.feature")
 
 EXPECTED_SUMMARIES = {
     "DS_B": {

@@ -22,7 +22,7 @@ from pytest_bdd import scenarios, then, when
 
 from .conftest import Config, JointFixture
 
-scenarios("../features/01_health_check.feature")
+scenarios("../features/001_health_check.feature")
 
 
 def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901

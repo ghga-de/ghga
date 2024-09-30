@@ -24,7 +24,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/50_data_portal.feature")
+scenarios("../features/500_data_portal.feature")
 
 
 @when("the data portal ui is accessed", target_fixture="response")

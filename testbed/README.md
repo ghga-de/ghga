@@ -52,7 +52,7 @@ Located in the `features` directory, the **feature files** are numerically prefi
 ### Execution
 
 - Use `pytest -v` to run all tests.
-- For specific steps, such as step 24, use `pytest steps/test_24_*`.
+- For specific steps, such as step 240, use `pytest steps/test_240_*`.
 - For specific group of tests, BDD tags (pytest markers) can also be used, e.g. `pytest -m browse and metadata`.
 
 ### Modes of Operation

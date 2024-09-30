@@ -26,7 +26,7 @@ from .conftest import (
 )
 from .utils import search_dataset
 
-scenarios("../features/22_search_datasets.feature")
+scenarios("../features/220_search_datasets.feature")
 
 SEARCH_ALL_DATASETS = {
     "facets": [

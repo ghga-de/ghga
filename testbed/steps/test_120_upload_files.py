@@ -32,7 +32,7 @@ from steps.utils import get_secret_ids, ingest_config_as_file, upload_config_as_
 
 from .conftest import JointFixture, given, parse, scenarios, then, when
 
-scenarios("../features/12_upload_files.feature")
+scenarios("../features/120_upload_files.feature")
 
 
 def call_data_steward_kit_upload(

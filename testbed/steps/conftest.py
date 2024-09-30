@@ -49,22 +49,17 @@ from fixtures import (  # noqa: RUF100
     state_manager_fixture,
     vault_fixture,
 )
+from pytest import mark
 from pytest_bdd import (  # noqa: RUF100
     given,
-    parsers,
     scenarios,
     then,
     when,
 )
 
+from steps.conftest_3x import *  # noqa: F403
+from steps.conftest_3x import parse
 from steps.utils import EXPECTED_NOTIFICATIONS, parse_notifications
-
-parse = parsers.parse  # pylint: disable=invalid-name
-
-# Helpers for async step functions
-
-
-# Shared step functions
 
 
 class UserData(NamedTuple):
