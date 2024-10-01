@@ -72,7 +72,7 @@ class InformationService(InformationServicePort):
                 log.error(information_exists)
         except ResourceNotFoundError:
             await self._file_information_dao.insert(file_information)
-            log.debug(f"Successfully inserted information for file {file_id} ")
+            log.debug(f"Successfully inserted information for file {file_id}")
 
     async def serve_information(self, file_id: str) -> FileInformation:
         """Retrieve stored public information for the given file ID to be served by the API."""
