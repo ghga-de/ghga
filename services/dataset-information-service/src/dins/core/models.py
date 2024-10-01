@@ -29,6 +29,6 @@ class FileInformation(BaseModel):
     size: PositiveInt = Field(..., description="Size of the unencrypted file in bytes.")
     sha256_hash: str = Field(
         ...,
-        description="SHA256 hash of the unencrypted file content encoded as hexadecimal "
+        description="SHA256 hash of the unencrypted file content encoded as hexadecimal"
         " values as produced by hashlib.hexdigest().",
     )
