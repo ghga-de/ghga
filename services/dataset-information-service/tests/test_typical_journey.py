@@ -122,7 +122,7 @@ async def test_normal_journey(
     response = await joint_fixture.rest_client.get(url)
     assert response.status_code == 404
 
-    # requst deletion
+    # request deletion
     deletion_requested = event_schemas.FileDeletionRequested(file_id=file_id)
 
     await joint_fixture.kafka.publish_event(
