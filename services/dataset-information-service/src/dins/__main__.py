@@ -12,9 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Entrypoint of the package"""
 
-"""Short description of package."""  # Please adapt to package
+from dins.cli import cli
 
-from importlib.metadata import version
 
-__version__ = version(__package__)
+def run():
+    """Run the service"""
+    cli()
+
+
+if __name__ == "__main__":
+    run()

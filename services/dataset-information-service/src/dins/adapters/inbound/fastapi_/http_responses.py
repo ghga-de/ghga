@@ -12,9 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""A collection of http responses."""
 
-"""General testing utilities"""
+from fastapi.responses import JSONResponse
 
-from pathlib import Path
+from dins.core.models import FileInformation
 
-BASE_DIR = Path(__file__).parent.resolve()
+
+class HttpFileInformationResponse(JSONResponse):
+    """Return relevant public information for the requested file."""
+
+    response_id = "fileInformation"
+
+    def __init__(self, *, file_information: FileInformation, status_code: int = 200):
+        """Construct message and init the response."""
+        super().__init__(content=file_information.model_dump(), status_code=status_code)

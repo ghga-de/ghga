@@ -12,5 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""DAO translators for database access."""
 
-"""Subpackage defining a RESTful API."""
+from hexkit.protocols.dao import DaoFactoryProtocol
+
+from dins.core import models
+from dins.ports.inbound.dao import FileInformationDaoPort
+
+
+async def get_file_information_dao(
+    *, dao_factory: DaoFactoryProtocol
+) -> FileInformationDaoPort:
+    """Setup the DAOs using the specified provider of the DaoFactoryProtocol."""
+    return await dao_factory.get_dao(
+        name="file_information",
+        dto_model=models.FileInformation,
+        id_field="file_id",
+    )

@@ -1,7 +1,15 @@
 {
   "additionalProperties": false,
-  "description": "Modifies the orginal Settings class provided by the user",
+  "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "files_to_delete_topic": {
+      "description": "The name of the topic for events informing about files to be deleted.",
+      "examples": [
+        "file-deletions"
+      ],
+      "title": "Files To Delete Topic",
+      "type": "string"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -17,13 +25,12 @@
       "type": "string"
     },
     "service_name": {
-      "default": "my_microservice",
-      "description": "Short name of this service",
+      "default": "dins",
       "title": "Service Name",
       "type": "string"
     },
     "service_instance_id": {
-      "description": "A string that uniquely identifies this instance across all instances of this service. This is included in log messages.",
+      "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
       "examples": [
         "germany-bw-instance-001"
       ],
@@ -46,6 +53,116 @@
         "%(asctime)s - Severity: %(levelno)s - %(msg)s"
       ],
       "title": "Log Format"
+    },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
+    "kafka_servers": {
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "examples": [
+        [
+          "localhost:9092"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Kafka Servers",
+      "type": "array"
+    },
+    "kafka_security_protocol": {
+      "default": "PLAINTEXT",
+      "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
+      "enum": [
+        "PLAINTEXT",
+        "SSL"
+      ],
+      "title": "Kafka Security Protocol",
+      "type": "string"
+    },
+    "kafka_ssl_cafile": {
+      "default": "",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
+      "title": "Kafka Ssl Cafile",
+      "type": "string"
+    },
+    "kafka_ssl_certfile": {
+      "default": "",
+      "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
+      "title": "Kafka Ssl Certfile",
+      "type": "string"
+    },
+    "kafka_ssl_keyfile": {
+      "default": "",
+      "description": "Optional filename containing the client private key.",
+      "title": "Kafka Ssl Keyfile",
+      "type": "string"
+    },
+    "kafka_ssl_password": {
+      "default": "",
+      "description": "Optional password to be used for the client private key.",
+      "format": "password",
+      "title": "Kafka Ssl Password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
+    },
+    "kafka_max_message_size": {
+      "default": 1048576,
+      "description": "The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this.",
+      "examples": [
+        1048576,
+        16777216
+      ],
+      "exclusiveMinimum": 0,
+      "title": "Kafka Max Message Size",
+      "type": "integer"
+    },
+    "db_connection_str": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "password",
+      "title": "Db Connection Str",
+      "type": "string",
+      "writeOnly": true
+    },
+    "db_name": {
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
+      "title": "Db Name",
+      "type": "string"
+    },
+    "file_registered_event_topic": {
+      "description": "The name of the topic for events informing about new registered files for which the metadata should be made available.",
+      "examples": [
+        "internal-file-registry"
+      ],
+      "title": "File Registered Event Topic",
+      "type": "string"
+    },
+    "file_registered_event_type": {
+      "description": "The name of the type used for events informing about new registered files for which the metadata should be made available.",
+      "examples": [
+        "file_registered"
+      ],
+      "title": "File Registered Event Type",
+      "type": "string"
     },
     "host": {
       "default": "127.0.0.1",
@@ -169,32 +286,16 @@
         []
       ],
       "title": "Cors Allowed Headers"
-    },
-    "generate_correlation_id": {
-      "default": true,
-      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
-      "examples": [
-        true,
-        false
-      ],
-      "title": "Generate Correlation Id",
-      "type": "boolean"
-    },
-    "language": {
-      "default": "Croatian",
-      "description": "The language.",
-      "enum": [
-        "Greek",
-        "Croatian",
-        "French",
-        "German"
-      ],
-      "title": "Language",
-      "type": "string"
     }
   },
   "required": [
-    "service_instance_id"
+    "files_to_delete_topic",
+    "service_instance_id",
+    "kafka_servers",
+    "db_connection_str",
+    "db_name",
+    "file_registered_event_topic",
+    "file_registered_event_type"
   ],
   "title": "ModSettings",
   "type": "object"

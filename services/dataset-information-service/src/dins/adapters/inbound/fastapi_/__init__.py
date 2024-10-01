@@ -12,13 +12,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Test dummy."""
-
-from my_microservice.core.greeting import generate_greeting
-
-
-def test_dummy():
-    """A very simple example test."""
-    greeting = generate_greeting("monde", "French", True)
-    assert greeting.message == "Salut monde!"
+"""FastAPI-based Adapter Code"""

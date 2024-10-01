@@ -12,31 +12,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Config Parameter Modeling and Parsing."""
+"""Config Parameter Modeling and Parsing"""
 
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from pydantic import Field
+from hexkit.providers.mongokafka import MongoKafkaConfig
 
-from .models import SupportedLanguages
+from dins.adapters.inbound.event_sub import (
+    EventSubTranslatorConfig,
+    OutboxSubTranslatorConfig,
+)
 
-SERVICE_NAME: str = "my_microservice"  # Please adapt
+SERVICE_NAME = "dins"
 
 
-# Please adapt config prefix and remove unnecessary config bases:
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, LoggingConfig):
+class Config(
+    ApiConfigBase,
+    EventSubTranslatorConfig,
+    MongoKafkaConfig,
+    LoggingConfig,
+    OutboxSubTranslatorConfig,
+):
     """Config parameters and their defaults."""
 
-    service_name: str = Field(
-        default=SERVICE_NAME, description="Short name of this service"
-    )
-
-    language: SupportedLanguages = Field(
-        default="Croatian", description="The language."
-    )
+    service_name: str = SERVICE_NAME
 
 
-CONFIG = Config()  # type: ignore
+CONFIG = Config()  # type: ignore [call-arg]
