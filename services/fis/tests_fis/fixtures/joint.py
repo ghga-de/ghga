@@ -44,6 +44,7 @@ __all__ = ["joint_fixture", "JointFixture", "TEST_PAYLOAD"]
 
 TEST_PAYLOAD = UploadMetadataBase(
     file_id="abc",
+    bucket_id="staging",
     object_id="happy_little_object",
     part_size=16 * 1024**2,
     unencrypted_size=50 * 1024**2,

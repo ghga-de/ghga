@@ -103,7 +103,6 @@ async def ingest_metadata(
     await upload_metadata_processor.populate_by_event(
         upload_metadata=payload, secret_id=secret_id
     )
-
     return Response(status_code=202)
 
 

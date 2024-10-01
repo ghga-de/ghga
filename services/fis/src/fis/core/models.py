@@ -33,6 +33,7 @@ class UploadMetadataBase(BaseModel):
 
     file_id: str
     object_id: str
+    bucket_id: str
     part_size: int
     unencrypted_size: int
     encrypted_size: int

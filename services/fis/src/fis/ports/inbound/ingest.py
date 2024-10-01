@@ -20,7 +20,7 @@ from fis.core import models
 
 
 class DecryptionError(RuntimeError):
-    """Thrown when decryption with the provided private key failed"""
+    """Raised when decryption with the provided private key failed"""
 
     def __init__(self):
         message = "Could not decrypt received payload with the given key."
@@ -28,14 +28,14 @@ class DecryptionError(RuntimeError):
 
 
 class VaultCommunicationError(RuntimeError):
-    """Thrown when interaction with the vault resulted in an error"""
+    """Raised when interaction with the vault resulted in an error"""
 
     def __init__(self, *, message) -> None:
         super().__init__(message)
 
 
 class WrongDecryptedFormatError(RuntimeError):
-    """Thrown when the decrypted payload"""
+    """Raised when the decrypted payload"""
 
     def __init__(self, *, cause: str):
         message = f"Decrypted payload does not conform to expected format: {

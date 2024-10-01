@@ -46,11 +46,6 @@ class ServiceConfig(BaseSettings):
         description="Base64 encoded private key of the keypair whose public key is used "
         + "to encrypt the payload.",
     )
-    source_bucket_id: str = Field(
-        default=...,
-        description="ID of the bucket the object(s) corresponding to the upload metadata "
-        + "have been uploaded to. This should currently point to the staging bucket.",
-    )
     token_hashes: list[str] = Field(
         default=...,
         description="List of token hashes corresponding to the tokens that can be used "
@@ -62,7 +57,6 @@ async def _send_file_metadata(
     *,
     dao: FileUploadValidationSuccessDao,
     upload_metadata: models.UploadMetadataBase,
-    source_bucket_id: str,
     secret_id: str,
 ):
     """Send FileUploadValidationSuccess event to downstream services"""
@@ -70,7 +64,7 @@ async def _send_file_metadata(
         upload_date=now_as_utc().isoformat(),
         file_id=upload_metadata.file_id,
         object_id=upload_metadata.object_id,
-        bucket_id=source_bucket_id,
+        bucket_id=upload_metadata.bucket_id,
         s3_endpoint_alias=upload_metadata.storage_alias,
         decrypted_size=upload_metadata.unencrypted_size,
         decryption_secret_id=secret_id,
@@ -125,7 +119,6 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
         await _send_file_metadata(
             dao=self._file_validation_success_dao,
             secret_id=secret_id,
-            source_bucket_id=self._config.source_bucket_id,
             upload_metadata=upload_metadata,
         )
 
@@ -170,7 +163,6 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
         await _send_file_metadata(
             dao=self._file_validation_success_dao,
             secret_id=secret_id,
-            source_bucket_id=self._config.source_bucket_id,
             upload_metadata=upload_metadata,
         )
 

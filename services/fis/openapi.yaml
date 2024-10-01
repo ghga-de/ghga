@@ -28,6 +28,9 @@ components:
 
         in place of the actual secret.'
       properties:
+        bucket_id:
+          title: Bucket Id
+          type: string
         encrypted_md5_checksums:
           items:
             type: string
@@ -65,6 +68,7 @@ components:
       required:
       - file_id
       - object_id
+      - bucket_id
       - part_size
       - unencrypted_size
       - encrypted_size
@@ -104,7 +108,7 @@ info:
   description: A service to ingest s3 file upload metadata produced by thedata-steward-kit
     upload command
   title: File Ingest Service
-  version: 3.1.1
+  version: 4.0.0
 openapi: 3.1.0
 paths:
   /federated/ingest_metadata:

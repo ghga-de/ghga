@@ -28,7 +28,6 @@ private_key: dummy-key
 service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
 service_instance_id: '1'
 service_name: fis
-source_bucket_id: staging
 token_hashes:
 - abcdef
 - ghijkl

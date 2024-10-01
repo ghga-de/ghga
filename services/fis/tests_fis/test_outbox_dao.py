@@ -60,7 +60,7 @@ async def test_dto_to_event(joint_fixture: JointFixture):
             upload_date=now_as_utc().isoformat(),
             file_id=TEST_PAYLOAD.file_id,
             object_id=TEST_PAYLOAD.object_id,
-            bucket_id=joint_fixture.config.source_bucket_id,
+            bucket_id=TEST_PAYLOAD.bucket_id,
             s3_endpoint_alias=TEST_PAYLOAD.storage_alias,
             decrypted_size=TEST_PAYLOAD.unencrypted_size,
             decryption_secret_id="",

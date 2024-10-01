@@ -172,11 +172,6 @@
       "title": "Private Key",
       "type": "string"
     },
-    "source_bucket_id": {
-      "description": "ID of the bucket the object(s) corresponding to the upload metadata have been uploaded to. This should currently point to the staging bucket.",
-      "title": "Source Bucket Id",
-      "type": "string"
-    },
     "token_hashes": {
       "description": "List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.",
       "items": {
@@ -419,7 +414,6 @@
     "vault_url",
     "vault_path",
     "private_key",
-    "source_bucket_id",
     "token_hashes",
     "file_upload_validation_success_topic",
     "kafka_servers",
