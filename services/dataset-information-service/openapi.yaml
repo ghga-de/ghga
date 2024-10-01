@@ -11,8 +11,8 @@ components:
           title: File Id
           type: string
         sha256_hash:
-          description: SHA256 hash of the unencrypted file content encoded as hexadecimal  values
-            as produced by hashlib.hexdigest().
+          description: SHA256 hash of the unencrypted file content encoded as hexadecimal
+            values as produced by hashlib.hexdigest().
           title: Sha256 Hash
           type: string
         size:

@@ -5,7 +5,7 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 db_connection_str: '**********'
-db_name: dev_db
+db_name: dev
 docs_url: /docs
 file_registered_event_topic: internal_file_registry
 file_registered_event_type: file_registered

@@ -40,8 +40,7 @@ class InformationService(InformationServicePort):
             await self._file_information_dao.get_by_id(id_=file_id)
         except ResourceNotFoundError:
             log.info(
-                f"Information for file with id '{
-                    file_id}' has already been deleted."
+                f"Information for file with id '{file_id}' has already been deleted."
             )
             return
 
@@ -78,8 +77,7 @@ class InformationService(InformationServicePort):
         """Retrieve stored public information for the given file ID to be served by the API."""
         try:
             file_information = await self._file_information_dao.get_by_id(file_id)
-            log.debug(f"Information for file {
-                      file_information.file_id} found.")
+            log.debug(f"Information for file {file_information.file_id} found.")
         except ResourceNotFoundError as error:
             information_not_found = self.InformationNotFoundError(file_id=file_id)
             log.warning(information_not_found)

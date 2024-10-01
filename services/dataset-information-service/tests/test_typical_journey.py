@@ -92,8 +92,8 @@ async def test_normal_journey(
         assert expected_message in caplog.messages
 
     # Test reregistration of mismatching content
-    mismatch_message = f"Mismatching information for the file with ID {
-        file_id} has already been registered."
+    mismatch_message = f"Mismatching information for the file with ID {file_id}"
+    "has already been registered."
     mismatch_mock = INCOMING_PAYLOAD_MOCK.model_copy(
         update={"decrypted_sha256": "other-fake-checksum"}
     )
