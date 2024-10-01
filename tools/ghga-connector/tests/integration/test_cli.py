@@ -36,7 +36,7 @@ from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from ghga_connector.cli import (
-    download,
+    async_download,
     init_message_display,
     retrieve_upload_parameters,
 )
@@ -162,7 +162,7 @@ async def test_multipart_download(
             wps_api_url=api_url,
         ),
     ):
-        await download(
+        await async_download(
             output_dir=tmp_path,
             my_public_key_path=Path(PUBLIC_KEY_FILE),
             my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -274,7 +274,7 @@ async def test_download(
                         exceptions.UnauthorizedAPICallError,
                         match="This is not the token you're looking for.",
                     ):
-                        await download(
+                        await async_download(
                             output_dir=output_dir,
                             my_public_key_path=Path(PUBLIC_KEY_FILE),
                             my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -288,7 +288,7 @@ async def test_download(
                         match="Endpoint file ID did not match file ID"
                         " announced in work order token",
                     ):
-                        await download(
+                        await async_download(
                             output_dir=output_dir,
                             my_public_key_path=Path(PUBLIC_KEY_FILE),
                             my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -301,7 +301,7 @@ async def test_download(
                     if expected_exception
                     else nullcontext()
                 ):
-                    await download(
+                    await async_download(
                         output_dir=output_dir,
                         my_public_key_path=Path(PUBLIC_KEY_FILE),
                         my_private_key_path=Path(PRIVATE_KEY_FILE),
