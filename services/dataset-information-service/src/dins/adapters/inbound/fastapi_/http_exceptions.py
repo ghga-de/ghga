@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 
 class HttpInformationNotFoundError(HttpCustomExceptionBase):
-    """Thrown when a file with given ID could not be found."""
+    """Raised when a file with given ID could not be found."""
 
     exception_id = "informationNotFound"
 
