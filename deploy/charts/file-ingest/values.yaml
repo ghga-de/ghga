@@ -22,7 +22,6 @@ parameters:
     db_name: fis
     service_instance_id: rest.1
     service_name: fis
-    source_bucket_id: staging
     token_hashes: []
     vault_url: http://vault:8200
     vault_verify: false
