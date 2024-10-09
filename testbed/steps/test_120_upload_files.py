@@ -291,6 +291,7 @@ def ingest_file_metadata(fixtures: JointFixture, storage_name: str) -> IngestCon
         submission_store_dir=fixtures.dsk.config.submission_store,
         map_files_fields=list(fixtures.dsk.config.metadata_file_fields),
         selected_storage_alias=storage_config.storage_alias,
+        fallback_bucket_id=fixtures.config.staging_bucket,
     )
 
     ingest_config_path = ingest_config_as_file(config=ingest_config)

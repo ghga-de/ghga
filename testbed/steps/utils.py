@@ -78,6 +78,7 @@ def ingest_config_as_file(config: IngestConfig):
         "input_dir": str(config.input_dir),
         "map_files_fields": config.map_files_fields,
         "selected_storage_alias": config.selected_storage_alias,
+        "fallback_bucket_id": config.fallback_bucket_id,
     }
 
     return write_data_to_yaml(data=ingest_config)
