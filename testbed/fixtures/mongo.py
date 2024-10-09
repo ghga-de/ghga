@@ -89,16 +89,22 @@ class MongoFixture(StateManager):
         db_name: str,
         collection_name: str,
         query: Mapping[str, Any] | None = None,
+        sloppy: bool = False,
     ) -> list[dict[str, Any]]:
         """Return one document from the given collection matching the given filter."""
         url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
         if query:
             query = self.stringify_query_params(query)
         response = self.http.get(url, headers=self.auth_headers, params=query)
-        assert (
-            response.status_code == 200
-        ), f"Failed to retrieve document: {response.text}"
-        return response.json()
+        status_code = response.status_code
+        if status_code == 200:
+            return response.json()
+        if status_code == 404 and sloppy:
+            return []  # treat non-existing collections as being empty
+        assert False, (
+            "Failed to retrieve documents"
+            f" with status code {status_code}: {response.text}"
+        )
 
     def wait_for_document(
         self,
@@ -134,7 +140,7 @@ class MongoFixture(StateManager):
         """
         slept: float = 0
         while slept < timeout:
-            documents = self.find_documents(db_name, collection_name, query)
+            documents = self.find_documents(db_name, collection_name, query, True)
             if len(documents) >= number:
                 return documents
             sleep(interval)

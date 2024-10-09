@@ -101,3 +101,8 @@ def keys_are_made_available(connector: ConnectorFixture, config: Config):
         public_key=config.user_public_crypt4gh_key,
         private_key=config.user_private_crypt4gh_key,
     )
+
+
+@then(parse('the response error message is "{expected_reason}"'))
+def check_reason(expected_reason: str, response: Response):
+    assert expected_reason in response.json()["detail"]

@@ -1,5 +1,5 @@
 @download @auth
-Feature: 30 User Registration
+Feature: 300 User Registration
   Users can register themselves and then authenticate.
 
   "Logged in" = authenticated with 1st factor only (OIDC).
@@ -9,6 +9,7 @@ Feature: 30 User Registration
     Given the session store is empty
     And the TOTP token store is empty
     And no notification has been sent yet
+    And the state of "Data Steward" IVA is "Unverified"
 
   Scenario: Attempt to access user data without login
     Given the user "Dr. John Doe" is not yet registered
@@ -109,6 +110,19 @@ Feature: 30 User Registration
     When "Data Steward" retrieves their user data
     Then the response status code is "200"
     And the expected user data of "Data Steward" is returned
+
+  Scenario: The data steward cannot access user data
+    When "Data Steward" retrieves the user data of "Dr. John Doe"
+    Then the response status code is "403"
+    And the response error message is "Not authorized to request user"
+
+  Scenario: The data steward has a verified IVA
+    Given the user "Data Steward" is logged out
+    And the state of "Data Steward" IVA is "Verified"
+    And I am logged in as "Data Steward"
+    And I am authenticated as "Data Steward"
+    When "Data Steward" retrieves the user data of "Dr. John Doe"
+    Then the response status code is "200"
 
   Scenario: Finishing the registration
     Then set the state to "user registration is completed"

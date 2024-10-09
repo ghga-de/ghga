@@ -85,8 +85,3 @@ def user_tries_to_login(name: str, fixtures: JointFixture) -> Response:
     auth_headers = {"Authorization": f"Bearer {external_token}"}
     url = fixtures.config.auth_adapter_url + "/rpc/login"
     return fixtures.http.post(url, headers=auth_headers)
-
-
-@then(parse('the response error message is "{expected_reason}"'))
-def check_reason(expected_reason: str, response: Response):
-    assert expected_reason in response.json()["detail"]

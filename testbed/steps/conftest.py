@@ -59,7 +59,11 @@ from pytest_bdd import (  # noqa: RUF100
 
 from steps.conftest_3x import *  # noqa: F403
 from steps.conftest_3x import parse
-from steps.utils import EXPECTED_NOTIFICATIONS, parse_notifications
+from steps.utils import (
+    EXPECTED_NOTIFICATIONS,
+    parse_notifications,
+    reset_user_token_counter,
+)
 
 
 class UserData(NamedTuple):
@@ -89,7 +93,7 @@ def registered_as_user(name: str, fixtures: JointFixture) -> UserData:
 
 
 @given(parse('I am logged in as "{name}"'))
-def access_as_user(name: str, fixtures: JointFixture):
+def login_as_user(name: str, fixtures: JointFixture):
     sub = fixtures.auth.get_sub(name)
     session = fixtures.auth.fetch_session(
         name=name, user_id=sub, state_store=fixtures.state
@@ -106,6 +110,9 @@ def authenticate_user(full_name: str, fixtures: JointFixture):
     response = fixtures.auth.authenticate(session=session, state_store=fixtures.state)
     assert response.status_code == 204, response.text
 
+    # Update session cache with up-to-date session information from server
+    login_as_user(full_name, fixtures)
+
 
 @given(parse('the user "{name}" is logged out'))
 def logout_as_user(name: str, fixtures: JointFixture):
@@ -119,6 +126,7 @@ def logout_as_user(name: str, fixtures: JointFixture):
     if not session:
         print("No session found, creating a new one.")
         session = fixtures.auth.fetch_session(name=name, user_id=sub)
+    reset_user_token_counter(sub, fixtures)
     fixtures.auth.auth_logout(session)
     fixtures.state.unset_state(f"session-{sub}")
 
@@ -169,6 +177,13 @@ def fetch_data_stewardship(fixtures: JointFixture) -> dict[str, Any]:
     )
     assert user is not None, "no data steward found in the nos database"
     state["nos"] = user
+    iva = fixtures.mongo.find_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_user_ivas_collection,
+        {"user_id": user_id},
+    )
+    assert iva is not None, "no data steward IVA in the ums database"
+    state["iva"] = iva
     return state
 
 
@@ -195,6 +210,16 @@ def restore_data_stewardship(state: dict[str, Any], fixtures: JointFixture) -> N
         fixtures.config.ums_claims_collection,
         claim,
     )
+    iva = state.get("iva")
+    assert iva
+    fixtures.mongo.upsert_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_user_ivas_collection,
+        iva,
+    )
+    registered_users = fixtures.state.get_state("registered users") or {}
+    registered_users[state["user"]["ext_id"]] = state["user"]["_id"]
+    fixtures.state.set_state("registered users", registered_users)
 
 
 @given("we start on a clean slate")

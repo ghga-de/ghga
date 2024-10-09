@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fixtures import Config, JointFixture, Response
+from fixtures import Config, JointFixture, MongoFixture, Response
 from fixtures.config import S3StorageConfig
 from fixtures.utils import write_data_to_yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig
@@ -260,3 +260,48 @@ def parse_notifications(raw_data: dict) -> list[Notification]:
         )
         for item in sorted(raw_data["items"], key=lambda x: x["Created"], reverse=True)
     ]
+
+
+def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
+    """Forget the previous TOTP logins for the user with the given sub.
+
+    This allows logging in again with the same TOTP counter.
+    """
+    config, mongo = fixtures.config, fixtures.mongo
+
+    user = mongo.find_document(
+        config.ums_db_name,
+        config.ums_users_collection,
+        query={"ext_id": sub},
+    )
+    if not user:
+        return  # user did not registered so far
+
+    user_id = user["_id"]
+    assert user_id
+
+    user_token_document = mongo.find_document(
+        config.ums_db_name,
+        config.ums_user_tokens_collection,
+        query={"_id": user_id},
+    )
+    if not user_token_document:
+        return  # user did not create a TOTP token so far
+
+    totp_token = user_token_document["totp_token"]
+    assert {"last_counter", "counter_attempts", "total_attempts"}.issubset(totp_token)
+    totp_token.update({"last_counter": -1, "counter_attempts": -1, "total_attempts": 0})
+
+    # Update the TOTP token counter directly in the database
+    mongo.upsert_document(
+        config.ums_db_name, config.ums_user_tokens_collection, user_token_document
+    )
+
+    # Wait until the update really has been written to the database
+    document = mongo.wait_for_document(
+        config.ums_db_name,
+        config.ums_user_tokens_collection,
+        query={"_id": user_id, "totp_token": totp_token},
+        timeout=1,
+    )
+    assert document

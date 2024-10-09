@@ -19,6 +19,8 @@ from datetime import datetime, timedelta
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
+from steps.utils import reset_user_token_counter
+
 from .conftest import (
     JointFixture,
     Response,
@@ -188,3 +190,55 @@ def user_changes_title(full_name: str, title: str, fixtures: JointFixture):
         changed_user_data["title"] = title
         fixtures.state.set_state("changed user data", all_changed_user_data)
     return response
+
+
+@when(
+    parse('"{full_name}" retrieves the user data of "{other_full_name}"'),
+    target_fixture="response",
+)
+def user_retrieve_user_data(
+    full_name: str, other_full_name: str, fixtures: JointFixture
+):
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session
+
+    registered_users = fixtures.state.get_state("registered users") or {}
+    other_user_sub = fixtures.auth.get_sub(other_full_name)
+    other_user_id = registered_users.get(other_user_sub)
+
+    url = f"{fixtures.config.ums_url}/users/{other_user_id}"
+    headers = fixtures.auth.headers(session=session)
+    return fixtures.http.get(url, headers=headers)
+
+
+@given(parse('the state of "{full_name}" IVA is "{state}"'))
+def set_iva_state(full_name: str, state: str, fixtures: JointFixture):
+    """Retrieve the list of all IVAs and delete them"""
+    registered_users = fixtures.state.get_state("registered users") or {}
+    user_sub = fixtures.auth.get_sub(full_name)
+    user_id = registered_users.get(user_sub)
+
+    iva = fixtures.mongo.find_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_user_ivas_collection,
+        query={"user_id": user_id},
+    )
+    assert iva
+    iva["state"] = state
+
+    # Overwrite the IVA state in Mongo directly
+    fixtures.mongo.upsert_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_user_ivas_collection,
+        iva,
+    )
+
+    # Make sure the document is updated before
+    document = fixtures.mongo.wait_for_document(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_user_ivas_collection,
+        query={"user_id": user_id, "state": state},
+    )
+    assert document
