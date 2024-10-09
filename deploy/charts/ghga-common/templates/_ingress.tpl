@@ -3,7 +3,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "common.names.fullname" . }}
   annotations:
 {{ toYaml .Values.ingress.annotations | indent 4 }}
 spec:
@@ -22,7 +22,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: {{ .Release.Name }}-svc
+                name: {{ include "common.names.fullname" . }}
                 port:
                   number: {{ .Values.port }}
 {{ end }}

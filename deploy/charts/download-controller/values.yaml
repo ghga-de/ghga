@@ -34,7 +34,7 @@ parameters:
     download_served_event_topic: downloads
     download_served_event_type: drs_object_served
     drs_server_uri: drs://localhost:8080/
-    ekss_base_url: http://encryption-key-store-svc:8080
+    ekss_base_url: http://encryption-key-store:8080
     file_deleted_event_topic: downloads
     file_deleted_event_type: drs_object_deleted
     file_registered_event_topic: downloads

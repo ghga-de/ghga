@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "common.names.fullname" . }}
 data:
 {{- if .Values.parameters -}}
 {{/* Use rest and consumer parameters for configmap */}}

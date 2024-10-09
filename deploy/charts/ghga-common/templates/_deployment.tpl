@@ -3,10 +3,10 @@
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    app: {{ .Release.Name }}
+    app: {{ include "common.names.fullname" . }}
     {{- if .Values.labels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.labels "context" $ ) | nindent 4 }}
     {{- end }}
@@ -40,12 +40,12 @@ spec:
         {{- end }}
         helm.sh/revision: {{ .Release.Revision | quote }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
-        app: {{ .Release.Name }}
+        app: {{ include "common.names.fullname" . }}
         {{- if .Values.podLabels }}
         {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: {{ .Release.Name }}
+      serviceAccountName: {{ include "common.names.fullname" . }}
       shareProcessNamespace: {{ .Values.shareProcessNamespace }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets: {{- include "common.tplvalues.render" (dict "value" .Values.imagePullSecrets "context" $) | nindent 8 }}

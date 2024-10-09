@@ -3,10 +3,10 @@
 apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "common.names.fullname" . }}
 spec:
   ambassador_id: {{ .Values.mapping.ambassador_id }}
-  service: "{{ .Release.Name }}-svc:{{ .Values.mapping.port }}"
+  service: "{{ include "common.names.fullname" . }}:{{ .Values.mapping.port }}"
   hostname: {{ .Values.mapping.hostname }}
   prefix: {{ .Values.mapping.prefix }}
   rewrite: {{ .Values.mapping.rewrite }}

@@ -27,7 +27,7 @@ parameters:
     db_connection_str: null
     db_name: ars
     docs_url: /docs
-    download_access_url: http://claims-repository-svc:8080/download-access
+    download_access_url: http://claims-repository:8080/download-access
     host: "0.0.0.0"
     access_request_events_topic: access_requests
     access_request_created_event_type: access_request_created
