@@ -118,7 +118,7 @@ spec:
       {{- range $container := .Values.containers }}
         - name: {{ $container.config.name | default "config" }}
           configMap:
-            name: {{ $.Release.Name }}
+            name: {{ include "common.names.fullname" $ }}
             items:
             - key: {{ $container.config.key | default "parameters" }}
               path: .{{ $.Values.config_prefix }}.yaml
