@@ -423,6 +423,8 @@ async def test_recreate_existing_totp_token(
         headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
+    session = await query_new_session(client, session)
+    assert session.state is SessionState.AUTHENTICATED
 
     assert not user_registry.published_events
 
@@ -440,6 +442,7 @@ async def test_recreate_existing_totp_token(
     assert response.status_code == status.HTTP_201_CREATED
     uri = response.json()["uri"]
     new_secret = parse_qs(urlparse(uri).query)["secret"][0]
+    session = await query_new_session(client, session)
     assert session.state is SessionState.NEW_TOTP_TOKEN
 
     # should not notify because the token had not been stored yet
@@ -458,6 +461,8 @@ async def test_recreate_existing_totp_token(
         headers=with_totp_code(headers, new_secret),
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
+    session = await query_new_session(client, session)
+    assert session.state is SessionState.AUTHENTICATED
 
     # try to create a new TOTP token with force flag again
     response = await client.post(
@@ -467,6 +472,7 @@ async def test_recreate_existing_totp_token(
     uri = response.json()["uri"]
     changed_secret = parse_qs(urlparse(uri).query)["secret"][0]
     assert changed_secret != new_secret
+    session = await query_new_session(client, session)
     assert session.state is SessionState.NEW_TOTP_TOKEN
 
     # should notify because the token was overwritten
