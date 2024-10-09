@@ -58,13 +58,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/metldata):
 ```bash
-docker pull ghga/metldata:2.1.1
+docker pull ghga/metldata:2.1.2
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/metldata:2.1.1 .
+docker build -t ghga/metldata:2.1.2 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -72,7 +72,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/metldata:2.1.1 --help
+docker run -p 8080:8080 ghga/metldata:2.1.2 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -93,7 +93,7 @@ The service requires the following configuration parameters:
 
 - **`service_name`** *(string)*: Default: `"metldata"`.
 
-- **`service_instance_id`** *(string)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -126,7 +126,7 @@ The service requires the following configuration parameters:
 
 - **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`db_connection_str`** *(string, format: password)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -136,7 +136,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string)*: Name of the database located on the MongoDB server.
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
@@ -146,7 +146,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array)*: A list of connection strings to connect to Kafka bootstrap servers.
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
   - **Items** *(string)*
 
@@ -200,7 +200,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`primary_artifact_name`** *(string)*: Name of the artifact from which the information for outgoing change events is derived.
+- **`primary_artifact_name`** *(string, required)*: Name of the artifact from which the information for outgoing change events is derived.
 
 
   Examples:
@@ -210,7 +210,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`primary_dataset_name`** *(string)*: Name of the resource class corresponding to the embedded_dataset slot.
+- **`primary_dataset_name`** *(string, required)*: Name of the resource class corresponding to the embedded_dataset slot.
 
 
   Examples:
@@ -220,7 +220,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`resource_change_event_topic`** *(string)*: Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.
+- **`resource_change_event_topic`** *(string, required)*: Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.
 
 
   Examples:
@@ -230,7 +230,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`resource_deletion_event_type`** *(string)*: Type used for events indicating the deletion of a previously existing resource.
+- **`resource_deletion_event_type`** *(string, required)*: Type used for events indicating the deletion of a previously existing resource.
 
 
   Examples:
@@ -240,7 +240,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`resource_upsertion_type`** *(string)*: Type used for events indicating the upsert of a resource.
+- **`resource_upsertion_type`** *(string, required)*: Type used for events indicating the upsert of a resource.
 
 
   Examples:
@@ -250,7 +250,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_change_event_topic`** *(string)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
+- **`dataset_change_event_topic`** *(string, required)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
 
 
   Examples:
@@ -260,7 +260,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_deletion_type`** *(string)*: Type used for events announcing a new dataset overview.
+- **`dataset_deletion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
 
 
   Examples:
@@ -270,7 +270,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_upsertion_type`** *(string)*: Type used for events announcing a new dataset overview.
+- **`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
 
 
   Examples:
@@ -372,11 +372,11 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`artifact_infos`** *(array)*: Information for artifacts to be queryable via the Artifacts REST API.
+- **`artifact_infos`** *(array, required)*: Information for artifacts to be queryable via the Artifacts REST API.
 
   - **Items**: Refer to *[#/$defs/ArtifactInfo](#%24defs/ArtifactInfo)*.
 
-- **`loader_token_hashes`** *(array)*: Hashes of tokens used to authenticate for loading artifact.
+- **`loader_token_hashes`** *(array, required)*: Hashes of tokens used to authenticate for loading artifact.
 
   - **Items** *(string)*
 
@@ -415,11 +415,7 @@ metadata.
 
       - *null*
 
-  - **`anchor_point`**: The anchor point for this metadata class.
-
-    - **All of**
-
-      - : Refer to *[#/$defs/AnchorPoint](#%24defs/AnchorPoint)*.
+  - **`anchor_point`**: The anchor point for this metadata class. Refer to *[#/$defs/AnchorPoint](#%24defs/AnchorPoint)*.
 
   - **`json_schema`** *(object, required)*: The JSON schema for this metadata class.
 
