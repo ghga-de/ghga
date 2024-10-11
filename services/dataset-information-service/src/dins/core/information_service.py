@@ -88,6 +88,7 @@ class InformationService(InformationServicePort):
             accession=file.file_id,
             size=file.decrypted_size,
             sha256_hash=file.decrypted_sha256,
+            storage_alias=file.s3_endpoint_alias,
         )
         file_id = file_information.accession
 

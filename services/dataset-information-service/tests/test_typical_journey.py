@@ -80,14 +80,17 @@ INCOMING_FILE_PAYLOAD = event_schemas.FileInternallyRegistered(
 )
 
 INCOMING_FILE_PAYLOAD_2 = INCOMING_FILE_PAYLOAD.model_copy(
-    update={"file_id": FILE_ID_2}
+    update={"file_id": FILE_ID_2, "s3_endpoint_alias": "test-node-2"}
 )
 INCOMING_FILE_PAYLOAD_3 = INCOMING_FILE_PAYLOAD.model_copy(
-    update={"file_id": FILE_ID_3}
+    update={"file_id": FILE_ID_3, "s3_endpoint_alias": "test-node-3"}
 )
 
 FILE_INFORMATION = models.FileInformation(
-    accession=FILE_ID_1, sha256_hash=DECRYPTED_SHA256, size=DECRYPTED_SIZE
+    accession=FILE_ID_1,
+    sha256_hash=DECRYPTED_SHA256,
+    size=DECRYPTED_SIZE,
+    storage_alias="test-node",
 )
 
 pytestmark = pytest.mark.asyncio()
@@ -227,11 +230,13 @@ async def test_dataset_information_journey(
             "accession": FILE_ID_1,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
+            "storage_alias": "test-node",
         },
         {
             "accession": FILE_ID_2,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
+            "storage_alias": "test-node-2",
         },
     ]
 
@@ -256,16 +261,19 @@ async def test_dataset_information_journey(
             "accession": FILE_ID_1,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
+            "storage_alias": "test-node",
         },
         {
             "accession": FILE_ID_2,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
+            "storage_alias": "test-node-2",
         },
         {
             "accession": FILE_ID_3,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
+            "storage_alias": "test-node-3",
         },
     ]
 

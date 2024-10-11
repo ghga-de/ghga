@@ -53,10 +53,16 @@ components:
           exclusiveMinimum: 0.0
           title: Size
           type: integer
+        storage_alias:
+          description: Alias of the storage location where the corresponding file
+            data resides in permanent storage.
+          title: Storage Alias
+          type: string
       required:
       - accession
       - size
       - sha256_hash
+      - storage_alias
       title: FileInformation
       type: object
     HTTPValidationError:

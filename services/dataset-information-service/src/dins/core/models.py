@@ -40,6 +40,11 @@ class FileInformation(FileAccession):
         description="SHA256 hash of the unencrypted file content encoded as hexadecimal"
         " values as produced by hashlib.hexdigest().",
     )
+    storage_alias: str = Field(
+        default=...,
+        description="Alias of the storage location where the corresponding file data resides"
+        " in permanent storage.",
+    )
 
 
 class DatasetFileAccessions(BaseModel):
