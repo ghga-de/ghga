@@ -30,22 +30,22 @@ Return of internal only file metadata, i.e. encrypted part sizes as MD5 and SHA2
 ### RESTful/Synchronous:
 
 #### File Information:
-- GET `/file_information/{file_id}`: Get file size and sha256 for the unencrypted file content
+- GET `/file_information/{file_id}`: Get storage location alias, file size and sha256 for the unencrypted file content 
 
 Here the `file_id` is the public accession for the given file.
 
-This should return a payload including the unencrypted file size in bytes and SHA256 checksum for the given file ID,
-hiding unnecessary details for the requester.
+This should return a payload including the unencrypted file size in bytes, the SHA256 checksum for the given file ID and the alias of the storage location, hiding unnecessary details for the requester.
 ```
 {
     'accession': ...,
     'size': ...,
     'sha256_hash': ...,
+    'storage_alias': ...,
 }
 ```
 
 #### Dataset Information:
-- GET `/dataset_information/{dataset_id}`: Get file size and sha256 for the unencrypted file content for all files in the given dataset
+- GET `/dataset_information/{dataset_id}`: Get file size, storage location alias and sha256 for the unencrypted file content for all files in the given dataset
 
 Here the `dataset_id` is the public accession for the given dataset.
 
@@ -59,11 +59,13 @@ This should return a list of objects with each element containing the `file_id/a
             `accession`: ...,    
             'size': ...,
             'sha256_hash': ...,
+            'storage_alias': ...,
         },
         {
             `accession`: ...,    
             'size': ...,
             'sha256_hash': ...,
+            'storage_alias': ...,
         },
         ...
     ]
