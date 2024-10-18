@@ -18,7 +18,7 @@
 
 from pytest import fixture
 
-from fixtures.config import Config
+from fixtures.config import Config, S3StorageConfig
 from fixtures.http_client import HttpClient
 from fixtures.state_manager import StateManager
 
@@ -62,39 +62,34 @@ class S3Fixture(StateManager):
 
     def empty_buckets(
         self,
-        storage_aliases: str | list[str] | None = None,
+        storages: S3StorageConfig | list[S3StorageConfig] | None = None,
         buckets: str | list[str] | None = None,
     ) -> None:
         """Empty the given bucket(s) in given storage alias(es)."""
-        if buckets is None:
-            buckets = [
-                self.config.staging_bucket,
-                self.config.permanent_bucket,
-                self.config.outbox_bucket,
-                self.config.inbox_bucket,
+        if isinstance(storages, S3StorageConfig):
+            storages = [storages]
+
+        if storages is None:
+            storages = [
+                self.get_storage_config("primary"),
+                self.get_storage_config("secondary"),
             ]
 
         if isinstance(buckets, str):
             buckets = [buckets]
 
-        if storage_aliases is None:
-            storage_aliases = [
-                self.get_storage_config("primary").storage_alias,
-                self.get_storage_config("secondary").storage_alias,
-            ]
-
-        if isinstance(storage_aliases, str):
-            storage_aliases = [storage_aliases]
-
-        for storage_alias in storage_aliases:
-            for bucket_id in buckets:
-                url = f"{self.config.sms_url}/objects/{storage_alias}/{bucket_id}"
+        for storage in storages:
+            buckets_to_delete = buckets if buckets else list(storage.buckets)
+            for bucket_id in buckets_to_delete:
+                url = (
+                    f"{self.config.sms_url}/objects/{storage.storage_alias}/{bucket_id}"
+                )
                 response = self.http.delete(
                     url, headers=self.auth_headers, timeout=DELETION_TIMEOUT
                 )
                 assert (
                     response.status_code == 204
-                ), f"Failed to delete objects in {storage_alias}.{bucket_id}: {response.text}"
+                ), f"Failed to delete objects in {storage.storage_alias}.{bucket_id}: {response.text}"
 
 
 @fixture(name="s3", scope="session")

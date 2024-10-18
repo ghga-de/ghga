@@ -161,7 +161,12 @@ def call_data_steward_kit_ingest(
 
 @given("the staging buckets are empty")
 def staging_buckets_are_empty(fixtures: JointFixture):
-    fixtures.s3.empty_buckets(buckets=fixtures.config.staging_bucket)
+    for storage_name in ["primary", "secondary"]:
+        storage_config = fixtures.s3.get_storage_config(storage_name)
+        fixtures.s3.empty_buckets(
+            storages=storage_config,
+            buckets=storage_config.buckets.staging,
+        )
 
 
 @given("no file metadata exists")
@@ -268,7 +273,8 @@ def check_uploaded_files_in_storage(
     fixtures: JointFixture, uploaded_file_uuids: set[str], storage_name: str
 ):
     """Check that the uploaded files exist in the given bucket."""
-    bucket_id = fixtures.config.staging_bucket
+    storage_config = fixtures.s3.get_storage_config(storage_name)
+    bucket_id = storage_config.buckets.staging
     storage_config = fixtures.s3.get_storage_config(storage_name)
     for object_id in uploaded_file_uuids:
         assert fixtures.s3.does_object_exist(
@@ -291,7 +297,7 @@ def ingest_file_metadata(fixtures: JointFixture, storage_name: str) -> IngestCon
         submission_store_dir=fixtures.dsk.config.submission_store,
         map_files_fields=list(fixtures.dsk.config.metadata_file_fields),
         selected_storage_alias=storage_config.storage_alias,
-        fallback_bucket_id=fixtures.config.staging_bucket,
+        fallback_bucket_id=storage_config.buckets.staging,
     )
 
     ingest_config_path = ingest_config_as_file(config=ingest_config)
@@ -359,6 +365,6 @@ def check_ingested_files_in_storage(
     for object_id in object_ids:
         assert fixtures.s3.does_object_exist(
             storage_alias=storage_config.storage_alias,
-            bucket=fixtures.config.permanent_bucket,
+            bucket=storage_config.buckets.permanent,
             object_id=object_id,
         ), f"{object_id} does not exist in the permanent bucket"

@@ -35,8 +35,12 @@ scenarios("../features/340_download_files.feature")
 
 @given("the download buckets are empty")
 def download_buckets_empty(fixtures: JointFixture):
-    config = fixtures.config
-    fixtures.s3.empty_buckets(buckets=[config.inbox_bucket, config.staging_bucket])
+    for storage_name in ["primary", "secondary"]:
+        storage_config = fixtures.s3.get_storage_config(storage_name)
+        fixtures.s3.empty_buckets(
+            storages=storage_config,
+            buckets=[storage_config.buckets.inbox, storage_config.buckets.staging],
+        )
 
 
 @when(

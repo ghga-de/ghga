@@ -24,11 +24,25 @@ from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings
 
 
+class Buckets(BaseModel):
+    """Configuration for S3 bucket IDs."""
+
+    inbox: str
+    outbox: str
+    staging: str
+    permanent: str
+
+    def __iter__(self):
+        """Allow iteration over all bucket IDs."""
+        return iter([self.inbox, self.outbox, self.staging, self.permanent])
+
+
 class S3StorageConfig(BaseModel):
     """Configuration for an S3 object storage."""
 
     storage_alias: str
     credentials: S3Config
+    buckets: Buckets
 
 
 class ObjectStoragesConfig(BaseModel):
@@ -84,6 +98,12 @@ class Config(BaseSettings):
                     "s3_access_key_id": "testbed-key",
                     "s3_secret_access_key": "testbed-secret",
                 },
+                "buckets": {
+                    "inbox": "hub1-inbox",
+                    "outbox": "hub1-outbox",
+                    "staging": "hub1-interrogations",
+                    "permanent": "hub1-permanent",
+                },
             },
             "secondary": {
                 "storage_alias": "secondary",
@@ -92,15 +112,15 @@ class Config(BaseSettings):
                     "s3_access_key_id": "testbed-key",
                     "s3_secret_access_key": "testbed-secret",
                 },
+                "buckets": {
+                    "inbox": "hub2-inbox",
+                    "outbox": "hub2-outbox",
+                    "staging": "hub2-interrogations",
+                    "permanent": "hub2-permanent",
+                },
             },
         }  # type: ignore
     )
-
-    # bucket names
-    inbox_bucket: str = "inbox"
-    outbox_bucket: str = "outbox"
-    staging_bucket: str = "staging"
-    permanent_bucket: str = "permanent"
 
     object_id: str = "testbed-event-object"
 

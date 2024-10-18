@@ -101,7 +101,7 @@ def create_named_file(
 
     file_object = FileObject(
         file_path=Path(file_path),
-        bucket_id=config.staging_bucket,
+        bucket_id="",  # Not used in the tests, but required by the model
         object_id=alias,
     )
     return file_object

@@ -109,7 +109,7 @@ def upload_config_as_file(
         "part_size": str(config.upload_part_size),
         "object_storages": {
             storage_alias: {
-                "bucket_id": config.staging_bucket,
+                "bucket_id": storage_config.buckets.staging,
                 "credentials": {
                     "s3_access_key_id": s3_access_key_id,
                     "s3_secret_access_key": s3_secret_access_key,
