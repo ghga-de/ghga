@@ -1,10 +1,10 @@
 exports:
   defaults:
-
     global:
       imageRegistry: ""
       imagePullSecrets: []
       storageClass: ""
+      topics: {}
 
     nameOverride: ""
 
@@ -167,3 +167,5 @@ exports:
       rewrite: /
       hostname: ""
       prefix: ""
+
+    topics: {}
