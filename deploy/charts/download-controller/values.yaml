@@ -7,60 +7,19 @@ config_prefix: dcs
 
 parameters:
   default:
-    api_root_path: ""
-    api_route: /ga4gh/drs/v1
-    auth_algs:
-    - ES256
-    auth_check_claims:
-      email: null
-      exp: null
-      file_id: null
-      full_user_name: null
-      iat: null
-      type: null
-      user_id: null
-      user_public_crypt4gh_key: null
     auth_key: '{}'
-    auth_map_claims: {}
-    auto_reload: false
-    cache_timeout: 7
     cors_allow_credentials: false
     cors_allowed_headers: []
     cors_allowed_methods: []
     cors_allowed_origins: []
     db_connection_str: null
     db_name: dcs
-    docs_url: /docs
-    download_served_event_topic: downloads
-    download_served_event_type: drs_object_served
     drs_server_uri: drs://localhost:8080/
     ekss_base_url: http://encryption-key-store:8080
-    file_deleted_event_topic: downloads
-    file_deleted_event_type: drs_object_deleted
-    file_registered_event_topic: downloads
-    file_registered_event_type: drs_object_registered
-    files_to_delete_topic: purges
-    files_to_register_topic: internal_registrations
-    files_to_register_type: internal_file_registered
     host: "0.0.0.0"
-    openapi_url: /openapi.json
-    port: 8080
     presigned_url_expires_after: 10
-    retry_access_after: 120
     object_storages: {}
-    #   test:
-    #     bucket: outbox
-    #     credentials:
-    #       aws_config_ini: null
-    #       s3_endpoint_url: null
-    #       s3_access_key_id: null
-    #       s3_secret_access_key: null
-    #       s3_session_token: null
-
     service_instance_id: 'dcs_1'
-    service_name: dcs
-    unstaged_download_event_topic: downloads
-    workers: 1
     unstaged_download_collection: unstaged-download-requested
   rest:
     service_instance_id: 'rest.1'
@@ -80,3 +39,48 @@ containers:
   config:
     name: parameters-consumer
     key: parameters-consumer
+
+
+topics:
+
+  fileRegisteredEvent:
+    topic:
+      name: file_registered_event_topic
+      value: downloads
+    type:
+      name: file_registered_event_type
+      value: drs_object_registered
+
+  fileDeletedEvent: 
+    topic:
+      name: file_deleted_event_topic
+      value: downloads
+    type:
+      name: file_deleted_event_type
+      value: drs_object_deleted
+
+  filesToRegister:
+    topic:
+      name: files_to_register_topic
+      value: internal-registrations
+    type:
+      name: files_to_register_type
+      value: internal_file_registered
+
+  filesToDelete:
+    topic:
+      name: files_to_delete_topic
+      value: purges
+
+  downloadServed:
+    topic:
+      name: download_served_event_topic
+      value: downloads
+    type:
+      name: download_served_event_type
+      value: drs_object_served
+
+  unstagedDownload:
+    topic:
+      name: unstaged_download_event_topic
+      value: downloads
