@@ -1,9 +1,9 @@
 {{/* Transforms topic values to serivce config parameters. */}}
 {{- define "ghga-common.kafkaTopicsParameters" -}}
-{{- $topics := merge (.Values.globals.topics | default dict) .Values.topics -}}
+{{- $topics := merge (.Values.global.topics | default dict) .Values.topics -}}
 {{- range $key, $value := $topics -}}
 {{- if $value.topic }}
-  {{ $value.topic.name }}: {{ $value.topic.value }}
+  {{ $value.topic.name }}: {{ $.Values.topicPrefix | empty | ternary $value.topic.value (cat $.Values.topicPrefix "-" $value.topic.value ) | nospace }}
 {{- end -}}
 {{- if $value.type }}
   {{ $value.type.name }}: {{ $value.type.value }}
