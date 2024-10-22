@@ -24,6 +24,7 @@ import pyotp
 import pytest
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.core.session_store import Session, SessionState
 from auth_service.auth_adapter.deps import get_config, get_session_store
@@ -31,6 +32,8 @@ from auth_service.user_management.user_registry.models.ivas import IvaState
 from auth_service.user_management.user_registry.models.users import UserStatus
 
 from ...fixtures.utils import (
+    RE_USER_INFO_URL,
+    USER_INFO,
     headers_for_session,
 )
 from .fixtures import (
@@ -201,7 +204,9 @@ async def test_verify_totp_without_csrf_token(
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
 
 
-async def test_verify_totp(client_with_session: ClientWithSession):
+async def test_verify_totp(
+    client_with_session: ClientWithSession, httpx_mock: HTTPXMock
+):
     """Test verification of TOTP tokens."""
     client, session, user_registry, user_token_dao = client_with_session
     headers = headers_for_session(session)
@@ -258,6 +263,7 @@ async def test_verify_totp(client_with_session: ClientWithSession):
     response = await client.post(LOGOUT_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
+    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
     session = await query_new_session(client)
     assert session.state is SessionState.HAS_TOTP_TOKEN
     headers = headers_for_session(session)

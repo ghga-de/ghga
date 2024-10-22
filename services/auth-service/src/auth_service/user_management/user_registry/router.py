@@ -16,10 +16,15 @@
 
 """Routes for managing users and IVAs"""
 
+from contextlib import suppress
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Query, Response
 from fastapi.exceptions import HTTPException
+from hexkit.protocols.dao import ResourceNotFoundError
+
+from auth_service.auth_adapter.deps import UserTokenDao, get_user_token_dao
+from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
 
 from ..auth import (
     StewardAuthContext,
@@ -280,6 +285,8 @@ async def delete_user(
         ),
     ],
     user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
+    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
     auth_context: StewardAuthContext,
 ) -> Response:
     """Delete user."""
@@ -288,12 +295,20 @@ async def delete_user(
             status_code=403, detail="Not authorized to delete this user."
         )
     try:
+        # delete the user data belonging to this service
         await user_registry.delete_user(id_)
+        # delete associated tokens belonging to the auth adapter
+        with suppress(ResourceNotFoundError):
+            await token_dao.delete(id_)
+        # delete associated claims belonging to the claims repository
+        async for claim in claim_dao.find_all(mapping={"user_id": id_}):
+            with suppress(ResourceNotFoundError):
+                await claim_dao.delete(claim.id)
     except user_registry.UserDoesNotExistError as error:
         raise HTTPException(
             status_code=404, detail="The user was not found."
         ) from error
-    except user_registry.UserRetrievalError as error:
+    except Exception as error:
         raise HTTPException(
             status_code=500, detail="The user cannot be deleted."
         ) from error

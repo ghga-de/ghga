@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from typing import Any
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -193,11 +194,9 @@ class UserRegistry(UserRegistryPort):
             log.error("Could not delete user: %s", error)
             raise self.UserDeletionError(user_id=user_id) from error
         try:
-            try:
-                async for iva in self._iva_dao.find_all(mapping={"user_id": user_id}):
+            async for iva in self._iva_dao.find_all(mapping={"user_id": user_id}):
+                with suppress(ResourceNotFoundError):
                     await self._iva_dao.delete(iva.id)
-            except ResourceNotFoundError:
-                pass
         except Exception as error:
             log.error("Could not delete IVAs of user: %s", error)
             raise self.UserDeletionError(user_id=user_id) from error

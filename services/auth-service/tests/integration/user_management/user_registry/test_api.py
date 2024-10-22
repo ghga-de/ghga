@@ -15,8 +15,10 @@
 
 """Test the REST API"""
 
-from datetime import datetime
+import asyncio
+from datetime import datetime, timedelta
 from functools import partial
+from uuid import uuid4
 
 import pytest
 from fastapi import status
@@ -753,7 +755,8 @@ async def test_delete_user_as_data_steward(
 
 
 async def test_delete_user_as_same_user(bare_client: BareClient):
-    """Test that a registered user can be deleted by a data steward."""
+    """Test that users cannot delete their own accounts."""
+    # normal users cannot delete their own accounts
     headers = get_headers_for(
         id="some-id", name="Max Headroom", email="max@example.org"
     )
@@ -763,7 +766,7 @@ async def test_delete_user_as_same_user(bare_client: BareClient):
     error = response.json()
     assert error == {"detail": "Not authorized"}
 
-    # even data stewards cannot delete their own accounts
+    # and even data stewards cannot delete their own accounts
     headers = get_headers_for(
         id="some-id", name="Max Headroom", email="max@example.org", role="data_steward"
     )
@@ -781,6 +784,85 @@ async def test_delete_user_unauthenticated(bare_client: BareClient):
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error == {"detail": "Not authenticated"}
+
+
+async def test_delete_users_with_associated_data(
+    full_client: FullClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test that when a user is deleted, all associated data is deleted as well."""
+    config = full_client.config
+    db = full_client.mongodb.client[config.db_name]
+    collections = (
+        config.users_collection,
+        config.user_tokens_collection,
+        config.ivas_collection,
+        config.claims_collection,
+    )
+    # make sure the database is empty
+    for collection in collections:
+        assert not db[collection].count_documents({})
+    # prepare two random, but valid user IDs
+    user_ids = [str(uuid4()) for _ in range(2)]
+    now = now_as_utc().isoformat()
+    later = (now_as_utc() + timedelta(days=90)).isoformat()
+    # create some data for each user
+    for id_ in user_ids:
+        # create the base dataset for a fake user
+        db[collections[0]].insert_one({"_id": id_, "name": "All the Same"})
+        # create an associated fake user token
+        db[collections[1]].insert_one({"_id": id_, "totp_token": {}})
+        # create something that can pass as an associated IVA
+        db[collections[2]].insert_one(
+            {
+                "_id": str(uuid4()),
+                "user_id": id_,
+                "type": "Phone",
+                "value": "0123456",
+                "created": now,
+                "changed": now,
+            }
+        )
+        # create something that can pass as an associated claim
+        db[collections[3]].insert_one(
+            {
+                "_id": str(uuid4()),
+                "user_id": id_,
+                "visa_type": "ControlledAccessGrants",
+                "visa_value": "https://ghga.de/something",
+                "source": "https://ghga.de",
+                "assertion_date": now,
+                "creation_date": now,
+                "valid_from": now,
+                "valid_until": later,
+            }
+        )
+
+    def num_documents(collection):
+        """Get the number of non-deleted documents in the given collection."""
+        count = db[collection].count_documents
+        return count({}) - count({"__metadata__.deleted": True})
+
+    # make sure all users have been stored with all their associated data
+    for collection in collections:
+        assert num_documents(collection) == len(user_ids), collection
+
+    # successively delete the users and check that all associated data is deleted
+    while user_ids:
+        id_ = user_ids.pop()
+        response = await full_client.delete(f"/users/{id_}", headers=steward_headers)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        bad_collections = set(collections)
+        # try a couple of times to allow for processing time
+        for _tries in range(100):
+            for collection in list(bad_collections):
+                if num_documents(collection) == len(user_ids):
+                    bad_collections.remove(collection)
+            if not bad_collections:
+                break
+            await asyncio.sleep(0.1)
+        assert not bad_collections
 
 
 async def test_get_ivas_when_not_a_data_steward(

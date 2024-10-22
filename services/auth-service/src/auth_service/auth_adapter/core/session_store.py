@@ -218,4 +218,4 @@ class SessionStore(SessionStorePort[Session]):
         timeout_soft = max(0, int(last_used + timeout_soft - now + 0.5))
         timeout_hard = max(0, int(created + timeout_hard - now + 0.5))
         timeout_soft = min(timeout_soft, timeout_hard)
-        return (timeout_soft, timeout_hard)
+        return timeout_soft, timeout_hard
