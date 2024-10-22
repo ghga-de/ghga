@@ -87,6 +87,7 @@ class Config(BaseSettings):
         "nos",
         "ns",
         "fis",
+        "dins",
     ]
 
     object_storages: ObjectStoragesConfig = ObjectStoragesConfig(
@@ -138,6 +139,7 @@ class Config(BaseSettings):
         "mail",
         "op",
         "sms",
+        "dins",
     ]
 
     # internal APIs
@@ -220,6 +222,9 @@ class Config(BaseSettings):
 
     # sms
     sms_url: str = "http://sms"
+
+    # dins
+    dins_url: str = "http://dins"
 
     @model_validator(mode="after")
     def check_operation_modes(self):

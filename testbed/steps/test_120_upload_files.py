@@ -319,6 +319,7 @@ def check_metadata_documents(
     fixtures: JointFixture, ingest_config: IngestConfig
 ) -> set[str]:
     accessions: set[str] = set()
+    file_information = fixtures.state.get_state("all file information") or {}
     file_metadata_dir = fixtures.dsk.config.file_metadata_dir
     for metadata_file_path in file_metadata_dir.iterdir():
         if metadata_file_path.suffix == ".json":
@@ -329,8 +330,15 @@ def check_metadata_documents(
                 submission_store=SubmissionStore(config=ingest_config),
             )
             accessions.add(accession)
-
+            file_metadata = json.loads(metadata_file_path.read_text())
+            # Store basic file information for later use
+            file_information[accession] = {
+                "size": file_metadata["Unencrypted file size"],
+                "sha256_hash": file_metadata["Unencrypted file checksum"],
+                "storage_alias": file_metadata["Storage alias"],
+            }
     assert accessions
+    fixtures.state.set_state("all file information", file_information)
 
     documents = fixtures.mongo.wait_for_documents(
         db_name=fixtures.config.ifrs_db_name,
