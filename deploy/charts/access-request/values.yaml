@@ -5,39 +5,12 @@ config_prefix: ars
 
 parameters:
   default:
-    access_grant_max_days: 730
-    access_grant_min_days: 7
-    access_upfront_max_days: 180
-    api_root_path: ""
-    auth_algs:
-    - ES256
-    auth_check_claims:
-      email: null
-      exp: null
-      iat: null
-      name: null
-      id: null
     auth_key: '{}'
-    auth_map_claims: {}
-    auto_reload: false
-    cors_allow_credentials: false
-    cors_allowed_headers: []
-    cors_allowed_methods: []
-    cors_allowed_origins: []
     db_connection_str: null
     db_name: ars
-    docs_url: /docs
     download_access_url: http://claims-repository:8080/download-access
     host: "0.0.0.0"
-    access_request_events_topic: access_requests
-    access_request_created_event_type: access_request_created
-    access_request_allowed_event_type: access_request_allowed
-    access_request_denied_event_type: access_request_denied
-    openapi_url: /openapi.json
-    port: 8080
     service_instance_id: 'rest.1'
-    service_name: ars
-    workers: 1
 
 containers:
 - name: rest
@@ -46,3 +19,16 @@ containers:
   config:
     name: parameters
     key: parameters
+
+topics:
+  fileRegisteredEvent:
+    topic:
+      name: access_request_events_topic
+      value: access_requests
+    types:
+    - name: access_request_created_event_type
+      value: access_request_created
+    - name: access_request_allowed_event_type
+      value: access_request_allowed
+    - name: access_request_denied_event_type
+      value: access_request_denied
