@@ -8,5 +8,10 @@
 {{- if $value.type }}
   {{ $value.type.name }}: {{ $value.type.value }}
 {{- end -}}
+{{- if $value.types }}
+{{- range $key, $value := $value.types }}
+  {{ $value.name }}: {{ $value.value }}
+{{- end }}
+{{- end -}}
 {{- end -}}
 {{- end -}}
