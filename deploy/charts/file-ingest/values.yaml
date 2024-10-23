@@ -5,32 +5,14 @@ config_prefix: fis
 
 parameters:
   default:
-    api_root_path: ""
-    auto_reload: false
-    cors_allow_credentials: false
-    cors_allowed_headers: []
-    cors_allowed_methods: []
-    cors_allowed_origins: []
-    docs_url: /docs
     host: 0.0.0.0
-    openapi_url: /openapi.json
-    port: 8080
     private_key: ""
-    file_upload_validation_success_topic: interrogations
-    file_validations_collection: file-validations
+    vault_url: http://vault:8200
+    vault_path: ekss
     db_connection_str: null
     db_name: fis
     service_instance_id: rest.1
-    service_name: fis
     token_hashes: []
-    vault_url: http://vault:8200
-    vault_verify: false
-    vault_role_id: null
-    vault_secret_id: null
-    vault_path: ekss
-    vault_kube_role: null
-    vault_auth_mount_point: null
-    workers: 1
 
 containers:
 - name: rest
@@ -39,3 +21,11 @@ containers:
   config:
     name: parameters
     key: parameters
+
+
+topics:
+
+  fileUploadValidationSuccess:
+    topic:
+      name: file_upload_validation_success_topic
+      value: interrogations
