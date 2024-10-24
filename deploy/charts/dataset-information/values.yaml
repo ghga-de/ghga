@@ -10,7 +10,6 @@ parameters:
     db_name: dins
     service_instance_id: rest.1
     service_name: dins
-    token_hashes: []
   rest:
     service_instance_id: 'rest.1'
   consumer:
