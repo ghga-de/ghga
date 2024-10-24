@@ -1,0 +1,28 @@
+image:
+  repository: "ghga/purge-controller-service"
+
+config_prefix: pcs
+
+parameters:
+  default:
+    host: 0.0.0.0
+    db_connection_str: null
+    db_name: pcs
+    service_instance_id: rest.1
+    token_hashes: []
+
+containers:
+- name: rest
+  type: "rest"
+  cmd: pcs run-rest
+  config:
+    name: parameters
+    key: parameters
+
+
+topics:
+
+  filesToDelete:
+    topic:
+      name: files_to_delete_topic
+      value: purges

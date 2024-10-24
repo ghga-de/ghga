@@ -1,0 +1,62 @@
+image:
+  repository: "ghga/dataset-information-service"
+
+config_prefix: dins
+
+parameters:
+  default:
+    host: 0.0.0.0
+    db_connection_str: null
+    db_name: dins
+    service_instance_id: rest.1
+    service_name: dins
+    token_hashes: []
+  rest:
+    service_instance_id: 'rest.1'
+  consumer:
+    service_instance_id: 'consumer.1'
+
+containers:
+- name: rest
+  type: "rest"
+  cmd: dins run-rest
+  config:
+    name: parameters-rest
+    key: parameters-rest
+- name: consumer
+  type: "consumer"
+  cmd: dins consume-events
+  config:
+    name: parameters-consumer
+    key: parameters-consumer
+
+
+topics:
+
+  fileRegisteredEvent:
+    topic:
+      name: file_registered_event_topic
+      value: internal_registrations
+    type:
+      name: file_registered_event_type
+      value: internal_file_registered
+
+  filesToDelete:
+    topic:
+      name: files_to_delete_topic
+      value: purges
+
+  datasetUpsertionEvent:
+    topic:
+      name: dataset_event_topic
+      value: metadata_datasets
+    type:
+      name: dataset_upsertion_event_type
+      value: dataset_created
+  datasetDeletionEvent:
+    topic:
+      name: dataset_event_topic
+      value: metadata_datasets
+    type:
+      name: dataset_deletion_event_type
+      value: dataset_deleted
