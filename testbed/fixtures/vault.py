@@ -20,6 +20,7 @@
 from collections.abc import Generator
 
 import hvac
+import hvac.exceptions
 from pydantic import BaseModel
 from pytest import fixture
 
@@ -49,6 +50,28 @@ class VaultFixture:
         return self.client.secrets.kv.v2.list_secrets(
             path=self.config.path,
         )["data"]["keys"]
+
+    def empty_secrets(self, secrets_to_delete: list[str] | None = None):
+        try:
+            secrets_to_delete = secrets_to_delete or self.keys
+            print(f"Deleting secrets: {secrets_to_delete}")
+        except hvac.exceptions.InvalidPath as exc:
+            print(
+                "Invalid path error when fetching secrets.",
+                "The path might be invalid, or no secrets may exist.",
+                exc,
+            )
+            return
+
+        if not secrets_to_delete:
+            print("No secrets to delete")
+            return
+
+        for secret in secrets_to_delete:
+            print(f"Secret: {secret}")
+            self.client.secrets.kv.v2.delete_metadata_and_all_versions(
+                path=f"{self.config.path}/{secret}"
+            )
 
 
 @fixture(name="vault", scope="session")

@@ -233,6 +233,8 @@ def reset_state(fixtures: JointFixture):
     restore_data_stewardship(saved_data_steward, fixtures)
     fixtures.dsk.reset_work_dir()  # reset local submission registry
     empty_mail_server(fixtures)  # reset mail server
+    if not fixtures.config.use_api_gateway:
+        fixtures.vault.empty_secrets()  # empty secret storage
 
 
 @given("no notification has been sent yet")
@@ -340,3 +342,10 @@ def check_email_sent_to(
         sleep(interval)
         slept += interval
     assert False, f"An email notification was not received by {email}."
+
+
+@given("no file encryption secrets exist in the vault")
+def reset_file_encryption_secrets(fixtures: JointFixture):
+    """Reset the file encryption secrets in the vault."""
+    if not fixtures.config.use_api_gateway:
+        fixtures.vault.empty_secrets()  # empty secret storage

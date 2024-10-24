@@ -88,6 +88,7 @@ class Config(BaseSettings):
         "ns",
         "fis",
         "dins",
+        "pcs",
     ]
 
     object_storages: ObjectStoragesConfig = ObjectStoragesConfig(
@@ -140,6 +141,7 @@ class Config(BaseSettings):
         "op",
         "sms",
         "dins",
+        "pcs",
     ]
 
     # internal APIs
@@ -151,6 +153,7 @@ class Config(BaseSettings):
     auth_basic: str = ""  # for Basic Authentication
     upload_token: str = ""  # simple token for uploading metadata
     state_management_token: str = ""  # simple token for state management service
+    purge_controller_token: str = ""  # simple token for purge controller service
     totp_digits: int = 6
     totp_algorithm: str = "sha1"
     totp_interval: int = 30
@@ -193,6 +196,11 @@ class Config(BaseSettings):
     ifrs_db_name: str = "ifrs"
     ifrs_metadata_collection: str = "file_metadata"
 
+    # pcs
+    pcs_db_name: str = "pcs"
+    pcs_file_deletions_collection: str = "file_deletions"
+    pcs_url: str = "http://pcs"
+
     # mass
     mass_url: str = "http://mass"
 
@@ -211,6 +219,8 @@ class Config(BaseSettings):
 
     # dcs
     dcs_url: str = "http://dcs"
+    dcs_db_name: str = "dcs"
+    dcs_objects_collection: str = "drs_objects"
 
     # data portal ui
     data_portal_ui_url: str = "http://data-portal-ui"
@@ -225,6 +235,8 @@ class Config(BaseSettings):
 
     # dins
     dins_url: str = "http://dins"
+    dins_db_name: str = "dins"
+    dins_metadata_collection: str = "file_information"
 
     @model_validator(mode="after")
     def check_operation_modes(self):

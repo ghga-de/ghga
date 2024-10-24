@@ -16,6 +16,8 @@
 
 """Fixture for testing code that uses the S3ObjectStorage provider."""
 
+from typing import Any
+
 from pytest import fixture
 
 from fixtures.config import Config, S3StorageConfig
@@ -59,6 +61,15 @@ class S3Fixture(StateManager):
         url = f"{self.config.sms_url}/objects/{storage_alias}/{bucket}/{object_id}"
         response = self.http.get(url, headers=self.auth_headers)
         return response.status_code == 200
+
+    def list_objects(self, bucket: str, storage_alias: str) -> list[str]:
+        """List all objects in the specified bucket."""
+        url = f"{self.config.sms_url}/objects/{storage_alias}/{bucket}"
+        response = self.http.get(url, headers=self.auth_headers)
+        assert response.status_code == 200
+        objects = response.json()
+        assert isinstance(objects, list)
+        return objects
 
     def empty_buckets(
         self,

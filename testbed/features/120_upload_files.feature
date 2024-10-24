@@ -15,6 +15,7 @@ Feature: 12 Upload Files
 
   Scenario: Batch uploading files of dataset A
 
+    Given no file encryption secrets exist in the vault
     When "all" files of dataset "DS_A" are uploaded to "primary" storage in batch
     Then the file metadata for each uploaded file exists
     And the uploaded files exist in the staging bucket of "primary" storage
