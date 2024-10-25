@@ -5,30 +5,14 @@ config_prefix: metldata
 
 parameters:
   default:
-    api_root_path: ""
     artifact_infos: []
-    auto_reload: false
-    cors_allow_credentials: false
-    cors_allowed_headers: []
-    cors_allowed_methods: []
-    cors_allowed_origins: []
-    dataset_change_event_topic: metadata_datasets
-    dataset_deletion_type: dataset_deleted
-    dataset_upsertion_type: dataset_created
     db_connection_str: null
     db_name: metadata_artifacts
-    docs_url: /docs
     host: 0.0.0.0
     loader_token_hashes: null  # <Please fill - The tokens must be the loader token generated using the data steward kit.>
-    openapi_url: /openapi.json
-    port: 8080
     primary_artifact_name: embedded_public
     primary_dataset_name: EmbeddedDataset
-    resource_change_event_topic: searchable_resources
-    resource_deletion_event_type: searchable_resource_deleted
-    resource_upsertion_type: searchable_resource_upserted
     service_instance_id: 'rest.1'
-    workers: 1
 
 containers:
 - name: rest
@@ -37,3 +21,24 @@ containers:
   config:
     name: parameters
     key: parameters
+
+topics:
+  datasetChangeEvent:
+    topic:
+      name: dataset_change_event_topic
+      value: metadata_datasets
+    types:
+    - name: dataset_deletion_type
+      value: dataset_deleted
+    - name: dataset_upsertion_type
+      value: dataset_created
+
+  resourceChangeEvent:
+    topic:
+      name: resource_change_event_topic
+      value: searchable_resources
+    types:
+    - name: resource_deletion_event_type
+      value: searchable_resource_deleted
+    - name: resource_upsertion_type
+      value: searchable_resource_upserted
