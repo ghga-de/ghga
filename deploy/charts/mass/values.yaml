@@ -5,21 +5,9 @@ config_prefix: mass
 
 parameters:
   default:
-    api_root_path: ""
-    auto_reload: false
-    cors_allow_credentials: null
-    cors_allowed_headers: null
-    cors_allowed_methods: null
-    cors_allowed_origins: null
     db_connection_str: null
     db_name: metadata-store
-    docs_url: /docs
     host: "0.0.0.0"
-    openapi_url: /openapi.json
-    port: 8080
-    resource_change_event_topic: searchable_resources
-    resource_deletion_event_type: searchable_resource_deleted
-    resource_upsertion_event_type: searchable_resource_upserted
     searchable_classes:
       EmbeddedDataset:
         description: Dataset grouping files under controlled access.
@@ -33,8 +21,6 @@ parameters:
           name: Dataset alias
         - key: title
           name: Dataset title
-    service_name: mass
-    workers: 1
   rest:
     service_instance_id: 'rest.1'
   consumer:
@@ -53,3 +39,15 @@ containers:
   config:
     name: parameters-consumer
     key: parameters-consumer
+
+
+topics:
+  resourceChangeEvent:
+    topic:
+      name: resource_change_event_topic
+      value: searchable_resources
+    types:
+    - name: resource_deletion_event_type
+      value: searchable_resource_deleted
+    - name: resource_upsertion_event_type
+      value: searchable_resource_upserted
