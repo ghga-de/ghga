@@ -26,7 +26,7 @@ topics:
   datasetChangeEvent:
     topic:
       name: dataset_change_event_topic
-      value: metadata_datasets
+      value: metadata-datasets
     types:
     - name: dataset_deletion_type
       value: dataset_deleted
@@ -36,7 +36,7 @@ topics:
   resourceChangeEvent:
     topic:
       name: resource_change_event_topic
-      value: searchable_resources
+      value: searchable-resources
     types:
     - name: resource_deletion_event_type
       value: searchable_resource_deleted
