@@ -7,11 +7,11 @@ parameters:
   default:
     db_connection_str: null
     db_name: ifrs
-    file_deleted_event_topic: internal_registrations
+    file_deleted_event_topic: internal-registrations
     file_deleted_event_type: internal_file_deleted
-    file_registered_event_topic: internal_registrations
+    file_registered_event_topic: internal-registrations
     file_registered_event_type: internal_file_registered
-    file_staged_event_topic: internal_registrations
+    file_staged_event_topic: internal-registrations
     file_staged_event_type: internal_file_staged
     files_to_delete_topic: purges
     files_to_register_topic: interrogations

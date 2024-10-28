@@ -35,7 +35,7 @@ topics:
   fileRegisteredEvent:
     topic:
       name: file_registered_event_topic
-      value: internal_registrations
+      value: internal-registrations
     type:
       name: file_registered_event_type
       value: internal_file_registered
@@ -48,14 +48,14 @@ topics:
   datasetUpsertionEvent:
     topic:
       name: dataset_event_topic
-      value: metadata_datasets
+      value: metadata-datasets
     type:
       name: dataset_upsertion_event_type
       value: dataset_created
   datasetDeletionEvent:
     topic:
       name: dataset_event_topic
-      value: metadata_datasets
+      value: metadata-datasets
     type:
       name: dataset_deletion_event_type
       value: dataset_deleted

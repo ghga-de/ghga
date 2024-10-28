@@ -21,7 +21,7 @@ parameters:
     cors_allowed_headers: []
     cors_allowed_methods: []
     cors_allowed_origins: []
-    dataset_change_event_topic: metadata_datasets
+    dataset_change_event_topic: metadata-datasets
     dataset_deletion_event_type: dataset_deleted
     dataset_upsertion_event_type: dataset_created
     datasets_collection: datasets

@@ -45,7 +45,7 @@ topics:
   resourceChangeEvent:
     topic:
       name: resource_change_event_topic
-      value: searchable_resources
+      value: searchable-resources
     types:
     - name: resource_deletion_event_type
       value: searchable_resource_deleted

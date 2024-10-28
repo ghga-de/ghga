@@ -58,7 +58,7 @@ parameters:
     add_as_data_stewards: []
     claims_collection: claims
 
-    dataset_deletion_event_topic: metadata_datasets
+    dataset_deletion_event_topic: metadata-datasets
     dataset_deletion_event_type: dataset_deleted
 
     # general

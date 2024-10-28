@@ -24,7 +24,7 @@ topics:
   fileRegisteredEvent:
     topic:
       name: access_request_events_topic
-      value: access_requests
+      value: access-requests
     types:
     - name: access_request_created_event_type
       value: access_request_created
