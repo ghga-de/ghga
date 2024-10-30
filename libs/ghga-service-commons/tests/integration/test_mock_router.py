@@ -23,10 +23,7 @@ import pytest
 from fastapi import HTTPException
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from ghga_service_commons.api.mock_router import (  # noqa: F401
-    MockRouter,
-    assert_all_responses_were_requested,
-)
+from ghga_service_commons.api.mock_router import MockRouter
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 from tests.integration.fixtures.mock_api import app
 
@@ -85,7 +82,8 @@ def test_get_two_path_variables(httpx_mock: HTTPXMock):  # noqa: F811
     """Make sure the handler can parse paths with more than one variable."""
     httpx_mock.add_callback(callback=app.handle_request)
 
-    expected = ["4", 9]  # pass str number as a sanity check that it stays a str
+    # pass str number as a sanity check that it stays a str
+    expected = ["4", 9]
 
     with httpx.Client(base_url=BASE_URL) as client:
         response = client.get(f"/items/{expected[0]}/sizes/{expected[1]}")
@@ -186,6 +184,9 @@ def test_endpoint_missing_typehint():
             """Define a dummy function with missing type-hint info."""
 
 
+@pytest.mark.httpx_mock(
+    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
+)
 def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
     """Make sure only the specified errors are passed to the handler.
 

@@ -23,16 +23,11 @@ from inspect import signature
 from typing import Any, Callable, Generic, TypeVar, cast, get_type_hints
 
 import httpx
-import pytest
 from pydantic import BaseModel
 
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 
-__all__ = [
-    "MockRouter",
-    "assert_all_responses_were_requested",
-    "HttpException",
-]
+__all__ = ["MockRouter", "HttpException"]
 
 BRACKET_PATTERN = re.compile(r"{.*?}")
 
@@ -65,17 +60,6 @@ def _get_signature_info(endpoint_function: Callable) -> dict[str, Any]:
     if "return" in signature_parameters:
         signature_parameters.pop("return")
     return signature_parameters
-
-
-@pytest.fixture
-def assert_all_responses_were_requested() -> bool:
-    """Whether httpx checks that all registered responses are sent back.
-
-    This is set to false because the registered endpoints are considered mocked even if
-    they aren't used in a given test. If this is True (default), pytest_httpx will raise
-    an error if a given test doesn't hit every mocked endpoint.
-    """
-    return False
 
 
 class RegisteredEndpoint(BaseModel):
