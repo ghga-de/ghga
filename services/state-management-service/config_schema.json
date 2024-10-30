@@ -188,6 +188,22 @@
       "title": "Object Storages",
       "type": "object"
     },
+    "vault_url": {
+      "description": "URL for the Vault",
+      "examples": [
+        "http://vault:8200"
+      ],
+      "title": "Vault Url",
+      "type": "string"
+    },
+    "vault_token": {
+      "description": "Token for the Vault",
+      "examples": [
+        "dev-token"
+      ],
+      "title": "Vault Token",
+      "type": "string"
+    },
     "token_hashes": {
       "description": "List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.",
       "examples": [
@@ -411,6 +427,8 @@
     "service_instance_id",
     "kafka_servers",
     "object_storages",
+    "vault_url",
+    "vault_token",
     "token_hashes",
     "db_prefix",
     "db_connection_str"

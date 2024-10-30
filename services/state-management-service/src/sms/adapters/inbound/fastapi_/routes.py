@@ -19,12 +19,14 @@ from fastapi import APIRouter
 from sms.adapters.inbound.fastapi_.routers.documents import mongodb_router
 from sms.adapters.inbound.fastapi_.routers.events import kafka_router
 from sms.adapters.inbound.fastapi_.routers.objects import s3_router
+from sms.adapters.inbound.fastapi_.routers.secrets import secrets_router
 
 router = APIRouter(tags=["StateManagementService"])
 
 router.include_router(mongodb_router, prefix="/documents", tags=["sms-mongodb"])
 router.include_router(s3_router, prefix="/objects", tags=["sms-s3"])
 router.include_router(kafka_router, prefix="/events", tags=["sms-kafka"])
+router.include_router(secrets_router, prefix="/secrets", tags=["sms-vault"])
 
 
 @router.get(

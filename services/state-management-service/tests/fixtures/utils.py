@@ -26,6 +26,7 @@ from sms.inject import prepare_rest_app
 from sms.ports.inbound.docs_handler import DocsHandlerPort
 from sms.ports.inbound.events_handler import EventsHandlerPort
 from sms.ports.inbound.objects_handler import ObjectsHandlerPort
+from sms.ports.inbound.secrets_handler import SecretsHandlerPort
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -39,6 +40,7 @@ async def get_rest_client(
     docs_handler_override: DocsHandlerPort | None = None,
     objects_handler_override: ObjectsHandlerPort | None = None,
     events_handler_override: EventsHandlerPort | None = None,
+    secrets_handler_override: SecretsHandlerPort | None = None,
 ):
     """Prepare a REST API client for testing."""
     async with prepare_rest_app(
@@ -46,6 +48,7 @@ async def get_rest_client(
         docs_handler_override=docs_handler_override,
         objects_handler_override=objects_handler_override,
         events_handler_override=events_handler_override,
+        secrets_handler_override=secrets_handler_override,
     ) as app:
         async with AsyncTestClient(app) as client:
             yield client
@@ -58,17 +61,21 @@ async def get_rest_client_with_mocks(
     docs_handler_override: DocsHandlerPort | None = None,
     objects_handler_override: ObjectsHandlerPort | None = None,
     events_handler_override: EventsHandlerPort | None = None,
+    secrets_handler_override: SecretsHandlerPort | None = None,
 ):
-    """Prepare a REST client with the dependencies mocked by default, negating the need
-    to mock unused dependencies in each test.
+    """Prepare a REST client with the dependencies mocked by default
+
+    This negates the need to explicitly mock unused dependencies in each test.
     """
     docs_handler = docs_handler_override or AsyncMock()
     objects_handler = objects_handler_override or AsyncMock()
     events_handler = events_handler_override or AsyncMock()
+    secrets_handler = secrets_handler_override or AsyncMock()
     async with get_rest_client(
         config,
         docs_handler_override=docs_handler,
         objects_handler_override=objects_handler,
         events_handler_override=events_handler,
+        secrets_handler_override=secrets_handler,
     ) as client:
         yield client

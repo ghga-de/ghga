@@ -57,7 +57,7 @@ components:
 info:
   description: A service for basic infrastructure technology state management.
   title: State Management Service
-  version: 1.3.1
+  version: 1.4.0
 openapi: 3.1.0
 paths:
   /documents/permissions:
@@ -383,5 +383,71 @@ paths:
       tags:
       - StateManagementService
       - sms-s3
+  /secrets/{vault_path}:
+    delete:
+      description: Delete all secrets from the specified vault.
+      operationId: delete_secrets
+      parameters:
+      - in: path
+        name: vault_path
+        required: true
+        schema:
+          description: The path to the vault
+          examples:
+          - ekss
+          - sms
+          title: Vault Path
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Delete all secrets from the specified vault.
+      tags:
+      - StateManagementService
+      - sms-vault
+    get:
+      description: Returns a list of secrets in the specified vault
+      operationId: get_secrets
+      parameters:
+      - in: path
+        name: vault_path
+        required: true
+        schema:
+          description: The path to the vault
+          examples:
+          - ekss
+          - sms
+          title: Vault Path
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: string
+                title: Response Get Secrets
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Returns a list of secrets in the vault
+      tags:
+      - StateManagementService
+      - sms-vault
 tags:
 - name: StateManagementService

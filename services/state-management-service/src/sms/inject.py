@@ -27,9 +27,11 @@ from sms.config import Config
 from sms.core.docs_handler import DocsHandler
 from sms.core.events_handler import EventsHandler
 from sms.core.objects_handler import ObjectsHandler, S3ObjectStorages
+from sms.core.secrets_handler import SecretsHandler
 from sms.ports.inbound.docs_handler import DocsHandlerPort
 from sms.ports.inbound.events_handler import EventsHandlerPort
 from sms.ports.inbound.objects_handler import ObjectsHandlerPort
+from sms.ports.inbound.secrets_handler import SecretsHandlerPort
 
 
 @asynccontextmanager
@@ -77,6 +79,7 @@ async def prepare_rest_app(
     docs_handler_override: DocsHandlerPort | None = None,
     objects_handler_override: ObjectsHandlerPort | None = None,
     events_handler_override: EventsHandlerPort | None = None,
+    secrets_handler_override: SecretsHandlerPort | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -95,6 +98,13 @@ async def prepare_rest_app(
         else EventsHandler(config=config)
     )
     app.dependency_overrides[dummies.events_handler_port] = lambda: events_handler
+
+    secrets_handler = (
+        secrets_handler_override
+        if secrets_handler_override
+        else SecretsHandler(config=config)
+    )
+    app.dependency_overrides[dummies.secrets_handler_port] = lambda: secrets_handler
 
     async with prepare_docs_handler_with_override(
         config=config, docs_handler_override=docs_handler_override

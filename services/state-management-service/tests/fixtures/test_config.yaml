@@ -2,6 +2,9 @@ service_instance_id: "1"
 token_hashes:
 # plaintext token: 43fadc91-b98f-4925-bd31-1b054b13dc55
 - 7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e
+vault_token: "dev-token"
+vault_url: "http://vault:8200"
+
 db_connection_str: mongodb://mongodb:27017
 db_prefix: "test_"
 db_permissions:
