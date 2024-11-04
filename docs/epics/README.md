@@ -67,3 +67,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (57) [Monkfish](./57-monkfish/technical_specification.md): State Management Service
 - (58) [Poodle Moth](./58-poodle-moth/technical_specification.md): Storing Data as strings vs BSON in MongoDB
 - (59) [Bottlenose Dolphin](./59-bottlenose-dolphin/technical_specification.md): Angular implementation plan and migration strategy
+- (60) [Hippopotamus](./60-hippopotamus/technical_specification.md): Create baseline Angular implementation
