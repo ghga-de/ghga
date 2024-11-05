@@ -48,6 +48,15 @@ def get_all_dataset_information(
     return http.get(url)
 
 
+def get_file_information_from_metadata(file_metadata):
+    """Extract the file information from the metadata"""
+    return {
+        "size": file_metadata["Unencrypted file size"],
+        "sha256_hash": file_metadata["Unencrypted file checksum"],
+        "storage_alias": file_metadata["Storage alias"],
+    }
+
+
 @when(
     parse('I request the details of all files in "{alias}" dataset'),
     target_fixture="response",
@@ -71,7 +80,9 @@ def check_dataset_file_information(alias: str, response: Response, state: StateS
     all_file_information = state.get_state("all file information")
     for file in dataset_file_information:
         accession = file.pop("accession")
-        assert all_file_information[accession] == file
+        file_metadata = all_file_information[accession]
+        file_information = get_file_information_from_metadata(file_metadata)
+        assert file_information == file
 
 
 @when(
@@ -98,4 +109,6 @@ def check_single_file_information(response: Response, state: StateStorage):
     assert result
     all_file_information = state.get_state("all file information")
     accession = result.pop("accession")
-    assert all_file_information[accession] == result
+    file_metadata = all_file_information[accession]
+    file_information = get_file_information_from_metadata(file_metadata)
+    assert file_information == result

@@ -1,5 +1,5 @@
 @upload @files
-Feature: 12 Upload Files
+Feature: 120 Upload Files
   As a data steward, I can upload files to object storage
 
   Background:
@@ -20,7 +20,7 @@ Feature: 12 Upload Files
     Then the file metadata for each uploaded file exists
     And the uploaded files exist in the staging bucket of "primary" storage
     When the file metadata uploaded to "primary" storage is ingested
-    Then the file metadata is stored in the internal file registry
+    Then the ingested file metadata is stored in the internal file registry
     And the file encryption secret is saved in the vault
     And the ingested files exist in the permanent bucket of "primary" storage
 
@@ -30,7 +30,7 @@ Feature: 12 Upload Files
     Then the file metadata for each uploaded file exists
     And the uploaded files exist in the staging bucket of "primary" storage
     When the file metadata uploaded to "primary" storage is ingested
-    Then the file metadata is stored in the internal file registry
+    Then the ingested file metadata is stored in the internal file registry
     And the file encryption secret is saved in the vault
     And the ingested files exist in the permanent bucket of "primary" storage
 
@@ -40,7 +40,7 @@ Feature: 12 Upload Files
     Then the file metadata for each uploaded file exists
     And the uploaded files exist in the staging bucket of "secondary" storage
     When the file metadata uploaded to "secondary" storage is ingested
-    Then the file metadata is stored in the internal file registry
+    Then the ingested file metadata is stored in the internal file registry
     And the file encryption secret is saved in the vault
     And the ingested files exist in the permanent bucket of "secondary" storage
 

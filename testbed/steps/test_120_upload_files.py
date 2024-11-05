@@ -312,7 +312,7 @@ def ingest_file_metadata(fixtures: JointFixture, storage_name: str) -> IngestCon
 
 
 @then(
-    "the file metadata is stored in the internal file registry",
+    "the ingested file metadata is stored in the internal file registry",
     target_fixture="object_ids",
 )
 def check_metadata_documents(
@@ -332,11 +332,7 @@ def check_metadata_documents(
             accessions.add(accession)
             file_metadata = json.loads(metadata_file_path.read_text())
             # Store basic file information for later use
-            file_information[accession] = {
-                "size": file_metadata["Unencrypted file size"],
-                "sha256_hash": file_metadata["Unencrypted file checksum"],
-                "storage_alias": file_metadata["Storage alias"],
-            }
+            file_information[accession] = file_metadata
     assert accessions
     fixtures.state.set_state("all file information", file_information)
 

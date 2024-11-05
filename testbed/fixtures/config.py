@@ -171,6 +171,8 @@ class Config(BaseSettings):
     # file ingest
     fis_url: str = "http://fis"
     fis_pubkey: str
+    fis_db_name: str = "fis"
+    fis_file_validations_collection: str = "fileValidations"
 
     # metldata
     metldata_db_name: str = "metldata"
@@ -195,6 +197,7 @@ class Config(BaseSettings):
     # ifrs
     ifrs_db_name: str = "ifrs"
     ifrs_metadata_collection: str = "file_metadata"
+    ifrs_upload_validations_collection: str = "file_upload_validation_success"
 
     # pcs
     pcs_db_name: str = "pcs"
@@ -235,6 +238,9 @@ class Config(BaseSettings):
     dins_url: str = "http://dins"
     dins_db_name: str = "dins"
     dins_metadata_collection: str = "file_information"
+
+    # event topics
+    file_interrogations_topic: str = "interrogations"
 
     @model_validator(mode="after")
     def check_operation_modes(self):

@@ -1,0 +1,135 @@
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+"""Step definitions for ingesting existing files again"""
+
+import json
+from datetime import datetime
+from pathlib import Path
+
+from ghga_datasteward_kit.file_ingest import IngestConfig
+
+from steps.test_120_upload_files import call_data_steward_kit_ingest
+from steps.utils import ingest_config_as_file
+
+from .conftest import JointFixture, given, scenarios, then, when
+
+scenarios("../features/121_ingest_existing_files_again.feature")
+
+
+def restore_file_metadata_json(file_metadata_dir: Path, file_metadata: dict):
+    file_metadata_dir.mkdir(exist_ok=True)
+    file_alias = file_metadata["Alias"]
+    metadata_file_path = file_metadata_dir / f"{file_alias}.json"
+    with metadata_file_path.open("w") as metadata_file:
+        json.dump(file_metadata, metadata_file)
+    assert metadata_file_path.exists()
+
+
+@given("all the file metadata is stored in the internal file registry")
+def check_metadata_documents(fixtures: JointFixture):
+    file_information = fixtures.state.get_state("all file information") or {}
+    accessions = list(file_information)
+    documents = fixtures.mongo.wait_for_documents(
+        db_name=fixtures.config.ifrs_db_name,
+        collection_name=fixtures.config.ifrs_metadata_collection,
+        query={"_id": {"$in": accessions}},
+        number=len(accessions),
+    )
+    assert documents
+
+
+@when(
+    "an existing file is attempted to be ingested again",
+    target_fixture="file_accession",
+)
+def ingest_existing_file_again(fixtures: JointFixture):
+    """Ingest an already existing file again.
+
+    Retrieve the first file in the stored file information list,
+    restore the file metadata JSON and ingest it again
+    """
+    all_file_information = fixtures.state.get_state("all file information") or {}
+
+    file_accession = min(all_file_information)
+    file_metadata = all_file_information[file_accession]
+
+    file_metadata_dir = fixtures.dsk.config.file_metadata_dir
+    restore_file_metadata_json(file_metadata_dir, file_metadata=file_metadata)
+
+    ingest_config = IngestConfig(
+        file_ingest_baseurl=fixtures.config.fis_url,
+        file_ingest_pubkey=fixtures.config.fis_pubkey,
+        input_dir=fixtures.dsk.config.file_metadata_dir,
+        submission_store_dir=fixtures.dsk.config.submission_store,
+        map_files_fields=list(fixtures.dsk.config.metadata_file_fields),
+        selected_storage_alias=file_metadata["Storage alias"],
+        fallback_bucket_id=file_metadata["Bucket ID"],
+    )
+
+    ingest_config_path = ingest_config_as_file(config=ingest_config)
+
+    call_data_steward_kit_ingest(
+        ingest_config_path=ingest_config_path,
+        token_path=fixtures.config.dsk_token_path,
+        token=fixtures.config.upload_token,
+    )
+
+    return file_accession
+
+
+@then("the file metadata in the internal file registry is not updated")
+def check_metadata_documents_not_updated(fixtures: JointFixture, file_accession: str):
+    """Check that the file metadata in the internal file registry is not updated
+
+    In the current implementation, the file ingest service processes all ingest
+    requests and updates its own database records. However, the internal file registry
+    fails to update existing records, so the file metadata in the internal file
+    registry remains unchanged.
+    """
+    document = fixtures.mongo.wait_for_document(
+        db_name=fixtures.config.fis_db_name,
+        collection_name=fixtures.config.fis_file_validations_collection,
+        query={"_id": file_accession},
+    )
+    assert document
+    fis_document_timestamp = document["upload_date"]
+
+    document = fixtures.mongo.wait_for_document(
+        db_name=fixtures.config.ifrs_db_name,
+        collection_name=fixtures.config.ifrs_upload_validations_collection,
+        query={"_id": file_accession},
+    )
+    assert document
+    ifrs_document_timestamp = document["upload_date"]
+
+    # internal file registry updates later than the upstream service
+    # the timestamp should not be greater if the file metadata is not updated
+    assert datetime.fromisoformat(ifrs_document_timestamp) < datetime.fromisoformat(
+        fis_document_timestamp
+    )
+
+
+@given("no file interrogation events exists")
+def delete_file_interrogation_events(fixtures: JointFixture):
+    """Delete all file interrogation events from Kafka
+
+    In the current implementation, the internal file registry service enters
+    a restart-crash loop if there's an unhappy event in the queue. Here we remove
+    the messages from the corresponding Kafka topic, allowing the service to stabilize
+    after the unhappy test case.
+    """
+    fixtures.kafka.clear_topics(topics=fixtures.config.file_interrogations_topic)
