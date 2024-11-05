@@ -25,63 +25,32 @@ from pydantic import BaseModel
 from pytest import fixture
 
 from fixtures.config import Config
+from fixtures.http_client import HttpClient
+from fixtures.state_manager import StateManager
 
 
-class VaultConfig(BaseModel):
-    """Class model with vault configuration"""
+class VaultFixture(StateManager):
+    """Fixture for managing Kafka resources."""
 
-    url: str
-    token: str
-    path: str
-
-
-class VaultFixture:
-    """Vault fixture"""
-
-    def __init__(self, config: VaultConfig):
+    def __init__(self, config: Config, http: HttpClient):
         self.config = config
+        self.http = http
 
-    @property
-    def client(self) -> hvac.Client:
-        return hvac.Client(self.config.url, self.config.token)
+    def keys(self) -> list[str]:
+        url = f"{self.config.sms_url}/secrets/{self.config.vault_path}"
+        response = self.http.get(url, headers=self.auth_headers)
+        assert response.status_code == 200, f"Failed to get keys: {response.text}"
+        keys = response.json()
+        assert isinstance(keys, list), "Keys must be a list"
+        return keys
 
-    @property
-    def keys(self):
-        return self.client.secrets.kv.v2.list_secrets(
-            path=self.config.path,
-        )["data"]["keys"]
-
-    def empty_secrets(self, secrets_to_delete: list[str] | None = None):
-        try:
-            secrets_to_delete = secrets_to_delete or self.keys
-            print(f"Deleting secrets: {secrets_to_delete}")
-        except hvac.exceptions.InvalidPath as exc:
-            print(
-                "Invalid path error when fetching secrets.",
-                "The path might be invalid, or no secrets may exist.",
-                exc,
-            )
-            return
-
-        if not secrets_to_delete:
-            print("No secrets to delete")
-            return
-
-        for secret in secrets_to_delete:
-            print(f"Secret: {secret}")
-            self.client.secrets.kv.v2.delete_metadata_and_all_versions(
-                path=f"{self.config.path}/{secret}"
-            )
+    def empty_secrets(self):
+        url = f"{self.config.sms_url}/secrets/{self.config.vault_path}"
+        response = self.http.delete(url, headers=self.auth_headers)
+        assert response.status_code == 204, f"Failed to delete secrets: {response.text}"
 
 
 @fixture(name="vault", scope="session")
-def vault_fixture(config) -> Generator[VaultFixture, None, None]:
+def vault_fixture(config: Config, http: HttpClient) -> VaultFixture:
     """Pytest fixture for tests using vault."""
-    vault_config = VaultConfig.model_validate(
-        {
-            "url": config.vault_url,
-            "token": config.vault_token,
-            "path": config.vault_path,
-        }
-    )
-    yield VaultFixture(vault_config)
+    return VaultFixture(config=config, http=http)

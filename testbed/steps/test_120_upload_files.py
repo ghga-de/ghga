@@ -353,9 +353,7 @@ def check_metadata_documents(
 @then(parse("the file encryption secret is saved in the vault"))
 def check_secrets_in_vault(fixtures: JointFixture, file_objects: list[FileObject]):
     secret_ids = get_secret_ids(fixtures.dsk.config.file_metadata_dir, file_objects)
-    if not fixtures.config.vault_token:
-        return  # skip test if no vault token is provided
-    vault_keys = fixtures.vault.keys
+    vault_keys = fixtures.vault.keys()
     for secret_id in secret_ids:
         assert secret_id in vault_keys
 

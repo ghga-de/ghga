@@ -226,8 +226,6 @@ class Config(BaseSettings):
     data_portal_ui_url: str = "http://data-portal-ui"
 
     # vault
-    vault_url: str = "http://vault:8200"
-    vault_token: str = "dev-token"
     vault_path: str = "ekss"
 
     # sms

@@ -108,13 +108,5 @@ def check_storage_for_deleted_files(fixtures: JointFixture):
 
 @then("the file encryption secrets are removed from the vault")
 def check_secrets_in_vault(fixtures: JointFixture):
-    if not fixtures.config.vault_token:
-        return  # skip test if vault token is not provided
-    try:
-        vault_keys = fixtures.vault.keys
-    except hvac.exceptions.InvalidPath as exc:
-        print("The path might be invalid, or no secrets may exist.", exc)
-    else:
-        assert (
-            not vault_keys
-        ), f"File encryption secrets still exist in Vault: {vault_keys}"
+    vault_keys = fixtures.vault.keys()
+    assert not vault_keys, f"File encryption secrets still exist in Vault: {vault_keys}"
