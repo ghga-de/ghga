@@ -7,27 +7,8 @@ parameters:
   default:
     db_connection_str: null
     db_name: ifrs
-    file_deleted_event_topic: internal-registrations
-    file_deleted_event_type: internal_file_deleted
-    file_registered_event_topic: internal-registrations
-    file_registered_event_type: internal_file_registered
-    file_staged_event_topic: internal-registrations
-    file_staged_event_type: internal_file_staged
-    files_to_delete_topic: purges
-    files_to_register_topic: interrogations
-    files_to_stage_topic: downloads
     service_instance_id: "consumer.1"
-    service_name: internal_file_registry
-
     object_storages: {}
-    #   test:
-    #     bucket: permanent
-    #     credentials:
-    #       aws_config_ini: null
-    #       s3_endpoint_url: null
-    #       s3_access_key_id: null
-    #       s3_secret_access_key: null
-    #       s3_session_token: null
 
 containers:
 - name: consumer
@@ -36,3 +17,38 @@ containers:
   config:
     name: parameters
     key: parameters
+
+topics:
+  fileDeletedEvent:
+    topic:
+      name: file_deleted_event_topic
+      value: internal-registrations
+    types:
+      - name: file_deleted_event_type
+        value: internal_file_deleted
+  fileRegisteredEvent:
+    topic:
+      name: file_registered_event_topic
+      value: internal-registrations
+    types:
+      - name: file_registered_event_type
+        value: internal_file_registered
+  fileStagedEvent:
+    topic:
+      name: file_staged_event_topic
+      value: internal-registrations
+    types:
+      - name: file_staged_event_type
+        value: internal_file_staged
+  filesToDelete:
+    topic:
+      name: files_to_delete_topic
+      value: purges
+  filesToRegister:
+    topic:
+      name: files_to_register_topic
+      value: interrogations
+  filesToStage:
+    topic:
+      name: files_to_stage_topic
+      value: downloads
