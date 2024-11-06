@@ -5,39 +5,14 @@ config_prefix: wps
 
 parameters:
   default:
-    api_root_path: ""
-    auth_algs:
-    - ES256
-    auth_check_claims:
-      email: null
-      exp: null
-      iat: null
-      name: null
-      id: null
     auth_key: '{}'
-    auth_map_claims: {}
-    auto_reload: false
-    cors_allow_credentials: false
-    cors_allowed_headers: []
-    cors_allowed_methods: []
-    cors_allowed_origins: []
-    dataset_change_event_topic: metadata-datasets
-    dataset_deletion_event_type: dataset_deleted
-    dataset_upsertion_event_type: dataset_created
-    datasets_collection: datasets
     db_connection_str: null
     db_name: wps
-    docs_url: /docs
     download_access_url: http://claims-repository:8080/download-access
     host: "0.0.0.0"
-    openapi_url: /openapi.json
-    port: 8080
     service_instance_id: 'wps_1'
     service_name: wps
     work_package_signing_key: '{}'
-    work_package_valid_days: 30
-    work_packages_collection: workPackages
-    workers: 1
   rest:
     service_instance_id: 'rest.1'
   consumer:
@@ -56,3 +31,14 @@ containers:
   config:
     name: parameters-consumer
     key: parameters-consumer
+
+topics:
+  datasetChangeEvent:
+    topic:
+      name: dataset_change_event_topic
+      value: metadata-datasets
+    types:
+    - name: dataset_upsertion_event_type
+      value: dataset_created
+    - name: dataset_deletion_event_type
+      value: dataset_deleted
