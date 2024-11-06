@@ -41,7 +41,7 @@ spec:
     {{- range $key, $value := . }}
     - operation: All
       resource:
-        name: '{{ $value.topic.value }}'
+        name: '{{ $.Values.topicPrefix | empty | ternary $value.topic.value (cat $.Values.topicPrefix "-" $value.topic.value ) | nospace }}'
         patternType: literal
         type: topic
     {{- end }}
