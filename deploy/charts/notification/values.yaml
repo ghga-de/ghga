@@ -22,8 +22,6 @@ parameters:
     smtp_auth:
       username: "test@test.com"
       password: test
-    notification_event_topic: notifications
-    notification_event_type: notification
     plaintext_email_template: |
       Dear $recipient_name,
 
@@ -32,7 +30,6 @@ parameters:
       Warm regards,
       The GHGA Team
     service_instance_id: 'rest.1'
-    service_name: ns
     smtp_host: 127.0.0.1
     smtp_port: 587
     use_starttls: false
@@ -44,3 +41,12 @@ containers:
   config:
     name: parameters
     key: parameters
+
+topics:
+  notificationEvent:
+    topic:
+      name: notification_event_topic
+      value: notifications
+    types:
+      - name: notification_event_type
+        value: notification
