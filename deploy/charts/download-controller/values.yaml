@@ -36,44 +36,38 @@ containers:
 
 
 topics:
-
   fileRegisteredEvent:
     topic:
       name: file_registered_event_topic
       value: downloads
-    type:
-      name: file_registered_event_type
-      value: drs_object_registered
-
+    types:
+      - name: file_registered_event_type
+        value: drs_object_registered
   fileDeletedEvent:
     topic:
       name: file_deleted_event_topic
       value: downloads
-    type:
-      name: file_deleted_event_type
-      value: drs_object_deleted
-
+    types:
+      - name: file_deleted_event_type
+        value: drs_object_deleted
   filesToRegister:
     topic:
       name: files_to_register_topic
       value: internal-registrations
-    type:
-      name: files_to_register_type
-      value: internal_file_registered
-
+    types:
+      - name: files_to_register_type
+        value: internal_file_registered
   filesToDelete:
     topic:
       name: files_to_delete_topic
       value: purges
-
   downloadServed:
     topic:
       name: download_served_event_topic
       value: downloads
-    type:
-      name: download_served_event_type
-      value: drs_object_served
-
+    types:
+      - name: download_served_event_type
+        value: drs_object_served
   unstagedDownload:
     topic:
       name: unstaged_download_event_topic

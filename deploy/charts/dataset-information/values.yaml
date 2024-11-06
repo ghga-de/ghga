@@ -36,26 +36,24 @@ topics:
     topic:
       name: file_registered_event_topic
       value: internal-registrations
-    type:
-      name: file_registered_event_type
-      value: internal_file_registered
-
+    types:
+      - name: file_registered_event_type
+        value: internal_file_registered
   filesToDelete:
     topic:
       name: files_to_delete_topic
       value: purges
-
   datasetUpsertionEvent:
     topic:
       name: dataset_event_topic
       value: metadata-datasets
-    type:
-      name: dataset_upsertion_event_type
-      value: dataset_created
+    types:
+      - name: dataset_upsertion_event_type
+        value: dataset_created
   datasetDeletionEvent:
     topic:
       name: dataset_event_topic
       value: metadata-datasets
-    type:
-      name: dataset_deletion_event_type
-      value: dataset_deleted
+    types:
+      - name: dataset_deletion_event_type
+        value: dataset_deleted
