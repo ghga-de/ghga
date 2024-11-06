@@ -5,11 +5,7 @@ config_prefix: sms
 
 parameters:
   default:
-    api_root_path: ""
-    docs_url: /docs
-    openapi_url: /openapi.json
     host: 0.0.0.0
-    port: 8080
     db_connection_str: null
     db_permissions:
     - "*.*:*"
@@ -17,17 +13,9 @@ parameters:
     db_prefix: ""
     token_hashes: []
     service_instance_id: 'rest.1'
-    service_name: sms
     log_level: DEBUG
     object_storages: {}
-    #   test:
-    #     bucket: permanent
-    #     credentials:
-    #       aws_config_ini: null
-    #       s3_endpoint_url: null
-    #       s3_access_key_id: null
-    #       s3_secret_access_key: null
-    #       s3_session_token: null
+
 containers:
 - name: rest
   type: "rest"
