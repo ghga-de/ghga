@@ -170,3 +170,9 @@ exports:
 
     topicPrefix: ""
     topics: {}
+
+    kafkaUser:
+      enabled: false
+      clusterName: kafka
+      clusterNamespace: strimzi
+      caCertSecretName: kafka-cluster-ca-cert
