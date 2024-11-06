@@ -1,0 +1,8 @@
+{
+    "window.title": "Data Portal - ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
+    "cSpell.words": [
+        "devcontainer",
+        "devkit",
+        "metldata"
+    ]
+}
