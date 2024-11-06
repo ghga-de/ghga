@@ -5,24 +5,10 @@ config_prefix: nos
 
 parameters:
   default:
-    access_request_allowed_event_type: access_request_allowed
-    access_request_created_event_type: access_request_created
-    access_request_denied_event_type: access_request_denied
-    access_request_events_topic: access-requests
     central_data_stewardship_email: ""
     helpdesk_email: ""
     db_name: nos
-    iva_state_changed_event_topic: ivas
-    iva_state_changed_event_type: iva_state_changed
-    notification_event_topic: notifications
-    notification_event_type: notification
-    second_factor_recreated_event_topic: auth
-    second_factor_recreated_event_type: second_factor_recreated
     service_instance_id: 'consumer.1'
-    service_name: nos
-    user_events_topic: users
-    file_registered_event_topic: internal-registrations
-    file_registered_event_type: internal_file_registered
 
 containers:
 - name: consumer
@@ -31,3 +17,48 @@ containers:
   config:
     name: parameters
     key: parameters
+
+topics:
+  accessRequestEvents:
+    topic:
+      name: access_request_events_topic
+      value: access-requests
+    types:
+    - name: access_request_created_event_type
+      value: access_request_created
+    - name: access_request_allowed_event_type
+      value: access_request_allowed
+    - name: access_request_denied_event_type
+      value: access_request_denied
+  ivaStateChangeEvent:
+    topic:
+      name: iva_state_changed_event_topic
+      value: ivas
+    types:
+    - name: iva_state_changed_event_type
+      value: iva_state_changed
+  notificationEvent:
+    topic:
+      name: notification_event_topic
+      value: notifications
+    types:
+    - name: notification_event_type
+      value: notification
+  secondFactorRecreatedEvent:
+    topic:
+      name: second_factor_recreated_event_topic
+      value: auth
+    types:
+    - name: second_factor_recreated_event_type
+      value: second_factor_recreated
+  fileRegisteredEvent:
+    topic:
+      name: file_registered_event_topic
+      value: internal-registrations
+    types:
+    - name: file_registered_event_type
+      value: internal_file_registered
+  userEvents:
+    topic:
+      name: user_events_topic
+      value: users
