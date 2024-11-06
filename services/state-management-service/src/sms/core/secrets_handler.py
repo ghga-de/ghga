@@ -35,6 +35,11 @@ class VaultConfig(BaseSettings):
     vault_token: str = Field(
         default=..., description="Token for the Vault", examples=["dev-token"]
     )
+    vault_secrets_mount_point: str = Field(
+        default="secret",
+        examples=["secret"],
+        description="Name used to address the secret engine under a custom mount path.",
+    )
 
 
 class SecretsHandler(SecretsHandlerPort):
@@ -52,7 +57,10 @@ class SecretsHandler(SecretsHandlerPort):
     def get_secrets(self, vault_path: str) -> list[str]:
         """Return the IDs of all secrets in the specified vault."""
         try:
-            secrets = self.client.secrets.kv.v2.list_secrets(path=vault_path)
+            secrets = self.client.secrets.kv.v2.list_secrets(
+                path=vault_path,
+                mount_point=self._config.vault_secrets_mount_point,
+            )
             secret_ids = secrets["data"]["keys"]
             return secret_ids
         except InvalidPath:
@@ -73,5 +81,6 @@ class SecretsHandler(SecretsHandlerPort):
 
         for secret in secrets:
             self.client.secrets.kv.v2.delete_metadata_and_all_versions(
-                path=f"{vault_path}/{secret}"
+                path=f"{vault_path}/{secret}",
+                mount_point=self._config.vault_secrets_mount_point,
             )

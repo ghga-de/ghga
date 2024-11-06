@@ -107,9 +107,45 @@ def test_delete_successful(
 
     # delete_metadata_and_all_versions is called for each secret
     internal_deletion_calls = [
-        call(path=f"{DEFAULT_VAULT_PATH}/{secret}") for secret in stored_secrets
+        call(
+            path=f"{DEFAULT_VAULT_PATH}/{secret}",
+            mount_point=DEFAULT_TEST_CONFIG.vault_secrets_mount_point,
+        )
+        for secret in stored_secrets
     ]
     mock_client.secrets.kv.v2.delete_metadata_and_all_versions.assert_has_calls(
         internal_deletion_calls,
         any_order=True,
+    )
+
+
+def test_non_default_mount_point(monkeypatch: pytest.MonkeyPatch):
+    """Test get_secrets and delete_secrets method with non-default mount point.
+
+    Makes sure that the actual config value is passed to the hvac Client.
+    """
+    mock_client = Mock()
+    list_stored_secrets = {"data": {"keys": ["key1"]}}
+    mock_client.secrets.kv.v2.list_secrets.return_value = list_stored_secrets
+
+    # apply the mock to the SecretsHandler
+    monkeypatch.setattr(SecretsHandler, "client", mock_client)
+
+    # use alternative mount point
+    mount_point = "test"
+    config = DEFAULT_TEST_CONFIG.model_copy(
+        update={"vault_secrets_mount_point": mount_point}
+    )
+    secrets_handler = SecretsHandler(config=config)
+
+    # call delete_secrets()
+    secrets_handler.delete_secrets(f"{DEFAULT_VAULT_PATH}")
+    mock_client.secrets.kv.v2.list_secrets.assert_called_once_with(
+        path=f"{DEFAULT_VAULT_PATH}",
+        mount_point=mount_point,
+    )
+
+    mock_client.secrets.kv.v2.delete_metadata_and_all_versions.assert_called_once_with(
+        path=f"{DEFAULT_VAULT_PATH}/key1",
+        mount_point=mount_point,
     )

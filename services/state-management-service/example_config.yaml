@@ -46,6 +46,7 @@ service_instance_id: '1'
 service_name: sms
 token_hashes:
 - 7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e
+vault_secrets_mount_point: secret
 vault_token: dev-token
 vault_url: http://vault:8200
 workers: 1

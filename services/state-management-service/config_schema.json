@@ -204,6 +204,15 @@
       "title": "Vault Token",
       "type": "string"
     },
+    "vault_secrets_mount_point": {
+      "default": "secret",
+      "description": "Name used to address the secret engine under a custom mount path.",
+      "examples": [
+        "secret"
+      ],
+      "title": "Vault Secrets Mount Point",
+      "type": "string"
+    },
     "token_hashes": {
       "description": "List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.",
       "examples": [
