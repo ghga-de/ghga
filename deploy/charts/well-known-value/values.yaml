@@ -5,23 +5,11 @@ config_prefix: wkvs
 
 parameters:
   default:
-    api_root_path: ""
-    auto_reload: false
-    cors_allow_credentials: null
-    cors_allowed_headers: null
-    cors_allowed_methods: null
-    cors_allowed_origins: null
     crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
-    dcs_api_url: http://127.0.0.1/download
-    docs_url: /docs
+    dcs_api_url: http://download-controller/download
     host: "0.0.0.0"
-
-    openapi_url: /openapi.json
-    port: 8080
-    service_name: wkvs
-    ucs_api_url: http://127.0.0.1/upload
-    workers: 1
-    wps_api_url: http://127.0.0.1
+    ucs_api_url: http://upload-controller/upload
+    wps_api_url: http://work-package/
 
 containers:
 - name: rest
