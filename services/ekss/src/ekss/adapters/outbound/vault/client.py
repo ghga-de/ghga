@@ -143,7 +143,8 @@ class VaultAdapter:
             raise exceptions.SecretRetrievalError() from exc
 
         response = self._client.secrets.kv.v2.delete_metadata_and_all_versions(
-            path=path
+            path=path,
+            mount_point=self._secrets_mount_point,
         )
 
         # Check the response status

@@ -60,6 +60,7 @@ def vault_fixture() -> Generator[VaultFixture, None, None]:
             vault_secret_id=secret_id,
             vault_verify=True,
             vault_path="ekss",
+            vault_secrets_mount_point="secret-mount-point",
         )
         vault_adapter = VaultAdapter(config=config)
         # client needs some time after creation
@@ -73,6 +74,9 @@ def configure_vault(*, host: str, port: int):
     # client needs some time after creation
     time.sleep(2)
 
+    # use a non-default secret engine to test "vault_secrets_mount_point"
+    client.sys.move_backend("secret", "secret-mount-point")
+
     # enable authentication with role_id/secret_id
     client.sys.enable_auth_method(
         method_type="approle",
@@ -80,10 +84,10 @@ def configure_vault(*, host: str, port: int):
 
     # create access policy to bind to role
     ekss_policy = """
-    path "secret/data/ekss/*" {
+    path "secret-mount-point/data/ekss/*" {
         capabilities = ["read", "create"]
     }
-    path "secret/metadata/ekss/*" {
+    path "secret-mount-point/metadata/ekss/*" {
         capabilities = ["delete"]
     }
     """
