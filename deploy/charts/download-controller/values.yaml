@@ -6,10 +6,6 @@ config_prefix: dcs
 parameters:
   default:
     auth_key: '{}'
-    cors_allow_credentials: false
-    cors_allowed_headers: []
-    cors_allowed_methods: []
-    cors_allowed_origins: []
     db_connection_str: null
     db_name: dcs
     drs_server_uri: drs://localhost:8080/
