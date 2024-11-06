@@ -5,29 +5,12 @@ config_prefix: ekss
 
 parameters:
   default:
-    api_root_path: ""
-    auto_reload: false
-    cors_allow_credentials: false
-    cors_allowed_headers: []
-    cors_allowed_methods: []
-    cors_allowed_origins: []
-    docs_url: /docs
     host: 0.0.0.0
-
-    openapi_url: /openapi.json
-    port: 8080
     server_private_key: <Please fill>
     server_public_key: <Please fill>
-    service_name: encryption_key_store
-    service_instance_id: test
+    service_instance_id: 'ekss_1'
     vault_url: http://vault:8200
-    vault_verify: false
-    vault_role_id: null
-    vault_secret_id: null
     vault_path: ekss
-    vault_kube_role: null
-    vault_auth_mount_point: null
-    workers: 1
 
 containers:
 - name: rest
