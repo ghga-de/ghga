@@ -43,3 +43,7 @@ topics:
     types:
     - name: dataset_deletion_event_type
       value: dataset_deleted
+  userEvents:
+    topic:
+      name: user_events_topic
+      value: users
