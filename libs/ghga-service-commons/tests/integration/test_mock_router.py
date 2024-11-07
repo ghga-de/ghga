@@ -23,7 +23,10 @@ import pytest
 from fastapi import HTTPException
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.api.mock_router import (  # noqa: F401
+    MockRouter,
+    assert_all_responses_were_requested,
+)
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 from tests.integration.fixtures.mock_api import app
 
@@ -184,9 +187,6 @@ def test_endpoint_missing_typehint():
             """Define a dummy function with missing type-hint info."""
 
 
-@pytest.mark.httpx_mock(
-    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
-)
 def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
     """Make sure only the specified errors are passed to the handler.
 
