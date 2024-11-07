@@ -22,9 +22,6 @@ import httpx
 import pytest
 import pytest_asyncio
 from fastapi import status
-from ghga_service_commons.api.mock_router import (  # noqa: F401
-    assert_all_responses_were_requested,
-)
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
@@ -36,8 +33,6 @@ from tests_dcs.fixtures.utils import (
     generate_token_signing_keys,
     generate_work_order_token,
 )
-
-unintercepted_hosts: list[str] = ["localhost"]
 
 pytestmark = pytest.mark.asyncio()
 
@@ -74,16 +69,6 @@ async def storage_unavailable_fixture(joint_fixture: JointFixture):
         joint=joint_fixture,
         file_id=test_file.file_id,
     )
-
-
-@pytest.fixture
-def non_mocked_hosts() -> list:
-    """Fixture used by httpx_mock to determine which requests to intercept
-
-    We only want to intercept calls to the EKSS API, so this list will include
-    localhost and the host from the S3 fixture's connection URL.
-    """
-    return unintercepted_hosts
 
 
 async def test_get_health(joint_fixture: JointFixture):
@@ -135,6 +120,9 @@ async def test_access_non_existing(joint_fixture: JointFixture):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+@pytest.mark.httpx_mock(
+    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
+)
 async def test_deletion_config_error(
     storage_unavailable_fixture: StorageUnavailableFixture,
     httpx_mock: HTTPXMock,  # noqa: F811
@@ -151,6 +139,9 @@ async def test_deletion_config_error(
         await data_repository.delete_file(file_id=storage_unavailable_fixture.file_id)
 
 
+@pytest.mark.httpx_mock(
+    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
+)
 async def test_drs_config_error(
     storage_unavailable_fixture: StorageUnavailableFixture,
     httpx_mock: HTTPXMock,  # noqa: F811

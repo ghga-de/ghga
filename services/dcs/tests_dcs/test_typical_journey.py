@@ -22,9 +22,6 @@ import httpx
 import pytest
 from fastapi import status
 from ghga_event_schemas import pydantic_ as event_schemas
-from ghga_service_commons.api.mock_router import (  # noqa: F401
-    assert_all_responses_were_requested,
-)
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3.testutils import FileObject
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
@@ -41,16 +38,11 @@ unintercepted_hosts: list[str] = ["localhost"]
 pytestmark = pytest.mark.asyncio()
 
 
-@pytest.fixture
-def non_mocked_hosts() -> list:
-    """Fixture used by httpx_mock to determine which requests to intercept
-
-    We only want to intercept calls to the EKSS API, so this list will include
-    localhost and the host from the S3 fixture's connection URL.
-    """
-    return unintercepted_hosts
-
-
+@pytest.mark.httpx_mock(
+    assert_all_responses_were_requested=False,
+    can_send_already_matched_responses=True,
+    should_mock=lambda request: request.url.host not in unintercepted_hosts,
+)
 async def test_happy_journey(
     populated_fixture: PopulatedFixture,
     tmp_file: FileObject,
@@ -168,6 +160,9 @@ async def test_happy_journey(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.httpx_mock(
+    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
+)
 async def test_happy_deletion(
     populated_fixture: PopulatedFixture,
     tmp_file: FileObject,
