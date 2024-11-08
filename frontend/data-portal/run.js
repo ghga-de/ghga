@@ -22,7 +22,7 @@ function readSettings() {
   // Read the default configuration file
   const defaultSettingsPath = path.join(__dirname, `${NAME}.default.yaml`);
   const defaultSettings = yaml.load(
-    fs.readFileSync(defaultSettingsPath, "utf8")
+    fs.readFileSync(defaultSettingsPath, "utf8"),
   );
 
   // Read the (optional) development or production specific configuration file
@@ -114,7 +114,7 @@ function writeSettings(settings) {
 function runDevServer(host, port, logLevel) {
   console.log("Running the development server...");
 
-  params = ["start", "--", "--host", host, "--port", port];
+  const params = ["start", "--", "--host", host, "--port", port];
   if (logLevel == "debug") {
     params.push("--verbose");
   }
