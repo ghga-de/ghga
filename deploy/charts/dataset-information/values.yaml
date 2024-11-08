@@ -3,6 +3,22 @@ image:
 
 config_prefix: dins
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /dins/
+# Name of the database
+dbName: dataset-information
+# This parameter is used as Kafka's group id
+serviceName: dins-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: dins-rest-1
+# This parameter is used as Kafka's group id
+serviceNameConsumer: dins-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: dins-consumer-1
+
+# Those values are directly injected into the service's configuration
 parameters:
   default:
     host: 0.0.0.0
