@@ -9,12 +9,14 @@
     "test": "ng test",
     "lint": "ng lint",
     "lf": "ng lint --fix",
+    "preinstall": "npx only-allow pnpm",
     "prepare": "husky",
     "docs": "compodoc -p tsconfig.doc.json -s -r 8081",
     "compodoc:build": "compodoc -p tsconfig.doc.json",
     "compodoc:build-and-serve": "compodoc -p tsconfig.doc.json -s -r 8081",
     "compodoc:serve": "compodoc -s"
   },
+  "packageManager": "pnpm@9.12.3",
   "type": "module",
   "private": true,
   "dependencies": {

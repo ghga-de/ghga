@@ -58,6 +58,16 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
 
+## Package Manager
+
+This project uses pnpm to install dependencies which is a replacement for the much slower npm. Run 
+
+```bash
+pnpm install
+```
+
+to install the dependencies. It is important to note that you should not have a package-lock.json but instead a pnpm-lock.yaml. You can still use npm for run and other commands or to install global packages but not to add dependencies or to install all dependencies.
+
 ## Linter, Commits and Documentation
 
 The repository is setup in such a way to only allow linted commits. That means, that commits are blocked by husky if they cause linter errors (currently, warnings are accepted). This ensures that code quality standards are maintained without build up technical debt that has to be fixed later on.
