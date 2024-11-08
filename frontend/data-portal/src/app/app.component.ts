@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { ConfigService } from './config.service';
+import { ConfigService } from '@app/shared/services/config.service';
 
 /**
  * This is the root component of the application.
