@@ -4,5 +4,8 @@
         "devcontainer",
         "devkit",
         "metldata"
-    ]
+    ],
+    "eslint.options": {
+        "overrideConfigFile": "/workspace/eslint.config.js"
+    }
 }
