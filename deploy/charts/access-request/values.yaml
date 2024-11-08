@@ -3,14 +3,24 @@ image:
 
 config_prefix: ars
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /ars/
+# Name of the database
+dbName: access-request
+# This parameter is used as Kafka's group id
+serviceName: ars-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: ars-rest-1
+
+# Those values are directly injected into the service's configuration
 parameters:
   default:
     auth_key: '{}'
     db_connection_str: null
-    db_name: ars
     download_access_url: http://claims-repository:8080/download-access
     host: "0.0.0.0"
-    service_instance_id: 'rest.1'
 
 containers:
 - name: rest
