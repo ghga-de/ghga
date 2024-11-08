@@ -10,6 +10,9 @@
 {{- define "ghga-common.serviceInstanceId" -}}
     service_instance_id: {{ .Values.serviceInstanceIdPrefix | empty | ternary .Values.serviceInstanceId (cat .Values.serviceInstanceIdPrefix "-" .Values.serviceInstanceId ) | nospace }}
 {{- end -}}
+{{- define "ghga-common.serviceNameConsumer" -}}
+    service_name: {{ .Values.serviceNamePrefix | empty | ternary .Values.serviceNameConsumer (cat .Values.serviceNamePrefix "-" .Values.serviceNameConsumer ) | nospace }}
+{{- end -}}
 {{- define "ghga-common.serviceInstanceIdConsumer" -}}
     service_instance_id: {{ .Values.serviceInstanceIdPrefix | empty | ternary .Values.serviceInstanceIdConsumer (cat .Values.serviceInstanceIdPrefix "-" .Values.serviceInstanceIdConsumer ) | nospace }}
 {{- end -}}

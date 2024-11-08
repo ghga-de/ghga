@@ -23,6 +23,7 @@ data:
     {{- include "ghga-common.apiBasePath" . | nindent 4 }}
     {{- include "ghga-common.dbName" . | nindent 4 }}
     {{- include "ghga-common.serviceName" . | nindent 4 }}
+    {{- include "ghga-common.serviceNameConsumer" . | nindent 4 }}
     {{- include "ghga-common.serviceInstanceIdConsumer" . | nindent 4 }}
 {{- end -}}
 {{/* Create default parameter configmap */}}
