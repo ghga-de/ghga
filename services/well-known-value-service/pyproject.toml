@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wkvs"
-version = "1.1.1"
+version = "1.1.2"
 description = "Well-Known-Value-Service - Provides access to common values via API"
 dependencies = [
     "ghga-service-commons[api]>=3.1",
