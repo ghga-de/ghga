@@ -29,6 +29,9 @@ importers:
       '@angular/forms':
         specifier: 19.0.0-rc.1
         version: 19.0.0-rc.1(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(@angular/platform-browser@19.0.0-rc.1(@angular/animations@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)))(rxjs@7.8.1)
+      '@angular/material':
+        specifier: ^19.0.0-rc.0
+        version: 19.0.0-rc.1(dpilml7blm6q47jg4tyhkeylce)
       '@angular/platform-browser':
         specifier: 19.0.0-rc.1
         version: 19.0.0-rc.1(@angular/animations@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))
@@ -290,6 +293,13 @@ packages:
       tailwindcss:
         optional: true
 
+  '@angular/cdk@19.0.0-rc.1':
+    resolution: {integrity: sha512-aNpSadgqq3bpyZ/OsCiAl/TGMzUZYqAltctgYS3kXIrSphamus+9wOR7SF1dK87RUX/RWj3SMpol6e4kLmyfpw==}
+    peerDependencies:
+      '@angular/common': ^19.0.0-0 || ^19.1.0-0 || ^19.2.0-0 || ^19.3.0-0 || ^20.0.0-0
+      '@angular/core': ^19.0.0-0 || ^19.1.0-0 || ^19.2.0-0 || ^19.3.0-0 || ^20.0.0-0
+      rxjs: ^6.5.3 || ^7.4.0
+
   '@angular/cli@19.0.0-rc.1':
     resolution: {integrity: sha512-xZu/uts0fS6ZPfRfee3bMFx7XIsR3SMI6qL/n13j+Z+cRqdofyLOPiZeySf2RiWBXhYyUHIk4E1kT5giN/RABg==}
     engines: {node: ^18.19.1 || ^20.11.1 || >=22.0.0, npm: ^6.11.0 || ^7.5.6 || >=8.0.0, yarn: '>= 1.13.0'}
@@ -333,6 +343,17 @@ packages:
       '@angular/common': 19.0.0-rc.1
       '@angular/core': 19.0.0-rc.1
       '@angular/platform-browser': 19.0.0-rc.1
+      rxjs: ^6.5.3 || ^7.4.0
+
+  '@angular/material@19.0.0-rc.1':
+    resolution: {integrity: sha512-PCT4t4JL1INyLj0WEtGOVeS6i7Xk8wQa1sXqFV4nJADD+TPLFkvGFaW/mnXjKGFNXq8BAPe/lZ26uPFgy0HGfA==}
+    peerDependencies:
+      '@angular/animations': ^19.0.0-0 || ^19.1.0-0 || ^19.2.0-0 || ^19.3.0-0 || ^20.0.0-0
+      '@angular/cdk': 19.0.0-rc.1
+      '@angular/common': ^19.0.0-0 || ^19.1.0-0 || ^19.2.0-0 || ^19.3.0-0 || ^20.0.0-0
+      '@angular/core': ^19.0.0-0 || ^19.1.0-0 || ^19.2.0-0 || ^19.3.0-0 || ^20.0.0-0
+      '@angular/forms': ^19.0.0-0 || ^19.1.0-0 || ^19.2.0-0 || ^19.3.0-0 || ^20.0.0-0
+      '@angular/platform-browser': ^19.0.0-0 || ^19.1.0-0 || ^19.2.0-0 || ^19.3.0-0 || ^20.0.0-0
       rxjs: ^6.5.3 || ^7.4.0
 
   '@angular/platform-browser-dynamic@19.0.0-rc.1':
@@ -5472,6 +5493,15 @@ snapshots:
       - supports-color
       - terser
 
+  '@angular/cdk@19.0.0-rc.1(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1)':
+    dependencies:
+      '@angular/common': 19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1)
+      '@angular/core': 19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)
+      rxjs: 7.8.1
+      tslib: 2.8.1
+    optionalDependencies:
+      parse5: 7.2.1
+
   '@angular/cli@19.0.0-rc.1(@types/node@22.9.0)(chokidar@4.0.1)':
     dependencies:
       '@angular-devkit/architect': 0.1900.0-rc.1(chokidar@4.0.1)
@@ -5534,6 +5564,17 @@ snapshots:
     dependencies:
       '@angular/common': 19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1)
       '@angular/core': 19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)
+      '@angular/platform-browser': 19.0.0-rc.1(@angular/animations@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))
+      rxjs: 7.8.1
+      tslib: 2.8.1
+
+  '@angular/material@19.0.0-rc.1(dpilml7blm6q47jg4tyhkeylce)':
+    dependencies:
+      '@angular/animations': 19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))
+      '@angular/cdk': 19.0.0-rc.1(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1)
+      '@angular/common': 19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1)
+      '@angular/core': 19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)
+      '@angular/forms': 19.0.0-rc.1(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(@angular/platform-browser@19.0.0-rc.1(@angular/animations@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)))(rxjs@7.8.1)
       '@angular/platform-browser': 19.0.0-rc.1(@angular/animations@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0)))(@angular/common@19.0.0-rc.1(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))(rxjs@7.8.1))(@angular/core@19.0.0-rc.1(rxjs@7.8.1)(zone.js@0.15.0))
       rxjs: 7.8.1
       tslib: 2.8.1
