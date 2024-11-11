@@ -3,6 +3,21 @@ image:
 
 config_prefix: mass
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /mass/
+# Name of the database
+dbName: mass
+# This parameter is used as Kafka's group id
+serviceName: mass-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: mass-rest-1
+# This parameter is used as Kafka's group id
+serviceNameConsumer: mass-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: mass-consumer-1
+
 parameters:
   default:
     db_connection_str: null
