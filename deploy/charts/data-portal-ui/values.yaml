@@ -3,6 +3,11 @@ image:
 
 config_prefix: data_portal_ui
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /
+
 parameters:
   default:
     host: 0.0.0.0
