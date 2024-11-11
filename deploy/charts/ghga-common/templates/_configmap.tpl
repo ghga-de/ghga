@@ -14,7 +14,7 @@ data:
     {{- include "ghga-common.apiBasePath" . | nindent 4 }}
     {{- include "ghga-common.dbName" . | nindent 4 }}
     {{- include "ghga-common.serviceName" . | nindent 4 }}
-    {{- include "ghga-common.serviceInstanceID" . | nindent 4 }}
+    {{- include "ghga-common.serviceInstanceId" . | nindent 4 }}
 {{- end -}}
 {{- if .Values.parameters.consumer }}
   parameters-consumer: |
