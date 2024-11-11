@@ -15,13 +15,13 @@
 {{- end }}
 {{- end -}}
 {{- end -}}
+{{- end }}
 {{- if .Values.kafkaUser.enabled }}
   kafka_ssl_password: ""
   kafka_ssl_cafile: /cluster-ca-cert/ca.crt
   kafka_ssl_certfile: /kafka-secrets/user.crt
   kafka_ssl_keyfile: /kafka-secrets/user.key
   kafka_security_protocol: SSL
-{{- end }}
 {{- end }}
 {{- end -}}
 {{- define "ghga-common.kafkauser" -}}
