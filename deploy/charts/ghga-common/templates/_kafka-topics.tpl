@@ -41,11 +41,19 @@ spec:
     acls:
     {{ with .Values.topics }}
     {{- range $key, $value := . }}
+    {{- if eq $key "wildcard" }}
+    - operation: All
+      resource:
+        name: '{{ $value.topic.value }}'
+        patternType: literal
+        type: topic
+    {{- else }}
     - operation: All
       resource:
         name: '{{ $.Values.topicPrefix | empty | ternary $value.topic.value (cat $.Values.topicPrefix "-" $value.topic.value ) | nospace }}'
         patternType: literal
         type: topic
+    {{- end }}
     {{- end }}
     {{- end }}
     - operation: All
