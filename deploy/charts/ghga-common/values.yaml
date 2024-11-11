@@ -179,3 +179,8 @@ exports:
       caCertSecretName: kafka-cluster-ca-cert
 
     dbName: ""
+    apiBasePath: ""
+    serviceName: ""
+    serviceInstanceId: ""
+    serviceNameConsumer: ""
+    serviceInstanceIdConsumer: ""
