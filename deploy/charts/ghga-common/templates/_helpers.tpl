@@ -2,9 +2,9 @@
     api_root_path: {{ .Values.apiBasePathPrefix | empty | ternary .Values.apiBasePath (cat .Values.apiBasePathPrefix .Values.apiBasePath ) | nospace }}
 {{- end -}}
 {{- define "ghga-common.dbName" -}}
-    {{- if .Values.dbName }}
+{{- if .Values.dbName -}}
     db_name: {{ .Values.dbNamePrefix | empty | ternary .Values.dbName (cat .Values.dbNamePrefix "-" .Values.dbName ) | nospace }}
-    {{- end }}
+{{- end -}}
 {{- end -}}
 {{- define "ghga-common.serviceName" -}}
     service_name: {{ .Values.serviceNamePrefix | empty | ternary .Values.serviceName (cat .Values.serviceNamePrefix "-" .Values.serviceName ) | nospace }}

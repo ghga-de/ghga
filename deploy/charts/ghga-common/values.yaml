@@ -184,3 +184,7 @@ exports:
     serviceInstanceId: ""
     serviceNameConsumer: ""
     serviceInstanceIdConsumer: ""
+    parameters:
+      default: {}
+      rest: {}
+      consumer: {}
