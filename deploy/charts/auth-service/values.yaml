@@ -3,6 +3,21 @@ image:
 
 config_prefix: auth_service
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /auth-ext/
+# Name of the database
+dbName: auth-service
+# This parameter is used as Kafka's group id
+serviceName: auth-adapter-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: auth-adapter
+# This parameter is used as Kafka's group id
+serviceNameConsumer: auth-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: auth-consumer-1
+
 parameters:
   default:
     db_connection_str: null
