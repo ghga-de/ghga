@@ -3,6 +3,17 @@ image:
 
 config_prefix: pcs
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /pcs/
+# Name of the database
+dbName: purge-controller
+# This parameter is used as Kafka's group id
+serviceName: pcs-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: pcs-rest-1
+
 parameters:
   default:
     host: 0.0.0.0
