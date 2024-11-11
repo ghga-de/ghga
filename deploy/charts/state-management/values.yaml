@@ -3,6 +3,13 @@ image:
 
 config_prefix: sms
 
+# Service base path 
+apiBasePath: /sms/
+# This parameter is used as Kafka's group id
+serviceName: sms-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: sms-rest-1
+
 parameters:
   default:
     host: 0.0.0.0
@@ -12,7 +19,6 @@ parameters:
     allow_empty_prefix: true
     db_prefix: ""
     token_hashes: []
-    service_instance_id: 'rest.1'
     log_level: DEBUG
     object_storages: {}
 
@@ -23,3 +29,12 @@ containers:
   config:
     name: parameters
     key: parameters
+
+# SMS is just used for testing, it requires access to all topics to clear them
+kafkaTopicsParameters: false
+
+topics:
+  wildcard:
+    topic:
+      name: wildcard
+      value: '*'
