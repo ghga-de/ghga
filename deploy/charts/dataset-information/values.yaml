@@ -23,13 +23,6 @@ parameters:
   default:
     host: 0.0.0.0
     db_connection_str: null
-    db_name: dins
-    service_instance_id: rest.1
-    service_name: dins
-  rest:
-    service_instance_id: 'rest.1'
-  consumer:
-    service_instance_id: 'consumer.1'
 
 containers:
 - name: rest
