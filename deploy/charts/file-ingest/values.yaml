@@ -3,6 +3,17 @@ image:
 
 config_prefix: fis
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /fis/
+# Name of the database
+dbName: file-ingest
+# This parameter is used as Kafka's group id
+serviceName: fis-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: fis-rest-1
+
 parameters:
   default:
     host: 0.0.0.0
@@ -10,8 +21,6 @@ parameters:
     vault_url: http://vault:8200
     vault_path: ekss
     db_connection_str: null
-    db_name: fis
-    service_instance_id: rest.1
     token_hashes: []
 
 containers:
