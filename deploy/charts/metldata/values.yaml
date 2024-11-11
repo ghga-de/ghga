@@ -3,6 +3,17 @@ image:
 
 config_prefix: metldata
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /metldata/
+# Name of the database
+dbName: metadata-artifacts
+# This parameter is used as Kafka's group id
+serviceName: metldata
+# This parameter specifies the client id in Kafka
+serviceInstanceId: metldata-1
+
 parameters:
   default:
     artifact_infos: []
