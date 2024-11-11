@@ -3,6 +3,21 @@ image:
 
 config_prefix: wps
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /wps/
+# Name of the database
+dbName: work-package
+# This parameter is used as Kafka's group id
+serviceName: wps-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: wps-rest-1
+# This parameter is used as Kafka's group id
+serviceNameConsumer: wps-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: wps-consumer-1
+
 parameters:
   default:
     auth_key: '{}'
