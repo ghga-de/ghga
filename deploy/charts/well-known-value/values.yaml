@@ -3,6 +3,15 @@ image:
 
 config_prefix: wkvs
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /.well-known/
+# This parameter is used as Kafka's group id
+serviceName: wkvs
+# This parameter specifies the client id in Kafka
+serviceInstanceId: wkvs-rest-1
+
 parameters:
   default:
     crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
