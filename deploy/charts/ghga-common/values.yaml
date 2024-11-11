@@ -177,3 +177,5 @@ exports:
       clusterName: kafka
       clusterNamespace: strimzi
       caCertSecretName: kafka-cluster-ca-cert
+
+    dbName: ""
