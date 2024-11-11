@@ -3,22 +3,31 @@ image:
 
 config_prefix: dcs
 
+# Service parameters
+
+# Service base path 
+apiBasePath: /ga4gh/drs/v1/
+# Name of the database
+dbName: download-controller
+# This parameter is used as Kafka's group id
+serviceName: dcs-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: dcs-rest-1
+# This parameter is used as Kafka's group id
+serviceNameConsumer: dcs-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: dcs-consumer-1
+
 parameters:
   default:
     auth_key: '{}'
     db_connection_str: null
-    db_name: dcs
     drs_server_uri: drs://localhost:8080/
     ekss_base_url: http://encryption-key-store:8080
     host: "0.0.0.0"
     presigned_url_expires_after: 10
     object_storages: {}
-    service_instance_id: 'dcs_1'
     unstaged_download_collection: unstaged-download-requested
-  rest:
-    service_instance_id: 'rest.1'
-  consumer:
-    service_instance_id: 'consumer.1'
 
 containers:
 - name: rest
