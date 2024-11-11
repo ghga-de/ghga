@@ -10,14 +10,22 @@
 {{- end -}}
 {{- end -}}
 {{- define "ghga-common.serviceName" -}}
+{{- if .Values.serviceName -}}
     service_name: {{ .Values.serviceNamePrefix | empty | ternary .Values.serviceName (cat .Values.serviceNamePrefix "-" .Values.serviceName ) | nospace }}
 {{- end -}}
+{{- end -}}
 {{- define "ghga-common.serviceInstanceId" -}}
+{{- if .Values.serviceInstanceId -}}
     service_instance_id: {{ .Values.serviceInstanceIdPrefix | empty | ternary .Values.serviceInstanceId (cat .Values.serviceInstanceIdPrefix "-" .Values.serviceInstanceId ) | nospace }}
 {{- end -}}
+{{- end -}}
 {{- define "ghga-common.serviceNameConsumer" -}}
+{{- if .Values.serviceNameConsumer -}}
     service_name: {{ .Values.serviceNamePrefix | empty | ternary .Values.serviceNameConsumer (cat .Values.serviceNamePrefix "-" .Values.serviceNameConsumer ) | nospace }}
 {{- end -}}
+{{- end -}}
 {{- define "ghga-common.serviceInstanceIdConsumer" -}}
+{{- if .Values.serviceInstanceIdConsumer -}}
     service_instance_id: {{ .Values.serviceInstanceIdPrefix | empty | ternary .Values.serviceInstanceIdConsumer (cat .Values.serviceInstanceIdPrefix "-" .Values.serviceInstanceIdConsumer ) | nospace }}
+{{- end -}}
 {{- end -}}
