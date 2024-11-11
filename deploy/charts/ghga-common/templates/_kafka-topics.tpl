@@ -1,5 +1,6 @@
 {{/* Transforms topic values to serivce config parameters. */}}
 {{- define "ghga-common.kafkaTopicsParameters" -}}
+{{- if .Values.kafkaTopicsParameters }}
 {{- $topics := merge (.Values.global.topics | default dict) .Values.topics -}}
 {{- range $key, $value := $topics -}}
 {{- if $value.topic }}
@@ -20,6 +21,7 @@
   kafka_ssl_certfile: /kafka-secrets/user.crt
   kafka_ssl_keyfile: /kafka-secrets/user.key
   kafka_security_protocol: SSL
+{{- end }}
 {{- end }}
 {{- end -}}
 {{- define "ghga-common.kafkauser" -}}

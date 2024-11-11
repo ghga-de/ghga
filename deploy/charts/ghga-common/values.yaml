@@ -170,6 +170,7 @@ exports:
 
     topicPrefix: ""
     topics: {}
+    kafkaTopicsParameters: true
 
     kafkaUser:
       enabled: false
