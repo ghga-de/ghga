@@ -1,5 +1,8 @@
+{{- define "ghga-common.apiFullBasePath" -}}
+{{ .Values.apiBasePathPrefix | empty | ternary .Values.apiBasePath (cat .Values.apiBasePathPrefix .Values.apiBasePath ) | nospace }}
+{{- end -}}
 {{- define "ghga-common.apiBasePath" -}}
-    api_root_path: {{ .Values.apiBasePathPrefix | empty | ternary .Values.apiBasePath (cat .Values.apiBasePathPrefix .Values.apiBasePath ) | nospace }}
+    api_root_path: {{ include "ghga-common.apiFullBasePath" . }}
 {{- end -}}
 {{- define "ghga-common.dbName" -}}
 {{- if .Values.dbName -}}
