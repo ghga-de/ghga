@@ -2,7 +2,7 @@
     api_root_path: {{ .Values.apiBasePathPrefix | empty | ternary .Values.apiBasePath (cat .Values.apiBasePathPrefix .Values.apiBasePath ) | nospace }}
 {{- end -}}
 {{- define "ghga-common.dbName" -}}
-    {{- if .Values.dbNamePrefix }}
+    {{- if .Values.dbName }}
     db_name: {{ .Values.dbNamePrefix | empty | ternary .Values.dbName (cat .Values.dbNamePrefix "-" .Values.dbName ) | nospace }}
     {{- end }}
 {{- end -}}
