@@ -1,7 +1,7 @@
 image:
   repository: "ghga/access-request-service"
 
-config_prefix: ars
+configPrefix: ars
 
 # Service parameters
 
