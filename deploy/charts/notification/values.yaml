@@ -3,10 +3,18 @@ image:
 
 config_prefix: ns
 
+# Service parameters
+
+# Name of the database
+dbName: notification
+# This parameter is used as Kafka's group id
+serviceNameConsumer: ns-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: ns-consumer-1
+
 parameters:
   default:
     db_connection_str: null
-    db_name: ns
     from_address: test@test.com
     html_email_template: >-
       <!DOCTYPE html>
@@ -29,7 +37,6 @@ parameters:
 
       Warm regards,
       The GHGA Team
-    service_instance_id: 'rest.1'
     smtp_host: 127.0.0.1
     smtp_port: 587
     use_starttls: false

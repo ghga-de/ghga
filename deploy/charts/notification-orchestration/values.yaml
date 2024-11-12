@@ -3,12 +3,20 @@ image:
 
 config_prefix: nos
 
+# Service parameters
+
+# Name of the database
+dbName: notification-orchestration
+# This parameter is used as Kafka's group id
+serviceNameConsumer: nos-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: nos-consumer-1
+
 parameters:
   default:
     central_data_stewardship_email: ""
     helpdesk_email: ""
-    db_name: nos
-    service_instance_id: 'consumer.1'
+
 
 containers:
 - name: consumer
