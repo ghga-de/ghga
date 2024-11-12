@@ -8,7 +8,7 @@ spec:
   ambassador_id: {{ .Values.mapping.ambassador_id }}
   service: "{{ include "common.names.fullname" . }}:{{ .Values.mapping.port }}"
   hostname: {{ .Values.mapping.hostname }}
-  prefix: {{ include "ghga-common.apiFullBasePath" . }}
+  prefix: {{ .Values.apiBasePath | empty | ternary .Values.mapping.prefix (include "ghga-common.apiFullBasePath" .) }}
   rewrite: {{ .Values.mapping.rewrite }}
   timeout_ms: {{ .Values.mapping.timeout_ms }}
 {{ end }}

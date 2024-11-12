@@ -167,6 +167,7 @@ exports:
       rewrite: /
       hostname: ""
       prefix: ""
+      timeout_ms: 3000
 
     topicPrefix: ""
     topics: {}
