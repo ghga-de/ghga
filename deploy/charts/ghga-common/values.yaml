@@ -189,3 +189,6 @@ exports:
       default: {}
       rest: {}
       consumer: {}
+
+    # This value is replaced in templated secrets with the actual config prefix before starting the service
+    configPrefixPlaceholder: "%%CONFIG_PREFIX_PLACEHOLDER%%"

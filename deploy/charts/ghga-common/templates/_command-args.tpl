@@ -9,8 +9,8 @@ command: ["sh", "-c"]
 args:
   - if [ -d "/vault/secrets" ]; then
       for f in /vault/secrets/*; do
-        [ -f "$f" ] && . "$f";
+        [ -f "$f" ] &&  sed -i s/{{ (first .).Values.configPrefixPlaceholder }}/{{ (first .).Values.configPrefix | upper }}/ "$f" && . "$f";
       done
     fi;
-    {{ first . }};
+    {{ index . 1 }};
 {{- end -}}

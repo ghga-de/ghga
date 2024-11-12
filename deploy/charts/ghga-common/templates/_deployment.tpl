@@ -60,7 +60,7 @@ spec:
       {{- range $container := .Values.containers }}
         - image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart ) }}
           imagePullPolicy: {{ default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }}
-          {{- include "ghga-common.command-args" (list $container.cmd)  | nindent 10 }}
+          {{- include "ghga-common.command-args" (list $ $container.cmd)  | nindent 10 }}
           {{- if $.Values.args }}
           args: {{- include "common.tplvalues.render" (dict "value" $.Values.args "context" $) | nindent 12 }}
           {{- end }}
@@ -104,8 +104,8 @@ spec:
           {{- end }}
           volumeMounts:
             - name: {{ $container.config.name | default "config" }}
-              mountPath: /home/{{ $container.config.appuser | default "appuser" }}/.{{ $.Values.config_prefix }}.yaml
-              subPath: .{{ $.Values.config_prefix }}.yaml
+              mountPath: /home/{{ $container.config.appuser | default "appuser" }}/.{{ $.Values.configPrefix }}.yaml
+              subPath: .{{ $.Values.configPrefix }}.yaml
               readOnly: true
             {{- if $.Values.extraVolumeMounts }}
             {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
@@ -129,7 +129,7 @@ spec:
             name: {{ include "common.names.fullname" $ }}
             items:
             - key: {{ $container.config.key | default "parameters" }}
-              path: .{{ $.Values.config_prefix }}.yaml
+              path: .{{ $.Values.configPrefix }}.yaml
       {{- end }}
         {{- if .Values.extraVolumes }}
         {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
