@@ -9,6 +9,7 @@ import * as typescriptParser from "@typescript-eslint/parser";
 import jsdoc from "eslint-plugin-jsdoc";
 import prettier from "eslint-plugin-prettier";
 import boundaries from "eslint-plugin-boundaries";
+import markdown from "@eslint/markdown";
 
 import pkg from "@angular-eslint/eslint-plugin";
 const { configs: angularConfigs } = pkg;
@@ -261,6 +262,7 @@ export default [
       ],
     },
   },
+  // Configuration for HTML template files
   {
     files: ["**/*.component.html"],
     languageOptions: {
@@ -274,6 +276,23 @@ export default [
       ...angularTemplate.configs.recommended.rules,
       ...angularTemplate.configs.accessibility.rules,
       "prettier/prettier": "warn",
+    },
+  },
+  // Configuration for Markdown files
+  {
+    files: ["**/*.md"],
+    plugins: {
+      markdown
+    },
+    language: "markdown/commonmark",
+    rules: {
+      "markdown/fenced-code-language": "error",
+      "markdown/heading-increment": "error",
+      "markdown/no-duplicate-headings": "error",
+      "markdown/no-empty-links": "error",
+      "markdown/no-html": "error",
+      "markdown/no-invalid-label-refs": "error",
+      "markdown/no-missing-label-refs": "error",
     },
   },
 ];

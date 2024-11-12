@@ -2,7 +2,6 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.0-rc.0.
 
-
 ## Development server
 
 To start a local development server, run:
@@ -23,8 +22,7 @@ dev_launcher staging
 
 In this case, a proxy configuration will be used that proxies all API endpoints to the staging environment, while the application itself is still served by the development server.
 
-If you change the hosts file on your host computer so that localhost points to `data.staging.ghga.dev`, then this setup also allows testing authentication using the real OIDC provider. You need to point your browser to `https://data.staging.ghga.dev` in this case. The development server will serve the application via SSL in this setup, using the self-signed certificate created in `.devcontainer/cert.pem`.
-
+If you change the hosts file on your host computer so that localhost points to `data.staging.ghga.dev`, then this setup also allows testing authentication using the real OIDC provider. You need to point your browser to `https://data.staging.ghga.dev` in this case. The development server will serve the application via SSL in this setup, using the self-signed certificate created in `.devcontainer/cert.pem`. You can add this certificate to the trusted certificates of your web browser to avoid the warnings when loading the page.
 
 ## Code scaffolding
 
@@ -50,7 +48,6 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
-
 ## Running unit tests
 
 To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
@@ -75,7 +72,7 @@ For more information on using the Angular CLI, including detailed command refere
 
 ## Package Manager
 
-This project uses pnpm to install dependencies which is a replacement for the much slower npm. Run 
+This project uses pnpm to install dependencies which is a replacement for the much slower npm. Run
 
 ```bash
 pnpm install
@@ -87,7 +84,7 @@ to install the dependencies. It is important to note that you should not have a 
 
 The repository is setup in such a way to only allow linted commits. That means, that commits are blocked by husky if they cause linter errors (currently, warnings are accepted). This ensures that code quality standards are maintained without build up technical debt that has to be fixed later on.
 
-To ensure deterministic behavior, the pre-commit hook *does not* attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix` which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running ng lint) resolve those issues and try again.
+To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix` which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running ng lint) resolve those issues and try again.
 
 ## Ease of use
 
@@ -97,14 +94,14 @@ For comfort, we are adding these shorthands: `npm run lint`, `npm run lf` (for `
 
 This application is built as a modularized frontend monolith (a "modulith") using vertical slices and layers as module boundaries, which are enforced using the linter.
 
-The vertical slices correspond to the different feature areas or bounded contexts within the application, such as *metadata* or *access-requests*. Additionally, we have a vertical slice called *portal* that contains all overarching features, such as the home page (which displays a metadata summary) and the user profile page (which shows the user's access requests). Another slice, called *shared*, provides UI components or utilities used across all feature areas. Authentication and user session handling are implemented in a separate slice called *auth*.
+The vertical slices correspond to the different feature areas or bounded contexts within the application, such as _metadata_ or _access-requests_. Additionally, we have a vertical slice called _portal_ that contains all overarching features, such as the home page (which displays a metadata summary) and the user profile page (which shows the user's access requests). Another slice, called _shared_, provides UI components or utilities used across all feature areas. Authentication and user session handling are implemented in a separate slice called _auth_.
 
-The horizontal layers are named *features* (for feature components, i.e., smart components), *ui* (for presentational components, i.e., dumb components), *services* (for accessing domain objects and corresponding application logic), *models* (for interfaces of domain objects), and *utils* (for feature-specific utility functions)." The *services* layer primarily contains Angular services, while the *utils* layer includes pure pipes, guards, and custom utility functions.
+The horizontal layers are named _features_ (for feature components, i.e., smart components), _ui_ (for presentational components, i.e., dumb components), _services_ (for accessing domain objects and corresponding application logic), _models_ (for interfaces of domain objects), and _utils_ (for feature-specific utility functions)." The _services_ layer primarily contains Angular services, while the _utils_ layer includes pure pipes, guards, and custom utility functions.
 
 This results in the following architecture matrix:
 
 | portal   | metadata | access-requests | ... | auth     | shared   |
-|----------|----------|---------------- |-----|----------|----------|
+| -------- | -------- | --------------- | --- | -------- | -------- |
 | features | features | features        | ... | features | features |
 | ui       | ui       | ui              | ... | ui       | ui       |
 | services | services | services        | ... | services | services |
@@ -114,8 +111,8 @@ This results in the following architecture matrix:
 To create a clean architecture, the following rules are checked when importing modules from the architecture matrix:
 
 - Modules within a vertical slice must only import modules from the same slice, as these slices represent bounded contexts.
-- An exception is that all vertical slices are allowed to use modules from the *shared* vertical slice.
-- Another exception is that the *portal* slice is allowed to use feature components from other feature areas.
-- Additionally, the three bottom layers of the *auth* slice may be used in other slices.
+- An exception is that all vertical slices are allowed to use modules from the _shared_ vertical slice.
+- Another exception is that the _portal_ slice is allowed to use feature components from other feature areas.
+- Additionally, the three bottom layers of the _auth_ slice may be used in other slices.
 - Each module is only allowed to use modules from the layers below it.
-- An exception is that the *ui* layer may not use modules from the *services* layer.
+- An exception is that the _ui_ layer may not use modules from the _services_ layer.

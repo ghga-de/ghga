@@ -1,11 +1,21 @@
 {
-    "window.title": "Data Portal - ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
-    "cSpell.words": [
-        "devcontainer",
-        "devkit",
-        "metldata"
-    ],
-    "eslint.options": {
-        "overrideConfigFile": "/workspace/eslint.config.js"
-    }
+  "window.title": "Data Portal - ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
+  "cSpell.words": ["devcontainer", "devkit", "metldata"],
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "eslint.options": {
+    "overrideConfigFile": "/workspace/eslint.config.js"
+  }
 }
