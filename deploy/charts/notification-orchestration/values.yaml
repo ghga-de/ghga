@@ -8,6 +8,10 @@ config_prefix: nos
 # Name of the database
 dbName: notification-orchestration
 # This parameter is used as Kafka's group id
+serviceName: nos-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceId: nos-consumer-1
+# This parameter is used as Kafka's group id
 serviceNameConsumer: nos-consumer
 # This parameter specifies the client id in Kafka
 serviceInstanceIdConsumer: nos-consumer-1

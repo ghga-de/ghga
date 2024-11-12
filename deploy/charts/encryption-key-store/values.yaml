@@ -3,12 +3,18 @@ image:
 
 config_prefix: ekss
 
+# Service parameters
+
+# This parameter is used as Kafka's group id
+serviceName: ekss-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: ekss-rest-1
+
 parameters:
   default:
     host: 0.0.0.0
     server_private_key: <Please fill>
     server_public_key: <Please fill>
-    service_instance_id: 'ekss_1'
     vault_url: http://vault:8200
     vault_path: ekss
 
