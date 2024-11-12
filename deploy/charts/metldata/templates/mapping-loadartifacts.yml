@@ -7,7 +7,7 @@ spec:
   ambassador_id: {{ .Values.mapping.ambassador_id }}
   service: "{{ include "common.names.fullname" . }}:{{ .Values.mapping.port }}"
   hostname: {{ .Values.mapping.hostname }}
-  prefix: {{ Values.apiBasePath | empty | ternary .Values.mapping.prefix (include "ghga-common.apiFullBasePath" .) | trimSuffix "/" }}/rpc/load-artifacts
+  prefix: {{ .Values.apiBasePath | empty | ternary .Values.mapping.prefix (include "ghga-common.apiFullBasePath" .) | trimSuffix "/" }}/rpc/load-artifacts
   rewrite: {{ .Values.mapping.rewrite | trimSuffix "/" }}/rpc/load-artifacts
   timeout_ms: {{ .Values.mapping.timeout_ms_loadartifacts }}
 {{ end }}
