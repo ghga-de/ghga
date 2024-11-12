@@ -12,6 +12,12 @@
 npm-debug.log
 yarn-error.log
 
+# Test certificates
+*.pem
+
+# Dynamic proxy config file
+proxy.conf.json
+
 # Documentation
 documentation
 

@@ -27,8 +27,8 @@ function readSettings() {
 
   // Read the (optional) development or production specific configuration file
   const specificSettingsPath = DEV_MODE
-    ? `.devcontainer/.${NAME}.yaml`
-    : `.${NAME}.yaml`;
+    ? `.devcontainer/${NAME}.yaml`
+    : `${NAME}.yaml`;
 
   let specificSettings = {};
   try {
@@ -52,11 +52,11 @@ function readSettings() {
     if (isObject) {
       envVarValue = JSON.parse(envVarValue);
     } else {
-      isBoolean = typeof value === "boolean";
+      const isBoolean = typeof value === "boolean";
       if (isBoolean) {
         envVarValue = envVarValue.toLowerCase() === "true";
       } else {
-        isNumber = typeof value === "number";
+        const isNumber = typeof value === "number";
         if (isNumber) {
           envVarValue = parseFloat(envVarValue);
         }
@@ -111,13 +111,17 @@ function writeSettings(settings) {
 /**
  * Run the development server on the specified host and port.
  */
-function runDevServer(host, port, logLevel) {
+function runDevServer(host, port, ssl, sslCert, sslKey, logLevel) {
   console.log("Running the development server...");
 
   const params = ["start", "--", "--host", host, "--port", port];
+  if (ssl) {
+    params.push("--ssl", "--ssl-cert", sslCert, "--ssl-key", sslKey);
+  }
   if (logLevel == "debug") {
     params.push("--verbose");
   }
+
   const result = spawnSync("npm", params, {
     stdio: "inherit",
   });
@@ -151,9 +155,11 @@ function runProdServer(host, port, logLevel) {
     logLevel.toLowerCase(),
     "-d",
     ".",
-    "--page-fallback",
-    "./index.html",
-  ];
+    "--page-fallback"];
+  if (ssl) {
+    params.push("--http2", "--http2-tls-cert", sslCert, "--http2-tls-key", sslKey);
+  }
+  params.push("./index.html");
 
   const result = spawnSync("static-web-server", params, {
     stdio: "inherit",
@@ -176,15 +182,18 @@ function main() {
   const settings = readSettings();
   console.log("Runtime settings =", settings);
 
-  const { host, port, log_level } = settings;
+  const { host, port, ssl, ssl_cert, ssl_key, log_level } = settings;
   const logLevel = log_level.toLowerCase();
   delete settings.host;
   delete settings.port;
+  delete settings.ssl;
+  delete settings.ssl_cert;
+  delete settings.ssl_key;
   delete settings.log_level;
 
   writeSettings(settings);
 
-  (DEV_MODE ? runDevServer : runProdServer)(host, port, logLevel);
+  (DEV_MODE ? runDevServer : runProdServer)(host, port, ssl, ssl_cert, ssl_key, logLevel);
 }
 
 main();

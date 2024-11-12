@@ -2,15 +2,29 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.0-rc.0.
 
+
 ## Development server
 
 To start a local development server, run:
 
 ```bash
-ng serve
+dev_launcher
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:8080/`. The application will automatically reload whenever you modify any of the source files.
+
+By default, this will not use a proxy configuration and the API will be provided via the mock service worker.
+
+If you want to test the application against the backend provided by the staging deployment, then run:
+
+```bash
+dev_launcher staging
+```
+
+In this case, a proxy configuration will be used that proxies all API endpoints to the staging environment, while the application itself is still served by the development server.
+
+If you change the hosts file on your host computer so that localhost points to `data.staging.ghga.dev`, then this setup also allows testing authentication using the real OIDC provider. You need to point your browser to `https://data.staging.ghga.dev` in this case. The development server will serve the application via SSL in this setup, using the self-signed certificate created in `.devcontainer/cert.pem`.
+
 
 ## Code scaffolding
 
@@ -35,6 +49,7 @@ ng build
 ```
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+
 
 ## Running unit tests
 
