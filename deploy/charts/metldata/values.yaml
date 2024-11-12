@@ -1,11 +1,11 @@
 image:
   repository: "ghga/metldata"
 
-config_prefix: metldata
+configPrefix: metldata
 
 # Service parameters
 
-# Service base path 
+# Service base path
 apiBasePath: /metldata/
 # Name of the database
 dbName: metadata-artifacts

@@ -1,11 +1,11 @@
 image:
   repository: "ghga/work-package-service"
 
-config_prefix: wps
+configPrefix: wps
 
 # Service parameters
 
-# Service base path 
+# Service base path
 apiBasePath: /wps/
 # Name of the database
 dbName: work-package

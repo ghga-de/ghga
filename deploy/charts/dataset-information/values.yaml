@@ -1,11 +1,11 @@
 image:
   repository: "ghga/dataset-information-service"
 
-config_prefix: dins
+configPrefix: dins
 
 # Service parameters
 
-# Service base path 
+# Service base path
 apiBasePath: /dins/
 # Name of the database
 dbName: dataset-information

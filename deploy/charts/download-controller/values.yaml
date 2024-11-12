@@ -1,11 +1,11 @@
 image:
   repository: "ghga/download-controller-service"
 
-config_prefix: dcs
+configPrefix: dcs
 
 # Service parameters
 
-# Service base path 
+# Service base path
 apiBasePath: /ga4gh/drs/v1/
 # Name of the database
 dbName: download-controller

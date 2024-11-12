@@ -1,9 +1,9 @@
 image:
   repository: "ghga/state-management-service"
 
-config_prefix: sms
+configPrefix: sms
 
-# Service base path 
+# Service base path
 apiBasePath: /sms/
 # This parameter is used as Kafka's group id
 serviceName: sms-rest

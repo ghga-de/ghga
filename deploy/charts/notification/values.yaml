@@ -1,7 +1,7 @@
 image:
   repository: "ghga/notification-service"
 
-config_prefix: ns
+configPrefix: ns
 
 # Service parameters
 

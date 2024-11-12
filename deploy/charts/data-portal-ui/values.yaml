@@ -1,7 +1,7 @@
 image:
   repository: "ghga/data-portal-ui"
 
-config_prefix: data_portal_ui
+configPrefix: data_portal_ui
 
 # Service parameters
 

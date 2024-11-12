@@ -1,7 +1,7 @@
 image:
   repository: "ghga/internal-file-registry-service"
 
-config_prefix: ifrs
+configPrefix: ifrs
 
 # Service parameters
 

@@ -5,7 +5,7 @@ configPrefix: ars
 
 # Service parameters
 
-# Service base path 
+# Service base path
 apiBasePath: /ars/
 # Name of the database
 dbName: access-request

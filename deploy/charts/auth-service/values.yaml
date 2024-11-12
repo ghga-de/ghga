@@ -1,11 +1,11 @@
 image:
   repository: "ghga/auth-service"
 
-config_prefix: auth_service
+configPrefix: auth_service
 
 # Service parameters
 
-# Service base path 
+# Service base path
 apiBasePath: /auth-ext/
 # Name of the database
 dbName: auth-service

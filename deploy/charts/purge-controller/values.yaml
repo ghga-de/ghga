@@ -1,11 +1,11 @@
 image:
   repository: "ghga/purge-controller-service"
 
-config_prefix: pcs
+configPrefix: pcs
 
 # Service parameters
 
-# Service base path 
+# Service base path
 apiBasePath: /pcs/
 # Name of the database
 dbName: purge-controller

@@ -1,7 +1,7 @@
 image:
   repository: "ghga/encryption-key-store-service"
 
-config_prefix: ekss
+configPrefix: ekss
 
 # Service parameters
 

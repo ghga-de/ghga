@@ -1,7 +1,7 @@
 image:
   repository: "ghga/notification-orchestration-service"
 
-config_prefix: nos
+configPrefix: nos
 
 # Service parameters
 
