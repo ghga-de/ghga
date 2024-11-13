@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ars"
-version = "2.0.4"
+version = "2.0.5"
 description = "Access Request Service"
 dependencies = [
     "ghga-event-schemas~=3.3.1",

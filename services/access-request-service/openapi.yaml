@@ -54,8 +54,7 @@ components:
           title: Request Text
           type: string
         status:
-          allOf:
-          - $ref: '#/components/schemas/AccessRequestStatus'
+          $ref: '#/components/schemas/AccessRequestStatus'
           default: pending
           description: The status of this access request
         status_changed:
@@ -139,8 +138,7 @@ components:
           description: ID of the IVA to be used for this request
           title: Iva Id
         status:
-          allOf:
-          - $ref: '#/components/schemas/AccessRequestStatus'
+          $ref: '#/components/schemas/AccessRequestStatus'
           description: The new status of this access request
       required:
       - status
@@ -161,7 +159,7 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 2.0.4
+  version: 2.0.5
 openapi: 3.1.0
 paths:
   /access-requests:
