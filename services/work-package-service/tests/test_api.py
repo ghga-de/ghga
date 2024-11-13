@@ -75,6 +75,7 @@ async def test_get_work_package_unauthorized(client: AsyncTestClient):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_create_work_order_token(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
@@ -218,8 +219,6 @@ async def test_create_work_order_token(
     }
 
     # mock the access check for the test dataset to revoke access
-
-    httpx_mock.reset(assert_all_responses_were_requested=True)
     httpx_mock.add_response(
         method="GET",
         url="http://access/users/john-doe@ghga.de/datasets/some-dataset-id",
