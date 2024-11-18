@@ -17,6 +17,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Response, status
+from fastapi.responses import JSONResponse
 
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.http_authorization import (
@@ -53,6 +54,19 @@ async def health():
     status_code=status.HTTP_202_ACCEPTED,
     response_description="Received and decrypted data successfully.",
     deprecated=True,
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "description": "Metadata for the given file ID has already been processed."
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Either the payload is malformed or could not be decrypted.",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/HTTPValidationError"}
+                }
+            },
+        },
+    },
 )
 async def ingest_legacy_metadata(
     encrypted_payload: EncryptedPayload,
@@ -66,6 +80,15 @@ async def ingest_legacy_metadata(
         )
     except (DecryptionError, WrongDecryptedFormatError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+    file_id = decrypted_metadata.file_id
+    if await upload_metadata_processor.has_already_been_processed(file_id=file_id):
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error": f"Metadata for file {file_id} has already been processed."
+            },
+        )
 
     file_secret = decrypted_metadata.file_secret
 
@@ -91,6 +114,11 @@ async def ingest_legacy_metadata(
     tags=["FileIngestService"],
     status_code=status.HTTP_202_ACCEPTED,
     response_description="Received and decrypted data successfully.",
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "description": "Metadata for the given file ID has already been processed."
+        }
+    },
 )
 async def ingest_metadata(
     payload: UploadMetadata,
@@ -99,10 +127,19 @@ async def ingest_metadata(
 ):
     """Process metadata, file secret id and send success event"""
     secret_id = payload.secret_id
+    file_id = payload.file_id
+    if await upload_metadata_processor.has_already_been_processed(file_id=file_id):
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error": f"Metadata for file {file_id} has already been processed."
+            },
+        )
 
     await upload_metadata_processor.populate_by_event(
         upload_metadata=payload, secret_id=secret_id
     )
+
     return Response(status_code=202)
 
 
@@ -113,6 +150,16 @@ async def ingest_metadata(
     tags=["FileIngestService"],
     status_code=status.HTTP_200_OK,
     response_description="Received and stored secret successfully.",
+    responses={
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Either the payload is malformed or could not be decrypted.",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/HTTPValidationError"}
+                }
+            },
+        },
+    },
 )
 async def ingest_secret(
     encrypted_payload: EncryptedPayload,
@@ -120,9 +167,12 @@ async def ingest_secret(
     _token: Annotated[IngestTokenAuthContext, require_token],
 ):
     """Decrypt payload and deposit file secret in exchange for a secret id"""
-    file_secret = await upload_metadata_processor.decrypt_secret(
-        encrypted=encrypted_payload
-    )
+    try:
+        file_secret = await upload_metadata_processor.decrypt_secret(
+            encrypted=encrypted_payload
+        )
+    except DecryptionError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
     secret_id = await upload_metadata_processor.store_secret(file_secret=file_secret)
     return {"secret_id": secret_id}

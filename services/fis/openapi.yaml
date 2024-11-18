@@ -105,10 +105,10 @@ components:
       scheme: bearer
       type: http
 info:
-  description: A service to ingest s3 file upload metadata produced by thedata-steward-kit
+  description: A service to ingest s3 file upload metadata produced by the data-steward-kit
     upload command
   title: File Ingest Service
-  version: 4.0.1
+  version: 5.0.0
 openapi: 3.1.0
 paths:
   /federated/ingest_metadata:
@@ -127,6 +127,8 @@ paths:
             application/json:
               schema: {}
           description: Received and decrypted data successfully.
+        '409':
+          description: Metadata for the given file ID has already been processed.
         '422':
           content:
             application/json:
@@ -161,7 +163,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+          description: Either the payload is malformed or could not be decrypted.
       security:
       - HTTPBearer: []
       summary: Store file encryption/decryption secret and return secret ID.
@@ -198,12 +200,14 @@ paths:
             application/json:
               schema: {}
           description: Received and decrypted data successfully.
+        '409':
+          description: Metadata for the given file ID has already been processed.
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+          description: Either the payload is malformed or could not be decrypted.
       security:
       - HTTPBearer: []
       summary: Processes encrypted output data from the S3 upload script and ingests

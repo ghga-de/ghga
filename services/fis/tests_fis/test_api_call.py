@@ -29,7 +29,7 @@ from hexkit.providers.akafka.testutils import (
     check_recorded_events,
 )
 
-from fis.core.models import EncryptedPayload, LegacyUploadMetadata, UploadMetadata
+from fis.core.models import EncryptedPayload, UploadMetadata
 from tests_fis.fixtures.joint import TEST_PAYLOAD, JointFixture
 
 pytestmark = pytest.mark.asyncio()
@@ -72,15 +72,17 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     # test missing authorization
     response = await joint_fixture.rest_client.post(
-        "/federated/ingest_metadata", json=encrypted_secret.model_dump()
+        "/federated/ingest_secret", json=encrypted_secret.model_dump()
     )
     assert response.status_code == 403
 
     # test malformed payload
-    nonsense_payload = encrypted_secret.model_copy(update={"payload": "abcdefghijklmn"})
+    nonsense_secret_payload = encrypted_secret.model_copy(
+        update={"payload": "abcdefghijklmn"}
+    )
     response = await joint_fixture.rest_client.post(
-        "/federated/ingest_metadata",
-        json=nonsense_payload.model_dump(),
+        "/federated/ingest_secret",
+        json=nonsense_secret_payload.model_dump(),
         headers=headers,
     )
     assert response.status_code == 422
@@ -110,7 +112,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
     # from the recorded event instead
     expected_upload_date = str(event_recorder.recorded_events[0].payload["upload_date"])
 
-    payload = FileUploadValidationSuccess(
+    expected_payload = FileUploadValidationSuccess(
         upload_date=expected_upload_date,
         file_id=TEST_PAYLOAD.file_id,
         object_id=TEST_PAYLOAD.object_id,
@@ -126,7 +128,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
     )
 
     expected_event = ExpectedEvent(
-        payload=payload.model_dump(),
+        payload=expected_payload.model_dump(),
         type_="upserted",
         key=TEST_PAYLOAD.file_id,
     )
@@ -135,6 +137,25 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
         recorded_events=event_recorder.recorded_events, expected_events=[expected_event]
     )
 
+    # Check we don't send the event if metadata has already been seen
+    event_recorder = EventRecorder(
+        kafka_servers=joint_fixture.kafka.config.kafka_servers,
+        topic=joint_fixture.config.file_upload_validation_success_topic,
+    )
+
+    async with event_recorder:
+        response = await joint_fixture.rest_client.post(
+            "/federated/ingest_metadata",
+            json=payload.model_dump(),
+            headers=headers,
+        )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "error": f"Metadata for file {TEST_PAYLOAD.file_id} has already been processed."
+    }
+    assert len(event_recorder.recorded_events) == 0
+
     # test missing authorization
     response = await joint_fixture.rest_client.post(
         "/federated/ingest_metadata", json=payload.model_dump()
@@ -142,7 +163,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
     assert response.status_code == 403
 
     # test malformed payload
-    nonsense_payload = payload.model_copy(update={"payload": "abcdefghijklmn"})
+    nonsense_payload = expected_payload
     response = await joint_fixture.rest_client.post(
         "/federated/ingest_metadata",
         json=nonsense_payload.model_dump(),
@@ -153,13 +174,13 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
 async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
     """Test functionality with incoming API call"""
-    payload = LegacyUploadMetadata(
-        **TEST_PAYLOAD.model_dump(),
-        file_secret=base64.b64encode(os.urandom(32)).decode("utf-8"),
-    )
+    file_secret = base64.b64encode(os.urandom(32)).decode("utf-8")
+    payload = TEST_PAYLOAD.model_dump()
+    payload["file_secret"] = file_secret
+
     encrypted_payload = EncryptedPayload(
         payload=encrypt(
-            data=payload.model_dump_json(),
+            data=json.dumps(payload),
             key=joint_fixture.keypair.public,
         )
     )
@@ -194,7 +215,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
     # from the recorded event instead
     expected_upload_date = str(event_recorder.recorded_events[0].payload["upload_date"])
 
-    payload = FileUploadValidationSuccess(
+    expected_payload = FileUploadValidationSuccess(
         upload_date=expected_upload_date,
         file_id=TEST_PAYLOAD.file_id,
         object_id=TEST_PAYLOAD.object_id,
@@ -210,7 +231,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
     )
 
     expected_event = ExpectedEvent(
-        payload=payload.model_dump(),
+        payload=expected_payload.model_dump(),
         type_="upserted",
         key=TEST_PAYLOAD.file_id,
     )
@@ -218,6 +239,25 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
     check_recorded_events(
         recorded_events=event_recorder.recorded_events, expected_events=[expected_event]
     )
+
+    # Check we don't send the event if metadata has already been seen
+    # No need to mock the secret exchange, as that code path is not entered in this case
+    event_recorder = EventRecorder(
+        kafka_servers=joint_fixture.kafka.config.kafka_servers,
+        topic=joint_fixture.config.file_upload_validation_success_topic,
+    )
+
+    async with event_recorder:
+        response = await joint_fixture.rest_client.post(
+            "/legacy/ingest",
+            json=encrypted_payload.model_dump(),
+            headers=headers,
+        )
+    assert response.status_code == 409
+    assert response.json() == {
+        "error": f"Metadata for file {TEST_PAYLOAD.file_id} has already been processed."
+    }
+    assert len(event_recorder.recorded_events) == 0
 
     # test missing authorization
     response = await joint_fixture.rest_client.post(

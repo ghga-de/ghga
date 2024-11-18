@@ -33,7 +33,7 @@ def get_openapi_schema(api) -> dict[str, Any]:
     return get_openapi(
         title="File Ingest Service",
         version=__version__,
-        description="A service to ingest s3 file upload metadata produced by the"
+        description="A service to ingest s3 file upload metadata produced by the "
         + "data-steward-kit upload command",
         tags=[{"name": "FileIngestService"}],
         routes=api.routes,

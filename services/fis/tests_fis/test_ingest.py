@@ -16,6 +16,7 @@
 """Test ingest functions"""
 
 import base64
+import json
 import os
 
 import pytest
@@ -33,14 +34,14 @@ pytestmark = pytest.mark.asyncio()
 
 async def test_legacy_decryption_happy(joint_fixture: JointFixture):
     """Test decryption with valid keypair and correct file upload metadata format."""
-    payload = LegacyUploadMetadata(
-        **TEST_PAYLOAD.model_dump(),
-        file_secret=base64.b64encode(os.urandom(32)).decode("utf-8"),
-    )
+    # Can't use LegacyUploadMetadata directly, as dump_json will obfuscate the secret
+    file_secret = base64.b64encode(os.urandom(32)).decode("utf-8")
+    payload = TEST_PAYLOAD.model_dump()
+    payload["file_secret"] = file_secret
 
     encrypted_payload = EncryptedPayload(
         payload=encrypt(
-            data=payload.model_dump_json(),
+            data=json.dumps(payload),
             key=joint_fixture.keypair.public,
         )
     )
@@ -50,7 +51,12 @@ async def test_legacy_decryption_happy(joint_fixture: JointFixture):
             encrypted=encrypted_payload
         )
     )
-    assert processed_payload == payload
+
+    assert (
+        processed_payload.model_dump(exclude={"file_secret"})
+        == TEST_PAYLOAD.model_dump()
+    )
+    assert processed_payload.file_secret.get_secret_value() == file_secret
 
 
 async def test_legacy_decryption_sad(joint_fixture: JointFixture):

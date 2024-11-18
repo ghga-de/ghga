@@ -14,7 +14,7 @@
 # limitations under the License.
 """Models for internal representation"""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 
 class EncryptedPayload(BaseModel):
@@ -46,7 +46,7 @@ class UploadMetadataBase(BaseModel):
 class LegacyUploadMetadata(UploadMetadataBase):
     """Legacy model including file encryption/decryption secret"""
 
-    file_secret: str
+    file_secret: SecretStr
 
 
 class UploadMetadata(UploadMetadataBase):

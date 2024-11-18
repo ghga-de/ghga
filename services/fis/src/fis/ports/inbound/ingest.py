@@ -16,6 +16,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import SecretStr
+
 from fis.core import models
 
 
@@ -54,6 +56,11 @@ class LegacyUploadMetadataProcessorPort(ABC):
         ...
 
     @abstractmethod
+    async def has_already_been_processed(self, *, file_id: str) -> bool:
+        """Check if file metadata has already been seen and successfully processed."""
+        ...
+
+    @abstractmethod
     async def populate_by_event(
         self, *, upload_metadata: models.LegacyUploadMetadata, secret_id: str
     ):
@@ -61,7 +68,7 @@ class LegacyUploadMetadataProcessorPort(ABC):
         ...
 
     @abstractmethod
-    async def store_secret(self, *, file_secret: str) -> str:
+    async def store_secret(self, *, file_secret: SecretStr) -> str:
         """Communicate with HashiCorp Vault to store file secret and get secret ID"""
         ...
 
@@ -70,8 +77,13 @@ class UploadMetadataProcessorPort(ABC):
     """Port for S3 upload metadata processor"""
 
     @abstractmethod
-    async def decrypt_secret(self, *, encrypted: models.EncryptedPayload) -> str:
+    async def decrypt_secret(self, *, encrypted: models.EncryptedPayload) -> SecretStr:
         """Decrypt file secret payload"""
+        ...
+
+    @abstractmethod
+    async def has_already_been_processed(self, *, file_id: str) -> bool:
+        """Check if file metadata has already been seen and successfully processed."""
         ...
 
     @abstractmethod
@@ -82,6 +94,6 @@ class UploadMetadataProcessorPort(ABC):
         ...
 
     @abstractmethod
-    async def store_secret(self, *, file_secret: str) -> str:
+    async def store_secret(self, *, file_secret: SecretStr) -> str:
         """Communicate with HashiCorp Vault to store file secret and get secret ID"""
         ...

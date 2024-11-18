@@ -16,6 +16,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import SecretStr
+
 
 class VaultAdapterPort(ABC):
     """Port for vault adapter"""
@@ -24,7 +26,7 @@ class VaultAdapterPort(ABC):
         """Wrapper for errors encountered on secret insertion"""
 
     @abstractmethod
-    def store_secret(self, *, secret: str) -> str:
+    def store_secret(self, *, secret: SecretStr) -> str:
         """
         Store a secret under a subpath of the given prefix.
         Generates a UUID4 as key, uses it for the subpath and returns it.
