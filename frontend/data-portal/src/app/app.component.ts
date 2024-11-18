@@ -1,5 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { SiteFooterComponent } from '@app/portal/features/site-footer/site-footer.component';
+import { SiteHeaderComponent } from '@app/portal/features/site-header/site-header.component';
 import { ConfigService } from '@app/shared/services/config.service';
 
 /**
@@ -7,9 +9,8 @@ import { ConfigService } from '@app/shared/services/config.service';
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, SiteHeaderComponent, SiteFooterComponent],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss',
 })
 export class AppComponent {
   title = 'data-portal';
