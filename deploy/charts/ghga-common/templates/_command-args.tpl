@@ -8,8 +8,9 @@ prepends it with a failsafe routine that injects all existing secrets from vault
 command: ["sh", "-c"]
 args:
   - if [ -d "/vault/secrets" ]; then
-      for f in /vault/secrets/*; do
-        [ -f "$f" ] &&  sed s/{{ (first .).Values.configPrefixPlaceholder }}/{{ (first .).Values.configPrefix | upper }}/g "$f" > "$f"_ && . "$f"_;
+      cd /vault/secrets && mkdir -p substituted;
+      for f in *; do
+        [ -f "$f" ] &&  sed s/{{ (first .).Values.configPrefixPlaceholder }}/{{ (first .).Values.configPrefix | upper }}/g $f > substituted/$f && . substituted/$f;
       done
     fi;
     {{ index . 1 }};
