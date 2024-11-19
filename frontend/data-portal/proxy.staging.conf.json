@@ -1,8 +1,0 @@
-{
-  "/api": {
-    "target": "https://data.staging.ghga.de",
-    "secure": true,
-    "changeOrigin": true,
-    "logLevel": "debug"
-  }
-}

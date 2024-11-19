@@ -17,5 +17,6 @@
   },
   "eslint.options": {
     "overrideConfigFile": "/workspace/eslint.config.js"
-  }
+  },
+  "remote.localPortHost": "allInterfaces"
 }
