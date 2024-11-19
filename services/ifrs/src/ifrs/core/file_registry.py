@@ -186,8 +186,6 @@ class FileRegistry(FileRegistryPort):
                 The S3 bucket ID for the outbox.
 
         Raises:
-            self.FileNotInRegistryError:
-                When a file is requested that has not (yet) been registered.
             self.ChecksumMismatchError:
                 When the provided checksum did not match the expectations.
             self.FileInRegistryButNotInStorageError:
@@ -197,10 +195,10 @@ class FileRegistry(FileRegistryPort):
         """
         try:
             file = await self._file_metadata_dao.get_by_id(file_id)
-        except ResourceNotFoundError as error:
+        except ResourceNotFoundError:
             file_not_in_registry_error = self.FileNotInRegistryError(file_id=file_id)
             log.error(file_not_in_registry_error, extra={"file_id": file_id})
-            raise file_not_in_registry_error from error
+            return
 
         if decrypted_sha256 != file.decrypted_sha256:
             checksum_error = self.ChecksumMismatchError(

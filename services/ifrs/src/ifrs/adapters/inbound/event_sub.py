@@ -22,7 +22,8 @@ from hexkit.protocols.daosub import DaoSubscriberProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from ifrs.ports.inbound.idempotent import IdempotenceHandlerPort
+from ifrs.core.models import FileMetadataBase
+from ifrs.ports.inbound.file_registry import FileRegistryPort
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class OutboxSubTranslatorConfig(BaseSettings):
     )
 
 
-class NonstagedFileRequestedListener(
+class NonstagedFileRequestedTranslator(
     DaoSubscriberProtocol[event_schemas.NonStagedFileRequested]
 ):
     """A class that consumes NonStagedFileRequested events."""
@@ -60,28 +61,31 @@ class NonstagedFileRequestedListener(
         self,
         *,
         config: OutboxSubTranslatorConfig,
-        idempotence_handler: IdempotenceHandlerPort,
+        file_registry: FileRegistryPort,
     ):
-        self._idempotence_handler = idempotence_handler
+        self._file_registry = file_registry
         self.event_topic = config.files_to_stage_topic
 
     async def changed(
         self, resource_id: str, update: event_schemas.NonStagedFileRequested
     ) -> None:
         """Consume change event (created or updated) for download request data."""
-        await self._idempotence_handler.upsert_nonstaged_file_requested(
-            resource_id=resource_id, update=update
+        await self._file_registry.stage_registered_file(
+            file_id=resource_id,
+            decrypted_sha256=update.decrypted_sha256,
+            outbox_object_id=update.target_object_id,
+            outbox_bucket_id=update.target_bucket_id,
         )
 
     async def deleted(self, resource_id: str) -> None:
-        """Consume event indicating the deletion of a NonStagedFileRequested event."""
-        log.warning(
+        """This should never be called because these events are stateless and not saved."""
+        log.error(
             "Received DELETED-type event for NonStagedFileRequested with resource ID '%s'",
             resource_id,
         )
 
 
-class FileDeletionRequestedListener(
+class FileDeletionRequestedTranslator(
     DaoSubscriberProtocol[event_schemas.FileDeletionRequested]
 ):
     """A class that consumes FileDeletionRequested events."""
@@ -93,28 +97,26 @@ class FileDeletionRequestedListener(
         self,
         *,
         config: OutboxSubTranslatorConfig,
-        idempotence_handler: IdempotenceHandlerPort,
+        file_registry: FileRegistryPort,
     ):
-        self._idempotence_handler = idempotence_handler
+        self._file_registry = file_registry
         self.event_topic = config.files_to_delete_topic
 
     async def changed(
         self, resource_id: str, update: event_schemas.FileDeletionRequested
     ) -> None:
         """Consume change event (created or updated) for File Deletion Requests."""
-        await self._idempotence_handler.upsert_file_deletion_requested(
-            resource_id=resource_id, update=update
-        )
+        await self._file_registry.delete_file(file_id=resource_id)
 
     async def deleted(self, resource_id: str) -> None:
-        """Consume event indicating the deletion of a File Deletion Request."""
-        log.warning(
+        """This should never be called because these events are stateless and not saved."""
+        log.error(
             "Received DELETED-type event for FileDeletionRequested with resource ID '%s'",
             resource_id,
         )
 
 
-class FileValidationSuccessListener(
+class FileValidationSuccessTranslator(
     DaoSubscriberProtocol[event_schemas.FileUploadValidationSuccess]
 ):
     """A class that consumes FileUploadValidationSuccess events."""
@@ -126,22 +128,37 @@ class FileValidationSuccessListener(
         self,
         *,
         config: OutboxSubTranslatorConfig,
-        idempotence_handler: IdempotenceHandlerPort,
+        file_registry: FileRegistryPort,
     ):
-        self._idempotence_handler = idempotence_handler
+        self._file_registry = file_registry
         self.event_topic = config.files_to_register_topic
 
     async def changed(
         self, resource_id: str, update: event_schemas.FileUploadValidationSuccess
     ) -> None:
         """Consume change event (created or updated) for FileUploadValidationSuccess events."""
-        await self._idempotence_handler.upsert_file_upload_validation_success(
-            resource_id=resource_id, update=update
+        file_without_object_id = FileMetadataBase(
+            file_id=resource_id,
+            decrypted_sha256=update.decrypted_sha256,
+            decrypted_size=update.decrypted_size,
+            upload_date=update.upload_date,
+            decryption_secret_id=update.decryption_secret_id,
+            encrypted_part_size=update.encrypted_part_size,
+            encrypted_parts_md5=update.encrypted_parts_md5,
+            encrypted_parts_sha256=update.encrypted_parts_sha256,
+            content_offset=update.content_offset,
+            storage_alias=update.s3_endpoint_alias,
+        )
+
+        await self._file_registry.register_file(
+            file_without_object_id=file_without_object_id,
+            staging_object_id=update.object_id,
+            staging_bucket_id=update.bucket_id,
         )
 
     async def deleted(self, resource_id: str) -> None:
-        """Consume event indicating the deletion of a FileUploadValidationSuccess events."""
-        log.warning(
+        """This should never be called because these events are stateless and not saved."""
+        log.error(
             "Received DELETED-type event for FileUploadValidationSuccess with resource ID '%s'",
             resource_id,
         )

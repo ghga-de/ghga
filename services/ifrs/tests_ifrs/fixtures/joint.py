@@ -36,12 +36,10 @@ from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
 
-from ifrs.adapters.inbound.idempotent import get_idempotence_handler
 from ifrs.adapters.outbound.dao import get_file_metadata_dao
 from ifrs.config import Config
 from ifrs.inject import prepare_core, prepare_outbox_subscriber
 from ifrs.ports.inbound.file_registry import FileRegistryPort
-from ifrs.ports.inbound.idempotent import IdempotenceHandlerPort
 from ifrs.ports.outbound.dao import FileMetadataDaoPort
 from tests_ifrs.fixtures.config import get_config
 
@@ -53,7 +51,7 @@ STORAGE_ALIASES = ("test", "test2")
 
 
 @dataclass
-class EndpointAliases:
+class StorageAliases:
     node1: str = STORAGE_ALIASES[0]
     node2: str = STORAGE_ALIASES[1]
     fake: str = f"{STORAGE_ALIASES[0]}_fake"
@@ -68,12 +66,11 @@ class JointFixture:
     s3: S3Fixture
     file_metadata_dao: FileMetadataDaoPort
     file_registry: FileRegistryPort
-    idempotence_handler: IdempotenceHandlerPort
     kafka: KafkaFixture
     outbox_subscriber: KafkaOutboxSubscriber
     outbox_bucket: str
     staging_bucket: str
-    endpoint_aliases: EndpointAliases
+    storage_aliases: StorageAliases
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -87,11 +84,11 @@ async def joint_fixture(
         bucket=PERMANENT_BUCKET, credentials=s3.config
     )
 
-    endpoint_aliases = EndpointAliases()
+    storage_aliases = StorageAliases()
 
     object_storage_config = S3ObjectStoragesConfig(
         object_storages={
-            endpoint_aliases.node1: node_config,
+            storage_aliases.node1: node_config,
         }
     )
 
@@ -102,14 +99,9 @@ async def joint_fixture(
 
     # Prepare the file registry (core)
     async with prepare_core(config=config) as file_registry:
-        idempotence_handler = await get_idempotence_handler(
-            config=config,
-            file_registry=file_registry,
-        )
         async with prepare_outbox_subscriber(
             config=config,
             core_override=file_registry,
-            idempotence_handler_override=idempotence_handler,
         ) as outbox_subscriber:
             yield JointFixture(
                 config=config,
@@ -117,10 +109,9 @@ async def joint_fixture(
                 s3=s3,
                 file_metadata_dao=file_metadata_dao,
                 file_registry=file_registry,
-                idempotence_handler=idempotence_handler,
                 kafka=kafka,
                 outbox_subscriber=outbox_subscriber,
                 outbox_bucket=OUTBOX_BUCKET,
                 staging_bucket=STAGING_BUCKET,
-                endpoint_aliases=endpoint_aliases,
+                storage_aliases=storage_aliases,
             )

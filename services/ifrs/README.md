@@ -8,7 +8,7 @@ This service provides functionality to administer files stored in an S3-compatib
 object storage.
 All file-related metadata is stored in an internal mongodb database, owned and controlled
 by this service.
-It exposes no REST API enpoints and communicates with other services via events.
+It exposes no REST API endpoints and communicates with other services via events.
 
 ### Events consumed:
 
@@ -36,13 +36,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/internal-file-registry-service):
 ```bash
-docker pull ghga/internal-file-registry-service:2.0.4
+docker pull ghga/internal-file-registry-service:2.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/internal-file-registry-service:2.0.4 .
+docker build -t ghga/internal-file-registry-service:2.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -50,7 +50,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/internal-file-registry-service:2.0.4 --help
+docker run -p 8080:8080 ghga/internal-file-registry-service:2.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:

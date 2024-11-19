@@ -24,17 +24,15 @@ from hexkit.providers.akafka import KafkaEventPublisher, KafkaOutboxSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from ifrs.adapters.inbound.event_sub import (
-    FileDeletionRequestedListener,
-    FileValidationSuccessListener,
-    NonstagedFileRequestedListener,
+    FileDeletionRequestedTranslator,
+    FileValidationSuccessTranslator,
+    NonstagedFileRequestedTranslator,
 )
-from ifrs.adapters.inbound.idempotent import get_idempotence_handler
 from ifrs.adapters.outbound import dao
 from ifrs.adapters.outbound.event_pub import EventPubTranslator
 from ifrs.config import Config
 from ifrs.core.file_registry import FileRegistry
 from ifrs.ports.inbound.file_registry import FileRegistryPort
-from ifrs.ports.inbound.idempotent import IdempotenceHandlerPort
 
 
 @asynccontextmanager
@@ -75,7 +73,6 @@ async def prepare_outbox_subscriber(
     *,
     config: Config,
     core_override: FileRegistryPort | None = None,
-    idempotence_handler_override: IdempotenceHandlerPort | None = None,
 ) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -84,21 +81,15 @@ async def prepare_outbox_subscriber(
     async with prepare_core_with_override(
         config=config, core_override=core_override
     ) as file_registry:
-        idempotence_handler = idempotence_handler_override
-        if not idempotence_handler:
-            idempotence_handler = await get_idempotence_handler(
-                config=config,
-                file_registry=file_registry,
-            )
-
         outbox_translators = [
-            cls(config=config, idempotence_handler=idempotence_handler)
+            cls(config=config, file_registry=file_registry)
             for cls in (
-                FileDeletionRequestedListener,
-                FileValidationSuccessListener,
-                NonstagedFileRequestedListener,
+                FileDeletionRequestedTranslator,
+                FileValidationSuccessTranslator,
+                NonstagedFileRequestedTranslator,
             )
         ]
+
         async with KafkaOutboxSubscriber.construct(
             config=config, translators=outbox_translators
         ) as kafka_outbox_subscriber:

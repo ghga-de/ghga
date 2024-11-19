@@ -2,7 +2,7 @@ This service provides functionality to administer files stored in an S3-compatib
 object storage.
 All file-related metadata is stored in an internal mongodb database, owned and controlled
 by this service.
-It exposes no REST API enpoints and communicates with other services via events.
+It exposes no REST API endpoints and communicates with other services via events.
 
 ### Events consumed:
 

@@ -37,7 +37,7 @@ async def test_happy_journey(
 ):
     """Simulates a typical, successful journey for upload, download, and deletion"""
     storage = joint_fixture.s3
-    storage_alias = joint_fixture.endpoint_aliases.node1
+    storage_alias = joint_fixture.storage_aliases.node1
 
     bucket_id = joint_fixture.config.object_storages[storage_alias].bucket
     # place example content in the staging:

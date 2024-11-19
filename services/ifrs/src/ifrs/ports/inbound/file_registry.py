@@ -141,8 +141,6 @@ class FileRegistryPort(ABC):
                 The S3 bucket ID for the outbox.
 
         Raises:
-            self.FileNotInRegistryError:
-                When a file is requested that has not (yet) been registered.
             self.ChecksumMismatchError:
                 When the provided checksum did not match the expectations.
             self.FileInRegistryButNotInStorageError:

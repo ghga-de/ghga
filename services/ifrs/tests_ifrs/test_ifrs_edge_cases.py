@@ -16,8 +16,13 @@
 """Tests edge cases not covered by the typical journey test."""
 
 import logging
+from unittest.mock import AsyncMock
 
 import pytest
+from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.custom_types import JsonObject
+from hexkit.providers.akafka.provider.daosub import CHANGE_EVENT_TYPE
 from hexkit.providers.s3.testutils import (
     FileObject,
     S3Fixture,  # noqa: F401
@@ -29,6 +34,32 @@ from tests_ifrs.fixtures.example_data import EXAMPLE_METADATA, EXAMPLE_METADATA_
 from tests_ifrs.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio()
+
+TEST_FILE_ID = "test_id"
+TEST_NONSTAGED_FILE_REQUESTED = event_schemas.NonStagedFileRequested(
+    file_id=TEST_FILE_ID,
+    target_object_id="",
+    target_bucket_id="",
+    s3_endpoint_alias="",
+    decrypted_sha256="",
+)
+
+TEST_FILE_UPLOAD_VALIDATION_SUCCESS = event_schemas.FileUploadValidationSuccess(
+    upload_date=now_as_utc().isoformat(),
+    file_id=TEST_FILE_ID,
+    object_id="",
+    bucket_id="",
+    s3_endpoint_alias="",
+    decrypted_size=0,
+    decryption_secret_id="",
+    content_offset=0,
+    encrypted_part_size=0,
+    encrypted_parts_md5=[],
+    encrypted_parts_sha256=[],
+    decrypted_sha256="",
+)
+
+TEST_FILE_DELETION_REQUESTED = event_schemas.FileDeletionRequested(file_id=TEST_FILE_ID)
 
 
 async def test_register_with_empty_staging(joint_fixture: JointFixture):
@@ -49,7 +80,7 @@ async def test_reregistration(
     an exception). Test PR/Push workflow message
     """
     storage = joint_fixture.s3
-    storage_alias = joint_fixture.endpoint_aliases.node1
+    storage_alias = joint_fixture.storage_aliases.node1
 
     # place example content in the staging bucket:
     file_object = tmp_file.model_copy(
@@ -102,7 +133,7 @@ async def test_reregistration_with_updated_metadata(
     expected exception.
     """
     storage = joint_fixture.s3
-    storage_alias = joint_fixture.endpoint_aliases.node1
+    storage_alias = joint_fixture.storage_aliases.node1
     # place example content in the staging bucket:
     file_object = tmp_file.model_copy(
         update={
@@ -151,17 +182,24 @@ async def test_reregistration_with_updated_metadata(
         assert expected_message in caplog.messages
 
 
-async def test_stage_non_existing_file(joint_fixture: JointFixture):
+async def test_stage_non_existing_file(joint_fixture: JointFixture, caplog):
     """Check that requesting to stage a non-registered file fails with the expected
     exception.
     """
-    with pytest.raises(FileRegistryPort.FileNotInRegistryError):
-        await joint_fixture.file_registry.stage_registered_file(
-            file_id="notregisteredfile001",
-            decrypted_sha256=EXAMPLE_METADATA_BASE.decrypted_sha256,
-            outbox_object_id=EXAMPLE_METADATA.object_id,
-            outbox_bucket_id=joint_fixture.outbox_bucket,
-        )
+    file_id = "notregisteredfile001"
+    error = joint_fixture.file_registry.FileNotInRegistryError(file_id=file_id)
+
+    caplog.clear()
+    await joint_fixture.file_registry.stage_registered_file(
+        file_id=file_id,
+        decrypted_sha256=EXAMPLE_METADATA_BASE.decrypted_sha256,
+        outbox_object_id=EXAMPLE_METADATA.object_id,
+        outbox_bucket_id=joint_fixture.outbox_bucket,
+    )
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    assert record.message == str(error)
+    assert record.levelname == "ERROR"
 
 
 async def test_stage_checksum_mismatch(
@@ -175,7 +213,7 @@ async def test_stage_checksum_mismatch(
     await joint_fixture.file_metadata_dao.insert(EXAMPLE_METADATA)
 
     storage = joint_fixture.s3
-    storage_alias = joint_fixture.endpoint_aliases.node1
+    storage_alias = joint_fixture.storage_aliases.node1
 
     bucket_id = joint_fixture.config.object_storages[storage_alias].bucket
     # place the content for an example file in the permanent storage:
@@ -216,3 +254,46 @@ async def test_storage_db_inconsistency(joint_fixture: JointFixture):
             outbox_object_id=EXAMPLE_METADATA.object_id,
             outbox_bucket_id=joint_fixture.outbox_bucket,
         )
+
+
+@pytest.mark.parametrize(
+    "upsertion_event, topic_config_name, method_name",
+    [
+        (
+            TEST_FILE_DELETION_REQUESTED.model_dump(),
+            "files_to_delete_topic",
+            "delete_file",
+        ),
+        (
+            TEST_FILE_UPLOAD_VALIDATION_SUCCESS.model_dump(),
+            "files_to_register_topic",
+            "register_file",
+        ),
+        (
+            TEST_NONSTAGED_FILE_REQUESTED.model_dump(),
+            "files_to_stage_topic",
+            "stage_registered_file",
+        ),
+    ],
+)
+@pytest.mark.asyncio()
+async def test_outbox_subscriber_routing(
+    joint_fixture: JointFixture,
+    upsertion_event: JsonObject,
+    topic_config_name: str,
+    method_name: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Make sure the outbox subscriber calls the correct method on the file registry."""
+    topic = getattr(joint_fixture.config, topic_config_name)
+    mock = AsyncMock()
+    monkeypatch.setattr(joint_fixture.file_registry, method_name, mock)
+    await joint_fixture.kafka.publish_event(
+        payload=upsertion_event,
+        type_=CHANGE_EVENT_TYPE,
+        topic=topic,
+        key=TEST_FILE_ID,
+    )
+
+    await joint_fixture.outbox_subscriber.run(forever=False)
+    mock.assert_awaited_once()
