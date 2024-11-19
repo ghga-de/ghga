@@ -24,13 +24,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/state-management-service):
 ```bash
-docker pull ghga/state-management-service:1.4.1
+docker pull ghga/state-management-service:2.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/state-management-service:1.4.1 .
+docker build -t ghga/state-management-service:2.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -38,7 +38,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/state-management-service:1.4.1 --help
+docker run -p 8080:8080 ghga/state-management-service:2.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -154,6 +154,100 @@ The service requires the following configuration parameters:
   "secret"
   ```
 
+
+- **`vault_role_id`**: Vault role ID to access a specific prefix. Default: `null`.
+
+  - **Any of**
+
+    - *string, format: password*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  "example_role"
+  ```
+
+
+- **`vault_secret_id`**: Vault secret ID to access a specific prefix. Default: `null`.
+
+  - **Any of**
+
+    - *string, format: password*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  "example_secret"
+  ```
+
+
+- **`vault_verify`**: SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification. Default: `true`.
+
+  - **Any of**
+
+    - *boolean*
+
+    - *string*
+
+
+  Examples:
+
+  ```json
+  "/etc/ssl/certs/my_bundle.pem"
+  ```
+
+
+- **`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
+
+- **`vault_kube_role`**: Vault role name used for Kubernetes authentication. Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  "file-ingest-role"
+  ```
+
+
+- **`vault_auth_mount_point`**: Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  null
+  ```
+
+
+  ```json
+  "approle"
+  ```
+
+
+  ```json
+  "kubernetes"
+  ```
+
+
+- **`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
 
 - **`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.
 

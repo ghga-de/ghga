@@ -23,13 +23,13 @@ from sms.inject import prepare_rest_app
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import VALID_BEARER_TOKEN
 from tests.fixtures.vault import (  # noqa: F401
-    DEFAULT_VAULT_PATH,
+    VAULT_PATH,
     VaultFixture,
     vault_container_fixture,
     vault_fixture,
 )
 
-TEST_URL = f"/secrets/{DEFAULT_VAULT_PATH}"
+TEST_URL = f"/secrets/{VAULT_PATH}"
 pytestmark = pytest.mark.asyncio()
 HEADERS: dict[str, Any] = {"Authorization": VALID_BEARER_TOKEN}
 

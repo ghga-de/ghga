@@ -42,11 +42,18 @@ object_storages:
       s3_session_token: null
 openapi_url: /openapi.json
 port: 8080
+service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
 service_instance_id: '1'
 service_name: sms
 token_hashes:
 - 7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e
+vault_auth_mount_point: null
+vault_kube_role: dummy-role
+vault_path: sms
+vault_role_id: '**********'
+vault_secret_id: '**********'
 vault_secrets_mount_point: secret
 vault_token: dev-token
 vault_url: http://vault:8200
+vault_verify: true
 workers: 1

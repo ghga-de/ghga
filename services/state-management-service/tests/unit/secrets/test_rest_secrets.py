@@ -21,11 +21,11 @@ import pytest
 
 from tests.fixtures.config import DEFAULT_TEST_CONFIG
 from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client_with_mocks
-from tests.fixtures.vault import DEFAULT_VAULT_PATH
+from tests.fixtures.vault import VAULT_PATH
 
 pytestmark = pytest.mark.asyncio()
 
-TEST_URL = f"/secrets/{DEFAULT_VAULT_PATH}"
+TEST_URL = f"/secrets/{VAULT_PATH}"
 HEADERS: dict[str, Any] = {"Authorization": VALID_BEARER_TOKEN}
 
 
@@ -53,7 +53,7 @@ async def test_get_secrets(stored_secrets: list[str]):
 
     assert response.status_code == 200
     assert response.json() == stored_secrets
-    secrets_handler.get_secrets.assert_called_once_with(DEFAULT_VAULT_PATH)
+    secrets_handler.get_secrets.assert_called_once_with(VAULT_PATH)
 
 
 async def test_delete_secrets():
@@ -65,4 +65,4 @@ async def test_delete_secrets():
         response = await client.delete(TEST_URL, headers=HEADERS)
 
     assert response.status_code == 204
-    secrets_handler.delete_secrets.assert_called_once_with(DEFAULT_VAULT_PATH)
+    secrets_handler.delete_secrets.assert_called_once_with(VAULT_PATH)

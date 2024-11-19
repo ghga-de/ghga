@@ -213,6 +213,104 @@
       "title": "Vault Secrets Mount Point",
       "type": "string"
     },
+    "vault_role_id": {
+      "anyOf": [
+        {
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Vault role ID to access a specific prefix",
+      "examples": [
+        "example_role"
+      ],
+      "title": "Vault Role Id"
+    },
+    "vault_secret_id": {
+      "anyOf": [
+        {
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Vault secret ID to access a specific prefix",
+      "examples": [
+        "example_secret"
+      ],
+      "title": "Vault Secret Id"
+    },
+    "vault_verify": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "default": true,
+      "description": "SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification.",
+      "examples": [
+        "/etc/ssl/certs/my_bundle.pem"
+      ],
+      "title": "Vault Verify"
+    },
+    "vault_path": {
+      "description": "Path without leading or trailing slashes where secrets should be stored in the vault.",
+      "title": "Vault Path",
+      "type": "string"
+    },
+    "vault_kube_role": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Vault role name used for Kubernetes authentication",
+      "examples": [
+        "file-ingest-role"
+      ],
+      "title": "Vault Kube Role"
+    },
+    "vault_auth_mount_point": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used.",
+      "examples": [
+        null,
+        "approle",
+        "kubernetes"
+      ],
+      "title": "Vault Auth Mount Point"
+    },
+    "service_account_token_path": {
+      "default": "/var/run/secrets/kubernetes.io/serviceaccount/token",
+      "description": "Path to service account token used by kube auth adapter.",
+      "format": "path",
+      "title": "Service Account Token Path",
+      "type": "string"
+    },
     "token_hashes": {
       "description": "List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.",
       "examples": [
@@ -438,6 +536,7 @@
     "object_storages",
     "vault_url",
     "vault_token",
+    "vault_path",
     "token_hashes",
     "db_prefix",
     "db_connection_str"

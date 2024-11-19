@@ -22,7 +22,7 @@ from hvac.exceptions import InvalidPath
 
 from sms.core.secrets_handler import SecretsHandler
 from tests.fixtures.config import DEFAULT_TEST_CONFIG
-from tests.fixtures.vault import DEFAULT_VAULT_PATH
+from tests.fixtures.vault import VAULT_PATH
 
 
 @pytest.mark.parametrize(
@@ -38,7 +38,7 @@ def test_get_secrets(monkeypatch: pytest.MonkeyPatch, secrets: list[str]):
     monkeypatch.setattr(SecretsHandler, "client", mock_client)
     secrets_handler = SecretsHandler(config=DEFAULT_TEST_CONFIG)
 
-    assert secrets_handler.get_secrets(DEFAULT_VAULT_PATH) == secrets
+    assert secrets_handler.get_secrets(VAULT_PATH) == secrets
     mock_client.secrets.kv.v2.list_secrets.assert_called_once()
 
 
@@ -52,10 +52,10 @@ def test_get_secrets_error(monkeypatch: pytest.MonkeyPatch, caplog):
 
     # Make sure the error is logged as a warning but an empty list is still returned
     caplog.clear()
-    secrets = secrets_handler.get_secrets(DEFAULT_VAULT_PATH)
+    secrets = secrets_handler.get_secrets(VAULT_PATH)
     assert len(caplog.messages) == 1
     assert caplog.messages[0] == (
-        f"Invalid path error when fetching secrets. The path, '{DEFAULT_VAULT_PATH}',"
+        f"Invalid path error when fetching secrets. The path, '{VAULT_PATH}',"
         + " might be invalid, or no secrets may exist."
     )
     assert caplog.records[0].levelname == "WARNING"
@@ -72,7 +72,7 @@ def test_delete_secrets_error(monkeypatch: pytest.MonkeyPatch):
     secrets_handler = SecretsHandler(config=DEFAULT_TEST_CONFIG)
 
     # Call delete_secrets() in order to trigger get_secrets
-    secrets_handler.delete_secrets(DEFAULT_VAULT_PATH)
+    secrets_handler.delete_secrets(VAULT_PATH)
     mock_client.secrets.kv.v2.list_secrets.assert_called_once()
     mock_client.secrets.kv.v2.delete_metadata_and_all_versions.assert_not_called()
 
@@ -102,13 +102,13 @@ def test_delete_successful(
     secrets_handler = SecretsHandler(config=DEFAULT_TEST_CONFIG)
 
     # call delete_secrets()
-    secrets_handler.delete_secrets(DEFAULT_VAULT_PATH)
+    secrets_handler.delete_secrets(VAULT_PATH)
     mock_client.secrets.kv.v2.list_secrets.assert_called_once()
 
     # delete_metadata_and_all_versions is called for each secret
     internal_deletion_calls = [
         call(
-            path=f"{DEFAULT_VAULT_PATH}/{secret}",
+            path=f"{VAULT_PATH}/{secret}",
             mount_point=DEFAULT_TEST_CONFIG.vault_secrets_mount_point,
         )
         for secret in stored_secrets
@@ -139,13 +139,13 @@ def test_non_default_mount_point(monkeypatch: pytest.MonkeyPatch):
     secrets_handler = SecretsHandler(config=config)
 
     # call delete_secrets()
-    secrets_handler.delete_secrets(f"{DEFAULT_VAULT_PATH}")
+    secrets_handler.delete_secrets(f"{VAULT_PATH}")
     mock_client.secrets.kv.v2.list_secrets.assert_called_once_with(
-        path=f"{DEFAULT_VAULT_PATH}",
+        path=f"{VAULT_PATH}",
         mount_point=mount_point,
     )
 
     mock_client.secrets.kv.v2.delete_metadata_and_all_versions.assert_called_once_with(
-        path=f"{DEFAULT_VAULT_PATH}/key1",
+        path=f"{VAULT_PATH}/key1",
         mount_point=mount_point,
     )
