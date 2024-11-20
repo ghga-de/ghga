@@ -12,6 +12,9 @@
 npm-debug.log
 yarn-error.log
 
+# Runtime config
+public/config.js
+
 # Environment files
 **/*.env
 

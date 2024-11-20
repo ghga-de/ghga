@@ -4,14 +4,18 @@ RUN apk upgrade --no-cache --available
 
 # BUILDER: a container to build the service dist directory
 FROM base AS builder
-WORKDIR /service
-COPY package.json package-lock.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+# install pnpm
+RUN corepack prepare pnpm@9.13.2 --activate
+RUN npm install -g pnpm
 # install static web server
 RUN apk add curl sudo which
 RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sh
+# build the service
+WORKDIR /service
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
+COPY . .
+RUN npm run build
 
 # RUNNER: a container to run the service
 FROM base AS runner
@@ -22,16 +26,17 @@ USER appuser
 COPY --from=builder /service/dist/data-portal/browser ./dist
 # install static web server
 COPY --from=builder /usr/local/bin/static-web-server /usr/local/bin
-# make the index file writeable
+# make the config file writeable to the appuser
 USER root
-RUN chown appuser ./dist/index.html
+RUN touch ./dist/config.js
+RUN chown appuser ./dist/config.js
 USER appuser
 # install run script
-COPY ./run.js .
+COPY ./run.js ./run.mjs
 # install dependencies for run script
 RUN npm install js-yaml
 # install default configuration file
 COPY ./data-portal.default.yaml .
 
 ENTRYPOINT ["node"]
-CMD ["/home/appuser/run.js"]
+CMD ["/home/appuser/run.mjs"]

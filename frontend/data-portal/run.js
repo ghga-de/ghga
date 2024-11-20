@@ -77,31 +77,22 @@ function getBrowserDir(distDir) {
 }
 
 /**
- * Inject the settings into the index file in the appropriate output directory.
+ * Write the settings into the config file in the appropriate output directory.
  *
  * @param {Object} settings - The configuration settings to write.
- * @throws {Error} If the output directory or the index file does not exist.
+ * @throws {Error} If the output directory does not exist.
  */
 function writeSettings(settings) {
-  let outputDir = DEV_MODE ? 'src' : getBrowserDir('dist');
+  const outputDir = DEV_MODE ? 'public' : getBrowserDir('dist');
 
   // Ensure the output directory exists
   if (!fs.existsSync(outputDir)) {
     throw new Error(`Output directory not found: ${outputDir}`);
   }
 
-  // Ensure the index file exists
-  const indexPath = path.join(outputDir, 'index.html');
-  if (!fs.existsSync(indexPath)) {
-    throw new Error(`Index file not found: ${indexPath}`);
-  }
-
-  // Inject the configuration settings into the index file
+  const configPath = path.join(outputDir, 'config.js');
   const configScript = `window.config = ${JSON.stringify(settings)}`;
-  const indexFile = fs
-    .readFileSync(indexPath, 'utf8')
-    .replace(/window\.config = {[^}]*}/, configScript);
-  fs.writeFileSync(indexPath, indexFile, 'utf8');
+  fs.writeFileSync(configPath, configScript, 'utf8');
 }
 
 /**
@@ -142,7 +133,7 @@ function addHostEntry(name, ip) {
 /**
  * Run the development server on the specified host and port.
  */
-function runDevServer(host, port, logLevel, baseUrl, basicAuth, ssl, sslCert, sslKey) {
+function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basicAuth) {
   console.log('Running the development server...');
 
   if (baseUrl === `http://${host}:${port}`) {
@@ -194,7 +185,7 @@ function runDevServer(host, port, logLevel, baseUrl, basicAuth, ssl, sslCert, ss
  * It is assumed that the application has already been built
  * and that the "serve" package is installed globally.
  */
-function runProdServer(host, port, logLevel) {
+function runProdServer(host, port, ssl, sslCert, sslKey, logLevel) {
   console.log('Running the production server...');
 
   const distDir = getBrowserDir(path.join(__dirname, 'dist'));
@@ -238,14 +229,14 @@ function main() {
   console.log('Runtime settings =', settings);
 
   const {
-    base_url: baseUrl,
-    basic_auth: basicAuth,
     host,
     port,
-    log_level: logLevel,
     ssl,
     ssl_cert,
     ssl_key,
+    log_level: logLevel,
+    base_url: baseUrl,
+    basic_auth: basicAuth,
   } = settings;
 
   if (!host || !port) {
@@ -270,12 +261,12 @@ function main() {
   (DEV_MODE ? runDevServer : runProdServer)(
     host,
     port,
-    logLevel,
-    baseUrl,
-    basicAuth,
     ssl,
     ssl_cert,
     ssl_key,
+    logLevel,
+    baseUrl,
+    basicAuth,
   );
 }
 
