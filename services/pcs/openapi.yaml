@@ -38,7 +38,7 @@ info:
   description: A service exposing an external API to commission file deletionsfrom
     the wholefile backend.
   title: Purge Controller Service
-  version: 2.0.3
+  version: 2.0.4
 openapi: 3.1.0
 paths:
   /files/{file_id}:
