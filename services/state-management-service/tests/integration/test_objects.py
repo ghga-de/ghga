@@ -15,13 +15,23 @@
 """Integration tests for the /objects endpoints."""
 
 import pytest
+from hexkit.providers.s3 import S3Config
+from hexkit.providers.s3.testutils import FederatedS3Fixture
 
-from tests.conftest import FederatedS3Fixture
-from tests.fixtures.config import DEFAULT_TEST_CONFIG
+from tests.fixtures.config import DEFAULT_TEST_CONFIG, Config
 from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client
 
 pytestmark = pytest.mark.asyncio()
 DEFAULT_ALIAS = "primary"
+
+
+def patch_config_for_alias(
+    alias: str, s3_config: S3Config, original_config: Config = DEFAULT_TEST_CONFIG
+) -> Config:
+    """Update the full config instance with the given s3 config for the given alias."""
+    dumped = original_config.model_dump()
+    dumped["object_storages"][alias]["credentials"] = s3_config
+    return Config(**dumped)
 
 
 def bucket_not_found_json(bucket_id: str) -> dict[str, str]:
@@ -37,29 +47,6 @@ def invalid_bucket_json(bucket_id: str) -> dict[str, str]:
 def invalid_object_json(object_id: str) -> dict[str, str]:
     """Return the JSON response for an invalid object ID error."""
     return {"detail": f"Object ID '{object_id}' is invalid."}
-
-
-async def test_federated_fixture(federated_s3: FederatedS3Fixture):
-    """Test that the federated S3 fixture actually uses separate S3 instances."""
-    buckets = {
-        "bucket1": ["object1", "object2"],
-        "empty": [],
-    }
-
-    await federated_s3.populate_dummy_items("primary", buckets)
-
-    assert await federated_s3.nodes["primary"].storage.does_object_exist(
-        bucket_id="bucket1", object_id="object1"
-    )
-    assert await federated_s3.nodes["primary"].storage.does_bucket_exist(
-        bucket_id="empty"
-    )
-    assert not await federated_s3.nodes["secondary"].storage.does_object_exist(
-        bucket_id="bucket1", object_id="object1"
-    )
-    assert not await federated_s3.nodes["secondary"].storage.does_bucket_exist(
-        bucket_id="empty"
-    )
 
 
 @pytest.mark.parametrize(
@@ -93,7 +80,8 @@ async def test_does_object_exist(
     buckets: dict[str, list[str]],
 ):
     """Test the /objects/{bucket_id}/{object_id} endpoint."""
-    config = federated_s3.get_patched_config(config=DEFAULT_TEST_CONFIG)
+    s3_config = federated_s3.get_configs_by_alias()[DEFAULT_ALIAS]
+    config = patch_config_for_alias(alias=DEFAULT_ALIAS, s3_config=s3_config)
     await federated_s3.populate_dummy_items(DEFAULT_ALIAS, buckets)
 
     async with get_rest_client(config=config) as client:
@@ -119,7 +107,8 @@ async def test_does_object_exist(
 
 async def test_list_objects(federated_s3: FederatedS3Fixture):
     """Test the GET /objects/{bucket_id} endpoint."""
-    config = federated_s3.get_patched_config(config=DEFAULT_TEST_CONFIG)
+    s3_config = federated_s3.get_configs_by_alias()[DEFAULT_ALIAS]
+    config = patch_config_for_alias(alias=DEFAULT_ALIAS, s3_config=s3_config)
 
     buckets = {
         "bucket1": ["object1", "object2"],
@@ -153,7 +142,8 @@ async def test_list_objects(federated_s3: FederatedS3Fixture):
 
 async def test_delete_objects(federated_s3: FederatedS3Fixture):
     """Test the DELETE /objects/{bucket_id} endpoint."""
-    config = federated_s3.get_patched_config(config=DEFAULT_TEST_CONFIG)
+    s3_config = federated_s3.get_configs_by_alias()[DEFAULT_ALIAS]
+    config = patch_config_for_alias(alias=DEFAULT_ALIAS, s3_config=s3_config)
 
     buckets = {
         "bucket1": ["object1", "object2"],
