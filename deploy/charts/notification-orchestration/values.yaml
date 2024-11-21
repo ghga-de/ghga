@@ -63,13 +63,6 @@ topics:
     types:
     - name: second_factor_recreated_event_type
       value: second_factor_recreated
-  fileRegisteredEvent:
-    topic:
-      name: file_registered_event_topic
-      value: internal-registrations
-    types:
-    - name: file_registered_event_type
-      value: internal_file_registered
   userEvents:
     topic:
       name: user_events_topic
