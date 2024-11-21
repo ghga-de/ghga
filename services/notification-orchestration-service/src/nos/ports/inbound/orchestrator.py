@@ -56,10 +56,6 @@ class OrchestratorPort(ABC):
         """
 
     @abstractmethod
-    async def process_file_registered_notification(self, *, file_id: str):
-        """Send notifications for internal file registrations (completed uploads)."""
-
-    @abstractmethod
     async def process_all_ivas_invalidated(self, *, user_id: str):
         """Handle notifications for all IVA resets."""
 

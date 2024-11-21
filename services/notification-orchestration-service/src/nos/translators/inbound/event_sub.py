@@ -49,16 +49,6 @@ class EventSubTranslatorConfig(BaseSettings):
         description="The type to use for access request denied events",
         examples=["access_request_denied"],
     )
-    file_registered_event_topic: str = Field(
-        default=...,
-        description="The name of the topic containing internal file registration events.",
-        examples=["internal_file_registry"],
-    )
-    file_registered_event_type: str = Field(
-        default=...,
-        description="The type used for events detailing internally file registrations.",
-        examples=["file_registered"],
-    )
     iva_state_changed_event_topic: str = Field(
         default=...,
         description="The name of the topic containing IVA events.",
@@ -89,7 +79,6 @@ class EventSubTranslator(EventSubscriberProtocol):
     ):
         self.topics_of_interest = [
             config.access_request_events_topic,
-            config.file_registered_event_topic,
             config.iva_state_changed_event_topic,
             config.second_factor_recreated_event_topic,
         ]
@@ -97,7 +86,6 @@ class EventSubTranslator(EventSubscriberProtocol):
             config.access_request_created_event_type,
             config.access_request_allowed_event_type,
             config.access_request_denied_event_type,
-            config.file_registered_event_type,
             config.iva_state_changed_event_type,
             config.second_factor_recreated_event_type,
         ]
@@ -113,15 +101,6 @@ class EventSubTranslator(EventSubscriberProtocol):
             event_type=type_,
             user_id=validated_payload.user_id,
             dataset_id=validated_payload.dataset_id,
-        )
-
-    async def _handle_file_registered(self, payload: JsonObject) -> None:
-        """Send notifications for internal file registrations (completed uploads)."""
-        validated_payload = get_validated_payload(
-            payload, event_schemas.FileInternallyRegistered
-        )
-        await self._orchestrator.process_file_registered_notification(
-            file_id=validated_payload.file_id
         )
 
     async def _handle_iva_state_change(self, payload: JsonObject) -> None:
@@ -154,8 +133,6 @@ class EventSubTranslator(EventSubscriberProtocol):
                 self._config.access_request_denied_event_type,
             ):
                 await self._handle_access_request(type_, payload)
-            case self._config.file_registered_event_type:
-                await self._handle_file_registered(payload=payload)
             case self._config.iva_state_changed_event_type:
                 if key.startswith("all-"):
                     await self._handle_all_ivas_reset(payload=payload)

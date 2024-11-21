@@ -16,9 +16,8 @@
 """Module hosting the dependency injection framework."""
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
-from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka import (
     KafkaEventPublisher,
     KafkaEventSubscriber,
@@ -65,11 +64,7 @@ def prepare_core_with_override(
     core_override: OrchestratorPort | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
-    return (
-        asyncnullcontext(core_override)
-        if core_override
-        else prepare_core(config=config)
-    )
+    return nullcontext(core_override) if core_override else prepare_core(config=config)
 
 
 @asynccontextmanager

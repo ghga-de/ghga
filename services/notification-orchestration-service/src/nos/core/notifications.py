@@ -111,11 +111,6 @@ The request by {full_user_name} to download the dataset
 """,
 )
 
-FILE_REGISTERED_TO_DS = Notification(
-    "File upload completed",
-    "The file {file_id} has been successfully uploaded.",
-)
-
 ALL_IVAS_INVALIDATED_TO_USER = Notification(
     "Contact Address Invalidation",
     """

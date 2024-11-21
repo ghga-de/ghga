@@ -74,22 +74,6 @@
       "title": "Access Request Denied Event Type",
       "type": "string"
     },
-    "file_registered_event_topic": {
-      "description": "The name of the topic containing internal file registration events.",
-      "examples": [
-        "internal_file_registry"
-      ],
-      "title": "File Registered Event Topic",
-      "type": "string"
-    },
-    "file_registered_event_type": {
-      "description": "The type used for events detailing internally file registrations.",
-      "examples": [
-        "file_registered"
-      ],
-      "title": "File Registered Event Type",
-      "type": "string"
-    },
     "iva_state_changed_event_topic": {
       "description": "The name of the topic containing IVA events.",
       "examples": [
@@ -263,8 +247,6 @@
     "access_request_created_event_type",
     "access_request_allowed_event_type",
     "access_request_denied_event_type",
-    "file_registered_event_topic",
-    "file_registered_event_type",
     "iva_state_changed_event_topic",
     "iva_state_changed_event_type",
     "second_factor_recreated_event_topic",
