@@ -197,7 +197,7 @@ class Config(BaseSettings):
     # ifrs
     ifrs_db_name: str = "ifrs"
     ifrs_metadata_collection: str = "file_metadata"
-    ifrs_upload_validations_collection: str = "file_upload_validation_success"
+    ifrs_file_metadata_collection: str = "file_metadata"
 
     # pcs
     pcs_db_name: str = "pcs"

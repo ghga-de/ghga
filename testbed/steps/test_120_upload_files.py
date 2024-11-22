@@ -127,8 +127,8 @@ def call_data_steward_kit_batch_upload(
 
 
 def call_data_steward_kit_ingest(
-    ingest_config_path: str, token_path: Path, token: str
-) -> None:
+    ingest_config_path: str, token_path: Path, token: str, check_output: bool = True
+) -> subprocess.CompletedProcess:
     """Call DSKit file_ingest command to ingest file"""
     with temporary_file(token_path, token) as _:
         completed_ingest = subprocess.run(  # nosec B607, B603
@@ -151,12 +151,15 @@ def call_data_steward_kit_ingest(
     if "ERROR" in completed_ingest.stderr or completed_ingest.returncode:
         print(completed_ingest.stderr)
 
-    assert (
-        completed_ingest.stdout.strip()
-        == "Successfully sent all file upload metadata for ingest."
-    )
-    assert not "ERROR" in completed_ingest.stderr
-    assert not completed_ingest.returncode
+    if check_output:
+        assert (
+            completed_ingest.stdout.strip()
+            == "Successfully sent all file upload metadata for ingest."
+        )
+        assert not "ERROR" in completed_ingest.stderr
+        assert not completed_ingest.returncode
+
+    return completed_ingest
 
 
 @given("the staging buckets are empty")

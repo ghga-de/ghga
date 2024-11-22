@@ -17,6 +17,7 @@
 """Step definitions for ingesting existing files again"""
 
 import json
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -54,9 +55,9 @@ def check_metadata_documents(fixtures: JointFixture):
 
 @when(
     "an existing file is attempted to be ingested again",
-    target_fixture="file_accession",
+    target_fixture="ingest_output",
 )
-def ingest_existing_file_again(fixtures: JointFixture):
+def ingest_existing_file_again(fixtures: JointFixture) -> subprocess.CompletedProcess:
     """Ingest an already existing file again.
 
     Retrieve the first file in the stored file information list,
@@ -82,17 +83,23 @@ def ingest_existing_file_again(fixtures: JointFixture):
 
     ingest_config_path = ingest_config_as_file(config=ingest_config)
 
-    call_data_steward_kit_ingest(
+    return call_data_steward_kit_ingest(
         ingest_config_path=ingest_config_path,
         token_path=fixtures.config.dsk_token_path,
         token=fixtures.config.upload_token,
+        check_output=False,
     )
 
-    return file_accession
+
+@then("I get an error message that the metadata has already been processed")
+def check_ingest_output(ingest_output: subprocess.CompletedProcess):
+    assert "ERROR" in ingest_output.stderr
+    assert "409 Conflict" in ingest_output.stderr.strip()
+    assert "Metadata has already been processed." in ingest_output.stdout.strip()
 
 
 @then("the file metadata in the internal file registry is not updated")
-def check_metadata_documents_not_updated(fixtures: JointFixture, file_accession: str):
+def check_metadata_documents_not_updated(fixtures: JointFixture):
     """Check that the file metadata in the internal file registry is not updated
 
     In the current implementation, the file ingest service processes all ingest
@@ -100,6 +107,9 @@ def check_metadata_documents_not_updated(fixtures: JointFixture, file_accession:
     fails to update existing records, so the file metadata in the internal file
     registry remains unchanged.
     """
+    all_file_information = fixtures.state.get_state("all file information") or {}
+    file_accession = min(all_file_information)
+
     document = fixtures.mongo.wait_for_document(
         db_name=fixtures.config.fis_db_name,
         collection_name=fixtures.config.fis_file_validations_collection,
@@ -110,26 +120,14 @@ def check_metadata_documents_not_updated(fixtures: JointFixture, file_accession:
 
     document = fixtures.mongo.wait_for_document(
         db_name=fixtures.config.ifrs_db_name,
-        collection_name=fixtures.config.ifrs_upload_validations_collection,
+        collection_name=fixtures.config.ifrs_file_metadata_collection,
         query={"_id": file_accession},
     )
     assert document
     ifrs_document_timestamp = document["upload_date"]
 
     # internal file registry updates later than the upstream service
-    # the timestamp should not be greater if the file metadata is not updated
-    assert datetime.fromisoformat(ifrs_document_timestamp) < datetime.fromisoformat(
+    # so without a file metadata update, the ifrs timestamp should not be later
+    assert datetime.fromisoformat(ifrs_document_timestamp) <= datetime.fromisoformat(
         fis_document_timestamp
     )
-
-
-@given("no file interrogation events exists")
-def delete_file_interrogation_events(fixtures: JointFixture):
-    """Delete all file interrogation events from Kafka
-
-    In the current implementation, the internal file registry service enters
-    a restart-crash loop if there's an unhappy event in the queue. Here we remove
-    the messages from the corresponding Kafka topic, allowing the service to stabilize
-    after the unhappy test case.
-    """
-    fixtures.kafka.clear_topics(topics=fixtures.config.file_interrogations_topic)
