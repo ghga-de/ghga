@@ -48,6 +48,10 @@ async def get_secrets(
     """Returns a list of secrets in the specified vault"""
     try:
         return secrets_handler.get_secrets(vault_path)
+    except PermissionError as err:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(err)
+        ) from err
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR) from exc
 
@@ -66,5 +70,9 @@ async def delete_secrets(
     """Delete all secrets from the specified vault."""
     try:
         secrets_handler.delete_secrets(vault_path)
+    except PermissionError as err:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(err)
+        ) from err
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR) from exc

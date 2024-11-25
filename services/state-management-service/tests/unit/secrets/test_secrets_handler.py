@@ -30,25 +30,25 @@ from tests.fixtures.vault import VAULT_PATH
     [[], ["key1"], ["key1", "key2"]],
     ids=["empty", "single", "multiple"],
 )
-def test_get_secrets(monkeypatch: pytest.MonkeyPatch, secrets: list[str]):
+def test_get_secrets(secrets: list[str]):
     """Test get_secrets method without errors"""
     # patch the hvac client with a mock
     mock_client = Mock()
     mock_client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": secrets}}
-    monkeypatch.setattr(SecretsHandler, "client", mock_client)
     secrets_handler = SecretsHandler(config=DEFAULT_TEST_CONFIG)
+    secrets_handler.client = mock_client
 
     assert secrets_handler.get_secrets(VAULT_PATH) == secrets
     mock_client.secrets.kv.v2.list_secrets.assert_called_once()
 
 
-def test_get_secrets_error(monkeypatch: pytest.MonkeyPatch, caplog):
+def test_get_secrets_error(caplog):
     """Test get_secrets method with an error"""
     # patch the hvac client with a mock
     mock_client = Mock()
     mock_client.secrets.kv.v2.list_secrets.side_effect = InvalidPath("Invalid path")
-    monkeypatch.setattr(SecretsHandler, "client", mock_client)
     secrets_handler = SecretsHandler(config=DEFAULT_TEST_CONFIG)
+    secrets_handler.client = mock_client
 
     # Make sure the error is logged as a warning but an empty list is still returned
     caplog.clear()
@@ -63,13 +63,13 @@ def test_get_secrets_error(monkeypatch: pytest.MonkeyPatch, caplog):
     mock_client.secrets.kv.v2.list_secrets.assert_called_once()
 
 
-def test_delete_secrets_error(monkeypatch: pytest.MonkeyPatch):
+def test_delete_secrets_error():
     """Test delete_secrets method on empty vault."""
     # patch the hvac client with a mock
     mock_client = Mock()
     mock_client.secrets.kv.v2.list_secrets.side_effect = InvalidPath("Invalid path")
-    monkeypatch.setattr(SecretsHandler, "client", mock_client)
     secrets_handler = SecretsHandler(config=DEFAULT_TEST_CONFIG)
+    secrets_handler.client = mock_client
 
     # Call delete_secrets() in order to trigger get_secrets
     secrets_handler.delete_secrets(VAULT_PATH)
@@ -82,10 +82,7 @@ def test_delete_secrets_error(monkeypatch: pytest.MonkeyPatch):
     [[], ["key1"], ["key1", "key2"]],
     ids=["Empty", "OneSecret", "TwoSecrets"],
 )
-def test_delete_successful(
-    monkeypatch: pytest.MonkeyPatch,
-    stored_secrets: list[str],
-):
+def test_delete_successful(stored_secrets: list[str]):
     """Test delete_secrets method."""
     # create a mock for the hvac client
     list_stored_secrets = {"data": {"keys": stored_secrets}}
@@ -98,8 +95,8 @@ def test_delete_successful(
         mock_client.secrets.kv.v2.list_secrets.side_effect = InvalidPath("Invalid path")
 
     # apply the mock to the SecretsHandler
-    monkeypatch.setattr(SecretsHandler, "client", mock_client)
     secrets_handler = SecretsHandler(config=DEFAULT_TEST_CONFIG)
+    secrets_handler.client = mock_client
 
     # call delete_secrets()
     secrets_handler.delete_secrets(VAULT_PATH)
@@ -119,7 +116,7 @@ def test_delete_successful(
     )
 
 
-def test_non_default_mount_point(monkeypatch: pytest.MonkeyPatch):
+def test_non_default_mount_point():
     """Test get_secrets and delete_secrets method with non-default mount point.
 
     Makes sure that the actual config value is passed to the hvac Client.
@@ -128,15 +125,13 @@ def test_non_default_mount_point(monkeypatch: pytest.MonkeyPatch):
     list_stored_secrets = {"data": {"keys": ["key1"]}}
     mock_client.secrets.kv.v2.list_secrets.return_value = list_stored_secrets
 
-    # apply the mock to the SecretsHandler
-    monkeypatch.setattr(SecretsHandler, "client", mock_client)
-
     # use alternative mount point
     mount_point = "test"
     config = DEFAULT_TEST_CONFIG.model_copy(
         update={"vault_secrets_mount_point": mount_point}
     )
     secrets_handler = SecretsHandler(config=config)
+    secrets_handler.client = mock_client
 
     # call delete_secrets()
     secrets_handler.delete_secrets(f"{VAULT_PATH}")

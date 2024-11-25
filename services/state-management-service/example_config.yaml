@@ -53,7 +53,6 @@ vault_path: sms
 vault_role_id: '**********'
 vault_secret_id: '**********'
 vault_secrets_mount_point: secret
-vault_token: dev-token
 vault_url: http://vault:8200
 vault_verify: true
 workers: 1

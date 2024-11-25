@@ -196,14 +196,6 @@
       "title": "Vault Url",
       "type": "string"
     },
-    "vault_token": {
-      "description": "Token for the Vault",
-      "examples": [
-        "dev-token"
-      ],
-      "title": "Vault Token",
-      "type": "string"
-    },
     "vault_secrets_mount_point": {
       "default": "secret",
       "description": "Name used to address the secret engine under a custom mount path.",
@@ -535,7 +527,6 @@
     "kafka_servers",
     "object_storages",
     "vault_url",
-    "vault_token",
     "vault_path",
     "token_hashes",
     "db_prefix",

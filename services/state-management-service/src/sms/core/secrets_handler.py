@@ -19,7 +19,7 @@ from pathlib import Path
 
 from hvac import Client as HvacClient
 from hvac.api.auth_methods import Kubernetes
-from hvac.exceptions import InvalidPath
+from hvac.exceptions import Forbidden, InvalidPath
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
@@ -33,9 +33,6 @@ class VaultConfig(BaseSettings):
 
     vault_url: str = Field(
         default=..., description="URL for the Vault", examples=["http://vault:8200"]
-    )
-    vault_token: str = Field(
-        default=..., description="Token for the Vault", examples=["dev-token"]
     )
     vault_secrets_mount_point: str = Field(
         default="secret",
@@ -82,6 +79,22 @@ class VaultConfig(BaseSettings):
         description="Path to service account token used by kube auth adapter.",
     )
 
+    @field_validator("vault_verify")
+    @classmethod
+    def validate_vault_ca(cls, value: bool | str) -> bool | str:
+        """Check that the CA bundle can be read if it is specified."""
+        if isinstance(value, str):
+            path = Path(value)
+            if not path.exists():
+                raise ValueError(f"Vault CA bundle not found at: {path}")
+            try:
+                bundle = path.open().read()
+            except OSError as error:
+                raise ValueError("Vault CA bundle cannot be read") from error
+            if "-----BEGIN CERTIFICATE-----" not in bundle:
+                raise ValueError("Vault CA bundle does not contain a certificate")
+        return value
+
 
 class SecretsHandler(SecretsHandlerPort):
     """Adapter wrapping hvac.Client"""
@@ -89,6 +102,7 @@ class SecretsHandler(SecretsHandlerPort):
     def __init__(self, config: VaultConfig):
         """Initialized approle-based client and log in"""
         self._config = config
+        self.client = HvacClient(url=config.vault_url)
         self._auth_mount_point = config.vault_auth_mount_point
         self._secrets_mount_point = config.vault_secrets_mount_point
         self._kube_role = config.vault_kube_role
@@ -123,7 +137,6 @@ class SecretsHandler(SecretsHandlerPort):
                 )
             else:
                 self._kube_adapter.login(role=self._kube_role, jwt=jwt)
-
         elif self._auth_mount_point:
             self.client.auth.approle.login(
                 role_id=self._role_id,
@@ -134,31 +147,6 @@ class SecretsHandler(SecretsHandlerPort):
             self.client.auth.approle.login(
                 role_id=self._role_id, secret_id=self._secret_id
             )
-
-    @field_validator("vault_verify")
-    @classmethod
-    def validate_vault_ca(cls, value: bool | str) -> bool | str:
-        """Check that the CA bundle can be read if it is specified."""
-        if isinstance(value, str):
-            path = Path(value)
-            if not path.exists():
-                raise ValueError(f"Vault CA bundle not found at: {path}")
-            try:
-                bundle = path.open().read()
-            except OSError as error:
-                raise ValueError("Vault CA bundle cannot be read") from error
-            if "-----BEGIN CERTIFICATE-----" not in bundle:
-                raise ValueError("Vault CA bundle does not contain a certificate")
-        return value
-
-    @property
-    def client(self) -> HvacClient:
-        """Return an instance of a vault client"""
-        return HvacClient(
-            url=self._config.vault_url,
-            token=self._config.vault_token,
-            verify=self._config.vault_verify,
-        )
 
     def get_secrets(self, vault_path: str) -> list[str]:
         """Return the IDs of all secrets in the specified vault."""
@@ -178,6 +166,12 @@ class SecretsHandler(SecretsHandlerPort):
             )
             log.warning(msg, vault_path)
             return []
+        except Forbidden as err:
+            permission_error = PermissionError(
+                f"Permission not configured for vault path '{vault_path}'",
+            )
+            log.error(permission_error)
+            raise permission_error from err
 
     def delete_secrets(self, vault_path: str):
         """Delete all secrets from the specified vault."""
@@ -188,7 +182,14 @@ class SecretsHandler(SecretsHandlerPort):
             return
 
         for secret in secrets:
-            self.client.secrets.kv.v2.delete_metadata_and_all_versions(
-                path=f"{vault_path}/{secret}",
-                mount_point=self._config.vault_secrets_mount_point,
-            )
+            try:
+                self.client.secrets.kv.v2.delete_metadata_and_all_versions(
+                    path=f"{vault_path}/{secret}",
+                    mount_point=self._config.vault_secrets_mount_point,
+                )
+            except Forbidden as err:
+                permission_error = PermissionError(
+                    f"Permission not configured for vault path '{vault_path}'",
+                )
+                log.error(permission_error)
+                raise permission_error from err

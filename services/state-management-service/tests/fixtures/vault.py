@@ -20,6 +20,7 @@ from contextlib import suppress
 
 import hvac
 import pytest
+from hvac.api.auth_methods import Kubernetes
 from hvac.exceptions import InvalidPath
 from testcontainers.core.generic import DockerContainer
 
@@ -30,7 +31,7 @@ DEFAULT_IMAGE = "hashicorp/vault:1.12"
 VAULT_URL = DEFAULT_TEST_CONFIG.vault_url
 DEFAULT_PORT = 8200
 VAULT_PATH = DEFAULT_TEST_CONFIG.vault_path
-VAULT_TOKEN = DEFAULT_TEST_CONFIG.vault_token
+VAULT_TOKEN = "dev-token"
 VAULT_MOUNT_POINT = DEFAULT_TEST_CONFIG.vault_secrets_mount_point
 
 
@@ -43,12 +44,58 @@ class VaultFixture:
     def __init__(self, config: VaultConfig):
         self.config = config
         self.vaults_used: set[str] = set()
+        self.client = hvac.Client(url=self.config.vault_url)
+        self._auth_mount_point = config.vault_auth_mount_point
+        self._secrets_mount_point = config.vault_secrets_mount_point
+        self._kube_role = config.vault_kube_role
+
+        if self._kube_role:
+            # use kube role and service account token
+            self._kube_adapter = Kubernetes(self.client.adapter)
+            self._service_account_token_path = config.service_account_token_path
+        elif config.vault_role_id and config.vault_secret_id:
+            # use role and secret ID instead
+            self._role_id = config.vault_role_id.get_secret_value()
+            self._secret_id = config.vault_secret_id.get_secret_value()
+        else:
+            raise ValueError(
+                "There is no way to log in to vault:\n"
+                + "Neither kube role nor both role and secret ID were provided."
+            )
+
+    def _check_auth(self):
+        """Check if authentication timed out and re-authenticate if needed"""
+        if not self.client.is_authenticated():
+            self._login()
+
+    def _login(self):
+        """Log in using Kubernetes Auth or AppRole"""
+        if self._kube_role:
+            with self._service_account_token_path.open() as token_file:
+                jwt = token_file.read()
+            if self._auth_mount_point:
+                self._kube_adapter.login(
+                    role=self._kube_role, jwt=jwt, mount_point=self._auth_mount_point
+                )
+            else:
+                self._kube_adapter.login(role=self._kube_role, jwt=jwt)
+
+        elif self._auth_mount_point:
+            self.client.auth.approle.login(
+                role_id=self._role_id,
+                secret_id=self._secret_id,
+                mount_point=self._auth_mount_point,
+            )
+        else:
+            self.client.auth.approle.login(
+                role_id=self._role_id, secret_id=self._secret_id
+            )
 
     def store_secret(self, *, key: str, vault_path: str = VAULT_PATH):
         """Store a secret in vault"""
-        client = hvac.Client(url=self.config.vault_url, token=VAULT_TOKEN)
+        self._check_auth()
 
-        client.secrets.kv.v2.create_or_update_secret(
+        self.client.secrets.kv.v2.create_or_update_secret(
             path=f"{vault_path}/{key}",
             secret={key: f"secret_for_{key}"},
             mount_point=self.config.vault_secrets_mount_point,
@@ -57,15 +104,15 @@ class VaultFixture:
 
     def delete_all_secrets(self, vault_path: str):
         """Remove all secrets from the vault to reset for next test"""
-        client = hvac.Client(url=self.config.vault_url, token=VAULT_TOKEN)
+        self._check_auth()
 
         with suppress(InvalidPath):
-            secrets = client.secrets.kv.v2.list_secrets(
+            secrets = self.client.secrets.kv.v2.list_secrets(
                 path=vault_path,
                 mount_point=self.config.vault_secrets_mount_point,
             )
             for key in secrets["data"]["keys"]:
-                client.secrets.kv.v2.delete_metadata_and_all_versions(
+                self.client.secrets.kv.v2.delete_metadata_and_all_versions(
                     path=f"{vault_path}/{key}",
                     mount_point=self.config.vault_secrets_mount_point,
                 )
@@ -107,7 +154,6 @@ def vault_container_fixture() -> Generator[VaultContainerFixture, None, None]:
             vault_role_id=role_id,
             vault_secret_id=secret_id,
             vault_verify=DEFAULT_TEST_CONFIG.vault_verify,
-            vault_token=VAULT_TOKEN,
             vault_path=VAULT_PATH,
             vault_secrets_mount_point=VAULT_MOUNT_POINT,
         )
@@ -144,18 +190,15 @@ def configure_vault(*, host: str, port: int):
     # create access policy to bind to role
     policy = f"""
     path "{VAULT_MOUNT_POINT}/data/{VAULT_PATH}/*" {{
-        capabilities = ["read", "create"]
+        capabilities = ["read", "list", "create", "update", "delete"]
     }}
     path "{VAULT_MOUNT_POINT}/metadata/{VAULT_PATH}/*" {{
-        capabilities = ["delete"]
+        capabilities = ["read", "list", "create", "update", "delete"]
     }}
     """
 
     # inject policy
-    client.sys.create_or_update_policy(
-        name=VAULT_PATH,
-        policy=policy,
-    )
+    client.sys.create_or_update_policy(name=VAULT_PATH, policy=policy)
 
     role_name = "test_role"
     # create role and bind policy
@@ -170,9 +213,7 @@ def configure_vault(*, host: str, port: int):
     role_id = response["data"]["role_id"]
 
     # retrieve secret_id
-    response = client.auth.approle.generate_secret_id(
-        role_name=role_name,
-    )
+    response = client.auth.approle.generate_secret_id(role_name=role_name)
     secret_id = response["data"]["secret_id"]
 
     # log out root token client

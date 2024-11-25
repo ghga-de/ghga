@@ -94,8 +94,13 @@ async def test_nonexistent_vault_path(vault: VaultFixture):
         AsyncTestClient(app=app) as client,
     ):
         response = await client.get("/secrets/doesnotexist", headers=HEADERS)
-        assert response.status_code == 200
-        assert response.json() == []
+        assert response.status_code == 403
+        assert response.json() == {
+            "detail": "Permission not configured for vault path 'doesnotexist'"
+        }
 
         response = await client.delete("/secrets/doesnotexist", headers=HEADERS)
-        assert response.status_code == 204
+        assert response.status_code == 403
+        assert response.json() == {
+            "detail": "Permission not configured for vault path 'doesnotexist'"
+        }
