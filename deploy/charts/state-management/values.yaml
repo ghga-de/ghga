@@ -24,8 +24,6 @@ parameters:
     vault_url: http://vault:8200
     # Is set in the request
     vault_path: ""
-    # Required if token authentication is used
-    vault_token: ""
 
 containers:
 - name: rest
