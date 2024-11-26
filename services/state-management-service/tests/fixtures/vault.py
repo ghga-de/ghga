@@ -44,7 +44,9 @@ class VaultFixture:
     def __init__(self, config: VaultConfig):
         self.config = config
         self.vaults_used: set[str] = set()
-        self.client = hvac.Client(url=self.config.vault_url)
+        self.client = hvac.Client(
+            url=self.config.vault_url, verify=self.config.vault_verify
+        )
         self._auth_mount_point = config.vault_auth_mount_point
         self._secrets_mount_point = config.vault_secrets_mount_point
         self._kube_role = config.vault_kube_role

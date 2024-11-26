@@ -53,7 +53,9 @@ async def get_secrets(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(err)
         ) from err
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+        ) from exc
 
 
 @secrets_router.delete(
@@ -75,4 +77,6 @@ async def delete_secrets(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(err)
         ) from err
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+        ) from exc

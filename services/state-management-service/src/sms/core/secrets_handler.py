@@ -102,7 +102,7 @@ class SecretsHandler(SecretsHandlerPort):
     def __init__(self, config: VaultConfig):
         """Initialized approle-based client and log in"""
         self._config = config
-        self.client = HvacClient(url=config.vault_url)
+        self.client = HvacClient(url=config.vault_url, verify=config.vault_verify)
         self._auth_mount_point = config.vault_auth_mount_point
         self._secrets_mount_point = config.vault_secrets_mount_point
         self._kube_role = config.vault_kube_role
