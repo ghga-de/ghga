@@ -16,12 +16,12 @@
 """Join the functionality of all fixtures for API-level integration testing."""
 
 __all__ = [
-    "cleanup_fixture",
-    "joint_fixture",
     "JointFixture",
-    "populated_fixture",
     "PopulatedFixture",
+    "cleanup_fixture",
     "generate_work_order_token",
+    "joint_fixture",
+    "populated_fixture",
 ]
 
 import json

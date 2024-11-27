@@ -8,8 +8,6 @@ components:
         type:
           const: s3
           default: s3
-          enum:
-          - s3
           title: Type
           type: string
       required:
@@ -35,8 +33,6 @@ components:
         type:
           const: sha-256
           default: sha-256
-          enum:
-          - sha-256
           title: Type
           type: string
       required:
@@ -113,8 +109,6 @@ components:
           type: string
         exception_id:
           const: internalServerError
-          enum:
-          - internalServerError
           title: Exception Id
           type: string
       required:
@@ -140,8 +134,6 @@ components:
           type: string
         exception_id:
           const: noSuchObject
-          enum:
-          - noSuchObject
           title: Exception Id
           type: string
       required:
@@ -171,8 +163,6 @@ components:
           type: string
         exception_id:
           const: wrongFileAuthorizationError
-          enum:
-          - wrongFileAuthorizationError
           title: Exception Id
           type: string
       required:
