@@ -40,7 +40,7 @@ from fis.ports.inbound.ingest import (
 from fis.ports.outbound.daopub import FileUploadValidationSuccessDao
 from tests_fis.fixtures.config import get_config
 
-__all__ = ["joint_fixture", "JointFixture", "TEST_PAYLOAD"]
+__all__ = ["TEST_PAYLOAD", "JointFixture", "joint_fixture"]
 
 TEST_PAYLOAD = UploadMetadataBase(
     file_id="abc",

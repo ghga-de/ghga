@@ -73,7 +73,7 @@ class VaultConfig(BaseSettings):
         " If none is provided, the default is used.",
     )
     service_account_token_path: Path = Field(
-        default="/var/run/secrets/kubernetes.io/serviceaccount/token",
+        default=Path("/var/run/secrets/kubernetes.io/serviceaccount/token"),
         description="Path to service account token used by kube auth adapter.",
     )
 
