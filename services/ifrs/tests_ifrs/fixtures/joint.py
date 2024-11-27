@@ -16,10 +16,10 @@
 """Join the functionality of all fixtures for API-level integration testing."""
 
 __all__ = [
-    "JointFixture",
     "OUTBOX_BUCKET",
     "PERMANENT_BUCKET",
     "STAGING_BUCKET",
+    "JointFixture",
 ]
 
 from collections.abc import AsyncGenerator
