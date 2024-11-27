@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 
 from pcs.adapters.inbound.fastapi_ import dummies
 
-__all__ = ["require_token", "TokenAuthContext"]
+__all__ = ["TokenAuthContext", "require_token"]
 
 
 class TokenAuthContext(BaseModel):

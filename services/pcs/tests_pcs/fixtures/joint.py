@@ -32,7 +32,7 @@ from pcs.ports.inbound.file_deletion import FileDeletionPort
 from pcs.ports.outbound.daopub import FileDeletionDao
 from tests_pcs.fixtures.config import get_config
 
-__all__ = ["joint_fixture", "JointFixture"]
+__all__ = ["JointFixture", "joint_fixture"]
 
 
 @dataclass
