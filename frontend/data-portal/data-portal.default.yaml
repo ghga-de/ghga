@@ -13,5 +13,15 @@ log_level: INFO
 
 base_url: http://127.0.0.1:8080
 
+auth_url: /api/auth
 mass_url: /api/mass
 metldata_url: /api/metldata
+
+oidc_client_id: ghga-client
+oidc_redirect_url: oauth/callback
+oidc_scope: 'openid profile email'
+oidc_authority_url: https://login.aai.lifescience-ri.eu/oidc/
+oidc_authorization_url: authorize
+oidc_token_url: token
+oidc_userinfo_url: userinfo
+oidc_use_discovery: true

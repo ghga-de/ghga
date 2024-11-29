@@ -1,0 +1,61 @@
+<h2>Set up two-factor authentication</h2>
+
+@if (isLoading()) {
+  <p>Loading...</p>
+} @else if (isNewlyRegistered()) {
+  <p>Thank you for registering in the GHGA data portal.</p>
+  <p>
+    For additional security when accessing protected data with the GHGA data portal, we
+    are using two-factor authentication and verification of your identity via a contact
+    address that is separate from your primary E-Mail contact address.
+  </p>
+  <button mat-raised-button (click)="confirmRegistration()">Continue</button>
+} @else if (hasLostToken() && !lostTokenConfirmed()) {
+  <p>
+    In the case that you lost your phone or the setup of your authenticator app, you can
+    create a new authentication code setup.
+  </p>
+  <p>
+    However, all contact addresses that had been verified before will need to be
+    verified again.
+  </p>
+  <button mat-raised-button (click)="lostTokenConfirmed.set(true)">Continue</button>
+  <button mat-button (click)="cancelLostToken()">Cancel</button>
+} @else {
+  @let uri = setupUri() | async;
+  @if (uri) {
+    <p>
+      The two-factor authentication means that we require you to enter an additional
+      6-digit authentication code after you logged in via LS Login. This code can be
+      produced by an authenticator app such as Aegis, Microsoft Authenticator or Google
+      Authenticator, which you can install on your mobile phone.
+    </p>
+    <p>
+      In order to set up the authenticator app to produce the authentication codes for
+      the GHGA data portal, please scan this QR code with your authenticator app:
+    </p>
+    <qrcode [qrdata]="uri" [width]="160"></qrcode>
+    <button mat-button (click)="showManualSetup = !showManualSetup">
+      @if (showManualSetup) {
+        Hide
+      } @else {
+        Show
+      }
+      manual setup instructions
+    </button>
+    @if (showManualSetup) {
+      <p>
+        If you have trouble scanning the QR Code, please manually input the following
+        setup key in your authenticator app:
+      </p>
+      <p><input type="text" size="35" readonly [value]="getSecret(uri)" /></p>
+      <button mat-button (click)="copySecret(uri)">Copy the setup key</button>
+    }
+    <button mat-raised-button (click)="completeSetup()">Continue</button>
+  } @else if (uri === undefined) {
+    <p>Generating the TOTP setup...</p>
+  } @else {
+    <p>Error setting up two-factor authentication.</p>
+    <p><a routerLink="/">Go back to the home page.</a></p>
+  }
+}

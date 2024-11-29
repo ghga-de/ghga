@@ -131,21 +131,17 @@ export default [
             {
               from: ['config'],
               disallow: ['*'],
-              message: 'Config modules can only import modules with routes',
+              message: 'Config modules can only import routes and auth services',
             },
             {
               from: ['config'],
-              allow: ['routes'],
+              allow: ['routes', ['service', { context: 'auth' }]],
             },
-            // modules for routes may only import feature components
+            // modules for routes may not import ui components
             {
               from: ['routes'],
-              disallow: ['*'],
-              message: 'Modules for routes can only import feature components',
-            },
-            {
-              from: ['routes'],
-              allow: ['features'],
+              disallow: ['ui'],
+              message: 'Modules for routes cannot import ui components',
             },
             // unit tests are currently exempt from all rules
             {
@@ -180,7 +176,7 @@ export default [
             },
             // Auth service may be imported in other contexts
             {
-              from: ['features', 'service'],
+              from: ['features', 'service', 'routes'],
               allow: [['service', { context: 'auth' }]],
             },
             // Auth models may be imported in other contexts

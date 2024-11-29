@@ -30,6 +30,14 @@ If the staging backend requires an additional Basic authentication, you can set 
 dev_launcher staging username:password
 ```
 
+In order to make the OIDC and basic authentication work, you also need to add a `.devcontainer/local.env` file like this, with the proper credentials:
+
+```env
+data_portal_base_url=https://data.staging.ghga.dev
+data_portal_basic_auth=USERNAME:PASSWORD
+data_portal_oidc_client_id=OIDC_DEV_CLIENT_ID
+```
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:

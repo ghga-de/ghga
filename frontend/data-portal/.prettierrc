@@ -4,5 +4,6 @@
   "useTabs": false,
   "singleQuote": true,
   "printWidth": 88,
-  "proseWrap": "preserve"
+  "proseWrap": "preserve",
+  "endOfLine": "lf"
 }

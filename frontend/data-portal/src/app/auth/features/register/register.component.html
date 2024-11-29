@@ -1,0 +1,66 @@
+<h1>Registration with GHGA</h1>
+@let u = user();
+@switch (u) {
+  @case (undefined) {
+    <p>Loading...</p>
+  }
+  @case (null) {
+    <p>You are currently not logged in.</p>
+    <p><a routerLink="/">Go back to the home page.</a></p>
+  }
+  @default {
+    <h2>Welcome, {{ u.full_name }}!</h2>
+    <p>
+      @if (u.id) {
+        @if (u.state === 'NeedsReRegistration') {
+          Your contact information has changed since you last registered.
+        }
+        Please confirm that the information given below is correct.
+      } @else {
+        Since you haven't used our data portal before, we ask you to confirm your user
+        data and register with us.
+      }
+    </p>
+    <p>
+      <span class="label">Name:</span>
+      <span>{{ u.name }}</span>
+    </p>
+    <p>
+      <span class="label">E-Mail:</span>
+      <span>{{ u.email }}</span>
+    </p>
+    <p>
+      <span class="label">Life Science ID:</span>
+      <span>{{ u.ext_id }}</span>
+    </p>
+    <p>
+      <span class="label">Academic title:</span>
+      <mat-form-field>
+        <mat-select [formControl]="titleControl">
+          @for (title of allTitles; track title) {
+            <mat-option [value]="title || ''">{{ title || '–' }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </p>
+    <p>
+      <mat-checkbox [(ngModel)]="accepted">
+        I accept the
+        <a
+          href="https://www.ghga.de/Downloads/Terms_of_Use_-_GHGA_Data_Infrastructure_V1.0.pdf"
+          target="_blank"
+          rel="noreferrer"
+          >terms of use</a
+        >
+        and the
+        <a href="https://www.ghga.de/data-protection" target="_blank" rel="noreferrer">
+          privacy policy</a
+        >.
+      </mat-checkbox>
+    </p>
+    <button mat-button (click)="cancel()">Cancel and log out</button>
+    <button mat-raised-button (click)="register()" [disabled]="!accepted">
+      {{ u?.id ? 'Confirm' : 'Register' }}
+    </button>
+  }
+}

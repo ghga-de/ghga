@@ -2,8 +2,12 @@
   <a routerLink="/">GHGA Logo</a>
 
   <mat-nav-list>
-    <a routerLink="/" class="mx-1">Home</a
-    ><a routerLink="/browse" class="mx-1">Browse</a></mat-nav-list
-  >
-  <a routerLink="/">Login Button</a>
+    <a routerLink="/" class="mx-1">Home</a>
+    <a routerLink="/browse" class="mx-1">Browse</a>
+  </mat-nav-list>
+  @if (isLoggedIn()) {
+    <button mat-button (click)="onLogout()">Logout</button>
+  } @else {
+    <button mat-button (click)="onLogin()">Login</button>
+  }
 </mat-toolbar>

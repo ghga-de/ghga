@@ -5,7 +5,7 @@ RUN apk upgrade --no-cache --available
 # BUILDER: a container to build the service dist directory
 FROM base AS builder
 # install pnpm
-RUN corepack prepare pnpm@9.13.2 --activate
+RUN corepack prepare pnpm@9.14.2 --activate
 RUN npm install -g pnpm
 # install static web server
 RUN apk add curl sudo which
@@ -28,8 +28,7 @@ COPY --from=builder /service/dist/data-portal/browser ./dist
 COPY --from=builder /usr/local/bin/static-web-server /usr/local/bin
 # make the config file writeable to the appuser
 USER root
-RUN touch ./dist/config.js
-RUN chown appuser ./dist/config.js
+RUN touch ./dist/config.js && chown appuser ./dist/config.js
 USER appuser
 # install run script
 COPY ./run.js ./run.mjs

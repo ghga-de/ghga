@@ -1,5 +1,4 @@
-import { Component, inject } from '@angular/core';
-import { ConfigService } from '@app/shared/services/config.service';
+import { Component } from '@angular/core';
 
 /**
  * This is the home page component
@@ -9,8 +8,4 @@ import { ConfigService } from '@app/shared/services/config.service';
   imports: [],
   templateUrl: './home-page.component.html',
 })
-export class HomePageComponent {
-  #config = inject(ConfigService);
-
-  massUrl = this.#config.massUrl; // just to show that we can access the config service
-}
+export class HomePageComponent {}
