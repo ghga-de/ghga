@@ -1,4 +1,37 @@
 nav {
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+}
+
+div.icons-div a {
+  margin: 0 7px;
+  color: var(--mat-sys-outline);
+}
+
+nav div a span {
+  font-size: 75px;
+  line-height: 75px;
+  display: block;
+}
+
+nav div a div {
+  color: var(--mat-sys-inverse-primary);
+  border-color: var(--mat-sys-inverse-primary);
+}
+
+nav div.swirl {
+  height: 70px;
+  background: var(--svg-encoded);
+  background-size: 100% 100%;
+  background-repeat: no-repeat no-repeat;
+  background-position: center bottom;
+}
+
+nav a:hover,
+nav a:active {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 8%);
+}
+
+nav a:focus {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
 }

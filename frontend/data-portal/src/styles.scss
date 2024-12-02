@@ -1,8 +1,11 @@
 // Custom Theming for Angular Material
 // For more information: https://material.angular.io/guide/theming
-@use "@angular/material" as mat;
+@use '@angular/material' as mat;
 // Plus imports for other components in your app.
-@use "./assets/scss/ghga_colors";
+@use './assets/scss/ghga_colors';
+@use './assets/scss/material_symbols';
+@use './assets/scss/fontawesome';
+@use './assets/scss/fontawesome_brands';
 
 // Add Tailwind CSS
 @tailwind base;
@@ -11,10 +14,10 @@
 
 // Add Lexend font
 @font-face {
-  font-family: "Lexend";
+  font-family: 'Lexend';
   src:
-    local("Lexend"),
-    url(./assets/fonts/Lexend.ttf) format("truetype");
+    local('Lexend'),
+    url(./assets/fonts/Lexend.ttf) format('truetype');
 }
 
 // Include theme styles for core and each component used in your app.
@@ -24,18 +27,11 @@
   @include mat.theme(
     (
       color: (
-        theme-type: dark,
+        theme-type: light,
         primary: ghga_colors.$primary-palette,
         tertiary: ghga_colors.$tertiary-palette,
       ),
       typography: Lexend,
-      density: 0,
-    )
-  );
-  @include mat.toolbar-overrides(
-    (
-      container-background-color: var(--mat-sys-primary-container),
-      container-text-color: var(--mat-sys-on-primary-container),
     )
   );
 }
@@ -45,5 +41,5 @@ body {
   height: 100%;
   font-size: 16px;
   margin: 0;
-  font-family: Lexend, "Segoe UI", "Helvetica Neue", sans-serif;
+  font-family: Lexend, 'Segoe UI', 'Helvetica Neue', sans-serif;
 }

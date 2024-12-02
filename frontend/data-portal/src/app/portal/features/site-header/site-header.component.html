@@ -1,13 +1,43 @@
-<mat-toolbar color="primary" class="flex justify-between">
-  <a routerLink="/">GHGA Logo</a>
+<mat-toolbar class="py-2">
+  <mat-toolbar-row class="align-center flex justify-between">
+    <div class="flex h-full basis-1/4">
+      <a routerLink="/" class="flex h-full flex-nowrap items-center p-3"
+        ><img
+          src="assets/images/GHGA_logo_clean.png"
+          class="max-h-12"
+          alt="GHGA Logo"
+        />
+        <div class="ms-2 border-l ps-2 pt-1 uppercase">
+          <span class="text-3xl leading-3 tracking-wider">Data</span><br /><span
+            >Portal</span
+          >
+        </div></a
+      >
+    </div>
 
-  <mat-nav-list>
-    <a routerLink="/" class="mx-1">Home</a>
-    <a routerLink="/browse" class="mx-1">Browse</a>
-  </mat-nav-list>
-  @if (isLoggedIn()) {
-    <button mat-button (click)="onLogout()">Logout</button>
-  } @else {
-    <button mat-button (click)="onLogin()">Login</button>
-  }
+    <mat-nav-list class="basis-1/2 text-center">
+      <a
+        [id]="route === '/' ? 'activePage' : ''"
+        mat-flat-button
+        routerLink="/"
+        class="homeLink mx-1"
+        >Home</a
+      ><a
+        [id]="route === '/browse' ? 'activePage' : ''"
+        mat-flat-button
+        routerLink="/browse"
+        class="mx-1"
+        >Browse</a
+      ></mat-nav-list
+    >
+    <div class="basis-1/4 text-right">
+      @if (isLoggedIn()) {
+        <button mat-icon-button (click)="onLogout()">
+          <mat-icon>logout</mat-icon>
+        </button>
+      } @else {
+        <button mat-icon-button (click)="onLogin()"><mat-icon>login</mat-icon></button>
+      }
+    </div></mat-toolbar-row
+  >
 </mat-toolbar>

@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { MatIconRegistry } from '@angular/material/icon';
 import { RouterOutlet } from '@angular/router';
 import { ShowSessionComponent } from '@app/portal/features/show-session/show-session.component';
 import { SiteFooterComponent } from '@app/portal/features/site-footer/site-footer.component';
@@ -17,4 +18,17 @@ import { SiteHeaderComponent } from '@app/portal/features/site-header/site-heade
   ],
   templateUrl: './app.component.html',
 })
-export class AppComponent {}
+export class AppComponent implements OnInit {
+  /**
+   * Creating new instance of MatIconRegistry
+   * @param matIconReg
+   */
+  constructor(private matIconReg: MatIconRegistry) {}
+
+  /**
+   * Run on App component initialisation
+   */
+  ngOnInit(): void {
+    this.matIconReg.setDefaultFontSetClass('material-symbols-outlined');
+  }
+}

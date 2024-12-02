@@ -1,10 +1,14 @@
-<header class="mb-2">
-  <app-site-header></app-site-header>
-</header>
+<div class="relative min-h-screen">
+  <header class="mb-2">
+    <app-site-header></app-site-header>
+  </header>
 
-<main>
-  <router-outlet />
-  <app-show-session></app-show-session>
-</main>
+  <main class="break-words p-5 text-lg">
+    <router-outlet />
+    <app-show-session></app-show-session>
+  </main>
 
-<footer class="mt-2"><app-site-footer></app-site-footer></footer>
+  <footer>
+    <app-site-footer></app-site-footer>
+  </footer>
+</div>

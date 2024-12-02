@@ -1,8 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatNavList } from '@angular/material/list';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { RouterLink } from '@angular/router';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth.service';
 
 /**
@@ -12,9 +13,18 @@ import { AuthService } from '@app/auth/services/auth.service';
   selector: 'app-site-header',
   templateUrl: './site-header.component.html',
   standalone: true,
-  imports: [MatToolbarModule, MatNavList, MatButtonModule, RouterLink],
+  imports: [MatToolbarModule, MatNavList, MatButtonModule, MatIconModule, RouterLink],
+  styleUrl: './site-header.component.scss',
 })
 export class SiteHeaderComponent {
+  route: string = '';
+  constructor(private router: Router) {
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.route = this.router.url;
+      } else return;
+    });
+  }
   #authService = inject(AuthService);
 
   isLoggedIn = this.#authService.isLoggedIn;
