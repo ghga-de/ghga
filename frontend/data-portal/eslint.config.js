@@ -50,6 +50,7 @@ export default [
       'jsdoc/require-jsdoc': [
         'warn',
         {
+          exemptEmptyConstructors: true,
           require: {
             FunctionDeclaration: true,
             MethodDefinition: true,

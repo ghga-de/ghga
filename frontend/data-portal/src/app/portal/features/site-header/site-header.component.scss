@@ -10,12 +10,12 @@ mat-toolbar {
 }
 
 mat-toolbar-row div div {
-  color: var(--mat-sys-inverse-primary);
-  border-color: var(--mat-sys-inverse-primary);
+  color: var(--mat-sys-quinary);
+  border-color: var(--mat-sys-quinary);
 }
 
 a#activePage {
-  background-color: var(--mat-sys-secondary);
+  background-color: var(--mat-sys-tertiary);
 }
 
 button {

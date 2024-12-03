@@ -17,17 +17,19 @@ import { AuthService } from '@app/auth/services/auth.service';
   styleUrl: './site-header.component.scss',
 })
 export class SiteHeaderComponent {
+  #router = inject(Router);
+  #authService = inject(AuthService);
+  isLoggedIn = this.#authService.isLoggedIn;
+
   route: string = '';
-  constructor(private router: Router) {
-    this.router.events.subscribe((event) => {
+
+  constructor() {
+    this.#router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        this.route = this.router.url;
+        this.route = this.#router.url;
       } else return;
     });
   }
-  #authService = inject(AuthService);
-
-  isLoggedIn = this.#authService.isLoggedIn;
 
   /**
    * User login
