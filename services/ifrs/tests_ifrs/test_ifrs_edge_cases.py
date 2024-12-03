@@ -26,6 +26,7 @@ from hexkit.providers.akafka.provider.daosub import CHANGE_EVENT_TYPE
 from hexkit.providers.s3.testutils import (
     FileObject,
     S3Fixture,  # noqa: F401
+    temp_file_object,
     tmp_file,  # noqa: F401
 )
 
@@ -276,7 +277,6 @@ async def test_storage_db_inconsistency(joint_fixture: JointFixture):
         ),
     ],
 )
-@pytest.mark.asyncio()
 async def test_outbox_subscriber_routing(
     joint_fixture: JointFixture,
     upsertion_event: JsonObject,
@@ -297,3 +297,93 @@ async def test_outbox_subscriber_routing(
 
     await joint_fixture.outbox_subscriber.run(forever=False)
     mock.assert_awaited_once()
+
+
+async def test_error_during_copy(joint_fixture: JointFixture, caplog):
+    """Errors during `object_storage.copy_object` should be logged and re-raised."""
+    # Insert FileMetadata record into the DB
+    dao = joint_fixture.file_metadata_dao
+    await dao.insert(EXAMPLE_METADATA)
+
+    s3_alias = EXAMPLE_METADATA.storage_alias
+    source_bucket = joint_fixture.config.object_storages[s3_alias].bucket
+    outbox_bucket = "outbox-bucket"
+
+    # Upload a matching object to S3
+    with temp_file_object(source_bucket, EXAMPLE_METADATA.object_id) as file:
+        await joint_fixture.s3.populate_file_objects([file])
+
+    # Run the file-staging operation to encounter an error (outbox bucket doesn't exist)
+    caplog.clear()
+    caplog.set_level("CRITICAL")
+    with pytest.raises(joint_fixture.file_registry.CopyOperationError):
+        await joint_fixture.file_registry.stage_registered_file(
+            file_id=EXAMPLE_METADATA.file_id,
+            decrypted_sha256=EXAMPLE_METADATA.decrypted_sha256,
+            outbox_bucket_id=outbox_bucket,
+            outbox_object_id=EXAMPLE_METADATA.object_id,
+        )
+
+    # Verify the log message exists
+    assert caplog.records
+    assert caplog.records[0].message == (
+        "Fatal error occurred while copying file with the ID 'examplefile001' to the"
+        + " bucket 'outbox-bucket'. The exception is: The bucket with ID 'outbox-bucket'"
+        + " does not exist."
+    )
+
+    # Upload the file to the outbox bucket so we trigger ObjectAlreadyExistsError
+    with temp_file_object(outbox_bucket, EXAMPLE_METADATA.object_id) as file:
+        await joint_fixture.s3.populate_file_objects([file])
+
+    # Run the file-staging operation to encounter the error
+    caplog.clear()
+    caplog.set_level("INFO")
+    await joint_fixture.file_registry.stage_registered_file(
+        file_id=EXAMPLE_METADATA.file_id,
+        decrypted_sha256=EXAMPLE_METADATA.decrypted_sha256,
+        outbox_bucket_id=outbox_bucket,
+        outbox_object_id=EXAMPLE_METADATA.object_id,
+    )
+
+    assert caplog.records
+    assert caplog.records[0].getMessage() == (
+        "Object corresponding to file ID 'examplefile001' is already in the outbox."
+    )
+
+
+async def test_copy_when_file_exists_in_outbox(joint_fixture: JointFixture, caplog):
+    """Test that `FileRegistry.stage_registered_file` returns early if a copy is
+    unnecessary.
+    """
+    # Insert FileMetadata record into the DB
+    dao = joint_fixture.file_metadata_dao
+    await dao.insert(EXAMPLE_METADATA)
+
+    # Populate the source and dest buckets
+    s3_alias = EXAMPLE_METADATA.storage_alias
+    source_bucket = joint_fixture.config.object_storages[s3_alias].bucket
+    outbox_bucket = "outbox-bucket"
+    with temp_file_object(source_bucket, EXAMPLE_METADATA.object_id) as file:
+        await joint_fixture.s3.populate_file_objects([file])
+
+    with temp_file_object(outbox_bucket, EXAMPLE_METADATA.object_id) as file:
+        await joint_fixture.s3.populate_file_objects([file])
+
+    # Run the file-staging operation, which should return early (it will catch the
+    # error raised by the hexkit provider, which asserts that the file doesn't exist
+    # in the outbox)
+    caplog.clear()
+    caplog.set_level("INFO")
+    await joint_fixture.file_registry.stage_registered_file(
+        file_id=EXAMPLE_METADATA.file_id,
+        decrypted_sha256=EXAMPLE_METADATA.decrypted_sha256,
+        outbox_bucket_id=outbox_bucket,
+        outbox_object_id=EXAMPLE_METADATA.object_id,
+    )
+
+    # Check the log
+    assert caplog.records
+    assert caplog.records[0].getMessage() == (
+        "Object corresponding to file ID 'examplefile001' is already in the outbox."
+    )

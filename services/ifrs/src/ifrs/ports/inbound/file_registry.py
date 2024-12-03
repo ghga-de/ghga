@@ -91,6 +91,16 @@ class FileRegistryPort(ABC):
             )
             super().__init__(message)
 
+    class CopyOperationError(FatalError):
+        """Thrown if an unresolvable error occurs while copying a file between buckets."""
+
+        def __init__(self, file_id: str, dest_bucket_id: str, exc_text: str):
+            message = (
+                f"Fatal error occurred while copying file with the ID '{file_id}'"
+                + f" to the bucket '{dest_bucket_id}'. The exception is: {exc_text}"
+            )
+            super().__init__(message)
+
     @abstractmethod
     async def register_file(
         self,
@@ -146,6 +156,8 @@ class FileRegistryPort(ABC):
             self.FileInRegistryButNotInStorageError:
                 When encountering inconsistency between the registry (the database) and
                 the permanent storage. This a fatal error.
+            self.CopyOperationError:
+                When an error occurs while attempting to copy the object to the outbox.
         """
         ...
 
