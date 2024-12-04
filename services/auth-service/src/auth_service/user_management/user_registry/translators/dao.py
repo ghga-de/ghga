@@ -26,7 +26,7 @@ from ..models.ivas import Iva as IvaDto
 from ..models.users import User as UserDto
 from ..ports.dao import UserDaoPublisherFactoryPort
 
-__all__ = ["UserDaoPublisherFactory", "UserDaoConfig"]
+__all__ = ["UserDaoConfig", "UserDaoPublisherFactory"]
 
 
 class UserDaoConfig(BaseSettings):

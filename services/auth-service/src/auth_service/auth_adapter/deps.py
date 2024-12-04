@@ -37,9 +37,9 @@ from .ports.totp import TOTPHandlerPort
 from .translators.dao import UserTokenDaoFactory
 
 __all__ = [
-    "get_user_token_dao",
-    "SessionStoreDependency",
     "SessionDependency",
+    "SessionStoreDependency",
+    "get_user_token_dao",
 ]
 
 SESSION_COOKIE = "session"

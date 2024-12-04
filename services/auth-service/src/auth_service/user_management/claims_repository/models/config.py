@@ -21,7 +21,7 @@ from auth_service.user_management.user_registry.models.ivas import IvaType
 
 from . import BaseDto
 
-__all__ = ["UserWithIVA", "IvaType"]
+__all__ = ["IvaType", "UserWithIVA"]
 
 
 class UserWithIVA(BaseDto):

@@ -32,7 +32,7 @@ from ghga_service_commons.auth.policies import (
 
 from auth_service.config import CONFIG
 
-__all__ = ["UserAuthContext", "StewardAuthContext"]
+__all__ = ["StewardAuthContext", "UserAuthContext"]
 
 
 auth_provider = GHGAAuthContextProvider(config=CONFIG, context_class=AuthContext)

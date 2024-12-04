@@ -39,7 +39,7 @@ from .translators.dao import (
 )
 from .translators.event_pub import EventPubTranslator, EventPubTranslatorConfig
 
-__all__ = ["get_user_dao", "IvaDao", "UserDao", "get_user_registry"]
+__all__ = ["IvaDao", "UserDao", "get_user_dao", "get_user_registry"]
 
 
 def get_user_dao_factory(

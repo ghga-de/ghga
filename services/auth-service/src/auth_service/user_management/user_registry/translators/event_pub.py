@@ -25,7 +25,7 @@ from pydantic_settings import BaseSettings
 from ..models.ivas import Iva
 from ..ports.event_pub import EventPublisherPort
 
-__all__ = ["EventPubTranslatorConfig", "EventPubTranslator"]
+__all__ = ["EventPubTranslator", "EventPubTranslatorConfig"]
 
 
 class EventPubTranslatorConfig(BaseSettings):

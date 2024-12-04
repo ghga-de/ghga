@@ -25,11 +25,11 @@ from hexkit.providers.mongokafka import MongoKafkaConfig, MongoKafkaDaoPublisher
 from .config import CONFIG, Config
 
 __all__ = [
+    "Config",
     "Depends",
     "get_config",
-    "get_mongodb_dao_factory",
     "get_mongo_kafka_dao_factory",
-    "Config",
+    "get_mongodb_dao_factory",
 ]
 
 

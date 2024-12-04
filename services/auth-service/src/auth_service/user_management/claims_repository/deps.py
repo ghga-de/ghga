@@ -27,7 +27,7 @@ from auth_service.deps import (
 from .ports.dao import ClaimDao
 from .translators.dao import ClaimDaoConfig, ClaimDaoFactory
 
-__all__ = ["get_claim_dao", "ClaimDao"]
+__all__ = ["ClaimDao", "get_claim_dao"]
 
 
 def get_claim_dao_factory(

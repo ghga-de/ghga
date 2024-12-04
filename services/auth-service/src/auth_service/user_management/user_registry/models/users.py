@@ -23,7 +23,7 @@ from pydantic import EmailStr, Field
 
 from . import BaseDto
 
-__all__ = ["User", "UserData", "UserStatus", "StatusChange"]
+__all__ = ["StatusChange", "User", "UserData", "UserStatus"]
 
 
 class UserStatus(str, Enum):

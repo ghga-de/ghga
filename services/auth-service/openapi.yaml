@@ -17,128 +17,7 @@ components:
       - dac
       title: AuthorityLevel
       type: string
-    Claim-Input:
-      additionalProperties: false
-      description: A claim about a user with a claim ID
-      properties:
-        asserted_by:
-          anyOf:
-          - $ref: '#/components/schemas/AuthorityLevel'
-          - type: 'null'
-          description: Authority level
-          examples:
-          - so
-          - dac
-          - system
-        assertion_date:
-          description: Date when the assertion was made
-          examples:
-          - '2022-11-30T12:00:00Z'
-          format: date-time
-          title: Assertion Date
-          type: string
-        conditions:
-          anyOf:
-          - items:
-              items:
-                $ref: '#/components/schemas/Condition-Input'
-              type: array
-            type: array
-          - type: 'null'
-          description: Set of conditions
-          title: Conditions
-        creation_date:
-          description: Date of creation of this claim
-          format: date-time
-          title: Creation Date
-          type: string
-        id:
-          description: Internal claim ID
-          title: Id
-          type: string
-        iva_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: ID of an IVA associated with this claim
-          title: Iva Id
-        revocation_date:
-          anyOf:
-          - format: date-time
-            type: string
-          - type: 'null'
-          description: If revoked, date of revocation
-          title: Revocation Date
-        source:
-          description: Asserting organization
-          examples:
-          - https://home.org
-          format: uri
-          maxLength: 2083
-          minLength: 1
-          title: Source
-          type: string
-        sub_source:
-          anyOf:
-          - format: uri
-            maxLength: 2083
-            minLength: 1
-            type: string
-          - type: 'null'
-          description: Asserting sub-organization
-          examples:
-          - https://dac.home.org
-          title: Sub Source
-        user_id:
-          description: Internal user ID
-          title: User Id
-          type: string
-        valid_from:
-          description: Start date of validity
-          examples:
-          - '2023-01-01T00:00:00Z'
-          format: date-time
-          title: Valid From
-          type: string
-        valid_until:
-          description: End date of validity
-          examples:
-          - '2023-12-31T23:59:59Z'
-          format: date-time
-          title: Valid Until
-          type: string
-        visa_type:
-          $ref: '#/components/schemas/VisaType'
-          examples:
-          - AffiliationAndRole
-        visa_value:
-          anyOf:
-          - format: email
-            type: string
-          - format: uri
-            maxLength: 2083
-            minLength: 1
-            type: string
-          - items:
-              $ref: '#/components/schemas/Identity'
-            type: array
-          description: Scope of the claim depending of the visa type
-          examples:
-          - faculty@home.org
-          title: Visa Value
-      required:
-      - valid_from
-      - valid_until
-      - visa_type
-      - visa_value
-      - assertion_date
-      - source
-      - user_id
-      - creation_date
-      - id
-      title: Claim
-      type: object
-    Claim-Output:
+    Claim:
       additionalProperties: false
       description: A claim about a user with a claim ID
       properties:
@@ -191,13 +70,14 @@ components:
           description: If revoked, date of revocation
           title: Revocation Date
         source:
-          anyOf:
-          - type: string
-          - type: 'null'
           description: Asserting organization
           examples:
           - https://home.org
+          format: uri
+          maxLength: 2083
+          minLength: 1
           title: Source
+          type: string
         sub_source:
           anyOf:
           - type: string
@@ -657,77 +537,7 @@ components:
           description: Previous user status
       title: StatusChange
       type: object
-    User-Input:
-      additionalProperties: false
-      description: Complete user model with ID
-      properties:
-        active_access_requests:
-          default: []
-          description: List of IDs of all active data access requests created by the
-            user
-          items:
-            type: string
-          title: Active Access Requests
-          type: array
-        active_submissions:
-          default: []
-          description: List of IDs of all active submissions created by the user
-          items:
-            type: string
-          title: Active Submissions
-          type: array
-        email:
-          description: Preferred e-mail address of the user
-          examples:
-          - user@home.org
-          format: email
-          title: Email
-          type: string
-        ext_id:
-          description: External (Life Science) ID
-          examples:
-          - user@lifescience-ri.eu
-          format: email
-          title: External ID
-          type: string
-        id:
-          description: Internal user ID
-          title: Id
-          type: string
-        name:
-          description: Full name of the user
-          examples:
-          - Rosalind Franklin
-          title: Name
-          type: string
-        registration_date:
-          description: Date when the user was registered
-          format: date-time
-          title: Registration Date
-          type: string
-        status:
-          $ref: '#/components/schemas/UserStatus'
-          description: Registration status of the user
-        status_change:
-          anyOf:
-          - $ref: '#/components/schemas/StatusChange'
-          - type: 'null'
-          description: Last status change
-        title:
-          anyOf:
-          - $ref: '#/components/schemas/AcademicTitle'
-          - type: 'null'
-          description: Academic title of the user
-          title: Academic title
-      required:
-      - registration_date
-      - name
-      - email
-      - ext_id
-      - status
-      title: User
-      type: object
-    User-Output:
+    User:
       additionalProperties: false
       description: Complete user model with ID
       properties:
@@ -1308,7 +1118,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User-Input'
+                $ref: '#/components/schemas/User'
           description: User was successfully registered.
         '401':
           description: Not authorized to register users.
@@ -1376,7 +1186,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User-Input'
+                $ref: '#/components/schemas/User'
           description: Requested user has been found.
         '401':
           description: Not authorized to request user data.
@@ -1486,7 +1296,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/Claim-Input'
+                  $ref: '#/components/schemas/Claim'
                 title: Response 200 Get Claims
                 type: array
           description: User claims have been retrieved.
@@ -1522,7 +1332,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Claim-Input'
+                $ref: '#/components/schemas/Claim'
           description: Claim was successfully stored.
         '400':
           description: Claim cannot be stored.

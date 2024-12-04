@@ -128,7 +128,7 @@ class Config(
     oidc_authority_url: HttpUrl = Field(
         default="https://login.aai.lifescience-ri.eu/oidc/",
         description="external OIDC authority URL used by the auth adapter",
-    )
+    )  # type: ignore
     oidc_issuer: str = Field(
         default="https://login.aai.lifescience-ri.eu/oidc/",
         description="external OIDC issuer for access tokens used by the auth adapter"
@@ -138,7 +138,7 @@ class Config(
         default="https://login.aai.lifescience-ri.eu/oidc/userinfo",
         description="external OIDC userinfo endpoint used by the auth adapter"
         " (determined using OIDC discovery if None)",
-    )
+    )  # type: ignore
     oidc_client_id: str = Field(
         default="ghga-data-portal", description="the registered OIDC client ID"
     )
@@ -146,7 +146,7 @@ class Config(
     organization_url: HttpUrl = Field(
         default="https://ghga.de",
         description="the URL used as source for internal claims",
-    )
+    )  # type: ignore
 
     db_name: str = Field(
         default="auth-db",

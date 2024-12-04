@@ -29,11 +29,11 @@ __all__ = [
     "create_controlled_access_filter",
     "create_data_steward_claim",
     "dataset_id_for_download_access",
-    "is_valid_claim",
-    "is_internal_claim",
-    "is_data_steward_claim",
     "get_dataset_for_value",
     "has_download_access_for_dataset",
+    "is_data_steward_claim",
+    "is_internal_claim",
+    "is_valid_claim",
 ]
 
 

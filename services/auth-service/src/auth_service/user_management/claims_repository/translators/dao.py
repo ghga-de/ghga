@@ -24,7 +24,7 @@ from ..models.claims import Claim as ClaimDto
 from ..models.claims import ClaimFullCreation as ClaimCreationDto
 from ..ports.dao import ClaimDao, ClaimDaoFactoryPort
 
-__all__ = ["ClaimDaoFactory", "ClaimDaoConfig"]
+__all__ = ["ClaimDaoConfig", "ClaimDaoFactory"]
 
 
 class ClaimDaoConfig(BaseSettings):

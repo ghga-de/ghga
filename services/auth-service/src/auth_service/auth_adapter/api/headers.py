@@ -22,7 +22,7 @@ from fastapi import Request, Response, status
 
 from ..core.session_store import Session
 
-__all__ = ["get_bearer_token", "session_to_header", "pass_auth_response"]
+__all__ = ["get_bearer_token", "pass_auth_response", "session_to_header"]
 
 
 def get_bearer_token(*header_values: str | None) -> str | None:

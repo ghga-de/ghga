@@ -31,7 +31,7 @@ from auth_service.config import CONFIG, Config
 
 from .session_store import Session
 
-__all__ = ["get_user_info", "internal_token_from_session", "get_jwt_config"]
+__all__ = ["get_jwt_config", "get_user_info", "internal_token_from_session"]
 
 log = logging.getLogger(__name__)
 

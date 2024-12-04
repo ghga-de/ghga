@@ -29,7 +29,7 @@ from ..deps import ClaimDao
 from ..models.claims import VisaType
 from .claims import is_data_steward_claim, is_valid_claim
 
-__all__ = ["user_exists", "user_with_iva_exists", "is_data_steward"]
+__all__ = ["is_data_steward", "user_exists", "user_with_iva_exists"]
 
 
 async def user_exists(user_id: str, *, user_dao: UserDao) -> bool:

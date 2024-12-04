@@ -23,7 +23,7 @@ from random import randint
 
 import pytest
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
-from pydantic import AnyUrl, SecretStr
+from pydantic import AnyHttpUrl, SecretStr
 
 from auth_service.auth_adapter.core.totp import (
     TOTPAlgorithm,
@@ -39,7 +39,7 @@ def create_totp_handler() -> TOTPHandler:
     encryption_key = TOTPHandler.random_encryption_key()
     config = TOTPConfig(
         totp_issuer="Test Issuer",
-        totp_image=AnyUrl("https://www.test.dev/logo.png"),
+        totp_image=AnyHttpUrl("https://www.test.dev/logo.png"),
         totp_encryption_key=SecretStr(encryption_key),
     )
     return TOTPHandler(config)
