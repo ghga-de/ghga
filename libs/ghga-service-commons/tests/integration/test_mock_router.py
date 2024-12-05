@@ -219,7 +219,7 @@ def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
     def fails_also():  # will only get passed to error if we set handle_exception_subclasses
         raise TestValueError()
 
-    httpx_mock.add_callback(callback=throwaway.handle_request)
+    httpx_mock.add_callback(callback=throwaway.handle_request, is_reusable=True)
 
     with httpx.Client(base_url=BASE_URL) as client:
         client.get("/gotohandler")

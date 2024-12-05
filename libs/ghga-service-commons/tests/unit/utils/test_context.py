@@ -16,6 +16,9 @@
 
 """Test context utils."""
 
+import sys
+from contextlib import nullcontext
+
 import pytest
 
 from ghga_service_commons.utils.context import asyncnullcontext
@@ -25,6 +28,14 @@ from ghga_service_commons.utils.context import asyncnullcontext
 async def test_asyncnullcontext():
     """Test the asyncnullcontext context manager."""
     value = "test"
+
+    modern_python = sys.version_info >= (3, 10)
+
+    try:
+        async with nullcontext(value) as test:
+            assert test == value
+    except AttributeError:
+        assert not modern_python, "nullcontext should work with async"
 
     async with asyncnullcontext(value) as test:
         assert test == value
