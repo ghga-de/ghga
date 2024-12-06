@@ -185,6 +185,12 @@ export default [
               from: ['features', 'service', 'models'],
               allow: [['model', { context: 'auth' }]],
             },
+            // Mock module may only import models
+            {
+              from: ['mock'],
+              disallow: [['*', { context: '!model' }]],
+              message: 'Mock modules can only import models',
+            },
           ],
         },
       ],
@@ -253,6 +259,11 @@ export default [
           pattern: 'src/app/*/utils',
           mode: 'folder',
           capture: ['context'],
+        },
+        {
+          type: 'mock',
+          mode: 'folder',
+          pattern: 'src/mocks',
         },
       ],
     },

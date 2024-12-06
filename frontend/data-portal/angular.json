@@ -28,6 +28,11 @@
                 "glob": "**/*",
                 "input": "public"
               },
+              {
+                "glob": "mockServiceWorker.js",
+                "input": "src/mocks",
+                "output": "./"
+              },
               "src/assets"
             ],
             "styles": ["src/styles.scss"],
@@ -87,6 +92,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "mockServiceWorker.js",
+                "input": "src/mocks",
+                "output": "./"
               }
             ],
             "styles": ["src/styles.scss"],
