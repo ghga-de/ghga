@@ -25,7 +25,7 @@ from pytest import fixture
 from .config import Config
 from .http_client import HttpClient
 
-__all__ = ["iva_fixture", "IVAFixture"]
+__all__ = ["IVAFixture", "iva_fixture"]
 
 
 class IVA(BaseModel):

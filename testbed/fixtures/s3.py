@@ -24,7 +24,7 @@ from fixtures.config import Config, S3StorageConfig
 from fixtures.http_client import HttpClient
 from fixtures.state_manager import StateManager
 
-__all__ = ["s3_fixture", "S3Fixture"]
+__all__ = ["S3Fixture", "s3_fixture"]
 
 DELETION_TIMEOUT = 60
 

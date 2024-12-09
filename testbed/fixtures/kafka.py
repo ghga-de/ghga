@@ -24,7 +24,7 @@ from fixtures.config import Config
 from fixtures.http_client import HttpClient
 from fixtures.state_manager import StateManager
 
-__all__ = ["kafka_fixture", "KafkaFixture"]
+__all__ = ["KafkaFixture", "kafka_fixture"]
 
 
 class KafkaFixture(StateManager):

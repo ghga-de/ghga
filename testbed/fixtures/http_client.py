@@ -25,7 +25,7 @@ from pytest import fixture
 
 from fixtures.config import Config
 
-__all__ = ["http_fixture", "HttpClient", "Response"]
+__all__ = ["HttpClient", "Response", "http_fixture"]
 
 TIMEOUT = 10  # timeout for HTTP requests in seconds
 

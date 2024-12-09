@@ -28,9 +28,9 @@ from fixtures.http_client import HttpClient
 from fixtures.state_manager import StateManager
 
 __all__ = [
-    "mongo_fixture",
     "MongoClient",
     "MongoFixture",
+    "mongo_fixture",
 ]
 
 TIMEOUT = 10  # timeout for database operations in seconds

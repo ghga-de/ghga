@@ -55,6 +55,7 @@ def delete_files_of_complete_datasets(http: HttpClient, fixtures: JointFixture):
             fixtures.config.pcs_db_name,
             fixtures.config.pcs_file_deletions_collection,
             query={"_id": file_id},
+            timeout=TIMEOUT,
         )
         assert document
 
@@ -80,6 +81,7 @@ def check_services_for_deleted_files(fixtures: JointFixture):
             collection_name=service[1],
             query={"_id": {"$in": accessions}},
             number=len(accessions),
+            timeout=TIMEOUT,
         )
         assert (
             not documents
