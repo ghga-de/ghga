@@ -17,6 +17,7 @@
 
 import asyncio
 import multiprocessing
+import re
 import time
 
 import httpx
@@ -24,6 +25,7 @@ import pytest
 from fastapi import FastAPI
 
 from ghga_service_commons.api import ApiConfigBase, run_server
+from ghga_service_commons.api.api import configure_app
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.httpyexpect.server import HttpException
 from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
@@ -32,8 +34,9 @@ from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
 from tests.integration.fixtures.hello_world_test_app import GREETING, app
 from tests.integration.fixtures.utils import find_free_port
 
+pytestmark = pytest.mark.asyncio()
 
-@pytest.mark.asyncio
+
 async def test_run_server():
     """Test the run_server wrapper function."""
     config = ApiConfigBase()
@@ -58,7 +61,6 @@ async def test_run_server():
     assert response.json() == GREETING
 
 
-@pytest.mark.asyncio
 async def test_configure_exception_handler():
     """Test the exception handler configuration of a FastAPI app."""
     # example params for an http exception
@@ -92,3 +94,26 @@ async def test_configure_exception_handler():
     assert body["exception_id"] == exception_id
     assert body["description"] == description
     assert body["data"] == data
+
+
+async def test_request_duration_log(caplog):
+    """Check the middleware function that logs request duration in ms."""
+    caplog.set_level("INFO")
+
+    # small fastapi app with basic endpoint
+    test_app = FastAPI()
+    test_app.get("/")(lambda: 200)
+
+    config = ApiConfigBase()
+    configure_app(test_app, config)
+
+    client = AsyncTestClient(test_app)
+    await client.get("/")
+
+    # Get list of the log messages
+    for record in caplog.record_tuples:
+        if record[0] == "ghga_service_commons.api.api":
+            assert re.match(r'GET http://.* "200 OK" - \d+ ms$', record[2])
+            break
+    else:
+        assert False, "Request duration log was not captured"

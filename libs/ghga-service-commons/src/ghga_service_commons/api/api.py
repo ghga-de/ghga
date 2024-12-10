@@ -20,7 +20,9 @@ RESTful webapps with FastAPI.
 """
 
 import asyncio
+import http
 import logging
+import time
 from collections.abc import Sequence
 from functools import partial
 from typing import Optional, Union
@@ -159,7 +161,7 @@ def set_header_correlation_id(request: Request, correlation_id: str):
     request.scope.update(headers=headers.raw)
     # delete _headers to force update
     delattr(request, "_headers")
-    log.info("Assigned %s as header correlation ID value.", correlation_id)
+    log.debug("Assigned %s as header correlation ID value.", correlation_id)
 
 
 def get_validated_correlation_id(
@@ -177,7 +179,7 @@ def get_validated_correlation_id(
     """
     if not correlation_id and generate_correlation_id:
         correlation_id = new_correlation_id()
-        log.info("Generated new correlation id: %s", correlation_id)
+        log.debug("Generated new correlation id: %s", correlation_id)
     else:
         validate_correlation_id(correlation_id)
     return correlation_id
@@ -217,6 +219,29 @@ async def correlation_id_middleware(
         return response
 
 
+async def request_logging_middleware(request: Request, call_next):
+    """Measure and log the amount of time it takes to process the HTTP request."""
+    url = request.url
+    start_time = time.time()
+    response = await call_next(request)
+    duration = int(round((time.time() - start_time) * 1000))
+    try:
+        status_phrase = http.HTTPStatus(response.status_code).phrase
+    except ValueError:
+        status_phrase = ""
+    msg = f'{request.method} {url} "{response.status_code} {status_phrase}" - {duration} ms'
+    log.info(
+        msg,
+        extra={
+            "method": request.method,
+            "url": str(url),
+            "status_code": response.status_code,
+            "duration_ms": duration,
+        },
+    )
+    return response
+
+
 def configure_app(app: FastAPI, config: ApiConfigBase):
     """Configure a FastAPI app based on a config object."""
     app.root_path = config.api_root_path.rstrip("/")
@@ -235,6 +260,7 @@ def configure_app(app: FastAPI, config: ApiConfigBase):
         kwargs["allow_credentials"] = config.cors_allow_credentials
 
     app.add_middleware(CORSMiddleware, **kwargs)
+    app.add_middleware(BaseHTTPMiddleware, dispatch=request_logging_middleware)
     app.add_middleware(
         BaseHTTPMiddleware,
         dispatch=partial(
