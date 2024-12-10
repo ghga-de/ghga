@@ -222,9 +222,9 @@ async def correlation_id_middleware(
 async def request_logging_middleware(request: Request, call_next):
     """Measure and log the amount of time it takes to process the HTTP request."""
     url = request.url
-    start_time = time.time()
+    start_time = time.perf_counter()
     response = await call_next(request)
-    duration = int(round((time.time() - start_time) * 1000))
+    duration = int(round((time.perf_counter() - start_time) * 1000))
     try:
         status_phrase = http.HTTPStatus(response.status_code).phrase
     except ValueError:
