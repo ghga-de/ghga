@@ -52,6 +52,7 @@ __all__ = [
     "correlation_id_middleware",
     "configure_app",
     "run_server",
+    "UnexpectedCorrelationIdError",
 ]
 
 # unofficial, but frequently used header name
@@ -185,6 +186,17 @@ def get_validated_correlation_id(
     return correlation_id
 
 
+class UnexpectedCorrelationIdError(RuntimeError):
+    """Raised when the value of a response's correlation ID is unexpected."""
+
+    def __init__(self, *, correlation_id: str):
+        """Set the message and raise"""
+        message = (
+            f"Response contained unexpected correlation ID header: '{correlation_id}'"
+        )
+        super().__init__(message)
+
+
 async def correlation_id_middleware(
     request: Request, call_next, generate_correlation_id: bool
 ):
@@ -194,7 +206,9 @@ async def correlation_id_middleware(
 
     Raises:
         InvalidCorrelationIdError: If a correlation ID is invalid or empty (and
-            `generate_correlation_id` is False).
+            `generate_correlation_id` is False)
+        UnexpectedCorrelationIdError: If the correlation ID is already in the response
+            headers but the value is not what it should be.
     """
     correlation_id = request.headers.get(CORRELATION_ID_HEADER_NAME, "")
 
@@ -215,7 +229,16 @@ async def correlation_id_middleware(
 
     # Set the correlation ID ContextVar
     async with set_correlation_id(validated_correlation_id):
-        response = await call_next(request)
+        response: Response = await call_next(request)
+
+        # Update the response to include the correlation ID
+        cid_in_response = response.headers.get(CORRELATION_ID_HEADER_NAME, "")
+        if not cid_in_response:
+            response.headers.append(
+                CORRELATION_ID_HEADER_NAME, validated_correlation_id
+            )
+        elif cid_in_response != validated_correlation_id:
+            raise UnexpectedCorrelationIdError(correlation_id=cid_in_response)
         return response
 
 
