@@ -26,8 +26,8 @@ from schemapack._internals.spec.custom_types import (
 
 __all__ = [
     "ClassName",
-    "ResourceId",
-    "RelationPropertyName",
     "ContentPropertyName",
     "IdPropertyName",
+    "RelationPropertyName",
+    "ResourceId",
 ]

@@ -23,7 +23,7 @@ from schemapack._internals.validation import (
 )
 
 __all__ = [
-    "GlobalValidationPlugin",
     "ClassValidationPlugin",
+    "GlobalValidationPlugin",
     "ResourceValidationPlugin",
 ]

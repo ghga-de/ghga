@@ -33,7 +33,7 @@ from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import SchemaPack
 
 
-def identify_resource_dependencies(  # noqa: C901, PLR0912
+def identify_resource_dependencies(  # noqa: C901
     *,
     datapack: DataPack,
     class_name: ClassName,
@@ -92,7 +92,7 @@ def identify_resource_dependencies(  # noqa: C901, PLR0912
     resource_blacklist: dict[ClassName, set[ResourceId]] = defaultdict(set)
     resource_blacklist[class_name].add(resource_id)
     if _resource_blacklist:
-        for class_name, resource_ids in _resource_blacklist.items():
+        for class_name, resource_ids in _resource_blacklist.items():  # noqa: PLR1704
             resource_blacklist[class_name].update(resource_ids)
 
     dependencies_by_class: dict[ClassName, set[ResourceId]] = defaultdict(set)

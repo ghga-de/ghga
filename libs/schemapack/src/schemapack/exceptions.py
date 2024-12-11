@@ -33,15 +33,15 @@ from schemapack._internals.exceptions import (
 
 __all__ = [
     "BaseError",
-    "SpecError",
+    "CircularRelationError",
+    "ClassNotFoundError",
+    "DataPackSpecError",
     "ParsingError",
+    "ResourceNotFoundError",
+    "SchemaPackSpecError",
+    "SpecError",
+    "ValidationAssumptionError",
     "ValidationError",
     "ValidationErrorRecord",
-    "DataPackSpecError",
-    "SchemaPackSpecError",
-    "CircularRelationError",
     "ValidationPluginError",
-    "ValidationAssumptionError",
-    "ResourceNotFoundError",
-    "ClassNotFoundError",
 ]

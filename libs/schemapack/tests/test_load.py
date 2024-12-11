@@ -21,12 +21,19 @@ from pathlib import Path
 import pytest
 
 from schemapack import load_datapack, load_schemapack
+from schemapack._internals.spec.schemapack import ClassDefinition
 from schemapack.exceptions import DataPackSpecError, ParsingError, SchemaPackSpecError
 from tests.fixtures.examples import (
     INVALID_DATAPACK_PATHS,
     INVALID_SCHEMAPACK_PATHS,
     VALID_DATAPACK_PATHS,
     VALID_SCHEMAPACK_PATHS,
+)
+from tests.fixtures.test_content_schema_objects import (
+    DATASET_CONTENT,
+    DATASET_DESCRIPTION,
+    DATASET_ID,
+    DATASET_RELATIONS,
 )
 
 
@@ -78,3 +85,15 @@ def test_load_datapack_invalid(name: str, path: Path):
 
     with pytest.raises(expected_error) if expected_error else nullcontext():
         _ = load_datapack(path)
+
+
+def test_load_content_schema():
+    """Test creating a ClassDefinition object with a content schema given as a FrozenDict.
+    This ensures the jsonschema schema validation works for FrozenDict.
+    """
+    _ = ClassDefinition(
+        id=DATASET_ID,
+        description=DATASET_DESCRIPTION,
+        content=DATASET_CONTENT,
+        relations=DATASET_RELATIONS,
+    )

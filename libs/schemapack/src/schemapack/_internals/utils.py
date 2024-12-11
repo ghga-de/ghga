@@ -32,8 +32,10 @@ import jsonschema.exceptions
 import jsonschema.protocols
 import jsonschema.validators
 import ruamel.yaml
+from arcticfreeze import FrozenDict
 from pydantic import BaseModel
 
+from schemapack._internals.spec.custom_types import FrozenType, ThawedType
 from schemapack.exceptions import ParsingError
 
 yaml = ruamel.yaml.YAML(typ="rt")
@@ -79,7 +81,8 @@ def assert_valid_json_schema(schema: Mapping[str, Any]) -> None:
     cls: type[jsonschema.protocols.Validator] = jsonschema.validators.validator_for(
         schema
     )
-
+    if isinstance(schema, FrozenDict):
+        schema = thaw_frozendict(schema)
     try:
         cls.check_schema(schema)
     except jsonschema.exceptions.SchemaError as error:
@@ -107,6 +110,18 @@ def model_to_serializable_dict(
         A dictionary representation of the provided model.
     """
     return json.loads(model.model_dump_json(exclude_defaults=True))
+
+
+def thaw_frozendict(frozen_dict: FrozenType) -> ThawedType:
+    """Recursively thaws a FrozenDict into a standard dictionary."""
+    return {
+        key: (
+            thaw_frozendict(val)
+            if isinstance(val, FrozenDict)
+            else (list(val) if isinstance(val, tuple) else val)
+        )
+        for key, val in frozen_dict.items()
+    }
 
 
 def dumps_model(

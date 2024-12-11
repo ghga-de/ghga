@@ -18,6 +18,7 @@
 
 from typing import Annotated, TypeAlias
 
+from arcticfreeze import FrozenDict
 from pydantic import Field as _Field
 
 _NonEmptyStr: TypeAlias = Annotated[str, _Field(..., min_length=1)]
@@ -26,3 +27,5 @@ ResourceId: TypeAlias = _NonEmptyStr
 RelationPropertyName: TypeAlias = _NonEmptyStr
 ContentPropertyName: TypeAlias = _NonEmptyStr
 IdPropertyName: TypeAlias = _NonEmptyStr
+FrozenType: TypeAlias = FrozenDict[str, "str | FrozenType | tuple"]
+ThawedType: TypeAlias = dict[str, "str | ThawedType | list"]

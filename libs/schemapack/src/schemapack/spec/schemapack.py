@@ -29,11 +29,11 @@ from schemapack._internals.spec.schemapack import (
 
 __all__ = [
     "SUPPORTED_SCHEMA_PACK_VERSIONS",
-    "SchemaPack",
     "ClassDefinition",
     "IDSpec",
     "MandatoryRelationSpec",
     "MultipleRelationSpec",
     "Relation",
+    "SchemaPack",
     "SupportedSchemaPackVersions",
 ]

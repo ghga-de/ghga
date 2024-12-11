@@ -24,8 +24,8 @@ from .base import (
 )
 
 __all__ = [
-    "SchemaPackValidator",
-    "GlobalValidationPlugin",
     "ClassValidationPlugin",
+    "GlobalValidationPlugin",
     "ResourceValidationPlugin",
+    "SchemaPackValidator",
 ]
