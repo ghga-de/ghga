@@ -1,31 +1,24 @@
-podAnnotations: {}
-command: []
-args: []
 image:
-  name: "ghga/auth-km-jobs"
-  tag: "0.0.0-31c85112c3f666abf8ff8633adff437bf04b716d"
-cronSchedule: ""
+  repository: "ghga/auth-km-jobs"
 
-serviceAccount:
-  enabled: true
-  name: auth-km-jobs
+configPrefix: auth_km_jobs
 
-service:
-  keyType: "internal"
-  runCommands:
-    internal: run refresh-int-keys
-    external: run refresh-ext-keys
-    wps: run refresh-wps-keys
+cronSchedule: "0 0 1 1 0"
 
-envPrefix: auth_km_jobs
+containers:
+- name: job
+  type: "job"
+  cmd: "run refresh-int-keys"
+# internal: run refresh-int-keys
+# external: run refresh-ext-keys
+# wps: run refresh-wps-keys
+
 envVars:
-  token: ""
-  vault_addr: https://hashicorp-vault.vault:8200
-  vault_namespace: vault
-  kube_role: auth-km-jobs-role
-
-# Used to add image pull secrets to deployment
-# imagePullSecretNames:
-#  - name: dockerhub
-#  - name: ex
-imagePullSecretNames: []
+  - name: AUTH_KM_JOBS_TOKEN
+    value:  ""
+  - name: AUTH_KM_JOBS_VAULT_ADDR
+    value: https://hashicorp-vault.vault:8200
+  - name: AUTH_KM_JOBS_VAULT_NAMESPACE
+    value: vault
+  - name: AUTH_KM_JOBS_VAULT_ROLE
+    value: auth-km-jobs-role
