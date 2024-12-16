@@ -160,6 +160,9 @@ async def test_get_part_upload_urls(
                 break
 
 
+@pytest.mark.httpx_mock(
+    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
+)
 @pytest.mark.asyncio
 async def test_get_wps_file_info(httpx_mock: HTTPXMock):
     """Test response handling with some mock - just make sure code paths work"""

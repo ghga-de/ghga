@@ -57,6 +57,8 @@ class ProgressBar:
         if exc_type:
             self._progress.remove_task(self._task_id)
         self._progress.stop()
+        # add a newline so next output is alway printed on a separate line
+        print()
 
     def advance(self, size: int):
         """Advance progress bar by specified amount of bytes and display."""

@@ -22,7 +22,7 @@ import httpx
 from ghga_service_commons.utils.crypt import decrypt
 from tenacity import RetryError
 
-from . import HttpxClientConfigurator, exceptions
+from . import exceptions, retry_handler
 
 
 class WorkPackageAccessor:
@@ -45,14 +45,13 @@ class WorkPackageAccessor:
         self.package_id = package_id
         self.my_private_key = my_private_key
         self.my_public_key = my_public_key
-        self.retry_handler = HttpxClientConfigurator.retry_handler
 
     async def _call_url(
         self, *, fn: Callable, headers: httpx.Headers, url: str
     ) -> httpx.Response:
         """Call url with provided headers and client method passed as callable."""
         try:
-            response: httpx.Response = await self.retry_handler(
+            response: httpx.Response = await retry_handler(
                 fn=fn,
                 headers=headers,
                 url=url,

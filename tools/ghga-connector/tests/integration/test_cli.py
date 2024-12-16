@@ -29,9 +29,6 @@ from unittest.mock import AsyncMock, patch
 import crypt4gh.keys
 import httpx
 import pytest
-from ghga_service_commons.api.mock_router import (  # noqa: F401
-    assert_all_responses_were_requested,
-)
 from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
@@ -68,6 +65,16 @@ ENVIRON_DEFAULTS = {
 
 unintercepted_hosts: list[str] = []
 
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.httpx_mock(
+        assert_all_responses_were_requested=False,
+        assert_all_requests_were_expected=False,
+        can_send_already_matched_responses=True,
+        should_mock=lambda request: request.url.host not in unintercepted_hosts,
+    ),
+]
+
 
 def wkvs_method_mock(value: str):
     """Dummy to patch WVKS method"""
@@ -76,13 +83,6 @@ def wkvs_method_mock(value: str):
         return value
 
     return inner
-
-
-@pytest.fixture
-def non_mocked_hosts() -> list:
-    """Hosts that shall not be mocked by httpx."""
-    # Let requests go out to localstack/S3.
-    return unintercepted_hosts
 
 
 @pytest.mark.parametrize(
@@ -105,7 +105,6 @@ def non_mocked_hosts() -> list:
         (20 * 1024 * 1024, DEFAULT_PART_SIZE),
     ],
 )
-@pytest.mark.asyncio
 async def test_multipart_download(
     httpx_mock: HTTPXMock,  # noqa: F811
     file_size: int,
@@ -199,7 +198,6 @@ async def test_multipart_download(
         ),
     ],
 )
-@pytest.mark.asyncio
 async def test_download(
     httpx_mock: HTTPXMock,  # noqa: F811
     bad_url: bool,
@@ -334,7 +332,6 @@ async def test_download(
         (False, "encrypted_file", exceptions.FileAlreadyEncryptedError),
     ],
 )
-@pytest.mark.asyncio
 async def test_upload(
     httpx_mock: HTTPXMock,  # noqa: F811
     bad_url: bool,
@@ -432,7 +429,6 @@ async def test_upload(
         (20 * 1024 * 1024, 16),
     ],
 )
-@pytest.mark.asyncio
 async def test_multipart_upload(
     httpx_mock: HTTPXMock,  # noqa: F811
     file_size: int,

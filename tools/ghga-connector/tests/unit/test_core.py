@@ -22,12 +22,10 @@ from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 from ghga_connector.core.api_calls import is_service_healthy
 
 
-@pytest.fixture
-def assert_all_responses_were_requested() -> bool:
-    """Disable default behaviour"""
-    return False
-
-
+@pytest.mark.httpx_mock(
+    assert_all_responses_were_requested=False,
+    assert_all_requests_were_expected=False,
+)
 @pytest.mark.parametrize(
     "api_url,timeout_in_seconds,expected_response",
     [

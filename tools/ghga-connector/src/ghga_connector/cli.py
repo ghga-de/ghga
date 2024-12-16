@@ -32,7 +32,6 @@ from ghga_service_commons.utils import crypt
 from ghga_connector.config import CONFIG
 from ghga_connector.core import (
     AbstractMessageDisplay,
-    HttpxClientConfigurator,
     MessageColors,
     WorkPackageAccessor,
     async_client,
@@ -42,7 +41,7 @@ from ghga_connector.core.api_calls import WKVSCaller
 from ghga_connector.core.downloading.batch_processing import FileStager
 from ghga_connector.core.main import (
     decrypt_file,
-    download_files,
+    download_file,
     get_wps_token,
     upload_file,
 )
@@ -112,7 +111,7 @@ def exception_hook(
     )
 
     if value.args:
-        message = value.args[0]
+        message += f"\n{value.args[0]}"
 
     message_display.failure(message)
 
@@ -215,11 +214,6 @@ async def async_upload(
 ):
     """Upload a file asynchronously"""
     message_display = init_message_display(debug=debug)
-    HttpxClientConfigurator.configure(
-        exponential_backoff_max=CONFIG.exponential_backoff_max,
-        max_retries=CONFIG.max_retries,
-        retry_status_codes=CONFIG.retry_status_codes,
-    )
     async with async_client() as client:
         parameters = await retrieve_upload_parameters(client)
         await upload_file(
@@ -260,18 +254,30 @@ def download(
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
     ),
+    overwrite: bool = typer.Option(
+        False,
+        help="Set to true to overwrite already existing files in the output directory.",
+    ),
 ):
     """Wrapper for the async download function"""
     asyncio.run(
-        async_download(output_dir, my_public_key_path, my_private_key_path, debug)
+        async_download(
+            output_dir=output_dir,
+            my_public_key_path=my_public_key_path,
+            my_private_key_path=my_private_key_path,
+            debug=debug,
+            overwrite=overwrite,
+        )
     )
 
 
 async def async_download(
+    *,
     output_dir: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
     debug: bool = False,
+    overwrite: bool = False,
 ):
     """Download files asynchronously"""
     if not my_public_key_path.is_file():
@@ -286,11 +292,6 @@ async def async_download(
     )
 
     message_display = init_message_display(debug=debug)
-    HttpxClientConfigurator.configure(
-        exponential_backoff_max=CONFIG.exponential_backoff_max,
-        max_retries=CONFIG.max_retries,
-        retry_status_codes=CONFIG.retry_status_codes,
-    )
     message_display.display("\nFetching work package token...")
     work_package_information = get_work_package_information(
         my_private_key=my_private_key, message_display=message_display
@@ -305,6 +306,7 @@ async def async_download(
             work_package_information=work_package_information,
         )
 
+        message_display.display("Preparing files for download...")
         stager = FileStager(
             wanted_file_ids=list(parameters.file_ids_with_extension),
             dcs_api_url=parameters.dcs_api_url,
@@ -318,7 +320,7 @@ async def async_download(
             staged_files = await stager.get_staged_files()
             for file_id in staged_files:
                 message_display.display(f"Downloading file with id '{file_id}'...")
-                await download_files(
+                await download_file(
                     api_url=parameters.dcs_api_url,
                     client=client,
                     file_id=file_id,
@@ -329,6 +331,7 @@ async def async_download(
                     part_size=CONFIG.part_size,
                     message_display=message_display,
                     work_package_accessor=parameters.work_package_accessor,
+                    overwrite=overwrite,
                 )
             staged_files.clear()
 

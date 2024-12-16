@@ -15,6 +15,7 @@
 """Handling session initialization for httpx"""
 
 from contextlib import asynccontextmanager, contextmanager
+from functools import cached_property
 
 import httpx
 from tenacity import (
@@ -25,23 +26,17 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
+from ghga_connector.config import CONFIG
 from ghga_connector.constants import TIMEOUT
 
 
 class HttpxClientConfigurator:
     """Helper class to make max_retries user configurable"""
 
-    retry_handler: AsyncRetrying
-
-    @classmethod
-    def configure(
-        cls,
-        exponential_backoff_max: int,
-        max_retries: int,
-        retry_status_codes: list[int],
-    ):
+    @cached_property
+    def retry_handler(self):
         """Configure client retry handler with exponential backoff"""
-        cls.retry_handler = AsyncRetrying(
+        return AsyncRetrying(
             reraise=True,
             retry=(
                 retry_if_exception_type(
@@ -52,23 +47,38 @@ class HttpxClientConfigurator:
                     )
                 )
                 | retry_if_result(
-                    lambda response: response.status_code in retry_status_codes
+                    lambda response: response.status_code in CONFIG.retry_status_codes
                 )
             ),
-            stop=stop_after_attempt(max_retries),
-            wait=wait_exponential_jitter(max=exponential_backoff_max),
+            stop=stop_after_attempt(CONFIG.max_retries),
+            wait=wait_exponential_jitter(max=CONFIG.exponential_backoff_max),
         )
+
+
+retry_handler = HttpxClientConfigurator().retry_handler
 
 
 @contextmanager
 def httpx_client():
     """Yields a context manager httpx client and closes it afterward"""
-    with httpx.Client(timeout=TIMEOUT) as client:
+    with httpx.Client(
+        timeout=TIMEOUT,
+        limits=httpx.Limits(
+            max_connections=CONFIG.max_concurrent_downloads,
+            max_keepalive_connections=CONFIG.max_concurrent_downloads,
+        ),
+    ) as client:
         yield client
 
 
 @asynccontextmanager
 async def async_client():
     """Yields a context manager async httpx client and closes it afterward"""
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+    async with httpx.AsyncClient(
+        timeout=TIMEOUT,
+        limits=httpx.Limits(
+            max_connections=CONFIG.max_concurrent_downloads,
+            max_keepalive_connections=CONFIG.max_concurrent_downloads,
+        ),
+    ) as client:
         yield client
