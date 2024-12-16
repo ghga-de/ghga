@@ -27,7 +27,8 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.core.session_store import Session, SessionState
-from auth_service.auth_adapter.deps import get_config, get_session_store
+from auth_service.auth_adapter.deps import get_session_store
+from auth_service.auth_adapter.ports.session_store import SessionStorePort
 from auth_service.user_management.user_registry.models.ivas import IvaState
 from auth_service.user_management.user_registry.models.users import UserStatus
 
@@ -88,10 +89,11 @@ def with_totp_code(
     return headers
 
 
-async def remove_user_id_from_session(session: Session):
+async def remove_user_id_from_session(
+    session: Session, session_store: SessionStorePort[Session]
+):
     """Remove the user ID from the session in the backend."""
     assert session.user_id
-    session_store = await get_session_store(config=get_config())
     session_in_store = await session_store.get_session(session.session_id)
     assert session_in_store
     assert session_in_store.user_id == session.user_id
@@ -115,7 +117,8 @@ async def test_create_totp_token_without_user_id(
 ):
     """Test that TOTP token creation without a user ID fails."""
     client, session = client_with_session[:2]
-    await remove_user_id_from_session(session)
+    store = client.app.dependency_overrides[get_session_store]()
+    await remove_user_id_from_session(session, store)
     response = await client.post(TOTP_TOKEN_PATH, headers=headers_for_session(session))
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not registered"}
@@ -180,7 +183,8 @@ async def test_verify_totp_without_user_id(
 ):
     """Test that TOTP token creation without a user ID fails."""
     client, session = client_with_session[:2]
-    await remove_user_id_from_session(session)
+    store = client.app.dependency_overrides[get_session_store]()
+    await remove_user_id_from_session(session, store)
     headers = headers_for_session(session).copy()
     headers["X-Authorization"] = "Bearer TOTP:123456"
     response = await client.post(VERIFY_TOTP_PATH, headers=headers)
@@ -411,7 +415,8 @@ async def test_recreate_existing_totp_token(
     client_with_session: ClientWithSession,
 ):
     """Test that TOTP tokens can be recreated."""
-    client, session, user_registry = client_with_session[:3]
+    client, session = client_with_session[:2]
+    user_registry = client_with_session.user_registry
     assert not user_registry.published_events
 
     headers = headers_for_session(session)

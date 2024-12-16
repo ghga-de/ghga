@@ -18,25 +18,25 @@
 
 import pytest
 from ghga_service_commons.utils.utc_dates import utc_datetime
+from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
-from auth_service.user_management.claims_repository.deps import (
-    get_claim_dao_factory,
-    get_config,
-)
+from auth_service.config import get_config
 from auth_service.user_management.claims_repository.models.claims import (
     Claim,
     ClaimFullCreation,
     VisaType,
+)
+from auth_service.user_management.claims_repository.translators.dao import (
+    ClaimDaoFactory,
 )
 
 
 @pytest.mark.asyncio()
 async def test_claim_creation(mongodb: MongoDbFixture):
     """Test creating a new user claim"""
-    claim_dao_factory = get_claim_dao_factory(
-        config=get_config(), dao_factory=mongodb.dao_factory
-    )
+    dao_factory = MongoDbDaoFactory(config=mongodb.config)
+    claim_dao_factory = ClaimDaoFactory(config=get_config(), dao_factory=dao_factory)
     claim_dao = await claim_dao_factory.get_claim_dao()
 
     claim_data = ClaimFullCreation(

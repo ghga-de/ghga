@@ -22,7 +22,7 @@ then this must be also specified in the config setting api_root_path.
 from typing import Annotated
 
 from fastapi import (
-    FastAPI,
+    APIRouter,
     Header,
     HTTPException,
     Path,
@@ -31,28 +31,22 @@ from fastapi import (
     Response,
     status,
 )
-from ghga_service_commons.api import configure_app
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import SecretStr
 
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.core.utils import is_data_steward
-from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
+from auth_service.user_management.claims_repository.deps import ClaimDaoDependency
 from auth_service.user_management.user_registry.deps import (
-    Depends,
-    IvaDao,
-    UserDao,
-    UserRegistryPort,
-    get_iva_dao,
-    get_user_dao,
-    get_user_registry,
+    IvaDaoDependency,
+    UserDaoDependency,
+    UserRegistryDependency,
 )
 from auth_service.user_management.user_registry.models.users import (
     User,
     UserStatus,
 )
 
-from .. import DESCRIPTION, TITLE, VERSION
 from ..core.auth import (
     UserInfoError,
     get_user_info,
@@ -66,17 +60,15 @@ from ..deps import (
     SessionDependency,
     SessionStoreDependency,
     TOTPHandlerDependency,
-    UserTokenDao,
-    get_user_token_dao,
+    UserTokenDaoDependency,
 )
 from .basic import get_basic_auth_dependency
 from .dto import TOTPTokenResponse
 from .headers import get_bearer_token, pass_auth_response, session_to_header
 
-app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
-configure_app(app, config=CONFIG)
+router = APIRouter()
 
-basic_auth_dependency = get_basic_auth_dependency(app, CONFIG)
+basic_auth_dependency = get_basic_auth_dependency(CONFIG)
 basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else None
 
 # the auth adapter needs to handle all HTTP methods
@@ -97,7 +89,7 @@ def add_allowed_route(route: str, write: bool = False):
     elif "*" in route:
         route = route.replace("*", "{variable}")
 
-    @app.api_route(route, methods=methods)
+    @router.api_route(route, methods=methods)
     async def allowed_route(
         request: Request,
         authorization: Annotated[str | None, Header()] = None,
@@ -117,7 +109,7 @@ def add_allowed_routes():
 add_allowed_routes()
 
 
-@app.post(
+@router.post(
     AUTH_PATH + "/rpc/login",
     operation_id="login",
     tags=["users"],
@@ -129,10 +121,10 @@ add_allowed_routes()
 async def login(  # noqa: C901, PLR0913
     request: Request,
     session_store: SessionStoreDependency,
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
-    iva_dao: Annotated[IvaDao, Depends(get_iva_dao)],
+    user_dao: UserDaoDependency,
+    token_dao: UserTokenDaoDependency,
+    claim_dao: ClaimDaoDependency,
+    iva_dao: IvaDaoDependency,
     authorization: Annotated[str | None, Header()] = None,
     x_authorization: Annotated[str | None, Header()] = None,
 ) -> Response:
@@ -215,7 +207,7 @@ async def login(  # noqa: C901, PLR0913
     return response
 
 
-@app.post(
+@router.post(
     AUTH_PATH + "/rpc/logout",
     operation_id="logout",
     tags=["users"],
@@ -242,7 +234,7 @@ async def logout(
     return response
 
 
-@app.post(
+@router.post(
     AUTH_PATH + "/users",
     operation_id="post_user",
     tags=["users"],
@@ -267,7 +259,7 @@ async def post_user(
     return pass_auth_response(request, f"Bearer {internal_token}")
 
 
-@app.put(
+@router.put(
     AUTH_PATH + "/users/{id}",
     operation_id="put_user",
     tags=["users"],
@@ -304,7 +296,7 @@ async def put_user(
     return pass_auth_response(request, f"Bearer {internal_token}")
 
 
-@app.post(
+@router.post(
     AUTH_PATH + "/totp-token",
     operation_id="create_new_totp_token",
     tags=["totp"],
@@ -352,7 +344,7 @@ async def create_new_totp_token(
     return TOTPTokenResponse(uri=SecretStr(uri))
 
 
-@app.post(
+@router.post(
     AUTH_PATH + "/rpc/verify-totp",
     operation_id="verify_totp",
     tags=["totp"],
@@ -365,8 +357,8 @@ async def rpc_verify_totp(  # noqa: PLR0913
     session_store: SessionStoreDependency,
     session: SessionDependency,
     totp_handler: TOTPHandlerDependency,
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
-    token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
+    user_registry: UserRegistryDependency,
+    token_dao: UserTokenDaoDependency,
     x_authorization: Annotated[
         str | None, Header(title="the TOTP code to verify")
     ] = None,
@@ -404,7 +396,7 @@ async def rpc_verify_totp(  # noqa: PLR0913
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.api_route(
+@router.api_route(
     "/{path:path}",
     methods=ALL_METHODS,
     dependencies=basic_auth_dependencies,

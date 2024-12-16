@@ -23,15 +23,19 @@ import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import NoHitsFoundError
 from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
-from auth_service.__main__ import get_claim_dao, prepare_event_subscriber
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.models.claims import (
     AuthorityLevel,
     Claim,
     VisaType,
 )
+from auth_service.user_management.claims_repository.translators.dao import (
+    ClaimDaoFactory,
+)
+from auth_service.user_management.prepare import prepare_event_subscriber
 
 
 @pytest.mark.asyncio()
@@ -47,6 +51,10 @@ async def test_deletion_handler(
             "kafka_servers": kafka.config.kafka_servers,
         }
     )
+
+    dao_factory = MongoDbDaoFactory(config=config)
+    claim_dao_factory = ClaimDaoFactory(config=config, dao_factory=dao_factory)
+    claim_dao = await claim_dao_factory.get_claim_dao()
 
     now = now_as_utc()
     claim = Claim(
@@ -64,7 +72,7 @@ async def test_deletion_handler(
         revocation_date=None,
         creation_date=now,
     )
-    claim_dao = await get_claim_dao(config=config)
+
     await claim_dao.insert(claim)
     assert await claim_dao.find_one(mapping={"user_id": "some-user-id"})
 

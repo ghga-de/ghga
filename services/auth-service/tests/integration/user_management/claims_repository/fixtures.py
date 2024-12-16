@@ -22,15 +22,15 @@ from ghga_service_commons.api.testing import AsyncTestClient as BareClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.config import Config
-from auth_service.deps import get_config, get_mongodb_dao_factory
-from auth_service.user_management.api.main import app, lifespan
 from auth_service.user_management.claims_repository.models.config import (
     IvaType,
     UserWithIVA,
 )
+from auth_service.user_management.prepare import prepare_rest_app
 from auth_service.user_management.user_registry.models.users import User, UserStatus
 
 data_steward = User(
@@ -55,10 +55,10 @@ add_as_data_stewards = [
 
 async def seed_database(config: Config) -> None:
     """Seed the database with a dummy user that will become a data steward."""
-    user_dao = await get_mongodb_dao_factory(config=config).get_dao(
-        name=config.users_collection,
-        dto_model=User,
-        id_field="id",
+    dao_factory = MongoDbDaoFactory(config=config)
+
+    user_dao = await dao_factory.get_dao(
+        name=config.users_collection, dto_model=User, id_field="id"
     )
     try:
         await user_dao.get_by_id(data_steward.id)
@@ -87,7 +87,5 @@ async def fixture_full_client(
         add_as_data_stewards=add_as_data_stewards,
     )
     await seed_database(config)
-    app.dependency_overrides[get_config] = lambda: config
-    async with lifespan(app), FullClient(app) as client:
+    async with prepare_rest_app(config=config) as app, FullClient(app) as client:
         yield client
-    app.dependency_overrides.clear()

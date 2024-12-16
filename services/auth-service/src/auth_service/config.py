@@ -175,3 +175,8 @@ class Config(
 
 
 CONFIG = Config()  # type: ignore
+
+
+def get_config() -> Config:
+    """Get runtime configuration."""
+    return CONFIG

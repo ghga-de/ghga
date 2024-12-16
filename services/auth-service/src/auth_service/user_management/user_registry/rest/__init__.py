@@ -13,20 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Dependency dummies for the claims repository used in view definitions.
-
-The dummies are overridden by the actual dependencies when preparing the application.
-"""
-
-from typing import Annotated
-
-from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
-
-from .ports.dao import ClaimDao
-
-__all__ = ["ClaimDaoDependency", "get_claim_dao"]
-
-get_claim_dao = DependencyDummy("claim_dao")
-
-ClaimDaoDependency = Annotated[ClaimDao, Depends(get_claim_dao)]
+"""Subpackage defining a RESTful API for the user registry."""

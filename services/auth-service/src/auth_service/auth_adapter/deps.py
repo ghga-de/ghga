@@ -14,31 +14,29 @@
 # limitations under the License.
 #
 
-"""FastAPI dependencies for the auth adapter"""
+"""Dependencies and dependency dummies for the auth adapter used in view definitions.
+
+The dummies are overridden by the actual dependencies when preparing the application.
+"""
 
 from typing import Annotated
 
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
+from ghga_service_commons.api.di import DependencyDummy
 
-from auth_service.deps import (
-    Depends,
-    MongoDbDaoFactory,
-    get_config,
-    get_mongodb_dao_factory,
-)
-from auth_service.user_management.user_registry.translators.dao import UserDaoConfig
-
-from .adapters.memory_session_store import MemorySessionStore
-from .core.session_store import Session, SessionConfig
-from .core.totp import TOTPConfig, TOTPHandler, TOTPToken
+from .core.session_store import Session
+from .core.totp import TOTPToken
 from .ports.dao import UserTokenDao
 from .ports.session_store import SessionStorePort
 from .ports.totp import TOTPHandlerPort
-from .translators.dao import UserTokenDaoFactory
 
 __all__ = [
     "SessionDependency",
     "SessionStoreDependency",
+    "TOTPHandlerDependency",
+    "UserTokenDaoDependency",
+    "get_session_store",
+    "get_totp_handler",
     "get_user_token_dao",
 ]
 
@@ -46,22 +44,21 @@ SESSION_COOKIE = "session"
 CSRF_TOKEN_HEADER = "X-CSRF-Token"  # noqa: S105
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
-_session_store = None
-_totp_handler = None
+
+get_session_store = DependencyDummy("session_store")
+get_totp_handler = DependencyDummy("totp_handler")
+get_user_token_dao = DependencyDummy("user_token_dao")
 
 
-async def get_session_store(
-    config: Annotated[SessionConfig, Depends(get_config)],
-) -> SessionStorePort[Session]:
-    """Get the session store."""
-    global _session_store
-    if not _session_store:
-        _session_store = MemorySessionStore(config=config)
-    return _session_store
+SessionStoreDependency = Annotated[
+    SessionStorePort[Session], Depends(get_session_store)
+]
+TOTPHandlerDependency = Annotated[TOTPHandlerPort[TOTPToken], Depends(get_totp_handler)]
+UserTokenDaoDependency = Annotated[UserTokenDao, Depends(get_user_token_dao)]
 
 
 async def get_session(
-    store: Annotated[SessionStorePort[Session], Depends(get_session_store)],
+    store: SessionStoreDependency,
     request: Request,
 ) -> Session | None:
     """Get the current session.
@@ -85,35 +82,4 @@ async def get_session(
     return session
 
 
-async def get_totp_handler(
-    config: Annotated[TOTPConfig, Depends(get_config)],
-) -> TOTPHandlerPort[TOTPToken]:
-    """Get the TOTP handler."""
-    global _totp_handler
-    if not _totp_handler:
-        _totp_handler = TOTPHandler(config=config)
-    return _totp_handler
-
-
-def get_user_token_dao_factory(
-    config: Annotated[UserDaoConfig, Depends(get_config)],
-    dao_factory: Annotated[MongoDbDaoFactory, Depends(get_mongodb_dao_factory)],
-) -> UserTokenDaoFactory:
-    """Get a user token DAO factory."""
-    return UserTokenDaoFactory(config=config, dao_factory=dao_factory)
-
-
-async def get_user_token_dao(
-    dao_factory: Annotated[UserTokenDaoFactory, Depends(get_user_token_dao_factory)],
-) -> UserTokenDao:
-    """Get user token data access object."""
-    return await dao_factory.get_user_token_dao()
-
-
-SessionStoreDependency = Annotated[
-    SessionStorePort[Session], Depends(get_session_store)
-]
-
 SessionDependency = Annotated[Session | None, Depends(get_session)]
-
-TOTPHandlerDependency = Annotated[TOTPHandlerPort[TOTPToken], Depends(get_totp_handler)]

@@ -23,8 +23,7 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.config import Config
-from auth_service.deps import get_config
-from auth_service.user_management.api.main import app, lifespan
+from auth_service.user_management.prepare import prepare_rest_app
 
 
 @pytest_asyncio.fixture(name="bare_client")
@@ -36,9 +35,7 @@ async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient,
         service_instance_id=kafka.config.service_instance_id,
         provide_apis=["users"],
     )  # type: ignore
-    app.dependency_overrides[get_config] = lambda: config
-
-    async with lifespan(app), BareClient(app) as client:
+    async with prepare_rest_app(config) as app, BareClient(app) as client:
         yield client
 
 
@@ -63,11 +60,8 @@ async def fixture_full_client(
         service_instance_id=kafka.config.service_instance_id,
         provide_apis=["users"],
     )
-    app.dependency_overrides[get_config] = lambda: config
-    assert app.router.lifespan_context
-    async with lifespan(app), FullClient(app) as client:
+    async with prepare_rest_app(config) as app, FullClient(app) as client:
         client.config = config
         client.mongodb = mongodb
         client.kafka = kafka
         yield client
-    app.dependency_overrides.clear()

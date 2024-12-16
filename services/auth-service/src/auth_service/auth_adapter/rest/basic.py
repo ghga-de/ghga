@@ -48,7 +48,7 @@ def get_allowed_credentials(config: Config) -> list[HTTPBasicCredentials]:
     return allowed_credentials
 
 
-def get_basic_auth_dependency(app: FastAPI, config: Config):
+def get_basic_auth_dependency(config: Config):
     """Get dependency for Basic authentication if this is configured."""
     allowed_credentials = get_allowed_credentials(config)
     if not allowed_credentials:
@@ -58,6 +58,40 @@ def get_basic_auth_dependency(app: FastAPI, config: Config):
         return None
 
     http_basic = HTTPBasic(realm=realm)
+
+    async def check_basic_auth(
+        passed_credentials: Annotated[HTTPBasicCredentials, Depends(http_basic)],
+    ):
+        """Check basic access authentication if username and password are set."""
+        for credentials in allowed_credentials:
+            # check user and password while avoiding timing attacks
+            user_ok = secrets.compare_digest(
+                passed_credentials.username, credentials.username
+            )
+            pwd_ok = secrets.compare_digest(
+                passed_credentials.password, credentials.password
+            )
+            if user_ok and pwd_ok:
+                break
+        else:
+            www_auth = f'Basic realm="{realm}"'
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": www_auth},
+            )
+
+    return Depends(check_basic_auth)
+
+
+def add_basic_auth_exception_handler(app: FastAPI, config: Config):
+    """Add an exception handler if needed for Basic authentication."""
+    allowed_credentials = get_allowed_credentials(config)
+    if not allowed_credentials:
+        return None
+    realm = config.basic_auth_realm
+    if not realm:
+        return None
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request, exc):
@@ -86,27 +120,3 @@ def get_basic_auth_dependency(app: FastAPI, config: Config):
         return JSONResponse(
             {"detail": detail}, status_code=status_code, headers=response_headers
         )
-
-    async def check_basic_auth(
-        passed_credentials: Annotated[HTTPBasicCredentials, Depends(http_basic)],
-    ):
-        """Check basic access authentication if username and password are set."""
-        for credentials in allowed_credentials:
-            # check user and password while avoiding timing attacks
-            user_ok = secrets.compare_digest(
-                passed_credentials.username, credentials.username
-            )
-            pwd_ok = secrets.compare_digest(
-                passed_credentials.password, credentials.password
-            )
-            if user_ok and pwd_ok:
-                break
-        else:
-            www_auth = f'Basic realm="{realm}"'
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": www_auth},
-            )
-
-    return Depends(check_basic_auth)

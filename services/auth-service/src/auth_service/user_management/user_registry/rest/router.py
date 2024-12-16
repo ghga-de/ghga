@@ -23,16 +23,16 @@ from fastapi import APIRouter, Path, Query, Response
 from fastapi.exceptions import HTTPException
 from hexkit.protocols.dao import ResourceNotFoundError
 
-from auth_service.auth_adapter.deps import UserTokenDao, get_user_token_dao
-from auth_service.user_management.claims_repository.deps import ClaimDao, get_claim_dao
+from auth_service.auth_adapter.deps import UserTokenDaoDependency
+from auth_service.user_management.claims_repository.deps import ClaimDaoDependency
 
-from ..auth import (
+from ...rest.auth import (
     StewardAuthContext,
     UserAuthContext,
     is_steward,
 )
-from .deps import Depends, get_user_registry
-from .models.ivas import (
+from ..deps import UserRegistryDependency
+from ..models.ivas import (
     IvaAndUserData,
     IvaBasicData,
     IvaData,
@@ -40,14 +40,13 @@ from .models.ivas import (
     IvaState,
     IvaVerificationCode,
 )
-from .models.users import (
+from ..models.users import (
     User,
     UserBasicData,
     UserModifiableData,
     UserRegisteredData,
     UserStatus,
 )
-from .ports.registry import UserRegistryPort
 
 __all__ = ["router"]
 
@@ -75,7 +74,7 @@ INITIAL_USER_STATUS = UserStatus.ACTIVE
 )
 async def post_user(
     user_data: UserRegisteredData,
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> User:
     """Register a user."""
@@ -129,7 +128,7 @@ async def put_user(
             description="Internal ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> Response:
     """Update a user."""
@@ -177,7 +176,7 @@ async def get_user(
             description="Internal User ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> User:
     """Get user data."""
@@ -226,7 +225,7 @@ async def patch_user(
             description="Internal ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> Response:
     """Modify user data."""
@@ -284,9 +283,9 @@ async def delete_user(
             description="Internal ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
-    token_dao: Annotated[UserTokenDao, Depends(get_user_token_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    user_registry: UserRegistryDependency,
+    token_dao: UserTokenDaoDependency,
+    claim_dao: ClaimDaoDependency,
     auth_context: StewardAuthContext,
 ) -> Response:
     """Delete user."""
@@ -342,7 +341,7 @@ async def get_user_ivas(
             description="Internal User ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> list[IvaData]:
     """Get all IVAs of a user."""
@@ -382,7 +381,7 @@ async def post_user_iva(
         ),
     ],
     data: IvaBasicData,
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> IvaId:
     """Create new IVA for a given user."""
@@ -435,7 +434,7 @@ async def delete_user_iva(
             description="IVA ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> Response:
     """Delete an IVA of the given user."""
@@ -476,7 +475,7 @@ async def unverify_iva(
             description="IVA ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: StewardAuthContext,
 ) -> Response:
     """Unverify the specified IVA."""
@@ -514,7 +513,7 @@ async def request_code_for_iva(
             description="IVA ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> Response:
     """Request verification code for the specified IVA."""
@@ -559,7 +558,7 @@ async def create_code_for_iva(
             description="IVA ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: StewardAuthContext,
 ) -> IvaVerificationCode:
     """Create a verification code for the specified IVA."""
@@ -609,7 +608,7 @@ async def confirm_code_for_iva_transmitted(
             description="IVA ID",
         ),
     ],
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: StewardAuthContext,
 ) -> Response:
     """Confirm the transmission of a verification code for the specified IVA."""
@@ -656,7 +655,7 @@ async def validate_code_for_iva(
         ),
     ],
     data: IvaVerificationCode,
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
 ) -> Response:
     """Validate a verification code for the specified IVA."""
@@ -704,7 +703,7 @@ async def validate_code_for_iva(
     status_code=200,
 )
 async def get_all_ivas(
-    user_registry: Annotated[UserRegistryPort, Depends(get_user_registry)],
+    user_registry: UserRegistryDependency,
     _auth_context: StewardAuthContext,
     user_id: Annotated[
         str | None,

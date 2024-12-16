@@ -16,63 +16,27 @@
 """Entrypoint of the package"""
 
 import asyncio
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+import importlib
+import logging
 
 from ghga_service_commons.api import run_server
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from hexkit.log import configure_logging
-from hexkit.providers.akafka.provider import KafkaEventSubscriber
-
-from auth_service.deps import get_mongodb_dao_factory
-from auth_service.user_management.claims_repository.core.deletion import (
-    DatasetDeletionHandler,
-    DatasetDeletionPort,
-)
-from auth_service.user_management.claims_repository.deps import (
-    ClaimDao,
-    get_claim_dao_factory,
-)
-from auth_service.user_management.claims_repository.translators.event_sub import (
-    EventSubTranslator,
-)
 
 from .config import CONFIG, Config
 
-
-async def get_claim_dao(
-    config: Config,
-) -> ClaimDao:
-    """Get an event handler for dataset deletion events."""
-    dao_factory = get_mongodb_dao_factory(config=config)
-    claim_dao_factory = get_claim_dao_factory(config=config, dao_factory=dao_factory)
-    return await claim_dao_factory.get_claim_dao()
+log = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def prepare_event_handler(
-    config: Config,
-) -> AsyncGenerator[DatasetDeletionPort, None]:
-    """Get an event handler for dataset deletion events."""
-    claim_dao = await get_claim_dao(config)
-    yield DatasetDeletionHandler(claim_dao=claim_dao)
+def import_prepare_module(service: str):
+    """Import the prepare module for the given service."""
+    return importlib.import_module(f"auth_service.{service}.prepare")
 
 
-@asynccontextmanager
-async def prepare_event_subscriber(
-    config: Config,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
-    """Get an event subscriber for dataset deletion events."""
-    async with prepare_event_handler(config) as handler:
-        translator = EventSubTranslator(config=config, handler=handler)
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=translator
-        ) as event_subscriber:
-            yield event_subscriber
-
-
-async def consume_events(config: Config = CONFIG):
+async def consume_events(service: str, config: Config = CONFIG):
     """Run an event consumer listening to the configured topic."""
+    prepare_event_subscriber = import_prepare_module(service).prepare_event_subscriber
+
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run()
 
@@ -84,17 +48,19 @@ async def run_parallel(
 
     When no API is specified, only the health endpoint will be available.
     """
-    service_runner = run_server(
-        app=f"auth_service.{service}.api.main:app", config=config
-    )
-    if run_consumer:
-        await asyncio.gather(service_runner, consume_events(config=config))
-    else:
-        await service_runner
+    prepare_rest_app = import_prepare_module(service).prepare_rest_app
+
+    async with prepare_rest_app(config=config) as app:
+        service_runner = run_server(app=app, config=config)
+        if run_consumer:
+            event_consumer = consume_events(service=service, config=config)
+            await asyncio.gather(service_runner, event_consumer)
+        else:
+            await service_runner
 
 
 def run(config: Config = CONFIG):
-    """Run the service"""
+    """Run the auth service"""
     configure_logging(config=config)
     assert_tz_is_utc()
     apis = config.provide_apis
@@ -108,7 +74,7 @@ def run(config: Config = CONFIG):
         components.append("event consumer")
     if not components:
         raise ValueError("must specify an API or run as event consumer")
-    print(f"Starting {service} service with {' and '.join(components)}")
+    log.info(f"Starting {service} service with {' and '.join(components)}")
     asyncio.run(run_parallel(service, run_consumer, config=config))
 
 

@@ -20,12 +20,12 @@ import pytest
 from fastapi import Request, Response, status
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from auth_service.auth_adapter.api.headers import (
+from auth_service.auth_adapter.core.session_store import Session
+from auth_service.auth_adapter.rest.headers import (
     get_bearer_token,
     pass_auth_response,
     session_to_header,
 )
-from auth_service.auth_adapter.core.session_store import Session
 
 NOW = now_as_utc()
 

@@ -21,17 +21,15 @@ from base64 import b64encode
 from collections.abc import Mapping
 
 import pytest
-from fastapi import status
+from fastapi import FastAPI, status
 from httpx import Response
 from pytest_httpx import HTTPXMock
 
-from auth_service.auth_adapter.api import main
 from auth_service.auth_adapter.deps import (
     SESSION_COOKIE,
     get_session_store,
     get_user_token_dao,
 )
-from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_management.user_registry.models.users import UserStatus
@@ -50,8 +48,9 @@ from ...fixtures.utils import (
 from .fixtures import (
     AUTH_PATH,
     BareClient,
+    ClientWithBasicAuth,
     fixture_bare_client,  # noqa: F401
-    fixture_with_basic_auth,  # noqa: F401
+    fixture_bare_client_with_basic_auth,  # noqa: F401
 )
 
 pytestmark = pytest.mark.asyncio()
@@ -67,18 +66,19 @@ def expected_set_cookie(session_id: str) -> str:
 
 
 def setup_daos(
+    app: FastAPI,
     iva_state: IvaState = IvaState.VERIFIED,
     **user_args: str,
 ) -> None:
     """Setup the dummy DAOs for the tests."""
     user_dao = DummyUserDao(**user_args)
-    main.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    app.dependency_overrides[get_user_dao] = lambda: user_dao
     user_token_dao = DummyUserTokenDao()
-    main.app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
+    app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
     iva_dao = DummyIvaDao(state=iva_state)
-    main.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
+    app.dependency_overrides[get_iva_dao] = lambda: iva_dao
     claim_dao = DummyClaimDao()
-    main.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
+    app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
 
 def assert_session_header(
@@ -103,7 +103,7 @@ def assert_session_header(
 
 async def test_logout(bare_client: BareClient):
     """Test that a logout request removes the user session."""
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.create_session(
         ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
     )
@@ -141,7 +141,7 @@ async def test_logout_without_session(bare_client: BareClient):
 
 async def test_logout_with_invalid_csrf_token(bare_client: BareClient):
     """Test that a logout request with an invalid CSRF token fails."""
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.create_session(
         ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
     )
@@ -166,14 +166,14 @@ async def test_login_with_unregistered_user(
     """Test that a login request can create a new session for an unregistered user."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    setup_daos(ext_id="not.john@aai.org")
+    setup_daos(bare_client.app, ext_id="not.john@aai.org")
 
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
     session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.get_session(session_id)
     assert session
     assert response.cookies.get(SESSION_COOKIE) == session_id
@@ -196,7 +196,7 @@ async def test_login_with_invalid_userinfo(
     bad_user_info = {**USER_INFO, "sub": "not.john@aai.org"}
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=bad_user_info)
 
-    setup_daos(ext_id="not.john@aai.org")
+    setup_daos(bare_client.app, ext_id="not.john@aai.org")
 
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
@@ -215,14 +215,14 @@ async def test_login_with_registered_user(
     """Test that a login request can create a new session for a registered user."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    setup_daos()
+    setup_daos(bare_client.app)
 
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
     session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.get_session(session_id)
     assert session
     assert response.cookies.get(SESSION_COOKIE) == session_id
@@ -246,14 +246,14 @@ async def test_login_with_registered_user_and_name_change(
     changed_user_info = {**USER_INFO, "name": "John Doe Jr."}
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=changed_user_info)
 
-    setup_daos()
+    setup_daos(bare_client.app)
 
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
     session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.get_session(session_id)
     assert session
     assert response.cookies.get(SESSION_COOKIE) == session_id
@@ -276,14 +276,14 @@ async def test_login_with_registered_user_with_title(
     """Test a login request for a user when a title was entered."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    setup_daos(title="Dr.")
+    setup_daos(bare_client.app, title="Dr.")
 
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     assert response.status_code == status.HTTP_204_NO_CONTENT
     session_id = response.cookies.get(SESSION_COOKIE)
     assert session_id
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.get_session(session_id)
     assert session
     assert response.cookies.get(SESSION_COOKIE) == session_id
@@ -307,7 +307,7 @@ async def test_login_with_deactivated_user(
     """Test that a login request for a registered deactivated user fails."""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    setup_daos(status=UserStatus.INACTIVE)
+    setup_daos(bare_client.app, status=UserStatus.INACTIVE)
 
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
@@ -326,12 +326,12 @@ async def test_login_without_access_token(bare_client: BareClient):
 
 
 async def test_login_without_access_token_and_basic_auth(
-    with_basic_auth: str, bare_client: BareClient
+    client_with_basic_auth: ClientWithBasicAuth,
 ):
     """Test login request with valid basic auth but without access token."""
-    assert with_basic_auth
+    bare_client, credentials = client_with_basic_auth
 
-    auth = b64encode(with_basic_auth.encode("UTF-8")).decode("ASCII")
+    auth = b64encode(credentials.encode("UTF-8")).decode("ASCII")
     auth = f"Basic {auth}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
     # should give a 403 instead of 401 to distinguish from basic access error
@@ -358,9 +358,9 @@ async def test_login_with_invalid_access_token(bare_client: BareClient):
 
 async def test_login_with_cookie_and_unregistered_user(bare_client: BareClient):
     """Test login request with session cookie for an unregistered user."""
-    setup_daos(ext_id="not.john@aai.org")
+    setup_daos(bare_client.app, ext_id="not.john@aai.org")
 
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.create_session(
         ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
     )
@@ -383,9 +383,9 @@ async def test_login_with_cookie_and_unregistered_user(bare_client: BareClient):
 
 async def test_login_with_cookie_and_registered_user(bare_client: BareClient):
     """Test login request with session cookie for a registered user."""
-    setup_daos()
+    setup_daos(bare_client.app)
 
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.create_session(
         ext_id="john@aai.org",
         user_id="john@ghga.de",
@@ -416,6 +416,7 @@ async def test_login_with_cookie_and_registered_data_steward(
 ):
     """Test login request with session cookie for a registered data steward."""
     setup_daos(
+        bare_client.app,
         id_="james@ghga.de",
         ext_id="james@aai.org",
         name="James Steward",
@@ -424,7 +425,7 @@ async def test_login_with_cookie_and_registered_data_steward(
         iva_state=iva_state,
     )
 
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.create_session(
         ext_id="james@aai.org",
         user_id="james@ghga.de",
@@ -455,9 +456,9 @@ async def test_login_with_cookie_but_without_csrf_token(bare_client: BareClient)
 
     It should be possible to login from a new browser tab using the session cookie.
     """
-    setup_daos()
+    setup_daos(bare_client.app)
 
-    store = await get_session_store(config=CONFIG)
+    store = bare_client.app.dependency_overrides[get_session_store]()
     session = await store.create_session(
         ext_id="john@aai.org",
         user_id="john@ghga.de",

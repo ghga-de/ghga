@@ -24,6 +24,10 @@ from typing import Any
 
 from jwcrypto import jwk
 
+from auth_service.config import CONFIG
+
+auth_adapter = "auth_adapter" in CONFIG.provide_apis
+
 
 def generate_jwk() -> jwk.JWK:
     """Generate a random EC based JWK."""
@@ -39,9 +43,21 @@ def generate_jwk_set() -> jwk.JWKSet:
     return jwk_set
 
 
+def set_auth_keys_env() -> None:
+    """Set signing keys as environment variables."""
+    for key, value in generate_keys().items():
+        if value is None:
+            if key in environ:
+                del environ[key]
+        else:
+            environ[key] = value
+
+
 def generate_keys() -> dict[str, Any]:
     """Generate dictionary with signing keys."""
-    auth_adapter = "ext_auth" in environ.get("AUTH_SERVICE_PROVIDE_APIS", "")
+    auth_adapter = "ext_auth" in environ.get(
+        "AUTH_SERVICE_PROVIDE_APIS", environ.get("auth_service_provide_apis", "")
+    )
     int_key = generate_jwk().export
     env: dict[str, Any] = {
         "AUTH_SERVICE_AUTH_KEY": int_key(private_key=auth_adapter),
@@ -65,16 +81,6 @@ def generate_keys() -> dict[str, Any]:
     return env
 
 
-def set_auth_keys_env() -> None:
-    """Set signing keys as environment variables."""
-    for key, value in generate_keys().items():
-        if value is None:
-            if key in environ:
-                del environ[key]
-        else:
-            environ[key] = value
-
-
 def print_auth_keys_env() -> None:
     """Print environment for signing keys."""
     for key, value in generate_keys().items():
@@ -84,7 +90,7 @@ def print_auth_keys_env() -> None:
             print(f"{key}={value!r}")
 
 
-def reload_auth_key_config(auth_adapter: bool) -> None:
+def reload_auth_key_config(auth_adapter: bool = auth_adapter) -> None:
     """Reload the configuration for the signing keys."""
     environ["AUTH_SERVICE_PROVIDE_APIS"] = '["ext_auth"]' if auth_adapter else "[]"
     set_auth_keys_env()
@@ -96,7 +102,7 @@ def reload_auth_key_config(auth_adapter: bool) -> None:
     if auth_adapter:
         from auth_service.auth_adapter.core import auth
     else:
-        from auth_service.user_management import auth  # type: ignore[no-redef]
+        from auth_service.user_management.rest import auth  # type: ignore[no-redef]
 
     reload(auth)
 

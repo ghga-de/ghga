@@ -16,13 +16,11 @@
 """Fixtures for the auth adapter integration tests"""
 
 import json
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from datetime import timedelta
 from importlib import reload
-from os import environ
 from typing import NamedTuple
 
-import pytest
 import pytest_asyncio
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient as BareClient
@@ -32,10 +30,14 @@ from httpx import Response
 from pydantic import SecretStr
 from pytest_httpx import HTTPXMock
 
+from auth_service import config as config_module
+from auth_service.auth_adapter import prepare as auth_adapter_prepare_module
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.deps import SESSION_COOKIE, get_user_token_dao
-from auth_service.deps import CONFIG, Config, get_config
+from auth_service.auth_adapter.prepare import prepare_rest_app
+from auth_service.auth_adapter.rest import router as auth_adapter_router_module
+from auth_service.config import CONFIG, Config
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.user_registry.deps import (
     get_iva_dao,
@@ -62,11 +64,7 @@ totp_encryption_key = TOTPHandler.random_encryption_key()
 
 @pytest_asyncio.fixture(name="bare_client")
 async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient, None]:
-    """Get a test client for the user registry without database."""
-    from auth_service.auth_adapter.api import main
-
-    reload(main)
-
+    """Get a test client for the auth adapter without database."""
     config = Config(
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,
@@ -74,10 +72,15 @@ async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient,
         totp_encryption_key=SecretStr(totp_encryption_key),
     )  # type: ignore
 
-    main.app.dependency_overrides[get_config] = lambda: config
-
-    async with BareClient(main.app) as client:
+    async with prepare_rest_app(config=config) as app, BareClient(app) as client:
         yield client
+
+
+class ClientWithBasicAuth(NamedTuple):
+    """A test client with basic auth."""
+
+    bare_client: BareClient
+    credentials: str
 
 
 class ClientWithSession(NamedTuple):
@@ -157,8 +160,6 @@ async def fixture_bare_client_with_session(
     bare_client: BareClient, httpx_mock: HTTPXMock
 ) -> AsyncGenerator[ClientWithSession, None]:
     """Get test client for the auth adapter with a logged in user"""
-    from auth_service.auth_adapter.api import main
-
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     user_registry = DummyUserRegistry()
@@ -167,7 +168,7 @@ async def fixture_bare_client_with_session(
     user_token_dao = DummyUserTokenDao()
     claim_dao = DummyClaimDao()
 
-    overrides = main.app.dependency_overrides
+    overrides = bare_client.app.dependency_overrides
     overrides[get_user_dao] = lambda: user_dao
     overrides[get_iva_dao] = lambda: iva_dao
     overrides[get_user_registry] = lambda: user_registry
@@ -179,22 +180,33 @@ async def fixture_bare_client_with_session(
     yield ClientWithSession(bare_client, session, user_registry, user_token_dao)
 
 
-@pytest.fixture(name="with_basic_auth")
-def fixture_with_basic_auth() -> Generator[str, None, None]:
-    """Run test with Basic authentication"""
-    from auth_service import config
-    from auth_service.auth_adapter.api import main
+@pytest_asyncio.fixture(name="client_with_basic_auth")
+async def fixture_bare_client_with_basic_auth(
+    kafka: KafkaFixture,
+) -> AsyncGenerator[ClientWithBasicAuth, None]:
+    """Get a test client for the user registry with Basic auth."""
+    # create a config with Basic auth credentials
+    credentials = "testuser:testpwd"
+    config = Config(
+        basic_auth_credentials=credentials,
+        allow_read_paths=["/allowed/read/*", "/logo.png"],
+        allow_write_paths=["/allowed/write/*"],
+        kafka_servers=kafka.config.kafka_servers,
+        service_name=kafka.config.service_name,
+        service_instance_id=kafka.config.service_instance_id,
+        totp_encryption_key=SecretStr(totp_encryption_key),
+    )  # type: ignore
 
-    user, pwd = "testuser", "testpwd"
-    credentials = f"{user}:{pwd}"
-    environ["AUTH_SERVICE_BASIC_AUTH_CREDENTIALS"] = credentials
-    environ["AUTH_SERVICE_ALLOW_READ_PATHS"] = '["/allowed/read/*", "/logo.png"]'
-    environ["AUTH_SERVICE_ALLOW_WRITE_PATHS"] = '["/allowed/write/*"]'
-    reload(config)
-    reload(main)
-    yield credentials
-    del environ["AUTH_SERVICE_BASIC_AUTH_CREDENTIALS"]
-    del environ["AUTH_SERVICE_ALLOW_READ_PATHS"]
-    del environ["AUTH_SERVICE_ALLOW_WRITE_PATHS"]
-    reload(config)
-    reload(main)
+    # create app with the changed config
+    config_module.CONFIG = config
+    try:
+        # reload to make the changes affect the router
+        reload(auth_adapter_router_module)
+        reload(auth_adapter_prepare_module)
+        async with prepare_rest_app(config=config) as app, BareClient(app) as client:
+            yield ClientWithBasicAuth(client, credentials)
+
+    finally:
+        config_module.CONFIG = CONFIG
+        reload(auth_adapter_router_module)
+        reload(auth_adapter_prepare_module)

@@ -19,7 +19,7 @@
 import pytest
 from fastapi.security import HTTPBasicCredentials
 
-from auth_service.auth_adapter.api.basic import get_allowed_credentials
+from auth_service.auth_adapter.rest.basic import get_allowed_credentials
 from auth_service.config import Config
 
 

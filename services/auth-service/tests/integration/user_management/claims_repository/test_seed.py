@@ -23,7 +23,9 @@ from typing import Any
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from auth_service.config import Config
 from auth_service.user_management.claims_repository.core.seed import (
@@ -33,6 +35,33 @@ from auth_service.user_management.claims_repository.models.config import (
     IvaType,
     UserWithIVA,
 )
+from auth_service.user_management.claims_repository.translators.dao import (
+    ClaimDaoFactory,
+)
+from auth_service.user_management.user_registry.translators.dao import (
+    UserDaoPublisherFactory,
+)
+
+
+async def fut(config: Config):
+    """Run seed_data_steward_claims (the function under test here)."""
+    # prepare the infrastructure
+    dao_factory = MongoDbDaoFactory(config=config)
+    async with (
+        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
+    ):
+        # create DAOs
+        user_dao_publisher_factory = UserDaoPublisherFactory(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
+        user_dao = await user_dao_publisher_factory.get_user_dao()
+        iva_dao = await user_dao_publisher_factory.get_iva_dao()
+        claim_dao_factory = ClaimDaoFactory(config=config, dao_factory=dao_factory)
+        claim_dao = await claim_dao_factory.get_claim_dao()
+        # run the actual function
+        await seed_data_steward_claims(
+            config=config, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
+        )
 
 
 @pytest.mark.asyncio()
@@ -62,7 +91,9 @@ async def test_add_data_steward(
 
     caplog.set_level(logging.INFO)
     caplog.clear()
-    await seed_data_steward_claims(config)
+
+    await fut(config)
+
     records = [record for record in caplog.records if record.module == "seed"]
 
     log_messages = [record.message for record in records]
@@ -130,7 +161,9 @@ async def test_add_data_steward(
     # add existing data steward
 
     caplog.clear()
-    await seed_data_steward_claims(config)
+
+    await fut(config)
+
     records = [record for record in caplog.records if record.module == "seed"]
 
     log_messages = [record.message for record in records]
@@ -149,7 +182,12 @@ async def test_add_data_steward(
 
     new_claim = new_claims[0]
     assert new_claim.pop("_id") != claim.pop("_id")
-    for date_field in ["creation_date", "assertion_date", "valid_from", "valid_until"]:
+    for date_field in [
+        "creation_date",
+        "assertion_date",
+        "valid_from",
+        "valid_until",
+    ]:
         time_diff = datetime.fromisoformat(
             new_claim.pop(date_field)
         ) - datetime.fromisoformat(claim.pop(date_field))
@@ -165,12 +203,13 @@ async def test_add_data_steward(
         match="Configured data steward with external ID id-of-john-doe@ls.org"
         " has the name 'Jane Roe', expected was 'John Doe'",
     ):
-        await seed_data_steward_claims(config)
+        await fut(config)
 
     # add data steward with different email address
 
     users_collection.update_one(
-        {"_id": user["_id"]}, {"$set": {"name": "John Doe", "email": "jane@home.org"}}
+        {"_id": user["_id"]},
+        {"$set": {"name": "John Doe", "email": "jane@home.org"}},
     )
 
     with pytest.raises(
@@ -178,4 +217,4 @@ async def test_add_data_steward(
         match="Configured data steward with external ID id-of-john-doe@ls.org"
         " has the email address <jane@home.org>, expected was <john@home.org>",
     ):
-        await seed_data_steward_claims(config)
+        await fut(config)

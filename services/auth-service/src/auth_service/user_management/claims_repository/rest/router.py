@@ -25,26 +25,24 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_management.user_registry.deps import (
-    IvaDao,
-    UserDao,
-    get_iva_dao,
-    get_user_dao,
+    IvaDaoDependency,
+    UserDaoDependency,
 )
 
-from .core.claims import (
+from ..core.claims import (
     create_controlled_access_claim,
     dataset_id_for_download_access,
     has_download_access_for_dataset,
     is_valid_claim,
 )
-from .core.utils import (
+from ..core.utils import (
     iva_is_verified,
     user_exists,
     user_is_active,
     user_with_iva_exists,
 )
-from .deps import ClaimDao, Depends, get_claim_dao
-from .models.claims import (
+from ..deps import ClaimDaoDependency
+from ..models.claims import (
     Accession,
     Claim,
     ClaimCreation,
@@ -97,8 +95,8 @@ async def post_claim(
             description="Internal ID of the user",
         ),
     ],
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    user_dao: UserDaoDependency,
+    claim_dao: ClaimDaoDependency,
 ) -> Claim:
     """Store a user claim"""
     if not await user_exists(user_id, user_dao=user_dao):
@@ -145,8 +143,8 @@ async def get_claims(
             description="Internal ID of the user",
         ),
     ],
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    user_dao: UserDaoDependency,
+    claim_dao: ClaimDaoDependency,
 ) -> list[Claim]:
     """Get all claims for a given user"""
     if not await user_exists(user_id, user_dao=user_dao):
@@ -186,8 +184,8 @@ async def patch_user(
             description="Internal claim ID",
         ),
     ],
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    user_dao: UserDaoDependency,
+    claim_dao: ClaimDaoDependency,
 ) -> Response:
     """Revoke an existing user claim"""
     if not await user_exists(user_id, user_dao=user_dao):
@@ -244,8 +242,8 @@ async def delete_claim(
             description="Internal claim ID",
         ),
     ],
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    user_dao: UserDaoDependency,
+    claim_dao: ClaimDaoDependency,
 ) -> Response:
     """Delete an existing user claim"""
     if not await user_exists(user_id, user_dao=user_dao):
@@ -308,9 +306,9 @@ async def grant_download_access(  # noqa: PLR0913
             description="The ID of the dataset",
         ),
     ],
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    iva_dao: Annotated[IvaDao, Depends(get_iva_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    user_dao: UserDaoDependency,
+    iva_dao: IvaDaoDependency,
+    claim_dao: ClaimDaoDependency,
     # internal service, authorization without token via service mesh
 ) -> Response:
     """Grant download access permission for a dataset to a user with the given IVA.
@@ -368,9 +366,9 @@ async def check_download_access(
             description="Internal ID of the dataset",
         ),
     ],
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    iva_dao: Annotated[IvaDao, Depends(get_iva_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    user_dao: UserDaoDependency,
+    iva_dao: IvaDaoDependency,
+    claim_dao: ClaimDaoDependency,
     # internal service, authorization without token via service mesh
 ) -> bool:
     """Check download access permission for a given dataset by a given user.
@@ -427,9 +425,9 @@ async def get_datasets_with_download_access(
             description="Internal ID of the user",
         ),
     ],
-    user_dao: Annotated[UserDao, Depends(get_user_dao)],
-    iva_dao: Annotated[IvaDao, Depends(get_iva_dao)],
-    claim_dao: Annotated[ClaimDao, Depends(get_claim_dao)],
+    user_dao: UserDaoDependency,
+    iva_dao: IvaDaoDependency,
+    claim_dao: ClaimDaoDependency,
     # internal service, authorization without token via service mesh
 ) -> list[str]:
     """Get list of all dataset IDs with download access permission for a given user.

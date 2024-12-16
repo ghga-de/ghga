@@ -13,20 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Dependency dummies for the claims repository used in view definitions.
+"""Module containing the main FastAPI router and entrypoints."""
 
-The dummies are overridden by the actual dependencies when preparing the application.
-"""
+from fastapi import APIRouter, status
 
-from typing import Annotated
+router = APIRouter()
 
-from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
-from .ports.dao import ClaimDao
-
-__all__ = ["ClaimDaoDependency", "get_claim_dao"]
-
-get_claim_dao = DependencyDummy("claim_dao")
-
-ClaimDaoDependency = Annotated[ClaimDao, Depends(get_claim_dao)]
+@router.get(
+    "/health", summary="health", tags=["health"], status_code=status.HTTP_200_OK
+)
+async def health():
+    """Used to check that this service is alive"""
+    return {"status": "OK"}

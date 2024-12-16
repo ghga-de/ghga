@@ -23,19 +23,8 @@ from hexkit.correlation import set_new_correlation_id
 from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
 
 from auth_service.config import Config
-from auth_service.deps import get_mongo_kafka_dao_factory, get_mongodb_dao_factory
-from auth_service.user_management.claims_repository.deps import (
-    ClaimDao,
-    get_claim_dao,
-    get_claim_dao_factory,
-)
-from auth_service.user_management.user_registry.deps import (
-    IvaDao,
-    UserDao,
-    get_iva_dao,
-    get_user_dao,
-    get_user_dao_factory,
-)
+from auth_service.user_management.claims_repository.deps import ClaimDao
+from auth_service.user_management.user_registry.deps import IvaDao, UserDao
 from auth_service.user_management.user_registry.models.ivas import Iva, IvaBasicData
 from auth_service.user_management.user_registry.models.users import User, UserStatus
 
@@ -49,7 +38,7 @@ __all__ = ["seed_data_steward_claims"]
 log = logging.getLogger(__name__)
 
 
-async def _remove_existing_data_steward_claims(claim_dao: ClaimDao) -> None:
+async def _remove_existing_data_steward_claims(*, claim_dao: ClaimDao) -> None:
     """Remove all existing data steward claims"""
     num_removed_claims = 0
     async for claim in claim_dao.find_all(mapping={"visa_type": VisaType.GHGA_ROLE}):
@@ -59,7 +48,7 @@ async def _remove_existing_data_steward_claims(claim_dao: ClaimDao) -> None:
     log.info("Removed %d existing data steward claim(s).", num_removed_claims)
 
 
-async def _add_user_with_ext_id(info: UserWithIVA, user_dao: UserDao) -> User:
+async def _add_user_with_ext_id(*, info: UserWithIVA, user_dao: UserDao) -> User:
     """Add a new user with the given external ID to the database."""
     user_dto = User(
         ext_id=info.ext_id,
@@ -73,7 +62,7 @@ async def _add_user_with_ext_id(info: UserWithIVA, user_dao: UserDao) -> User:
     return user_dto
 
 
-def _check_data_steward_info(info: UserWithIVA, user: User) -> None:
+def _check_data_steward_info(*, info: UserWithIVA, user: User) -> None:
     """Verify that the data steward has the given name and email address.
 
     This serves as a security check to ensure that the right user is configured.
@@ -90,7 +79,9 @@ def _check_data_steward_info(info: UserWithIVA, user: User) -> None:
         )
 
 
-async def _add_iva_for_user(user_id: str, data: IvaBasicData, iva_dao: IvaDao) -> Iva:
+async def _add_iva_for_user(
+    *, user_id: str, data: IvaBasicData, iva_dao: IvaDao
+) -> Iva:
     """Add a new IVA for the given user with the given basic data."""
     now = now_as_utc()
     iva_dto = Iva(user_id=user_id, created=now, changed=now, **data.model_dump())
@@ -99,6 +90,7 @@ async def _add_iva_for_user(user_id: str, data: IvaBasicData, iva_dao: IvaDao) -
 
 
 async def _add_configured_data_steward_claims(
+    *,
     data_stewards: list[UserWithIVA],
     user_dao: UserDao,
     iva_dao: IvaDao,
@@ -115,7 +107,7 @@ async def _add_configured_data_steward_claims(
             raise
         except NoHitsFoundError:
             try:
-                user = await _add_user_with_ext_id(data_steward, user_dao=user_dao)
+                user = await _add_user_with_ext_id(info=data_steward, user_dao=user_dao)
             except Exception as error:
                 log.error(
                     "Could not add new user with external ID %r: %s", ext_id, error
@@ -123,7 +115,7 @@ async def _add_configured_data_steward_claims(
                 raise
             log.warning("Added missing data steward with external ID %r.", ext_id)
         else:
-            _check_data_steward_info(data_steward, user)
+            _check_data_steward_info(info=data_steward, user=user)
         # add the IVA of the data steward
         iva_data = IvaBasicData(
             type=data_steward.iva_type, value=data_steward.iva_value
@@ -146,7 +138,9 @@ async def _add_configured_data_steward_claims(
             raise
         except NoHitsFoundError:
             try:
-                iva = await _add_iva_for_user(user.id, iva_data, iva_dao=iva_dao)
+                iva = await _add_iva_for_user(
+                    user_id=user.id, data=iva_data, iva_dao=iva_dao
+                )
             except Exception as error:
                 log.error(
                     "Could not add new IVA for user with external ID %r: %s",
@@ -163,7 +157,9 @@ async def _add_configured_data_steward_claims(
         log.info("Added data steward role for %r to the claims repository.", ext_id)
 
 
-async def seed_data_steward_claims(config: Config) -> None:
+async def seed_data_steward_claims(
+    *, config: Config, user_dao: UserDao, iva_dao: IvaDao, claim_dao: ClaimDao
+) -> None:
     """Seed the claims repository with data steward claims.
 
     This function removes all existing data steward claims and then adds such
@@ -175,19 +171,10 @@ async def seed_data_steward_claims(config: Config) -> None:
     if not data_stewards:
         log.warning("No data stewards are defined in the configuration.")
     async with set_new_correlation_id():
-        async for dao_publisher_factory in get_mongo_kafka_dao_factory(config=config):
-            user_dao_factory = get_user_dao_factory(
-                config=config,
-                dao_publisher_factory=dao_publisher_factory,
-            )
-            user_dao = await get_user_dao(dao_factory=user_dao_factory)
-            iva_dao = await get_iva_dao(dao_factory=user_dao_factory)
-            claim_dao_factory = get_claim_dao_factory(
-                config=config,
-                dao_factory=get_mongodb_dao_factory(config=config),
-            )
-            claim_dao = await get_claim_dao(dao_factory=claim_dao_factory)
-            await _remove_existing_data_steward_claims(claim_dao=claim_dao)
-            await _add_configured_data_steward_claims(
-                data_stewards, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
-            )
+        await _remove_existing_data_steward_claims(claim_dao=claim_dao)
+        await _add_configured_data_steward_claims(
+            data_stewards=data_stewards,
+            user_dao=user_dao,
+            iva_dao=iva_dao,
+            claim_dao=claim_dao,
+        )
