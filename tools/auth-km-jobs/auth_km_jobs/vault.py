@@ -14,6 +14,8 @@ def get_vault() -> hvac.Client:
     url = config.vault_addr
     namespace = config.vault_namespace
     role = config.kube_role
+    auth_mount_point = config.vault_auth_mount_point
+
     if role:
         jwt = open(config.sa_token_path).read()
         token = None
@@ -30,7 +32,7 @@ def get_vault() -> hvac.Client:
     )
 
     if role:
-        Kubernetes(client.adapter).login(role=role, jwt=jwt)
+        Kubernetes(client.adapter).login(role=role, jwt=jwt, mount_point=auth_mount_point)
 
     return client
 

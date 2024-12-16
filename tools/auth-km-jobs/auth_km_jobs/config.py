@@ -9,6 +9,7 @@ class Config(BaseSettings):
         default="http://localhost:8200", description="Vault address."
     )
     vault_namespace: str = Field(default="vault", description="Vault namespace.")
+    vault_auth_mount_point: str = Field(default="kubernetes", description="Mount point for Kubernetes authentication.")
     token: str = Field(default="dev-token", description="Vault token.")
     secret_key_name: str = Field(
         default="key", description="Name of the key for stored secrets."
