@@ -34,7 +34,6 @@ spec:
             {{- if .Values.podAnnotations }}
             {{- .Values.podAnnotations | toYaml | nindent 12}}
             {{- end }}
-            helm.sh/revision: {{ .Release.Revision | quote }}
           labels: {{- include "common.labels.standard" . | nindent 12 }}
             app: {{ include "common.names.fullname" . }}
             {{- if .Values.podLabels }}
