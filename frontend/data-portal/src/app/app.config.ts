@@ -8,6 +8,7 @@ import {
   provideExperimentalZonelessChangeDetection,
 } from '@angular/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
 
 import {
@@ -25,6 +26,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withFetch(), withInterceptorsFromDi()),
     provideNoopAnimations(),
+    provideAnimationsAsync(),
     { provide: HTTP_INTERCEPTORS, useClass: CsrfInterceptor, multi: true },
   ],
 };

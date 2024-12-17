@@ -34,6 +34,17 @@
       typography: Lexend,
     )
   );
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-tertiary),
+      text-label-text-size: medium,
+      filled-label-text-size: medium,
+      outlined-label-text-size: medium,
+      protected-label-text-size: medium,
+      protected-container-color: var(--mat-sys-tertiary),
+      protected-label-text-color: var(--mat-sys-on-primary),
+    )
+  );
 }
 
 :root {
@@ -50,4 +61,53 @@ body {
   font-size: 16px;
   margin: 0;
   font-family: Lexend, 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+
+p {
+  margin-bottom: 0.5em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--mat-sys-primary);
+}
+
+h1 {
+  font-weight: 550;
+  font-size: 175%;
+  margin-bottom: 0.8em;
+}
+
+h2 {
+  font-weight: 550;
+  font-size: 140%;
+  margin-bottom: 0.75em;
+}
+
+h3 {
+  font-weight: 550;
+  font-size: 130%;
+  margin-bottom: 0.7em;
+}
+
+h4 {
+  font-weight: 550;
+  font-size: 120%;
+  margin-bottom: 0.7em;
+}
+
+h5 {
+  font-weight: 600;
+  font-size: 110%;
+  margin-bottom: 0.7em;
+}
+
+h6 {
+  font-weight: 650;
+  font-size: 105%;
+  margin-bottom: 0.7em;
 }

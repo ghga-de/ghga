@@ -9,9 +9,10 @@ mat-toolbar {
   );
 }
 
-mat-toolbar-row div div {
-  color: var(--mat-sys-quinary);
-  border-color: var(--mat-sys-quinary);
+// Tailwind classes do not override the Material classes, so we have to do it here
+mat-toolbar-row {
+  padding-left: 0;
+  height: fit-content;
 }
 
 a#activePage {
@@ -19,10 +20,10 @@ a#activePage {
 }
 
 button {
-  --mat-sys-on-surface-variant: #fff;
   @include mat.icon-button-overrides(
     (
       icon-color: var(--mat-sys-on-primary),
+      state-layer-color: var(--mat-sys-on-primary),
     )
   );
 }
@@ -34,4 +35,17 @@ mat-toolbar-row div a:active {
 
 mat-toolbar-row div a:focus {
   background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
+}
+
+mat-nav-list a {
+  @include mat.button-overrides(
+    (
+      text-state-layer-color: var(--mat-sys-on-primary),
+    )
+  );
+}
+
+mat-nav-list a mat-icon {
+  scale: 0.8;
+  margin: 0 -5px 0 0;
 }

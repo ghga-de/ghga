@@ -4,7 +4,7 @@
   <p>Loading...</p>
 } @else if (isNewlyRegistered()) {
   <p>Thank you for registering in the GHGA data portal.</p>
-  <p>
+  <p class="mb-5">
     For additional security when accessing protected data with the GHGA data portal, we
     are using two-factor authentication and verification of your identity via a contact
     address that is separate from your primary E-Mail contact address.
@@ -15,12 +15,12 @@
     In the case that you lost your phone or the setup of your authenticator app, you can
     create a new authentication code setup.
   </p>
-  <p>
+  <p class="mb-5">
     However, all contact addresses that had been verified before will need to be
     verified again.
   </p>
+  <button mat-stroked-button (click)="cancelLostToken()" class="mr-2">Cancel</button>
   <button mat-raised-button (click)="lostTokenConfirmed.set(true)">Continue</button>
-  <button mat-button (click)="cancelLostToken()">Cancel</button>
 } @else {
   @let uri = setupUri() | async;
   @if (uri) {
@@ -34,8 +34,38 @@
       In order to set up the authenticator app to produce the authentication codes for
       the GHGA data portal, please scan this QR code with your authenticator app:
     </p>
-    <qrcode [qrdata]="uri" [width]="160"></qrcode>
-    <button mat-button (click)="showManualSetup = !showManualSetup">
+    <qrcode [qrdata]="uri" [width]="256"></qrcode>
+
+    @if (showManualSetup) {
+      <p>
+        If you have trouble scanning the QR Code, please manually input the following
+        setup key in your authenticator app:
+      </p>
+      <p class="flex content-center">
+        <input
+          type="text"
+          size="33"
+          readonly
+          [value]="getSecret(uri)"
+          class="mb-2 mr-2 h-10 text-center font-mono"
+        />
+        <button
+          mat-icon-button
+          (click)="copySecret(uri)"
+          class="relative"
+          matTooltip="Copy setup key"
+          matTooltipPosition="right"
+          matTooltipHideDelay="100000"
+        >
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </p>
+    }
+    <button
+      mat-stroked-button
+      class="manual-setup-button mr-2"
+      (click)="showManualSetup = !showManualSetup"
+    >
       @if (showManualSetup) {
         Hide
       } @else {
@@ -43,14 +73,6 @@
       }
       manual setup instructions
     </button>
-    @if (showManualSetup) {
-      <p>
-        If you have trouble scanning the QR Code, please manually input the following
-        setup key in your authenticator app:
-      </p>
-      <p><input type="text" size="35" readonly [value]="getSecret(uri)" /></p>
-      <button mat-button (click)="copySecret(uri)">Copy the setup key</button>
-    }
     <button mat-raised-button (click)="completeSetup()">Continue</button>
   } @else if (uri === undefined) {
     <p>Generating the TOTP setup...</p>

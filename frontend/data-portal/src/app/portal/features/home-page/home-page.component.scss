@@ -1,0 +1,7 @@
+@use '@angular/material' as mat;
+
+p a mat-icon {
+  scale: 0.6;
+  margin: 0 -5px 0 -3px;
+  transform: translateY(10px);
+}

@@ -6,6 +6,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '@app/auth/services/auth.service';
 import { QRCodeComponent } from 'angularx-qrcode';
 
@@ -17,7 +20,14 @@ import { QRCodeComponent } from 'angularx-qrcode';
  */
 @Component({
   selector: 'app-setup-totp',
-  imports: [CommonModule, QRCodeComponent, MatButtonModule],
+  imports: [
+    CommonModule,
+    QRCodeComponent,
+    MatButtonModule,
+    MatInputModule,
+    MatIcon,
+    MatTooltipModule,
+  ],
   templateUrl: './setup-totp.component.html',
 })
 export class SetupTotpComponent {

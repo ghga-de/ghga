@@ -1,33 +1,39 @@
-<mat-toolbar class="py-2">
+<mat-toolbar>
   <mat-toolbar-row class="align-center flex justify-between">
     <div class="flex h-full basis-1/4">
-      <a routerLink="/" class="flex h-full flex-nowrap items-center p-3"
+      <a matRipple routerLink="/" class="flex h-full flex-nowrap items-center px-4 py-3"
         ><img
           src="assets/images/GHGA_logo_clean.png"
           class="max-h-12"
           alt="GHGA Logo"
         />
         <div class="ms-2 border-l ps-2 pt-1 uppercase">
-          <span class="text-3xl leading-3 tracking-wider">Data</span><br /><span
-            >Portal</span
-          >
+          <span class="border-quinary text-3xl leading-3 tracking-wider text-quinary"
+            >Data</span
+          ><br /><span>Portal</span>
         </div></a
       >
     </div>
 
-    <mat-nav-list class="basis-1/2 text-center">
+    <mat-nav-list class="my-8 basis-1/2 text-center">
       <a
         [id]="route === '/' ? 'activePage' : ''"
-        mat-flat-button
+        mat-button
         routerLink="/"
         class="homeLink mx-1"
         >Home</a
       ><a
         [id]="route === '/browse' ? 'activePage' : ''"
-        mat-flat-button
+        mat-button
         routerLink="/browse"
         class="mx-1"
-        >Browse</a
+        >Browse Data</a
+      >
+      <a mat-button href="https://docs.ghga.de/faq/" class="mx-1 flex-row-reverse"
+        >FAQ<mat-icon class="float-right">open_in_new</mat-icon></a
+      >
+      <a mat-button href="https://docs.ghga.de/" class="mx-1 flex-row-reverse"
+        >Docs<mat-icon class="float-right">open_in_new</mat-icon></a
       ></mat-nav-list
     >
     <div class="basis-1/4 text-right">
@@ -36,7 +42,9 @@
           <mat-icon>logout</mat-icon>
         </button>
       } @else {
-        <button mat-icon-button (click)="onLogin()"><mat-icon>login</mat-icon></button>
+        <button mat-icon-button (click)="onLogin()">
+          <mat-icon>login</mat-icon>
+        </button>
       }
     </div></mat-toolbar-row
   >

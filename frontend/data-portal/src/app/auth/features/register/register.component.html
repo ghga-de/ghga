@@ -6,7 +6,7 @@
   }
   @case (null) {
     <p>You are currently not logged in.</p>
-    <p><a routerLink="/">Go back to the home page.</a></p>
+    <a mat-raised-button routerLink="/">Return to the home page</a>
   }
   @default {
     <h2>Welcome, {{ u.full_name }}!</h2>
@@ -22,19 +22,19 @@
       }
     </p>
     <p>
-      <span class="label">Name:</span>
+      <span class="inline-block min-w-44 font-bold">Name:</span>
       <span>{{ u.name }}</span>
     </p>
     <p>
-      <span class="label">E-Mail:</span>
+      <span class="inline-block min-w-44 font-bold">E-Mail:</span>
       <span>{{ u.email }}</span>
     </p>
     <p>
-      <span class="label">Life Science ID:</span>
+      <span class="inline-block min-w-44 font-bold">Life Science ID:</span>
       <span>{{ u.ext_id }}</span>
     </p>
-    <p>
-      <span class="label">Academic title:</span>
+    <p class="mb-0">
+      <span class="inline-block min-w-44 font-bold">Academic title:</span>
       <mat-form-field>
         <mat-select [formControl]="titleControl">
           @for (title of allTitles; track title) {
@@ -43,22 +43,30 @@
         </mat-select>
       </mat-form-field>
     </p>
-    <p>
+    <p class="mb-4">
       <mat-checkbox [(ngModel)]="accepted">
         I accept the
         <a
-          href="https://www.ghga.de/Downloads/Terms_of_Use_-_GHGA_Data_Infrastructure_V1.0.pdf"
+          href="https://zenodo.org/records/11146387"
           target="_blank"
-          rel="noreferrer"
+          rel="noreferrer noopener"
+          class="underline"
           >terms of use</a
         >
         and the
-        <a href="https://www.ghga.de/data-protection" target="_blank" rel="noreferrer">
+        <a
+          href="https://www.ghga.de/data-protection"
+          target="_blank"
+          rel="noreferrer noopener"
+          class="underline"
+        >
           privacy policy</a
         >.
       </mat-checkbox>
     </p>
-    <button mat-button (click)="cancel()">Cancel and log out</button>
+    <button mat-stroked-button class="mr-2" (click)="cancel()">
+      Cancel and log out
+    </button>
     <button mat-raised-button (click)="register()" [disabled]="!accepted">
       {{ u?.id ? 'Confirm' : 'Register' }}
     </button>

@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { AcademicTitle, UserBasicData } from '@app/auth/models/user';
 
 import { MatButtonModule } from '@angular/material/button';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth.service';
 
 // TODO: Polish this component
@@ -28,9 +29,9 @@ import { AuthService } from '@app/auth/services/auth.service';
     MatCheckboxModule,
     MatFormFieldModule,
     MatSelectModule,
+    RouterLink,
   ],
   templateUrl: './register.component.html',
-  styleUrl: './register.component.scss',
 })
 export class RegisterComponent {
   #authService = inject(AuthService);
