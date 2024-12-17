@@ -1,4 +1,5 @@
 /**
+ * Test the TOTP token setup component
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */

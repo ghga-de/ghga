@@ -1,4 +1,5 @@
 /**
+ * Test the site header component
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */

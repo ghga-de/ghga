@@ -1,4 +1,5 @@
 /**
+ * The main app configuration
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */

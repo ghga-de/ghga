@@ -1,4 +1,5 @@
 /**
+ * Show session information
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */

@@ -1,7 +1,11 @@
 /**
+ * Mock REST handlers
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
+
+import { http, HttpResponse, RequestHandler } from 'msw';
+import { responses, ResponseValue } from './responses';
 
 /**
  * Create response handlers for MSW
@@ -10,12 +14,6 @@
  * converts it into a list of response handlers that can be used to setup MSW.
  */
 
-import { http, HttpResponse, RequestHandler } from 'msw';
-import { responses, ResponseValue } from './responses';
-
-/**
- * List of handlers for REST endpoints
- */
 export const handlers: RequestHandler[] = [];
 
 type ResponseMap = { [params: string]: ResponseValue };

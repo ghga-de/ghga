@@ -1,10 +1,7 @@
 /**
+ * The main module
  * @copyright The GHGA Authors
  * @license Apache-2.0
- */
-
-/**
- * The main module
  */
 
 import { isDevMode } from '@angular/core';
