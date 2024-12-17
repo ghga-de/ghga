@@ -1,3 +1,8 @@
+/**
+ * @copyright The GHGA Authors
+ * @license Apache-2.0
+ */
+
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 

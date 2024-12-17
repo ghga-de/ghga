@@ -1,4 +1,8 @@
-/* eslint-disable jsdoc/require-jsdoc */
+/**
+ * @copyright The GHGA Authors
+ * @license Apache-2.0
+ */
+
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth.service';

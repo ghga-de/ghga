@@ -1,4 +1,9 @@
 /**
+ * @copyright The GHGA Authors
+ * @license Apache-2.0
+ */
+
+/**
  * All possible states of the user session
  */
 export type LoginState =
