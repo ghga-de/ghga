@@ -34,4 +34,12 @@ export const responses: { [endpoint: string]: ResponseValue } = {
     count: searchResults.count,
     hits: searchResults.hits,
   },
+
+  /**
+   * Static assets
+   */
+  'GET /assets/*': undefined,
+  'GET /*.css': undefined,
+  'GET /*.js': undefined,
+  'GET /*.woff2': undefined,
 };

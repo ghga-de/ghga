@@ -197,14 +197,14 @@ export default [
             },
             // Auth models may be imported in other contexts
             {
-              from: ['features', 'service', 'models'],
+              from: ['features', 'service', 'model', 'mock'],
               allow: [['model', { context: 'auth' }]],
             },
             // Mock module may only import models
             {
               from: ['mock'],
-              disallow: [['*', { context: '!model' }]],
-              message: 'Mock modules can only import models',
+              disallow: ['!model'],
+              message: 'Mock modules can only import models  ${dependency.context}',
             },
           ],
         },

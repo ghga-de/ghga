@@ -5,16 +5,18 @@
  */
 
 import { http, HttpResponse, RequestHandler } from 'msw';
+import { handlers as authHandlers } from './auth';
 import { responses, ResponseValue } from './responses';
 
 /**
- * Create response handlers for MSW
- *
  * This module takes a list of static responses for different endpoints and
  * converts it into a list of response handlers that can be used to setup MSW.
  */
 
-export const handlers: RequestHandler[] = [];
+/**
+ * List of handlers for REST endpoints
+ */
+export const handlers: RequestHandler[] = [...authHandlers];
 
 type ResponseMap = { [params: string]: ResponseValue };
 

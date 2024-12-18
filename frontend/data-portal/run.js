@@ -226,7 +226,9 @@ function main() {
   process.chdir(__dirname);
 
   const settings = readSettings();
-  console.log('Runtime settings =', settings);
+
+  console.log('Runtime settings:');
+  console.table(settings);
 
   const {
     host,
