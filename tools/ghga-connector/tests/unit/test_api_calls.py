@@ -16,12 +16,15 @@
 
 """Tests for API Calls"""
 
+import asyncio
+import base64
 from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
 from typing import Union
 from unittest.mock import Mock
 
+import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
@@ -29,10 +32,104 @@ from ghga_connector.core import WorkPackageAccessor, async_client, exceptions
 from ghga_connector.core.api_calls.well_knowns import WKVSCaller
 from ghga_connector.core.uploading.structs import UploadStatus
 from ghga_connector.core.uploading.uploader import Uploader
+from tests.fixtures.mock_api.app import create_caching_headers
 from tests.fixtures.utils import mock_wps_token
 
+pytest.mark.httpx_mock(
+    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
+)
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.httpx_mock(
+        assert_all_responses_were_requested=False,
+        can_send_already_matched_responses=True,
+        should_mock=lambda request: True,
+    ),
+]
+API_URL = "http://127.0.0.1"
 
-@pytest.mark.asyncio
+
+class RecordingClient(httpx.AsyncClient):
+    """An `AsyncClient` wrapper that records responses."""
+
+    calls: list[httpx.Response]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.calls = []
+
+    async def _do_request(self, method: str, *args, **kwargs) -> httpx.Response:
+        """Wrap actual client calls so we can see which calls were cached vs not."""
+        method_func = getattr(super(), method)
+        response = await method_func(*args, **kwargs)
+        self.calls.append(response)
+        return response
+
+    def assert_last_call_from_cache(self):
+        """Assert that the last call was from the cache."""
+        assert self.calls[-1].extensions["from_cache"]
+
+    def assert_last_call_not_from_cache(self):
+        """Assert that the last call was not from the cache."""
+        assert not self.calls[-1].extensions["from_cache"]
+
+    async def get(self, *args, **kwargs) -> httpx.Response:
+        """Record GET calls."""
+        return await self._do_request("get", *args, **kwargs)
+
+    async def post(self, *args, **kwargs) -> httpx.Response:
+        """Record POST calls."""
+        return await self._do_request("post", *args, **kwargs)
+
+
+async def test_get_work_order_token_caching(monkeypatch, httpx_mock: HTTPXMock):
+    """Test the caching of call to the WPS to get a work order token.
+
+    The `mock_external_calls` fixture will route HTTP requests to the mock API.
+    """
+    # Patch the decrypt function so we don't need an actual token
+    monkeypatch.setattr(
+        "ghga_connector.core.work_package._decrypt", lambda data, key: data
+    )
+
+    # Patch the client to record calls
+    monkeypatch.setattr("ghga_connector.core.client.httpx.AsyncClient", RecordingClient)
+    async with async_client() as client:
+        assert isinstance(client, RecordingClient)
+        accessor = WorkPackageAccessor(
+            api_url=API_URL,
+            client=client,
+            dcs_api_url="",
+            my_private_key=b"",
+            my_public_key=b"",
+            access_token="",
+            package_id="wp_1",
+        )
+        file_id = "file-id-1"
+        add_httpx_response = partial(
+            httpx_mock.add_response,
+            status_code=201,
+            json=base64.b64encode(b"1234567890" * 5).decode(),
+            headers=create_caching_headers(3),
+        )
+        add_httpx_response()
+        await accessor.get_work_order_token(file_id=file_id)
+
+        # Verify that the call was made
+        assert client.calls
+        client.assert_last_call_not_from_cache()
+
+        # Make same call and verify that the response came from the cache instead
+        await accessor.get_work_order_token(file_id=file_id)
+        client.assert_last_call_from_cache()
+
+        # Wait for the cache entry to expire, then make the call again
+        await asyncio.sleep(1)
+        add_httpx_response()
+        await accessor.get_work_order_token(file_id=file_id)
+        client.assert_last_call_not_from_cache()
+
+
 @pytest.mark.parametrize(
     "bad_url,upload_id,upload_status,expected_exception",
     [
@@ -107,7 +204,6 @@ async def test_patch_multipart_upload(
             await uploader.patch_multipart_upload(upload_status=upload_status)
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "from_part, end_part, expected_exception",
     [
@@ -160,10 +256,6 @@ async def test_get_part_upload_urls(
                 break
 
 
-@pytest.mark.httpx_mock(
-    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
-)
-@pytest.mark.asyncio
 async def test_get_wps_file_info(httpx_mock: HTTPXMock):
     """Test response handling with some mock - just make sure code paths work"""
     files = {"file_1": ".tar.gz"}
@@ -218,7 +310,6 @@ async def test_get_wps_file_info(httpx_mock: HTTPXMock):
             response = await work_package_accessor.get_package_files()
 
 
-@pytest.mark.asyncio
 async def test_wkvs_calls(httpx_mock: HTTPXMock):
     """Test handling of responses for WKVS api calls"""
     wkvs_url = "https://127.0.0.1"

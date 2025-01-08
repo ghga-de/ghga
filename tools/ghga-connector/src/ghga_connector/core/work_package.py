@@ -22,6 +22,8 @@ import httpx
 from ghga_service_commons.utils.crypt import decrypt
 from tenacity import RetryError
 
+from ghga_connector.constants import CACHE_MIN_FRESH
+
 from . import exceptions, retry_handler
 
 
@@ -94,7 +96,12 @@ class WorkPackageAccessor:
         url = f"{self.api_url}/work-packages/{self.package_id}/files/{file_id}/work-order-tokens"
 
         # send authorization header as bearer token
-        headers = httpx.Headers({"Authorization": f"Bearer {self.access_token}"})
+        headers = httpx.Headers(
+            {
+                "Authorization": f"Bearer {self.access_token}",
+                "Cache-Control": f"min-fresh={CACHE_MIN_FRESH}",
+            }
+        )
         response = await self._call_url(fn=self.client.post, headers=headers, url=url)
 
         status_code = response.status_code

@@ -51,7 +51,7 @@ class DownloaderBase(ABC):
         """
 
     @abstractmethod
-    async def download_to_queue(self, *, url: str, part_range: PartRange) -> None:
+    async def download_to_queue(self, *, part_range: PartRange) -> None:
         """
         Start downloading file parts in parallel into a queue.
         This should be wrapped into asyncio.task and is guarded by a semaphore to limit

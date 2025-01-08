@@ -31,6 +31,7 @@ def is_service_healthy(api_url: str, *, timeout_in_seconds: int = 5) -> bool:
 def check_url(api_url: str, *, timeout_in_seconds: int = 5) -> bool:
     """Checks, if an url is reachable within a certain time"""
     try:
+        # Don't cache health checks
         response = httpx.get(url=api_url, timeout=timeout_in_seconds)
     except httpx.RequestError:
         return False

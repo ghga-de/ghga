@@ -17,6 +17,7 @@
 
 import asyncio
 import base64
+import gc
 from asyncio import PriorityQueue, Queue, Semaphore, Task, create_task
 from collections.abc import Coroutine
 from io import BufferedWriter
@@ -111,6 +112,9 @@ class Downloader(DownloaderBase):
     async def download_file(self, *, output_path: Path, part_size: int):
         """Download file to the specified location and manage lower level details."""
         # Split the file into parts based on the part size
+        self._message_display.display(
+            f"Fetching work order token and download URL for {self._file_id}"
+        )
         url_response = await self.fetch_download_url()
         part_ranges = calc_part_ranges(
             part_size=part_size, total_file_size=url_response.file_size
@@ -120,11 +124,7 @@ class Downloader(DownloaderBase):
 
         # start async part download to intermediate queue
         for part_range in part_ranges:
-            task_handler.schedule(
-                self.download_to_queue(
-                    url=url_response.download_url, part_range=part_range
-                )
-            )
+            task_handler.schedule(self.download_to_queue(part_range=part_range))
 
         # get file header envelope
         try:
@@ -157,8 +157,13 @@ class Downloader(DownloaderBase):
                 ),
                 name="Write queue to file",
             )
-            await task_handler.gather()
-            await write_to_file
+            try:
+                await task_handler.gather()
+            except:
+                write_to_file.cancel()
+                raise
+            else:
+                await write_to_file
 
     async def fetch_download_url(self) -> URLResponse:
         """Fetch a work order token and retrieve the download url.
@@ -168,14 +173,10 @@ class Downloader(DownloaderBase):
             2. the file size in bytes
         """
         try:
-            self._message_display.display(
-                f"Fetching work order token for {self._file_id}"
-            )
             url_and_headers = await get_file_authorization(
                 file_id=self._file_id,
                 work_package_accessor=self._work_package_accessor,
             )
-            self._message_display.display(f"Fetching download URL for {self._file_id}")
             response = await get_download_url(
                 client=self._client, url_and_headers=url_and_headers
             )
@@ -242,7 +243,7 @@ class Downloader(DownloaderBase):
         ResponseExceptionTranslator(spec=spec).handle(response=response)
         raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 
-    async def download_to_queue(self, *, url: str, part_range: PartRange) -> None:
+    async def download_to_queue(self, *, part_range: PartRange) -> None:
         """
         Start downloading file parts in parallel into a queue.
         This should be wrapped into  asyncio.task and is guarded by a semaphore to limit
@@ -250,6 +251,8 @@ class Downloader(DownloaderBase):
         """
         # Guard with semaphore to ensure only a set amount of downloads runs in parallel
         async with self._semaphore:
+            url_and_headers = await self.fetch_download_url()
+            url = url_and_headers.download_url
             try:
                 await self.download_content_range(
                     url=url, start=part_range.start, end=part_range.stop
@@ -265,7 +268,12 @@ class Downloader(DownloaderBase):
         end: int,
     ) -> None:
         """Download a specific range of a file's content using a presigned download url."""
-        headers = httpx.Headers({"Range": f"bytes={start}-{end}"})
+        headers = httpx.Headers(
+            {
+                "Range": f"bytes={start}-{end}",
+                "Cache-Control": "no-store",  # don't cache part downloads
+            }
+        )
 
         try:
             response: httpx.Response = await retry_handler(
@@ -320,3 +328,4 @@ class Downloader(DownloaderBase):
             downloaded_size += chunk_size
             self._queue.task_done()
             progress_bar.advance(chunk_size)
+            gc.collect()

@@ -19,7 +19,7 @@ from typing import Union
 
 import httpx
 
-from ghga_connector.constants import TIMEOUT_LONG
+from ghga_connector.constants import CACHE_MIN_FRESH, TIMEOUT_LONG
 from ghga_connector.core import WorkPackageAccessor, exceptions
 
 from .structs import (
@@ -30,11 +30,14 @@ from .structs import (
 
 
 async def _get_authorization(
-    file_id: str, work_package_accessor: WorkPackageAccessor, url: str
-) -> UrlAndHeaders:
+    file_id: str, work_package_accessor: WorkPackageAccessor
+) -> httpx.Headers:
     """
     Fetch work order token using accessor and prepare DCS endpoint URL and headers for a
-    given endpoint identified by the `url` passed
+    given endpoint identified by the `url` passed.
+
+    The calls will use the cache if possible while the cached responses are still fresh
+    for at least another `CACHE_MIN_FRESH` seconds.
     """
     # fetch a work order token
     decrypted_token = await work_package_accessor.get_work_order_token(file_id=file_id)
@@ -44,10 +47,11 @@ async def _get_authorization(
             "Accept": "application/json",
             "Authorization": f"Bearer {decrypted_token}",
             "Content-Type": "application/json",
+            "Cache-Control": f"min-fresh={CACHE_MIN_FRESH}",
         }
     )
 
-    return UrlAndHeaders(endpoint_url=url, headers=headers)
+    return headers
 
 
 async def get_envelope_authorization(
@@ -59,9 +63,10 @@ async def get_envelope_authorization(
     """
     # build url
     url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}/envelopes"
-    return await _get_authorization(
-        file_id=file_id, work_package_accessor=work_package_accessor, url=url
+    headers = await _get_authorization(
+        file_id=file_id, work_package_accessor=work_package_accessor
     )
+    return UrlAndHeaders(url, headers)
 
 
 async def get_file_authorization(
@@ -73,9 +78,10 @@ async def get_file_authorization(
     """
     # build URL
     url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}"
-    return await _get_authorization(
-        file_id=file_id, work_package_accessor=work_package_accessor, url=url
+    headers = await _get_authorization(
+        file_id=file_id, work_package_accessor=work_package_accessor
     )
+    return UrlAndHeaders(url, headers)
 
 
 async def get_download_url(

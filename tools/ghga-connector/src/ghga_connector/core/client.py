@@ -16,8 +16,11 @@
 
 from contextlib import asynccontextmanager, contextmanager
 from functools import cached_property
+from typing import Union
 
+import hishel
 import httpx
+from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from tenacity import (
     AsyncRetrying,
     retry_if_exception_type,
@@ -71,6 +74,32 @@ def httpx_client():
         yield client
 
 
+def get_cache_transport(
+    wrapped_transport: Union[httpx.AsyncBaseTransport, None] = None,
+) -> hishel.AsyncCacheTransport:
+    """Construct an async cache transport with `hishel`.
+
+    The `wrapped_transport` parameter can be used for testing to inject, for example,
+    an httpx.ASGITransport pointing to a FastAPI app.
+    """
+    cache_transport = hishel.AsyncCacheTransport(
+        transport=wrapped_transport or httpx.AsyncHTTPTransport(),
+        storage=hishel.AsyncInMemoryStorage(ttl=1800),  # persist for 30 minutes
+        controller=hishel.Controller(
+            cacheable_methods=["POST", "GET"],
+            cacheable_status_codes=[200, 201],
+        ),
+    )
+    return cache_transport
+
+
+def get_mounts() -> dict[str, httpx.AsyncBaseTransport]:
+    """Return a dict of mounts for the cache transport."""
+    return {
+        "all://": get_cache_transport(),
+    }
+
+
 @asynccontextmanager
 async def async_client():
     """Yields a context manager async httpx client and closes it afterward"""
@@ -80,5 +109,7 @@ async def async_client():
             max_connections=CONFIG.max_concurrent_downloads,
             max_keepalive_connections=CONFIG.max_concurrent_downloads,
         ),
+        mounts=get_mounts(),
     ) as client:
+        attach_correlation_id_to_requests(client)
         yield client
