@@ -23,6 +23,7 @@ import string
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto import jwk
 
+from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
 from wps.core.models import WorkOrderToken
 
 __all__ = [
@@ -34,7 +35,6 @@ __all__ = [
 
 ACCESS_TOKEN_CHARSET = string.ascii_letters + string.digits
 ACCESS_TOKEN_LENGTH = 24
-WORK_ORDER_TOKEN_VALID_SECONDS = 30
 
 
 def generate_work_package_access_token() -> str:

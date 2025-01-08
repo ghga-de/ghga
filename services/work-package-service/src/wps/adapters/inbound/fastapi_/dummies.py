@@ -30,10 +30,10 @@ from ghga_service_commons.auth.ghga import AuthContext
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
 __all__ = [
-    "auth_provider",
-    "work_package_repo_port",
     "AuthProviderDummy",
     "WorkPackageRepositoryDummy",
+    "auth_provider",
+    "work_package_repo_port",
 ]
 
 auth_provider = DependencyDummy("auth_provider")

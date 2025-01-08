@@ -141,7 +141,7 @@ components:
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
-  version: 2.0.6
+  version: 2.0.7
 openapi: 3.1.0
 paths:
   /health:
@@ -262,9 +262,7 @@ paths:
         '201':
           content:
             application/json:
-              schema:
-                title: Response Create Work Order Token
-                type: string
+              schema: {}
           description: Work order token has been created.
         '403':
           description: Not authorized to create the work order token.

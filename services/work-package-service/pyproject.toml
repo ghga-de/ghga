@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wps"
-version = "2.0.6"
+version = "2.0.7"
 description = "Work Package Service"
 dependencies = [
     "ghga-event-schemas~=3.3.1",
@@ -67,6 +67,7 @@ fixable = [
     "UP",
     "I",
     "D",
+    "RUF022",
 ]
 ignore = [
     "E111",
@@ -86,6 +87,7 @@ ignore = [
     "D206",
     "D300",
     "UP040",
+    "PLC0206",
 ]
 select = [
     "C90",

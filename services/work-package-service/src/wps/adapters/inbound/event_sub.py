@@ -29,7 +29,7 @@ from pydantic_settings import BaseSettings
 from wps.core.models import Dataset, DatasetFile, WorkType
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
-__all__ = ["EventSubTranslatorConfig", "EventSubTranslator"]
+__all__ = ["EventSubTranslator", "EventSubTranslatorConfig"]
 
 log = logging.getLogger(__name__)
 

@@ -34,7 +34,7 @@ from wps.config import Config
 from wps.core.repository import WorkPackageRepository
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
-__all__ = ["prepare_core", "prepare_rest_app", "prepare_consumer", "Consumer"]
+__all__ = ["Consumer", "prepare_consumer", "prepare_core", "prepare_rest_app"]
 
 
 @asynccontextmanager

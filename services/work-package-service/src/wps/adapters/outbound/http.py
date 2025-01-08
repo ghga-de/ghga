@@ -25,7 +25,7 @@ from pydantic_settings import BaseSettings
 
 from wps.ports.outbound.access import AccessCheckPort
 
-__all__ = ["AccessCheckConfig", "AccessCheckAdapter"]
+__all__ = ["AccessCheckAdapter", "AccessCheckConfig"]
 
 TIMEOUT = 60
 

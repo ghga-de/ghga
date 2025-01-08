@@ -25,7 +25,7 @@ from ghga_event_schemas.pydantic_ import (
 
 from wps.core.models import Dataset, DatasetFile, WorkType
 
-__all__ = ["DATASET", "DATASET_UPSERTION_EVENT", "DATASET_DELETION_EVENT"]
+__all__ = ["DATASET", "DATASET_DELETION_EVENT", "DATASET_UPSERTION_EVENT"]
 
 
 DATASET = Dataset(

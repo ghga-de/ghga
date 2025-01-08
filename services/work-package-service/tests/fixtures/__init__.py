@@ -41,15 +41,15 @@ __all__ = [
     "AUTH_CLAIMS",
     "AUTH_KEY_PAIR",
     "SIGNING_KEY_PAIR",
+    "Consumer",
     "fixture_auth_context",
     "fixture_auth_headers",
     "fixture_bad_auth_headers",
+    "fixture_client",
     "fixture_config",
     "fixture_repository",
-    "fixture_client",
     "headers_for_token",
     "non_mocked_hosts",
-    "Consumer",
 ]
 
 AUTH_KEY_PAIR = generate_jwk()

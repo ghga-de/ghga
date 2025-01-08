@@ -19,9 +19,11 @@
 import logging
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import JSONResponse
 
 from wps.adapters.inbound.fastapi_.auth import UserAuthContext, WorkPackageAccessToken
 from wps.adapters.inbound.fastapi_.dummies import WorkPackageRepositoryDummy
+from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
 from wps.core.models import (
     Dataset,
     WorkPackageCreationData,
@@ -137,17 +139,23 @@ async def create_work_order_token(
     file_id: str,
     repository: WorkPackageRepositoryDummy,
     work_package_access_token: WorkPackageAccessToken,
-) -> str:
+) -> JSONResponse:
     """Get an encrypted work order token using a work package access token."""
     try:
         if not (work_package_id and file_id and work_package_access_token):
             raise repository.WorkPackageAccessError
-        return await repository.work_order_token(
+
+        wot = await repository.work_order_token(
             work_package_id=work_package_id,
             file_id=file_id,
             check_valid=True,
             work_package_access_token=work_package_access_token,
         )
+
+        cache_control_header = {
+            "Cache-Control": f"max-age={WORK_ORDER_TOKEN_VALID_SECONDS}, private"
+        }
+        return JSONResponse(content=wot, status_code=201, headers=cache_control_header)
     except repository.WorkPackageAccessError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
 

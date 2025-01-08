@@ -25,12 +25,12 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from wps.core.crypt import validate_public_key
 
 __all__ = [
-    "WorkType",
     "WorkOrderToken",
+    "WorkPackage",
     "WorkPackageCreationData",
     "WorkPackageCreationResponse",
     "WorkPackageData",
-    "WorkPackage",
+    "WorkType",
 ]
 
 

@@ -23,6 +23,8 @@ from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest_httpx import HTTPXMock
 
+from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
+
 from .fixtures import (  # noqa: F401
     SIGNING_KEY_PAIR,
     fixture_auth_headers,
@@ -186,6 +188,9 @@ async def test_create_work_order_token(
         headers=headers_for_token(token),
     )
     assert response.status_code == status.HTTP_201_CREATED
+    assert "Cache-Control" in response.headers
+    cache_control = response.headers["Cache-Control"]
+    assert cache_control == f"max-age={WORK_ORDER_TOKEN_VALID_SECONDS}, private"
 
     wot = response.json()
     assert isinstance(wot, str)
