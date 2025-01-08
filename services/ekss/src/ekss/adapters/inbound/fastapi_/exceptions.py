@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 
 class HttpMalformedOrMissingEnvelopeError(HttpCustomExceptionBase):
-    """Thrown when envelope decryption fails due to a missing or malformed envelope."""
+    """Raised when envelope decryption fails due to a missing or malformed envelope."""
 
     exception_id = "malformedOrMissingEnvelopeError"
 
@@ -36,7 +36,7 @@ class HttpMalformedOrMissingEnvelopeError(HttpCustomExceptionBase):
 
 
 class HttpEnvelopeDecryptionError(HttpCustomExceptionBase):
-    """Thrown when no available secret crypt4GH key can successfully decrypt the file envelope."""
+    """Raised when no available secret crypt4GH key can successfully decrypt the file envelope."""
 
     exception_id = "envelopeDecryptionError"
 
@@ -53,7 +53,7 @@ class HttpEnvelopeDecryptionError(HttpCustomExceptionBase):
 
 
 class HttpSecretInsertionError(HttpCustomExceptionBase):
-    """Thrown when a secret could not be inserted into the vault"""
+    """Raised when a secret could not be inserted into the vault"""
 
     exception_id = "secretInsertionError"
 
@@ -70,7 +70,7 @@ class HttpSecretInsertionError(HttpCustomExceptionBase):
 
 
 class HttpVaultConnectionError(HttpCustomExceptionBase):
-    """Thrown when the EKSS could not connect to the vault"""
+    """Raised when the EKSS could not connect to the vault"""
 
     exception_id = "vaultConnectionError"
 
@@ -87,7 +87,7 @@ class HttpVaultConnectionError(HttpCustomExceptionBase):
 
 
 class HttpSecretNotFoundError(HttpCustomExceptionBase):
-    """Thrown when no secret with the given id could be found"""
+    """Raised when no secret with the given id could be found"""
 
     exception_id = "secretNotFoundError"
 
@@ -99,5 +99,19 @@ class HttpSecretNotFoundError(HttpCustomExceptionBase):
         super().__init__(
             status_code=status_code,
             description="The secret for the given id was not found.",
+            data={},
+        )
+
+
+class HttpDecodingError(HttpCustomExceptionBase):
+    """Raised when a byte string could not be decoded using base64"""
+
+    exception_id = "decodingError"
+
+    def __init__(self, *, affected: str, status_code: int = 422):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=f"Could not decode the the given string as base64: {affected}",
             data={},
         )

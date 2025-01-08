@@ -95,6 +95,28 @@ async def test_corrupted_header(
 
 
 @pytest.mark.asyncio
+async def test_invalid_pubkey(
+    *,
+    first_part_fixture: FirstPartFixture,  # noqa: F811
+):
+    """Test request response for /secrets endpoint with an invalid public key"""
+    app.dependency_overrides[config_injector] = lambda: first_part_fixture.vault.config
+
+    payload = first_part_fixture.content
+    content = base64.b64encode(payload).decode("utf-8")
+
+    request_body = {
+        "public_key": "abc",
+        "file_part": content,
+    }
+
+    response = client.post(url="/secrets", json=request_body)
+    assert response.status_code == 422
+    body = response.json()
+    assert body["exception_id"] == "decodingError"
+
+
+@pytest.mark.asyncio
 async def test_missing_envelope(
     *,
     first_part_fixture: FirstPartFixture,  # noqa: F811
@@ -117,3 +139,27 @@ async def test_missing_envelope(
     assert response.status_code == 400
     body = response.json()
     assert body["exception_id"] == "malformedOrMissingEnvelopeError"
+
+
+@pytest.mark.asyncio
+async def test_non_base64_envelope(
+    *,
+    first_part_fixture: FirstPartFixture,  # noqa: F811
+):
+    """Test request response for /secrets endpoint with malformed envelope"""
+    app.dependency_overrides[config_injector] = lambda: first_part_fixture.vault.config
+
+    payload = first_part_fixture.content
+    content = "abc" + base64.b64encode(payload).decode("utf-8")
+
+    request_body = {
+        "public_key": base64.b64encode(first_part_fixture.client_pubkey).decode(
+            "utf-8"
+        ),
+        "file_part": content,
+    }
+
+    response = client.post(url="/secrets", json=request_body)
+    assert response.status_code == 422
+    body = response.json()
+    assert body["exception_id"] == "decodingError"

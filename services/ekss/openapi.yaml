@@ -9,6 +9,31 @@ components:
           type: array
       title: HTTPValidationError
       type: object
+    HttpDecodingError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpDecodingErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: decodingError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpDecodingError
+      type: object
+    HttpDecodingErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpDecodingErrorData
+      type: object
     HttpEnvelopeDecryptionError:
       additionalProperties: false
       properties:
@@ -209,7 +234,7 @@ info:
   description: A service managing storage and retrieval of symmetric keys in a HashiCorp
     Vault.
   title: Encryption Key Store Service
-  version: 1.4.4
+  version: 1.5.0
 openapi: 3.1.0
 paths:
   /health:
@@ -244,37 +269,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InboundEnvelopeContent'
-          description: ''
+          description: Successfully created and stored secret for re-encryption.
         '400':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpMalformedOrMissingEnvelopeError'
-          description: Bad Request
+          description: Crypt4GH header envelope is either missing or malformed in
+            the provided payload.
         '403':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpEnvelopeDecryptionError'
-          description: Forbidden
+          description: Could not decrypt Crypt4GH header envelope with the given key
+            pair.
         '422':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+                $ref: '#/components/schemas/HttpDecodingError'
+          description: One of the provided inputs could not be decoded as base64 string.
         '502':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpSecretInsertionError'
-          description: Bad Gateway
+          description: Failed to successfully insert secret into vault.
         '504':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpVaultConnectionError'
-          description: Gateway Timeout
+          description: Failed to establish a connection to vault.
       summary: Extract file encryption/decryption secret and file content offset from
         enevelope
       tags:
@@ -293,13 +320,13 @@ paths:
           type: string
       responses:
         '204':
-          description: ''
+          description: Succesfully deleted secret.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpSecretNotFoundError'
-          description: Not Found
+          description: Could not find a secret for the given secret ID.
         '422':
           content:
             application/json:
@@ -333,19 +360,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OutboundEnvelopeContent'
-          description: ''
+          description: Created personalized Crypt4GH envelope.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpSecretNotFoundError'
-          description: Not Found
+          description: Could not find a secret for the given secret ID.
         '422':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+                $ref: '#/components/schemas/HttpDecodingError'
+          description: One of the provided inputs could not be decoded as base64 string.
       summary: Get personalized envelope containing Crypt4GH file encryption/decryption
         key
       tags:
