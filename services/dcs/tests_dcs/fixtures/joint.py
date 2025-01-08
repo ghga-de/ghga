@@ -284,7 +284,7 @@ async def cleanup_fixture(
     test_file_expired.file_id = expired_file_id
     test_file_expired.object_id = expired_object_id
     test_file_expired.last_accessed = utc_dates.now_as_utc() - timedelta(
-        days=joint_fixture.config.cache_timeout
+        days=joint_fixture.config.outbox_cache_timeout
     )
 
     # populate DB entries

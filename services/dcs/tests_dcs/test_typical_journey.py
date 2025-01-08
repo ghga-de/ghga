@@ -99,6 +99,8 @@ async def test_happy_journey(
     ):
         response = await joint_fixture.rest_client.get(f"/objects/{drs_id}", timeout=5)
     assert response.status_code == status.HTTP_202_ACCEPTED
+    assert "Cache-Control" in response.headers
+    assert response.headers["Cache-Control"] == "no-store"
     retry_after = int(response.headers["Retry-After"])
     # the example file is small, so we expect the minimum wait time
     assert retry_after == joint_fixture.config.retry_after_min
@@ -135,6 +137,12 @@ async def test_happy_journey(
     ):
         drs_object_response = await joint_fixture.rest_client.get(f"/objects/{drs_id}")
 
+    # Verify that the response contains the expected cache-control headers
+    assert "Cache-Control" in drs_object_response.headers
+    cache_headers = drs_object_response.headers["Cache-Control"]
+    max_age_header = f"max-age={joint_fixture.config.presigned_url_expires_after}"
+    assert cache_headers == f"{max_age_header}, private"
+
     # download file bytes:
     presigned_url = drs_object_response.json()["access_methods"][0]["access_url"]["url"]
     unintercepted_hosts.append(httpx.URL(presigned_url).host)
@@ -146,6 +154,8 @@ async def test_happy_journey(
         f"/objects/{drs_id}/envelopes", timeout=5
     )
     assert response.status_code == status.HTTP_200_OK
+    assert "Cache-Control" in response.headers
+    assert response.headers["Cache-Control"] == "no-store"
 
     response = await joint_fixture.rest_client.get(
         "/objects/invalid_id/envelopes", timeout=5

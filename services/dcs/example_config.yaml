@@ -14,7 +14,6 @@ auth_check_claims:
 auth_key: '{}'
 auth_map_claims: {}
 auto_reload: true
-cache_timeout: 7
 cors_allow_credentials: false
 cors_allowed_headers: []
 cors_allowed_methods: []
@@ -56,6 +55,7 @@ object_storages:
       s3_secret_access_key: '**********'
       s3_session_token: null
 openapi_url: /openapi.json
+outbox_cache_timeout: 7
 port: 8080
 presigned_url_expires_after: 30
 retry_after_max: 300

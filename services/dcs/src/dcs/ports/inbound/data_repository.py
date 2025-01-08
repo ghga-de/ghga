@@ -112,7 +112,7 @@ class DataRepositoryPort(ABC):
         Check if files present in the outbox have outlived their allocated time and remove
         all that do.
         For each file in the outbox, its 'last_accessed' field is checked and compared
-        to the current datetime. If the threshold configured in the cache_timeout option
+        to the current datetime. If the threshold configured in the outbox_cache_timeout option
         is met or exceeded, the corresponding file is removed from the outbox.
         """
         ...

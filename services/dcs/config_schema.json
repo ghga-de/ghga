@@ -386,14 +386,14 @@
       "title": "Presigned URL expiration time in seconds",
       "type": "integer"
     },
-    "cache_timeout": {
+    "outbox_cache_timeout": {
       "default": 7,
       "description": "Time in days since last access after which a file present in the outbox should be unstaged and has to be requested from permanent storage again for the next request.",
       "examples": [
         7,
         30
       ],
-      "title": "Cache Timeout",
+      "title": "Outbox Cache Timeout",
       "type": "integer"
     },
     "auth_key": {

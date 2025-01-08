@@ -16,7 +16,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from dcs.adapters.inbound.fastapi_ import (
     dummies,
@@ -98,6 +98,7 @@ async def get_drs_object(
     work_order_context: Annotated[
         WorkOrderContext, http_authorization.require_work_order_context
     ],
+    config: dummies.DataRepoConfigDependency,
 ):
     """
     Get info about a ``DrsObject``. The object_id parameter refers to the file id
@@ -106,15 +107,22 @@ async def get_drs_object(
     if not work_order_context.file_id == object_id:
         raise http_exceptions.HttpWrongFileAuthorizationError()
 
+    expires_after = config.presigned_url_expires_after
+    cache_control_header = {"Cache-Control": f"max-age={expires_after}, private"}
+
     try:
         drs_object = await data_repository.access_drs_object(drs_id=object_id)
-        return drs_object
+        return Response(
+            content=drs_object.model_dump_json(), headers=cache_control_header
+        )
 
     except data_repository.RetryAccessLaterError as retry_later_error:
         # tell client to retry after 5 minutes
-        return http_responses.HttpObjectNotInOutboxResponse(
+        response = http_responses.HttpObjectNotInOutboxResponse(
             retry_after=retry_later_error.retry_after
         )
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     except data_repository.DrsObjectNotFoundError as object_not_found_error:
         raise http_exceptions.HttpObjectNotFoundError(
@@ -170,4 +178,6 @@ async def get_envelope(
     ) as communication_error:
         raise http_exceptions.HttpInternalServerError() from communication_error
 
-    return http_responses.HttpEnvelopeResponse(envelope=envelope)
+    response = http_responses.HttpEnvelopeResponse(envelope=envelope)
+    response.headers["Cache-Control"] = "no-store"
+    return response
