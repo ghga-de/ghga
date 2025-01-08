@@ -43,7 +43,7 @@ const useProxy = !target.startsWith('http://127.');
 const config = {};
 
 if (useProxy) {
-  console.log('Configuring proxy server...');
+  console.log(`\nRunning proxy server with target: ${target}`);
   config['/api'] = {
     target,
     changeOrigin: true,
@@ -52,6 +52,10 @@ if (useProxy) {
     logLevel: 'debug',
     configure,
   };
+}
+
+if (baseUrl && !baseUrl.startsWith('http://127.')) {
+  console.log(`\n\x1b[33mPlease point your browser to: ${baseUrl}\x1b[0m\n`);
 }
 
 export default config;

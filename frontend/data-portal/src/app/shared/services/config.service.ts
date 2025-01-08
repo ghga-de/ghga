@@ -19,6 +19,8 @@ interface Config {
   oidc_token_url: string;
   oidc_userinfo_url: string;
   oidc_use_discovery: boolean;
+  mock_api: boolean;
+  mock_oidc: boolean;
 }
 
 declare global {

@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+/**
+ * Run the development or production server for the data portal.
+ *
+ * Syntax: run.js [--dev [--with-backend] [--with-oidc]]
+ */
+
 import { spawnSync } from 'child_process';
 import fs from 'fs';
 import yaml from 'js-yaml';
@@ -7,7 +13,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const NAME = 'data-portal';
-const DEV_MODE = process.argv.slice(2).includes('--dev');
+const DEFAULT_BACKEND = 'https://data.staging.ghga.dev';
+
+const args = process.argv.slice(1);
+const DEV = args.includes('--dev');
+const WITH_BACKEND = args.includes('--with-backend');
+const WITH_OIDC = args.includes('--with-oidc');
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -24,7 +36,7 @@ function readSettings() {
   const defaultSettings = yaml.load(fs.readFileSync(defaultSettingsPath, 'utf8'));
 
   // Read the (optional) development or production specific configuration file
-  const specificSettingsPath = DEV_MODE ? `.devcontainer/${NAME}.yaml` : `${NAME}.yaml`;
+  const specificSettingsPath = DEV ? `.devcontainer/${NAME}.yaml` : `${NAME}.yaml`;
 
   let specificSettings = {};
   try {
@@ -83,7 +95,7 @@ function getBrowserDir(distDir) {
  * @throws {Error} If the output directory does not exist.
  */
 function writeSettings(settings) {
-  const outputDir = DEV_MODE ? 'public' : getBrowserDir('dist');
+  const outputDir = DEV ? 'public' : getBrowserDir('dist');
 
   // Ensure the output directory exists
   if (!fs.existsSync(outputDir)) {
@@ -91,18 +103,14 @@ function writeSettings(settings) {
   }
 
   const configPath = path.join(outputDir, 'config.js');
-  const configScript = `window.config = ${JSON.stringify(settings)}`;
+  const configScript = `window.config = ${JSON.stringify(settings)};`;
   fs.writeFileSync(configPath, configScript, 'utf8');
 }
 
 /**
- * Get the name and IP address of the specified URL.
+ * Find the IP address for a given hostname
  */
-function getNameAndAddress(url) {
-  const { hostname } = new URL(url);
-  if (!hostname) {
-    console.error(`Invalid URL: ${url}`);
-  }
+function getIpAddress(hostname) {
   const result = spawnSync('dig', ['+short', hostname, '@8.8.8.8'], {
     encoding: 'utf8',
   });
@@ -111,7 +119,7 @@ function getNameAndAddress(url) {
     console.error(`Cannot resolve ${hostname}`);
     process.exit(1);
   }
-  return [hostname, address];
+  return address;
 }
 
 /**
@@ -136,20 +144,36 @@ function addHostEntry(name, ip) {
 function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basicAuth) {
   console.log('Running the development server...');
 
-  if (baseUrl === `http://${host}:${port}`) {
+  const { hostname } = new URL(baseUrl);
+  if (!hostname) {
+    console.error(`Invalid URL: ${baseUrl}`);
+    return;
+  }
+
+  if (WITH_BACKEND || WITH_OIDC) {
+    console.log(`Using ${hostname} as backend for API calls via proxy.`);
+    const ipAddress = getIpAddress(hostname);
+    addHostEntry(hostname, ipAddress);
+  } else {
     console.log('Using the mock service worker for API calls.');
     basicAuth = null;
-  } else if (baseUrl.startsWith('https://')) {
-    console.log(`Using ${baseUrl} as backend for API calls via proxy.`);
-    const [baseName, baseIp] = getNameAndAddress(baseUrl);
-    addHostEntry(baseName, baseIp);
-    console.log(`Your host computer should resolve ${baseName} to ${host}.`);
-    port = 443;
-    ssl = true;
-  } else {
-    console.error(`Invalid base URL: ${baseUrl}`);
-    process.exit(1);
   }
+  if (WITH_OIDC) {
+    console.log('Using OIDC for authentication.');
+    if (port != 443 || !ssl) {
+      port = 443;
+      ssl = true;
+      console.log('The server must use HTTPS for OIDC.');
+    }
+  } else {
+    console.log('Using the mock service worker for authentication.');
+  }
+
+  if (host != hostname) {
+    console.log(`Your host computer should resolve ${hostname} to ${host}.`);
+  }
+
+  console.log('Please point your browser to:', baseUrl);
 
   // export settings used in the proxy config
   process.env.data_portal_base_url = baseUrl;
@@ -227,10 +251,7 @@ function main() {
 
   const settings = readSettings();
 
-  console.log('Runtime settings:');
-  console.table(settings);
-
-  const {
+  let {
     host,
     port,
     ssl,
@@ -240,6 +261,39 @@ function main() {
     base_url: baseUrl,
     basic_auth: basicAuth,
   } = settings;
+
+  let msg = 'Running';
+  let adapted = false;
+  if (DEV) {
+    msg += ' in development mode';
+    if (WITH_BACKEND || WITH_OIDC) {
+      if (!baseUrl || baseUrl.startsWith('http://127.')) {
+        settings.base_url = baseUrl = DEFAULT_BACKEND;
+        adapted = true;
+      }
+    }
+    if (WITH_BACKEND) {
+      msg += ` with ${baseUrl.split('://')[1] || baseUrl} as backend`;
+    } else {
+      msg += ' with mock API';
+    }
+    if (WITH_OIDC) {
+      msg += ' and authentication via OIDC';
+      if (settings.port !== 443 || !settings.ssl) {
+        settings.port = port = 443;
+        settings.ssl = ssl = true;
+        adapted = true;
+      }
+    } else {
+      msg += ' and mock authentication';
+    }
+  } else {
+    msg += ' in production mode';
+  }
+  console.log(msg);
+  console.log(`Runtime settings${adapted ? ' (adapted)' : ''}:`);
+
+  console.table(settings);
 
   if (!host || !port) {
     console.error('Host and port must be specified');
@@ -258,9 +312,14 @@ function main() {
   delete settings.log_level;
   delete settings.basic_auth;
 
+  if (DEV) {
+    settings.mock_api = !WITH_BACKEND;
+    settings.mock_oidc = !WITH_OIDC;
+  }
+
   writeSettings(settings);
 
-  (DEV_MODE ? runDevServer : runProdServer)(
+  (DEV ? runDevServer : runProdServer)(
     host,
     port,
     ssl,
