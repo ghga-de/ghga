@@ -172,7 +172,7 @@ class Config(BaseSettings):
     fis_url: str = "http://fis"
     fis_pubkey: str
     fis_db_name: str = "fis"
-    fis_file_validations_collection: str = "fileValidations"
+    fis_file_validations_collection: str = "file_validations"
 
     # metldata
     metldata_db_name: str = "metldata"
