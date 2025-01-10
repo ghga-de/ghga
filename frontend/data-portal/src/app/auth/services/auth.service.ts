@@ -203,7 +203,7 @@ export class AuthService {
   }
 
   /**
-   * Login user via OIDC
+   * Logout user via OIDC
    *
    * This returns a promise to trigger a redirect of the current window
    * to the authorization endpoint of the OIDC provider.

@@ -280,6 +280,11 @@ export default [
           mode: 'folder',
           pattern: 'src/mocks',
         },
+        {
+          type: 'setup',
+          mode: 'file',
+          pattern: ['jest.config.ts', 'setup-jest.ts'],
+        },
       ],
     },
   },

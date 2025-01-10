@@ -6,7 +6,25 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { AuthService } from '@app/auth/services/auth.service';
 import { SetupTotpComponent } from './setup-totp.component';
+
+/**
+ * Mock the auth service as needed for the setup TOTP component
+ */
+class MockAuthService {
+  /**
+   * Pretend to have determined the login state
+   * @returns always false
+   */
+  isUndetermined = () => false;
+
+  /**
+   * Pretend to have a newly registered user
+   * @returns always 'Registered'
+   */
+  sessionState = () => 'Registered';
+}
 
 describe('SetupTotpComponent', () => {
   let component: SetupTotpComponent;
@@ -15,11 +33,12 @@ describe('SetupTotpComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SetupTotpComponent],
+      providers: [{ provide: AuthService, useClass: MockAuthService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SetupTotpComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {

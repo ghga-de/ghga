@@ -8,15 +8,77 @@ import { TestBed } from '@angular/core/testing';
 
 import { ConfigService } from './config.service';
 
+const mockConfig = {
+  base_url: 'https://portal.test',
+  auth_url: '/test/auth',
+  mass_url: '/test/mass',
+  metldata_url: '/test/metldata',
+  oidc_client_id: 'test-oidc-client-id',
+  oidc_redirect_url: 'test/redirect',
+  oidc_scope: 'some scope',
+  oidc_authority_url: 'https://login.test',
+  oidc_authorization_url: 'test/authorize',
+  oidc_token_url: 'test/token',
+  oidc_userinfo_url: 'test/userinfo',
+  oidc_use_discovery: true,
+  mock_api: true,
+  mock_oidc: true,
+};
+
 describe('ConfigService', () => {
   let service: ConfigService;
 
   beforeEach(() => {
+    window.config = mockConfig;
+
     TestBed.configureTestingModule({});
     service = TestBed.inject(ConfigService);
   });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+
+  it('should provide the base URL', () => {
+    expect(service.baseUrl).toBe('https://portal.test');
+  });
+
+  it('should provide the auth service URL', () => {
+    expect(service.authUrl).toBe('https://portal.test/test/auth');
+  });
+
+  it('should provide the MASS URL', () => {
+    expect(service.massUrl).toBe('https://portal.test/test/mass');
+  });
+
+  it('should provide the metldata service URL', () => {
+    expect(service.metldataUrl).toBe('https://portal.test/test/metldata');
+  });
+
+  it('should provide the OID client ID', () => {
+    expect(service.oidcClientId).toBe('test-oidc-client-id');
+  });
+
+  it('should provide the OIDC redirect URL', () => {
+    expect(service.oidcRedirectUrl).toBe('https://portal.test/test/redirect');
+  });
+
+  it('should provide the OIDC scope', () => {
+    expect(service.oidcScope).toBe('some scope');
+  });
+
+  it('should provide the OIDC authority URL', () => {
+    expect(service.oidcAuthorityUrl).toBe('https://login.test');
+  });
+
+  it('should provide the OIDC authorization URL', () => {
+    expect(service.oidcAuthorizationUrl).toBe('https://login.test/test/authorize');
+  });
+  it('should provide the OIDC token URL', () => {
+    expect(service.oidcTokenUrl).toBe('https://login.test/test/token');
+  });
+
+  it('should provide the OIDC userinfo URL', () => {
+    expect(service.oidcUserInfoUrl).toBe('https://login.test/test/userinfo');
   });
 });

@@ -5,9 +5,15 @@
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
     "types": [
-      "jasmine"
+      "jest",
+      "@testing-library/jest-dom",
+      "@testing-library/angular",
     ]
   },
+  "files": [
+    "jest.config.ts",
+    "setup-test.ts"
+  ],
   "include": [
     "src/**/*.spec.ts",
     "src/**/*.d.ts"

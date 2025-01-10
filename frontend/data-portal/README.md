@@ -1,6 +1,6 @@
-# DataPortal
+# GHGA Data Portal
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.0-rc.0.
+This repository contains the Angular 19 front-end application for the GHGA data portal.
 
 ## Development server
 
@@ -34,7 +34,7 @@ The development server will serve the application via SSL in this mode, using th
 
 In this mode, the `data_portal_oidc_client_id` and the other OIDC settings must be set properly as required by the OIDC provider.
 
-You will also need to changed the hosts file on your host computer so that localhost points to the staging backend. If you use the default staging backend, then you can browse the application at `https://data.staging.ghga.dev`.
+You will also need to change the hosts file on your host computer so that localhost points to the staging backend. If you use the default staging backend, then you can browse the application at `https://data.staging.ghga.dev`.
 
 To test against the real backend and with the real OIDC provider, you can start the development server like this:
 
@@ -76,7 +76,7 @@ This will compile your project and store the build artifacts in the `dist/` dire
 
 ## Running unit tests
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+To execute unit tests with the [Jest](https://jestjs.io/) testing framework, use the following command:
 
 ```bash
 ng test
@@ -98,23 +98,37 @@ For more information on using the Angular CLI, including detailed command refere
 
 ## Package Manager
 
-This project uses pnpm to install dependencies which is a replacement for the much slower npm. Run
+This project uses pnpm to install dependencies, which is a replacement for the much slower npm. Run
 
 ```bash
 pnpm install
 ```
 
-to install the dependencies. It is important to note that you should not have a package-lock.json but instead a pnpm-lock.yaml. You can still use npm for run and other commands or to install global packages but not to add dependencies or to install all dependencies.
+to install the dependencies. It is important to note that you should not have a `package-lock.json` but instead a `pnpm-lock.yaml`. You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies.
 
-## Linter, Commits and Documentation
+## Linter, Commits, and Documentation
 
-The repository is setup in such a way to only allow linted commits. That means, that commits are blocked by husky if they cause linter errors (currently, warnings are accepted). This ensures that code quality standards are maintained without build up technical debt that has to be fixed later on.
+The repository is set up in such a way to only allow linted commits. That means commits are blocked by Husky if they cause linter errors (currently, warnings are accepted). This ensures that code quality standards are maintained without building up technical debt that has to be fixed later on.
 
-To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix` which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running ng lint) resolve those issues and try again.
+To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix`, which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running `ng lint`), resolve those issues and try again.
 
 ## Ease of use
 
-For comfort, we are adding these shorthands: `npm run lint`, `npm run lf` (for `lint --fix`) and `npm run docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code and fixing (the auto-fixable ones) should be offered in the context menu on hover or via Ctrl-`.`.
+For comfort, we are adding these shorthands: `npm run lint`, `npm run lf` (for `lint --fix`), and `npm run docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
+
+## Testing
+
+We are using [Jest](https://jestjs.io/) for unit testing in this project. If possible, the queries and matchers from the [Testing Library](https://testing-library.com/) should be used. See the documentation for the [Angular Testing Library](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/).
+
+The unit tests are not included in the linting process and can be executed separately by running `npm run test`. These three variants of running the tests are provided:
+
+- `npm run test:coverage` - also collect and report test coverage information
+- `npm run test:parallel` - use parallel processes (currently slower, probably due to inefficient transpilation)
+- `npm run test:watch` - continually watch files for changes and rerun tests related to changed files
+
+You can also use the VS Code extension for Jest to run tests interactively using the test explorer in the side bar.
+
+Note that modernizing the unit testing tooling is on the roadmap of the Angular team for 2025. We may need to change some parts of the tooling when the official solution is provided.
 
 ## The Architecture Matrix
 
@@ -122,7 +136,7 @@ This application is built as a modularized frontend monolith (a "modulith") usin
 
 The vertical slices correspond to the different feature areas or bounded contexts within the application, such as _metadata_ or _access-requests_. Additionally, we have a vertical slice called _portal_ that contains all overarching features, such as the home page (which displays a metadata summary) and the user profile page (which shows the user's access requests). Another slice, called _shared_, provides UI components or utilities used across all feature areas. Authentication and user session handling are implemented in a separate slice called _auth_.
 
-The horizontal layers are named _features_ (for feature components, i.e., smart components), _ui_ (for presentational components, i.e., dumb components), _services_ (for accessing domain objects and corresponding application logic), _models_ (for interfaces of domain objects), and _utils_ (for feature-specific utility functions)." The _services_ layer primarily contains Angular services, while the _utils_ layer includes pure pipes, guards, and custom utility functions.
+The horizontal layers are named _features_ (for feature components, i.e., smart components), _ui_ (for presentational components, i.e., dumb components), _services_ (for accessing domain objects and corresponding application logic), _models_ (for interfaces of domain objects), and _utils_ (for feature-specific utility functions). The _services_ layer primarily contains Angular services, while the _utils_ layer includes pure pipes, guards, and custom utility functions.
 
 This results in the following architecture matrix:
 

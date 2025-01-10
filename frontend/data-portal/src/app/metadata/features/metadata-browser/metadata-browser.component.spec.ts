@@ -19,7 +19,7 @@ describe('BrowseComponent', () => {
 
     fixture = TestBed.createComponent(MetadataBrowserComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
