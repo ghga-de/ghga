@@ -4,14 +4,8 @@
  * @license Apache-2.0
  */
 
-import {
-  HttpEvent,
-  HttpHandler,
-  HttpInterceptor,
-  HttpRequest,
-} from '@angular/common/http';
+import { HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
 
 /**
  * A tiny service that just holds the CSRF token
@@ -24,29 +18,22 @@ export class CsrfService {
 }
 
 /**
- * Custom CSRF Interceptor
+ * Intercept all HTTP requests and add the CSRF token if needed
+ * @param req the outgoing request object to handle
+ * @param next the next interceptor in the chain
+ * @returns an observable of the HTTP event
  */
-@Injectable()
-export class CsrfInterceptor implements HttpInterceptor {
-  #csrf = inject(CsrfService);
-
-  /**
-   * Intercept all HTTP requests and add the CSRF token if needed
-   * @param req the outgoing request object to handle
-   * @param next the next interceptor in the chain
-   * @returns an observable of the HTTP event
-   */
-  intercept(
-    req: HttpRequest<unknown>,
-    next: HttpHandler,
-  ): Observable<HttpEvent<unknown>> {
-    const method = req.method;
-    if (method && /^(POST|PUT|PATCH|DELETE)$/.test(method)) {
-      const csrfToken = this.#csrf.token;
-      if (csrfToken) {
-        req = req.clone({ setHeaders: { 'X-CSRF-Token': csrfToken } });
-      }
+export const csrfInterceptor: HttpInterceptorFn = (
+  req: HttpRequest<unknown>,
+  next: HttpHandlerFn,
+) => {
+  const method = req.method;
+  if (method && /^(POST|PUT|PATCH|DELETE)$/.test(method)) {
+    const csrfService = inject(CsrfService);
+    const csrfToken = csrfService.token;
+    if (csrfToken) {
+      req = req.clone({ headers: req.headers.set('X-Csrf-Token', csrfToken) });
     }
-    return next.handle(req);
   }
-}
+  return next(req);
+};
