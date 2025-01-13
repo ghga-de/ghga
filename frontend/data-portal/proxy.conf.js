@@ -3,6 +3,7 @@
 const baseUrl = process.env.data_portal_base_url;
 const basicAuth = process.env.data_portal_basic_auth;
 const checkCert = !process.env.data_portal_ignore_cert;
+const proxyHint = process.env.data_portal_proxy_hint;
 
 // filter out standard headers
 function filterHeaders(headers) {
@@ -54,8 +55,8 @@ if (useProxy) {
   };
 }
 
-if (baseUrl && !baseUrl.startsWith('http://127.')) {
-  console.log(`\n\x1b[33mPlease point your browser to: ${baseUrl}\x1b[0m\n`);
+if (proxyHint) {
+  console.log(`\n\x1b[33m${proxyHint}\x1b[0m\n`);
 }
 
 export default config;
