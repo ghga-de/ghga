@@ -52,4 +52,12 @@ export const routes: Routes = [
         (m) => m.ConfirmTotpComponent,
       ),
   },
+  {
+    path: '**',
+    loadComponent: () =>
+      import('../app/portal/features/page-not-found/page-not-found.component').then(
+        (m) => m.PageNotFoundComponent,
+      ),
+    title: 'GHGA | Page not found',
+  },
 ];
