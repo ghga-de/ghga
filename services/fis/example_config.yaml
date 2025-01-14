@@ -24,7 +24,8 @@ log_level: INFO
 log_traceback: true
 openapi_url: /openapi.json
 port: 8080
-private_key: dummy-key
+private_key_passphrase: null
+private_key_path: placeholder.sec
 service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
 service_instance_id: '1'
 service_name: fis

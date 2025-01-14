@@ -16,7 +16,9 @@
 
 import json
 import logging
+from pathlib import Path
 
+from crypt4gh.keys import get_private_key
 from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
 from ghga_service_commons.utils.crypt import decrypt
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -42,10 +44,15 @@ log = logging.getLogger(__name__)
 class ServiceConfig(BaseSettings):
     """Specific configs for authentication and encryption"""
 
-    private_key: str = Field(
+    private_key_path: Path = Field(
         default=...,
-        description="Base64 encoded private key of the keypair whose public key is used "
+        description="Path to the Crypt4GH private key file of the keypair whose public key is used "
         + "to encrypt the payload.",
+    )
+    private_key_passphrase: str | None = Field(
+        default=None,
+        description="Passphrase needed to read the content of the private key file. "
+        + "Only needed if the private key is encrypted.",
     )
     token_hashes: list[str] = Field(
         default=...,
@@ -98,7 +105,11 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
     ) -> models.LegacyUploadMetadata:
         """Decrypt upload metadata using private key"""
         try:
-            decrypted = decrypt(data=encrypted.payload, key=self._config.private_key)
+            private_key = get_private_key(
+                self._config.private_key_path,
+                callback=lambda: self._config.private_key_passphrase,
+            )
+            decrypted = decrypt(data=encrypted.payload, key=private_key)
         except (ValueError, CryptoError) as error:
             decrypt_error = DecryptionError()
             log.error(decrypt_error)
@@ -158,9 +169,11 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
     async def decrypt_secret(self, *, encrypted: models.EncryptedPayload) -> SecretStr:
         """Decrypt file secret payload"""
         try:
-            decrypted = SecretStr(
-                decrypt(data=encrypted.payload, key=self._config.private_key)
+            private_key = get_private_key(
+                self._config.private_key_path,
+                callback=lambda: self._config.private_key_passphrase,
             )
+            decrypted = SecretStr(decrypt(data=encrypted.payload, key=private_key))
         except (ValueError, CryptoError) as error:
             decrypt_error = DecryptionError()
             raise decrypt_error from error

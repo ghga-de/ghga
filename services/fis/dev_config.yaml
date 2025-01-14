@@ -1,5 +1,5 @@
 service_name: fis
-private_key: dummy-key
+private_key_path: ./placeholder.sec
 token_hashes: [abcdef, ghijkl]
 
 file_upload_validation_success_topic: file-upload-validation-success

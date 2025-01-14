@@ -15,17 +15,18 @@
 #
 """Bundle test fixtures together"""
 
+import os
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
+from pathlib import Path
+from tempfile import mkstemp
 
 import httpx
 import pytest_asyncio
+from crypt4gh.keys import get_private_key, get_public_key
+from crypt4gh.keys.c4gh import generate as generate_keypair
 from ghga_service_commons.api.testing import AsyncTestClient
-from ghga_service_commons.utils.crypt import (
-    KeyPair,
-    encode_key,
-    generate_key_pair,
-)
+from ghga_service_commons.utils.crypt import KeyPair
 from ghga_service_commons.utils.simple_token import generate_token_and_hash
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -76,15 +77,31 @@ async def joint_fixture(
     kafka: KafkaFixture, mongodb: MongoDbFixture
 ) -> AsyncGenerator[JointFixture, None]:
     """Generate keypair for testing and setup container with updated config"""
-    keypair = generate_key_pair()
-    private_key = encode_key(key=keypair.private)
+    config = get_config(sources=[kafka.config, mongodb.config])
+    assert config.private_key_passphrase is not None
 
+    sk_file, sk_path = mkstemp(prefix="private", suffix=".sec")
+    pk_file, pk_path = mkstemp(prefix="public", suffix=".pub")
+    # Crypt4GH does not reset the umask it sets, so we need to deal with it
+    original_umask = os.umask(0o022)
+    generate_keypair(
+        seckey=sk_file,
+        pubkey=pk_file,
+        passphrase=config.private_key_passphrase.encode(),
+    )
+    public_key = get_public_key(pk_path)
+    private_key = get_private_key(sk_path, lambda: config.private_key_passphrase)
+    os.umask(original_umask)
+
+    keypair = KeyPair(private=private_key, public=public_key)
     token, token_hash = generate_token_and_hash()
 
-    config = get_config(sources=[kafka.config, mongodb.config])
     # cannot update inplace, copy and update instead
     config = config.model_copy(
-        update={"private_key": private_key, "token_hashes": [token_hash]}
+        update={
+            "private_key_path": sk_path,
+            "token_hashes": [token_hash],
+        }
     )
     async with (
         prepare_core(config=config) as (
@@ -109,3 +126,7 @@ async def joint_fixture(
             legacy_upload_metadata_processor=legacy_upload_metadata_processor,
             dao=dao,
         )
+
+    # cleanup
+    Path(pk_path).unlink()
+    Path(sk_path).unlink()

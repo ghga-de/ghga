@@ -167,10 +167,24 @@
       "title": "Service Account Token Path",
       "type": "string"
     },
-    "private_key": {
-      "description": "Base64 encoded private key of the keypair whose public key is used to encrypt the payload.",
-      "title": "Private Key",
+    "private_key_path": {
+      "description": "Path to the Crypt4GH private key file of the keypair whose public key is used to encrypt the payload.",
+      "format": "path",
+      "title": "Private Key Path",
       "type": "string"
+    },
+    "private_key_passphrase": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted.",
+      "title": "Private Key Passphrase"
     },
     "token_hashes": {
       "description": "List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.",
@@ -413,7 +427,7 @@
     "service_instance_id",
     "vault_url",
     "vault_path",
-    "private_key",
+    "private_key_path",
     "token_hashes",
     "file_upload_validation_success_topic",
     "kafka_servers",
