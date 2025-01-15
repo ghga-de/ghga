@@ -2,6 +2,37 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "server_private_key_path": {
+      "description": "Path to the Crypt4GH private key file",
+      "examples": [
+        "./key.sec"
+      ],
+      "format": "path",
+      "title": "Server Private Key Path",
+      "type": "string"
+    },
+    "server_public_key_path": {
+      "description": "Path to the Crypt4GH public key file",
+      "examples": [
+        "./key.pub"
+      ],
+      "format": "path",
+      "title": "Server Public Key Path",
+      "type": "string"
+    },
+    "private_key_passphrase": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted.",
+      "title": "Private Key Passphrase"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -299,32 +330,14 @@
       ],
       "title": "Generate Correlation Id",
       "type": "boolean"
-    },
-    "server_private_key": {
-      "description": "Base64 encoded server Crypt4GH private key",
-      "examples": [
-        "server_private_key"
-      ],
-      "format": "password",
-      "title": "Server Private Key",
-      "type": "string",
-      "writeOnly": true
-    },
-    "server_public_key": {
-      "description": "Base64 encoded server Crypt4GH public key",
-      "examples": [
-        "server_public_key"
-      ],
-      "title": "Server Public Key",
-      "type": "string"
     }
   },
   "required": [
+    "server_private_key_path",
+    "server_public_key_path",
     "service_instance_id",
     "vault_url",
-    "vault_path",
-    "server_private_key",
-    "server_public_key"
+    "vault_path"
   ],
   "title": "ModSettings",
   "type": "object"

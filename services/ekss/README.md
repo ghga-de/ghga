@@ -65,13 +65,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/encryption-key-store-service):
 ```bash
-docker pull ghga/encryption-key-store-service:1.5.0
+docker pull ghga/encryption-key-store-service:2.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/encryption-key-store-service:1.5.0 .
+docker build -t ghga/encryption-key-store-service:2.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -79,7 +79,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/encryption-key-store-service:1.5.0 --help
+docker run -p 8080:8080 ghga/encryption-key-store-service:2.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -96,6 +96,34 @@ ekss --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`server_private_key_path`** *(string, format: path, required)*: Path to the Crypt4GH private key file.
+
+
+  Examples:
+
+  ```json
+  "./key.sec"
+  ```
+
+
+- **`server_public_key_path`** *(string, format: path, required)*: Path to the Crypt4GH public key file.
+
+
+  Examples:
+
+  ```json
+  "./key.pub"
+  ```
+
+
+- **`private_key_passphrase`**: Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. Default: `null`.
+
+  - **Any of**
+
+    - *string*
+
+    - *null*
+
 - **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
 - **`service_name`** *(string)*: Default: `"encryption_key_store"`.
@@ -351,26 +379,6 @@ The service requires the following configuration parameters:
 
   ```json
   false
-  ```
-
-
-- **`server_private_key`** *(string, format: password, required)*: Base64 encoded server Crypt4GH private key.
-
-
-  Examples:
-
-  ```json
-  "server_private_key"
-  ```
-
-
-- **`server_public_key`** *(string, required)*: Base64 encoded server Crypt4GH public key.
-
-
-  Examples:
-
-  ```json
-  "server_public_key"
   ```
 
 

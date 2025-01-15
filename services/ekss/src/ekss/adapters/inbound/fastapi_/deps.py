@@ -15,17 +15,9 @@
 
 """FastAPI dependencies (used with the `Depends` feature)"""
 
-from fastapi import Depends
-
-from ekss.adapters.outbound.vault import VaultAdapter
-from ekss.config import CONFIG, VaultConfig
+from ekss.config import CONFIG
 
 
 def config_injector():
     """Injectable config, overridable for tests"""
     return CONFIG
-
-
-def get_vault(config: VaultConfig = Depends(config_injector)) -> VaultAdapter:
-    """Get VaultAdapter for config"""
-    return VaultAdapter(config=config)

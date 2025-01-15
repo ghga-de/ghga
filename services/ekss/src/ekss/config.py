@@ -15,7 +15,6 @@
 
 """Config Parameter Modeling and Parsing"""
 
-import base64
 from pathlib import Path
 
 from ghga_service_commons.api import ApiConfigBase
@@ -93,46 +92,33 @@ class VaultConfig(BaseSettings):
         return value
 
 
+class Crypt4GHConfig(BaseSettings):
+    """Service specific configuration"""
+
+    server_private_key_path: Path = Field(
+        default=...,
+        examples=["./key.sec"],
+        description="Path to the Crypt4GH private key file",
+    )
+    server_public_key_path: Path = Field(
+        default=...,
+        examples=["./key.pub"],
+        description="Path to the Crypt4GH public key file",
+    )
+    private_key_passphrase: str | None = Field(
+        default=None,
+        description=(
+            "Passphrase needed to read the content of the private key file. "
+            + "Only needed if the private key is encrypted."
+        ),
+    )
+
+
 @config_from_yaml(prefix="ekss")
-class Config(ApiConfigBase, VaultConfig, LoggingConfig):
+class Config(ApiConfigBase, VaultConfig, LoggingConfig, Crypt4GHConfig):
     """Config parameters and their defaults."""
 
     service_name: str = "encryption_key_store"
-    server_private_key: SecretStr = Field(
-        default=...,
-        examples=["server_private_key"],
-        description="Base64 encoded server Crypt4GH private key",
-    )
-    server_public_key: str = Field(
-        default=...,
-        examples=["server_public_key"],
-        description="Base64 encoded server Crypt4GH public key",
-    )
-
-    @field_validator("server_private_key")
-    @classmethod
-    def validate_private_key_parsable(cls, value: SecretStr):
-        """Try do decode public key using base64 and check if length matches expectations."""
-        secret_value = value.get_secret_value()
-        decoded = base64.b64decode(secret_value)
-        key_length = len(decoded)
-        if key_length != 32:
-            raise ValueError(
-                f"Length of decoded private key did not match expectation:\nIs:{key_length}\nShould be: 32"
-            )
-        return value
-
-    @field_validator("server_public_key")
-    @classmethod
-    def validate_public_key_parsable(cls, value: str):
-        """Try do decode public key using base64 and check if length matches expectations."""
-        decoded = base64.b64decode(value)
-        key_length = len(decoded)
-        if key_length != 32:
-            raise ValueError(
-                f"Length of decoded public key did not match expectation:\nIs:{key_length}\nShould be: 32"
-            )
-        return value
 
 
-CONFIG = Config()  # type: ignore [call-arg]
+CONFIG = Config()  # type: ignore

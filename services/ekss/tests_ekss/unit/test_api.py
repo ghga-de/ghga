@@ -19,9 +19,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ekss.adapters.inbound.fastapi_.main import setup_app
-from ekss.config import CONFIG
+from tests_ekss.fixtures.config import DEFAULT_CONFIG
 
-app = setup_app(CONFIG)
+app = setup_app(DEFAULT_CONFIG)
 client = TestClient(app=app)
 
 

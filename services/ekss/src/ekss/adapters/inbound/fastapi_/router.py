@@ -21,12 +21,13 @@ from fastapi import APIRouter, Depends, status
 from requests.exceptions import RequestException
 
 from ekss.adapters.inbound.fastapi_ import exceptions, models
-from ekss.adapters.inbound.fastapi_.deps import get_vault
+from ekss.adapters.inbound.fastapi_.deps import config_injector
 from ekss.adapters.outbound.vault import VaultAdapter
 from ekss.adapters.outbound.vault.exceptions import (
     SecretInsertionError,
     SecretRetrievalError,
 )
+from ekss.config import Config
 from ekss.core.envelope_decryption import extract_envelope_content
 from ekss.core.envelope_encryption import get_envelope
 
@@ -93,11 +94,12 @@ async def health():
 async def post_encryption_secrets(
     *,
     envelope_query: models.InboundEnvelopeQuery,
-    vault: VaultAdapter = Depends(get_vault),
+    config: Config = Depends(config_injector),
 ):
     """Extract file encryption/decryption secret, create secret ID and extract
     file content offset
     """
+    vault = VaultAdapter(config)
     try:
         client_pubkey = base64.b64decode(envelope_query.public_key)
     except Exception as error:
@@ -112,6 +114,8 @@ async def post_encryption_secrets(
         submitter_secret, offset = await extract_envelope_content(
             file_part=file_part,
             client_pubkey=client_pubkey,
+            server_private_key_path=config.server_private_key_path,
+            passphrase=config.private_key_passphrase,
         )
     except ValueError as error:
         # Everything in envelope decryption is a ValueError... try to distinguish based on message
@@ -149,16 +153,21 @@ async def post_encryption_secrets(
     },
 )
 async def get_header_envelope(
-    *, secret_id: str, client_pk: str, vault: VaultAdapter = Depends(get_vault)
+    *, secret_id: str, client_pk: str, config: Config = Depends(config_injector)
 ):
     """Create header envelope for the file secret with given ID encrypted with a given public key"""
+    vault = VaultAdapter(config)
     try:
         client_pubkey = base64.urlsafe_b64decode(client_pk)
     except Exception as error:
         raise exceptions.HttpDecodingError(affected="client public key") from error
     try:
         header_envelope = await get_envelope(
-            secret_id=secret_id, client_pubkey=client_pubkey, vault=vault
+            secret_id=secret_id,
+            client_pubkey=client_pubkey,
+            server_private_key_path=config.server_private_key_path,
+            passphrase=config.private_key_passphrase,
+            vault=vault,
         )
     except SecretRetrievalError as error:
         raise exceptions.HttpSecretNotFoundError() from error
@@ -178,8 +187,9 @@ async def get_header_envelope(
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["secretNotFoundError"],
     },
 )
-async def delete_secret(*, secret_id: str, vault: VaultAdapter = Depends(get_vault)):
+async def delete_secret(*, secret_id: str, config: Config = Depends(config_injector)):
     """Create header envelope for the file secret with given ID encrypted with a given public key"""
+    vault = VaultAdapter(config)
     try:
         vault.delete_secret(key=secret_id)
     except SecretRetrievalError as error:

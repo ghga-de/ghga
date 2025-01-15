@@ -18,13 +18,13 @@
 import os
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest_asyncio
 
-from tests_ekss.fixtures.keypair import (
-    KeypairFixture,
-    generate_keypair_fixture,  # noqa: F401
-)
+from ekss.config import Config
+from tests_ekss.fixtures.config import DEFAULT_CONFIG, get_config
+from tests_ekss.fixtures.keypair import tmp_keypair
 from tests_ekss.fixtures.vault import (
     VaultFixture,
     vault_fixture,  # noqa: F401
@@ -35,8 +35,9 @@ from tests_ekss.fixtures.vault import (
 class EnvelopeFixture:
     """Fixture for GET call to create an envelope"""
 
-    client_pk: bytes
-    client_sk: bytes
+    config: Config
+    public_key_path: Path
+    private_key_path: Path
     secret_id: str
     secret: bytes
     vault: VaultFixture
@@ -46,21 +47,21 @@ class EnvelopeFixture:
 async def envelope_fixture(
     *,
     vault_fixture: VaultFixture,  # noqa: F811
-    generate_keypair_fixture: KeypairFixture,  # noqa: F811
 ) -> AsyncGenerator[EnvelopeFixture, None]:
     """
     Generates an EnvelopeFixture, containing a client public key as well as a secret id
     That secret id corresponds to a random secret created and put into the database
     """
     secret = os.urandom(32)
-
     # put secret in database
     secret_id = vault_fixture.adapter.store_secret(secret=secret)
-
-    yield EnvelopeFixture(
-        client_pk=generate_keypair_fixture.public_key,
-        client_sk=generate_keypair_fixture.private_key,
-        secret_id=secret_id,
-        secret=secret,
-        vault=vault_fixture,
-    )
+    with tmp_keypair(DEFAULT_CONFIG.private_key_passphrase) as crypt4gh_config:
+        config = get_config([vault_fixture.config, crypt4gh_config])
+        yield EnvelopeFixture(
+            config=config,
+            public_key_path=config.server_public_key_path,
+            private_key_path=config.server_private_key_path,
+            secret_id=secret_id,
+            secret=secret,
+            vault=vault_fixture,
+        )

@@ -12,8 +12,9 @@ log_level: INFO
 log_traceback: true
 openapi_url: /openapi.json
 port: 8080
-server_private_key: '**********'
-server_public_key: HsKvfHsAFNGykFi/zMssay0xajoHvY30IcYPGDCXrGU=
+private_key_passphrase: null
+server_private_key_path: key.sec
+server_public_key_path: key.pub
 service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
 service_instance_id: '1'
 service_name: encryption_key_store

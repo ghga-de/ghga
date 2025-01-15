@@ -20,9 +20,7 @@ from typing import Any
 from fastapi.openapi.utils import get_openapi
 
 from ekss import __version__
-from ekss.config import Config
-
-config = Config()
+from ekss.config import CONFIG
 
 
 def get_openapi_schema(api) -> dict[str, Any]:
@@ -32,7 +30,7 @@ def get_openapi_schema(api) -> dict[str, Any]:
         version=__version__,
         description="A service managing storage and retrieval of symmetric keys in"
         + " a HashiCorp Vault.",
-        servers=[{"url": config.api_root_path}],
+        servers=[{"url": CONFIG.api_root_path}],
         tags=[{"name": "EncryptionKeyStoreService"}],
         routes=api.routes,
     )

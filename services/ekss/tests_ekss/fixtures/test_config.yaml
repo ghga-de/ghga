@@ -7,5 +7,6 @@ vault_secrets_mount_point: secret
 vault_kube_role: dummy-role
 service_instance_id: "1"
 
-server_private_key_path: key.sec
-server_public_key_path: key.pub
+server_private_key_path: test_placeholder.sec
+server_public_key_path: test_placeholder.pub
+private_key_passphrase: test

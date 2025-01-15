@@ -13,8 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that exclusively used in unit tests"""
+"""Test config"""
 
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent.resolve()
+from pydantic_settings import BaseSettings
+
+from ekss.config import Config
+from tests_ekss.fixtures.utils import BASE_DIR
+
+TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
+
+
+def get_config(
+    sources: list[BaseSettings] | None = None,
+    default_config_yaml: Path = TEST_CONFIG_YAML,
+) -> Config:
+    """Merges parameters from the default TEST_CONFIG_YAML with params inferred
+    from testcontainers.
+    """
+    sources_dict: dict[str, object] = {}
+
+    if sources is not None:
+        for source in sources:
+            sources_dict.update(**source.model_dump())
+
+    return Config(config_yaml=default_config_yaml, **sources_dict)
+
+
+DEFAULT_CONFIG = get_config()
