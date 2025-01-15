@@ -270,6 +270,11 @@ class FileUploadValidationFailure(UploadDateModel):
 class FileInternallyRegistered(FileUploadValidationSuccess):
     """This event is triggered when an newly uploaded file is internally registered."""
 
+    encrypted_size: int = Field(
+        ...,
+        description="The size of the encrypted file content in bytes without the Crypt4GH envelope.",
+    )
+
     model_config = ConfigDict(title="file_internally_registered")
 
 
