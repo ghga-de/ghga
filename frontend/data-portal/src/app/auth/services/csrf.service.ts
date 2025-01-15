@@ -19,8 +19,8 @@ export class CsrfService {
 
 /**
  * Intercept all HTTP requests and add the CSRF token if needed
- * @param req the outgoing request object to handle
- * @param next the next interceptor in the chain
+ * @param req - the outgoing request object to handle
+ * @param next - the next interceptor in the chain
  * @returns an observable of the HTTP event
  */
 export const csrfInterceptor: HttpInterceptorFn = (

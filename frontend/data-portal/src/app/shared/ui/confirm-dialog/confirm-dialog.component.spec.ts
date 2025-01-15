@@ -1,0 +1,66 @@
+/**
+ * Test the confirm dialog component
+ * @copyright The GHGA Authors
+ * @license Apache-2.0
+ */
+
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { screen } from '@testing-library/angular';
+
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { ConfirmDialogComponent } from './confirm-dialog.component';
+
+describe('ConfirmDialogComponent', () => {
+  let component: ConfirmDialogComponent;
+  let fixture: ComponentFixture<ConfirmDialogComponent>;
+
+  const dialogRef = {
+    close: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ConfirmDialogComponent],
+      providers: [
+        { provide: MAT_DIALOG_DATA, useValue: { message: 'Test message' } },
+        { provide: MatDialogRef, useValue: dialogRef },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ConfirmDialogComponent);
+    component = fixture.componentInstance;
+    await fixture.whenStable();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should display the test message', () => {
+    const compiled = fixture.nativeElement;
+    const content = compiled.querySelector('.mat-mdc-dialog-content');
+    expect(content).toBeTruthy();
+    expect(content.textContent).toBe('Test message');
+  });
+
+  it('should return false when cancelled', () => {
+    jest.spyOn(dialogRef, 'close');
+    expect(dialogRef.close).not.toHaveBeenCalled();
+    const button = screen.getByRole('button', { name: 'Cancel' });
+    expect(button).toBeVisible();
+    expect(button).toHaveTextContent('Cancel');
+    button.click();
+    expect(dialogRef.close).toHaveBeenCalledWith(false);
+  });
+
+  it('should return true when confirmed', () => {
+    jest.spyOn(dialogRef, 'close');
+    expect(dialogRef.close).not.toHaveBeenCalled();
+    const button = screen.getByRole('button', { name: 'Continue' });
+    expect(button).toBeVisible();
+    expect(button).toHaveTextContent('Continue');
+    button.click();
+    expect(dialogRef.close).toHaveBeenCalledWith(true);
+  });
+});

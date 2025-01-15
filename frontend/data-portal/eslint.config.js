@@ -153,6 +153,11 @@ export default [
               from: ['config'],
               allow: ['routes', ['service', { context: 'auth' }]],
             },
+            // modules for routes may import feature components
+            {
+              from: ['routes'],
+              allow: ['features'],
+            },
             // modules for routes may not import ui components
             {
               from: ['routes'],

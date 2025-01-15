@@ -43,6 +43,8 @@ export class SetupTotpComponent {
 
   lostTokenConfirmed = signal(false);
 
+  allowNavigation = false; // used by canDeactivate guard
+
   /**
    * Get the provisioning URI as a signal
    */
@@ -71,7 +73,7 @@ export class SetupTotpComponent {
 
   /**
    * Get the actual secret from the query parameter in the URI
-   * @param uri The provisioning URI containing the secret
+   * @param uri - The provisioning URI containing the secret
    * @returns just the secret from the URI
    */
   getSecret(uri: string): string {
@@ -80,7 +82,7 @@ export class SetupTotpComponent {
 
   /**
    * Copy the secret to the clipboard
-   * @param uri The provisioning URI containing the secret
+   * @param uri - The provisioning URI containing the secret
    */
   copySecret(uri: string): void {
     navigator.clipboard.writeText(this.getSecret(uri));
@@ -93,6 +95,7 @@ export class SetupTotpComponent {
    * and continue with the TOTP confirmation step.
    */
   completeSetup(): void {
+    this.allowNavigation = true;
     this.#authService.completeTotpSetup();
   }
 }

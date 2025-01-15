@@ -154,7 +154,6 @@ function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basic
     console.log(`Using ${hostname} as backend for API calls via proxy.`);
   } else {
     console.log('Using the mock service worker for API calls.');
-    basicAuth = null;
   }
   if (WITH_OIDC) {
     console.log('Using OIDC for authentication.');
@@ -166,17 +165,16 @@ function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basic
   } else {
     console.log('Using the mock service worker for authentication.');
   }
+  if (!WITH_BACKEND && !WITH_OIDC) {
+    basicAuth = null;
+  }
 
-  let proxyHint = '';
   if (WITH_OIDC && host != hostname) {
     const ipAddress = getIpAddress(hostname);
     addHostEntry(hostname, ipAddress);
     console.log(`Your host computer should resolve ${hostname} to ${host}.`);
-    proxyHint = `Please point your browser to: ${baseUrl}`;
-    console.log(proxyHint);
+    console.log(`Please point your browser to: ${baseUrl}`);
   }
-  // pass a hint to the user that shall be shown when running the proxy server
-  process.env.data_portal_proxy_hint = proxyHint;
 
   // export settings used in the proxy config
   process.env.data_portal_base_url = baseUrl;
@@ -184,6 +182,16 @@ function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basic
     process.env.data_portal_basic_auth = basicAuth;
   } else {
     delete process.env.data_portal_basic_auth;
+  }
+  if (WITH_BACKEND) {
+    process.env.data_portal_with_backend = true;
+  } else {
+    delete process.env.data_portal_with_backend;
+  }
+  if (WITH_OIDC) {
+    process.env.data_portal_with_oidc = true;
+  } else {
+    delete process.env.data_portal_with_oidc;
   }
 
   const params = ['start', '--', '--host', host, '--port', port];

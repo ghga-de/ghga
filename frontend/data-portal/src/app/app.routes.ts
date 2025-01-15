@@ -8,6 +8,7 @@ import { inject, Injectable } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, Routes, TitleStrategy } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth.service';
+import { canDeactivate as canDeactivateAuth } from './auth/features/can-deactivate.guard';
 
 export const routes: Routes = [
   {
@@ -29,13 +30,13 @@ export const routes: Routes = [
   // routes used in the authentication flows
   {
     path: 'oauth/callback',
-    canActivate: [() => inject(AuthService).oidcRedirect()],
+    canActivate: [() => inject(AuthService).guardCallback()],
     children: [],
   },
-  // TODO: add guards to the following routes that check the expected state
-  // TODO: also add deactivation guards to these routes
   {
     path: 'register',
+    canActivate: [() => inject(AuthService).guardRegister()],
+    canDeactivate: [canDeactivateAuth],
     loadComponent: () =>
       import('./auth/features/register/register.component').then(
         (m) => m.RegisterComponent,
@@ -44,6 +45,8 @@ export const routes: Routes = [
   },
   {
     path: 'setup-totp',
+    canActivate: [() => inject(AuthService).guardSetupTotp()],
+    canDeactivate: [canDeactivateAuth],
     loadComponent: () =>
       import('./auth/features/setup-totp/setup-totp.component').then(
         (m) => m.SetupTotpComponent,
@@ -52,6 +55,8 @@ export const routes: Routes = [
   },
   {
     path: 'confirm-totp',
+    canActivate: [() => inject(AuthService).guardConfirmTotp()],
+    canDeactivate: [canDeactivateAuth],
     loadComponent: () =>
       import('./auth/features/confirm-totp/confirm-totp.component').then(
         (m) => m.ConfirmTotpComponent,

@@ -3,7 +3,8 @@
 const baseUrl = process.env.data_portal_base_url;
 const basicAuth = process.env.data_portal_basic_auth;
 const checkCert = !process.env.data_portal_ignore_cert;
-const proxyHint = process.env.data_portal_proxy_hint;
+const mockApi = !process.env.data_portal_with_backend;
+const mockOidc = !process.env.data_portal_with_oidc;
 
 // filter out standard headers
 function filterHeaders(headers) {
@@ -39,12 +40,15 @@ function configure(proxy) {
 
 let target = baseUrl || 'http://127.0.0.1';
 if (!target.endsWith('/')) target += '/';
-const useProxy = !target.startsWith('http://127.');
+const useProxy = (!mockApi || !mockOidc) && !target.startsWith('http://127.');
 
 const config = {};
 
 if (useProxy) {
   console.log(`\nRunning proxy server with target: ${target}`);
+  if (basicAuth) {
+    console.log('Using basic authentication');
+  }
   config['/api'] = {
     target,
     changeOrigin: true,
@@ -55,8 +59,8 @@ if (useProxy) {
   };
 }
 
-if (proxyHint) {
-  console.log(`\n\x1b[33m${proxyHint}\x1b[0m\n`);
+if (!mockOidc && baseUrl && !baseUrl.startsWith('http://127.')) {
+  console.log(`\n\x1b[33mPlease point your browser to: ${baseUrl}\x1b[0m\n`);
 }
 
 export default config;

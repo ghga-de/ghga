@@ -43,6 +43,8 @@ export class ConfirmTotpComponent {
 
   verificationError = false;
 
+  allowNavigation = false; // used by canDeactivate guard
+
   /**
    * Input handler for the TOTP code
    */
@@ -61,6 +63,7 @@ export class ConfirmTotpComponent {
     if (verified) {
       console.info('Successfully authenticated.');
       // add toast message here
+      this.allowNavigation = true;
       this.#authService.redirectAfterLogin();
     } else {
       // maybe add toast message here

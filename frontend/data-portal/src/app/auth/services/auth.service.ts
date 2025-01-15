@@ -19,7 +19,16 @@ import {
   User as OidcUser,
   UserManager as OidcUserManager,
 } from 'oidc-client-ts';
-import { catchError, firstValueFrom, map, Observable, of } from 'rxjs';
+import {
+  catchError,
+  first,
+  firstValueFrom,
+  interval,
+  map,
+  Observable,
+  of,
+  timeout,
+} from 'rxjs';
 import { LoginState, User, UserBasicData } from '../models/user';
 import { CsrfService } from './csrf.service';
 
@@ -83,8 +92,14 @@ export class AuthService {
    * Get the current user session state as a signal
    */
   sessionState = computed<LoginState>(() => {
-    const state = this.user()?.state;
-    return state || (state === null ? 'LoggedOut' : 'Undetermined');
+    const currentUser = this.user();
+    switch (currentUser) {
+      case null:
+        return 'LoggedOut';
+      case undefined:
+        return 'Undetermined';
+    }
+    return currentUser.state || 'Undetermined';
   });
 
   /**
@@ -165,15 +180,28 @@ export class AuthService {
   }
 
   /**
-   * Handle OIDC redirect callback
-   *
-   * This method can be used as a canActivate guard for the OAuth callback route.
-   * @returns always false to prevent the route from being activated
+   * Navigate back to the home page if no child routes are present
+   * @returns always false to prevent the route from being accessed
    */
-  async oidcRedirect(): Promise<boolean> {
-    if (await this.#oidcUserManager.getUser()) return false; // already logged in
+  #guardBack(): boolean {
+    if (!this.#router.routerState.root.children.length) {
+      this.#router.navigate(['/']);
+    }
+    return false;
+  }
+
+  /**
+   * This method can be used as a guard for the OAuth callback route.
+   * @returns true if the route is accessible
+   */
+  async guardCallback(): Promise<boolean> {
     let oidcUser: OidcUser | undefined;
     let errorMessage: string | undefined;
+    if (await this.#oidcUserManager.getUser()) {
+      errorMessage = 'You are already logged in';
+      console.warn(errorMessage); // TODO: also add a toast message
+      return this.#guardBack();
+    }
     try {
       oidcUser = await this.#oidcUserManager.signinCallback();
     } catch (e) {
@@ -195,11 +223,78 @@ export class AuthService {
         errorMessage = 'OpenID connect login failed';
       }
       console.error(errorMessage); // TODO: also add a toast message
-      return false;
+      return this.#guardBack();
     }
 
     this.#loadUserSession(oidcUser.access_token);
-    return false;
+    return this.#guardBack();
+  }
+
+  /**
+   * Wait until the session is determined and return its state
+   * @param waitForMs - how long we should wait for the session state in ms
+   * @param probeEveryMs - how frequently we should probe the session state in ms
+   * @returns the determined session state or Undetermined on timeout
+   */
+  async #determineSessionState(
+    waitForMs: number = 5_000,
+    probeEveryMs: number = 5,
+  ): Promise<LoginState> {
+    return (await firstValueFrom(
+      interval(probeEveryMs).pipe(
+        map(() => this.sessionState()),
+        first((state) => state !== 'Undetermined'),
+        timeout(waitForMs),
+        catchError(() => of('Undetermined')),
+      ),
+    )) as LoginState;
+  }
+
+  /**
+   * This method can be used as a guard for the registration route.
+   * @returns true if the route is accessible
+   */
+  async guardRegister(): Promise<boolean> {
+    switch (await this.#determineSessionState()) {
+      case 'LoggedIn':
+      case 'NeedsReRegistration':
+        return true;
+    }
+    const errorMessage = 'You cannot register at this point';
+    console.warn(errorMessage); // TODO: also add a toast message
+    return this.#guardBack();
+  }
+
+  /**
+   * This method can be used as a guard for the TOTP setup route.
+   * @returns true if the route is accessible
+   */
+  async guardSetupTotp(): Promise<boolean> {
+    switch (await this.#determineSessionState()) {
+      case 'Registered':
+      case 'NeedsTotpToken':
+      case 'LostTotpToken':
+        return true;
+    }
+    const errorMessage = 'You cannot setup a second factor at this point';
+    console.warn(errorMessage); // TODO: also add a toast message
+    return this.#guardBack();
+  }
+
+  /**
+   * This method can be used as a guard for the TOTP confirmation route.
+   * @returns true if the route is accessible
+   */
+  async guardConfirmTotp(): Promise<boolean> {
+    let errorMessage: string | undefined;
+    switch (await this.#determineSessionState()) {
+      case 'NewTotpToken':
+      case 'HasTotpToken':
+        return true;
+    }
+    errorMessage = 'You cannot use the second factor at this point';
+    console.warn(errorMessage); // TODO: also add a toast message
+    return this.#guardBack();
   }
 
   /**
@@ -221,13 +316,14 @@ export class AuthService {
         this.#csrf.token = null;
         sessionStorage.removeItem('afterLogin');
         this.#router.navigate(['/']);
+        // TODO: also add a toast message that we are logged out
       });
     }
   }
 
   /**
    * Move session state
-   * @param state the new state to set
+   * @param state - the new state to set
    */
   #setNewState(state: LoginState): void {
     this.#userSignal.update((user) => {
@@ -240,7 +336,7 @@ export class AuthService {
 
   /**
    * Get the deserialized user session from a JSON-formatted string.
-   * @param session the session as a JSON-formatted string or null
+   * @param session - the session as a JSON-formatted string or null
    * @returns the parsed user or null if no session or undefined if error
    */
   #parseUserFromSession(session: string): User | null | undefined {
@@ -269,7 +365,7 @@ export class AuthService {
    *
    * It is also called to check when a state change was triggered and we need to
    * wait for and verify that the backend has actually updated the user session.
-   * @param accessToken the access token to use for logging in
+   * @param accessToken - the access token to use for logging in
    */
   async #loadUserSession(accessToken: string | undefined = undefined): Promise<void> {
     console.debug('Loading user session...');
@@ -323,8 +419,8 @@ export class AuthService {
 
   /**
    * Wait for the backend user session to change the state
-   * @param state the state that is expected to change
-   * @param maxAttempts the maximum number of attempts to wait for the state
+   * @param state - the state that is expected to change
+   * @param maxAttempts - the maximum number of attempts to wait for the state
    * @returns a promise that resolves to the last reached state
    */
   async #waitForStateChange(
@@ -345,9 +441,9 @@ export class AuthService {
 
   /**
    * Register or re-register a user
-   * @param id the internal user ID or null for new users
-   * @param ext_id the external user ID (can be null for registered users)
-   * @param basicData the basic user data to register or re-register
+   * @param id - the internal user ID or null for new users
+   * @param ext_id - the external user ID (can be null for registered users)
+   * @param basicData - the basic user data to register or re-register
    * @returns a promise that resolves to true if the code is valid
    */
   async register(
@@ -427,7 +523,7 @@ export class AuthService {
 
   /**
    * Verify the given TOTP code
-   * @param code the 6-digit TOTP code to verify
+   * @param code - the 6-digit TOTP code to verify
    * @returns a promise that resolves to true if the code is valid
    */
   async verifyTotpCode(code: string): Promise<boolean> {

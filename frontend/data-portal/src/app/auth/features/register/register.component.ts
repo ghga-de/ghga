@@ -45,6 +45,8 @@ export class RegisterComponent {
 
   accepted = false;
 
+  allowNavigation = false; // used by canDeactivate guard
+
   /**
    * Initialize the registration component
    */
@@ -76,11 +78,13 @@ export class RegisterComponent {
     const title = this.titleControl.value || null;
     const { id, ext_id, name, email } = user;
     const data: UserBasicData = { name, email, title };
+    this.allowNavigation = true;
     const ok = await this.#authService.register(id || null, ext_id, data);
     if (ok) {
       // add toast message or dialog here
       console.info('Registration was successful.');
     } else {
+      this.allowNavigation = false;
       // add toast message here
       console.error('Registration failed.');
     }
