@@ -40,8 +40,7 @@ class WrongDecryptedFormatError(RuntimeError):
     """Raised when the decrypted payload"""
 
     def __init__(self, *, cause: str):
-        message = f"Decrypted payload does not conform to expected format: {
-            cause}."
+        message = f"Decrypted payload does not conform to expected format: {cause}."
         super().__init__(message)
 
 
