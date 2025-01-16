@@ -199,6 +199,7 @@ async def test_happy_journey(joint_fixture: JointFixture):
         decrypted_size=file_to_register.decrypted_size,
         decryption_secret_id="some-secret",
         content_offset=123456,
+        encrypted_size=1234567,
         encrypted_part_size=123456,
         encrypted_parts_md5=["somechecksum", "anotherchecksum"],
         encrypted_parts_sha256=["somechecksum", "anotherchecksum"],
