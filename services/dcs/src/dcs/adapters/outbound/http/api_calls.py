@@ -32,8 +32,7 @@ def get_envelope_from_ekss(
     receiver_public_key_base64 = base64.urlsafe_b64encode(
         base64.b64decode(receiver_public_key)
     ).decode()
-    api_url = f"{
-        api_base}/secrets/{secret_id}/envelopes/{receiver_public_key_base64}"
+    api_url = f"{api_base}/secrets/{secret_id}/envelopes/{receiver_public_key_base64}"
     try:
         response = httpx.get(url=api_url, timeout=60)
     except httpx.RequestError as request_error:

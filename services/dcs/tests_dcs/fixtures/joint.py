@@ -202,6 +202,7 @@ async def populated_fixture(
         upload_date=EXAMPLE_FILE.creation_date,
         decrypted_size=EXAMPLE_FILE.decrypted_size,
         decrypted_sha256=EXAMPLE_FILE.decrypted_sha256,
+        encrypted_size=1234567,
         encrypted_part_size=1,
         encrypted_parts_md5=["some", "checksum"],
         encrypted_parts_sha256=["some", "checksum"],

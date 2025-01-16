@@ -39,8 +39,9 @@ class DataRepositoryPort(ABC):
         """
 
         def __init__(self, *, object_id: str, from_error: Exception):
-            message = f"Could not remove object {
-                    object_id} from outbox: {str(from_error)}"
+            message = (
+                f"Could not remove object {object_id} from outbox: {str(from_error)}"
+            )
             super().__init__(message)
 
     class DrsObjectNotFoundError(RuntimeError):
@@ -86,8 +87,9 @@ class DataRepositoryPort(ABC):
         """Raise when API call returns unexpected return code"""
 
         def __init__(self, *, api_url: str, response_code: int):
-            message = f"Call to {api_url} returned unexpected response code {
-                    response_code}"
+            message = (
+                f"Call to {api_url} returned unexpected response code {response_code}"
+            )
             super().__init__(message)
 
     @abstractmethod

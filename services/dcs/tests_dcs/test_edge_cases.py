@@ -189,5 +189,6 @@ async def test_register_file_twice(populated_fixture: PopulatedFixture, caplog):
     caplog.clear()
     await joint_fixture.data_repository.register_new_file(file=file)
     failure_message = f"Could not register file with id '{
-        example_file.file_id}' as an entry already exists for this id."
+        example_file.file_id
+    }' as an entry already exists for this id."
     assert failure_message in caplog.messages
