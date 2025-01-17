@@ -164,7 +164,7 @@ export default [
               disallow: ['ui'],
               message: 'Modules for routes cannot import ui components',
             },
-            // unit tests are currently exempt from all rules
+            // tests are currently exempt from all rules
             {
               from: ['spec'],
               allow: ['*'],
@@ -253,7 +253,7 @@ export default [
         },
         {
           type: 'spec',
-          pattern: 'src/app/**/*.spec.ts',
+          pattern: 'src/app/**/*.spec.ts|tests/**/*.spec.ts',
           mode: 'full',
         },
         {
@@ -286,9 +286,9 @@ export default [
           pattern: 'src/mocks',
         },
         {
-          type: 'setup',
+          type: 'tooling',
           mode: 'file',
-          pattern: ['jest.config.ts', 'setup-jest.ts'],
+          pattern: ['jest.config.ts', 'setup-jest.ts', 'playwright.config.ts'],
         },
       ],
     },

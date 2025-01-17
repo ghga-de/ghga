@@ -56,6 +56,12 @@ testem.log
 .keystore
 .ssl/
 
+# Testing
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Translations
 *.mo
 *.pot

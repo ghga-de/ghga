@@ -114,13 +114,13 @@ Note that modernizing the unit testing tooling is on the roadmap of the Angular 
 
 ## Running end-to-end tests
 
-For end-to-end (e2e) testing, run:
+We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/) for details.
 
-```bash
-ng e2e
-```
+- `npm run e2e` - run e2e-tets
+- `npm run e2e:debug`: - run e2e tests in headed mode
+- `npm run e2e:report`: - open HTML report for e2e tests
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Like for unit testing, you can also [use the VS Code extension for Playwright](https://playwright.dev/docs/getting-started-vscode) to run tests interactively using the test explorer in the side bar. VS Code is able to support different test providers (like Jest and Playwright) along with each other.
 
 ## The Architecture Matrix
 

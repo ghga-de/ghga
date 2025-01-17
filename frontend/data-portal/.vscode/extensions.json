@@ -1,8 +1,11 @@
 {
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=827846
   "recommendations": [
-    "angular.ng-template",
+    "esbenp.prettier-vscode",
     "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode"
+    "angular.ng-template",
+    "orta.vscode-jest",
+    "dbaeumer.vscode-eslint",
+    "ms-playwright.playwright"
   ]
 }
