@@ -10,9 +10,15 @@
  * Metldata API
  */
 
+// get dataset summaries with arbitrary accessions
+export const getDatasetSummary = (accession: string) => ({
+  ...datasetSummary,
+  accession: accession,
+});
+
 export const metadataGlobalSummary = {
   resource_stats: {
-    SequencingProcessFile: {
+    ProcessDataFile: {
       count: 532,
       stats: {
         format: [
@@ -111,4 +117,59 @@ export const searchResults = {
       },
     },
   ],
+};
+
+export const datasetSummary = {
+  accession: 'GHGAD588887987',
+  description:
+    'Test dataset for Metadata Repository get dataset details call. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
+  type: ['Test Type'],
+  title: 'Test dataset for details',
+  dac_email: 'test[at]test[dot]de;',
+  samples_summary: {
+    count: 3,
+    stats: {
+      sex: [
+        { value: 'Female', count: 1 },
+        { value: 'Male', count: 1 },
+      ],
+      tissues: [
+        { value: 'metastasis', count: 1 },
+        { value: 'tumor', count: 2 },
+      ],
+      phenotypic_features: [
+        { value: 'Test Phenotype 1', count: 2 },
+        { value: 'Test Phenotype 2', count: 1 },
+      ],
+    },
+  },
+  studies_summary: {
+    count: 1,
+    stats: {
+      accession: ['TEST18666800'],
+      title: ['Test Study'],
+    },
+  },
+  experiments_summary: {
+    count: 14,
+    stats: {
+      experiment_methods: [
+        {
+          value: 'Ilumina_test',
+          count: 10,
+        },
+        { value: 'HiSeq_test', count: 4 },
+      ],
+    },
+  },
+  files_summary: {
+    count: 27,
+    stats: {
+      format: [
+        { value: 'FASTQ', count: 22 },
+        { value: 'BAM', count: 5 },
+      ],
+      size: 434543980,
+    },
+  },
 };

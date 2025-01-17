@@ -75,7 +75,7 @@ export class ConfigService {
    * @returns the auth service URL sans end slash
    */
   get authUrl(): string {
-    return new URL(this.#config.auth_url, withEndSlash(this.#config.base_url)).href;
+    return sansEndSlash(this.#config.auth_url);
   }
 
   /**
@@ -83,7 +83,7 @@ export class ConfigService {
    * @returns the MASS URL sans end slash
    */
   get massUrl(): string {
-    return new URL(this.#config.mass_url, withEndSlash(this.#config.base_url)).href;
+    return sansEndSlash(this.#config.mass_url);
   }
 
   /**
@@ -91,7 +91,7 @@ export class ConfigService {
    * @returns the metldata service URL sans slash
    */
   get metldataUrl(): string {
-    return new URL(this.#config.metldata_url, withEndSlash(this.#config.base_url)).href;
+    return sansEndSlash(this.#config.metldata_url);
   }
 
   /**

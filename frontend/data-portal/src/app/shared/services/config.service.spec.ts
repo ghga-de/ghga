@@ -44,15 +44,15 @@ describe('ConfigService', () => {
   });
 
   it('should provide the auth service URL', () => {
-    expect(service.authUrl).toBe('https://portal.test/test/auth');
+    expect(service.authUrl).toBe('/test/auth');
   });
 
   it('should provide the MASS URL', () => {
-    expect(service.massUrl).toBe('https://portal.test/test/mass');
+    expect(service.massUrl).toBe('/test/mass');
   });
 
   it('should provide the metldata service URL', () => {
-    expect(service.metldataUrl).toBe('https://portal.test/test/metldata');
+    expect(service.metldataUrl).toBe('/test/metldata');
   });
 
   it('should provide the OID client ID', () => {

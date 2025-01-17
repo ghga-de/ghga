@@ -1,0 +1,95 @@
+<mat-expansion-panel (opened)="onOpen()"
+  ><mat-expansion-panel-header
+    ><div class="grid w-full grid-cols-12">
+      <span class="col-span-2">{{ hit().id_ }}</span
+      ><span class="col-span-10">{{ hit().content.title }}</span>
+    </div></mat-expansion-panel-header
+  >
+  <ng-template matExpansionPanelContent
+    ><p>Dataset ID: {{ summary().accession }}</p>
+    @if (hit().content.alias) {
+      <p>EGA ID: {{ hit().content.alias }}</p>
+    }
+    <p>Full title: {{ summary().title }}</p>
+    <p>Description: {{ summary().description }}</p>
+    @if (summary().type && summary().type !== []) {
+      <p>
+        Types:
+        @for (type of summary().type; track type) {
+          ({{ type }})
+        }
+      </p>
+    }
+    <p>
+      Part of study:
+      {{
+        summary().studies_summary.count > 0
+          ? summary().studies_summary.stats.title
+          : 'None'
+      }}
+    </p>
+    <p>
+      Accession ID:
+      {{
+        summary().studies_summary.count > 0
+          ? summary().studies_summary.stats.accession
+          : 'N/A'
+      }}
+    </p>
+    <p>File Summary:</p>
+    <p>{{ summary().studies_summary.count }} Files</p>
+    @if (summary().files_summary.count > 0) {
+      <ul>
+        @for (format of summary().files_summary.stats.format; track format.value) {
+          <li class="uppercase">{{ format.value }} {{ format.count }}</li>
+        }
+      </ul>
+    }
+    <p>Sample info:</p>
+    <p>
+      {{ summary().samples_summary.count }} Samples
+      @if (summary().samples_summary.stats.sex !== []) {
+        (Sex:
+        @for (sex of summary().samples_summary.stats.sex; track sex.value) {
+          {{ sex.count }} {{ sex.value }}
+        }
+        )
+      }
+    </p>
+    <p>{{ summary().samples_summary.stats.tissues.length }} Tissues</p>
+    @if (summary().samples_summary.stats.tissues.length > 0) {
+      <ul>
+        @for (tissue of summary().samples_summary.stats.tissues; track tissue.value) {
+          ({{ tissue.count }} {{ tissue.value }})
+        }
+      </ul>
+    }
+    <p>
+      {{ summary().samples_summary.stats.phenotypic_features.length }} Phenotypic
+      Features
+    </p>
+    @if (summary().samples_summary.stats.phenotypic_features.length > 0) {
+      <ul>
+        @for (
+          phenotypic_feature of summary().samples_summary.stats.phenotypic_features;
+          track phenotypic_feature.value
+        ) {
+          ({{ phenotypic_feature.count }} {{ phenotypic_feature.value }})
+        }
+      </ul>
+    }
+    <p>Experiments Summary:</p>
+    <p>{{ summary().experiments_summary.count }} Experiments</p>
+    <p>{{ summary().experiments_summary.stats.experiment_methods.length }} Platforms</p>
+    @if (summary().experiments_summary.stats.experiment_methods.length > 0) {
+      <ul>
+        @for (
+          platform of summary().experiments_summary.stats.experiment_methods;
+          track platform.value
+        ) {
+          <li class="uppercase">{{ platform.value }} {{ platform.count }}</li>
+        }
+      </ul>
+    }
+  </ng-template>
+</mat-expansion-panel>

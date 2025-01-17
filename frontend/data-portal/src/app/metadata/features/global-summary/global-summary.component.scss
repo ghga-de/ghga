@@ -1,0 +1,20 @@
+@use '@angular/material' as mat;
+
+mat-card {
+  @include mat.card-overrides(
+    (
+      outlined-outline-color: var(--mat-sys-on-primary),
+      outlined-container-color: var(--mat-sys-on-primary),
+      title-text-size: 20px,
+      title-text-weight: var(--mat-sys-label-medium-weight-prominent),
+    )
+  );
+}
+
+mat-card.card-primary {
+  @include mat.card-overrides(
+    (
+      outlined-container-color: var(--mat-sys-primary),
+    )
+  );
+}

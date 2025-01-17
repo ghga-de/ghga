@@ -6,10 +6,19 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { metadataGlobalSummary } from '@app/../mocks/data';
+import { MetadataService } from '@app/metadata/services/metadata.service';
 import { HomePageComponent } from './home-page.component';
+
+/**
+ * Mock the metadata service as needed for the global stats
+ */
+class MockMetadataService {
+  globalSummary = signal(metadataGlobalSummary.resource_stats);
+  globalSummaryError = signal(undefined);
+}
 
 describe('HomePageComponent', () => {
   let component: HomePageComponent;
@@ -22,10 +31,8 @@ describe('HomePageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HomePageComponent],
-      // TODO: http client providers can be removed later (see home-page.component.ts)
       providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
+        { provide: MetadataService, useClass: MockMetadataService },
         {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,
@@ -45,8 +52,8 @@ describe('HomePageComponent', () => {
   it('should render top heading', () => {
     const fixture = TestBed.createComponent(HomePageComponent);
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toEqual(
-      'The German Human Genome-Phenome Archive',
-    );
+    const text = compiled.querySelector('h1')?.textContent;
+    expect(text).toContain('The German Human Genome-Phenome');
+    expect(text).toContain('Data Portal');
   });
 });
