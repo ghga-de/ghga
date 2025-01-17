@@ -87,6 +87,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             decryption_secret_id=validated_payload.decryption_secret_id,
             decrypted_sha256=validated_payload.decrypted_sha256,
             decrypted_size=validated_payload.decrypted_size,
+            encrypted_size=validated_payload.encrypted_size,
             creation_date=validated_payload.upload_date,
             s3_endpoint_alias=validated_payload.s3_endpoint_alias,
         )

@@ -20,6 +20,7 @@ import logging
 import re
 import uuid
 from datetime import timedelta
+from time import perf_counter
 
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.utils import utc_dates
@@ -171,7 +172,10 @@ class DataRepository(DataRepositoryPort):
         """
         # make sure that metadata for the DRS object exists in the database:
         try:
+            started = perf_counter()
             drs_object_with_access_time = await self._drs_object_dao.get_by_id(drs_id)
+            stopped = perf_counter() - started
+            log.debug("Fetched DRS object model in %.3f seconds.", stopped)
         except ResourceNotFoundError as error:
             drs_object_not_found = self.DrsObjectNotFoundError(drs_id=drs_id)
             log.error(drs_object_not_found)
@@ -180,11 +184,7 @@ class DataRepository(DataRepositoryPort):
         drs_object = models.DrsObject(
             **drs_object_with_access_time.model_dump(exclude={"last_accessed"})
         )
-
-        drs_object_with_uri = self._get_model_with_self_uri(drs_object=drs_object)
-
         storage_alias = drs_object.s3_endpoint_alias
-
         try:
             bucket_id, object_storage = self._object_storages.for_alias(storage_alias)
         except KeyError as exc:
@@ -194,11 +194,17 @@ class DataRepository(DataRepositoryPort):
             log.critical(storage_alias_not_configured)
             raise storage_alias_not_configured from exc
 
-        # check if the file corresponding to the DRS object is already in the outbox:
-        if not await object_storage.does_object_exist(
-            bucket_id=bucket_id, object_id=drs_object.object_id
-        ):
-            log.info(f"File not in outbox for '{drs_id}'. Request staging...")
+        try:
+            started = perf_counter()
+            drs_object_with_access = await self._get_access_model(
+                drs_object=drs_object,
+                object_storage=object_storage,
+                bucket_id=bucket_id,
+            )
+            stopped = perf_counter() - started
+            log.debug("Fetched new presigned URL in %.3f seconds.", stopped)
+        except object_storage.ObjectNotFoundError as exc:
+            log.info("File not in outbox for '%s'. Request staging...", drs_id)
 
             # publish an outbox event to request a stage of the corresponding file:
             unstaged_file_dto = event_schemas.NonStagedFileRequested(
@@ -209,7 +215,10 @@ class DataRepository(DataRepositoryPort):
                 decrypted_sha256=drs_object.decrypted_sha256,
             )
 
+            started = perf_counter()
             await self._nonstaged_file_requested_dao.upsert(unstaged_file_dto)
+            stopped = perf_counter() - started
+            log.debug("Upserted outbox DAO in %.3f seconds.", stopped)
 
             # calculate the required time in seconds based on the decrypted file size
             # (actually the encrypted file is staged, but this is an estimate anyway)
@@ -219,31 +228,30 @@ class DataRepository(DataRepositoryPort):
             retry_after = max(retry_after, config.retry_after_min)
             retry_after = min(retry_after, config.retry_after_max)
             # instruct to retry later:
-            raise self.RetryAccessLaterError(retry_after=retry_after)
+            raise self.RetryAccessLaterError(retry_after=retry_after) from exc
 
         # Successfully staged, update access information now
-        log.debug(f"Updating access time of for '{drs_id}'.")
+        log.debug("Updating access time of for '%s'.", drs_id)
         drs_object_with_access_time.last_accessed = utc_dates.now_as_utc()
+        started = perf_counter()
         await self._drs_object_dao.update(drs_object_with_access_time)
-
-        drs_object_with_access = await self._get_access_model(
-            drs_object=drs_object,
-            object_storage=object_storage,
-            bucket_id=bucket_id,
-        )
+        stopped = perf_counter() - started
+        log.debug("Updated last access time in %.3f seconds.", stopped)
 
         # publish an event indicating the served download:
+        drs_object_with_uri = self._get_model_with_self_uri(drs_object=drs_object)
+        started = perf_counter()
         await self._event_publisher.download_served(
             drs_object=drs_object_with_uri,
             target_bucket_id=bucket_id,
         )
-        log.info(f"Sent download served event for '{drs_id}'.")
-
-        # CLI needs to have the encrypted size to correctly download all file parts
-        encrypted_size = await object_storage.get_object_size(
-            bucket_id=bucket_id, object_id=drs_object.object_id
+        stopped = perf_counter() - started
+        log.info(
+            "Sent download served event for '%s' in %.3f seconds.", drs_id, stopped
         )
-        return drs_object_with_access.convert_to_drs_response_model(size=encrypted_size)
+        return drs_object_with_access.convert_to_drs_response_model(
+            size=drs_object.encrypted_size
+        )
 
     async def cleanup_outbox_buckets(
         self, *, object_storages_config: S3ObjectStoragesConfig
@@ -262,9 +270,7 @@ class DataRepository(DataRepositoryPort):
         """
         # Run on demand through CLI, so crashing should be ok if the alias is not configured
         log.info(
-            f"Starting outbox cleanup for storage identified by alias '{
-                storage_alias
-            }'."
+            f"Starting outbox cleanup for storage identified by alias '{storage_alias}'."
         )
         try:
             bucket_id, object_storage = self._object_storages.for_alias(storage_alias)
@@ -321,9 +327,7 @@ class DataRepository(DataRepositoryPort):
         with contextlib.suppress(ResourceNotFoundError):
             await self._drs_object_dao.get_by_id(file.file_id)
             log.error(
-                f"Could not register file with id '{
-                    file.file_id
-                }' as an entry already exists for this id."
+                f"Could not register file with id '{file.file_id}' as an entry already exists for this id."
             )
             return
 
@@ -426,9 +430,7 @@ class DataRepository(DataRepositoryPort):
                 bucket_id=bucket_id, object_id=drs_object.object_id
             )
             log.debug(
-                f"Successfully deleted file object for '{
-                    file_id
-                }' from object storage identified by '{alias}'."
+                f"Successfully deleted file object for '{file_id}' from object storage identified by '{alias}'."
             )
 
         # Remove file from database and send success event

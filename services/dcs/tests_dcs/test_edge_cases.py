@@ -183,6 +183,7 @@ async def test_register_file_twice(populated_fixture: PopulatedFixture, caplog):
         decrypted_sha256=example_file.decrypted_sha256,
         decrypted_size=example_file.decrypted_size,
         creation_date=now_as_utc().isoformat(),
+        encrypted_size=example_file.encrypted_size,
         s3_endpoint_alias=example_file.s3_endpoint_alias,
     )
 

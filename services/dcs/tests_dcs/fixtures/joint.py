@@ -73,6 +73,7 @@ EXAMPLE_FILE = models.AccessTimeDrsObject(
     creation_date=utc_dates.now_as_utc().isoformat(),
     decrypted_size=12345,
     decryption_secret_id="some-secret",
+    encrypted_size=23456,
     s3_endpoint_alias=STORAGE_ALIAS,
     last_accessed=utc_dates.now_as_utc(),
 )
