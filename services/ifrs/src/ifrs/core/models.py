@@ -85,3 +85,7 @@ class FileMetadata(FileMetadataBase):
     object_id: str = Field(
         ..., description="A UUID to identify the file in object storage"
     )
+    object_size: int = Field(
+        ...,
+        description="The size of the file content in bytes as stored in the permanent storage.",
+    )

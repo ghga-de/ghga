@@ -42,5 +42,7 @@ EXAMPLE_METADATA_BASE = models.FileMetadataBase(
 )
 
 EXAMPLE_METADATA = models.FileMetadata(
-    **EXAMPLE_METADATA_BASE.model_dump(), object_id="objectid001"
+    **EXAMPLE_METADATA_BASE.model_dump(),
+    object_id="objectid001",
+    object_size=64 * 1024**2 + 1234567,  #  dummy value
 )

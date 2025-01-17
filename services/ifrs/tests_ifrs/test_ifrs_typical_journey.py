@@ -64,9 +64,13 @@ async def test_happy_journey(
             staging_bucket_id=joint_fixture.staging_bucket,
         )
 
+    stored_metadata = await joint_fixture.file_metadata_dao.get_by_id(
+        EXAMPLE_METADATA.file_id
+    )
     assert len(recorder.recorded_events) == 1
     event = recorder.recorded_events[0]
     assert event.payload["object_id"] != ""
+    assert event.payload["encrypted_size"] == stored_metadata.object_size
     assert event.type_ == joint_fixture.config.file_registered_event_type
 
     object_id = cast(str, event.payload["object_id"])

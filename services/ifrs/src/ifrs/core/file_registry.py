@@ -66,7 +66,7 @@ class FileRegistry(FileRegistryPort):
 
         # object ID is a UUID generated upon registration, so cannot compare those
         registered_file_without_object_id = registered_file.model_dump(
-            exclude={"object_id"}
+            exclude={"object_id", "object_size"}
         )
 
         if file_without_object_id.model_dump() == registered_file_without_object_id:
@@ -137,22 +137,6 @@ class FileRegistry(FileRegistryPort):
             file_without_object_id.file_id,
         )
         object_id = str(uuid.uuid4())
-        file = models.FileMetadata(
-            **file_without_object_id.model_dump(), object_id=object_id
-        )
-
-        # Make sure the object exists in the source bucket (staging)
-        if not await object_storage.does_object_exist(
-            bucket_id=staging_bucket_id, object_id=staging_object_id
-        ):
-            content_not_in_staging = self.FileContentNotInStagingError(
-                file_id=file_without_object_id.file_id
-            )
-            log.error(
-                content_not_in_staging,
-                extra={"file_id": file_without_object_id.file_id},
-            )
-            raise content_not_in_staging
 
         # Copy the file from staging to permanent storage
         try:
@@ -169,6 +153,17 @@ class FileRegistry(FileRegistryPort):
                 file_without_object_id.file_id,
             )
             return
+        except object_storage.ObjectNotFoundError as exc:
+            # The object does not exist in the source bucket (staging)
+            # copy_object fetches the source object size, which checks for existence first
+            content_not_in_staging = self.FileContentNotInStagingError(
+                file_id=file_without_object_id.file_id
+            )
+            log.error(
+                content_not_in_staging,
+                extra={"file_id": file_without_object_id.file_id},
+            )
+            raise content_not_in_staging from exc
         except Exception as exc:
             # Irreconcilable object error -- event needs investigation
             obj_error = self.CopyOperationError(
@@ -179,6 +174,14 @@ class FileRegistry(FileRegistryPort):
             log.critical(obj_error)
             raise obj_error from exc
 
+        object_size = await object_storage.get_object_size(
+            bucket_id=permanent_bucket_id, object_id=object_id
+        )
+        file = models.FileMetadata(
+            **file_without_object_id.model_dump(),
+            object_id=object_id,
+            object_size=object_size,
+        )
         # Log the registration and publish an event
         log.info("Inserting file with file ID '%s'.", file.file_id)
         await self._file_metadata_dao.insert(file)
@@ -245,16 +248,6 @@ class FileRegistry(FileRegistryPort):
             file.storage_alias
         )
 
-        # Make sure the file exists in permanent storage before trying to copy it
-        if not await object_storage.does_object_exist(
-            bucket_id=permanent_bucket_id, object_id=file.object_id
-        ):
-            not_in_storage_error = self.FileInRegistryButNotInStorageError(
-                file_id=file_id
-            )
-            log.critical(msg=not_in_storage_error, extra={"file_id": file_id})
-            raise not_in_storage_error
-
         # Copy the file from permanent storage bucket to the outbox (download) bucket
         try:
             await object_storage.copy_object(
@@ -270,6 +263,14 @@ class FileRegistry(FileRegistryPort):
                 file_id,
             )
             return
+        except object_storage.ObjectNotFoundError as exc:
+            # file does not exist in permanent storage
+            # copy_object fetches the source object size, which checks for existence first
+            not_in_storage_error = self.FileInRegistryButNotInStorageError(
+                file_id=file_id
+            )
+            log.critical(msg=not_in_storage_error, extra={"file_id": file_id})
+            raise not_in_storage_error from exc
         except Exception as exc:
             # Irreconcilable object error -- event needs investigation
             obj_error = self.CopyOperationError(
