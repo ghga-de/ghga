@@ -53,7 +53,7 @@ describe('HomePageComponent', () => {
     const fixture = TestBed.createComponent(HomePageComponent);
     const compiled = fixture.nativeElement as HTMLElement;
     const text = compiled.querySelector('h1')?.textContent;
-    expect(text).toContain('The German Human Genome-Phenome');
+    expect(text).toContain('The German Human Genome-Phenome Archive');
     expect(text).toContain('Data Portal');
   });
 });
