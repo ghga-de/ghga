@@ -2,7 +2,28 @@
 
 This repository contains the Angular 19 front-end application for the GHGA data portal.
 
-## Development server
+<!-- toc -->
+
+- [GHGA Data Portal](#ghga-data-portal)
+  - [Local testing](#local-testing)
+    - [API requests \& the backend](#api-requests--the-backend)
+    - [Authentication](#authentication)
+  - [Code scaffolding](#code-scaffolding)
+  - [Building](#building)
+  - [Package Manager](#package-manager)
+  - [Linter, Commits, and Documentation](#linter-commits-and-documentation)
+    - [Ease of use](#ease-of-use)
+  - [Testing](#testing)
+    - [Unit-tests](#unit-tests)
+    - [End-to-End tests](#end-to-end-tests)
+      - [Issues relating to headed execution](#issues-relating-to-headed-execution)
+  - [The Architecture Matrix](#the-architecture-matrix)
+  - [References](#references)
+  - [License](#license)
+
+<!-- tocstop -->
+
+## Local testing
 
 To start a local development server, run:
 
@@ -14,6 +35,8 @@ Once the server is running, open your browser and navigate to `http://localhost:
 
 By default, this will not use a proxy configuration; the API will be provided via the mock service worker, and the authentication will be faked as well.
 
+### API requests & the backend
+
 If you want to test the application against the backend provided by the staging deployment, then run:
 
 ```bash
@@ -24,13 +47,21 @@ In this case, a proxy configuration will be used that proxies all API endpoints 
 
 If the staging backend requires an additional Basic authentication, you can set it in the environment variable `data_portal_basic_auth`.
 
+### Authentication
+
 If you want to test authentication using the real OIDC provider, then run:
 
 ```bash
 dev_launcher --with-oidc
 ```
 
+---
+
+**NOTE**
+
 The development server will serve the application via SSL in this mode, using the certificate created in `.devcontainer/cert.pem`. You should add the corresponding CA certificate `.devcontainer/ca-cert.pem` to the trusted certificates of your development computer or web browser to avoid the warnings when loading the page.
+
+---
 
 In this mode, the `data_portal_oidc_client_id` and the other OIDC settings must be set properly as required by the OIDC provider.
 
@@ -52,11 +83,19 @@ data_portal_oidc_client_id=THE_OIDC_CLIENT_ID
 
 ## Code scaffolding
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+The Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
 
 ```bash
 ng generate component component-name
 ```
+
+or
+
+```bash
+ng g c component-name
+```
+
+for short.
 
 For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
 
@@ -72,11 +111,7 @@ To build the project run:
 ng build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+This will compile the project and store the build artifacts in the `dist/` directory. By default, the production build optimizes the application for performance and speed.
 
 ## Package Manager
 
@@ -86,7 +121,15 @@ This project uses pnpm to install dependencies, which is a replacement for the m
 pnpm install
 ```
 
-to install the dependencies. It is important to note that you should not have a `package-lock.json` but instead a `pnpm-lock.yaml`. You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies.
+to install the dependencies.
+
+---
+
+**NOTE**
+
+You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`. You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies.
+
+---
 
 ## Linter, Commits, and Documentation
 
@@ -94,11 +137,13 @@ The repository is set up in such a way to only allow linted commits. That means 
 
 To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix`, which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running `ng lint`), resolve those issues and try again.
 
-## Ease of use
+### Ease of use
 
-For comfort, we are adding these shorthands: `npm run lint`, `npm run lf` (for `lint --fix`), and `npm run docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
+For comfort, we are adding these shorthands: `pnpm run lint`, `pnpm run lf` (for `lint --fix`), and `pnpm run docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
 
-## Running unit-tests
+## Testing
+
+### Unit-tests
 
 We are using [Jest](https://jestjs.io/) for unit testing in this project. If possible, the queries and matchers from the [Testing Library](https://testing-library.com/) should be used. See the documentation for the [Angular Testing Library](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/).
 
@@ -112,7 +157,7 @@ You can also use the VS Code extension for Jest to run tests interactively using
 
 Note that modernizing the unit testing tooling is on the roadmap of the Angular team for 2025. We may need to change some parts of the tooling when the official solution is provided.
 
-## Running end-to-end tests
+### End-to-End tests
 
 We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/) for details.
 
@@ -123,7 +168,7 @@ We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing 
 
 Like for unit testing, you can also [use the VS Code extension for Playwright](https://playwright.dev/docs/getting-started-vscode) to run tests interactively using the test explorer in the side bar. VS Code is able to support different test providers (like Jest and Playwright) along with each other.
 
-### Issues relating to headed execution
+#### Issues relating to headed execution
 
 In order for the headed execution to work in the dev container, an X-Server must be running on the host.
 
@@ -157,6 +202,13 @@ To create a clean architecture, the following rules are checked when importing m
 - Additionally, the three bottom layers of the _auth_ slice may be used in other slices.
 - Each module is only allowed to use modules from the layers below it.
 - An exception is that the _ui_ layer may not use modules from the _services_ layer.
+
+## References
+
+- [Playwright](https://playwright.dev/) and the docs for it [docs for it](https://playwright.dev/docs/).
+- [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli)
+- [Pnpm](https://pnpm.io/) and [the docs for it](https://pnpm.io/motivation).
+- [Jest](https://jestjs.io/) for unit tests. [Testing Library](https://testing-library.com/) for queries with an [Angular integration](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/).
 
 ## License
 
