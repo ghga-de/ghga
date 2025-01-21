@@ -49,6 +49,11 @@ export class MetadataService {
   );
 
   /**
+   * Whether the global summary is loading as a signal
+   */
+  globalSummaryIsLoading: Signal<boolean> = this.#globalSummary.isLoading;
+
+  /**
    * The global summary error as a signal
    */
   globalSummaryError: Signal<unknown> = this.#globalSummary.error;
@@ -88,6 +93,11 @@ export class MetadataService {
   datasetSummary: Signal<DatasetSummary> = computed(
     () => this.#datasetSummary.value() ?? emptyDatasetSummary,
   );
+
+  /**
+   * Whether the dataset summary is loading as a signal
+   */
+  datasetIsLoading: Signal<boolean> = this.#datasetSummary.isLoading;
 
   /**
    * The dataset summary error as a signal

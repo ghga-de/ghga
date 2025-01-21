@@ -15,6 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '@app/auth/services/auth.service';
+import { NotificationService } from '@app/shared/services/notification.service';
 
 // TODO: Polish this component
 
@@ -34,6 +35,7 @@ import { AuthService } from '@app/auth/services/auth.service';
   styleUrl: './confirm-totp.component.scss',
 })
 export class ConfirmTotpComponent {
+  #notify = inject(NotificationService);
   #authService = inject(AuthService);
 
   codeControl = new FormControl<string>('', [
@@ -61,13 +63,11 @@ export class ConfirmTotpComponent {
     if (!code) return;
     const verified = await this.#authService.verifyTotpCode(code);
     if (verified) {
-      console.info('Successfully authenticated.');
-      // add toast message here
+      this.#notify.showSuccess('Successfully authenticated.');
       this.allowNavigation = true;
       this.#authService.redirectAfterLogin();
     } else {
-      // maybe add toast message here
-      console.error('Failed to authenticate.');
+      this.#notify.showError('Failed to authenticate.');
       this.codeControl.reset();
       this.verificationError = true;
     }

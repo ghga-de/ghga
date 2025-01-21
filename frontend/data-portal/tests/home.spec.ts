@@ -31,7 +31,7 @@ test('has global statistics', async ({ page }) => {
   await expect(main).toContainText('Files: 532');
 });
 
-// TODO: adapt and activate this test when the metadata browser is implemented
+// TODO: adapt and activate this test when the dataset detail page is implemented
 test.skip('can navigate to dataset details', async ({ page }) => {
   await page.goto('/');
 

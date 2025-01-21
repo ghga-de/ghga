@@ -18,3 +18,11 @@ mat-card.card-primary {
     )
   );
 }
+
+section {
+  @include mat.progress-spinner-overrides(
+    (
+      active-indicator-color: var(--mat-sys-on-primary),
+    )
+  );
+}

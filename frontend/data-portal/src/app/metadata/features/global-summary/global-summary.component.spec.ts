@@ -18,6 +18,7 @@ import { MetadataService } from '@app/metadata/services/metadata.service';
 class MockMetadataService {
   globalSummary = signal(metadataGlobalSummary.resource_stats);
   globalSummaryError = signal(undefined);
+  globalSummaryIsLoading = signal(false);
 }
 
 describe('GlobalStatsComponent', () => {

@@ -14,6 +14,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MetadataSearchService } from '@app/metadata/services/metadataSearch.service';
+import { NotificationService } from '@app/shared/services/notification.service';
 import { DatasetExpansionPanelComponent } from '../dataset-expansion-panel/dataset-expansion-panel.component';
 
 /**
@@ -35,9 +36,11 @@ import { DatasetExpansionPanelComponent } from '../dataset-expansion-panel/datas
   styleUrl: './metadata-browser.component.scss',
 })
 export class MetadataBrowserComponent implements OnInit {
+  #notify = inject(NotificationService);
   #metadataSearch = inject(MetadataSearchService);
 
   #className = 'EmbeddedDataset';
+
   /**
    * On init, define the default values of the search variables
    */
@@ -69,7 +72,7 @@ export class MetadataBrowserComponent implements OnInit {
 
   #errorEffect = effect(() => {
     if (this.#metadataSearch.searchResultsError()) {
-      console.log('Error fetching search results'); // TODO: show a toast message
+      this.#notify.showError('Error fetching search results');
     }
   });
 

@@ -9,7 +9,6 @@ import {
   ApplicationConfig,
   provideExperimentalZonelessChangeDetection,
 } from '@angular/core';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, TitleStrategy } from '@angular/router';
 import { provideHttpCache, withHttpCacheInterceptor } from '@ngneat/cashew';
@@ -29,7 +28,6 @@ export const appConfig: ApplicationConfig = {
     ),
     // cache all GET requests by default
     provideHttpCache({ strategy: 'implicit' }),
-    provideNoopAnimations(),
     provideAnimationsAsync(),
   ],
 };

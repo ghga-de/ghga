@@ -8,6 +8,7 @@ import { Component, effect, inject, input } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { Hit } from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata.service';
+import { NotificationService } from '@app/shared/services/notification.service';
 
 /**
  * Component for the expansion panel for each dataset found in the search results
@@ -19,8 +20,10 @@ import { MetadataService } from '@app/metadata/services/metadata.service';
   styleUrl: './dataset-expansion-panel.component.scss',
 })
 export class DatasetExpansionPanelComponent {
-  hit = input.required<Hit>();
+  #notify = inject(NotificationService);
   #metadata = inject(MetadataService);
+
+  hit = input.required<Hit>();
 
   summary = this.#metadata.datasetSummary;
 
@@ -33,7 +36,7 @@ export class DatasetExpansionPanelComponent {
 
   #errorEffect = effect(() => {
     if (this.#metadata.datasetSummaryError()) {
-      console.log('Error fetching dataset summary'); // TODO: show a toast message
+      this.#notify.showError('Error fetching dataset summary');
     }
   });
 }

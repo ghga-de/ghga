@@ -1,5 +1,9 @@
 <section class="my-8 rounded-lg bg-primary p-5 pb-8">
+  @if (isLoading()) {
+    <mat-spinner class="float-right" [diameter]="24"> </mat-spinner>
+  }
   <h2 class="text-white">Statistics</h2>
+
   <div class="flex grid grid-cols-4 justify-center gap-x-[8%] px-16">
     <mat-card appearance="outlined" class="card-primary min-h-56 p-4 text-white"
       ><mat-card-title class="text-center"
@@ -10,7 +14,7 @@
         ><br />Total datasets:</mat-card-title
       ><mat-card-content class="mt-4 text-2xl"
         ><div class="text-center">
-          {{ stats().Dataset.count }}
+          {{ datasets().count }}
         </div></mat-card-content
       ></mat-card
     >
@@ -20,12 +24,12 @@
           ><mat-icon inline class="rounded-full border-4 border-tertiary px-1"
             >genetics</mat-icon
           ></span
-        ><br />Platforms: {{ stats().ExperimentMethod.count }}</mat-card-title
+        ><br />Platforms: {{ platforms().count }}</mat-card-title
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
           <tbody>
             @for (
-              platform of stats().ExperimentMethod.stats.instrument_model;
+              platform of platforms().stats.instrument_model;
               track platform.value
             ) {
               <tr>
@@ -45,11 +49,11 @@
           ><mat-icon inline class="rounded-full border-4 border-white px-1"
             >person</mat-icon
           ></span
-        ><br />Individuals: {{ stats().Individual.count }}</mat-card-title
+        ><br />Individuals: {{ individuals().count }}</mat-card-title
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
           <tbody>
-            @for (sex of stats().Individual.stats.sex; track sex.value) {
+            @for (sex of individuals().stats.sex; track sex.value) {
               <tr>
                 <td class="pe-2 text-right font-bold">{{ sex.count }}</td>
                 <td class="text-left">
@@ -67,11 +71,11 @@
           ><mat-icon inline class="rounded-full border-4 border-tertiary px-1"
             >description</mat-icon
           ></span
-        ><br />Files: {{ stats().ProcessDataFile.count }}</mat-card-title
+        ><br />Files: {{ files().count }}</mat-card-title
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
           <tbody>
-            @for (format of stats().ProcessDataFile.stats.format; track format.value) {
+            @for (format of files().stats.format; track format.value) {
               <tr>
                 <td class="pe-2 text-right font-bold">{{ format.count }}</td>
                 <td class="text-left uppercase">

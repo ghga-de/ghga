@@ -13,6 +13,7 @@ import {
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ConfigService } from '@app/shared/services/config.service';
+import { NotificationService } from '@app/shared/services/notification.service';
 import type { OidcMetadata, UserManagerSettings } from 'oidc-client-ts';
 import {
   Log as OidcLog,
@@ -44,6 +45,7 @@ export class AuthService {
   #http = inject(HttpClient);
   #router = inject(Router);
   #csrf = inject(CsrfService);
+  #notify = inject(NotificationService);
   #userSignal = signal<User | null | undefined>(undefined);
 
   #oidcUserManager: OidcUserManager;
@@ -196,33 +198,29 @@ export class AuthService {
    */
   async guardCallback(): Promise<boolean> {
     let oidcUser: OidcUser | undefined;
-    let errorMessage: string | undefined;
+    let message: string | undefined;
     if (await this.#oidcUserManager.getUser()) {
-      errorMessage = 'You are already logged in';
-      console.warn(errorMessage); // TODO: also add a toast message
+      this.#notify.showWarning('You are already logged in');
       return this.#guardBack();
     }
     try {
       oidcUser = await this.#oidcUserManager.signinCallback();
     } catch (e) {
-      errorMessage = e instanceof Error ? e.message : String(e);
+      message = e instanceof Error ? e.message : String(e);
     }
 
     if (oidcUser) {
       if (!oidcUser.profile?.sub) {
-        errorMessage = 'No OpenID connect user';
+        message = 'No OpenID connect user';
       } else if (oidcUser.expired) {
-        errorMessage = 'OpenID connect login expired';
+        message = 'OpenID connect login expired';
       } else if (!oidcUser.access_token) {
-        errorMessage = 'No OpenID connect access token';
+        message = 'No OpenID connect access token';
       }
     }
 
-    if (!oidcUser || errorMessage) {
-      if (!errorMessage) {
-        errorMessage = 'OpenID connect login failed';
-      }
-      console.error(errorMessage); // TODO: also add a toast message
+    if (!oidcUser || message) {
+      this.#notify.showError(message || 'OpenID connect login failed');
       return this.#guardBack();
     }
 
@@ -260,8 +258,7 @@ export class AuthService {
       case 'NeedsReRegistration':
         return true;
     }
-    const errorMessage = 'You cannot register at this point';
-    console.warn(errorMessage); // TODO: also add a toast message
+    this.#notify.showWarning('You cannot register at this point');
     return this.#guardBack();
   }
 
@@ -276,8 +273,7 @@ export class AuthService {
       case 'LostTotpToken':
         return true;
     }
-    const errorMessage = 'You cannot setup a second factor at this point';
-    console.warn(errorMessage); // TODO: also add a toast message
+    this.#notify.showWarning('You cannot setup a second factor at this point');
     return this.#guardBack();
   }
 
@@ -286,14 +282,12 @@ export class AuthService {
    * @returns true if the route is accessible
    */
   async guardConfirmTotp(): Promise<boolean> {
-    let errorMessage: string | undefined;
     switch (await this.#determineSessionState()) {
       case 'NewTotpToken':
       case 'HasTotpToken':
         return true;
     }
-    errorMessage = 'You cannot use the second factor at this point';
-    console.warn(errorMessage); // TODO: also add a toast message
+    this.#notify.showWarning('You cannot use the second factor at this point');
     return this.#guardBack();
   }
 
@@ -316,7 +310,7 @@ export class AuthService {
         this.#csrf.token = null;
         sessionStorage.removeItem('afterLogin');
         this.#router.navigate(['/']);
-        // TODO: also add a toast message that we are logged out
+        this.#notify.showSuccess('You have been logged out');
       });
     }
   }
@@ -407,8 +401,7 @@ export class AuthService {
           }
         } else {
           if (accessToken || user === undefined) {
-            console.error('Failed to load user session');
-            // TODO: also add a toast message
+            this.#notify.showError('Failed to load user session');
           }
           this.#oidcUserManager.removeUser();
           userSignal.set(user);
@@ -487,11 +480,11 @@ export class AuthService {
     return firstValueFrom(
       this.#http.post<{ uri: string }>(this.#totpTokenUrl, null, { params }).pipe(
         map(({ uri }) => {
-          console.info('TOTP token created');
+          this.#notify.showSuccess('TOTP token created');
           return uri || null;
         }),
         catchError(() => {
-          console.error('Failed to create TOTP token');
+          this.#notify.showError('Failed to create TOTP token');
           return of(null);
         }),
       ),

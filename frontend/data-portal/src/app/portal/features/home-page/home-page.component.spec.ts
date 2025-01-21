@@ -18,6 +18,7 @@ import { HomePageComponent } from './home-page.component';
 class MockMetadataService {
   globalSummary = signal(metadataGlobalSummary.resource_stats);
   globalSummaryError = signal(undefined);
+  globalSummaryIsLoading = signal(false);
 }
 
 describe('HomePageComponent', () => {

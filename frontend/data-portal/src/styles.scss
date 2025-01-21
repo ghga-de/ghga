@@ -114,3 +114,38 @@ h6 {
   font-size: 105%;
   margin-bottom: 0.7em;
 }
+
+.mat-mdc-snack-bar-container {
+  &.snackbar-ok .mat-mdc-snackbar-surface {
+    background-color: #32cd32;
+    color: var(--mat-sys-on-primary);
+    .mat-icon {
+      color: var(--mat-sys-on-primary);
+      opacity: 0.75;
+    }
+  }
+  &.snackbar-info .mat-mdc-snackbar-surface {
+    background-color: var(--mat-sys-surface);
+    color: var(--mat-sys-on-surface);
+    .mat-icon {
+      color: var(--mat-sys-on-surface);
+      opacity: 0.75;
+    }
+  }
+  &.snackbar-warn .mat-mdc-snackbar-surface {
+    background-color: var(--mat-sys-tertiary-fixed-dim);
+    color: var(--mat-sys-on-tertiary-fixed);
+    .mat-icon {
+      color: var(--mat-sys-on-tertiary-fixed);
+      opacity: 0.75;
+    }
+  }
+  &.snackbar-error .mat-mdc-snackbar-surface {
+    background-color: var(--mat-sys-error);
+    color: var(--mat-sys-on-error);
+    .mat-icon {
+      color: var(--mat-sys-on-error);
+      opacity: 0.75;
+    }
+  }
+}

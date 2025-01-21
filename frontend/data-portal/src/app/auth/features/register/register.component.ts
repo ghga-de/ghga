@@ -15,6 +15,7 @@ import { AcademicTitle, UserBasicData } from '@app/auth/models/user';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth.service';
+import { NotificationService } from '@app/shared/services/notification.service';
 
 // TODO: Polish this component
 
@@ -35,6 +36,7 @@ import { AuthService } from '@app/auth/services/auth.service';
   templateUrl: './register.component.html',
 })
 export class RegisterComponent {
+  #notify = inject(NotificationService);
   #authService = inject(AuthService);
 
   user = this.#authService.user;
@@ -81,12 +83,10 @@ export class RegisterComponent {
     this.allowNavigation = true;
     const ok = await this.#authService.register(id || null, ext_id, data);
     if (ok) {
-      // add toast message or dialog here
-      console.info('Registration was successful.');
+      this.#notify.showSuccess('Registration was successful.');
     } else {
       this.allowNavigation = false;
-      // add toast message here
-      console.error('Registration failed.');
+      this.#notify.showError('Registration failed.');
     }
   }
 }
