@@ -14,6 +14,8 @@ serviceName: metldata
 # This parameter specifies the client id in Kafka
 serviceInstanceId: metldata-1
 
+timeoutLoadArtifacts: 10000
+
 parameters:
   default:
     artifact_infos: []

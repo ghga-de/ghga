@@ -9,5 +9,5 @@ spec:
   hostname: {{ .Values.mapping.hostname }}
   prefix: {{ .Values.apiBasePath | empty | ternary .Values.mapping.prefix (include "ghga-common.apiFullBasePath" .) | trimSuffix "/" }}/rpc/load-artifacts
   rewrite: {{ .Values.mapping.rewrite | trimSuffix "/" }}/rpc/load-artifacts
-  timeout_ms: {{ .Values.mapping.timeout_ms_loadartifacts }}
+  timeout_ms: {{ .Values.mapping.timeoutLoadArtifacts }}
 {{ end }}
