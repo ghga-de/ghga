@@ -68,4 +68,7 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (58) [Poodle Moth](./58-poodle-moth/technical_specification.md): Storing Data as strings vs BSON in MongoDB
 - (59) [Bottlenose Dolphin](./59-bottlenose-dolphin/technical_specification.md): Angular implementation plan and migration strategy
 - (60) [Hippopotamus](./60-hippopotamus/technical_specification.md): Create baseline Angular implementation
+- (61) [Matamata Turtle](./61-matamata-turtle/technical_specification.md): DLQ Service
+- (62) [California Condor](./62-california-condor/technical_specification.md): DB Versioning
 - (63) [Thorny Devil](./63-thorny-devil/technical_specification.md): Download path response caching
+- (64) [Blue Whale](./64-blue-whale/technical_specification.md): Reimplement frontend features in Angular
