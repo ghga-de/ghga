@@ -17,8 +17,6 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 
-// TODO: Polish this component
-
 /**
  * User registration page
  */

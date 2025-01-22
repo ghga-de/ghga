@@ -4,7 +4,9 @@
  * @license Apache-2.0
  */
 
-/** TODO: Add type annotations using the models that are also used in the application code. */
+import { DatasetSummary } from '@app/metadata/models/dataset-summary';
+import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
+import { SearchResults } from '@app/metadata/models/search-results';
 
 /**
  * Metldata API
@@ -16,7 +18,7 @@ export const getDatasetSummary = (accession: string) => ({
   accession: accession,
 });
 
-export const metadataGlobalSummary = {
+export const metadataGlobalSummary: BaseGlobalSummary = {
   resource_stats: {
     ProcessDataFile: {
       count: 532,
@@ -53,7 +55,60 @@ export const metadataGlobalSummary = {
     },
     Dataset: {
       count: 252,
-      stats: {},
+    },
+  },
+};
+
+export const datasetSummary: DatasetSummary = {
+  accession: 'GHGAD588887987',
+  description:
+    'This is the test dataset description. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
+  types: ['Test Type'],
+  title: 'Test dataset for details',
+  dac_email: 'test@some.dac.org',
+  samples_summary: {
+    count: 3,
+    stats: {
+      sex: [
+        { value: 'Female', count: 1 },
+        { value: 'Male', count: 1 },
+      ],
+      tissues: [
+        { value: 'metastasis', count: 1 },
+        { value: 'tumor', count: 2 },
+      ],
+      phenotypic_features: [
+        { value: 'Test Phenotype 1', count: 2 },
+        { value: 'Test Phenotype 2', count: 1 },
+      ],
+    },
+  },
+  studies_summary: {
+    count: 1,
+    stats: {
+      accession: 'TEST18666800',
+      title: 'Test Study',
+    },
+  },
+  experiments_summary: {
+    count: 14,
+    stats: {
+      experiment_methods: [
+        {
+          value: 'Ilumina_test',
+          count: 10,
+        },
+        { value: 'HiSeq_test', count: 4 },
+      ],
+    },
+  },
+  files_summary: {
+    count: 27,
+    stats: {
+      format: [
+        { value: 'FASTQ', count: 22 },
+        { value: 'BAM', count: 5 },
+      ],
     },
   },
 };
@@ -62,7 +117,7 @@ export const metadataGlobalSummary = {
  * MASS API
  */
 
-export const searchResults = {
+export const searchResults: SearchResults = {
   facets: [
     {
       key: 'studies.type',
@@ -86,90 +141,23 @@ export const searchResults = {
     {
       id_: 'GHGAD588887987',
       content: {
-        accession: 'GHGAD588887987',
-        ega_accession: 'EGAD588887987',
+        alias: 'EGAD588887987',
         title: 'Test dataset for details',
-        description:
-          'Test dataset for Metadata Repository get dataset details call. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
-        types: ['Test dataset type 1'],
       },
     },
     {
       id_: 'GHGAD588887988',
       content: {
-        accession: 'GHGAD588887988',
-        ega_accession: 'EGAD588887988',
+        alias: 'EGAD588887988',
         title: 'Test dataset for details',
-        description:
-          'Test dataset for Metadata Repository get dataset details call. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
-        types: ['Test dataset type 1'],
       },
     },
     {
       id_: 'GHGAD588887989',
       content: {
-        accession: 'GHGAD588887989',
-        ega_accession: 'EGAD588887989',
+        alias: 'EGAD588887989',
         title: 'Test dataset for details',
-        description:
-          'Test dataset for Metadata Repository get dataset details call. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
-        types: ['Test dataset type 1'],
       },
     },
   ],
-};
-
-export const datasetSummary = {
-  accession: 'GHGAD588887987',
-  description:
-    'Test dataset for Metadata Repository get dataset details call. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
-  type: ['Test Type'],
-  title: 'Test dataset for details',
-  dac_email: 'test[at]test[dot]de;',
-  samples_summary: {
-    count: 3,
-    stats: {
-      sex: [
-        { value: 'Female', count: 1 },
-        { value: 'Male', count: 1 },
-      ],
-      tissues: [
-        { value: 'metastasis', count: 1 },
-        { value: 'tumor', count: 2 },
-      ],
-      phenotypic_features: [
-        { value: 'Test Phenotype 1', count: 2 },
-        { value: 'Test Phenotype 2', count: 1 },
-      ],
-    },
-  },
-  studies_summary: {
-    count: 1,
-    stats: {
-      accession: ['TEST18666800'],
-      title: ['Test Study'],
-    },
-  },
-  experiments_summary: {
-    count: 14,
-    stats: {
-      experiment_methods: [
-        {
-          value: 'Ilumina_test',
-          count: 10,
-        },
-        { value: 'HiSeq_test', count: 4 },
-      ],
-    },
-  },
-  files_summary: {
-    count: 27,
-    stats: {
-      format: [
-        { value: 'FASTQ', count: 22 },
-        { value: 'BAM', count: 5 },
-      ],
-      size: 434543980,
-    },
-  },
 };

@@ -15,7 +15,7 @@ import { appConfig } from './app/app.config';
 async function startApp() {
   if (isDevMode() && (window.config.mock_api || window.config.mock_oidc)) {
     const { worker } = await import('./mocks/setup');
-    await worker.start({ waitUntilReady: true });
+    await worker.start();
   }
 }
 

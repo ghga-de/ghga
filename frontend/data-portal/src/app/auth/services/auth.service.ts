@@ -255,6 +255,7 @@ export class AuthService {
   async guardRegister(): Promise<boolean> {
     switch (await this.#determineSessionState()) {
       case 'LoggedIn':
+      case 'NeedsRegistration':
       case 'NeedsReRegistration':
         return true;
     }

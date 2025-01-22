@@ -30,25 +30,3 @@ test('has global statistics', async ({ page }) => {
   await expect(main).toContainText('Individuals: 5432');
   await expect(main).toContainText('Files: 532');
 });
-
-// TODO: adapt and activate this test when the dataset detail page is implemented
-test.skip('can navigate to dataset details', async ({ page }) => {
-  await page.goto('/');
-
-  // Open summary view
-  await page.getByText('GHGAD00446744119764').click();
-
-  // Open dataset details vie
-  await page.getByText('View dataset details').click();
-
-  // Expect to find the dataset ID
-  await expect(page.getByText('Dataset ID: GHGAD00446744119764')).toBeVisible();
-
-  // Expect to find the study title
-  await expect(
-    page.getByText(
-      'Title: Comprehensive Genomic and Transcriptomic Analysis' +
-        ' of Rare Cancers for Guiding of Therapy (H021)',
-    ),
-  ).toBeVisible();
-});

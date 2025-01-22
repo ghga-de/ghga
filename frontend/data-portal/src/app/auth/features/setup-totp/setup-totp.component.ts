@@ -13,9 +13,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '@app/auth/services/auth.service';
 import { QRCodeComponent } from 'angularx-qrcode';
 
-// TODO: Polish this component
-// TODO: Maybe show another warning or different text when state is "LostTotpToken"
-
 /**
  * TOTP setup page
  */

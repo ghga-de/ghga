@@ -179,7 +179,9 @@ export const handlers = [
     const status = token === VALID_TOTP_CODE ? 204 : 401;
     return HttpResponse.json(undefined, { status });
   }),
-  // intercept user creation request
+  /**
+   * intercept user creation request
+   */
   http.post(USERS_URL, () => {
     user.id = user.id;
     user.state = 'Registered';

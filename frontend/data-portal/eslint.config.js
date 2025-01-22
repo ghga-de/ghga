@@ -166,7 +166,7 @@ export default [
             },
             // tests are currently exempt from all rules
             {
-              from: ['spec'],
+              from: ['spec', 'mock'],
               allow: ['*'],
             },
             // disallow importing from higher levels

@@ -17,8 +17,6 @@ import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '@app/auth/services/auth.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 
-// TODO: Polish this component
-
 /**
  * TOTP confirmation page
  */
@@ -77,6 +75,7 @@ export class ConfirmTotpComponent {
    * Set status to "lost token" and redirect to token setup
    */
   onLostToken(): void {
+    this.allowNavigation = true;
     this.#authService.lostTotpSetup();
   }
 }

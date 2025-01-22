@@ -12,10 +12,10 @@
     }
     <p>Full title: {{ summary().title }}</p>
     <p>Description: {{ summary().description }}</p>
-    @if (summary().type && summary().type !== []) {
+    @if (summary().types && summary().types !== []) {
       <p>
         Types:
-        @for (type of summary().type; track type) {
+        @for (type of summary().types; track type) {
           ({{ type }})
         }
       </p>

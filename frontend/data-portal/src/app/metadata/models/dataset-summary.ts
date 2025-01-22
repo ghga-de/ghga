@@ -5,10 +5,11 @@
  */
 
 export interface DatasetSummary {
-  title: string;
   accession: string;
+  title: string;
   description: string;
-  type?: string[];
+  dac_email: string;
+  types: string[];
   studies_summary: StudiesSummary;
   files_summary: FilesSummary;
   samples_summary: SamplesSummary;
@@ -56,10 +57,11 @@ interface ExperimentsSummary {
 }
 
 export const emptyDatasetSummary: DatasetSummary = {
-  title: '',
   accession: '',
+  title: '',
   description: '',
-  type: [],
+  dac_email: '',
+  types: [],
   studies_summary: { count: 0, stats: { accession: '', title: '' } },
   files_summary: { count: 0, stats: { format: [] } },
   samples_summary: {
