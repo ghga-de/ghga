@@ -1,5 +1,6 @@
 db_connection_str: '**********'
 db_name: dev
+db_version_collection: ifrsDbVersions
 file_deleted_event_topic: internal-file-registry
 file_deleted_event_type: file_deleted
 file_registered_event_topic: internal-file-registry
@@ -21,6 +22,7 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+migration_wait_sec: 10
 object_storages:
   test:
     bucket: permanent

@@ -19,15 +19,15 @@ from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
 
 from ifrs.adapters.inbound.event_sub import OutboxSubTranslatorConfig
 from ifrs.adapters.outbound.event_pub import EventPubTranslatorConfig
+from ifrs.migration_logic import MigrationConfig
 
 
 @config_from_yaml(prefix="ifrs")
 class Config(
-    MongoDbConfig,
+    MigrationConfig,
     KafkaConfig,
     OutboxSubTranslatorConfig,
     EventPubTranslatorConfig,

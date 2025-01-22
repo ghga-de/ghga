@@ -313,6 +313,24 @@
       ],
       "title": "Db Name",
       "type": "string"
+    },
+    "db_version_collection": {
+      "description": "The name of the collection containing DB version information for this service",
+      "examples": [
+        "ifrsDbVersions"
+      ],
+      "title": "Db Version Collection",
+      "type": "string"
+    },
+    "migration_wait_sec": {
+      "description": "The number of seconds to wait before checking the DB version again",
+      "examples": [
+        5,
+        30,
+        180
+      ],
+      "title": "Migration Wait Sec",
+      "type": "integer"
     }
   },
   "required": [
@@ -329,7 +347,9 @@
     "files_to_stage_topic",
     "kafka_servers",
     "db_connection_str",
-    "db_name"
+    "db_name",
+    "db_version_collection",
+    "migration_wait_sec"
   ],
   "title": "ModSettings",
   "type": "object"
