@@ -9,6 +9,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MetadataService } from '@app/metadata/services/metadata.service';
+import { UnderscoreToSpace } from '@app/shared/utils/underscore-to-space.pipe';
 import { NotificationService } from '@app/shared/services/notification.service';
 
 /**
@@ -16,7 +17,7 @@ import { NotificationService } from '@app/shared/services/notification.service';
  */
 @Component({
   selector: 'app-global-stats',
-  imports: [MatCardModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatCardModule, MatIconModule, UnderscoreToSpace, MatProgressSpinnerModule],
   templateUrl: './global-summary.component.html',
   styleUrl: './global-summary.component.scss',
 })

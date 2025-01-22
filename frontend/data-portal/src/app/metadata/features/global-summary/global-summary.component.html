@@ -35,7 +35,7 @@
               <tr>
                 <td class="pe-2 text-right font-bold">{{ platform.count }}</td>
                 <td class="text-left uppercase">
-                  {{ platform.value.replaceAll('_', ' ') }}
+                  {{ platform.value | underscoreToSpace }}
                 </td>
               </tr>
             }
