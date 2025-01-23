@@ -299,6 +299,36 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`db_version_collection`** *(string, required)*: The name of the collection containing DB version information for this service.
+
+
+  Examples:
+
+  ```json
+  "dcsDbVersions"
+  ```
+
+
+- **`migration_wait_sec`** *(integer, required)*: The number of seconds to wait before checking the DB version again.
+
+
+  Examples:
+
+  ```json
+  5
+  ```
+
+
+  ```json
+  30
+  ```
+
+
+  ```json
+  180
+  ```
+
+
 - **`drs_server_uri`** *(string, required)*: The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'.
 
 

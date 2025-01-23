@@ -39,5 +39,7 @@ unstaged_download_collection: unstagedDownloadRequested
 files_to_delete_topic: file-deletions
 file_deleted_event_topic: file-downloads
 file_deleted_event_type: file_deleted
+db_version_collection: dcsDbVersions
+migration_wait_sec: 10
 auth_key: "{}"
 log_level: INFO
