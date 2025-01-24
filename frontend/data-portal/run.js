@@ -277,13 +277,7 @@ function main() {
   let adapted = false;
   if (DEV) {
     msg += ' in development mode';
-    if (WITH_BACKEND) {
-      msg += ` with ${baseUrl.split('://')[1] || baseUrl} as backend`;
-    } else {
-      msg += ' with mock API';
-    }
-    if (WITH_OIDC) {
-      msg += ' and authentication via OIDC';
+    if (WITH_BACKEND || WITH_OIDC) {
       if (
         !baseUrl ||
         baseUrl.startsWith('http://127.') ||
@@ -292,6 +286,14 @@ function main() {
         settings.base_url = baseUrl = DEFAULT_BACKEND;
         adapted = true;
       }
+    }
+    if (WITH_BACKEND) {
+      msg += ` with ${baseUrl.split('://')[1] || baseUrl} as backend`;
+    } else {
+      msg += ' with mock API';
+    }
+    if (WITH_OIDC) {
+      msg += ' and authentication via OIDC';
       if (settings.port !== 443 || !settings.ssl) {
         settings.port = port = 443;
         settings.ssl = ssl = true;
