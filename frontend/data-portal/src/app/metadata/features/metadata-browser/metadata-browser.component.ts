@@ -77,4 +77,6 @@ export class MetadataBrowserComponent implements OnInit {
   });
 
   searchResults = this.#metadataSearch.searchResults;
+
+  facets = computed(() => this.searchResults().facets);
 }

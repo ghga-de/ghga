@@ -8,7 +8,7 @@
         <mat-form-field class="w-full">
           <input type="search" matInput placeholder="Search" />
         </mat-form-field>
-        @for (facet of searchResults().facets; track facet.key) {
+        @for (facet of facets(); track facet.key) {
           <div>
             {{ facet.name }}
             <ul class="mb-5 mt-1 rounded-lg border">
