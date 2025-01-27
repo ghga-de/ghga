@@ -130,3 +130,21 @@ async def test_v2_migration(
     assert len(post_unapply) == 9
     for doc in post_unapply:
         assert "encrypted_size" not in doc
+
+
+@pytest.mark.asyncio
+async def test_drop_or_rename_nonexistent_collection(mongodb: MongoDbFixture):
+    """Run migrations on a DB with no data in it.
+
+    The migrations should still complete and log the new DB version.
+    """
+    config = get_config(sources=[mongodb.config])
+    client = mongodb.client
+    version_coll = client[config.db_name][config.db_version_collection]
+    versions = version_coll.find().to_list()
+    assert not versions
+
+    await run_db_migrations(config=config)
+
+    versions = version_coll.find().to_list()
+    assert len(versions) == 2
