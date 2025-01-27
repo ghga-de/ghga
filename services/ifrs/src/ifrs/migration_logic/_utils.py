@@ -193,6 +193,11 @@ class MigrationDefinition:
         if original_coll_name in self._staged_collections:
             return
 
+        # Don't do anything if the collection doesn't exist
+        if original_coll_name not in await self._db.list_collection_names():
+            log.warning("Collection '%s' not found, can't stage.", original_coll_name)
+            return
+
         # Rename the old collection by giving it a prefix
         # e.g. "users" -> "tmp_v7_old_users"
         temp_old_coll_name = self.old_temp_name(original_coll_name)
@@ -211,6 +216,11 @@ class MigrationDefinition:
 
     async def unstage_collection(self, original_coll_name: str):
         """Reverse steps from `stage_collection()`"""
+        # Don't do anything if the collection doesn't exist
+        if original_coll_name not in await self._db.list_collection_names():
+            log.warning("Collection '%s' not found, can't unstage.", original_coll_name)
+            return
+
         # Add the prefix back to the new collection
         # e.g. "users" -> "tmp_v7_new_users"
         temp_new_coll_name = self.new_temp_name(original_coll_name)
