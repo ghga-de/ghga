@@ -274,7 +274,9 @@ export class AuthService {
       case 'LostTotpToken':
         return true;
     }
-    this.#notify.showWarning('You cannot setup a second factor at this point.');
+    this.#notify.showWarning(
+      'You cannot setup two-factor authentication at this point.',
+    );
     return this.#guardBack();
   }
 
@@ -288,7 +290,7 @@ export class AuthService {
       case 'HasTotpToken':
         return true;
     }
-    this.#notify.showWarning('You cannot use the second factor at this point.');
+    this.#notify.showWarning('You cannot use two-factor authentication at this point.');
     return this.#guardBack();
   }
 
@@ -481,11 +483,11 @@ export class AuthService {
     return firstValueFrom(
       this.#http.post<{ uri: string }>(this.#totpTokenUrl, null, { params }).pipe(
         map(({ uri }) => {
-          this.#notify.showSuccess('Second factor created.');
+          this.#notify.showSuccess('Two-factor authentication has been setup.');
           return uri || null;
         }),
         catchError(() => {
-          this.#notify.showError('Failed to create second factor.');
+          this.#notify.showError('Failed to setup two-factor authentication.');
           return of(null);
         }),
       ),
