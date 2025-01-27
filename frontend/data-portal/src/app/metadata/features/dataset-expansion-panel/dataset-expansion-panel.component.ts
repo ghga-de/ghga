@@ -61,7 +61,7 @@ export class DatasetExpansionPanelComponent {
 
   #errorEffect = effect(() => {
     if (this.#metadata.datasetSummaryError()) {
-      this.#notify.showError('Error fetching dataset summary');
+      this.#notify.showError('Error fetching dataset summary.');
     }
   });
 }

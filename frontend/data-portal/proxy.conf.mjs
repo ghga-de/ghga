@@ -70,7 +70,7 @@ if (useProxy) {
           console.log(
             `The target hostname ${targetHost} resolves to a local address on the host computer.`,
           );
-          console.warn('Please check the hosts file on your host computer.');
+          console.warn('Please check the hosts file on your host computer!');
         } else {
           console.log(
             `The target hostname ${targetHost} resolves to ${resolvedAddress} on the host computer.`,

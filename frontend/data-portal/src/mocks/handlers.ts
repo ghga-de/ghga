@@ -168,6 +168,7 @@ if (config.mock_oidc) {
 
 if (config.mock_api) {
   handlers.push(...createHandlersForResponses(apiResponses));
+  handlers.push(...noMockHandler('/@ng/*')); // hot module replacement
 } else {
   handlers.push(...noMockHandler('/*'));
 }

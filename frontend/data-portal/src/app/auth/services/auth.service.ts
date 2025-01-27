@@ -200,7 +200,7 @@ export class AuthService {
     let oidcUser: OidcUser | undefined;
     let message: string | undefined;
     if (await this.#oidcUserManager.getUser()) {
-      this.#notify.showWarning('You are already logged in');
+      this.#notify.showWarning('You are already logged in.');
       return this.#guardBack();
     }
     try {
@@ -211,16 +211,16 @@ export class AuthService {
 
     if (oidcUser) {
       if (!oidcUser.profile?.sub) {
-        message = 'No OpenID connect user';
+        message = 'No OpenID connect user.';
       } else if (oidcUser.expired) {
-        message = 'OpenID connect login expired';
+        message = 'OpenID connect login expired.';
       } else if (!oidcUser.access_token) {
-        message = 'No OpenID connect access token';
+        message = 'No OpenID connect access token.';
       }
     }
 
     if (!oidcUser || message) {
-      this.#notify.showError(message || 'OpenID connect login failed');
+      this.#notify.showError(message || 'OpenID connect login failed.');
       return this.#guardBack();
     }
 
@@ -259,7 +259,7 @@ export class AuthService {
       case 'NeedsReRegistration':
         return true;
     }
-    this.#notify.showWarning('You cannot register at this point');
+    this.#notify.showWarning('You cannot register at this point.');
     return this.#guardBack();
   }
 
@@ -274,7 +274,7 @@ export class AuthService {
       case 'LostTotpToken':
         return true;
     }
-    this.#notify.showWarning('You cannot setup a second factor at this point');
+    this.#notify.showWarning('You cannot setup a second factor at this point.');
     return this.#guardBack();
   }
 
@@ -288,7 +288,7 @@ export class AuthService {
       case 'HasTotpToken':
         return true;
     }
-    this.#notify.showWarning('You cannot use the second factor at this point');
+    this.#notify.showWarning('You cannot use the second factor at this point.');
     return this.#guardBack();
   }
 
@@ -311,7 +311,7 @@ export class AuthService {
         this.#csrf.token = null;
         sessionStorage.removeItem('afterLogin');
         this.#router.navigate(['/']);
-        this.#notify.showSuccess('You have been logged out');
+        this.#notify.showSuccess('You have been logged out.');
       });
     }
   }
@@ -402,7 +402,7 @@ export class AuthService {
           }
         } else {
           if (accessToken || user === undefined) {
-            this.#notify.showError('Failed to load user session');
+            this.#notify.showError('Failed to load user session.');
           }
           this.#oidcUserManager.removeUser();
           userSignal.set(user);
@@ -481,11 +481,11 @@ export class AuthService {
     return firstValueFrom(
       this.#http.post<{ uri: string }>(this.#totpTokenUrl, null, { params }).pipe(
         map(({ uri }) => {
-          this.#notify.showSuccess('TOTP token created');
+          this.#notify.showSuccess('Second factor created.');
           return uri || null;
         }),
         catchError(() => {
-          this.#notify.showError('Failed to create TOTP token');
+          this.#notify.showError('Failed to create second factor.');
           return of(null);
         }),
       ),

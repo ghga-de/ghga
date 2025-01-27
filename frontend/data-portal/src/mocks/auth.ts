@@ -25,26 +25,26 @@ const LOGIN_URL = `${AUTH_URL}/rpc/login`;
 const LOGOUT_URL = `${AUTH_URL}/rpc/logout`;
 const TOTP_TOKEN_URL = `${AUTH_URL}/totp-token`;
 const TOTP_VALIDATION_URL = `${AUTH_URL}/rpc/verify-totp`;
-const USERS_URL = `${AUTH_URL}/users-totp`;
+const USERS_URL = `${AUTH_URL}/users`;
 const OIDC_AUTHORITY_URL = CONFIG.oidc_authority_url;
 const OIDC_CONFIG_PATH = '.well-known/openid-configuration';
 const OIDC_CONFIG_URL = new URL(OIDC_CONFIG_PATH, OIDC_AUTHORITY_URL).href;
 const OIDC_SCOPE = CONFIG.oidc_scope;
 const OIDC_CLIENT_ID = CONFIG.oidc_client_id;
 const OIDC_USER_KEY = `oidc.user:${OIDC_AUTHORITY_URL}:${OIDC_CLIENT_ID}`;
+const USER_STATE_KEY = 'user.state';
 
 /**
  * The dummy user object for MSW
  */
 export const user: User = {
-  id: INITIAL_LOGIN_STATE === 'NeedsRegistration' ? undefined : 'j.doe@ghga.de',
   ext_id: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
   name: 'John Doe',
   title: 'Dr.',
   full_name: 'Dr. John Doe',
   email: 'j.jdoe@home.org',
   role: 'data_steward',
-  state: INITIAL_LOGIN_STATE, // the state after login
+  state: INITIAL_LOGIN_STATE,
   csrf: 'mock-csrf-token',
   timeout: 3600,
   extends: 7200,
@@ -113,6 +113,9 @@ export function getLoginHeaders(): Record<string, string> | null {
   if (!hasSessionCookie() && !sessionStorage.getItem(OIDC_USER_KEY)) {
     return null;
   }
+  user.state =
+    (sessionStorage.getItem(USER_STATE_KEY) as LoginState) || INITIAL_LOGIN_STATE;
+  user.id = user.state === 'NeedsRegistration' ? undefined : 'j.doe@ghga.de';
   return {
     'X-Session': JSON.stringify(user),
     // this should be actually HttpOnly, but this doesn't work with MSW
@@ -152,6 +155,7 @@ export const handlers = [
    * intercept logout request
    */
   http.post(LOGOUT_URL, () => {
+    sessionStorage.removeItem(USER_STATE_KEY);
     clearSessionCookie();
     clearOidcUser();
     return HttpResponse.json(undefined, { status: 204 });
@@ -163,6 +167,7 @@ export const handlers = [
     const userName = user.full_name.replace(' ', '%20');
     const issuer = 'GHGA';
     const secret = 'TEST-TOTP-TOKEN';
+    sessionStorage.setItem(USER_STATE_KEY, 'NewTotpToken');
     return HttpResponse.json(
       { uri: `otpauth://totp/${issuer}:${userName}?secret=${secret}&issuer=${issuer}` },
       { status: 201 },
@@ -175,15 +180,18 @@ export const handlers = [
     // the code is passed in the X-Authorization header in this case
     let token = request.headers.get('X-Authorization') || '';
     if (token.startsWith('Bearer TOTP:')) token = token.substring(12);
-    const status = token === VALID_TOTP_CODE ? 204 : 401;
+    const isValid = token === VALID_TOTP_CODE;
+    const status = isValid ? 204 : 401;
+    if (isValid) {
+      sessionStorage.setItem(USER_STATE_KEY, 'Authenticated');
+    }
     return HttpResponse.json(undefined, { status });
   }),
   /**
    * intercept user creation request
    */
   http.post(USERS_URL, () => {
-    user.id = user.id;
-    user.state = 'Registered';
+    sessionStorage.setItem(USER_STATE_KEY, 'Registered');
     return HttpResponse.json(undefined, { status: 201 });
   }),
 ];
