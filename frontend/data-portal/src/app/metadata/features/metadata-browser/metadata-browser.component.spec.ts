@@ -19,7 +19,10 @@ import { MetadataBrowserComponent } from './metadata-browser.component';
 class MockMetadataSearchService {
   searchResults = signal(searchResults);
   searchResultsError = signal(undefined);
+  searchResultsAreLoading = signal(false);
   loadQueryParameters = () => undefined;
+  query = signal('');
+  facets = signal({});
 }
 
 describe('BrowseComponent', () => {

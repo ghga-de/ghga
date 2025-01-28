@@ -35,4 +35,39 @@ describe('MetadataSearchService', () => {
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
+
+  it('should compute the search URL correctly for a range of parameters', () => {
+    expect(
+      service.urlFromParameters(
+        '/',
+        'EmbeddedDataset',
+        {},
+        'GHGAD33646518790164',
+        0,
+        10,
+      ),
+    ).toBe('/?class_name=EmbeddedDataset&query=GHGAD33646518790164&limit=10');
+    expect(
+      service.urlFromParameters(
+        '/',
+        'EmbeddedDataset',
+        {},
+        'GHGAD33646518790164',
+        10,
+        10,
+      ),
+    ).toBe('/?class_name=EmbeddedDataset&query=GHGAD33646518790164&limit=10&skip=10');
+  });
+
+  it('should compute an empty url if the class name is not set', () => {
+    expect(service.urlFromParameters('/', '', {}, 'GHGAD33646518790164', 0, 10)).toBe(
+      '',
+    );
+  });
+
+  it('should url escape the query parameter', () => {
+    expect(service.urlFromParameters('/', 'EmbeddedDataset', {}, 'test?', 0, 10)).toBe(
+      '/?class_name=EmbeddedDataset&query=test%3F&limit=10',
+    );
+  });
 });
