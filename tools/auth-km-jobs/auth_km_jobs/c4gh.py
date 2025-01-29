@@ -1,5 +1,6 @@
 import base64
 
+from crypt4gh.keys.c4gh import encode_private_key
 from nacl.public import PrivateKey
 
 __all__ = ["generate_crypt4gh_key_pair", "Crypt4GHKeyPair"]
@@ -12,13 +13,20 @@ class Crypt4GHKeyPair:
         """Initialize with PrivateKey instance."""
         self.key = key
 
-    def export_private(self) -> str:
-        """Export private key as base64 encoded string."""
-        return encode_key(bytes(self.key))
+    def export_private(self, passphrase=None, comment=None) -> str:
+        """Export the private key with metadata, optionally encrypted."""
+        key_bytes = encode_private_key(self.key, passphrase, comment)
+        return encode_key(key_bytes)
 
     def export_public(self) -> str:
-        """Export public key as base64 encoded string."""
-        return encode_key(bytes(self.key.public_key))
+        """Export the public key as a base64-encoded string."""
+        key_bytes = self.key.public_key.encode()
+        return encode_key(key_bytes)
+
+    def export_private_raw(self) -> str:
+        """Export the private key in raw format as a base64-encoded string."""
+        key_bytes = bytes(self.key)
+        return encode_key(key_bytes)
 
 
 def generate_crypt4gh_key_pair() -> Crypt4GHKeyPair:

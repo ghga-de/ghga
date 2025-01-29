@@ -7,9 +7,9 @@ from .jwks import fetch_external_jwks, generate_internal_jwk
 from .tokens import generate_simple_token
 from .vault import (
     store_private_int_key,
-    store_public_int_key,
-    store_public_ext_key,
     store_private_wps_key,
+    store_public_ext_key,
+    store_public_int_key,
     store_public_wps_key,
 )
 
@@ -85,6 +85,7 @@ def generate_test_keys(num_jwk: int = 1, num_c4gh: int = 1, num_tokens: int = 1)
             name += f"_{n_c4gh}"
         key = generate_crypt4gh_key_pair()
         print(f"{name}_PRIV={key.export_private()}")
+        print(f"{name}_PRIV_RAW={key.export_private_raw()}")
         print(f"{name}_PUB={key.export_public()}")
     for n_token in range(1, num_tokens + 1):
         name = "TOKEN"
