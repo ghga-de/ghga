@@ -13,6 +13,7 @@ const mockConfig = {
   auth_url: '/test/auth',
   mass_url: '/test/mass',
   metldata_url: '/test/metldata',
+  wps_url: '/test/wps',
   oidc_client_id: 'test-oidc-client-id',
   oidc_redirect_url: 'test/redirect',
   oidc_scope: 'some scope',

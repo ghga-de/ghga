@@ -11,6 +11,7 @@ interface Config {
   auth_url: string;
   mass_url: string;
   metldata_url: string;
+  wps_url: string;
   oidc_client_id: string;
   oidc_redirect_url: string;
   oidc_scope: string;
@@ -92,6 +93,14 @@ export class ConfigService {
    */
   get metldataUrl(): string {
     return sansEndSlash(this.#config.metldata_url);
+  }
+
+  /**
+   * Gets the WPS URL from the config object.
+   * @returns the WPS URL sans end slash
+   */
+  get wpsUrl(): string {
+    return sansEndSlash(this.#config.wps_url);
   }
 
   /**
