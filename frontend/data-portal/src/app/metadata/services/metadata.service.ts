@@ -5,20 +5,17 @@
  */
 
 import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, resource, signal, Signal } from '@angular/core';
-import {
-  BaseGlobalSummary,
-  emptyGlobalSummary,
-  GlobalSummary,
-} from '@app/metadata/models/global-summary';
+import { computed, inject, Injectable, signal, Signal } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { ConfigService } from '@app/shared/services/config.service';
-import { firstValueFrom, map } from 'rxjs';
+import { of } from 'rxjs';
+import { DatasetDetails, emptyDatasetDetails } from '../models/dataset-details';
 import { DatasetSummary, emptyDatasetSummary } from '../models/dataset-summary';
 
 /**
- * Metadata Query service
+ * Metadata query service
  *
- * This service provides the functionality to fetch the global metadata summary stats from the server.
+ * This service provides the functionality to fetch dataset summaries and details from the server.
  */
 @Injectable({
   providedIn: 'root',
@@ -29,63 +26,19 @@ export class MetadataService {
   #config = inject(ConfigService);
   #metldataUrl = this.#config.metldataUrl;
 
-  #globalSummaryUrl = `${this.#metldataUrl}/stats`;
   #datasetSummaryUrl = `${this.#metldataUrl}/artifacts/stats_public/classes/DatasetStats/resources`;
+  #datasetDetailsUrl = `${this.#metldataUrl}/artifacts/embedded_public/classes/EmbeddedDataset/resources`;
 
-  #globalSummary = resource<GlobalSummary, void>({
-    loader: () =>
-      firstValueFrom(
-        this.#http
-          .get<BaseGlobalSummary>(this.#globalSummaryUrl)
-          .pipe(map((value) => value.resource_stats)),
-      ),
-  }).asReadonly();
+  #summaryID = signal<string | undefined>(undefined);
+  #detailsID = signal<string | undefined>(undefined);
 
-  /**
-   * The global summary (empty while loading) as a signal
-   */
-  globalSummary: Signal<GlobalSummary> = computed(
-    () => this.#globalSummary.value() ?? emptyGlobalSummary,
-  );
-
-  /**
-   * Whether the global summary is loading as a signal
-   */
-  globalSummaryIsLoading: Signal<boolean> = this.#globalSummary.isLoading;
-
-  /**
-   * The global summary error as a signal
-   */
-  globalSummaryError: Signal<unknown> = this.#globalSummary.error;
-
-  #id_ = signal<string | undefined>(undefined);
-
-  #datasetSummary = resource({
-    request: computed(() => ({
-      id_: this.#id_(),
-    })),
-    loader: (param) => {
-      const id_ = param.request.id_;
-
-      if (id_) {
-        return Promise.resolve(
-          firstValueFrom(
-            this.#http.get<DatasetSummary>(`${this.#datasetSummaryUrl}/${id_}`),
-          ),
-        );
-      } else {
-        return Promise.resolve(emptyDatasetSummary);
-      }
+  #datasetSummary = rxResource({
+    request: this.#summaryID,
+    loader: ({ request: id }) => {
+      if (!id) return of(undefined);
+      return this.#http.get<DatasetSummary>(`${this.#datasetSummaryUrl}/${id}`);
     },
   });
-
-  /**
-   * Load the dataset with the given ID
-   * @param id_ Dataset ID
-   */
-  loadDatasetID(id_: string): void {
-    this.#id_.set(id_);
-  }
 
   /**
    * The dataset summary (empty while loading) as a signal
@@ -97,10 +50,51 @@ export class MetadataService {
   /**
    * Whether the dataset summary is loading as a signal
    */
-  datasetIsLoading: Signal<boolean> = this.#datasetSummary.isLoading;
+  datasetSummaryIsLoading: Signal<boolean> = this.#datasetSummary.isLoading;
 
   /**
    * The dataset summary error as a signal
    */
   datasetSummaryError: Signal<unknown> = this.#datasetSummary.error;
+
+  /**
+   * Load the dataset summary for the given dataset ID
+   * @param id Dataset ID
+   */
+  loadDatasetSummaryID(id: string): void {
+    this.#summaryID.set(id);
+  }
+
+  #datasetDetails = rxResource({
+    request: this.#summaryID,
+    loader: ({ request: id }) => {
+      if (!id) return of(undefined);
+      return this.#http.get<DatasetDetails>(`${this.#datasetDetailsUrl}/${id}`);
+    },
+  });
+
+  /**
+   * Load the dataset details for the given dataset ID
+   * @param id Dataset ID
+   */
+  loadDatasetDetailsID(id: string): void {
+    this.#detailsID.set(id);
+  }
+
+  /**
+   * The dataset details (empty while loading) as a signal
+   */
+  datasetDetails: Signal<DatasetDetails> = computed(
+    () => this.#datasetDetails.value() ?? emptyDatasetDetails,
+  );
+
+  /**
+   * Whether the dataset details are loading as a signal
+   */
+  datasetDetailsIsLoading: Signal<boolean> = this.#datasetDetails.isLoading;
+
+  /**
+   * The dataset details error as a signal
+   */
+  datasetDetailsError: Signal<unknown> = this.#datasetDetails.error;
 }

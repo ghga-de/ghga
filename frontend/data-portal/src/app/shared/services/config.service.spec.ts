@@ -11,6 +11,7 @@ import { ConfigService } from './config.service';
 const mockConfig = {
   base_url: 'https://portal.test',
   auth_url: '/test/auth',
+  dins_url: '/test/dins',
   mass_url: '/test/mass',
   metldata_url: '/test/metldata',
   wps_url: '/test/wps',

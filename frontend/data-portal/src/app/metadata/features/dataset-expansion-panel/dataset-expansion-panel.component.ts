@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { Hit } from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { NotificationService } from '@app/shared/services/notification.service';
@@ -27,6 +28,7 @@ import { UnderscoreToSpace } from '@app/shared/utils/underscore-to-space.pipe';
     MatButtonModule,
     UnderscoreToSpace,
     AddPluralS,
+    RouterLink,
   ],
   templateUrl: './dataset-expansion-panel.component.html',
   styleUrl: './dataset-expansion-panel.component.scss',
@@ -56,7 +58,7 @@ export class DatasetExpansionPanelComponent {
    * On opening of the expansible panel, load the query variables to the injectable service to prepare for the backend query
    */
   onOpen(): void {
-    this.#metadata.loadDatasetID(this.hit().id_);
+    this.#metadata.loadDatasetSummaryID(this.hit().id_);
   }
 
   #errorEffect = effect(() => {

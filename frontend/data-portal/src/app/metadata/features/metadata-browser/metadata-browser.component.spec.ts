@@ -9,7 +9,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { searchResults } from '@app/../mocks/data';
-import { MetadataSearchService } from '../../services/metadataSearch.service';
+import { MetadataSearchService } from '../../services/metadata-search.service';
 import { DatasetExpansionPanelComponent } from '../dataset-expansion-panel/dataset-expansion-panel.component';
 import { MetadataBrowserComponent } from './metadata-browser.component';
 

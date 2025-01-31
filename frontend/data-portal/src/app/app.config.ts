@@ -10,7 +10,11 @@ import {
   provideExperimentalZonelessChangeDetection,
 } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideRouter, TitleStrategy } from '@angular/router';
+import {
+  provideRouter,
+  TitleStrategy,
+  withComponentInputBinding,
+} from '@angular/router';
 import { provideHttpCache, withHttpCacheInterceptor } from '@ngneat/cashew';
 
 import { withFetch } from '@angular/common/http';
@@ -20,7 +24,7 @@ import { routes, TemplatePageTitleStrategy } from './app.routes';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideExperimentalZonelessChangeDetection(),
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     { provide: TitleStrategy, useClass: TemplatePageTitleStrategy },
     provideHttpClient(
       withFetch(),

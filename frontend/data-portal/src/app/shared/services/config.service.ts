@@ -9,6 +9,7 @@ import { Injectable } from '@angular/core';
 interface Config {
   base_url: string;
   auth_url: string;
+  dins_url: string;
   mass_url: string;
   metldata_url: string;
   wps_url: string;
@@ -77,6 +78,14 @@ export class ConfigService {
    */
   get authUrl(): string {
     return sansEndSlash(this.#config.auth_url);
+  }
+
+  /**
+   * Gets the dataset information service URL from the config object.
+   * @returns the dataset information service URL sans end slash
+   */
+  get dinsUrl(): string {
+    return sansEndSlash(this.#config.dins_url);
   }
 
   /**

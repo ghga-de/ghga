@@ -14,6 +14,7 @@ log_level: INFO
 base_url: http://127.0.0.1:8080
 
 auth_url: /api/auth
+dins_url: /api/dins
 mass_url: /api/mass
 metldata_url: /api/metldata
 wps_url: /api/wps

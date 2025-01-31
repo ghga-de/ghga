@@ -4,7 +4,13 @@
  * @license Apache-2.0
  */
 
-import { getDatasetSummary, metadataGlobalSummary, searchResults } from './data';
+import {
+  datasetInformation,
+  getDatasetDetails,
+  getDatasetSummary,
+  metadataGlobalSummary,
+  searchResults,
+} from './data';
 
 export type ResponseValue = undefined | number | object;
 
@@ -50,4 +56,15 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Get summary data from a single dataset
   'GET /api/metldata/artifacts/stats_public/classes/DatasetStats/resources/GHGAD588887989':
     getDatasetSummary('GHGAD588887989'),
+
+  // Get dataset details (embedded)
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD588887987':
+    getDatasetDetails('GHGAD588887987'),
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD588887988':
+    getDatasetDetails('GHGAD588887988'),
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD588887989':
+    getDatasetDetails('GHGAD588887989'),
+
+  // Get summary data from all files in a dataset
+  'GET /api/dins/dataset_information/*': datasetInformation,
 };

@@ -9,7 +9,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ConfigService } from '@app/shared/services/config.service';
-import { MetadataSearchService } from './metadataSearch.service';
+import { MetadataSearchService } from './metadata-search.service';
 
 /**
  * Mock the config service as needed by the metadata service

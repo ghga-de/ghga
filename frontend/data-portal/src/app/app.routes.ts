@@ -27,6 +27,14 @@ export const routes: Routes = [
       ),
     title: 'Browse Datasets',
   },
+  {
+    path: 'browse/:id',
+    loadComponent: () =>
+      import(
+        './metadata/features/dataset-details-page/dataset-details-page.component'
+      ).then((m) => m.DatasetDetailsPageComponent),
+    title: 'Dataset Details',
+  },
   // routes used in the authentication flows
   {
     path: 'oauth/callback',
@@ -69,7 +77,7 @@ export const routes: Routes = [
       import('../app/portal/features/page-not-found/page-not-found.component').then(
         (m) => m.PageNotFoundComponent,
       ),
-    title: 'GHGA | Page not found',
+    title: 'Page not found',
   },
 ];
 

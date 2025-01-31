@@ -1,0 +1,18 @@
+@use '@angular/material' as mat;
+
+mat-chip {
+  @include mat.chips-overrides(
+    (
+      label-text-size: var(--mat-sys-label-medium-size),
+      container-height: 75%,
+    )
+  );
+}
+
+a {
+  @include mat.button-overrides(
+    (
+      protected-container-color: var(--mat-sys-quaternary),
+    )
+  );
+}

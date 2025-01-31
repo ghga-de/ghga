@@ -24,7 +24,9 @@
           >
         }
         <a mat-raised-button><mat-icon>key</mat-icon>Request Access</a>
-        <a mat-raised-button><mat-icon>database_search</mat-icon>Dataset Details</a>
+        <a mat-raised-button [routerLink]="hit().id_"
+          ><mat-icon>database_search</mat-icon>Dataset Details</a
+        >
       </div>
       <p><strong>Dataset ID:</strong> {{ summary().accession }}</p>
       @if (hitContent().alias) {

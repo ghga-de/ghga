@@ -40,6 +40,8 @@
       text-label-text-size: medium,
       filled-label-text-size: medium,
       outlined-label-text-size: medium,
+      outlined-outline-color: var(--mat-sys-quaternary),
+      outlined-label-text-color: var(--mat-sys-quaternary),
       protected-label-text-size: medium,
       protected-container-color: var(--mat-sys-tertiary),
       protected-label-text-color: var(--mat-sys-on-primary),
@@ -150,6 +152,6 @@ h6 {
   }
 }
 
-.small-chips .mat-mdc-chip-action {
+.small-chips span .mat-mdc-chip-action {
   padding: 0 6px;
 }
