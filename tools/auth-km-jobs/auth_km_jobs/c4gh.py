@@ -20,7 +20,7 @@ class Crypt4GHKeyPair:
 
     def export_public(self) -> str:
         """Export the public key as a base64-encoded string."""
-        key_bytes = self.key.public_key.encode()
+        key_bytes = bytes(self.key.public_key)
         return encode_key(key_bytes)
 
     def export_private_raw(self) -> str:
