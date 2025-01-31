@@ -28,6 +28,8 @@ parameters:
     presigned_url_expires_after: 10
     object_storages: {}
     unstaged_download_collection: unstaged-download-requested
+    db_version_collection: dcsDbVersions
+    migration_wait_sec: 10
 
 containers:
 - name: rest

@@ -16,6 +16,8 @@ parameters:
   default:
     db_connection_str: null
     object_storages: {}
+    db_version_collection: ifrsDbVersions
+    migration_wait_sec: 10
 
 containers:
 - name: consumer

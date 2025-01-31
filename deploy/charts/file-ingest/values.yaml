@@ -17,7 +17,7 @@ serviceInstanceId: fis-rest-1
 parameters:
   default:
     host: 0.0.0.0
-    private_key: ""
+    private_key_path: <Please fill>
     vault_url: http://vault:8200
     vault_path: ekss
     db_connection_str: null
