@@ -295,6 +295,17 @@ export class AuthService {
   }
 
   /**
+   * This method can be used as a guard for all routes that need an authenticated user.
+   * @returns true if the route is accessible
+   */
+  async guardAuthenticated(): Promise<boolean> {
+    const state = await this.#determineSessionState();
+    if (state == 'Authenticated') return true;
+    this.#notify.showWarning('Please login to continue the requested action.');
+    return this.#guardBack();
+  }
+
+  /**
    * Logout user via OIDC
    *
    * This returns a promise to trigger a redirect of the current window

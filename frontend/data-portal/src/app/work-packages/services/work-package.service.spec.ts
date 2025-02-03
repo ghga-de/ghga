@@ -15,7 +15,7 @@ import { computed, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
 import { Dataset } from '../models/dataset';
-import { WorkPackage, WorkPackageResponse } from '../models/workPackage';
+import { WorkPackage, WorkPackageResponse } from '../models/work-package';
 import { WorkPackageService } from './work-package.service';
 
 const TEST_DATASET: Dataset = {

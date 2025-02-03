@@ -11,6 +11,7 @@ import { AuthService } from '@app/auth/services/auth.service';
 import { canDeactivate as canDeactivateAuth } from './auth/features/can-deactivate.guard';
 
 export const routes: Routes = [
+  // public routes
   {
     path: '',
     loadComponent: () =>
@@ -34,6 +35,16 @@ export const routes: Routes = [
         './metadata/features/dataset-details-page/dataset-details-page.component'
       ).then((m) => m.DatasetDetailsPageComponent),
     title: 'Dataset Details',
+  },
+  // routes that need user authentication
+  {
+    path: 'work-package',
+    canActivate: [() => inject(AuthService).guardAuthenticated()],
+    loadComponent: () =>
+      import('./work-packages/features/work-package/work-package.component').then(
+        (m) => m.WorkPackageComponent,
+      ),
+    title: 'Download or Upload Datasets',
   },
   // routes used in the authentication flows
   {
@@ -71,6 +82,7 @@ export const routes: Routes = [
       ),
     title: 'Confirm TOTP',
   },
+  // fallback route
   {
     path: '**',
     loadComponent: () =>
@@ -82,7 +94,9 @@ export const routes: Routes = [
 ];
 
 /**
- * This strategy provides a simpler way to set the page title. The routes (above) still set a title but it uses a template syntax to extend the title by the GHGA Data Portal string.
+ * This strategy provides a simpler way to set the page title.
+ * The routes (above) still set a title but it uses a template syntax
+ * to extend the title by the GHGA Data Portal string.
  */
 @Injectable({ providedIn: 'root' })
 export class TemplatePageTitleStrategy extends TitleStrategy {

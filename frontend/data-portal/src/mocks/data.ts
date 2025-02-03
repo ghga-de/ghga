@@ -9,6 +9,7 @@ import { DatasetInformation } from '@app/metadata/models/dataset-information';
 import { DatasetSummary } from '@app/metadata/models/dataset-summary';
 import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
+import { Dataset } from '@app/work-packages/models/dataset';
 
 /**
  * Metldata API
@@ -120,57 +121,6 @@ export const datasetSummary: DatasetSummary = {
       ],
     },
   },
-};
-
-/**
- * MASS API
- */
-
-export const searchResults: SearchResults = {
-  facets: [
-    {
-      key: 'studies.type',
-      name: 'Study Type',
-      options: [
-        { value: 'Option 1', count: 62 },
-        { value: 'Option 2', count: 37 },
-      ],
-    },
-    {
-      key: 'type',
-      name: 'Dataset Type',
-      options: [
-        { value: 'Test dataset type 1', count: 12 },
-        { value: 'Test dataset type 2', count: 87 },
-      ],
-    },
-  ],
-  count: 25, // just to test the paginator
-  hits: [
-    {
-      id_: 'GHGAD588887987',
-      content: {
-        alias: 'EGAD588887987',
-        title:
-          'Test dataset for details and this is also testing whether two lines of text actually appear correctly on the expansion panel headers or not at least at a resolution of one thousand nine hundred and twenty pixels wide',
-      },
-    },
-    {
-      id_: 'GHGAD588887988',
-      content: {
-        alias: 'EGAD588887988',
-        title: 'Test dataset for details',
-      },
-    },
-    {
-      id_: 'GHGAD588887989',
-      content: {
-        alias: 'EGAD588887989',
-        title:
-          'Test dataset for details and this is also testing whether more than two lines of text actually appear correctly on the expansion panel headers or not at least at a resolution of one thousand nine hundred and twenty pixels wide especially since this can cause issues with the layout of the expansion panels',
-      },
-    },
-  ],
 };
 
 export const datasetDetails: DatasetDetails = {
@@ -362,6 +312,61 @@ export const datasetDetails: DatasetDetails = {
   ],
 };
 
+/**
+ * MASS API
+ */
+
+export const searchResults: SearchResults = {
+  facets: [
+    {
+      key: 'studies.type',
+      name: 'Study Type',
+      options: [
+        { value: 'Option 1', count: 62 },
+        { value: 'Option 2', count: 37 },
+      ],
+    },
+    {
+      key: 'type',
+      name: 'Dataset Type',
+      options: [
+        { value: 'Test dataset type 1', count: 12 },
+        { value: 'Test dataset type 2', count: 87 },
+      ],
+    },
+  ],
+  count: 25, // just to test the paginator
+  hits: [
+    {
+      id_: 'GHGAD588887987',
+      content: {
+        alias: 'EGAD588887987',
+        title:
+          'Test dataset for details and this is also testing whether two lines of text actually appear correctly on the expansion panel headers or not at least at a resolution of one thousand nine hundred and twenty pixels wide',
+      },
+    },
+    {
+      id_: 'GHGAD588887988',
+      content: {
+        alias: 'EGAD588887988',
+        title: 'Test dataset for details',
+      },
+    },
+    {
+      id_: 'GHGAD588887989',
+      content: {
+        alias: 'EGAD588887989',
+        title:
+          'Test dataset for details and this is also testing whether more than two lines of text actually appear correctly on the expansion panel headers or not at least at a resolution of one thousand nine hundred and twenty pixels wide especially since this can cause issues with the layout of the expansion panels',
+      },
+    },
+  ],
+};
+
+/**
+ * DINS API
+ */
+
 export const datasetInformation: DatasetInformation = {
   accession: 'GHGAD588887988',
   file_information: [
@@ -427,3 +432,40 @@ export const datasetInformation: DatasetInformation = {
     },
   ],
 };
+
+/**
+ * WPS API
+ */
+
+export const datasets: Dataset[] = [
+  {
+    id: 'GHGAD588887987',
+    title: 'Some dataset to upload',
+    description:
+      'This is a very interesting dataset that can be used' +
+      ' to test the upload functionality of the Data Portal.' +
+      ' Note that the description can be longer than the title.',
+    stage: 'upload',
+    files: [],
+  },
+  {
+    id: 'GHGAD588887988',
+    title: 'Some dataset to download',
+    description:
+      'This is a very interesting dataset that can be used' +
+      ' to test the download functionality of the Data Portal.' +
+      ' Note that the description can be longer than the title.',
+    stage: 'download',
+    files: [],
+  },
+  {
+    id: 'GHGAD588887989',
+    title: 'Another dataset to download',
+    description:
+      'This is another todally ineresting dataset that can be used' +
+      ' to test the download functionality of the Data Portal.' +
+      ' Note that the description can be longer than the title.',
+    stage: 'download',
+    files: [],
+  },
+];

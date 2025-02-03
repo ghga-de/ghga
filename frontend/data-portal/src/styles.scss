@@ -155,3 +155,9 @@ h6 {
 .small-chips span .mat-mdc-chip-action {
   padding: 0 6px;
 }
+
+.mat-mdc-card.mat-mdc-card-outlined.error {
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  border-color: var(--mat-sys-error);
+}

@@ -1,0 +1,88 @@
+<h1>Download or upload datasets</h1>
+<p>
+  To download or upload datasets, you need to use the GHGA connector with a token that
+  allows downloading or uploading the files of a dataset for which you have
+  corresponding permissions.
+</p>
+@if (datasetsAreLoading()) {
+  <p>Loading your datasets...</p>
+} @else if (datasetsError()) {
+  <mat-card appearance="outlined" class="error">
+    <mat-card-content>Cannot load datasets. Please try again later.</mat-card-content>
+  </mat-card>
+} @else if (datasets().length === 0) {
+  <mat-card appearance="outlined" class="error">
+    <mat-card-content
+      >You currently cannot download or upload any datasets.</mat-card-content
+    >
+  </mat-card>
+} @else {
+  <p>As the first step, please select one of your available dataset:</p>
+
+  <div class="mb-4">
+    <mat-form-field class="container max-w-lg">
+      <mat-label>Available datasets</mat-label>
+      <mat-select (selectionChange)="selectDataset($event.value)">
+        @for (dataset of datasets(); track dataset) {
+          <mat-option [value]="dataset.id"
+            >{{ dataset.id }}: {{ dataset.title }}</mat-option
+          >
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+}
+@let dataset = selectedDataset();
+@if (dataset) {
+  <p>{{ dataset.description }}</p>
+  <p>
+    This dataset has been selected for <strong>{{ dataset.stage }}.</strong>
+  </p>
+
+  <div class="mt-4 flex flex-col">
+    <mat-form-field class="container max-w-5xl">
+      <mat-label>File accessions</mat-label>
+      <textarea
+        matInput
+        placeholder="accession1, accession2, ..."
+        [(ngModel)]="files"
+      ></textarea>
+      <mat-hint class="-mt-2 mb-4">
+        <p>
+          You can restrict the download to certain files only. To do so, enter the
+          desired file accessions above, separated by whitespace or commas.
+        </p>
+        <p>
+          Otherwise, leave the field above empty in order to download all files
+          belonging to the dataset.
+        </p>
+      </mat-hint>
+    </mat-form-field>
+
+    <mat-form-field class="container max-w-5xl">
+      <mat-label>Your public Crypt4GH key</mat-label>
+      <input matInput [(ngModel)]="pubKey" (input)="checkPubKey()" />
+      <mat-hint class="-mt-2 mb-4">
+        <p>
+          Please enter your public Crypt4GH key (in Base64 encoded format) above, so
+          that we can encrypt your data.
+        </p>
+        <p>
+          Otherwise, leave the field above empty in order to download all files
+          belonging to the dataset.
+        </p>
+        @if (pubKey && pubKeyError) {
+          <mat-error class="-mt-4 mb-4"
+            ><p>{{ pubKeyError }}</p></mat-error
+          >
+        }
+      </mat-hint>
+    </mat-form-field>
+  </div>
+  @if (pubKey && !pubKeyError) {
+    <button mat-raised-button color="primary" class="mb-4 mt-4" (click)="submit()">
+      <mat-icon>{{ dataset.stage }}</mat-icon> Generate an access token for
+      {{ dataset.stage }}
+    </button>
+  }
+}

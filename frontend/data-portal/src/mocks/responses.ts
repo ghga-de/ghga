@@ -6,6 +6,7 @@
 
 import {
   datasetInformation,
+  datasets,
   getDatasetDetails,
   getDatasetSummary,
   metadataGlobalSummary,
@@ -29,24 +30,6 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   'GET /api/metldata/stats': metadataGlobalSummary,
 
-  /**
-   * MASS API
-   */
-
-  'GET /api/mass/search*': {
-    facets: searchResults.facets,
-    count: searchResults.count,
-    hits: searchResults.hits,
-  },
-
-  /**
-   * Static assets
-   */
-  'GET /assets/*': undefined,
-  'GET /*.css': undefined,
-  'GET /*.js': undefined,
-  'GET /*.woff2': undefined,
-
   // Get summary data from a single dataset
   'GET /api/metldata/artifacts/stats_public/classes/DatasetStats/resources/GHGAD588887987':
     getDatasetSummary('GHGAD588887987'),
@@ -65,6 +48,35 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD588887989':
     getDatasetDetails('GHGAD588887989'),
 
+  /**
+   * MASS API
+   */
+
+  'GET /api/mass/search*': {
+    facets: searchResults.facets,
+    count: searchResults.count,
+    hits: searchResults.hits,
+  },
+
+  /**
+   * DINS API
+   */
+
   // Get summary data from all files in a dataset
   'GET /api/dins/dataset_information/*': datasetInformation,
+
+  /**
+   * WPS API
+   */
+
+  // Datasets requested by j.doe@ghga.de user
+  'GET /api/wps/users/j.doe@ghga.de/datasets': datasets,
+
+  /**
+   * Static assets
+   */
+  'GET /assets/*': undefined,
+  'GET /*.css': undefined,
+  'GET /*.js': undefined,
+  'GET /*.woff2': undefined,
 };

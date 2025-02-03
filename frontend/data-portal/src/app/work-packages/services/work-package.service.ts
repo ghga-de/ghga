@@ -11,7 +11,7 @@ import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
 import { map, Observable } from 'rxjs';
 import { Dataset } from '../models/dataset';
-import { WorkPackage, WorkPackageResponse } from '../models/workPackage';
+import { WorkPackage, WorkPackageResponse } from '../models/work-package';
 
 /**
  * Work package service
@@ -41,7 +41,13 @@ export class WorkPackageService {
         this.#http
           .get<Dataset[]>(`${this.#usersUrl}/${userId}/datasets`)
           // for now, this only covers downloads
-          .pipe(map((datasets) => datasets.filter(({ stage }) => stage == 'download')))
+          .pipe(
+            map((datasets) =>
+              datasets.filter(
+                ({ stage }) => stage === 'upload' || stage === 'download',
+              ),
+            ),
+          )
       );
     },
   }).asReadonly();
