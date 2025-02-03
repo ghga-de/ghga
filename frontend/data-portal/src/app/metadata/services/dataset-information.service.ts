@@ -61,7 +61,7 @@ export class DatasetInformationService {
    * Load the dataset information for the given dataset ID
    * @param id Dataset ID
    */
-  loadDatasetID(id: string): void {
+  loadDatasetInformation(id: string): void {
     this.#datasetID.set(id);
   }
 }

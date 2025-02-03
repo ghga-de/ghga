@@ -70,11 +70,12 @@ export interface Experiment {
 
 interface ExperimentMethod {
   accession: string;
+  name: string;
   type: string;
   instrument_model: string;
 }
 
-interface Sample {
+export interface Sample {
   accession: string;
   individual: Individual;
   name: string;

@@ -5,9 +5,10 @@
  */
 
 import { HttpClient } from '@angular/common/http';
-import { Injectable, Signal, computed, inject, resource, signal } from '@angular/core';
+import { Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { ConfigService } from '@app/shared/services/config.service';
-import { firstValueFrom } from 'rxjs';
+import { of } from 'rxjs';
 import { FacetFilterSetting } from '../models/facet-filter';
 import { SearchResults, emptySearchResults } from '../models/search-results';
 
@@ -37,19 +38,24 @@ export class MetadataSearchService {
     return this.#query();
   });
 
-  #searchResults = resource({
-    request: computed(() => ({
-      url: this.#massQueryUrl(),
-    })),
-    loader: ({ request }) => {
-      if (request.url !== '') {
-        return Promise.resolve(
-          firstValueFrom(this.#http.get<SearchResults>(request.url)),
-        );
-      } else {
-        return Promise.resolve(emptySearchResults);
-      }
-    },
+  #massQueryUrl: Signal<string> = computed(() => {
+    const baseUrl = this.#searchUrl;
+    const className = this.#className();
+
+    if (!baseUrl || !className) return '';
+
+    const query = this.#query();
+    const limit = this.#limit();
+    const skip = this.#skip();
+    const facets = this.#facets();
+
+    return this.urlFromParameters(baseUrl, className, facets, query, skip, limit);
+  });
+
+  #searchResults = rxResource<SearchResults | undefined, string>({
+    request: this.#massQueryUrl,
+    loader: ({ request: url }) =>
+      url ? this.#http.get<SearchResults>(url) : of(undefined),
   });
 
   /**
@@ -92,21 +98,6 @@ export class MetadataSearchService {
    * The search results error as a signal
    */
   searchResultsError: Signal<unknown> = this.#searchResults.error;
-
-  #massQueryUrl: Signal<string> = computed(() => {
-    const baseUrl = this.#searchUrl;
-    const query = this.#query();
-    const className = this.#className();
-    const limit = this.#limit();
-    const skip = this.#skip();
-    const facets = this.#facets();
-
-    if (className) {
-      return this.urlFromParameters(baseUrl, className, facets, query, skip, limit);
-    } else {
-      return '';
-    }
-  });
 
   /**
    * Computes an url from the provided parameters

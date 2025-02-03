@@ -28,10 +28,12 @@ export class StorageAlias implements PipeTransform {
    * @param storageAlias Storage alias
    * @returns Human readable storage location, returns the original string if not known, with the first group of letters separated by a space
    */
-  transform(storageAlias: string): string {
-    return storageAlias.replace(
-      /^[A-Z]+/,
-      (m: string) => (STORAGE_LOCATIONS[m] ?? m) + ' ',
-    );
+  transform(storageAlias: string | null): string {
+    return storageAlias
+      ? storageAlias.replace(
+          /^[A-Z]+/,
+          (m: string) => (STORAGE_LOCATIONS[m] ?? m) + ' ',
+        )
+      : '';
   }
 }

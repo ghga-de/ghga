@@ -43,21 +43,22 @@ test('can view a dataset summary', async ({ page }) => {
   ).toBeVisible();
 });
 
-// TODO: adapt and activate after dataset details page implementation
-test.skip('can navigate to dataset details', async ({ page }) => {
+test('can navigate to dataset details', async ({ page }) => {
   await page.goto('/browse');
 
   await page.getByText('GHGAD588887989').click();
 
   await expect(page).toHaveURL('/browse');
 
-  await page.getByText('View dataset details').click();
+  await page.getByText('Dataset Details').click();
 
   await expect(page).toHaveURL('/dataset/GHGAD588887989');
 
-  await expect(page.getByText('Dataset ID: GHGAD588887989')).toBeVisible();
+  await expect(page).toHaveTitle('Dataset GHGAD588887989 | GHGA Data Portal');
+
+  await expect(page.getByText('Dataset ID | GHGAD588887989')).toBeVisible();
 
   await expect(
-    page.getByText('Description: This is the test dataset description'),
+    page.getByText('Test dataset with some details for testing.'),
   ).toBeVisible();
 });

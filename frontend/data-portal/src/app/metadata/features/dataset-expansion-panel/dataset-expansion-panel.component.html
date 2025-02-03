@@ -24,7 +24,7 @@
           >
         }
         <a mat-raised-button><mat-icon>key</mat-icon>Request Access</a>
-        <a mat-raised-button [routerLink]="hit().id_"
+        <a mat-raised-button routerLink="/dataset/{{ hit().id_ }}"
           ><mat-icon>database_search</mat-icon>Dataset Details</a
         >
       </div>

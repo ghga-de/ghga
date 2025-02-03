@@ -177,7 +177,7 @@ export const datasetDetails: DatasetDetails = {
   accession: 'GHGAD588887987',
   title: 'Test dataset for details',
   description:
-    'Test dataset for Metadata Repository get dataset details call. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
+    'Test dataset with some details for testing. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
   types: ['Test Type'],
   ega_accession: 'EGAD588887987',
   data_access_policy: {
@@ -213,16 +213,84 @@ export const datasetDetails: DatasetDetails = {
   },
   process_data_files: [
     {
-      accession: 'GHGASF956121331',
-      ega_accession: 'EGAF956121331',
-      name: 'Test file 1',
-      format: 'FASTQ',
+      accession: 'GHGAF956121321',
+      ega_accession: 'EGAF956121321',
+      name: 'Process data file 1',
+      format: 'BAM',
+    },
+    {
+      accession: 'GHGAF956121322',
+      ega_accession: 'EGAF956121322',
+      name: 'Process data file 2',
+      format: 'BAM',
+    },
+    {
+      accession: 'GHGAF956121323',
+      ega_accession: 'EGAF956121323',
+      name: 'Process data file 3',
+      format: 'BAM',
+    },
+    {
+      accession: 'GHGAF956121324',
+      ega_accession: 'EGAF956121324',
+      name: 'Process data file 4',
+      format: 'BAM',
+    },
+    {
+      accession: 'GHGAF956121325',
+      ega_accession: 'EGAF956121325',
+      name: 'Process data file 5',
+      format: 'BAM',
     },
   ],
   experiment_method_supporting_files: [],
   analysis_method_supporting_files: [],
-  individual_supporting_files: [],
-  research_data_files: [],
+  individual_supporting_files: [
+    {
+      accession: 'GHGAF956121341',
+      ega_accession: 'EGAF956121341',
+      name: 'Supporting file 1',
+      format: 'PDF',
+    },
+    {
+      accession: 'GHGAF956121342',
+      ega_accession: 'EGAF956121342',
+      name: 'Supporting file 2',
+      format: 'PDF',
+    },
+  ],
+  research_data_files: [
+    {
+      accession: 'GHGAF956121331',
+      ega_accession: 'EGAF956121331',
+      name: 'Research data file 1',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF956121332',
+      ega_accession: 'EGAF956121332',
+      name: 'Research data file 2',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF956121333',
+      ega_accession: 'EGAF956121333',
+      name: 'Research data file 3',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF956121334',
+      ega_accession: 'EGAF956121334',
+      name: 'Research data file 4',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF956121335',
+      ega_accession: 'EGAF956121335',
+      name: 'Research data file 5',
+      format: 'FASTQ',
+    },
+  ],
   experiments: [
     {
       accession: 'GHGAE588321315',
@@ -232,8 +300,21 @@ export const datasetDetails: DatasetDetails = {
         'Test Experiment 1. Sagittis purus sit amet volutpat. Tellus cras adipiscing enim eu turpis egestas pretium. Vitae suscipit tellus mauris a diam maecenas sed enim ut. Vulputate enim nulla aliquet porttitor lacus luctus. Egestas sed sed risus pretium quam vulputate dignissim. Netus et malesuada fames ac turpis egestas maecenas. Nisl condimentum id venenatis a condimentum vitae sapien. Commodo quis imperdiet massa tincidunt nunc pulvinar sapien et. Vitae sapien pellentesque habitant morbi tristique senectus. Leo vel fringilla est ullamcorper eget nulla. Tempus egestas sed sed risus.',
       experiment_method: {
         accession: 'GHGAEM654513213',
+        name: 'DNA-Seq',
         type: 'Experiment Method 1',
         instrument_model: 'Experiment Platform 1',
+      },
+    },
+    {
+      accession: 'GHGAE588321316',
+      ega_accession: 'EGAE588321316',
+      title: 'Text Experiment 2',
+      description: 'Test Experiment 2. Sagittis purus sit amet volutpat.',
+      experiment_method: {
+        accession: 'GHGAEM654513214',
+        name: 'RNA-Seq',
+        type: 'Experiment Method 2',
+        instrument_model: 'Experiment Platform 2',
       },
     },
   ],
@@ -252,6 +333,32 @@ export const datasetDetails: DatasetDetails = {
       biospecimen_type: 'Test biospeciment type 1',
       biospecimen_tissue_term: 'Test tissue',
     },
+    {
+      accession: 'GHGASA588321316',
+      ega_accession: 'EGASA588321316',
+      description: 'Test Sample 2. Vivamus arcu felis bibendum ut.',
+      name: 'Test anatomical entity 2',
+      case_control_status: 'Test control status 2',
+      individual: {
+        sex: 'Male',
+        phenotypic_features_terms: ['Test phenotypic feature 2'],
+      },
+      biospecimen_type: 'Test biospeciment type 2',
+      biospecimen_tissue_term: 'Test tissue 2',
+    },
+    {
+      accession: 'GHGASA588321317',
+      ega_accession: 'EGASA588321317',
+      description: 'Test Sample 3. Vivamus arcu felis bibendum ut.',
+      name: 'Test anatomical entity 3',
+      case_control_status: 'Test control status 3',
+      individual: {
+        sex: 'Female',
+        phenotypic_features_terms: ['Test phenotypic feature 3'],
+      },
+      biospecimen_type: 'Test biospeciment type 3',
+      biospecimen_tissue_term: 'Test tissue 3',
+    },
   ],
 };
 
@@ -259,10 +366,64 @@ export const datasetInformation: DatasetInformation = {
   accession: 'GHGAD588887988',
   file_information: [
     {
-      accession: 'GHGASF956121331',
-      sha256_hash: '58b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286dc',
-      size: 123456789,
+      accession: 'GHGAF956121331',
+      sha256_hash: '58b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286d1',
+      size: 1234567891,
       storage_alias: 'TUE01',
+    },
+    {
+      accession: 'GHGAF956121332',
+      sha256_hash: '58b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286d2',
+      size: 1234567892,
+      storage_alias: 'TUE02',
+    },
+    {
+      accession: 'GHGAF956121333',
+      sha256_hash: '58b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286d3',
+      size: 1234567893,
+      storage_alias: 'TUE03',
+    },
+    {
+      accession: 'GHGAF956121334',
+      sha256_hash: '58b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286d4',
+      size: 1234567894,
+      storage_alias: 'TUE04',
+    },
+    {
+      accession: 'GHGAF956121335',
+      sha256_hash: '58b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286d5',
+      size: 1234567895,
+      storage_alias: 'TUE05',
+    },
+    {
+      accession: 'GHGAF956121321',
+      sha256_hash: '47b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286e1',
+      size: 87654321,
+      storage_alias: 'HD01',
+    },
+    {
+      accession: 'GHGAF956121322',
+      sha256_hash: '47b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286e2',
+      size: 87654322,
+      storage_alias: 'HD02',
+    },
+    {
+      accession: 'GHGAF956121323',
+      sha256_hash: '47b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286e3',
+      size: 87654323,
+      storage_alias: 'HD03',
+    },
+    {
+      accession: 'GHGAF956121324',
+      sha256_hash: '47b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286e4',
+      size: 87654324,
+      storage_alias: 'HD04',
+    },
+    {
+      accession: 'GHGAF956121325',
+      sha256_hash: '47b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286e5',
+      size: 87654325,
+      storage_alias: 'HD05',
     },
   ],
 };

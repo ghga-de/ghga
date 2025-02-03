@@ -58,7 +58,7 @@ export class DatasetExpansionPanelComponent {
    * On opening of the expansible panel, load the query variables to the injectable service to prepare for the backend query
    */
   onOpen(): void {
-    this.#metadata.loadDatasetSummaryID(this.hit().id_);
+    this.#metadata.loadDatasetSummary(this.hit().id_);
   }
 
   #errorEffect = effect(() => {

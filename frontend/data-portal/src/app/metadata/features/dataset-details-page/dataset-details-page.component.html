@@ -201,12 +201,17 @@
     <div class="grid grid-cols-1 gap-2">
       <mat-expansion-panel>
         <mat-expansion-panel-header>
-          Experiments Summary ({{ experiments().length }} experiment{{
-            experiments().length | addPluralS
+          Experiments Summary ({{ numExperiments() }} experiment{{
+            numExperiments() | addPluralS
           }})</mat-expansion-panel-header
         ><ng-template matExpansionPanelContent
           ><div class="overflow-auto">
-            <table mat-table [dataSource]="experiments()" matSort>
+            <table
+              mat-table
+              [dataSource]="experimentsDataSource"
+              matSort
+              #sortExperiments="matSort"
+            >
               <ng-container matColumnDef="accession">
                 <th mat-header-cell *matHeaderCellDef class="font-bold" mat-sort-header>
                   Experiment ID
@@ -261,20 +266,37 @@
 
               <tr mat-header-row *matHeaderRowDef="experimentsColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: experimentsColumns"></tr>
-            </table></div></ng-template
+            </table>
+
+            @if (numExperiments() > 10) {
+              <mat-paginator
+                [pageSize]="defaultTablePageSize"
+                [pageSizeOptions]="tablePageSizeOptions"
+                showFirstLastButtons
+                itemsPerPageLabel="Experiments per page"
+                aria-label="Select page of experiments"
+                #experimentsPaginator
+              >
+              </mat-paginator>
+            }</div></ng-template
       ></mat-expansion-panel>
 
       <mat-expansion-panel>
         <mat-expansion-panel-header>
-          Samples Summary ({{ samples().length }} sample{{
-            samples().length | addPluralS
+          Samples Summary ({{ numSamples() }} sample{{
+            numSamples() | addPluralS
           }})</mat-expansion-panel-header
         ><ng-template matExpansionPanelContent
           ><div class="overflow-auto">
-            <table mat-table [dataSource]="samples()" matSort>
+            <table
+              mat-table
+              [dataSource]="samplesDataSource"
+              matSort
+              #sortSamples="matSort"
+            >
               <ng-container matColumnDef="accession">
                 <th mat-header-cell *matHeaderCellDef class="font-bold" mat-sort-header>
-                  Experiment ID
+                  Sample ID
                 </th>
                 <td mat-cell *matCellDef="let sample">{{ sample.accession }}</td>
               </ng-container>
@@ -350,17 +372,33 @@
 
               <tr mat-header-row *matHeaderRowDef="samplesColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: samplesColumns"></tr>
-            </table></div></ng-template
+            </table>
+
+            @if (numSamples() > 10) {
+              <mat-paginator
+                [pageSize]="defaultTablePageSize"
+                [pageSizeOptions]="tablePageSizeOptions"
+                showFirstLastButtons
+                aria-label="Select page of samples"
+                #samplesPaginator
+              >
+              </mat-paginator>
+            }</div></ng-template
       ></mat-expansion-panel>
 
       <mat-expansion-panel>
         <mat-expansion-panel-header>
-          Files Summary ({{ allFiles().length }} file{{
-            allFiles().length | addPluralS
+          Files Summary ({{ numFiles() }} file{{
+            numFiles() | addPluralS
           }})</mat-expansion-panel-header
         ><ng-template matExpansionPanelContent
           ><div class="overflow-auto">
-            <table mat-table [dataSource]="allFiles()" matSort>
+            <table
+              mat-table
+              [dataSource]="filesDataSource"
+              matSort
+              #sortFiles="matSort"
+            >
               <ng-container matColumnDef="accession">
                 <th mat-header-cell *matHeaderCellDef class="font-bold" mat-sort-header>
                   File ID
@@ -431,7 +469,18 @@
 
               <tr mat-header-row *matHeaderRowDef="filesColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: filesColumns"></tr>
-            </table></div></ng-template
+            </table>
+
+            @if (numFiles() > 10) {
+              <mat-paginator
+                [pageSize]="defaultTablePageSize"
+                [pageSizeOptions]="tablePageSizeOptions"
+                showFirstLastButtons
+                aria-label="Select page of files"
+                #filesPaginator
+              >
+              </mat-paginator>
+            }</div></ng-template
       ></mat-expansion-panel>
     </div>
   }

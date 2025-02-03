@@ -61,12 +61,12 @@ export class MetadataService {
    * Load the dataset summary for the given dataset ID
    * @param id Dataset ID
    */
-  loadDatasetSummaryID(id: string): void {
+  loadDatasetSummary(id: string): void {
     this.#summaryID.set(id);
   }
 
   #datasetDetails = rxResource({
-    request: this.#summaryID,
+    request: this.#detailsID,
     loader: ({ request: id }) => {
       if (!id) return of(undefined);
       return this.#http.get<DatasetDetails>(`${this.#datasetDetailsUrl}/${id}`);
@@ -77,7 +77,7 @@ export class MetadataService {
    * Load the dataset details for the given dataset ID
    * @param id Dataset ID
    */
-  loadDatasetDetailsID(id: string): void {
+  loadDatasetDetails(id: string): void {
     this.#detailsID.set(id);
   }
 

@@ -28,7 +28,7 @@ export const routes: Routes = [
     title: 'Browse Datasets',
   },
   {
-    path: 'browse/:id',
+    path: 'dataset/:id',
     loadComponent: () =>
       import(
         './metadata/features/dataset-details-page/dataset-details-page.component'

@@ -12,6 +12,11 @@ describe('StorageAlias', () => {
     expect(pipe).toBeTruthy();
   });
 
+  it('returns empty string for null input', () => {
+    const pipe = new StorageAlias();
+    expect(pipe.transform(null)).toBe('');
+  });
+
   it('returns Tübingen 01 for TUE01', () => {
     const pipe = new StorageAlias();
     expect(pipe.transform('TUE01')).toBe('Tübingen 01');

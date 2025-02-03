@@ -19,8 +19,10 @@ import { DatasetDetailsPageComponent } from './dataset-details-page.component';
 class MockMetadataService {
   datasetDetails = signal(datasetDetails);
   datasetDetailsError = signal(undefined);
-  loadDatasetDetailsID = () => undefined;
+  loadDatasetDetails = () => undefined;
 }
+
+import { screen } from '@testing-library/angular';
 
 /**
  * Mock the dataset information service as needed for the dataset details
@@ -28,7 +30,7 @@ class MockMetadataService {
 class MockDatasetInformationService {
   datasetInformation = signal(datasetInformation);
   datasetInformationError = signal(undefined);
-  loadDatasetID = () => undefined;
+  loadDatasetInformation = () => undefined;
 }
 
 describe('DatasetDetailsPageComponent', () => {
@@ -48,19 +50,42 @@ describe('DatasetDetailsPageComponent', () => {
     fixture = TestBed.createComponent(DatasetDetailsPageComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('id', datasetDetails.accession);
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show details', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const text = compiled.textContent;
-    expect(text).toContain('Test Type');
-    expect(text).toContain(
-      'Test dataset for Metadata Repository get dataset details call.',
+  it('should show heading', () => {
+    const heading = screen.getByRole('heading', { level: 3 });
+    expect(heading).toHaveTextContent('Test dataset');
+  });
+
+  it('should show GHGA ID', () => {
+    expect(screen.queryAllByText('Dataset ID | GHGAD588887987').length).toBeGreaterThan(
+      0,
     );
+  });
+
+  it('should show EGA ID', () => {
+    expect(screen.queryAllByText('EGA ID | EGAD588887987').length).toBeGreaterThan(0);
+  });
+
+  it('should show dataset type', () => {
+    expect(screen.queryAllByText('Test Type').length).toBeGreaterThan(0);
+  });
+
+  it('should show study type', () => {
+    expect(screen.queryAllByText('test genomics').length).toBeGreaterThan(0);
+  });
+
+  it('should show dataset description', () => {
+    const expected = /^Test dataset with some details for testing\./;
+    expect(screen.queryByText(expected)).not.toBeNull();
+  });
+
+  it('should show offer option to request access', () => {
+    expect(screen.getByText('Request Access')).toBeVisible();
   });
 });
