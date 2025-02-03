@@ -8,6 +8,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { searchResults } from '@app/../mocks/data';
 import { MetadataSearchService } from '../../services/metadata-search.service';
 import { DatasetExpansionPanelComponent } from '../dataset-expansion-panel/dataset-expansion-panel.component';
@@ -34,6 +35,13 @@ describe('BrowseComponent', () => {
       imports: [MetadataBrowserComponent, NoopAnimationsModule],
       providers: [
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
+        RouterModule,
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {},
+          },
+        },
       ],
     })
       .overrideComponent(MetadataBrowserComponent, {

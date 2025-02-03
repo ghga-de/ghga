@@ -14,11 +14,15 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FacetFilterSetting } from '@app/metadata/models/facet-filter';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search.service';
 import { FacetActivityPipe } from '@app/metadata/utils/facet-activity.pipe';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { DatasetExpansionPanelComponent } from '../dataset-expansion-panel/dataset-expansion-panel.component';
+
+const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_SKIP_VALUE = 0;
 
 /**
  * This is the metadata browser component
@@ -44,12 +48,14 @@ import { DatasetExpansionPanelComponent } from '../dataset-expansion-panel/datas
 export class MetadataBrowserComponent implements OnInit {
   #notify = inject(NotificationService);
   #metadataSearch = inject(MetadataSearchService);
+  #route = inject(ActivatedRoute);
+  #router = inject(Router);
   #className = 'EmbeddedDataset';
-  #skip = 0;
+  #skip = DEFAULT_SKIP_VALUE;
   #pageEvent!: PageEvent;
 
   facetData: FacetFilterSetting = {};
-  pageSize = 10;
+  pageSize = DEFAULT_PAGE_SIZE;
   searchFormControl = new FormControl('');
   searchFormGroup = new FormGroup({
     searchTerm: this.searchFormControl,
@@ -65,20 +71,23 @@ export class MetadataBrowserComponent implements OnInit {
    * On init, define the default values of the search variables
    */
   ngOnInit(): void {
-    this.#updateMetadataServiceSearchTerms();
+    this.#loadSearchTermsFromRoute();
   }
 
   /**
-   * Syncs the data between this component and the search service and initiates a new search.
+   * This function takes the current URL, determines the query parameters and sets them accordingly in the metadata search service.
    */
-  #performSearch(): void {
-    this.#updateMetadataServiceSearchTerms();
-  }
-
-  /**
-   * Pushes the local filters, search term and page setup to the search service.
-   */
-  #updateMetadataServiceSearchTerms(): void {
+  #loadSearchTermsFromRoute(): void {
+    const { s, q, f, p } = this.#router.routerState.snapshot.root.queryParams;
+    this.pageSize = parseInt(p) || DEFAULT_PAGE_SIZE;
+    this.searchTerm = q || '';
+    if (f) {
+      const paramVals = this.#facetDataFromString(decodeURIComponent(f));
+      if (paramVals) {
+        this.facetData = paramVals;
+      }
+    }
+    this.#skip = parseInt(s) || DEFAULT_SKIP_VALUE;
     this.#metadataSearch.loadQueryParameters(
       this.#className,
       this.pageSize,
@@ -86,6 +95,32 @@ export class MetadataBrowserComponent implements OnInit {
       this.searchTerm,
       this.facetData,
     );
+  }
+
+  /**
+   * Syncs the data between this component and the search service and initiates a new search.
+   */
+  #performSearch(): void {
+    this.#updateMetadataServiceSearchTermsAndRoute();
+  }
+
+  /**
+   * Pushes the local filters, search term and page setup to the search service.
+   */
+  async #updateMetadataServiceSearchTermsAndRoute(): Promise<void> {
+    await this.#router.navigate([], {
+      relativeTo: this.#route,
+      queryParams: {
+        s: this.#skip !== DEFAULT_SKIP_VALUE ? this.#skip : undefined,
+        q: this.searchTerm !== '' ? this.searchTerm : undefined,
+        f:
+          Object.keys(this.facetData).length !== 0
+            ? encodeURIComponent(this.#facetDataToString(this.facetData))
+            : undefined,
+        p: this.pageSize !== DEFAULT_PAGE_SIZE ? this.pageSize : undefined,
+      },
+    });
+    this.#loadSearchTermsFromRoute();
   }
 
   /**
@@ -159,6 +194,50 @@ export class MetadataBrowserComponent implements OnInit {
     const [facetKey, facetOption] = facetData;
     const newValue = input.checked;
     this.#updateFacets(facetKey, facetOption, newValue);
+  }
+
+  /**
+   * Turns a FacetFilterSetting dictionary into a string for usage in the url f parameter
+   * This is the inverse operation to the #facetDataFromString function
+   * @param facetData the dictionary to turn into a string
+   * @returns the string representation
+   */
+  #facetDataToString(facetData: FacetFilterSetting): string {
+    if (Object.keys(facetData).length === 0) {
+      return '';
+    }
+    let facetStrings = [];
+    for (const key in facetData) {
+      for (const index in facetData[key]) {
+        facetStrings.push(key + ':' + facetData[key][index]);
+      }
+    }
+    return facetStrings.join(';');
+  }
+
+  /**
+   * This function takes a string (as used in the f argument of the url) and turns it into a FacetFilterSetting dictionary.
+   * This is the inverse operation of #facetDataToString.
+   * @param input the string to parse
+   * @returns The FacetFilterSetting dictionary format
+   */
+  #facetDataFromString(input: string): FacetFilterSetting {
+    if (input.indexOf(':') == -1) {
+      return {};
+    }
+    const filterStrings = input.split(';');
+    const ret: FacetFilterSetting = {};
+    for (const facet of filterStrings) {
+      const [facetName, facetValue] = facet.split(':', 2);
+      if (facetValue !== undefined) {
+        if (ret[facetName]) {
+          ret[facetName].push(facetValue);
+        } else {
+          ret[facetName] = [facetValue];
+        }
+      }
+    }
+    return ret;
   }
 
   /**
