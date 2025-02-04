@@ -202,7 +202,7 @@ class MigrationDefinition:
         # e.g. "users" -> "tmp_v7_old_users"
         temp_old_coll_name = self.old_temp_name(original_coll_name)
         old_collection = self._db[original_coll_name]
-        await old_collection.rename(temp_old_coll_name)
+        await old_collection.rename(temp_old_coll_name, dropTarget=True)
 
         # Rename the new, temp collection by removing its prefix
         # e.g. "tmp_v7_new_users" -> "users"
@@ -225,13 +225,13 @@ class MigrationDefinition:
         # e.g. "users" -> "tmp_v7_new_users"
         temp_new_coll_name = self.new_temp_name(original_coll_name)
         new_collection = self._db[original_coll_name]
-        await new_collection.rename(temp_new_coll_name)
+        await new_collection.rename(temp_new_coll_name, dropTarget=True)
 
         # Remove the prefix from the old collection
         # e.g. "tmp_v7_old_users" -> "users"
         temp_old_coll_name = self.old_temp_name(original_coll_name)
         old_collection = self._db[temp_old_coll_name]
-        await old_collection.rename(temp_old_coll_name)
+        await old_collection.rename(original_coll_name)
 
         # Remove this collection from the "staged" tracking set
         self._staged_collections.remove(original_coll_name)
