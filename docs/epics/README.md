@@ -61,14 +61,14 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (51) [Ethiopian Wolf](./51-ethiopian-wolf/technical_specification.md): Monorepo Setup for Multiple Microservices
 - (52) [Hero Shrew](./52-hero-shrew/technical_specification.md): Outbox Pattern Refactoring
 - (53) [Honey Bee](./53-honey-bee/technical_specification.md): DevOps Production Preparation 1
-- (54) [Peacock Spider](./54-peacock-spider/technical_specification.md): File Information Service
+- (54) [Peacock Spider](./54-peacock-spider/technical_specification.md): Dataset Information Service
 - (55) [Madagascan Sunset Moth](./55-madagascan-sunset-moth/technical_specification.md): Preliminary Storage Selection
 - (56) [Sphynx Cat](./56-sphynx-cat/technical_specification.md): Kakfa Dead Letter Queues
 - (57) [Monkfish](./57-monkfish/technical_specification.md): State Management Service
 - (58) [Poodle Moth](./58-poodle-moth/technical_specification.md): Storing Data as strings vs BSON in MongoDB
 - (59) [Bottlenose Dolphin](./59-bottlenose-dolphin/technical_specification.md): Angular implementation plan and migration strategy
-- (60) [Hippopotamus](./60-hippopotamus/technical_specification.md): Create baseline Angular implementation
-- (61) [Matamata Turtle](./61-matamata-turtle/technical_specification.md): DLQ Service
+- (60) [Hippopotamus](./60-hippopotamus/technical_specification.md): Create baseline for Angular implementation
 - (62) [California Condor](./62-california-condor/technical_specification.md): DB Versioning
-- (63) [Thorny Devil](./63-thorny-devil/technical_specification.md): Download path response caching
+- (63) [Thorny Devil](./63-thorny-devil/technical_specification.md): Download Path Service Response Caching
 - (64) [Blue Whale](./64-blue-whale/technical_specification.md): Reimplement frontend features in Angular
+- (65) [Striped Skunk](./65-striped-skunk/technical_specification.md): Hexkit v4 Rollout
