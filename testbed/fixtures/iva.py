@@ -74,9 +74,9 @@ class IVAFixture:
     def create_verification(self, iva_id: str, headers: dict) -> Response:
         url = f"{self.config.ums_url}/rpc/ivas/{iva_id}/create-code"
         response = self.http.post(url, headers=headers)
-        assert (
-            response.status_code == 201
-        ), f"Failed to create verification code: {response.text}"
+        assert response.status_code == 201, (
+            f"Failed to create verification code: {response.text}"
+        )
         results = response.json()
         assert "verification_code" in results, f"Verification code not found: {results}"
         return results["verification_code"]

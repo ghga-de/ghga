@@ -162,6 +162,6 @@ def check_iva_state(results: list, state: str, fixtures: JointFixture):
     assert isinstance(results, list), f"Expected a list of items, got: {results}"
     iva = results[0]
     assert iva, "No IVA found"
-    assert (
-        iva["state"].lower() == state.lower()
-    ), f"Expected state: {state}, got: {iva['state']}"
+    assert iva["state"].lower() == state.lower(), (
+        f"Expected state: {state}, got: {iva['state']}"
+    )

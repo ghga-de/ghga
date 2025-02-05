@@ -98,9 +98,9 @@ class S3Fixture(StateManager):
                 response = self.http.delete(
                     url, headers=self.auth_headers, timeout=DELETION_TIMEOUT
                 )
-                assert (
-                    response.status_code == 204
-                ), f"Failed to delete objects in {storage.storage_alias}.{bucket_id}: {response.text}"
+                assert response.status_code == 204, (
+                    f"Failed to delete objects in {storage.storage_alias}.{bucket_id}: {response.text}"
+                )
 
 
 @fixture(name="s3", scope="session")

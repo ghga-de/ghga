@@ -347,9 +347,9 @@ class TokenGenerator:
             state_store=state_store,
             force=recreate_totp,
         )
-        assert not totp_token.startswith(
-            "error:"
-        ), f"Cannot authenticate {session.name}: {totp_token}"
+        assert not totp_token.startswith("error:"), (
+            f"Cannot authenticate {session.name}: {totp_token}"
+        )
         totp = self.generate_totp(totp_token)
         return self.verify_totp(totp, session_headers)
 

@@ -103,6 +103,6 @@ def submission_registry_exists(num: str, fixtures: JointFixture):
 
     json_files = glob.glob(os.path.join(submission_store, "*.json"))
     num_found = len(json_files)
-    assert (
-        num_found == num_expected
-    ), f"{num_found} submission JSON files found in '{submission_store}'"
+    assert num_found == num_expected, (
+        f"{num_found} submission JSON files found in '{submission_store}'"
+    )

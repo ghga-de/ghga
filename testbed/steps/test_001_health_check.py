@@ -104,9 +104,9 @@ def check_user_management_apis_are_healthy(fixtures: JointFixture):
             f" but responds with status code {status_code}"
         )
     else:
-        assert (
-            status_code == 200
-        ), f"Error {status_code} when requesting claims for {name}"
+        assert status_code == 200, (
+            f"Error {status_code} when requesting claims for {name}"
+        )
         ret = response.json()
         if not (
             isinstance(ret, list)

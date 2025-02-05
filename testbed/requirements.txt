@@ -1,7 +1,7 @@
 # All your requirements go here. Please adapt as needed:
 
 ghga-connector==1.6.0
-ghga-datasteward-kit==4.4.1
+ghga-datasteward-kit==4.5.0
 
 ghga-event-schemas>=3.3.0,<4
 ghga-service-commons[auth,crypt]>=3.2.0,<4

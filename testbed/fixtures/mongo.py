@@ -154,9 +154,9 @@ class MongoFixture(StateManager):
         url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
         data = {"documents": document, "id_field": "_id"}
         response = self.http.put(url, headers=self.auth_headers, json=data)
-        assert (
-            response.status_code == 204
-        ), f"Failed to replace document: {response.text}"
+        assert response.status_code == 204, (
+            f"Failed to replace document: {response.text}"
+        )
 
     def remove_documents(
         self,
@@ -170,9 +170,9 @@ class MongoFixture(StateManager):
         if query:
             query = self.stringify_query_params(query)
         response = self.http.delete(url, headers=self.auth_headers, params=query)
-        assert (
-            response.status_code == 204
-        ), f"Failed to delete document: {response.text}"
+        assert response.status_code == 204, (
+            f"Failed to delete document: {response.text}"
+        )
 
 
 @fixture(name="mongo", scope="session")

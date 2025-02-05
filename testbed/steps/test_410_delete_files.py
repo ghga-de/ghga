@@ -46,9 +46,9 @@ def delete_files_of_complete_datasets(http: HttpClient, fixtures: JointFixture):
     for file_id in file_information:
         url = f"{fixtures.config.pcs_url}/files/{file_id}"
         response = http.delete(url, headers=auth_headers)
-        assert (
-            response.status_code == 202
-        ), f"Failed to delete file {file_id}: {response.text}"
+        assert response.status_code == 202, (
+            f"Failed to delete file {file_id}: {response.text}"
+        )
 
         # Wait for the file deletion request to be stored
         document = fixtures.mongo.wait_for_document(
@@ -83,9 +83,9 @@ def check_services_for_deleted_files(fixtures: JointFixture):
             number=len(accessions),
             timeout=TIMEOUT,
         )
-        assert (
-            not documents
-        ), f"File metadata still exist in the {service[0]}.{service[1]}: {documents}"
+        assert not documents, (
+            f"File metadata still exist in the {service[0]}.{service[1]}: {documents}"
+        )
 
 
 @then("the deleted files do not exist in the storage")

@@ -59,9 +59,7 @@ def user_account_inactivation(
     url = f"{fixtures.config.ums_url}/users/{user_id}"
     headers = auth.headers(session=authorized_user_session)
     response = fixtures.http.patch(url, json=user_data, headers=headers)
-    assert (
-        response.status_code == 204
-    ), f"Unable to update user status: { response.text}"
+    assert response.status_code == 204, f"Unable to update user status: {response.text}"
     sub = fixtures.auth.get_sub(user_name)
     fixtures.state.set_state(f"status-{sub}", status)
 
@@ -70,9 +68,9 @@ def user_account_inactivation(
 def user_status(full_name: str, status: str, fixtures: JointFixture):
     sub = fixtures.auth.get_sub(full_name)
     saved_status = fixtures.state.get_state(f"status-{sub}")
-    assert (
-        saved_status
-    ), f'Saved status "{saved_status}" does not match with the expected'
+    assert saved_status, (
+        f'Saved status "{saved_status}" does not match with the expected'
+    )
 
 
 @when(parse('"{name}" tries to log in'), target_fixture="response")
