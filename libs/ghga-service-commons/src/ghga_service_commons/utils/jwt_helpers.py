@@ -23,7 +23,7 @@ from jwcrypto import jwk, jwt
 
 from .utc_dates import now_as_utc
 
-__all__ = ["generate_jwk", "sign_and_serialize_token", "decode_and_validate_token"]
+__all__ = ["decode_and_validate_token", "generate_jwk", "sign_and_serialize_token"]
 
 
 def generate_jwk() -> jwk.JWK:

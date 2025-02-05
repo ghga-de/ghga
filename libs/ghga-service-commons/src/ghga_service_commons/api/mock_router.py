@@ -29,9 +29,9 @@ from pydantic import BaseModel
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 
 __all__ = [
+    "HttpException",
     "MockRouter",
     "assert_all_responses_were_requested",
-    "HttpException",
 ]
 
 BRACKET_PATTERN = re.compile(r"{.*?}")

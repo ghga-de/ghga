@@ -24,7 +24,7 @@ from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 from typing import BinaryIO, cast
 
-__all__ = ["big_temp_file", "NamedBinaryIO"]
+__all__ = ["NamedBinaryIO", "big_temp_file"]
 
 
 class NamedBinaryIO(ABC, BinaryIO):

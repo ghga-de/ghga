@@ -18,7 +18,7 @@
 exceptions.
 """
 
-__all__ = ["Response", "ExceptionMapping", "ResponseTranslator"]
+__all__ = ["ExceptionMapping", "Response", "ResponseTranslator"]
 
 from ghga_service_commons.httpyexpect.client.custom_types import Response
 from ghga_service_commons.httpyexpect.client.mapping import ExceptionMapping

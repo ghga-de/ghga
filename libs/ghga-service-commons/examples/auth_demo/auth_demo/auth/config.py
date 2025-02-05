@@ -16,7 +16,7 @@
 
 """Configuration of the auth context."""
 
-__all__ = ["DemoAuthContext", "DemoAuthConfig"]
+__all__ = ["DemoAuthConfig", "DemoAuthContext"]
 
 from typing import Any, cast
 

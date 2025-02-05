@@ -25,7 +25,7 @@ from hexkit.correlation import (
 
 CORRELATION_ID_HEADER_NAME = "X-Request-Id"
 
-__all__ = ["attach_correlation_id_to_requests", "AsyncClient"]
+__all__ = ["AsyncClient", "attach_correlation_id_to_requests"]
 
 
 async def _cid_request_hook(request, generate_correlation_id: bool):

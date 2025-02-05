@@ -23,7 +23,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "3.2.0"
+version = "3.3.0"
 description = "A library that contains common functionality used in services of GHGA"
 dependencies = [
     "pydantic >=2, <3",
@@ -53,7 +53,7 @@ dev = [
     "requests>=2.31, <3",
 ]
 objectstorage = [
-    "hexkit>=2, <4",
+    "hexkit>=2, <5",
 ]
 all = [
     "ghga-service-commons[api,auth,crypt,dev,http,objectstorage]",
@@ -89,6 +89,7 @@ fixable = [
     "UP",
     "I",
     "D",
+    "RUF022",
 ]
 ignore = [
     "E111",
@@ -107,6 +108,8 @@ ignore = [
     "D107",
     "D206",
     "D300",
+    "UP040",
+    "PLC0206",
 ]
 select = [
     "C90",

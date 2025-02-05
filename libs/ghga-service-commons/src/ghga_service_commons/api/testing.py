@@ -21,7 +21,7 @@ from typing import Any, Callable, Generic, TypeVar
 
 import httpx
 
-__all__ = ["get_free_port", "AsyncTestClient"]
+__all__ = ["AsyncTestClient", "get_free_port"]
 
 
 def get_free_port() -> int:

@@ -47,12 +47,12 @@ from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
 __all__ = [
     "CORRELATION_ID_HEADER_NAME",
     "ApiConfigBase",
-    "set_header_correlation_id",
-    "get_validated_correlation_id",
-    "correlation_id_middleware",
-    "configure_app",
-    "run_server",
     "UnexpectedCorrelationIdError",
+    "configure_app",
+    "correlation_id_middleware",
+    "get_validated_correlation_id",
+    "run_server",
+    "set_header_correlation_id",
 ]
 
 # unofficial, but frequently used header name

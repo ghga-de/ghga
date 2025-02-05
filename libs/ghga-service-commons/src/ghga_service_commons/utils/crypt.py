@@ -24,12 +24,12 @@ from typing import NamedTuple
 from nacl.public import PrivateKey, PublicKey, SealedBox
 
 __all__ = [
-    "generate_key_pair",
-    "encode_key",
+    "KeyPair",
     "decode_key",
     "decrypt",
+    "encode_key",
     "encrypt",
-    "KeyPair",
+    "generate_key_pair",
 ]
 
 

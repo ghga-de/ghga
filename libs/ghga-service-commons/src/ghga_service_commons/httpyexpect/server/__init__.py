@@ -18,7 +18,7 @@
 server side.
 """
 
-__all__ = ["HttpException", "HttpCustomExceptionBase"]
+__all__ = ["HttpCustomExceptionBase", "HttpException"]
 
 from ghga_service_commons.httpyexpect.server.exceptions import (
     HttpCustomExceptionBase,

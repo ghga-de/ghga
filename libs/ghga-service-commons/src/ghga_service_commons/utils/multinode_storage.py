@@ -24,8 +24,8 @@ from pydantic_settings import BaseSettings
 __all__ = [
     "ObjectStorages",
     "S3ObjectStorageNodeConfig",
-    "S3ObjectStoragesConfig",
     "S3ObjectStorages",
+    "S3ObjectStoragesConfig",
 ]
 
 

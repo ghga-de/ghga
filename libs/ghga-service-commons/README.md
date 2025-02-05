@@ -32,7 +32,8 @@ Thereby, you may specify following extra(s):
 For setting up the development environment, we rely on the
 [devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode.
 
-To use it, you have to have Docker as well as vscode with its "Remote - Containers" extension (`ms-vscode-remote.remote-containers`) extension installed.
+To use it, you have to have Docker as well as vscode with its "Remote - Containers"
+extension (`ms-vscode-remote.remote-containers`) extension installed.
 Then, you just have to open this repo in vscode and run the command
 `Remote-Containers: Reopen in Container` from the vscode "Command Palette".
 
@@ -47,7 +48,7 @@ Moreover, inside the devcontainer, there is following convenience command availa
 (please type it in the integrated terminal of vscode):
 - `dev_install` - install the lib with all development dependencies and pre-commit hooks
 (please run that if you are starting the devcontainer for the first time
-or if added any python dependencies to the [`./setup.cfg`](./setup.cfg))
+or if added any python dependencies to the [`./pyproject.toml`](./pyproject.toml))
 
 If you prefer not to use vscode, you could get a similar setup (without the editor specific features)
 by running the following commands:

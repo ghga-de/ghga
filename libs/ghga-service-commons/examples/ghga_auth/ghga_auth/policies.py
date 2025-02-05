@@ -32,7 +32,7 @@ from ghga_service_commons.auth.policies import (
     require_auth_context_using_credentials,
 )
 
-__all__ = ["OptionalAuthContext", "UserAuthContext", "AdminAuthContext"]
+__all__ = ["AdminAuthContext", "OptionalAuthContext", "UserAuthContext"]
 
 
 async def get_auth_context(
