@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth.service';
 import { QRCodeComponent } from 'angularx-qrcode';
 
@@ -20,6 +21,7 @@ import { QRCodeComponent } from 'angularx-qrcode';
   selector: 'app-setup-totp',
   imports: [
     CommonModule,
+    RouterLink,
     QRCodeComponent,
     MatButtonModule,
     MatInputModule,

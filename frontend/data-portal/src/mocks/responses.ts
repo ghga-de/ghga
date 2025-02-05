@@ -11,6 +11,7 @@ import {
   getDatasetSummary,
   metadataGlobalSummary,
   searchResults,
+  workPackageResponse,
 } from './data';
 
 export type ResponseValue = undefined | number | object;
@@ -71,6 +72,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Datasets requested by j.doe@ghga.de user
   'GET /api/wps/users/j.doe@ghga.de/datasets': datasets,
+
+  // Work package token returned after creating a work package
+  'POST /api/wps/work-packages': workPackageResponse,
 
   /**
    * Static assets

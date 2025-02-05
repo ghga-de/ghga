@@ -9,7 +9,7 @@ import { computed, inject, Injectable, Signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
-import { map, Observable } from 'rxjs';
+import { map, Observable, throwError } from 'rxjs';
 import { Dataset } from '../models/dataset';
 import { WorkPackage, WorkPackageResponse } from '../models/work-package';
 
@@ -78,7 +78,8 @@ export class WorkPackageService {
       workPackage.type !== 'download' ||
       !workPackage.user_public_crypt4gh_key
     ) {
-      throw new Error('Invalid work package');
+      // do not throw immediately to unify error handling
+      return throwError(() => new Error('Invalid work package'));
     }
     return this.#http.post<WorkPackageResponse>(this.#workPackagesUrl, workPackage);
   }

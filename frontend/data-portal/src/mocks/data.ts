@@ -10,6 +10,7 @@ import { DatasetSummary } from '@app/metadata/models/dataset-summary';
 import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
 import { Dataset } from '@app/work-packages/models/dataset';
+import { WorkPackageResponse } from '@app/work-packages/models/work-package';
 
 /**
  * Metldata API
@@ -469,3 +470,8 @@ export const datasets: Dataset[] = [
     files: [],
   },
 ];
+
+export const workPackageResponse: WorkPackageResponse = {
+  id: '7f562eb5-a0a5-427d-b40f-f91198d27309',
+  token: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0',
+};
