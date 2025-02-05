@@ -21,17 +21,15 @@ services have to be updated (or their dependencies capped):
 - `mass`
 - `nos`
 - `ns`
+- `auth-service`
+- `ghga-connector`
+- `metldata`
 
 ### Optional:
 - `wkvs` requires `hexkit`, but only for the configured logging. Nothing needs to be
 done at the moment.
-- `auth-service`: It requires `ghga-service-commons < 4`, so updating its dependencies
-  won't require changes until we're ready.
-- `ghga-connector`: Same as `auth-service`. Also, it only uses the `S3` subpackage.
-- `metldata`: Same as `auth-service`.
 - `ds-kit`: Doesn't currently require functionality from `v4` and its dependency is 
   capped.
-
 
 
 ## Additional Implementation Details:
