@@ -315,7 +315,7 @@ Example config:
     property_name: sex
   source:
     relation_path: Dataset(individuals)>Individual
-    content_path: sex
+    content_path: some.nested.properties.sex # Can contain dot notation for nested objects
 - class_name: Dataset
   target_content:
     object_path: samples_summary.stats
@@ -358,13 +358,15 @@ Draft Config:
     content_path: email
 ```
 
-#### Transformation 6: Delete Reference
+#### Transformation 6: Delete Relation
+
+Deletes a relation from the model and data.
 
 ##### Configuration
 
 ```yaml
 - class_name: ClassName
-  reference_name: reference_name
+  relation_name: reference_name
 ```
 
 #### Transformation 7: Delete Content Subschema
