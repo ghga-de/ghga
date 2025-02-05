@@ -1,0 +1,85 @@
+<h1 class="text-center">
+  <span class="text-3xl">User Account</span>
+</h1>
+<h2>
+  <span class="align-middle text-2xl"
+    >{{ auth.fullName() }}
+    @if (auth.role() === 'data_steward') {
+      <mat-chip> Data Steward </mat-chip>
+    }
+  </span>
+</h2>
+
+<mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">
+  <mat-card-header>
+    <mat-card-title>Email</mat-card-title>
+    <mat-card-subtitle
+      >Contact e-mail address taken from the LS Login account logged in
+      with.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <p class="text-base">
+      We will communicate with you via this email address:
+      <span class="font-bold">{{ auth.email() }}</span>
+    </p>
+    <p>
+      You can change this email address in your
+      <a href="https://profile.aai.lifescience-ri.eu/profile" target="_blank"
+        >LS Login profile<mat-icon [inline]="true" class="align-middle"
+          >open_in_new</mat-icon
+        ></a
+      >.
+    </p>
+  </mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">
+  <mat-card-header>
+    <mat-card-title>Contact addresses for account verification </mat-card-title>
+    <mat-card-subtitle
+      >Addresses used to verify your account's identity in order to access and request
+      access to datasets. Adding new contact addresses is done via the relevant button
+      at the end of this section. After a new address is added, you must request
+      verification of the address using the provided button. Removing a contact address
+      is done through the red button to the right, but you will lose access to any
+      datasets whose access was linked to that address.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <p class="text-base">
+      You have not yet created any contact addresses. This is needed if you wish to
+      download research data.
+    </p>
+  </mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">
+  <mat-card-header>
+    <mat-card-title>Dataset Access</mat-card-title>
+    <mat-card-subtitle
+      >If you have been granted access to any datasets, these will appear below. In
+      order to download data from these datasets (if you have been granted access to
+      one), you will need to create download tokens through the respective button, which
+      will take you to the download token management page.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <p class="text-base">You do not yet have access to any datasets.</p>
+  </mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">
+  <mat-card-header>
+    <mat-card-title>Pending Access Requests</mat-card-title>
+    <mat-card-subtitle
+      >If you have any pending access requests to any datasets, these will appear below.
+      Any request that is granted will be moved to the section above (Dataset Access).
+      If an access request is denied, it will no longer be displayed here, and a new
+      access request can be created by going to the desired dataset.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <p class="text-base">You have no pending access requests.</p>
+  </mat-card-content>
+</mat-card>
