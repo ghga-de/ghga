@@ -24,6 +24,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * Set the version from package.json in the ribbon text.
+ */
+function setVersion(settings) {
+  const text = settings.ribbon_text;
+  if (!text || !text.includes('$v')) return;
+  const packageJsonPath = path.join(__dirname, 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  settings.ribbon_text = text.replace('$v', packageJson.version);
+}
+
+/**
  * Reads and merges configuration settings from default and specific YAML files.
  * Overrides settings with environment variables prefixed with the application name.
  *
@@ -302,6 +313,7 @@ function main() {
     } else {
       msg += ' and mock authentication';
     }
+    setVersion(settings);
   } else {
     msg += ' in production mode';
   }

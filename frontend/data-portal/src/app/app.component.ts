@@ -9,13 +9,19 @@ import { MatIconRegistry } from '@angular/material/icon';
 import { RouterOutlet } from '@angular/router';
 import { SiteFooterComponent } from '@app/portal/features/site-footer/site-footer.component';
 import { SiteHeaderComponent } from '@app/portal/features/site-header/site-header.component';
+import { VersionRibbonComponent } from '@app/portal/features/version-ribbon/version-ribbon.component';
 
 /**
  * This is the root component of the application.
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, SiteHeaderComponent, SiteFooterComponent],
+  imports: [
+    RouterOutlet,
+    SiteHeaderComponent,
+    SiteFooterComponent,
+    VersionRibbonComponent,
+  ],
   templateUrl: './app.component.html',
 })
 export class AppComponent implements OnInit {

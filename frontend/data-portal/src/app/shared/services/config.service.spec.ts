@@ -25,6 +25,7 @@ const mockConfig = {
   oidc_use_discovery: true,
   mock_api: true,
   mock_oidc: true,
+  ribbon_text: 'Test ribbon text',
 };
 
 describe('ConfigService', () => {

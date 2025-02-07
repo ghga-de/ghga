@@ -23,6 +23,7 @@ interface Config {
   oidc_use_discovery: boolean;
   mock_api: boolean;
   mock_oidc: boolean;
+  ribbon_text: string;
 }
 
 declare global {
@@ -179,5 +180,13 @@ export class ConfigService {
    */
   get oidcUseDiscovery(): boolean {
     return this.#config.oidc_use_discovery;
+  }
+
+  /**
+   * Gets the text to be shown in the corner ribbon
+   * @returns the string with the version of the application
+   */
+  get ribbonText(): string {
+    return this.#config.ribbon_text;
   }
 }
