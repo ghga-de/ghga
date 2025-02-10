@@ -315,12 +315,18 @@ async def test_iva_state_change(
             plaintext_body=expected_ds_notification.text.format(
                 full_user_name=TEST_USER.name,
                 email=TEST_USER.email,
-                type=trigger_event.type,
+                type=trigger_event.type.value.lower(),
             ),
         )
         if expected_ds_notification
         else None
     )
+
+    if (
+        data_steward_notification
+        and expected_ds_notification == notifications.IVA_UNVERIFIED_TO_DS
+    ):
+        assert data_steward_notification.plaintext_body.startswith("\nThe 'fax' IVA")
 
     # Combine the two notifications into a list of expected events
     expected_events = []

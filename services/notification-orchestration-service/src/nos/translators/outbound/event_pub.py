@@ -24,7 +24,7 @@ from pydantic_settings import BaseSettings
 from nos.core.notifications import Notification
 from nos.ports.outbound.notification_emitter import NotificationEmitterPort
 
-__all__ = ["NotificationEmitterConfig", "NotificationEmitter"]
+__all__ = ["NotificationEmitter", "NotificationEmitterConfig"]
 
 
 class NotificationEmitterConfig(BaseSettings):

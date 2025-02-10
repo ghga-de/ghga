@@ -306,7 +306,7 @@ class Orchestrator(OrchestratorPort):
             event_schemas.IvaState.UNVERIFIED: (
                 partial(
                     self._iva_unverified,
-                    iva_type=str(user_iva.type) if user_iva.type else "N/A",
+                    iva_type=user_iva.type.value.lower() if user_iva.type else "N/A",
                 ),
                 "IVA Unverified",
             ),
