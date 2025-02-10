@@ -1,0 +1,66 @@
+# Schemapack (Irukandji)
+**Epic Type:** Implementation Epic
+
+Epic planning and implementation follow the
+[Epic Planning and Marathon SOP](https://docs.ghga-dev.de/main/sops/sop001_epic_planning.html).
+
+## Scope
+
+### Outline:
+This epic aims to make datapack navigation independent of its corresponding schemapack. Currently, since the relation class is not explicitly provided in the datapack, resolving target classes requires referring back to the schemapack. This epic introduces changes to eliminate this dependency, allowing the datapack to be self-contained for navigation.
+
+Additionally, this epic introduces configurable embedding depth in datapack denormalization. This ensures more control over how deeply related entities are embedded, enabling partial embedding instead of always including all related data at the highest level.
+
+### Included/Required:
+
+#### Example datapacks/schemapacks
+
+1. Update all the examples so that the datapack also has the rootClass, targetResources, rootResource and rootClass if it is specified in schemapack. 
+
+#### Datapack specification
+
+2. Change the datapack specification 
+   1. if there is  root resource, root resource has to exits
+   2. validating against datapack specification will rely on pydantic to ensure the root resource check. 
+3. The datapack specification will check if a datapack is valid or not. The validation plugins check if datapack is valid given a schemapack. 
+   1. shift the functionality of `unknown_root_resource.py` to datapack specification. 
+   2. shift the functionality of `target_id.py` to datapack specification.
+
+#### Validatio Plugings
+
+1. The following validators require are required to remain unchanged:
+   1. `content_schema.py`
+   2. `missing_class.py`
+   3. `missing_origin.py`
+   4. `missing_relations.py`
+   5. `missing_target.py`
+   6. `multiple_target.py`
+   7. `one_to_many_overlap.py`
+   8. `unknown_class.py`
+   9. `unknown_relations.py`
+2.  The following validators are obsolete and can be deleted:
+    1. `unknown_root_resource.py`, since the functionality is shifted to datapack specification. 
+    2. `target_id.py`, since the functionality is shifted to datapack specification. 
+
+3. If schemapack has a root class defined, `expected_root` plugin checks that the datapack has a root resource. 
+   1. Extend `expected_root.py`, so that it checks if the datapack also has a root class. 
+   2. Extend `expected_root`, so that it also checks schemapack has a root class defined, if datapack has a root class and a root resource. 
+4. If schemapack does not have a root class, `unexpected_root` checks that datapack has not a root source. 
+   1. Extend it, so that it checks that datapack does not have a root class defined either. 
+5. Merge `expected_root` and `unexpected_root` plugins into one root validator named `root_duality.py`
+6. `root_duality` must check the consistency
+   1. root class is same between the schemapack and the datapack
+   2. if root class in None in schemapack, it must be None in datapack.
+
+
+#### Embedded Profiles
+
+The denormalization process currently embeds all related entities into a single JSON output at the highest level. A configurable denormalization depth to allow more control over how deeply related entities are embedded will be implemented.
+
+For example, given that an experiment has relations to sample, sample has relations to files, the current implementation of denormalization embeds everything into the experiment including the complete information of the files referred by the samples. However, implementing an embedding depth will enable the denormalization of the experiment that embed samples but will keep the referred file information unchanged/not embedded. 
+
+## Human Resource/Time Estimation:
+
+Number of sprints required: 2
+
+Number of developers required: 1
