@@ -45,7 +45,6 @@ import { Buffer } from 'buffer';
     },
   ],
   templateUrl: './work-package.component.html',
-  styleUrl: './work-package.component.scss',
 })
 export class WorkPackageComponent {
   #clipboard = inject(Clipboard);

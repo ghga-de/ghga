@@ -100,6 +100,18 @@ export class MetadataSearchService {
   searchResultsError: Signal<unknown> = this.#searchResults.error;
 
   /**
+   * The current search results skip value
+   * to be used by the paginator
+   */
+  searchResultsSkip: Signal<number> = computed(() => this.#skip() ?? 0);
+
+  /**
+   * The current search results limit value
+   * to be used by the paginator
+   */
+  searchResultsLimit: Signal<number> = computed(() => this.#limit() ?? 0);
+
+  /**
    * Computes an url from the provided parameters
    * @param baseUrl the server address to use for the api
    * @param className request parameter of the same name

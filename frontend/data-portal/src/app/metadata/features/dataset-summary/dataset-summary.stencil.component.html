@@ -1,0 +1,86 @@
+<div class="pt-4 text-sm">
+  <div class="float-right ms-6 flex flex-col gap-y-2">
+    <a aria-disabled="true" mat-stroked-button rel="noopener noreferrer"
+      ><mat-icon>open_in_new</mat-icon>EGA Dataset</a
+    >
+    <a aria-disabled="true" mat-raised-button><mat-icon>key</mat-icon>Request Access</a>
+    <a aria-disabled="true" mat-raised-button
+      ><mat-icon>database_search</mat-icon>Dataset Details</a
+    >
+  </div>
+  <p><strong>Dataset ID:</strong> <app-stencil class="block w-20" /></p>
+
+  <p><strong>EGA ID:</strong> <app-stencil class="block w-20" /></p>
+
+  <p><strong>Full title:</strong> <app-stencil class="block w-20" /></p>
+  <p><strong>Description:</strong><app-stencil class="block w-20" /></p>
+
+  <div class="mb-4 mt-8 flex pe-[15%]">
+    <div class="flex grow flex-col gap-y-8">
+      <div class="flex">
+        <div class="me-3 pt-4 text-5xl text-neutral-700">
+          <mat-icon inline>book_2</mat-icon>
+        </div>
+        <div>
+          <p>
+            <strong>Part of study: </strong>
+          </p>
+          <p>
+            <app-stencil class="block w-20" />
+          </p>
+          <p>
+            <strong>Accession ID: </strong>
+          </p>
+          <p>
+            <app-stencil class="block w-20" />
+          </p>
+        </div>
+      </div>
+      <div class="flex">
+        <div class="me-3 pt-4 text-5xl text-neutral-700">
+          <mat-icon inline>genetics</mat-icon>
+        </div>
+        <div>
+          <p><strong>Sample info:</strong></p>
+          <p>
+            <app-stencil class="block w-20" />
+          </p>
+          <p>
+            <app-stencil class="block w-20" />
+          </p>
+          <p>
+            <app-stencil class="block w-20" />
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="flex grow flex-col gap-y-8">
+      <div class="flex">
+        <div class="me-3 pt-4 text-5xl text-neutral-700">
+          <mat-icon inline>description</mat-icon>
+        </div>
+        <div>
+          <p><strong>File Summary:</strong></p>
+          <p>
+            <app-stencil class="block w-20" />
+          </p>
+        </div>
+      </div>
+
+      <div class="flex">
+        <div class="me-3 pt-4 text-5xl text-neutral-700">
+          <mat-icon inline>experiment</mat-icon>
+        </div>
+        <div>
+          <p><strong>Experiments Summary:</strong></p>
+          <p>
+            <app-stencil class="block w-20" />
+          </p>
+          <p>
+            <app-stencil class="block w-20" />
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,34 @@
+@if (error()) {
+  <p class="text-red-500">Cannot browse datasets. Please try again later.</p>
+} @else {
+  <div class="mb-2 grid w-full grid-cols-[10rem_1fr] bg-primary px-6 py-2 text-white">
+    <span>Dataset ID</span><span>Title</span>
+  </div>
+  <div [class.invisible]="!loading()" class="-mb-3">
+    <mat-progress-bar mode="indeterminate" class="mb-6"></mat-progress-bar>
+  </div>
+
+  @if (loading()) {
+    <mat-accordion>
+      @for (stencil of stencils(); track stencil) {
+        <app-search-result-stencil />
+      }
+    </mat-accordion>
+  } @else {
+    <mat-accordion multi>
+      @for (hit of results().hits; track hit.id_) {
+        <app-search-result [hit]="hit" />
+      }
+    </mat-accordion>
+
+    <mat-paginator
+      (page)="handlePageEvent($event)"
+      [length]="numResults()"
+      [pageIndex]="pageIndex()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      aria-label="Select page"
+    >
+    </mat-paginator>
+  }
+}

@@ -9,17 +9,18 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { PageEvent } from '@angular/material/paginator';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FacetFilterSetting } from '@app/metadata/models/facet-filter';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search.service';
 import { FacetActivityPipe } from '@app/metadata/utils/facet-activity.pipe';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { DatasetExpansionPanelComponent } from '../dataset-expansion-panel/dataset-expansion-panel.component';
+import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil.component';
+import { SearchResultListComponent } from '../search-result-list/search-result-list.component';
 
 const DEFAULT_PAGE_SIZE = 10;
 const DEFAULT_SKIP_VALUE = 0;
@@ -30,17 +31,17 @@ const DEFAULT_SKIP_VALUE = 0;
 @Component({
   selector: 'app-metadata-browser',
   imports: [
-    MatExpansionModule,
-    DatasetExpansionPanelComponent,
     MatCheckboxModule,
-    MatPaginatorModule,
     MatChipsModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatButtonModule,
+    MatProgressSpinnerModule,
     ReactiveFormsModule,
     FacetActivityPipe,
+    SearchResultListComponent,
+    StencilComponent,
   ],
   templateUrl: './metadata-browser.component.html',
   styleUrl: './metadata-browser.component.scss',
@@ -52,20 +53,19 @@ export class MetadataBrowserComponent implements OnInit {
   #router = inject(Router);
   #className = 'EmbeddedDataset';
   #skip = DEFAULT_SKIP_VALUE;
-  #pageEvent!: PageEvent;
+  #pageSize = DEFAULT_PAGE_SIZE;
 
   facetData: FacetFilterSetting = {};
-  pageSize = DEFAULT_PAGE_SIZE;
   searchFormControl = new FormControl('');
   searchFormGroup = new FormGroup({
     searchTerm: this.searchFormControl,
   });
-  searchIsLoading = this.#metadataSearch.searchResultsAreLoading;
   searchTerm = '';
-  searchResults = this.#metadataSearch.searchResults;
   lastSearchQuery = this.#metadataSearch.query;
   lastSearchFilterFacets = this.#metadataSearch.facets;
-  facets = computed(() => this.searchResults().facets);
+  facets = computed(() => this.#metadataSearch.searchResults().facets);
+  numResults = computed(() => this.#metadataSearch.searchResults().count);
+  loading = computed(() => this.#metadataSearch.searchResultsAreLoading());
 
   /**
    * On init, define the default values of the search variables
@@ -79,7 +79,7 @@ export class MetadataBrowserComponent implements OnInit {
    */
   #loadSearchTermsFromRoute(): void {
     const { s, q, f, p } = this.#router.routerState.snapshot.root.queryParams;
-    this.pageSize = parseInt(p) || DEFAULT_PAGE_SIZE;
+    this.#pageSize = parseInt(p) || DEFAULT_PAGE_SIZE;
     this.searchTerm = q || '';
     if (f) {
       const paramVals = this.#facetDataFromString(decodeURIComponent(f));
@@ -90,7 +90,7 @@ export class MetadataBrowserComponent implements OnInit {
     this.#skip = parseInt(s) || DEFAULT_SKIP_VALUE;
     this.#metadataSearch.loadQueryParameters(
       this.#className,
-      this.pageSize,
+      this.#pageSize,
       this.#skip,
       this.searchTerm,
       this.facetData,
@@ -117,7 +117,7 @@ export class MetadataBrowserComponent implements OnInit {
           Object.keys(this.facetData).length !== 0
             ? encodeURIComponent(this.#facetDataToString(this.facetData))
             : undefined,
-        p: this.pageSize !== DEFAULT_PAGE_SIZE ? this.pageSize : undefined,
+        p: this.#pageSize !== DEFAULT_PAGE_SIZE ? this.#pageSize : undefined,
       },
     });
     this.#loadSearchTermsFromRoute();
@@ -163,15 +163,12 @@ export class MetadataBrowserComponent implements OnInit {
     this.clearSearchQuery();
   }
 
-  length = computed(() => this.#metadataSearch.searchResults().count);
-
   /**
    * Function to handle a change in pagination
    * @param e PageEvent instance
    */
-  handlePageEvent(e: PageEvent) {
-    this.#pageEvent = e;
-    this.pageSize = e.pageSize;
+  paginate(e: PageEvent) {
+    this.#pageSize = e.pageSize;
     this.#skip = e.pageSize * e.pageIndex;
     this.#performSearch();
   }

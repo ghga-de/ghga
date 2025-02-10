@@ -1,0 +1,20 @@
+@use '@angular/material' as mat;
+
+mat-expansion-panel {
+  margin-bottom: 1em;
+
+  @include mat.expansion-overrides(
+    (
+      header-collapsed-state-height: 72px,
+      header-hover-state-layer-color: var(--mat-sys-surface-dim),
+    )
+  );
+}
+
+mat-expansion-panel .mat-expansion-panel-header {
+  background-color: var(--mat-sys-surface-dim);
+}
+
+mat-expansion-panel .mat-expansion-panel-body {
+  background-color: green;
+}

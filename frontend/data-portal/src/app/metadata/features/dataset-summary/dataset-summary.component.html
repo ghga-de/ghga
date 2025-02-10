@@ -1,0 +1,160 @@
+<div class="pt-4 text-sm">
+  <div class="float-right ms-6 flex flex-col gap-y-2">
+    @if (hitContent().alias !== '') {
+      <a
+        mat-stroked-button
+        [href]="'https://ega-archive.org/datasets/' + hitContent().alias"
+        target="_blank"
+        rel="noopener noreferrer"
+        ><mat-icon>open_in_new</mat-icon>EGA Dataset</a
+      >
+    }
+    <a mat-raised-button><mat-icon>key</mat-icon>Request Access</a>
+    <a mat-raised-button routerLink="/dataset/{{ hit().id_ }}"
+      ><mat-icon>database_search</mat-icon>Dataset Details</a
+    >
+  </div>
+  <p><strong>Dataset ID:</strong> {{ summary().accession }}</p>
+  @if (hitContent().alias) {
+    <p><strong>EGA ID:</strong> {{ hitContent().alias }}</p>
+  }
+  <p><strong>Full title:</strong> {{ summary().title }}</p>
+  <p><strong>Description:</strong> {{ summary().description }}</p>
+  @if (summary().types.length) {
+    <p>
+      <strong>Types: </strong>
+      @for (type of summary().types; track type) {
+        <mat-chip class="small-chips mr-1 text-sm">{{ type }}</mat-chip>
+      }
+    </p>
+  }
+  <div class="mb-4 mt-8 flex pe-[15%]">
+    <div class="flex grow flex-col gap-y-8">
+      <div class="flex">
+        <div class="me-3 pt-4 text-5xl text-neutral-700">
+          <mat-icon inline>book_2</mat-icon>
+        </div>
+        <div>
+          <p>
+            <strong>Part of study: </strong>
+          </p>
+          <p>
+            {{ studiesSummary().count > 0 ? studiesSummaryStats().title : 'None' }}
+          </p>
+          <p>
+            <strong>Accession ID: </strong>
+          </p>
+          <p>
+            {{ studiesSummary().count > 0 ? studiesSummaryStats().accession : 'N/A' }}
+          </p>
+        </div>
+      </div>
+      <div class="flex">
+        <div class="me-3 pt-4 text-5xl text-neutral-700">
+          <mat-icon inline>genetics</mat-icon>
+        </div>
+        <div>
+          <p><strong>Sample info:</strong></p>
+          <p>
+            <strong>{{ samplesSummary().count }}</strong> Sample{{
+              samplesSummary().count | addPluralS
+            }}
+            @if (samplesSex().length) {
+              (Sex:
+              @for (sex of samplesSex(); track sex.value; let last = $last) {
+                {{ sex.count }} {{ sex.value }}{{ last ? ')' : ', ' }}
+              }
+            }
+          </p>
+          <p>
+            <strong>{{ samplesTissues().length }}</strong>
+            Tissue{{ samplesTissues().length | addPluralS }}
+          </p>
+          @if (samplesTissues().length > 0) {
+            <ul class="ms-6">
+              @for (tissue of samplesTissues(); track tissue.value) {
+                <li>
+                  <mat-chip class="small-chips mb-0.5 text-xs"
+                    ><span class="uppercase">{{ tissue.value }} </span>
+                    <strong>{{ tissue.count }}</strong></mat-chip
+                  >
+                </li>
+              }
+            </ul>
+          }
+          <p>
+            <strong>{{ samplesPhenotypes().length }}</strong>
+            Phenotypic Feature{{ samplesPhenotypes().length | addPluralS }}
+          </p>
+          @if (samplesPhenotypes().length > 0) {
+            <ul class="ms-6">
+              @for (
+                phenotypic_feature of samplesPhenotypes();
+                track phenotypic_feature.value
+              ) {
+                <li>
+                  <mat-chip class="small-chips mb-0.5"
+                    ><span class="uppercase">{{ phenotypic_feature.value }} </span
+                    ><strong>{{ phenotypic_feature.count }}</strong></mat-chip
+                  >
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="flex grow flex-col gap-y-8">
+      <div class="flex">
+        <div class="me-3 pt-4 text-5xl text-neutral-700">
+          <mat-icon inline>description</mat-icon>
+        </div>
+        <div>
+          <p><strong>File Summary:</strong></p>
+          <p>
+            <strong>{{ studiesSummary().count }}</strong> File{{
+              studiesSummary().count | addPluralS
+            }}
+          </p>
+          @if (filesSummary().count > 0) {
+            <ul class="ps-5">
+              @for (format of filesFormats(); track format.value) {
+                <li class="list-disc uppercase">
+                  {{ format.value }} <strong>{{ format.count }}</strong>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+
+      <div class="flex">
+        <div class="me-3 pt-4 text-5xl text-neutral-700">
+          <mat-icon inline>experiment</mat-icon>
+        </div>
+        <div>
+          <p><strong>Experiments Summary:</strong></p>
+          <p>
+            <strong>{{ experimentsSummary().count }}</strong> Experiment{{
+              experimentsSummary().count | addPluralS
+            }}
+          </p>
+          <p>
+            <strong>{{ experimentsPlatforms().length }} </strong>
+            Platform{{ experimentsPlatforms().length | addPluralS }}
+          </p>
+          @if (experimentsPlatforms().length > 0) {
+            <ul class="ps-5">
+              @for (platform of experimentsPlatforms(); track platform.value) {
+                <li class="list-disc uppercase">
+                  {{ platform.value | underscoreToSpace }}
+                  <strong>{{ platform.count }}</strong>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

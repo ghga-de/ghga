@@ -1,5 +1,5 @@
 /**
- * Test the dataset expansion panel
+ * Test the dataset summary component
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
@@ -7,10 +7,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { signal } from '@angular/core';
-
+import { ActivatedRoute } from '@angular/router';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
 import { MetadataService } from '@app/metadata/services/metadata.service';
-import { DatasetExpansionPanelComponent } from './dataset-expansion-panel.component';
+import { DatasetSummaryComponent } from './dataset-summary.component';
 
 /**
  * Mock the metadata service as needed for the dataset summary
@@ -20,17 +20,27 @@ class MockMetadataService {
   datasetSummaryError = signal(undefined);
 }
 
-describe('DatasetExpansionPanelComponent', () => {
-  let component: DatasetExpansionPanelComponent;
-  let fixture: ComponentFixture<DatasetExpansionPanelComponent>;
+describe('DatasetSummaryComponent', () => {
+  let component: DatasetSummaryComponent;
+  let fixture: ComponentFixture<DatasetSummaryComponent>;
+
+  const fakeActivatedRoute = {
+    snapshot: { data: {} },
+  } as ActivatedRoute;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DatasetExpansionPanelComponent],
-      providers: [{ provide: MetadataService, useClass: MockMetadataService }],
+      imports: [DatasetSummaryComponent],
+      providers: [
+        { provide: MetadataService, useClass: MockMetadataService },
+        {
+          provide: ActivatedRoute,
+          useValue: fakeActivatedRoute,
+        },
+      ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(DatasetExpansionPanelComponent);
+    fixture = TestBed.createComponent(DatasetSummaryComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('hit', searchResults.hits.at(0));
     await fixture.whenStable();
@@ -40,7 +50,7 @@ describe('DatasetExpansionPanelComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show datasets', () => {
+  it('should show accession and title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const text = compiled.textContent;
     expect(text).toContain('GHGAD588887987');

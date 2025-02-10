@@ -23,7 +23,7 @@
         class="homeLink mx-1"
         >Home</a
       ><a
-        [id]="route === '/browse' ? 'activePage' : ''"
+        [id]="route.startsWith('/browse') ? 'activePage' : ''"
         mat-button
         routerLink="/browse"
         class="mx-1"

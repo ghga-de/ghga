@@ -8,6 +8,8 @@ import { http, HttpResponse, RequestHandler } from 'msw';
 import { handlers as authHandlers } from './auth';
 import { responses as apiResponses, ResponseValue } from './responses';
 
+const DELAY = 0; // delay in seconds for testing
+
 /**
  * Create request handlers for the given responses
  *
@@ -122,6 +124,10 @@ function createHandlersForResponses(responses: {
         status = 201;
       } else if (/patch|put|delete/.test(method)) {
         status = 204;
+      }
+      if (DELAY && String(status)[0] === '2') {
+        console.info(`Delaying response for ${DELAY} seconds...`);
+        await new Promise((resolve) => setTimeout(resolve, DELAY * 1000));
       }
       return HttpResponse.json(response || undefined, { status });
     };

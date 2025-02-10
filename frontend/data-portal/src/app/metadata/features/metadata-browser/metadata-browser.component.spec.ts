@@ -11,7 +11,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { searchResults } from '@app/../mocks/data';
 import { MetadataSearchService } from '../../services/metadata-search.service';
-import { DatasetExpansionPanelComponent } from '../dataset-expansion-panel/dataset-expansion-panel.component';
+import { SearchResultListComponent } from '../search-result-list/search-result-list.component';
 import { MetadataBrowserComponent } from './metadata-browser.component';
 
 /**
@@ -45,7 +45,7 @@ describe('BrowseComponent', () => {
       ],
     })
       .overrideComponent(MetadataBrowserComponent, {
-        remove: { imports: [DatasetExpansionPanelComponent] },
+        remove: { imports: [SearchResultListComponent] },
       })
       .compileComponents();
 

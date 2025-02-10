@@ -1,7 +1,7 @@
 <div class="grid grid-cols-12 grid-rows-none gap-x-5">
   <div class="col-span-9 col-start-4">
-    <div class="inline-block grid w-full grid-cols-12 pb-4">
-      <mat-chip-set aria-label="search and filters" class="col-span-10">
+    <div class="flex w-full justify-between pb-4">
+      <mat-chip-set aria-label="search and filters">
         @if (lastSearchQuery() !== '') {
           <mat-chip (removed)="clearSearchQuery()">
             Keyword: {{ lastSearchQuery() }}
@@ -10,7 +10,7 @@
             </button></mat-chip
           >
         }
-        @for (facet of searchResults().facets; track facet.key) {
+        @for (facet of facets(); track facet.key) {
           @if (lastSearchFilterFacets()[facet.key]) {
             @for (option of facet.options; track option.value) {
               @if (lastSearchFilterFacets()[facet.key].indexOf(option.value) !== -1) {
@@ -25,10 +25,22 @@
           }
         }
       </mat-chip-set>
-      <div class="col-span-2 col-start-11">
-        <mat-chip class="float-right m-1"
-          >Total Datasets: {{ searchResults().count }}</mat-chip
-        >
+      <div>
+        <mat-chip>
+          <div class="flex content-around">
+            <span class="mr-1">Total Datasets:</span>
+
+            @if (loading()) {
+              <mat-spinner
+                class="inline-block"
+                class="mt-0.5"
+                [diameter]="15"
+              ></mat-spinner>
+            } @else {
+              <span>{{ numResults() }}</span>
+            }
+          </div>
+        </mat-chip>
       </div>
     </div>
   </div>
@@ -46,24 +58,39 @@
           />
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
-        @for (facet of facets(); track facet.key) {
-          <div>
-            {{ facet.name }}
+        @if (loading()) {
+          @for (i of [1, 2]; track i) {
+            <div class="w-1/2">
+              <app-stencil></app-stencil>
+            </div>
             <ul class="mb-5 mt-1 rounded-lg border">
-              @for (option of facet.options; track option.value) {
+              @for (j of [1, 2]; track j) {
                 <li>
-                  <mat-checkbox
-                    name="{{ facet.key }}#{{ option.value }}"
-                    (change)="onFacetFilterChanged($event)"
-                    [checked]="
-                      facet.key + '#' + option.value | facetActivity: facetData
-                    "
-                    >{{ option.value }} ({{ option.count }})</mat-checkbox
-                  >
+                  <app-stencil></app-stencil>
                 </li>
               }
             </ul>
-          </div>
+          }
+        } @else {
+          @for (facet of facets(); track facet.key) {
+            <div>
+              {{ facet.name }}
+              <ul class="mb-5 mt-1 rounded-lg border">
+                @for (option of facet.options; track option.value) {
+                  <li>
+                    <mat-checkbox
+                      name="{{ facet.key }}#{{ option.value }}"
+                      (change)="onFacetFilterChanged($event)"
+                      [checked]="
+                        facet.key + '#' + option.value | facetActivity: facetData
+                      "
+                      >{{ option.value }} ({{ option.count }})</mat-checkbox
+                    >
+                  </li>
+                }
+              </ul>
+            </div>
+          }
         }
         <div class="mt-8 grid grid-cols-2 gap-5">
           <button mat-stroked-button (click)="clear($event)">Clear</button>
@@ -73,26 +100,6 @@
     </div>
   </aside>
   <div class="col-span-9 col-start-4">
-    <div class="mb-4 grid w-full grid-cols-12 bg-primary px-6 py-2 text-white">
-      <span class="col-span-2">Dataset ID</span><span class="col-span-10">Title</span>
-    </div>
-    @if (searchIsLoading()) {
-      ... Loading ...
-    } @else {
-      <mat-accordion multi>
-        @for (hit of searchResults().hits; track hit.id_) {
-          <app-dataset-expansion-panel [hit]="hit" />
-        }
-      </mat-accordion>
-
-      <mat-paginator
-        (page)="handlePageEvent($event)"
-        [length]="length()"
-        [pageSize]="pageSize"
-        [pageSizeOptions]="[5, 10, 25, 50]"
-        aria-label="Select page"
-      >
-      </mat-paginator>
-    }
+    <app-search-result-list (paginate)="paginate($event)"></app-search-result-list>
   </div>
 </div>
