@@ -3,13 +3,16 @@ access_request_created_event_type: access_request_created
 access_request_denied_event_type: access_request_denied
 access_request_events_topic: access_request_events
 central_data_stewardship_email: test@test.abc
-db_connection_str: '**********'
 db_name: nos
 generate_correlation_id: true
 helpdesk_email: test@test.def
 iva_state_changed_event_topic: ivas
 iva_state_changed_event_type: iva_state_changed
+kafka_dlq_topic: dlq
+kafka_enable_dlq: false
 kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
@@ -20,6 +23,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+mongo_dsn: '**********'
+mongo_timeout: null
 notification_event_topic: notification_events
 notification_event_type: notification
 second_factor_recreated_event_topic: auth

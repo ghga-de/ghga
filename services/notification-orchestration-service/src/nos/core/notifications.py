@@ -81,7 +81,7 @@ We are glad to inform you that your request to download the dataset
 {dataset_id} has been accepted.
 
 You can now start downloading the dataset as explained in the GHGA Data Portal.
-For help, please see the guide at https://docs.ghga.de/data_portal/data_download/
+For help, please see the guide at https://docs.ghga.de/user_stories/accessing_data/
 """,
 )
 

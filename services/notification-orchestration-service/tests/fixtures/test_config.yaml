@@ -1,7 +1,7 @@
 service_instance_id: "1"
 central_data_stewardship_email: "test@test.abc"
 helpdesk_email: "test@test.def"
-db_connection_str: mongodb://localhost:27017
+mongo_dsn: mongodb://localhost:27017
 db_name: nos
 kafka_servers: ["kafka:9092"]
 access_request_events_topic: access_request_events
