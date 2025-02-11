@@ -48,7 +48,7 @@ Update all examples so that the datapack also contains the targetClass, targetRe
 4. If schemapack does not have a root class, `unexpected_root` checks that datapack does not have a root resource. 
    1. Extend it, so that it checks that datapack does not have a root class defined either. 
 5. Merge `expected_root` and `unexpected_root` plugins into one root validator named `root_duality.py`
-6. `root_duality` must check the consistency
+6. `root_duality` must check the consistency between datapack and schemapack so that
    1. the root class is same between the schemapack and the datapack
    2. if the root class in None in schemapack, it must be None in datapack.
 
@@ -58,6 +58,8 @@ Update all examples so that the datapack also contains the targetClass, targetRe
 The denormalization process currently embeds all related entities into a single JSON output at the highest level. A configurable denormalization depth to allow more control over how deeply related entities are embedded will be implemented.
 
 For example, given that an experiment has relations to sample, sample has relations to files, the current implementation of denormalization embeds everything into the experiment including the complete information of the files referred by the samples. However, implementing an embedding depth will enable the denormalization of the experiment that embed samples but will keep the referred file information unchanged/not embedded. 
+
+The new implementation will allow the embedding until a given depth. The current denormalize is a recursive function which will be converted to depth-limited recursion. The function will take an integer depth parameter that controls how many levels of references should be expanded.
 
 ## Human Resource/Time Estimation:
 
