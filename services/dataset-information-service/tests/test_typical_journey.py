@@ -72,6 +72,7 @@ INCOMING_FILE_PAYLOAD = event_schemas.FileInternallyRegistered(
     upload_date=now_as_utc().isoformat(),
     decrypted_size=DECRYPTED_SIZE,
     decrypted_sha256=DECRYPTED_SHA256,
+    encrypted_size=123456789,
     encrypted_part_size=1,
     encrypted_parts_md5=["some", "checksum"],
     encrypted_parts_sha256=["some", "checksum"],

@@ -16,8 +16,8 @@
 """Join the functionality of all fixtures for API-level integration testing."""
 
 __all__ = [
-    "joint_fixture",
     "JointFixture",
+    "joint_fixture",
     "kafka_container_fixture",
     "kafka_fixture",
     "mongodb_container_fixture",

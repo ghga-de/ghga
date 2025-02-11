@@ -14,9 +14,9 @@
 # limitations under the License.
 """DAO interfaces for database access."""
 
-from hexkit.protocols.dao import DaoNaturalId
+from hexkit.protocols.dao import Dao
 
 from dins.core import models
 
-DatasetDaoPort = DaoNaturalId[models.DatasetFileAccessions]
-FileInformationDaoPort = DaoNaturalId[models.FileInformation]
+DatasetDaoPort = Dao[models.DatasetFileAccessions]
+FileInformationDaoPort = Dao[models.FileInformation]

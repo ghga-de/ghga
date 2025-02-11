@@ -86,8 +86,6 @@ components:
           type: string
         exception_id:
           const: datasetNotFound
-          enum:
-          - datasetNotFound
           title: Exception Id
           type: string
       required:
@@ -117,8 +115,6 @@ components:
           type: string
         exception_id:
           const: informationNotFound
-          enum:
-          - informationNotFound
           title: Exception Id
           type: string
       required:

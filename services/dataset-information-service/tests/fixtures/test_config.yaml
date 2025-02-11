@@ -3,7 +3,7 @@ service_name: dins
 service_instance_id: '1'
 kafka_servers: ["kafka:9092"]
 
-db_connection_str: "mongodb://mongodb:27017"
+mongo_dsn: "mongodb://mongodb:27017"
 db_name: "dev"
 
 dataset_event_topic: metadata-datasets

@@ -7,7 +7,6 @@ cors_allowed_origins: null
 dataset_deletion_event_type: dataset_deleted
 dataset_event_topic: metadata-datasets
 dataset_upsertion_event_type: dataset_created
-db_connection_str: '**********'
 db_name: dev
 docs_url: /docs
 file_registered_event_topic: internal_file_registry
@@ -15,7 +14,11 @@ file_registered_event_type: file_registered
 files_to_delete_topic: file_deletions
 generate_correlation_id: true
 host: 127.0.0.1
+kafka_dlq_topic: dlq
+kafka_enable_dlq: false
 kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
@@ -26,6 +29,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+mongo_dsn: '**********'
+mongo_timeout: null
 openapi_url: /openapi.json
 port: 8080
 service_instance_id: '1'
