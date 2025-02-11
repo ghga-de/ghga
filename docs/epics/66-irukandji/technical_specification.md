@@ -15,16 +15,16 @@ Additionally, this epic introduces configurable embedding depth in datapack deno
 
 #### Example datapacks/schemapacks
 
-Update all examples so that the datapack also contains the rootClass, targetResources, rootResource and rootClass if it is specified in schemapack. 
+Update all examples so that the datapack also contains the targetClass, targetResources, rootResource and rootClass if it is specified in schemapack. 
 
 #### Datapack specification
 
-1. Change the datapack specification in the following way:
-   1. if there is  root resource, root resource has to exits
-   2. validating against datapack specification will rely on pydantic to ensure the root resource check. 
-3. The datapack specification will check if a datapack is valid or not. The validation plugins check if datapack is valid given a schemapack. 
-   1. shift the functionality of `unknown_root_resource.py` to datapack specification. 
-   2. shift the functionality of `target_id.py` to datapack specification.
+1. The datapack specification will validate whether a datapack adheres to its specifications. For example, if a root resource is specified in a datapack, it must exist within the data. The same applies to rootClass, targetResources, and targetClass.
+   1. The functionality of `unknown_root_resource.py` will be incorporated into the datapack specification.
+   2. The functionality of `target_id.py` will also be integrated into the datapack specification.
+   3. Checks for the existence of rootClass, targetResources, rootResource, and targetClass will be implemented.
+
+2. The above-mentioned checks to ensure that a datapack conforms to its specifications will utilize Pydantic validators.
 
 #### Validatio Plugings
 
