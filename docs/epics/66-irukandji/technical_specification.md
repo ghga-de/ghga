@@ -49,7 +49,7 @@ Update all examples so that the datapack also contains the rootClass, targetReso
    1. Extend it, so that it checks that datapack does not have a root class defined either. 
 5. Merge `expected_root` and `unexpected_root` plugins into one root validator named `root_duality.py`
 6. `root_duality` must check the consistency
-   1. root class is same between the schemapack and the datapack
+   1. the root class is same between the schemapack and the datapack
    2. if root class in None in schemapack, it must be None in datapack.
 
 
