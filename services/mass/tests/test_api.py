@@ -171,7 +171,7 @@ async def test_auto_recreation_of_indexes(
 
     # drop all text indexes
     config = joint_fixture.config
-    client: MongoClient = MongoClient(config.db_connection_str.get_secret_value())
+    client: MongoClient = MongoClient(str(config.mongo_dsn.get_secret_value()))
     db = client[config.db_name]
     for collection_name in db.list_collection_names():
         collection = db[collection_name]

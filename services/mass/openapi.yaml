@@ -102,6 +102,12 @@ components:
             - type: number
             - type: string
             - type: boolean
+            - format: date
+              type: string
+            - format: date-time
+              type: string
+            - format: uuid
+              type: string
             - items: {}
               type: array
             - type: object
@@ -111,7 +117,7 @@ components:
           type: object
         id_:
           description: The identifier for this resource
-          title: 'Id '
+          title: Id
           type: string
       required:
       - id_
@@ -182,7 +188,7 @@ info:
     name: Apache 2.0
   summary: A service for searching metadata artifacts and filtering results.
   title: Metadata Artifact Search Service
-  version: 3.0.4
+  version: 4.0.0
 openapi: 3.1.0
 paths:
   /health:

@@ -19,11 +19,11 @@
 from abc import ABC, abstractmethod
 from typing import TypeAlias
 
-from hexkit.protocols.dao import DaoNaturalId
+from hexkit.protocols.dao import Dao
 
 from mass.core.models import Resource
 
-ResourceDao: TypeAlias = DaoNaturalId[Resource]
+ResourceDao: TypeAlias = Dao[Resource]
 
 
 class DaoCollectionPort(ABC):

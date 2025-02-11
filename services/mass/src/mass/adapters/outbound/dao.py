@@ -78,7 +78,7 @@ class DaoCollection(DaoCollectionPort):
 
         # get client
         client: MongoClient = MongoClient(
-            self._config.db_connection_str.get_secret_value()
+            str(self._config.mongo_dsn.get_secret_value())
         )
         db = client[self._config.db_name]
 
