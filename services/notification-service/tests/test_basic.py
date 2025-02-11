@@ -338,7 +338,7 @@ async def test_html_escaping(joint_fixture: JointFixture):
     joint_fixture.notifier = cast(Notifier, joint_fixture.notifier)
 
     original_body = "<script>alert('danger');</script>"
-    original_name = f"<p>{sample_notification["recipient_name"]}</p>"
+    original_name = f"<p>{sample_notification['recipient_name']}</p>"
     injected_notification = {**sample_notification}
     injected_notification["plaintext_body"] = original_body
     injected_notification["recipient_name"] = original_name

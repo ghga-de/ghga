@@ -33,13 +33,13 @@ We recommend using the provided Docker container.
 
 A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-service):
 ```bash
-docker pull ghga/notification-service:2.1.0
+docker pull ghga/notification-service:3.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-service:2.1.0 .
+docker build -t ghga/notification-service:3.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -47,7 +47,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-service:2.1.0 --help
+docker run -p 8080:8080 ghga/notification-service:3.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -64,7 +64,7 @@ ns --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`db_connection_str`** *(string, format: password, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
 
   Examples:
@@ -81,6 +81,32 @@ The service requires the following configuration parameters:
 
   ```json
   "my-database"
+  ```
+
+
+- **`mongo_timeout`**: Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). Default: `null`.
+
+  - **Any of**
+
+    - *integer*: Exclusive minimum: `0`.
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  300
+  ```
+
+
+  ```json
+  600
+  ```
+
+
+  ```json
+  null
   ```
 
 
@@ -220,6 +246,91 @@ The service requires the following configuration parameters:
 
   ```json
   16777216
+  ```
+
+
+- **`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
+
+
+  Examples:
+
+  ```json
+  0
+  ```
+
+
+  ```json
+  1
+  ```
+
+
+  ```json
+  2
+  ```
+
+
+  ```json
+  3
+  ```
+
+
+  ```json
+  5
+  ```
+
+
+- **`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
+
+
+  Examples:
+
+  ```json
+  true
+  ```
+
+
+  ```json
+  false
+  ```
+
+
+- **`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
+
+
+  Examples:
+
+  ```json
+  "dlq"
+  ```
+
+
+- **`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
+
+
+  Examples:
+
+  ```json
+  0
+  ```
+
+
+  ```json
+  1
+  ```
+
+
+  ```json
+  2
+  ```
+
+
+  ```json
+  3
+  ```
+
+
+  ```json
+  5
   ```
 
 

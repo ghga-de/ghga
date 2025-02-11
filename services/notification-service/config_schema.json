@@ -27,15 +27,15 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
-    "db_connection_str": {
+    "mongo_dsn": {
       "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
       "examples": [
         "mongodb://localhost:27017"
       ],
-      "format": "password",
-      "title": "Db Connection Str",
-      "type": "string",
-      "writeOnly": true
+      "format": "multi-host-uri",
+      "minLength": 1,
+      "title": "Mongo Dsn",
+      "type": "string"
     },
     "db_name": {
       "description": "Name of the database located on the MongoDB server.",
@@ -44,6 +44,25 @@
       ],
       "title": "Db Name",
       "type": "string"
+    },
+    "mongo_timeout": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior).",
+      "examples": [
+        300,
+        600,
+        null
+      ],
+      "title": "Mongo Timeout"
     },
     "log_level": {
       "default": "INFO",
@@ -238,10 +257,57 @@
       "exclusiveMinimum": 0,
       "title": "Kafka Max Message Size",
       "type": "integer"
+    },
+    "kafka_max_retries": {
+      "default": 0,
+      "description": "The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue.",
+      "examples": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "minimum": 0,
+      "title": "Kafka Max Retries",
+      "type": "integer"
+    },
+    "kafka_enable_dlq": {
+      "default": false,
+      "description": "A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Kafka Enable DLQ",
+      "type": "boolean"
+    },
+    "kafka_dlq_topic": {
+      "default": "dlq",
+      "description": "The name of the topic used to resolve error-causing events.",
+      "examples": [
+        "dlq"
+      ],
+      "title": "Kafka DLQ Topic",
+      "type": "string"
+    },
+    "kafka_retry_backoff": {
+      "default": 0,
+      "description": "The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt.",
+      "examples": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "minimum": 0,
+      "title": "Kafka Retry Backoff",
+      "type": "integer"
     }
   },
   "required": [
-    "db_connection_str",
+    "mongo_dsn",
     "db_name",
     "service_instance_id",
     "plaintext_email_template",

@@ -18,11 +18,8 @@
 
 from typing import TypeAlias
 
-from hexkit.protocols.dao import (  # noqa: F401
-    DaoNaturalId,
-    ResourceNotFoundError,
-)
+from hexkit.protocols.dao import Dao, ResourceNotFoundError  # noqa: F401
 
 from ns.core import models
 
-NotificationRecordDaoPort: TypeAlias = DaoNaturalId[models.NotificationRecord]
+NotificationRecordDaoPort: TypeAlias = Dao[models.NotificationRecord]

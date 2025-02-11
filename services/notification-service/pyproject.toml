@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ns"
-version = "2.1.0"
+version = "3.0.0"
 description = "The Notification Service (NS) handles notification kafka events."
 dependencies = [
     "typer>=0.12",
     "ghga-event-schemas>=3.0.0, <4",
-    "ghga-service-commons>=3.0.0",
-    "hexkit[akafka,mongodb]>=3.0.0",
+    "ghga-service-commons>=3.3",
+    "hexkit[akafka,mongodb]>=4",
 ]
 
 [project.license]
@@ -66,6 +66,7 @@ fixable = [
     "UP",
     "I",
     "D",
+    "RUF022",
 ]
 ignore = [
     "E111",
@@ -85,6 +86,7 @@ ignore = [
     "D206",
     "D300",
     "UP040",
+    "PLC0206",
 ]
 select = [
     "C90",
