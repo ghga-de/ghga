@@ -19,9 +19,7 @@ spec:
               {{- toYaml . | nindent 12 }}
             {{- end }}
         spec:
-          {{- if .Values.serviceAccount.enabled }}
-          serviceAccountName: {{ .Values.serviceAccount.name }}
-          {{- end }}
+          serviceAccountName: {{ .Release.Name }}
           containers:
             - name: {{ .Chart.Name }}
               imagePullPolicy: {{ .Values.image.pullPolicy }} 

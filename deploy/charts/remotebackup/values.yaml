@@ -50,10 +50,6 @@ successfulJobsHistoryLimit: 5
 # Are passed as environment variables to the Pod
 env_vars: {}
 
-serviceAccount:
-  enabled: true
-  name: remotebackup
-
 runCommands: remotebackup backup
 
 # Parameters which are passed to the config.yaml file.
