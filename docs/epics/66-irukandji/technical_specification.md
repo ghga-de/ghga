@@ -19,7 +19,7 @@ Update all examples so that the datapack also contains the rootClass, targetReso
 
 #### Datapack specification
 
-2. Change the datapack specification 
+1. Change the datapack specification in the following way:
    1. if there is  root resource, root resource has to exits
    2. validating against datapack specification will rely on pydantic to ensure the root resource check. 
 3. The datapack specification will check if a datapack is valid or not. The validation plugins check if datapack is valid given a schemapack. 
