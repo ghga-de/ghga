@@ -50,7 +50,7 @@ Update all examples so that the datapack also contains the rootClass, targetReso
 5. Merge `expected_root` and `unexpected_root` plugins into one root validator named `root_duality.py`
 6. `root_duality` must check the consistency
    1. the root class is same between the schemapack and the datapack
-   2. if root class in None in schemapack, it must be None in datapack.
+   2. if the root class in None in schemapack, it must be None in datapack.
 
 
 #### Embedded Profiles
