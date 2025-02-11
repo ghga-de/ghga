@@ -45,7 +45,7 @@ Update all examples so that the datapack also contains the rootClass, targetReso
 3. If schemapack has a root class defined, `expected_root` plugin checks that the datapack has a root resource. 
    1. Extend `expected_root.py`, so that it checks if the datapack also has a root class. 
    2. Extend `expected_root`, so that it also checks schemapack has a root class defined, if datapack has a root class and a root resource. 
-4. If schemapack does not have a root class, `unexpected_root` checks that datapack has not a root source. 
+4. If schemapack does not have a root class, `unexpected_root` checks that datapack does not have a root resource. 
    1. Extend it, so that it checks that datapack does not have a root class defined either. 
 5. Merge `expected_root` and `unexpected_root` plugins into one root validator named `root_duality.py`
 6. `root_duality` must check the consistency
