@@ -156,9 +156,7 @@ class MigrationManager:
 
     async def __aenter__(self):
         """Set up database client and database reference"""
-        self.client = AsyncIOMotorClient(
-            self.config.db_connection_str.get_secret_value()
-        )
+        self.client = AsyncIOMotorClient(str(self.config.mongo_dsn.get_secret_value()))
         self.db = self.client[self.config.db_name]
         self._entered = True
         return self

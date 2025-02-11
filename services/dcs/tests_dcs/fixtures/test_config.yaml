@@ -18,7 +18,7 @@ object_storages:
       s3_access_key_id: test
       s3_secret_access_key: test
 service_name: dcs
-db_connection_str: "mongodb://mongodb:27017"
+mongo_dsn: "mongodb://mongodb:27017"
 db_name: "dev"
 ekss_base_url: http://localhost:8000
 service_instance_id: "001"
