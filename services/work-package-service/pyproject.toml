@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wps"
-version = "2.0.6"
+version = "3.0.0"
 description = "Work Package Service"
 dependencies = [
     "ghga-event-schemas~=3.3.1",
-    "ghga-service-commons[api,auth,crypt]>=3.1.5",
-    "hexkit[akafka,mongodb]>=3.4.0",
+    "ghga-service-commons[api,auth,crypt]>=3.3",
+    "hexkit[akafka,mongodb]>=4.0",
     "httpx>=0.27",
     "typer>=0.12",
 ]

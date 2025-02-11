@@ -17,6 +17,7 @@
 """Test the creation of dataclasses and DTOs"""
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
@@ -106,10 +107,13 @@ def test_bad_creation_data():
         )
 
 
+TEST_ID = UUID("edd537d0-0b94-4305-bfe0-99863aa63998")
+
+
 def test_work_package():
     """Test instantiating a work package DTO."""
     package = WorkPackage(
-        id="some-work-package-id",
+        id=TEST_ID,
         user_id="some-user-id",
         dataset_id="some-dataset-id",
         type=WorkType.DOWNLOAD,
@@ -121,7 +125,7 @@ def test_work_package():
         created=datetime(2022, 2, 2, 2, tzinfo=UTC),  # pyright: ignore
         expires=datetime(2022, 2, 2, 3, tzinfo=UTC),  # pyright: ignore
     )
-    assert package.id == "some-work-package-id"
+    assert package.id == TEST_ID
     assert package.full_user_name == "Dr. John Doe"
     assert package.files["another-file-id"] == ".bam"
     assert (package.expires - package.created).seconds == 60 * 60

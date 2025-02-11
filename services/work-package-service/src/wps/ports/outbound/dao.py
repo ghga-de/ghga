@@ -16,12 +16,12 @@
 
 """DAO interface for accessing the database."""
 
-from hexkit.protocols.dao import DaoNaturalId, DaoSurrogateId, ResourceNotFoundError
+from hexkit.protocols.dao import Dao, ResourceNotFoundError
 
 from wps.core import models
 
 __all__ = ["DatasetDaoPort", "ResourceNotFoundError", "WorkPackageDaoPort"]
 
 # ports described by type aliases:
-DatasetDaoPort = DaoNaturalId[models.Dataset]
-WorkPackageDaoPort = DaoSurrogateId[models.WorkPackage, models.WorkPackageData]
+DatasetDaoPort = Dao[models.Dataset]
+WorkPackageDaoPort = Dao[models.WorkPackage]

@@ -60,6 +60,5 @@ class WorkPackageDaoConstructor:
         return await dao_factory.get_dao(
             name=config.work_packages_collection,
             dto_model=models.WorkPackage,
-            dto_creation_model=models.WorkPackageData,
             id_field="id",
         )

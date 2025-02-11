@@ -32,7 +32,6 @@ from wps.core.models import (
     WorkPackage,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
-    WorkPackageData,
     WorkType,
 )
 from wps.core.tokens import (
@@ -170,7 +169,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         token = generate_work_package_access_token()
         user_public_crypt4gh_key = creation_data.user_public_crypt4gh_key
 
-        work_package_data = WorkPackageData(
+        work_package = WorkPackage(
             dataset_id=dataset_id,
             type=work_type,
             files=files,
@@ -182,9 +181,11 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             created=created,
             expires=expires,
         )
-        work_package = await self._dao.insert(work_package_data)
+        await self._dao.insert(work_package)
         encrypted_token = encrypt(token, user_public_crypt4gh_key)
-        return WorkPackageCreationResponse(id=work_package.id, token=encrypted_token)
+        return WorkPackageCreationResponse(
+            id=str(work_package.id), token=encrypted_token
+        )
 
     async def get(
         self,

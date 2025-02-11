@@ -20,7 +20,8 @@ in the API.
 from enum import Enum
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from hexkit.protocols.dao import UUID4Field
+from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from wps.core.crypt import validate_public_key
 
@@ -29,7 +30,6 @@ __all__ = [
     "WorkPackage",
     "WorkPackageCreationData",
     "WorkPackageCreationResponse",
-    "WorkPackageData",
     "WorkType",
 ]
 
@@ -125,9 +125,10 @@ class WorkPackageDetails(BaseModel):
     )
 
 
-class WorkPackageData(WorkPackageDetails):
+class WorkPackage(WorkPackageDetails):
     """All data that describes a work package."""
 
+    id: UUID4 = UUID4Field(description="ID of the work package")
     dataset_id: str
     user_id: str
     full_user_name: str = Field(
@@ -143,9 +144,3 @@ class WorkPackageData(WorkPackageDetails):
         default=...,
         description="Hash of the work package access token",
     )
-
-
-class WorkPackage(WorkPackageData):
-    """A work package including a unique identifier."""
-
-    id: str = Field(default=..., description="ID of the work package")
