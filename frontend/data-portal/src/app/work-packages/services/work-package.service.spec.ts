@@ -1,5 +1,5 @@
 /**
- * Test test work package service
+ * Test the work package service
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
@@ -66,7 +66,6 @@ describe('WorkPackageService', () => {
         provideHttpClientTesting(),
         { provide: ConfigService, useClass: MockConfigService },
         { provide: AuthService, useClass: MockAuthService },
-        WorkPackageService,
       ],
     });
     service = TestBed.inject(WorkPackageService);
@@ -86,7 +85,7 @@ describe('WorkPackageService', () => {
     userId.set(null);
     testBed.flushEffects();
     expect(service.datasetsAreLoading()).toBe(true);
-    expect(service.datasetsError()).toBe(undefined);
+    expect(service.datasetsError()).toBeUndefined();
     expect(service.datasets()).toEqual([]);
     await Promise.resolve(); // wait for loader to return
     expect(service.datasetsAreLoading()).toBe(false);
@@ -98,19 +97,19 @@ describe('WorkPackageService', () => {
 
   it('should get the datasets of an authenticated user', async () => {
     expect(service.datasetsAreLoading()).toBe(true);
-    expect(service.datasetsError()).toBe(undefined);
+    expect(service.datasetsError()).toBeUndefined();
     expect(service.datasets()).toEqual([]);
     userId.set('test-user-id');
     testBed.flushEffects();
     expect(service.datasetsAreLoading()).toBe(true);
-    expect(service.datasetsError()).toBe(undefined);
+    expect(service.datasetsError()).toBeUndefined();
     expect(service.datasets()).toEqual([]);
     const req = httpMock.expectOne('http://mock.dev/wps/users/test-user-id/datasets');
     expect(req.request.method).toBe('GET');
     req.flush([TEST_DATASET]);
     await Promise.resolve(); // wait for loader to return
     expect(service.datasetsAreLoading()).toBe(false);
-    expect(service.datasetsError()).toBe(undefined);
+    expect(service.datasetsError()).toBeUndefined();
     expect(service.datasets()).toEqual([TEST_DATASET]);
   });
 

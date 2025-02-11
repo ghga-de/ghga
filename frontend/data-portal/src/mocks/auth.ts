@@ -42,7 +42,7 @@ export const user: User = {
   name: 'John Doe',
   title: 'Dr.',
   full_name: 'Dr. John Doe',
-  email: 'j.jdoe@home.org',
+  email: 'doe@home.org',
   role: 'data_steward',
   state: INITIAL_LOGIN_STATE,
   csrf: 'mock-csrf-token',
@@ -115,7 +115,7 @@ export function getLoginHeaders(): Record<string, string> | null {
   }
   user.state =
     (sessionStorage.getItem(USER_STATE_KEY) as LoginState) || INITIAL_LOGIN_STATE;
-  user.id = user.state === 'NeedsRegistration' ? undefined : 'j.doe@ghga.de';
+  user.id = user.state === 'NeedsRegistration' ? undefined : 'doe@test.dev';
   return {
     'X-Session': JSON.stringify(user),
     // this should be actually HttpOnly, but this doesn't work with MSW

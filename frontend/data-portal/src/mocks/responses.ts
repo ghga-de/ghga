@@ -5,6 +5,9 @@
  */
 
 import {
+  allIvas,
+  allIvasOfDoe,
+  allIvasOfRoe,
   datasetInformation,
   datasets,
   getDatasetDetails,
@@ -25,6 +28,43 @@ export type ResponseValue = undefined | number | object;
  */
 
 export const responses: { [endpoint: string]: ResponseValue } = {
+  /**
+   * Auth API including 2FA and IVAs
+   */
+
+  // User IVAs
+  'GET /api/auth/users/doe@test.dev/ivas': allIvasOfDoe,
+  'GET /api/auth/users/roe@test.dev/ivas': allIvasOfRoe,
+
+  // New IVA
+  'POST /api/auth/users/*/ivas': { id: 'TEST123456789' },
+
+  // Delete IVA
+  'DELETE /api/auth/users/*/ivas/*': 204,
+
+  // Request IVA verification
+  'POST /api/auth/rpc/ivas/*/request-code': 204,
+
+  // Create IVA verification code
+  'POST /api/auth/rpc/ivas/*/create-code': {
+    verification_code: 'TEST123456789',
+  },
+
+  // Request IVA verification
+  'POST /api/auth/rpc/ivas/*/code-transmitted': 204,
+
+  // Request IVA verification with correct code
+  'POST /api/auth/rpc/ivas/*/validate-code?verification_code=ABC123': 204,
+
+  // Request IVA verification with others codes
+  'POST /api/auth/rpc/ivas/*/validate-code': 401,
+
+  // Get all IVAs
+  'GET /api/auth/ivas': allIvas,
+
+  // Invalidate an access request
+  'POST /api/auth/rpc/ivas/*/unverify': 204,
+
   /**
    * Metldata API
    */
@@ -70,8 +110,8 @@ export const responses: { [endpoint: string]: ResponseValue } = {
    * WPS API
    */
 
-  // Datasets requested by j.doe@ghga.de user
-  'GET /api/wps/users/j.doe@ghga.de/datasets': datasets,
+  // Datasets requested by doe@test.dev user
+  'GET /api/wps/users/doe@test.dev/datasets': datasets,
 
   // Work package token returned after creating a work package
   'POST /api/wps/work-packages': workPackageResponse,

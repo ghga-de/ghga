@@ -9,8 +9,69 @@ import { DatasetInformation } from '@app/metadata/models/dataset-information';
 import { DatasetSummary } from '@app/metadata/models/dataset-summary';
 import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
+import { IvaState, IvaType, UserWithIva } from '@app/verification-addresses/models/iva';
 import { Dataset } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
+
+/**
+ * IVAs
+ */
+
+export const allIvas: UserWithIva[] = [
+  {
+    id: '0063effb-2c43-4948-ba6f-f15425cb72d7',
+    type: IvaType.InPerson,
+    value: 'Hauptstr. 321',
+    changed: '2024-01-01T00:00:00',
+    state: IvaState.CodeRequested,
+    user_id: 'roe@test.dev',
+    user_name: 'Prof. Jane Roe',
+    user_email: 'roe@home.org',
+  },
+  {
+    id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
+    type: IvaType.Phone,
+    value: '+441234567890004',
+    changed: '2024-02-01T00:00:00',
+    state: IvaState.Verified,
+    user_id: 'doe@test.dev',
+    user_name: 'Dr. John Doe',
+    user_email: 'doe@home.org',
+  },
+  {
+    id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
+    type: IvaType.Phone,
+    value: '+491234567890000',
+    changed: '2024-03-01T00:00:00',
+    state: IvaState.Unverified,
+    user_id: 'doe@test.dev',
+    user_name: 'Dr. John Doe',
+    user_email: 'doe@home.org',
+  },
+  {
+    id: 'fc3c0ad8-01a4-4eb1-b8f3-40b04bb4bcb2',
+    type: IvaType.PostalAddress,
+    value: 'Wilhelmstr. 123',
+    changed: '2024-04-01T00:00:00',
+    state: IvaState.CodeTransmitted,
+    user_id: 'doe@test.dev',
+    user_name: 'Dr. John Doe',
+    user_email: 'doe@home.org',
+  },
+  {
+    id: '347368b5-718e-49ba-80ad-bc128e83b609',
+    type: IvaType.InPerson,
+    value: 'Mathematikon',
+    changed: '2024-05-01T00:00:00',
+    state: IvaState.CodeCreated,
+    user_id: 'roe@test.dev',
+    user_name: 'Prof. Jane Roe',
+    user_email: 'roe@home.org',
+  },
+];
+
+export const allIvasOfDoe = allIvas.filter((iva) => iva.user_id === 'doe@test.dev');
+export const allIvasOfRoe = allIvas.filter((iva) => iva.user_id === 'roe@test.dev');
 
 /**
  * Metldata API
