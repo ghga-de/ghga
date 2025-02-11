@@ -89,8 +89,7 @@ def _check_for_multiple_query_params(query_params: QueryParams):
     if multiples:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Only one value per query parameter is allowed: {
-                multiples}",
+            detail=f"Only one value per query parameter is allowed: {multiples}",
         )
 
 

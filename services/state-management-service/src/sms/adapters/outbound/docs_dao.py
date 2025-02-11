@@ -35,7 +35,7 @@ class DocsDao(DocsDaoPort):
     async def __aenter__(self):
         """Enter the context manager."""
         self._client: AsyncIOMotorClient = AsyncIOMotorClient(
-            self._config.db_connection_str.get_secret_value()
+            str(self._config.mongo_dsn.get_secret_value())
         )
         return self
 

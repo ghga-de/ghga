@@ -10,7 +10,7 @@ vault_verify: True
 vault_secrets_mount_point: non-default
 vault_kube_role: dummy-role
 
-db_connection_str: mongodb://mongodb:27017
+mongo_dsn: mongodb://mongodb:27017
 db_prefix: "test_"
 db_permissions:
 - "testdb.readonly:r"

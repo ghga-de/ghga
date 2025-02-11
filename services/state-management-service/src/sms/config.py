@@ -23,7 +23,7 @@ from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import Field, MongoDsn, Secret, field_validator, model_validator
 
 from sms.core.secrets_handler import VaultConfig
 
@@ -72,7 +72,7 @@ class SmsConfig(VaultConfig):
             "*.*:*",
         ],
     )
-    db_connection_str: SecretStr = Field(
+    mongo_dsn: Secret[MongoDsn] = Field(
         default=...,
         examples=["mongodb://localhost:27017"],
         description=(
