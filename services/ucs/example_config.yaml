@@ -4,7 +4,6 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
-db_connection_str: '**********'
 db_name: dev
 docs_url: /docs
 file_deleted_event_topic: file-downloads
@@ -16,7 +15,11 @@ file_upload_received_topic: file-uploads
 files_to_delete_topic: file-deletions
 generate_correlation_id: true
 host: 127.0.0.1
+kafka_dlq_topic: dlq
+kafka_enable_dlq: false
 kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
@@ -27,6 +30,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+mongo_dsn: '**********'
+mongo_timeout: null
 object_storages:
   test:
     bucket: inbox

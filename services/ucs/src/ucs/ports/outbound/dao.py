@@ -17,9 +17,9 @@
 
 from dataclasses import dataclass
 
-# for convienience: forward errors that may be thrown by DAO instances:
+# for convenience: forward errors that may be thrown by DAO instances:
 from hexkit.protocols.dao import (
-    DaoNaturalId,
+    Dao,
     ResourceAlreadyExistsError,  # noqa: F401
     ResourceNotFoundError,  # noqa: F401
 )
@@ -31,5 +31,5 @@ from ucs.core import models
 class DaoCollectionPort:
     """A collection of DAOs for interacting with the database."""
 
-    file_metadata: DaoNaturalId[models.FileMetadata]
-    upload_attempts: DaoNaturalId[models.UploadAttempt]
+    file_metadata: Dao[models.FileMetadata]
+    upload_attempts: Dao[models.UploadAttempt]
