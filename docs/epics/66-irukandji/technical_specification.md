@@ -15,7 +15,7 @@ Additionally, this epic introduces configurable embedding depth in datapack deno
 
 #### Example datapacks/schemapacks
 
-1. Update all the examples so that the datapack also has the rootClass, targetResources, rootResource and rootClass if it is specified in schemapack. 
+Update all examples so that the datapack also contains the rootClass, targetResources, rootResource and rootClass if it is specified in schemapack. 
 
 #### Datapack specification
 
