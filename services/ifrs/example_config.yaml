@@ -1,4 +1,3 @@
-db_connection_str: '**********'
 db_name: dev
 db_version_collection: ifrsDbVersions
 file_deleted_event_topic: internal-file-registry
@@ -11,7 +10,11 @@ files_to_delete_topic: file-deletions
 files_to_register_topic: file-interrogations
 files_to_stage_topic: file-downloads
 generate_correlation_id: true
+kafka_dlq_topic: dlq
+kafka_enable_dlq: false
 kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
@@ -23,6 +26,8 @@ log_format: null
 log_level: INFO
 log_traceback: true
 migration_wait_sec: 10
+mongo_dsn: '**********'
+mongo_timeout: null
 object_storages:
   test:
     bucket: permanent

@@ -143,7 +143,7 @@ async def test_stage_unstage(mongodb: MongoDbFixture):
     """Stage and immediately unstage a collection with collection name collisions."""
     config = get_config(sources=[mongodb.config])
     client: AsyncIOMotorClient = AsyncIOMotorClient(
-        config.db_connection_str.get_secret_value()
+        str(config.mongo_dsn.get_secret_value())
     )
     db = client.get_database(config.db_name)
     coll_name = "coll1"

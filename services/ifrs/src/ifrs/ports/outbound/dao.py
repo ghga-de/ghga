@@ -15,9 +15,9 @@
 
 """DAO interface for accessing the database."""
 
-from hexkit.protocols.dao import DaoNaturalId, ResourceNotFoundError  # noqa: F401
+from hexkit.protocols.dao import Dao, ResourceNotFoundError  # noqa: F401
 
 from ifrs.core.models import FileMetadata
 
 # port described by a type alias:
-FileMetadataDaoPort = DaoNaturalId[FileMetadata]
+FileMetadataDaoPort = Dao[FileMetadata]
