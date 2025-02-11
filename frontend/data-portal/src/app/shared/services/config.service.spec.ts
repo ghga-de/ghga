@@ -23,6 +23,7 @@ const mockConfig = {
   oidc_token_url: 'test/token',
   oidc_userinfo_url: 'test/userinfo',
   oidc_use_discovery: true,
+  oidc_account_url: 'https://account.test',
   mock_api: true,
   mock_oidc: true,
   ribbon_text: 'Test ribbon text',
@@ -83,5 +84,9 @@ describe('ConfigService', () => {
 
   it('should provide the OIDC userinfo URL', () => {
     expect(service.oidcUserInfoUrl).toBe('https://login.test/test/userinfo');
+  });
+
+  it('should provide the OIDC account URL', () => {
+    expect(service.oidcAccountUrl).toBe('https://account.test');
   });
 });

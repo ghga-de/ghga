@@ -2,10 +2,10 @@
 // For more information: https://material.angular.io/guide/theming
 @use '@angular/material' as mat;
 // Plus imports for other components in your app.
-@use './assets/scss/ghga_colours';
-@use './assets/scss/material_symbols';
+@use './assets/scss/ghga-colors';
+@use './assets/scss/material-symbols';
 @use './assets/scss/fontawesome';
-@use './assets/scss/fontawesome_brands';
+@use './assets/scss/fontawesome-brands';
 
 // Add Tailwind CSS
 @tailwind base;
@@ -28,8 +28,8 @@
     (
       color: (
         theme-type: light,
-        primary: ghga_colours.$primary-palette,
-        tertiary: ghga_colours.$tertiary-palette,
+        primary: ghga-colors.$primary-palette,
+        tertiary: ghga-colors.$tertiary-palette,
       ),
       typography: Lexend,
     )

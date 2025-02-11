@@ -27,5 +27,6 @@ oidc_authorization_url: authorize
 oidc_token_url: token
 oidc_userinfo_url: userinfo
 oidc_use_discovery: true
+oidc_account_url: https://profile.aai.lifescience-ri.eu/profile
 
 ribbon_text: 'Staging v$v'

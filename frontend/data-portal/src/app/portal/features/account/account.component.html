@@ -3,9 +3,9 @@
 </h1>
 <h2>
   <span class="align-middle text-2xl"
-    >{{ auth.fullName() }}
-    @if (auth.role() === 'data_steward') {
-      <mat-chip> Data Steward </mat-chip>
+    >{{ fullName() }}
+    @if (roleName()) {
+      <mat-chip> {{ roleName() }} </mat-chip>
     }
   </span>
 </h2>
@@ -21,7 +21,7 @@
   <mat-card-content class="my-4 text-base">
     <p class="text-base">
       We will communicate with you via this email address:
-      <span class="font-bold">{{ auth.email() }}</span>
+      <span class="font-bold">{{ email() }}</span>
     </p>
     <p>
       You can change this email address in your

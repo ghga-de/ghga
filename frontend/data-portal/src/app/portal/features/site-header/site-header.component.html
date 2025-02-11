@@ -3,7 +3,7 @@
     <div class="flex h-full basis-1/4">
       <a matRipple routerLink="/" class="flex h-full flex-nowrap items-center px-4 py-3"
         ><img
-          src="assets/images/GHGA_logo_clean.png"
+          src="assets/images/ghga-logo-clean.png"
           class="max-h-12"
           alt="GHGA Logo"
         />
@@ -47,15 +47,6 @@
       ></mat-nav-list
     >
     <div class="my-4 basis-1/4 text-right">
-      @if (isLoggedIn()) {
-        <button mat-icon-button (click)="onLogout()" aria-label="Logout">
-          <mat-icon>logout</mat-icon>
-        </button>
-      } @else {
-        <button mat-icon-button (click)="onLogin()" aria-label="Login">
-          <mat-icon>login</mat-icon>
-        </button>
-      }
-    </div></mat-toolbar-row
-  >
+      <app-account-button></app-account-button></div
+  ></mat-toolbar-row>
 </mat-toolbar>

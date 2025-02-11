@@ -21,6 +21,7 @@ interface Config {
   oidc_token_url: string;
   oidc_userinfo_url: string;
   oidc_use_discovery: boolean;
+  oidc_account_url: string;
   mock_api: boolean;
   mock_oidc: boolean;
   ribbon_text: string;
@@ -180,6 +181,14 @@ export class ConfigService {
    */
   get oidcUseDiscovery(): boolean {
     return this.#config.oidc_use_discovery;
+  }
+
+  /**
+   * Gets the URL for managing the OIDC provider account
+   * @returns the external URL to manage the account
+   */
+  get oidcAccountUrl(): string {
+    return this.#config.oidc_account_url;
   }
 
   /**

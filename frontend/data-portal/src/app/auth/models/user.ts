@@ -53,8 +53,15 @@ export interface User extends UserRegisteredData {
   id?: string;
   full_name: string;
   state: LoginState;
-  role?: string;
+  role?: keyof typeof RoleNames;
   csrf: string;
   timeout?: number;
   extends?: number;
+}
+
+/**
+ * Supported roles with readable names
+ */
+export enum RoleNames {
+  data_steward = 'Data Steward',
 }

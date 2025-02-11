@@ -6,9 +6,9 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
-import { AuthService } from './auth/services/auth.service';
 
-import { ActivatedRoute } from '@angular/router';
+import { SiteFooterComponent } from './portal/features/site-footer/site-footer.component';
+import { SiteHeaderComponent } from './portal/features/site-header/site-header.component';
 import { ConfigService } from './shared/services/config.service';
 
 /**
@@ -18,22 +18,6 @@ class MockConfigService {
   ribbonText = 'Test ribbon';
 }
 
-/**
- * Mock the auth service as needed for the main app component
- */
-class MockAuthService {
-  isLoggedIn = () => true;
-  fullName = () => 'Dr. John Doe';
-  sessionState = () => 'Authenticated';
-}
-
-/**
- * Mock the activated route
- */
-class MockActivatedRoute {
-  snapshot = { data: {} };
-}
-
 describe('AppComponent', () => {
   let component: AppComponent;
   let fixture: ComponentFixture<AppComponent>;
@@ -41,15 +25,12 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [
-        { provide: ConfigService, useClass: MockConfigService },
-        { provide: AuthService, useClass: MockAuthService },
-        {
-          provide: ActivatedRoute,
-          useClass: MockActivatedRoute,
-        },
-      ],
-    }).compileComponents();
+      providers: [{ provide: ConfigService, useClass: MockConfigService }],
+    })
+      .overrideComponent(AppComponent, {
+        remove: { imports: [SiteHeaderComponent, SiteFooterComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(AppComponent);
     component = fixture.componentInstance;
