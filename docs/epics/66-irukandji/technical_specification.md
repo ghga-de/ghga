@@ -28,7 +28,7 @@ Update all examples so that the datapack also contains the rootClass, targetReso
 
 #### Validatio Plugings
 
-1. The following validators require are required to remain unchanged:
+1. The following validators will remain unchanged:
    1. `content_schema.py`
    2. `missing_class.py`
    3. `missing_origin.py`
