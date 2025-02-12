@@ -19,7 +19,7 @@ Update all examples so that the datapack also contains the targetClass, targetRe
 
 #### Datapack specification
 
-1. The datapack specification will validate whether a datapack adheres to its specifications. For example, if a root resource is specified in a datapack, it must exist within the data. The same applies to rootClass, targetResources, and targetClass.
+1. The datapack specification will check that the elements—rootResource, rootClass, targetResources, and targetClass—exist within the datapack
    1. The functionality of `unknown_root_resource.py` will be incorporated into the datapack specification.
    2. The functionality of `target_id.py` will also be integrated into the datapack specification.
    3. Checks for the existence of rootClass, targetResources, rootResource, and targetClass will be implemented.
