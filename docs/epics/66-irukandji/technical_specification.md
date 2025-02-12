@@ -26,7 +26,7 @@ Update all examples so that the datapack also contains the targetClass, targetRe
 
 2. The above-mentioned checks to ensure that a datapack conforms to its specifications will utilize Pydantic validators.
 
-#### Validatio Plugings
+#### Validation Plugins
 
 1. The following validators will remain unchanged:
    1. `content_schema.py`
