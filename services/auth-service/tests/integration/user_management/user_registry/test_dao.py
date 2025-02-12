@@ -49,7 +49,7 @@ async def fixture_user_dao(
 ) -> AsyncGenerator[UserDaoPublisherFactoryPort, None]:
     """Create a user DAO factory for testing and set a random correlation ID."""
     config = Config(
-        db_connection_str=mongodb.config.db_connection_str,
+        mongo_dsn=mongodb.config.mongo_dsn,
         db_name=mongodb.config.db_name,
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,

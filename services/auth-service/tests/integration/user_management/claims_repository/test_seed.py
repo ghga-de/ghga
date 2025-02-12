@@ -70,7 +70,7 @@ async def test_add_data_steward(
 ):
     """Test that existing and non-existing data stewards can be added."""
     config = Config(
-        db_connection_str=mongodb.config.db_connection_str,
+        mongo_dsn=mongodb.config.mongo_dsn,
         db_name=mongodb.config.db_name,
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,

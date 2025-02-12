@@ -19,7 +19,7 @@
 from abc import ABC, abstractmethod
 from typing import TypeAlias
 
-from hexkit.protocols.dao import DaoNaturalId
+from hexkit.protocols.dao import Dao
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..core.totp import TOTPToken
@@ -41,7 +41,7 @@ class UserToken(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
-UserTokenDao: TypeAlias = DaoNaturalId[UserToken]
+UserTokenDao: TypeAlias = Dao[UserToken]
 
 
 class UserTokenDaoFactoryPort(ABC):

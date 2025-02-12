@@ -53,7 +53,7 @@ async def fixture_full_client(
 ) -> AsyncGenerator[FullClient, None]:
     """Get a test client for the user registry with a test database and event store."""
     config = Config(
-        db_connection_str=mongodb.config.db_connection_str,
+        mongo_dsn=mongodb.config.mongo_dsn,
         db_name=mongodb.config.db_name,
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,

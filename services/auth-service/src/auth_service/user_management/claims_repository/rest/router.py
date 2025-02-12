@@ -46,7 +46,6 @@ from ..models.claims import (
     Accession,
     Claim,
     ClaimCreation,
-    ClaimFullCreation,
     ClaimUpdate,
     ClaimValidity,
     VisaType,
@@ -103,7 +102,7 @@ async def post_claim(
         raise user_not_found_error
 
     current_date = now_as_utc()
-    full_claim = ClaimFullCreation(
+    full_claim = Claim(
         **claim_creation.model_dump(),
         user_id=user_id,
         creation_date=current_date,
@@ -111,13 +110,13 @@ async def post_claim(
     )
 
     try:
-        claim = await claim_dao.insert(full_claim)
+        await claim_dao.insert(full_claim)
     except Exception as error:
         log.error("Could not insert claim: %s", error)
         raise HTTPException(
             status_code=400, detail="User claim cannot be stored."
         ) from error
-    return claim
+    return full_claim
 
 
 @router.get(

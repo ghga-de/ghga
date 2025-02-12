@@ -17,6 +17,7 @@
 
 from enum import Enum
 from typing import Annotated, Any
+from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
@@ -36,7 +37,6 @@ __all__ = [
     "AuthorityLevel",
     "Claim",
     "ClaimCreation",
-    "ClaimFullCreation",
     "ClaimMatch",
     "ClaimUpdate",
     "ClaimValidity",
@@ -196,8 +196,16 @@ class ClaimUpdate(BaseDto):
     revocation_date: UTCDatetime = Field(default=..., description="Date of revocation")
 
 
-class ClaimFullCreation(ClaimCreation):
-    """A claim about a user with a user ID and all data except the claim ID"""
+def new_uuid4() -> str:
+    return str(uuid4())
+
+
+class Claim(ClaimCreation):
+    """A claim about a user with a user ID and all data"""
+
+    id: str = Field(  # actually UUID
+        default_factory=new_uuid4, description="Internal claim ID"
+    )
 
     user_id: str = Field(  # actually UUID
         default=..., description="Internal user ID"
@@ -208,12 +216,4 @@ class ClaimFullCreation(ClaimCreation):
     )
     revocation_date: UTCDatetime | None = Field(
         default=None, description="If revoked, date of revocation"
-    )
-
-
-class Claim(ClaimFullCreation):
-    """A claim about a user with a claim ID"""
-
-    id: str = Field(  # actually UUID
-        default=..., description="Internal claim ID"
     )

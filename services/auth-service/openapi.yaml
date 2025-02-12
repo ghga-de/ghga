@@ -19,7 +19,7 @@ components:
       type: string
     Claim:
       additionalProperties: false
-      description: A claim about a user with a claim ID
+      description: A claim about a user with a user ID and all data
       properties:
         asserted_by:
           anyOf:
@@ -125,7 +125,6 @@ components:
       - source
       - user_id
       - creation_date
-      - id
       title: Claim
       type: object
     ClaimCreation:
@@ -739,7 +738,7 @@ info:
   license:
     name: Apache 2.0
   title: User Management API
-  version: 2.7.0
+  version: 3.0.0
 openapi: 3.1.0
 paths:
   /download-access/users/{user_id}/datasets:

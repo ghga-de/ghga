@@ -21,7 +21,6 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 from ..models.claims import Claim as ClaimDto
-from ..models.claims import ClaimFullCreation as ClaimCreationDto
 from ..ports.dao import ClaimDao, ClaimDaoFactoryPort
 
 __all__ = ["ClaimDaoConfig", "ClaimDaoFactory"]
@@ -51,6 +50,5 @@ class ClaimDaoFactory(ClaimDaoFactoryPort):
             name=self._collection,
             dto_model=ClaimDto,
             id_field="id",
-            dto_creation_model=ClaimCreationDto,
             # fields_to_index=["user_id", "visa_type"], #  not yet supported
         )

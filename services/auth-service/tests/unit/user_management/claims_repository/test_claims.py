@@ -97,10 +97,9 @@ def test_create_data_steward_claim():
     )
     assert created_claim.user_id == "some-user-id"
     assert created_claim.iva_id == "some-claim_id"
-    full_claim = Claim(id="some-claim-id", **created_claim.model_dump())
-    assert is_valid_claim(full_claim)
-    assert is_data_steward_claim(full_claim)
-    assert not has_download_access_for_dataset(full_claim, "DS0815")
+    assert is_valid_claim(created_claim)
+    assert is_data_steward_claim(created_claim)
+    assert not has_download_access_for_dataset(created_claim, "DS0815")
 
 
 def test_is_data_steward_claim():
@@ -144,11 +143,10 @@ def test_create_controlled_access_claim():
     assert created_claim.user_id == "some-user-id"
     assert created_claim.iva_id == "some-iva-id"
     assert get_dataset_for_value(str(created_claim.visa_value)) == "DS0815"
-    full_claim = Claim(id="some-claim-id", **created_claim.model_dump())
-    assert is_valid_claim(full_claim)
-    assert not is_data_steward_claim(full_claim)
-    assert has_download_access_for_dataset(full_claim, "DS0815")
-    assert dataset_id_for_download_access(full_claim) == "DS0815"
+    assert is_valid_claim(created_claim)
+    assert not is_data_steward_claim(created_claim)
+    assert has_download_access_for_dataset(created_claim, "DS0815")
+    assert dataset_id_for_download_access(created_claim) == "DS0815"
 
 
 def test_get_dataset_for_value():

@@ -19,15 +19,14 @@
 from abc import ABC, abstractmethod
 from typing import TypeAlias
 
-from hexkit.protocols.dao import DaoSurrogateId
+from hexkit.protocols.dao import Dao
 
 from ..models.claims import Claim as ClaimDto
-from ..models.claims import ClaimFullCreation as ClaimCreationDto
 
 __all__ = ["ClaimDao", "ClaimDaoFactoryPort"]
 
 
-ClaimDao: TypeAlias = DaoSurrogateId[ClaimDto, ClaimCreationDto]
+ClaimDao: TypeAlias = Dao[ClaimDto]
 
 
 class ClaimDaoFactoryPort(ABC):

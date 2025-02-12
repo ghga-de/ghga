@@ -31,7 +31,6 @@ cors_allowed_origins: null
 csrf_token_bytes: 24
 dataset_deletion_event_topic: metadata_datasets
 dataset_deletion_event_type: dataset_deleted
-db_connection_str: '**********'
 db_name: dev-db
 docs_url: /docs
 generate_correlation_id: true
@@ -39,7 +38,11 @@ host: 0.0.0.0
 iva_events_topic: ivas
 iva_state_changed_event_type: iva_state_changed
 ivas_collection: ivas
+kafka_dlq_topic: dlq
+kafka_enable_dlq: false
 kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
 kafka_security_protocol: PLAINTEXT
 kafka_servers:
 - kafka:9092
@@ -51,6 +54,8 @@ log_format: null
 log_level: DEBUG
 log_traceback: true
 max_iva_verification_attempts: 10
+mongo_dsn: '**********'
+mongo_timeout: null
 oidc_authority_url: https://login.aai.lifescience-ri.eu/oidc/
 oidc_client_id: ghga-data-portal
 oidc_issuer: https://login.aai.lifescience-ri.eu/oidc/

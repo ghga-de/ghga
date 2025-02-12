@@ -47,7 +47,7 @@ async def test_deletion_handler(
     """Test the dataset deletion handler"""
     config = CONFIG.model_copy(
         update={
-            "db_connection_str": mongodb.config.db_connection_str,
+            "mongo_dsn": mongodb.config.mongo_dsn,
             "kafka_servers": kafka.config.kafka_servers,
         }
     )
@@ -92,7 +92,7 @@ async def test_deletion_handler(
             if record.module in ("eventsub", "deletion")
         ]
         assert len(messages) == 2, messages
-        assert messages[0].startswith('Consuming event of type "dataset_deleted"')
+        assert messages[0].startswith("Consuming event of type 'dataset_deleted'")
         assert messages[1] == "Deleted 1 claims for dataset DS0815"
         with pytest.raises(NoHitsFoundError):
             assert not await claim_dao.find_one(mapping={"user_id": "some-user-id"})
@@ -104,5 +104,5 @@ async def test_deletion_handler(
         messages = [record.message for record in records]
         messages = [message for message in messages if "correlation" not in message]
         assert len(messages) == 2, messages
-        assert messages[0].startswith('Consuming event of type "dataset_deleted"')
+        assert messages[0].startswith("Consuming event of type 'dataset_deleted'")
         assert messages[1] == "Deleted 0 claims for dataset DS0815"

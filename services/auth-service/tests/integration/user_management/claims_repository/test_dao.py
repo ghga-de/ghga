@@ -22,11 +22,7 @@ from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.config import get_config
-from auth_service.user_management.claims_repository.models.claims import (
-    Claim,
-    ClaimFullCreation,
-    VisaType,
-)
+from auth_service.user_management.claims_repository.models.claims import Claim, VisaType
 from auth_service.user_management.claims_repository.translators.dao import (
     ClaimDaoFactory,
 )
@@ -39,7 +35,7 @@ async def test_claim_creation(mongodb: MongoDbFixture):
     claim_dao_factory = ClaimDaoFactory(config=get_config(), dao_factory=dao_factory)
     claim_dao = await claim_dao_factory.get_claim_dao()
 
-    claim_data = ClaimFullCreation(
+    claim = Claim(
         user_id="some-internal-user-id",
         visa_type=VisaType.GHGA_ROLE,
         visa_value="data_steward@ghga.de",
@@ -49,17 +45,9 @@ async def test_claim_creation(mongodb: MongoDbFixture):
         source="https://ghga.de",  # type: ignore
         creation_date=utc_datetime(2022, 9, 15),
     )
-    claim = await claim_dao.insert(claim_data)
-    assert claim and isinstance(claim, Claim)
+    await claim_dao.insert(claim)
     assert claim.id is not None
-    assert claim.user_id == claim_data.user_id
-    assert claim.visa_type == claim_data.visa_type
-    assert claim.assertion_date == claim_data.assertion_date
-    assert claim.valid_from == claim_data.valid_from
-    assert claim.valid_until == claim_data.valid_until
-    assert claim.source == claim_data.source
     assert claim.sub_source is None
     assert claim.asserted_by is None
     assert claim.conditions is None
-    assert claim.creation_date == claim_data.creation_date
     assert claim.revocation_date is None

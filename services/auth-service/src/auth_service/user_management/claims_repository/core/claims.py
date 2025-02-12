@@ -22,7 +22,7 @@ from datetime import timedelta
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 from ....config import CONFIG
-from ..models.claims import AuthorityLevel, Claim, ClaimFullCreation, VisaType
+from ..models.claims import AuthorityLevel, Claim, VisaType
 
 __all__ = [
     "create_controlled_access_claim",
@@ -68,11 +68,11 @@ def is_internal_claim(claim: Claim, visa_type: VisaType) -> bool:
 
 def create_data_steward_claim(
     user_id: str, iva_id: str | None = None, valid_days=365
-) -> ClaimFullCreation:
+) -> Claim:
     """Create a claim for a data steward with the given IVA."""
     valid_from = now_as_utc()
     valid_until = now_as_utc() + timedelta(days=valid_days)
-    return ClaimFullCreation(
+    return Claim(
         visa_type=VisaType.GHGA_ROLE,
         visa_value=f"{DATA_STEWARD_ROLE}@{INTERNAL_DOMAIN}",
         assertion_date=valid_from,
@@ -112,10 +112,10 @@ def create_controlled_access_claim(
     dataset_id: str,
     valid_from: UTCDatetime,
     valid_until: UTCDatetime,
-) -> ClaimFullCreation:
+) -> Claim:
     """Create a claim for a controlled access grant."""
     creation_date = now_as_utc()
-    return ClaimFullCreation(
+    return Claim(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value=DATASET_PREFIX + dataset_id,
         assertion_date=creation_date,

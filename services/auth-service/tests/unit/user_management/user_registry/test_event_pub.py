@@ -16,6 +16,9 @@
 
 """Test the translator for publishing notification events in isolation."""
 
+from collections.abc import Mapping
+from typing import Any
+
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.custom_types import Ascii, JsonObject
@@ -64,7 +67,13 @@ class DummyEventPublisher(EventPublisherProtocol):
         self.published_payload: dict | None = None
 
     async def _publish_validated(
-        self, *, payload: JsonObject, type_: Ascii, key: Ascii, topic: Ascii
+        self,
+        *,
+        payload: JsonObject,
+        type_: Ascii,
+        key: Ascii,
+        topic: Ascii,
+        headers: Mapping[str, Any],
     ) -> None:
         """Record a published event and test expectations."""
         assert topic == self.expected_topic
