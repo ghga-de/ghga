@@ -28,7 +28,6 @@ from pydantic_settings import BaseSettings
 from ars.core.models import (
     AccessRequest,
     AccessRequestCreationData,
-    AccessRequestData,
     AccessRequestStatus,
 )
 from ars.core.roles import DATA_STEWARD_ROLE
@@ -112,17 +111,17 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if auth_context.title:
             full_user_name = auth_context.title + " " + full_user_name
 
-        access_request_data = AccessRequestData(
+        access_request = AccessRequest(
             **creation_data.model_dump(),
             full_user_name=full_user_name,
             request_created=request_created,
         )
 
-        request = await self._dao.insert(access_request_data)
+        await self._dao.insert(access_request)
 
-        await self._event_publisher.publish_request_created(request=request)
+        await self._event_publisher.publish_request_created(request=access_request)
 
-        return request
+        return access_request
 
     async def get(
         self,

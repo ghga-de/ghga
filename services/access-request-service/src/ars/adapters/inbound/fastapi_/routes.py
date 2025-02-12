@@ -83,7 +83,7 @@ async def create_access_request(
         raise HTTPException(
             status_code=500, detail="Access request could not be created."
         ) from exc
-    return request.id
+    return str(request.id)
 
 
 @router.get(

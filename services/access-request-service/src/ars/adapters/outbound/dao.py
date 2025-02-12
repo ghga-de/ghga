@@ -38,6 +38,5 @@ class AccessRequestDaoConstructor:
         return await dao_factory.get_dao(
             name="accessRequests",
             dto_model=models.AccessRequest,
-            dto_creation_model=models.AccessRequestData,
             id_field="id",
         )

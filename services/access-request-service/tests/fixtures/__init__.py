@@ -32,14 +32,14 @@ from ars.config import Config
 from ars.inject import prepare_core, prepare_rest_app
 
 __all__ = [
-    "AUTH_KEY_PAIR",
     "AUTH_CLAIMS_DOE",
     "AUTH_CLAIMS_STEWARD",
+    "AUTH_KEY_PAIR",
+    "JointFixture",
     "fixture_auth_headers_doe",
     "fixture_auth_headers_steward",
-    "joint_fixture",
-    "JointFixture",
     "headers_for_token",
+    "joint_fixture",
 ]
 
 

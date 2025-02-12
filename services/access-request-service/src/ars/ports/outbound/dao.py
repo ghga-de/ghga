@@ -16,11 +16,11 @@
 
 """DAO interface for accessing the database."""
 
-from hexkit.protocols.dao import DaoSurrogateId, ResourceNotFoundError
+from hexkit.protocols.dao import Dao, ResourceNotFoundError
 
 from ars.core import models
 
 __all__ = ["AccessRequestDaoPort", "ResourceNotFoundError"]
 
 # ports described by type aliases:
-AccessRequestDaoPort = DaoSurrogateId[models.AccessRequest, models.AccessRequestData]
+AccessRequestDaoPort = Dao[models.AccessRequest]

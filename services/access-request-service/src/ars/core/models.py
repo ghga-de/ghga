@@ -19,6 +19,7 @@ in the API.
 
 from enum import Enum
 from typing import Annotated
+from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -26,7 +27,6 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 __all__ = [
     "AccessRequest",
     "AccessRequestCreationData",
-    "AccessRequestData",
     "AccessRequestPatchData",
     "AccessRequestStatus",
 ]
@@ -78,8 +78,15 @@ class AccessRequestCreationData(BaseDto):
     )
 
 
-class AccessRequestData(AccessRequestCreationData):
+def new_uuid4() -> str:
+    """Return a string representation of a UUID4"""
+    return str(uuid4())
+
+
+class AccessRequest(AccessRequestCreationData):
     """All data that describes an access request."""
+
+    id: str = Field(default_factory=new_uuid4, description="ID of the access request")
 
     full_user_name: str = Field(
         default=...,
@@ -112,9 +119,3 @@ class AccessRequestPatchData(BaseDto):
         default=...,
         description="The new status of this access request",
     )
-
-
-class AccessRequest(AccessRequestData):
-    """An access request including a unique identifier."""
-
-    id: str = Field(default=..., description="ID of the access request")

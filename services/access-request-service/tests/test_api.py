@@ -306,8 +306,7 @@ async def test_patch_access_request(
     # mock setting the access grant
     httpx_mock.add_response(
         method="POST",
-        url="http://access/users/id-of-john-doe@ghga.de"
-        "/ivas/some-iva/datasets/DS001",
+        url="http://access/users/id-of-john-doe@ghga.de/ivas/some-iva/datasets/DS001",
         status_code=204,
     )
 

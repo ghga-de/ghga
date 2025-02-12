@@ -26,7 +26,7 @@ from pydantic_settings import BaseSettings
 
 from ars.ports.outbound.access_grants import AccessGrantsPort
 
-__all__ = ["AccessGrantsConfig", "AccessGrantsAdapter"]
+__all__ = ["AccessGrantsAdapter", "AccessGrantsConfig"]
 
 TIMEOUT = 60
 

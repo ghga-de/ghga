@@ -28,7 +28,6 @@ from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_da
 from ars.core.models import (
     AccessRequest,
     AccessRequestCreationData,
-    AccessRequestData,
     AccessRequestStatus,
 )
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
@@ -184,16 +183,15 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
 
         return async_iterator()
 
-    async def get_by_id(self, id_: str) -> AccessRequest:
+    async def get_by_id(self, id_: str) -> AccessRequest:  # type: ignore[override]
         """Get a resource by providing its ID."""
         async for request in self.find_all(mapping={"id": id_}):
             return request
         raise ResourceNotFoundError(id_=id_)
 
-    async def insert(self, dto: AccessRequestData) -> AccessRequest:
+    async def insert(self, dto: AccessRequest) -> None:
         """Create a new record."""
-        self.last_upsert = AccessRequest(**dto.model_dump(), id="newly-created-id")
-        return self.last_upsert
+        self.last_upsert = dto
 
     async def update(self, dto: AccessRequest) -> None:
         """Update an existing resource."""
@@ -308,7 +306,6 @@ async def test_can_create_request():
 
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
-    assert request.id == "newly-created-id"
     assert request.user_id == "id-of-john-doe@ghga.de"
     assert request.iva_id is None
     assert request.dataset_id == "DS001"
@@ -349,7 +346,6 @@ async def test_can_create_request_with_an_iva():
 
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
-    assert request.id == "newly-created-id"
     assert request.user_id == "id-of-john-doe@ghga.de"
     assert request.iva_id == "some-iva_id"
     assert request.dataset_id == "DS001"

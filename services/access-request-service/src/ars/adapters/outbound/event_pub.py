@@ -25,7 +25,7 @@ from pydantic_settings import BaseSettings
 from ars.core import models
 from ars.ports.outbound.event_pub import EventPublisherPort
 
-__all__ = ["EventPubTranslatorConfig", "EventPubTranslator"]
+__all__ = ["EventPubTranslator", "EventPubTranslatorConfig"]
 
 
 class EventPubTranslatorConfig(BaseSettings):

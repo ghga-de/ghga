@@ -16,6 +16,7 @@
 
 """Test the translators that target the event publishing protocol."""
 
+from collections.abc import Mapping
 from typing import Any
 
 import pytest
@@ -50,7 +51,13 @@ class EventRecorder(EventPublisherProtocol):
         self.recorded_event = {}
 
     async def _publish_validated(
-        self, *, payload: JsonObject, type_: Ascii, key: Ascii, topic: Ascii
+        self,
+        *,
+        payload: JsonObject,
+        type_: Ascii,
+        key: Ascii,
+        topic: Ascii,
+        headers: Mapping[str, Any],
     ) -> None:
         """Publish an event."""
         assert isinstance(payload, dict)

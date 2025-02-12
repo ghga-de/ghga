@@ -27,7 +27,7 @@ from ghga_service_commons.auth.policies import require_auth_context_using_creden
 from ars.adapters.inbound.fastapi_ import dummies
 from ars.core.roles import DATA_STEWARD_ROLE
 
-__all__ = ["UserAuthContext", "StewardAuthContext"]
+__all__ = ["StewardAuthContext", "UserAuthContext"]
 
 
 async def require_auth_context(
