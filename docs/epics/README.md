@@ -72,3 +72,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (63) [Thorny Devil](./63-thorny-devil/technical_specification.md): Download Path Service Response Caching
 - (64) [Blue Whale](./64-blue-whale/technical_specification.md): Reimplement frontend features in Angular
 - (65) [Striped Skunk](./65-striped-skunk/technical_specification.md): Hexkit v4 Rollout
+- (66) [Irukandji](./66-irukandji/technical_specification.md): Schemapack
