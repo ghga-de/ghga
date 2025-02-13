@@ -63,6 +63,6 @@ The new implementation will allow the embedding until a given depth. The current
 
 ## Human Resource/Time Estimation:
 
-Number of sprints required: 2
+Number of sprints required: 1
 
-Number of developers required: 1
+Number of developers required: 2
