@@ -1,4 +1,5 @@
 {{- define "ghga-common.deployment" -}}
+{{- if .Values.deployment.enabled -}}
 ---
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
@@ -183,4 +184,5 @@ spec:
       {{- if .Values.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- end }}
+{{- end -}}
 {{- end -}}

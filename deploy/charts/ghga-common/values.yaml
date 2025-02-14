@@ -6,6 +6,12 @@ exports:
       storageClass: ""
       topics: {}
 
+    deployment:
+      enabled: true
+    
+    job:
+      enabled: false
+
     nameOverride: ""
 
     fullnameOverride: ""
