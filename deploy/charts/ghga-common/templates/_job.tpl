@@ -37,6 +37,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
+      shareProcessNamespace: {{ .Values.shareProcessNamespace }}
       restartPolicy: {{ .Values.job.restartPolicy | default "Never" }}
       {{- if .Values.backoffLimit }}
       backoffLimit: {{ .Values.backoffLimit }}
@@ -47,7 +48,9 @@ spec:
       {{- end }}
       containers:
       {{- range $container := .Values.containers }}
-        - image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart ) }}
+        - name: {{ $.Release.Name }}-{{ $container.name }} 
+          securityContext: {{- omit $.Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart ) }}
           imagePullPolicy: {{ default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }}
           {{- include "ghga-common.command-args" (list $ $container.cmd)  | nindent 10 }}
           {{- if $.Values.args }}
@@ -64,6 +67,14 @@ spec:
             {{- if $.Values.extraVolumeMounts }}
             {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
+            {{- if $.Values.kafkaUser.enabled }}
+            - mountPath: "/kafka-secrets/"
+              name: kafka-secret
+              readOnly: true
+            - mountPath:  "/cluster-ca-cert/"
+              name: cluster-ca-cert
+              readOnly: true
+            {{- end }}
       {{- end }}
       volumes:
       {{- range $container := .Values.containers }}
@@ -74,6 +85,19 @@ spec:
             - key: {{ $container.config.key | default "parameters" }}
               path: .{{ $.Values.configPrefix }}.yaml
       {{- end }}
+        {{- if .Values.extraVolumes }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.kafkaUser.enabled }}
+        - name: kafka-secret
+          secret:
+            secretName: {{ include "common.names.fullname" . }}
+            optional: false
+        - name: cluster-ca-cert
+          secret:
+            secretName: {{ .Values.kafkaUser.caCertSecretName }}
+            optional: false
+        {{- end }}
         {{- if .Values.extraVolumes }}
         {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
