@@ -9,6 +9,7 @@ vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
 vault.hashicorp.com/auth-path: "{{ .Values.vaultAgent.authPath }}"
 {{- if .Values.vaultAgent.secrets -}}
 {{- if .Values.vaultAgent.secrets.mongodb }}
+{{- if .Values.vaultAgent.secrets.mongodb.enabled }}
 {{- $vaultSecretPath := .Values.vaultAgent.secrets.mongodb.secretPath }}
 {{- $connectionString := .Values.vaultAgent.secrets.mongodb.connectionString }}
 vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
@@ -20,7 +21,9 @@ vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
   export {{ .Values.configPrefix | upper }}_DB_CONNECTION_STR=${{ .Values.configPrefix }}_DB_URL
   {{`{{- end -}}`}}
 {{- end -}}
+{{- end -}}
 {{- if .Values.vaultAgent.secrets.service }}
+{{- if .Values.vaultAgent.secrets.service.enabled }}
 {{- $vaultSecretPath := .Values.vaultAgent.secrets.service.secretPath }}
 vault.hashicorp.com/agent-inject-command-service-secrets: |
   kill -TERM $(pgrep {{ .Values.vaultAgent.secrets.service.pgrepPattern }})
@@ -33,4 +36,4 @@ vault.hashicorp.com/agent-inject-template-service-secrets: |
 {{- end -}}
 {{- end -}}
 {{- end -}}
-
+{{- end -}}
