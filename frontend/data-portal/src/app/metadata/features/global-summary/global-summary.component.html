@@ -49,7 +49,7 @@
               }
             } @else {
               @for (
-                platform of platforms().stats.instrument_model;
+                platform of platforms().stats?.instrument_model ?? [];
                 track platform.value
               ) {
                 <tr>
@@ -91,7 +91,7 @@
                 </tr>
               }
             } @else {
-              @for (sex of individuals().stats.sex; track sex.value) {
+              @for (sex of individuals().stats?.sex ?? []; track sex.value) {
                 <tr>
                   <td class="pe-2 text-right font-bold">{{ sex.count }}</td>
                   <td class="text-left">
@@ -131,7 +131,7 @@
                 </tr>
               }
             } @else {
-              @for (format of files().stats.format; track format.value) {
+              @for (format of files().stats?.format ?? []; track format.value) {
                 <tr>
                   <td class="pe-2 text-right font-bold">{{ format.count }}</td>
                   <td class="text-left uppercase">

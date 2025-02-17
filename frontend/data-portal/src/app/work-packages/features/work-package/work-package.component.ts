@@ -18,6 +18,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 import { NotificationService } from '@app/shared/services/notification.service';
+import { getBackendErrorMessage, MaybeBackendError } from '@app/shared/utils/errors';
 import { Dataset } from '@app/work-packages/models/dataset';
 import { WorkPackage } from '@app/work-packages/models/work-package';
 import { WorkPackageService } from '@app/work-packages/services/work-package.service';
@@ -67,7 +68,7 @@ export class WorkPackageComponent {
 
   token = signal<string>('');
   tokenIsLoading = signal<boolean>(false);
-  tokenHasError = signal<boolean>(false);
+  tokenError = signal<string>('');
 
   /**
    * Select a dataset
@@ -78,36 +79,90 @@ export class WorkPackageComponent {
   }
 
   /**
+   * Remove headers and fix padding of the given base64 encoded key
+   * @param key - the key to be trimmed
+   * @returns the trimmed key
+   */
+  #trimKey(key: string): string {
+    // allow and trim headers and footers for public keys
+    key = key
+      .replace(/-----(BEGIN|END) CRYPT4GH PUBLIC KEY-----/, '')
+      .replace(/^[\s-]+/, '')
+      .replace(/[\s-=]+$/, '');
+    const fix = key.length % 4;
+    if (fix) {
+      key += '='.repeat(4 - fix);
+    }
+    return key;
+  }
+
+  /**
+   * Check whether the given key is a valid public key.
+   * @param key - the key in question
+   * @returns an internal error code
+   */
+  #checkPubKey(key: string): number {
+    if (key.match(/-.*PRIVATE.*-/)) {
+      return 2; // if any kind of private key has been posted
+    }
+    // allow and trim headers and footers for public keys
+    key = this.#trimKey(key);
+    if (!key) {
+      return 1; // key is empty after trimming
+    }
+    // Base64 decode the key
+    const binKey = Buffer.from(key, 'base64');
+    if (!binKey) {
+      return 3; // key is not a valid Base64 string
+    }
+    if (binKey?.length !== 32) {
+      // key does not have the right length for a Crypt4GH public key
+      if (!Buffer.compare(binKey.subarray(0, 5), Buffer.from('c4gh-', 'ascii'))) {
+        return 2; // key is actually a Base64 encoded Crypt4GH private key
+      }
+      return 3; // key is something else
+    }
+    return 0; // key seems to be ok
+  }
+
+  /**
    * Check whether the entered public key is valid
    * and set pubKeyError accordingly.
    */
   checkPubKey(): void {
     // validate the user key
     // (for testing, you can use MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI)
-    let key = this.pubKey();
-    let errorCode = 0;
-    if (key.match(/-.*PRIVATE.*-/)) {
-      errorCode = 1; // if any kind of private key has been posted
-    } else {
-      // allow and trim headers and footers for public keys
-      key = key.replace(/-----(BEGIN|END) CRYPT4GH PUBLIC KEY-----/, '').trim();
-      // Base64 decode the key
-      const binKey = Buffer.from(key, 'base64');
-      if (binKey?.length !== 32) {
-        // key does not have the right length for a Crypt4GH public key
-        if (!Buffer.compare(binKey.subarray(0, 5), Buffer.from('c4gh-', 'ascii'))) {
-          errorCode = 1; // key is actually a Base64 encoded Crypt4GH private key
-        } else {
-          errorCode = 2; // key is something else
-        }
-      }
-    }
+    const errorCode = this.#checkPubKey(this.pubKey());
     this.pubKeyError.set(
       {
-        1: 'Please do not paste your private key here!',
-        2: 'This does not seem to be a Base64 encoded Crypt4GH key.',
+        1: 'The key is empty.',
+        2: 'Please do not paste your private key here!',
+        3: 'This does not seem to be a Base64 encoded Crypt4GH key.',
       }[errorCode] ?? '',
     );
+  }
+
+  /**
+   * Handle errors when creating a work package
+   * @param error The error that occurred
+   */
+  #handleCreationError(error: MaybeBackendError): void {
+    // provide detailed error message if possible
+    const detail = getBackendErrorMessage(error);
+    const tokenAction = this.tokenAction();
+    this.tokenIsLoading.set(false);
+    // message shown on the page
+    let msg = `Unfortunately, your ${tokenAction} token could not be created`;
+    if (detail) msg += `: ${detail}`;
+    msg += '.';
+    this.tokenError.set(msg);
+    // message shown in the snackbar
+    msg = `Cannot create ${tokenAction} token`;
+    if (detail) msg += `: ${detail}`;
+    msg += '!';
+    this.#notify.showError(msg);
+    // also log the complete error to the console
+    console.debug(error);
   }
 
   /**
@@ -116,29 +171,24 @@ export class WorkPackageComponent {
   submit(): void {
     if (this.tokenIsLoading()) return;
     const dataset = this.selectedDataset();
-    const pubKey = this.pubKeyError() ? '' : this.pubKey();
+    const pubKey = this.pubKeyError() ? '' : this.#trimKey(this.pubKey());
     if (!dataset || !pubKey) return;
     const fileIds = (this.files() || '').split(/[,\s]+/).filter((file) => file);
     const workPackage: WorkPackage = {
       dataset_id: dataset.id,
-      file_ids: fileIds,
+      file_ids: fileIds.length ? fileIds : null, // null means all files
       type: dataset.stage,
       user_public_crypt4gh_key: pubKey,
     };
     this.token.set('');
     this.tokenIsLoading.set(true);
-    this.tokenHasError.set(false);
+    this.tokenError.set('');
     this.#wpService.createWorkPackage(workPackage).subscribe({
       next: ({ token }) => {
         this.token.set(token);
         this.tokenIsLoading.set(false);
       },
-      error: (err) => {
-        this.tokenIsLoading.set(false);
-        this.tokenHasError.set(true);
-        this.#notify.showError(`Cannot create ${workPackage.type} token!`);
-        console.debug(err);
-      },
+      error: (err) => this.#handleCreationError(err),
     });
   }
 
@@ -152,7 +202,7 @@ export class WorkPackageComponent {
     this.pubKeyError.set('');
     this.token.set('');
     this.tokenIsLoading.set(false);
-    this.tokenHasError.set(false);
+    this.tokenError.set('');
   }
 
   /**

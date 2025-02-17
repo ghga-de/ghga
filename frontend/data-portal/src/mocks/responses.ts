@@ -116,6 +116,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Work package token returned after creating a work package
   'POST /api/wps/work-packages': workPackageResponse,
 
+  // Simulate creating a work package with a bad file ID
+  'POST /api/wps/work-packages?file_ids=["error"]': 403,
+
   /**
    * Static assets
    */

@@ -534,5 +534,7 @@ export const datasets: Dataset[] = [
 
 export const workPackageResponse: WorkPackageResponse = {
   id: '7f562eb5-a0a5-427d-b40f-f91198d27309',
-  token: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0',
+  // the encrypted work package token (which can be pretty long)
+  token:
+    'gumRa5XE1Rm3tOJr3ocfA1F63rRUI2g6eCI0KY2Mv3epb28cZeylvaYsxRmgQRDboE2yOhtE4qxPhZgYz/Y7zR+hssBzq7Hg',
 };

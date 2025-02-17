@@ -3,9 +3,10 @@
   "cSpell.words": [
     "devcontainer",
     "devkit",
+    "GHGA",
     "metldata",
+    "Pydantic",
     "TOTP",
-    "ghga"
   ],
   "cSpell.language": "en-GB",
   "editor.defaultFormatter": "esbenp.prettier-vscode",

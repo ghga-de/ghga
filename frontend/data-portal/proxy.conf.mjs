@@ -53,7 +53,6 @@ if (useProxy) {
       const hostsContent = await fs.promises.readFile(hostsFile, 'utf8');
       const lines = hostsContent.split('\n');
       const hostEntry = lines.find((line) => line.includes(targetHost));
-
       if (hostEntry) {
         const resolvedAddress = hostEntry.split(/\s+/)[0];
         console.log(
@@ -63,18 +62,21 @@ if (useProxy) {
         console.log(
           `The target hostname ${targetHost} is not found in the hosts file.`,
         );
-        const dns = await import('dns');
-        const addresses = await dns.promises.lookup(targetHost);
-        const resolvedAddress = addresses.address;
-        if (resolvedAddress.startsWith('127.')) {
-          console.log(
-            `The target hostname ${targetHost} resolves to a local address on the host computer.`,
-          );
+        console.warn('Please check the hosts file in the dev container!');
+      }
+      const dns = await import('dns');
+      const addresses = await dns.promises.lookup(targetHost);
+      const resolvedAddress = addresses.address;
+      if (resolvedAddress.startsWith('127.')) {
+        console.log(
+          `The target hostname ${targetHost} resolves to a local address on the host computer.`,
+        );
+      } else {
+        console.log(
+          `The target hostname ${targetHost} resolves to ${resolvedAddress} on the host computer.`,
+        );
+        if (!mockOidc) {
           console.warn('Please check the hosts file on your host computer!');
-        } else {
-          console.log(
-            `The target hostname ${targetHost} resolves to ${resolvedAddress} on the host computer.`,
-          );
         }
       }
     } catch (err) {
