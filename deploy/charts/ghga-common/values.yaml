@@ -201,3 +201,16 @@ exports:
     configPrefixPlaceholder: "%%CONFIG_PREFIX_PLACEHOLDER%%"
 
     enableServiceLinks: true
+
+    vaultAgent:
+      enabled: false
+      authPath: kubernetes
+      role: service-role
+      secrets:
+        mongodb:
+          secretPath: database/creds/my-role
+          pgrepPattern: python
+          connectionString: "mongodb://{{username}}:{{password}}@mongodb:27017/admin"
+        service:
+          secretPath: operational-secrets/data/unique/apps/archive/service
+          pgrepPattern: python
