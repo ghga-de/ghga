@@ -388,9 +388,8 @@
 
       <mat-expansion-panel>
         <mat-expansion-panel-header>
-          Files Summary ({{ numFiles() }} file{{
-            numFiles() | addPluralS
-          }})</mat-expansion-panel-header
+          Files Summary ({{ numFiles() }} file{{ numFiles() | addPluralS }},
+          {{ numBytes() | parseBytes }} in total)</mat-expansion-panel-header
         ><ng-template matExpansionPanelContent
           ><div class="overflow-auto">
             <table

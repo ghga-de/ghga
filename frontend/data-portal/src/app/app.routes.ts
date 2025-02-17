@@ -31,9 +31,9 @@ export const routes: Routes = [
   {
     path: 'dataset/:id',
     loadComponent: () =>
-      import(
-        './metadata/features/dataset-details-page/dataset-details-page.component'
-      ).then((m) => m.DatasetDetailsPageComponent),
+      import('./metadata/features/dataset-details/dataset-details.component').then(
+        (m) => m.DatasetDetailsComponent,
+      ),
     title: 'Dataset Details',
   },
   // routes that need user authentication

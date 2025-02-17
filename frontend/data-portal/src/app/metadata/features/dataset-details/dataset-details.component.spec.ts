@@ -11,7 +11,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { datasetDetails, datasetInformation } from '@app/../mocks/data';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
-import { DatasetDetailsPageComponent } from './dataset-details-page.component';
+import { DatasetDetailsComponent } from './dataset-details.component';
 
 /**
  * Mock the metadata service as needed for the dataset details
@@ -33,13 +33,13 @@ class MockDatasetInformationService {
   loadDatasetInformation = () => undefined;
 }
 
-describe('DatasetDetailsPageComponent', () => {
-  let component: DatasetDetailsPageComponent;
-  let fixture: ComponentFixture<DatasetDetailsPageComponent>;
+describe('DatasetDetailsComponent', () => {
+  let component: DatasetDetailsComponent;
+  let fixture: ComponentFixture<DatasetDetailsComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DatasetDetailsPageComponent],
+      imports: [DatasetDetailsComponent],
       providers: [
         { provide: MetadataService, useClass: MockMetadataService },
         { provide: DatasetInformationService, useClass: MockDatasetInformationService },
@@ -47,7 +47,7 @@ describe('DatasetDetailsPageComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(DatasetDetailsPageComponent);
+    fixture = TestBed.createComponent(DatasetDetailsComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('id', datasetDetails.accession);
     await fixture.whenStable();

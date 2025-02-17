@@ -1,5 +1,5 @@
 /**
- * Short module description
+ * Component for showing the dataset details page
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
@@ -47,7 +47,7 @@ const COLUMNS = {
  * Component for the dataset details page
  */
 @Component({
-  selector: 'app-dataset-details-page',
+  selector: 'app-dataset-details',
   imports: [
     MatIconModule,
     MatButtonModule,
@@ -62,10 +62,10 @@ const COLUMNS = {
     ParseBytes,
     UnderscoreToSpace,
   ],
-  templateUrl: './dataset-details-page.component.html',
-  styleUrl: './dataset-details-page.component.scss',
+  templateUrl: './dataset-details.component.html',
+  styleUrl: './dataset-details.component.scss',
 })
-export class DatasetDetailsPageComponent implements OnInit, AfterViewInit {
+export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   id = input.required<string>();
   #location = inject(Location);
   #title = inject(Title);
@@ -106,6 +106,9 @@ export class DatasetDetailsPageComponent implements OnInit, AfterViewInit {
   numExperiments = computed(() => this.#experiments().length);
   numSamples = computed(() => this.#samples().length);
   numFiles = computed(() => this.#files().length);
+  numBytes = computed(() =>
+    this.#files().reduce((acc, file) => acc + (file.file_information?.size ?? 0), 0),
+  );
 
   experimentsDataSource = new MatTableDataSource<Experiment>([]);
   samplesDataSource = new MatTableDataSource<Sample>([]);
