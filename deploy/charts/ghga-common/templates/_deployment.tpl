@@ -140,7 +140,7 @@ spec:
         {{- if .Values.kafkaUser.enabled }}
         - name: kafka-secret
           secret:
-            secretName: {{ include "common.names.fullname" . }}
+            secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
             optional: false
         - name: cluster-ca-cert
           secret:

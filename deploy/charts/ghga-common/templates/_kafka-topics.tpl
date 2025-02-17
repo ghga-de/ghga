@@ -32,7 +32,7 @@ kind: KafkaUser
 metadata:
   labels:
     strimzi.io/cluster: {{ .Values.kafkaUser.clusterName }}
-  name: {{ include "common.names.fullname" . }}
+  name: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
   namespace: {{ .Values.kafkaUser.clusterNamespace }}  
 spec:
   authentication:
