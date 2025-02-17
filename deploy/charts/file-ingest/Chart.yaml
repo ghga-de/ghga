@@ -5,7 +5,7 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 5.1.1
+version: 5.2.0
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
@@ -19,7 +19,7 @@ apiVersion: v2
 
 dependencies:
 - name: ghga-common
-  version: 1.11.1
-  repository: https://ghga-de.github.io/charts
+  version: 1.12.2
+  repository: file://../ghga-common
   import-values:
   - defaults
