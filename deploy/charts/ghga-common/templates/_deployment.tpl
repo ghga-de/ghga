@@ -57,6 +57,8 @@ spec:
       {{- if .Values.podRestartPolicy }}
       restartPolicy: {{ .Values.podRestartPolicy }}
       {{- end }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
+      {{- if .Values.podDNSPolicy }}
       containers:
       {{- range $container := .Values.containers }}
         - image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart ) }}
