@@ -32,10 +32,10 @@ from wps.core.models import (
 class WorkPackageRepositoryPort(ABC):
     """A repository for work packages."""
 
-    class WorkPackageAccessError(KeyError):
+    class WorkPackageAccessError(RuntimeError):
         """Error that is raised when a work package cannot be accessed."""
 
-    class DatasetNotFoundError(KeyError):
+    class DatasetNotFoundError(RuntimeError):
         """Error that is raised when a dataset does not exist."""
 
     @abstractmethod
