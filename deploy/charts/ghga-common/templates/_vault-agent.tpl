@@ -18,7 +18,7 @@ vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: {{ $vaultSecr
 vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
   {{ print `{{- with secret "` $vaultSecretPath `" -}}` }}
   export {{ .Values.configPrefix | upper }}_DB_URL="{{ $connectionString }}"
-  export {{ .Values.configPrefix | upper }}_DB_CONNECTION_STR=${{ .Values.configPrefix }}_DB_URL
+  export {{ .Values.configPrefix | upper }}_DB_CONNECTION_STR=${{ .Values.configPrefix | upper }}_DB_URL
   {{`{{- end -}}`}}
 {{- end -}}
 {{- end -}}
