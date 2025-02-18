@@ -13,12 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test dummy."""
+"""A service to manage the dead letter queue for Kafka events"""
 
-from my_microservice.core.greeting import generate_greeting
+from importlib.metadata import version
 
-
-def test_dummy():
-    """A very simple example test."""
-    greeting = generate_greeting("monde", "French", True)
-    assert greeting.message == "Salut monde!"
+__version__ = version(__package__)

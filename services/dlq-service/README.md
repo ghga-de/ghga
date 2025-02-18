@@ -1,57 +1,35 @@
-# Microservice Repository Template
+[![tests](https://github.com/ghga-de/dlq-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/dlq-service/actions/workflows/tests.yaml)
+[![Coverage Status](https://coveralls.io/repos/github/ghga-de/dlq-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/dlq-service?branch=main)
 
-This is a template for GitHub repositories containing one Python-based microservice (optimal for a multirepository setup).
+# Dlq Service
 
-It features:
-
-- *Continuous Templation* - A continuous update-delivery mechanism for templated repositories
-- A [devcontainer](https://containers.dev/)-based fully-configured development environment for vscode
-- Tight linting and formatting using [Ruff](https://docs.astral.sh/ruff/)
-- Static type checking using [mypy](https://www.mypy-lang.org/)
-- Security scanning using [bandit](https://bandit.readthedocs.io/en/latest/)
-- A structure for automated tests using [pytest](https://docs.pytest.org/en/7.4.x/)
-- Dependency locking using [pip-tools](https://github.com/jazzband/pip-tools)
-- Git hooks checking linting and formatting before committing using [pre-commit](https://pre-commit.com/)
-- Automatic container-building and publishing to [Docker Hub](https://hub.docker.com/)
-- GitHub Actions for automating or checking all of the above
-
-It is worth emphasizing the first point, this template is not just a one-time kickstart for your project
-but repositories created using this template will continue receiving updates as the template evolves.
-For further details, please look at the explanation in [.template/README.md](/.template/README.md).
-
-Please also refer to [.readme_generation/README.md](/.readme_generation/README.md) for details on how
-to adapt this readme.
-
-Here the intro to the template stops and the actual template for the readme of the microservice starts:
-
----
-[![tests](https://github.com/ghga-de/microservice-repository-template/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/microservice-repository-template/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/microservice-repository-template/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/microservice-repository-template?branch=main)
-
-# My Microservice
-
-My-Microservice - a short description
+DLQ Service - a service to manage the dead letter queue for Kafka events
 
 ## Description
 
 <!-- Please provide a short overview of the features of this service. -->
 
-Here you should provide a short summary of the purpose of this microservice.
+The DLQ Service provides a way to manage Kafka topics designated as dead letter queues
+via a RESTful API interface.
+
+The DLQ Service requires configuration to define the topics and microservices for each
+individual DLQ. It will automatically derive the DLQ topic names based on the
+configuration and create a dedicated Kafka consumer for each DLQ topic.
 
 
 ## Installation
 
 We recommend using the provided Docker container.
 
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/my-microservice):
+A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/dlq-service):
 ```bash
-docker pull ghga/my-microservice:0.1.0
+docker pull ghga/dlq-service:0.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/my-microservice:0.1.0 .
+docker build -t ghga/dlq-service:0.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -59,7 +37,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/my-microservice:0.1.0 --help
+docker run -p 8080:8080 ghga/dlq-service:0.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -68,7 +46,7 @@ If you prefer not to use containers, you may install the service from source:
 pip install .
 
 # To run the service:
-my_microservice --help
+dlqs --help
 ```
 
 ## Configuration
@@ -76,9 +54,53 @@ my_microservice --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
 
-- **`service_name`** *(string)*: Short name of this service. Default: `"my_microservice"`.
+
+  Examples:
+
+  ```json
+  "mongodb://localhost:27017"
+  ```
+
+
+- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
+
+
+  Examples:
+
+  ```json
+  "my-database"
+  ```
+
+
+- **`mongo_timeout`**: Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). Default: `null`.
+
+  - **Any of**
+
+    - *integer*: Exclusive minimum: `0`.
+
+    - *null*
+
+
+  Examples:
+
+  ```json
+  300
+  ```
+
+
+  ```json
+  600
+  ```
+
+
+  ```json
+  null
+  ```
+
+
+- **`service_name`** *(string)*: Short name of this service. Default: `"dlqs"`.
 
 - **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
@@ -89,6 +111,147 @@ The service requires the following configuration parameters:
   "germany-bw-instance-001"
   ```
 
+
+- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
+
+  - **Items** *(string)*
+
+
+  Examples:
+
+  ```json
+  [
+      "localhost:9092"
+  ]
+  ```
+
+
+- **`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
+
+- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+
+- **`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
+
+- **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
+
+- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
+
+- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+
+
+  Examples:
+
+  ```json
+  true
+  ```
+
+
+  ```json
+  false
+  ```
+
+
+- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+
+
+  Examples:
+
+  ```json
+  1048576
+  ```
+
+
+  ```json
+  16777216
+  ```
+
+
+- **`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
+
+
+  Examples:
+
+  ```json
+  0
+  ```
+
+
+  ```json
+  1
+  ```
+
+
+  ```json
+  2
+  ```
+
+
+  ```json
+  3
+  ```
+
+
+  ```json
+  5
+  ```
+
+
+- **`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
+
+
+  Examples:
+
+  ```json
+  true
+  ```
+
+
+  ```json
+  false
+  ```
+
+
+- **`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
+
+
+  Examples:
+
+  ```json
+  "dlq"
+  ```
+
+
+- **`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
+
+
+  Examples:
+
+  ```json
+  0
+  ```
+
+
+  ```json
+  1
+  ```
+
+
+  ```json
+  2
+  ```
+
+
+  ```json
+  3
+  ```
+
+
+  ```json
+  5
+  ```
+
+
+- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
 - **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
 
@@ -205,31 +368,26 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+- **`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.
+
+  - **Items** *(string)*
 
 
   Examples:
 
   ```json
-  true
+  "7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e"
   ```
 
-
-  ```json
-  false
-  ```
-
-
-- **`language`** *(string)*: The language. Must be one of: `["Greek", "Croatian", "French", "German"]`. Default: `"Croatian"`.
 
 
 ### Usage:
 
 A template YAML for configurating the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
-Please adapt it, rename it to `.my_microservice.yaml`, and place it into one of the following locations:
-- in the current working directory were you are execute the service (on unix: `./.my_microservice.yaml`)
-- in your home directory (on unix: `~/.my_microservice.yaml`)
+Please adapt it, rename it to `.dlqs.yaml`, and place it into one of the following locations:
+- in the current working directory were you are execute the service (on unix: `./.dlqs.yaml`)
+- in your home directory (on unix: `~/.dlqs.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -238,8 +396,8 @@ The config yaml will be automatically parsed by the service.
 All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
 could also be set using environment variables or file secrets.
 
-For naming the environment variables, just prefix the parameter name with `my_microservice_`,
-e.g. for the `host` set an environment variable named `my_microservice_host`
+For naming the environment variables, just prefix the parameter name with `dlqs_`,
+e.g. for the `host` set an environment variable named `dlqs_host`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 
@@ -251,13 +409,22 @@ of the pydantic documentation.
 An OpenAPI specification for this service can be found [here](./openapi.yaml).
 
 ## Architecture and Design:
-<!-- Please provide an overview of the architecture and design of the code base.
-Mention anything that deviates from the standard triple hexagonal architecture and
-the corresponding structure. -->
+<!--
+ Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+ for the German Human Genome-Phenome Archive (GHGA)
 
-This is a Python-based service following the Triple Hexagonal Architecture pattern.
-It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
 
 
 ## Development

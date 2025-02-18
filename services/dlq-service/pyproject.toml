@@ -20,24 +20,23 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "my_microservice"
+name = "dlqs"
 version = "0.1.0"
-description = "My-Microservice - a short description"
+description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
 dependencies = [
     "typer >= 0.12",
-    "ghga-service-commons[api] >= 3.1",
-    "ghga-event-schemas >= 3.3",
-    "hexkit[akafka,s3,mongodb] >= 3.2",
+    "ghga-service-commons[api] >= 3.3",
+    "hexkit[akafka,mongodb] >= 4",
 ]
 
 [project.license]
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/my-microservice"
+Repository = "https://github.com/ghga-de/dlq-service"
 
 [project.scripts]
-my-microservice = "my_microservice.__main__:run"
+dlqs = "dlqs.__main__:cli"
 
 [tool.setuptools.packages.find]
 where = [

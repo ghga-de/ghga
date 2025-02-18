@@ -18,24 +18,25 @@
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.providers.akafka.config import KafkaConfig
+from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
-from .models import SupportedLanguages
-
-SERVICE_NAME: str = "my_microservice"  # Please adapt
+SERVICE_NAME: str = "dlqs"
 
 
-# Please adapt config prefix and remove unnecessary config bases:
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, LoggingConfig):
+class Config(ApiConfigBase, LoggingConfig, KafkaConfig, MongoDbConfig):
     """Config parameters and their defaults."""
 
     service_name: str = Field(
         default=SERVICE_NAME, description="Short name of this service"
     )
-
-    language: SupportedLanguages = Field(
-        default="Croatian", description="The language."
+    token_hashes: list[str] = Field(
+        default=...,
+        description="List of token hashes corresponding to the tokens that can be used "
+        + "to authenticate calls to this service. Hashes are made with SHA-256.",
+        examples=["7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e"],
     )
 
 
