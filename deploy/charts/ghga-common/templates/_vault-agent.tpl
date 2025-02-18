@@ -22,6 +22,8 @@ vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
   {{`{{- end -}}`}}
 {{- end -}}
 {{- end -}}
+
+{{/* Template which injects all KV pairs into the pod's environment */}}
 {{- if .Values.vaultAgent.secrets.service }}
 {{- if .Values.vaultAgent.secrets.service.enabled }}
 {{- $vaultSecretPath := .Values.vaultAgent.secrets.service.secretPath }}
@@ -35,5 +37,33 @@ vault.hashicorp.com/agent-inject-template-service-secrets: |
   {{`{{- end }}{{- end }}{{- end }}`}}
 {{- end -}}
 {{- end -}}
+
+{{/* */}}
+{{- $secrets := list "crypt4ghInternalPub" "crypt4ghInternalPriv" }}
+{{ range $secretName := $secrets -}}
+  {{- $enabled := dig  $secretName "enabled" "" $.Values.vaultAgent.secrets}}
+  {{ if $enabled -}}
+    {{- $vaultSecretPath := dig $secretName "secretPath" "" $.Values.vaultAgent.secrets }}
+    {{- $mountPath := dig $secretName "mountPath" "" $.Values.vaultAgent.secrets }}
+    {{- $dataKey := dig $secretName "dataKey" "" $.Values.vaultAgent.secrets }}
+    {{- $renderToFile := dig $secretName "renderToFile" "" $.Values.vaultAgent.secrets }}
+    {{- $parameterName := dig $secretName "parameterName" "" $.Values.vaultAgent.secrets }}
+  {{- if $renderToFile }}
+vault.hashicorp.com/agent-inject-file-{{ $secretName }}: {{ $mountPath }}
+vault.hashicorp.com/agent-inject-template-{{ $secretName }}: |
+  {{ print `{{ with secret ` ($vaultSecretPath | quote)  ` -}}` }}
+  {{ print `{{ index .Data.data ` ($dataKey | quote) ` }}` }}
+  {{ `{{- end }}` }}
+  {{- else }}
+vault.hashicorp.com/agent-inject-template-{{ $secretName }}: |
+  {{ print `{{ with secret ` ($vaultSecretPath | quote)  ` -}}` }}
+  export {{ $.Values.configPrefix | upper }}_{{ $parameterName | upper }}_='{{ print `{{ index .Data.data ` ($dataKey | quote) ` }}` }}'
+  {{ `{{- end }}` }}
+  {{- end }}
+vault.hashicorp.com/agent-inject-command-{{ $secretName }}: |
+  kill -TERM $(pgrep {{ $.Values.vaultAgent.pgrepPattern }})
+vault.hashicorp.com/agent-inject-secret-{{ $secretName }}: {{ $vaultSecretPath }}
+  {{- end }}
+{{- end }}
 {{- end -}}
 {{- end -}}

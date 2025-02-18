@@ -6,12 +6,17 @@ prepends it with a failsafe routine that injects all existing secrets from vault
 */}}
 {{- define "ghga-common.command-args" -}}
 command: ["sh", "-c"]
+{{ if (index . 0).Values.vaultAgent.enabled }}
 args:
   - if [ -d "/vault/secrets" ]; then
-      cd /vault/secrets && mkdir -p substituted;
+      cd /vault/secrets;
       for f in *; do
-        [ -f "$f" ] &&  sed s/{{ (first .).Values.configPrefixPlaceholder }}/{{ (first .).Values.configPrefix | upper }}/g $f > substituted/$f && . substituted/$f;
+        [ -f "$f" ] . $f;
       done
     fi;
     {{ index . 1 }};
+{{ else }}
+args:
+  - {{ index . 1 }};
+{{ end }}
 {{- end -}}

@@ -197,8 +197,6 @@ exports:
       consumer: {}
 
     configPrefix: ""
-    # This value is replaced in templated secrets with the actual config prefix before starting the service
-    configPrefixPlaceholder: "%%CONFIG_PREFIX_PLACEHOLDER%%"
 
     enableServiceLinks: true
 
@@ -206,13 +204,26 @@ exports:
       enabled: false
       authPath: kubernetes
       role: service-role
+      pgrepPattern: python
       secrets:
         mongodb:
           enabled: false
           secretPath: database/creds/my-role
-          pgrepPattern: python
           connectionString: "mongodb://{{username}}:{{password}}@mongodb:27017/admin"
         service:
           enabled: false
           secretPath: operational-secrets/data/unique/apps/archive/service
-          pgrepPattern: python
+        crypt4ghInternalPub:
+          enabled: false
+          secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
+          mountPath: /keys/crypt4gh-internal/crypt4gh.pub
+          dataKey: crypt4gh.pub
+          renderToFile: true
+          parameterName: CRYPT4GH_PUBLIC_KEY
+        crypt4ghInternalPriv:
+          enabled: false
+          secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
+          mountPath: /keys/crypt4gh-internal/crypt4gh.sec
+          dataKey: crypt4gh.sec
+          renderToFile: false
+          parameterName: CRYPT4GH_PRIVATE_KEY
