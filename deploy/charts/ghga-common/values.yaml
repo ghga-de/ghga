@@ -225,5 +225,12 @@ exports:
           secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
           mountPath: /keys/crypt4gh-internal/crypt4gh.sec
           dataKey: crypt4gh.sec
-          renderToFile: false
+          renderToFile: true
+          parameterName: CRYPT4GH_PRIVATE_KEY
+        crypt4ghExternalPriv:
+          enabled: false
+          secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-external"
+          mountPath: /keys/crypt4gh-external/crypt4gh.sec
+          dataKey: crypt4gh.sec
+          renderToFile: true
           parameterName: CRYPT4GH_PRIVATE_KEY
