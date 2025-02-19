@@ -25,8 +25,8 @@ export class ParseBytes implements PipeTransform {
    * @param bytes - Bytes as number
    * @returns Human readable size string, e.g. 5 kB
    */
-  transform(bytes: number | null): string {
-    if (bytes === null) return '';
+  transform(bytes: number | null | undefined): string {
+    if (bytes === null || bytes === undefined) return '';
     let parsedBytes = PREFIXES.flatMap((prefix, index) => {
       let calculatedVal = bytes / Math.pow(MULTIPLIER, index);
       if (calculatedVal < 1000 && calculatedVal >= 0.1) {

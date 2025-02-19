@@ -9,13 +9,14 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '@app/auth/services/auth.service';
+import { UserIvaListComponent } from '@app/verification-addresses/features/user-iva-list/user-iva-list.component';
 
 /**
  * This Component shows data about the current user and allows managing their IVAs.
  */
 @Component({
   selector: 'app-account',
-  imports: [MatCardModule, MatIconModule, MatChipsModule],
+  imports: [MatCardModule, MatIconModule, MatChipsModule, UserIvaListComponent],
   templateUrl: './account.component.html',
   styleUrl: './account.component.scss',
 })

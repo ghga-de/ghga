@@ -39,19 +39,12 @@
     <mat-card-title>Contact addresses for account verification </mat-card-title>
     <mat-card-subtitle
       >Addresses used to verify your account's identity in order to access and request
-      access to datasets. Adding new contact addresses is done via the relevant button
-      at the end of this section. After a new address is added, you must request
-      verification of the address using the provided button. Removing a contact address
-      is done through the red button to the right, but you will lose access to any
-      datasets whose access was linked to that address.</mat-card-subtitle
+      access to datasets.</mat-card-subtitle
     >
   </mat-card-header>
   <mat-card-content class="my-4 text-base">
-    <p class="text-base">
-      You have not yet created any contact addresses. This is needed if you wish to
-      download research data.
-    </p>
-  </mat-card-content>
+    <app-user-iva-list></app-user-iva-list
+  ></mat-card-content>
 </mat-card>
 
 <mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">

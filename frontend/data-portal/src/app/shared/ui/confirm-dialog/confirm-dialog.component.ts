@@ -8,8 +8,11 @@ import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
+  MatDialogActions,
+  MatDialogContent,
   MatDialogModule,
   MatDialogRef,
+  MatDialogTitle,
 } from '@angular/material/dialog';
 
 export interface ConfirmDialogData {
@@ -24,7 +27,13 @@ export interface ConfirmDialogData {
  */
 @Component({
   selector: 'app-confirm-dialog',
-  imports: [MatButtonModule, MatDialogModule],
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    MatDialogTitle,
+    MatDialogContent,
+    MatDialogActions,
+  ],
   templateUrl: './confirm-dialog.component.html',
 })
 export class ConfirmDialogComponent {

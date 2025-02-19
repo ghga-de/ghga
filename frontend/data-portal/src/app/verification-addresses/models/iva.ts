@@ -12,13 +12,13 @@ export enum IvaState {
   Verified = 'Verified',
 }
 
-export enum IvaStatePrintable {
-  Unverified = 'Unverified',
-  CodeRequested = 'Code Requested',
-  CodeCreated = 'Code Created',
-  CodeTransmitted = 'Code Transmitted',
-  Verified = 'Verified',
-}
+export const IvaStatePrintable: { [K in keyof typeof IvaState]: string } = {
+  Unverified: 'Unverified',
+  CodeRequested: 'Code Requested',
+  CodeCreated: 'Code Created',
+  CodeTransmitted: 'Code Transmitted',
+  Verified: 'Verified',
+};
 
 export enum IvaType {
   Phone = 'Phone',
@@ -27,12 +27,12 @@ export enum IvaType {
   InPerson = 'InPerson',
 }
 
-export enum IvaTypePrintable {
-  Phone = 'SMS',
-  Fax = 'Fax',
-  PostalAddress = 'Postal Address',
-  InPerson = 'In Person',
-}
+export const IvaTypePrintable: { [K in keyof typeof IvaType]: string } = {
+  Phone: 'SMS',
+  Fax: 'Fax',
+  PostalAddress: 'Postal Address',
+  InPerson: 'In Person',
+};
 
 export interface Iva {
   id: string;

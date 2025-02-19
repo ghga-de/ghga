@@ -7,6 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthService } from '@app/auth/services/auth.service';
+import { UserIvaListComponent } from '@app/verification-addresses/features/user-iva-list/user-iva-list.component';
 import { AccountComponent } from './account.component';
 
 /**
@@ -27,7 +28,11 @@ describe('AccountComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AccountComponent],
       providers: [{ provide: AuthService, useClass: MockAuthService }],
-    }).compileComponents();
+    })
+      .overrideComponent(AccountComponent, {
+        remove: { imports: [UserIvaListComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(AccountComponent);
     component = fixture.componentInstance;

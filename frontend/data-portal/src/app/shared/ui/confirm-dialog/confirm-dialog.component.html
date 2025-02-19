@@ -2,11 +2,11 @@
 <div mat-dialog-content>
   <p>{{ message }}</p>
 </div>
-<div mat-dialog-actions>
+<div mat-dialog-actions cdkTrapFocus>
   <button mat-button (click)="onCancel()">
     {{ cancelText }}
   </button>
-  <button mat-button cdkFocusInitial (click)="onConfirm()">
+  <button mat-raised-button cdkFocusInitial (click)="onConfirm()">
     {{ confirmText }}
   </button>
 </div>

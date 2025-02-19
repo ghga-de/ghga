@@ -1,0 +1,41 @@
+<h1 mat-dialog-title>Contact address verification</h1>
+<div mat-dialog-content>
+  <p style="max-width: 32em">
+    We sent a verification code to your selected contact address ({{ address() }}).
+    Please enter it here:
+  </p>
+  <form defaultButton="submit-code" (ngSubmit)="onSubmit()">
+    <mat-form-field>
+      <mat-label>Verification code</mat-label>
+      <input
+        type="text"
+        cdkFocusInitial
+        matInput
+        [formControl]="codeControl"
+        (input)="onInput()"
+        maxlength="6"
+      />
+    </mat-form-field>
+    <div class="min-h-6">
+      @if (
+        !codeControl.valid &&
+        codeControl.dirty &&
+        codeControl.value &&
+        codeControl.value.length >= 6
+      ) {
+        <mat-error>Please enter a valid verification code.</mat-error>
+      }
+    </div>
+  </form>
+</div>
+<div mat-dialog-actions cdkTrapFocus>
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button
+    id="submit-code"
+    mat-raised-button
+    [disabled]="!codeControl.valid"
+    (click)="onSubmit()"
+  >
+    Submit
+  </button>
+</div>

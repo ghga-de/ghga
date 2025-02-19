@@ -56,8 +56,11 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Request IVA verification with correct code
   'POST /api/auth/rpc/ivas/*/validate-code?verification_code=ABC123': 204,
 
-  // Request IVA verification with others codes
-  'POST /api/auth/rpc/ivas/*/validate-code': 401,
+  // Simulate a 2FA verification too many attempts error
+  'POST /api/auth/rpc/ivas/*/validate-code?verification_code=ZZZ999': 429,
+
+  // Request IVA verification with invalid codes
+  'POST /api/auth/rpc/ivas/*/validate-code': 403,
 
   // Get all IVAs
   'GET /api/auth/ivas': allIvas,

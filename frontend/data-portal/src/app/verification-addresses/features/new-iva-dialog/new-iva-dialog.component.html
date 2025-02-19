@@ -1,0 +1,42 @@
+<h1 mat-dialog-title>Add contact address</h1>
+<div mat-dialog-content cdkTrapFocus>
+  <form defaultButton="submit-code" (ngSubmit)="onSubmit()" #form="ngForm">
+    <p>Please select one of the following contact address types:</p>
+    <mat-button-toggle-group
+      aria-label="Contact address type"
+      [(ngModel)]="type"
+      name="type"
+      (change)="onTypeChange()"
+    >
+      @for (type of types; track type) {
+        <mat-button-toggle [value]="type.value">{{ type.text }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+    @if (type) {
+      <p class="mt-5">{{ valuePrompt }}</p>
+      <mat-form-field class="w-full">
+        <input
+          matInput
+          [(ngModel)]="value"
+          name="value"
+          cdkFocusInitial
+          maxlength="500"
+          #valueField
+          required
+        />
+      </mat-form-field>
+    }
+
+    <div mat-dialog-actions>
+      <button mat-button (click)="onCancel()">Cancel</button>
+      <button
+        id="submit-code"
+        mat-raised-button
+        [disabled]="!type || !value"
+        (click)="onSubmit()"
+      >
+        Submit
+      </button>
+    </div>
+  </form>
+</div>

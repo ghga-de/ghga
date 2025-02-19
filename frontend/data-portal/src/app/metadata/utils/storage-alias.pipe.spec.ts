@@ -12,9 +12,10 @@ describe('StorageAlias', () => {
     expect(pipe).toBeTruthy();
   });
 
-  it('returns empty string for null input', () => {
+  it('returns empty string for null or undefined input', () => {
     const pipe = new StorageAlias();
     expect(pipe.transform(null)).toBe('');
+    expect(pipe.transform(undefined)).toBe('');
   });
 
   it('returns Tübingen 01 for TUE01', () => {

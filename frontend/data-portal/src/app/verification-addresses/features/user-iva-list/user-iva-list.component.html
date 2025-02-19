@@ -1,0 +1,84 @@
+@if (ivasAreLoading()) {
+  <p class="text-base">Loading your contact addresses..</p>
+} @else if (ivasError()) {
+  <p class="font-bold text-red-600">
+    Your contact addresses could not be loaded. Please try again later.
+  </p>
+} @else {
+  @if (!ivas().length) {
+    <p class="text-base">
+      You have not yet created any contact addresses. This is needed if you wish to
+      download research data.
+    </p>
+  }
+  <p class="text-base">
+    Adding new contact addresses is done via the button at the end of this section.
+    After a new address is added, you must request verification of the address using the
+    button next to the address. Removing a contact address is done through the deletion
+    button to the right, but you will lose access to any datasets whose access was
+    linked to that address.
+  </p>
+  @if (ivas().length) {
+    <table mat-table [dataSource]="ivaSource" class="mat-elevation-z8">
+      <ng-container matColumnDef="value">
+        <td mat-cell class="max-w-72 text-base" *matCellDef="let iva">
+          {{ typeAndValue(iva) }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="state">
+        <td mat-cell class="w-72" *matCellDef="let iva">
+          <div class="text-center">
+            @switch (iva.state) {
+              @case ('Verified') {
+                <div class="text-bold text-base text-green-500">
+                  Address has been verified
+                  <mat-icon class="align-bottom">done</mat-icon>
+                </div>
+              }
+              @case ('Unverified') {
+                <button
+                  (click)="safeRequestVerification(iva)"
+                  class="w-64"
+                  mat-stroked-button
+                >
+                  <mat-icon>pin</mat-icon>
+                  Request verification
+                </button>
+              }
+              @case ('CodeTransmitted') {
+                <button
+                  (click)="enterVerificationCode(iva)"
+                  class="w-64"
+                  mat-stroked-button
+                >
+                  <mat-icon>dialpad</mat-icon>
+                  Enter verification code
+                </button>
+              }
+              @default {
+                <div class="text-bold text-base text-orange-500">
+                  Verification requested
+                  <mat-icon class="align-bottom">pending</mat-icon>
+                </div>
+              }
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="del">
+        <td mat-cell *matCellDef="let iva">
+          <button (click)="safeDelete(iva)" mat-icon-button aria-label="Delete">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-row *matRowDef="let row; columns: ['value', 'state', 'del']"></tr>
+    </table>
+  }
+  <button (click)="enterNew()" mat-raised-button class="mt-4">
+    <mat-icon>add</mat-icon>Add contact address
+  </button>
+}
