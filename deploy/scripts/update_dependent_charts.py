@@ -18,15 +18,24 @@ def read_chart_yaml(chart_path):
         return yaml.safe_load(f)
 
 
-def update_version_in_file(chart_path, old_version, new_version):
+def update_version_in_file(chart_path, target, old_version, new_version):
     """Replaces the old version with the new version in Chart.yaml without removing comments."""
     chart_file = chart_path / "Chart.yaml"
-    content = chart_file.read_text()
-    occurrences = content.count(f"version: {old_version}")
-    if occurrences > 1:
-        raise ValueError(f"Multiple occurrences ({occurrences}) of version {old_version} found in {chart_path.name}. Manual review required.")
-    updated_content = content.replace(f"version: {old_version}", f"version: {new_version}")
-    chart_file.write_text(updated_content)
+    content = chart_file.read_text().splitlines()
+    match target:
+        case "chart":
+            line = content[7]
+            if f"version: {old_version}" not in line:
+                raise ValueError(f"Wrong line number for version in {chart_path.name}")
+            content[7] = line.replace(old_version, new_version)
+        case "library":
+            line = content[21]
+            if f"version: {old_version}" not in line:
+                raise ValueError(f"Wrong line number for version in {chart_path.name}")
+            content[21] = line.replace(old_version, new_version)
+        case _:
+            raise ValueError(f"Invalid target: {target}")
+    chart_file.write_text("\n".join(content))
     print(f"Updated {chart_path.name} to version {new_version}")
 
 
@@ -62,7 +71,7 @@ def update_library_dependency(chart_path, library_version):
                 updated = True
 
     if updated:
-        update_version_in_file(chart_path, library_old_version, library_version)
+        update_version_in_file(chart_path, "library", library_old_version, library_version)
         print(f"Updated {chart_path.name} dependency to library version {library_version}")
 
     return library_old_version
@@ -94,7 +103,7 @@ def update_chart_versions():
                 new_version = get_new_version(current_version, library_old_version, library_new_version)
                 if new_version != current_version:
                     chart_yaml["version"] = new_version
-                    update_version_in_file(chart_path, current_version, new_version)
+                    update_version_in_file(chart_path, "chart", current_version, new_version)
                     print(f"Bumped {chart_path.name} version to {new_version}")
 
 if __name__ == "__main__":
