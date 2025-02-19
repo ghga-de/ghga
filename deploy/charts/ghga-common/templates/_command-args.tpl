@@ -11,8 +11,10 @@ args:
   - if [ -d "/vault/secrets" ]; then
       cd /vault/secrets;
       for f in *; do
-        [ -f "$f" ] . $f;
-      done
+        if [ -f "$f" ]; then
+          . "$f";
+        fi;
+      done;
     fi;
     {{ index . 1 }};
 {{ else }}
