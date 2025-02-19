@@ -50,7 +50,8 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "common.names.fullname" . }}
-      shareProcessNamespace: {{ .Values.shareProcessNamespace }}
+      {{/* allows Vault Agent to send (term) signals to the application process (namespace) */}}
+      shareProcessNamespace: {{ ternary true .Values.shareProcessNamespace .Values.vaultAgent.enabled }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets: {{- include "common.tplvalues.render" (dict "value" .Values.imagePullSecrets "context" $) | nindent 8 }}
       {{- end }}

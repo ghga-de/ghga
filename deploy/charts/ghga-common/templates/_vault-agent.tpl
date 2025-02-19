@@ -1,4 +1,6 @@
 {{- define "ghga-common.vaultAgentAnnotations" -}}
+
+{{/* Vault agent boilerplate */}}
 vault.hashicorp.com/tls-skip-verify: "false"
 vault.hashicorp.com/agent-inject: "true"
 vault.hashicorp.com/agent-init-first: "true"
@@ -7,7 +9,10 @@ vault.hashicorp.com/agent-pre-populate-only: "false"
 vault.hashicorp.com/agent-run-as-same-user: "true"
 vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
 vault.hashicorp.com/auth-path: "{{ .Values.vaultAgent.authPath }}"
+
 {{- if .Values.vaultAgent.secrets -}}
+
+{{/* Template to inject MongoDB connection string derived from Vault database engine */}}
 {{- if .Values.vaultAgent.secrets.mongodb }}
 {{- if .Values.vaultAgent.secrets.mongodb.enabled }}
 {{- $vaultSecretPath := .Values.vaultAgent.secrets.mongodb.secretPath }}
@@ -38,8 +43,8 @@ vault.hashicorp.com/agent-inject-template-service-secrets: |
 {{- end -}}
 {{- end -}}
 
-{{/* */}}
-{{- $secrets := list "crypt4ghInternalPub" "crypt4ghInternalPriv" }}
+{{/* Templates for key pairs, can be either rendered to a file or an environment variable */}}
+{{- $secrets := list "crypt4ghInternalPub" "crypt4ghInternalPriv" "crypt4ghExternalPriv" }}
 {{ range $secretName := $secrets -}}
   {{- $enabled := dig  $secretName "enabled" "" $.Values.vaultAgent.secrets}}
   {{ if $enabled -}}
@@ -65,5 +70,6 @@ vault.hashicorp.com/agent-inject-command-{{ $secretName }}: |
 vault.hashicorp.com/agent-inject-secret-{{ $secretName }}: {{ $vaultSecretPath }}
   {{- end }}
 {{- end }}
+
 {{- end -}}
 {{- end -}}
