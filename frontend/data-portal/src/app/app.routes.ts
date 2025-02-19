@@ -55,6 +55,15 @@ export const routes: Routes = [
       ),
     title: 'User Account',
   },
+  // routes for data stewards exclusively
+  {
+    path: 'iva-manager',
+    loadComponent: () =>
+      import(
+        './verification-addresses/features/iva-manager/iva-manager.component'
+      ).then((m) => m.IvaManagerComponent),
+    title: 'User Account',
+  },
   // routes used in the authentication flows
   {
     path: 'oauth/callback',

@@ -1,0 +1,62 @@
+@if (ivasAreLoading()) {
+  <p class="text-base">Loading contact addresses..</p>
+} @else {
+  @let columns = ['user', 'type', 'value', 'state', 'actions'];
+  <table
+    mat-table
+    [dataSource]="source"
+    class="mat-elevation-z8"
+    matSort
+    #sort="matSort"
+  >
+    <ng-container matColumnDef="user">
+      <th mat-header-cell *matHeaderCellDef class="w-64" mat-sort-header>User</th>
+      <td mat-cell class="text-base" *matCellDef="let iva">
+        {{ iva.user_name }}
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="type">
+      <th mat-header-cell *matHeaderCellDef class="w-15" mat-sort-header>Type</th>
+      <td mat-cell class="text-base" *matCellDef="let iva">
+        <mat-icon>{{ typeIconName(iva) }}</mat-icon
+        ><span class="ml-4">{{ typeName(iva) }}</span>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="value" class="w-64">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Value</th>
+      <td mat-cell class="text-base" *matCellDef="let iva">
+        {{ iva.value }}
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="state" class="w-12">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+      <td mat-cell class="text-base state{{ iva.state }}" *matCellDef="let iva">
+        {{ statusName(iva) }}
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef>Actions</th>
+      <td mat-cell class="text-base" *matCellDef="let iva"></td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="columns"></tr>
+    <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+    <tr class="mat-row" *matNoDataRow>
+      <td class="mat-cell p-4 text-base" colspan="5">
+        No contact addresses found. Try removing some filter conditions.
+      </td>
+    </tr>
+  </table>
+
+  @if (ivas().length > 10) {
+    <mat-paginator
+      [pageSize]="defaultTablePageSize"
+      [pageSizeOptions]="tablePageSizeOptions"
+      showFirstLastButtons
+      itemsPerPageLabel="IVAs per page"
+      aria-label="Select page of IVAs"
+      #paginator
+    >
+    </mat-paginator>
+  }
+}
