@@ -1,0 +1,27 @@
+@if (isDataSteward()) {
+  <a
+    mat-button
+    [matMenuTriggerFor]="menu"
+    aria-label="Administration"
+    [id]="isAdminRoute() ? 'activePage' : ''"
+    class="mx-1 flex-row-reverse"
+  >
+    Admin <mat-icon>arrow_drop_down</mat-icon>
+  </a>
+  <mat-menu #menu="matMenu">
+    <a
+      [id]="isIvaManagerRoute() ? 'activePage' : ''"
+      mat-menu-item
+      routerLink="/iva-manager"
+      class="mx-1"
+      ><mat-icon>contact_mail</mat-icon> IVA Manager</a
+    >
+    <a
+      [id]="isAccessRequestsManagerRoute() ? 'activePage' : ''"
+      mat-menu-item
+      routerLink="/access-request-manager"
+      class="mx-1"
+      ><mat-icon>person_raised_hand</mat-icon> Access Request Manager</a
+    >
+  </mat-menu>
+}

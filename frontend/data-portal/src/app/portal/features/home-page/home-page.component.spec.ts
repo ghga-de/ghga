@@ -10,13 +10,13 @@ import { ActivatedRoute } from '@angular/router';
 import { GlobalSummaryComponent } from '@app/metadata/features/global-summary/global-summary.component';
 import { HomePageComponent } from './home-page.component';
 
+const fakeActivatedRoute = {
+  snapshot: { data: {} },
+} as ActivatedRoute;
+
 describe('HomePageComponent', () => {
   let component: HomePageComponent;
   let fixture: ComponentFixture<HomePageComponent>;
-
-  const fakeActivatedRoute = {
-    snapshot: { data: {} },
-  } as ActivatedRoute;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({

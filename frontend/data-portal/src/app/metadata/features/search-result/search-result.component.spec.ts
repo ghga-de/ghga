@@ -22,13 +22,13 @@ class MockMetadataService {
   datasetSummaryIsLoading = signal(false);
 }
 
+const fakeActivatedRoute = {
+  snapshot: { data: {} },
+} as ActivatedRoute;
+
 describe(SearchResultComponent, () => {
   let component: SearchResultComponent;
   let fixture: ComponentFixture<SearchResultComponent>;
-
-  const fakeActivatedRoute = {
-    snapshot: { data: {} },
-  } as ActivatedRoute;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({

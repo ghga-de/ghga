@@ -11,15 +11,16 @@ import { ActivatedRoute } from '@angular/router';
 import { screen } from '@testing-library/angular';
 
 import { AccountButtonComponent } from '../account-button/account-button.component';
+import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
 import { SiteHeaderComponent } from './site-header.component';
+
+const fakeActivatedRoute = {
+  snapshot: { data: {} },
+} as ActivatedRoute;
 
 describe('SiteHeaderComponent', () => {
   let component: SiteHeaderComponent;
   let fixture: ComponentFixture<SiteHeaderComponent>;
-
-  const fakeActivatedRoute = {
-    snapshot: { data: {} },
-  } as ActivatedRoute;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -32,7 +33,7 @@ describe('SiteHeaderComponent', () => {
       ],
     })
       .overrideComponent(SiteHeaderComponent, {
-        remove: { imports: [AccountButtonComponent] },
+        remove: { imports: [AccountButtonComponent, AdminMenuComponent] },
       })
       .compileComponents();
   });

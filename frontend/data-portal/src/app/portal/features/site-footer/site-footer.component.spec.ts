@@ -9,13 +9,13 @@ import { ActivatedRoute } from '@angular/router';
 
 import { SiteFooterComponent } from './site-footer.component';
 
+const fakeActivatedRoute = {
+  snapshot: { data: {} },
+} as ActivatedRoute;
+
 describe('SiteFooterComponent', () => {
   let component: SiteFooterComponent;
   let fixture: ComponentFixture<SiteFooterComponent>;
-
-  const fakeActivatedRoute = {
-    snapshot: { data: {} },
-  } as ActivatedRoute;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({

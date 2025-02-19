@@ -9,8 +9,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatNavList } from '@angular/material/list';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
+import { BaseRouteService } from '@app/shared/services/base-route.service';
 import { AccountButtonComponent } from '../account-button/account-button.component';
+import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
 
 /**
  * This is the site header component
@@ -26,19 +28,12 @@ import { AccountButtonComponent } from '../account-button/account-button.compone
     MatIconModule,
     RouterLink,
     AccountButtonComponent,
+    AdminMenuComponent,
   ],
   styleUrl: './site-header.component.scss',
 })
 export class SiteHeaderComponent {
-  #router = inject(Router);
+  #baseRoute = inject(BaseRouteService);
 
-  route: string = '';
-
-  constructor() {
-    this.#router.events.subscribe((event) => {
-      if (event instanceof NavigationEnd) {
-        this.route = this.#router.url;
-      } else return;
-    });
-  }
+  route = this.#baseRoute.route;
 }

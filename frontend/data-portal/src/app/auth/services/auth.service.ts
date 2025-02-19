@@ -88,7 +88,7 @@ export class AuthService {
   /**
    * Check whether the user is fully authenticated with second factor as a signal
    */
-  isAuthenticated = computed<boolean>(() => this.user()?.state == 'Authenticated');
+  isAuthenticated = computed<boolean>(() => this.user()?.state === 'Authenticated');
 
   /**
    * Get the current user session state as a signal
@@ -322,8 +322,22 @@ export class AuthService {
    */
   async guardAuthenticated(): Promise<boolean> {
     const state = await this.#determineSessionState();
-    if (state == 'Authenticated') return true;
+    if (state === 'Authenticated') return true;
     this.#notify.showWarning('Please login to continue the requested action.');
+    return this.#guardBack();
+  }
+
+  /**
+   * This method can be used as a guard for all routes available only to data stewards.
+   * @returns true if the route is accessible
+   */
+  async guardDataSteward(): Promise<boolean> {
+    const state = await this.#determineSessionState();
+    if (state === 'Authenticated' && this.role() === 'data_steward') return true;
+    this.#notify.showWarning(
+      (state === 'Authenticated' ? 'Insufficient permissions' : 'Please login') +
+        ' to continue with the requested action.',
+    );
     return this.#guardBack();
   }
 
@@ -510,7 +524,7 @@ export class AuthService {
     const state = this.sessionState();
     if (!['NeedsTotpToken', 'LostTotpToken'].includes(state)) return null;
     let params = new HttpParams();
-    if (state == 'LostTotpToken') {
+    if (state === 'LostTotpToken') {
       params = params.set('force', 'true');
     }
     return firstValueFrom(

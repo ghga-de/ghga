@@ -17,13 +17,13 @@
 
     <mat-nav-list class="my-8 basis-1/2 text-center">
       <a
-        [id]="route === '/' ? 'activePage' : ''"
+        [id]="route() === '' ? 'activePage' : ''"
         mat-button
         routerLink="/"
         class="homeLink mx-1"
         >Home</a
       ><a
-        [id]="route.startsWith('/browse') ? 'activePage' : ''"
+        [id]="['browse', 'dataset'].includes(route()) ? 'activePage' : ''"
         mat-button
         routerLink="/browse"
         class="mx-1"
@@ -44,8 +44,8 @@
         rel="noreferrer noopener"
         class="mx-1 flex-row-reverse"
         >Docs<mat-icon class="float-right">open_in_new</mat-icon></a
-      ></mat-nav-list
-    >
+      ><app-admin-menu></app-admin-menu>
+    </mat-nav-list>
     <div class="my-4 basis-1/4 text-right">
       <app-account-button></app-account-button></div
   ></mat-toolbar-row>
