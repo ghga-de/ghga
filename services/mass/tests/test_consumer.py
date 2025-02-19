@@ -15,10 +15,15 @@
 
 """Tests to verify functionality of kafka event consumer"""
 
+from unittest.mock import AsyncMock
+
 import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
+from hexkit.providers.akafka.testutils import KafkaFixture
 
 from mass.core import models
+from mass.inject import prepare_event_subscriber
+from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio()
@@ -115,3 +120,65 @@ async def test_resource_delete(joint_fixture: JointFixture):
     )
 
     assert results_post_delete.count == 0
+
+
+async def test_event_subscriber_dlq(joint_fixture: JointFixture):
+    """Verify that if we get an error when consuming an event, it gets published to the DLQ."""
+    config = joint_fixture.config
+    assert config.kafka_enable_dlq
+
+    # Publish an event with a bogus payload to a topic/type this service expects
+    await joint_fixture.publish_event(
+        payload={"some_key": "some_value"},
+        type_=config.resource_upsertion_event_type,
+        topic=config.resource_change_event_topic,
+        key="test",
+    )
+    async with joint_fixture._kafka.record_events(
+        in_topic=config.kafka_dlq_topic
+    ) as recorder:
+        # Consume the event, which should error and get sent to the DLQ
+        await joint_fixture.consume_event()
+    assert recorder.recorded_events
+    assert len(recorder.recorded_events) == 1
+    event = recorder.recorded_events[0]
+    assert event.key == "test"
+    assert event.payload == {"some_key": "some_value"}
+
+
+async def test_consume_from_retry(kafka: KafkaFixture):
+    """Verify that this service will correctly get events from the retry topic"""
+    config = get_config(sources=[kafka.config], kafka_enable_dlq=True)
+    assert config.kafka_enable_dlq
+
+    # define content of resource
+    content: dict = {
+        "object": {"type": "added-resource-object", "id": "98u44-f4jo4"},
+        "city": "something",
+        "category": "test object",
+    }
+
+    # put together event payload
+    payload = event_schemas.SearchableResource(
+        accession="added-resource",
+        class_name=CLASS_NAME,
+        content=content,
+    ).model_dump()
+
+    # Publish an event with a proper payload to a topic/type this service expects
+    await kafka.publish_event(
+        payload=payload,
+        type_=config.resource_upsertion_event_type,
+        topic=config.service_name + "-retry",
+        key="test",
+        headers={"original_topic": config.resource_change_event_topic},
+    )
+
+    # Consume the event
+    qh_mock = AsyncMock()
+    async with prepare_event_subscriber(
+        config=config, query_handler_override=qh_mock
+    ) as consumer:
+        await consumer.run(forever=False)
+
+    qh_mock.load_resource.assert_awaited_once()

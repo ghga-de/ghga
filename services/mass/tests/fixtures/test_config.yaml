@@ -50,3 +50,4 @@ resource_deletion_event_type: searchable_resource_deleted
 resource_upsertion_event_type: searchable_resource_upserted
 service_instance_id: "001"
 kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: True

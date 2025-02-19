@@ -181,7 +181,7 @@ async def joint_fixture(
 ) -> AsyncGenerator[JointFixture, None]:
     """Function scoped joint fixture for API-level integration testing."""
     # merge configs from different sources with the default one:
-    config = get_config(sources=[mongodb.config, kafka.config])
+    config = get_config(sources=[mongodb.config, kafka.config], kafka_enable_dlq=True)
 
     async with (
         prepare_core(config=config) as query_handler,
