@@ -20,7 +20,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from ghga_service_commons.utils.context import asyncnullcontext
-from hexkit.providers.akafka.provider import KafkaEventSubscriber
+from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 
 from ns.adapters.inbound.akafka import EventSubTranslator
@@ -76,7 +76,12 @@ async def prepare_event_subscriber(
             config=config,
         )
 
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=event_sub_translator
-        ) as event_subscriber:
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config,
+                translator=event_sub_translator,
+                dlq_publisher=dlq_publisher,
+            ) as event_subscriber,
+        ):
             yield event_subscriber

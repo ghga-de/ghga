@@ -29,6 +29,7 @@ TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 def get_config(
     sources: list[BaseSettings] | None = None,
     default_config_yaml: Path = TEST_CONFIG_YAML,
+    **kwargs,
 ) -> Config:
     """Merges parameters from the default TEST_CONFIG_YAML with params inferred
     from testcontainers.
@@ -38,6 +39,7 @@ def get_config(
     if sources is not None:
         for source in sources:
             sources_dict.update(**source.model_dump())
+    sources_dict.update(**kwargs)
 
     return Config(config_yaml=default_config_yaml, **sources_dict)  # type: ignore
 
