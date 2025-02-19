@@ -18,12 +18,12 @@
 
 from typing import TypeAlias
 
-from hexkit.protocols.dao import DaoFactoryProtocol, DaoNaturalId
+from hexkit.protocols.dao import Dao, DaoFactoryProtocol
 
 from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
 from metldata.artifacts_rest.models import ArtifactInfo, ArtifactResource
 
-ArtifactResourceDao: TypeAlias = DaoNaturalId[ArtifactResource]
+ArtifactResourceDao: TypeAlias = Dao[ArtifactResource]
 
 
 class DaoNotFoundError(RuntimeError):

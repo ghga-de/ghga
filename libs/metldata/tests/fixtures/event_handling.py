@@ -78,6 +78,7 @@ class FileSystemEventFixture:
                 type_=event.type_,
                 key=event.key,
                 payload=event.payload,
+                headers=event.headers,
             )
 
 

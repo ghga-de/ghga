@@ -53,7 +53,7 @@ def _resolve_path(
                 f"Unable to find slot '{slot_name}' for class '{cur_cls}'."
             ) from error
         resolved_path.append(slot_def)
-        cur_cls = slot_def.range if slot_def.range in all_classes else None
+        cur_cls = slot_def.range if slot_def.range in all_classes else None  # type: ignore
     return resolved_path
 
 

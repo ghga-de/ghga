@@ -17,7 +17,7 @@
 """Functionality to publish and consume events stored on the file system."""
 
 import json
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 
 from hexkit.base import InboundProviderBase
@@ -50,6 +50,7 @@ class Event(BaseModel):
     type_: str
     key: str
     payload: JsonObject
+    headers: Mapping[str, str] | None = None
 
 
 def get_topic_path(*, topic: str, event_store_path: Path) -> Path:
@@ -110,7 +111,13 @@ class FileSystemEventPublisher(EventPublisherProtocol):
         self._config = config
 
     async def _publish_validated(
-        self, *, payload: JsonObject, type_: Ascii, key: Ascii, topic: Ascii
+        self,
+        *,
+        payload: JsonObject,
+        type_: Ascii,
+        key: Ascii,
+        topic: Ascii,
+        headers: Mapping[str, str],
     ) -> None:
         """Publish an event with already validated topic and type.
 
@@ -119,12 +126,14 @@ class FileSystemEventPublisher(EventPublisherProtocol):
             type_: The event type. ASCII characters only.
             key: The event key. ASCII characters only.
             topic: The event topic. ASCII characters only.
+            headers: Additional headers to attach to the event.
         """
         event = Event(
             topic=topic,
             type_=type_,
             key=key,
             payload=payload,
+            headers=headers,
         )
         write_event(
             event=event,
