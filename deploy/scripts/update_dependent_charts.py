@@ -35,7 +35,7 @@ def update_version_in_file(chart_path, target, old_version, new_version):
             content[21] = line.replace(old_version, new_version)
         case _:
             raise ValueError(f"Invalid target: {target}")
-    chart_file.write_text("\n".join(content))
+    chart_file.write_text("\n".join(content) + "\n")
     print(f"Updated {chart_path.name} to version {new_version}")
 
 
