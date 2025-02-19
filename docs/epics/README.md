@@ -73,3 +73,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (64) [Blue Whale](./64-blue-whale/technical_specification.md): Reimplement frontend features in Angular
 - (65) [Striped Skunk](./65-striped-skunk/technical_specification.md): Hexkit v4 Rollout
 - (66) [Irukandji](./66-irukandji/technical_specification.md): Schemapack
+- (67) [Oryx](./67-oryx/technical_specification.md): Kafka Event Config Standardization
