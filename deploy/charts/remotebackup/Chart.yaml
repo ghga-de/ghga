@@ -13,6 +13,10 @@ version: 2.0.0
 # It is recommended to use it with quotes.
 appVersion: "1.1.0"
 
+# The major version of the API. Minor versions and patches are not relevant as they do not
+# introduce breaking changes.
+apiVersion: v2
+
 dependencies:
 - name: ghga-common
   version: 2.1.1
