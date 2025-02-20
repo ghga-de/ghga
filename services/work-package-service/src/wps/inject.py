@@ -22,7 +22,7 @@ from typing import NamedTuple
 from fastapi import FastAPI
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from ghga_service_commons.utils.context import asyncnullcontext
-from hexkit.providers.akafka import KafkaEventSubscriber
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from wps.adapters.inbound.event_sub import EventSubTranslator
@@ -128,7 +128,12 @@ async def prepare_consumer(
             config=config,
         )
 
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=event_sub_translator
-        ) as event_subscriber:
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config,
+                translator=event_sub_translator,
+                dlq_publisher=dlq_publisher,
+            ) as event_subscriber,
+        ):
             yield Consumer(work_package_repository, event_subscriber)

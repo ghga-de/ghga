@@ -99,7 +99,7 @@ def fixture_config(kafka: KafkaFixture, mongodb: MongoDbFixture) -> Config:
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
         download_access_url="http://access",
         work_package_signing_key=SIGNING_KEY_PAIR.export_private(),  # pyright: ignore
-        **kafka.config.model_dump(),
+        **kafka.config.model_dump(exclude={"kafka_enable_dlq"}),
         **mongodb.config.model_dump(),
     )
 

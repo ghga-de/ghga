@@ -158,3 +158,71 @@ async def test_dataset_deletion(
             break
     else:
         assert False, "dataset not deleted"
+
+
+async def test_event_subscriber_dlq(
+    config: Config,
+    kafka: KafkaFixture,
+    consumer: Consumer,
+):
+    """Verify that if we get an error when consuming an event, it gets published to the DLQ."""
+    assert config.kafka_enable_dlq
+
+    # Publish an event with a bogus payload to a topic/type this service expects
+    await kafka.publish_event(
+        payload={"some_key": "some_value"},
+        topic=config.dataset_change_event_topic,
+        type_=config.dataset_upsertion_event_type,
+        key="test-key",
+    )
+
+    # Consume the event, which should error and get sent to the DLQ
+    async with kafka.record_events(in_topic=config.kafka_dlq_topic) as recorder:
+        await consumer.event_subscriber.run(forever=False)
+    assert recorder.recorded_events
+    assert len(recorder.recorded_events) == 1
+    event = recorder.recorded_events[0]
+    assert event.key == "test-key"
+    assert event.payload == {"some_key": "some_value"}
+
+
+async def test_consume_from_retry(
+    config: Config,
+    kafka: KafkaFixture,
+    consumer: Consumer,
+    mongodb: MongoDbFixture,
+):
+    """Verify that this service will correctly get events from the retry topic"""
+    assert config.kafka_enable_dlq
+
+    repository, subscriber = consumer
+
+    # make sure that in the beginning the database is empty
+    with pytest.raises(repository.DatasetNotFoundError):
+        await repository.get_dataset("some-dataset-id")
+
+    # Publish an event with a proper payload to a topic/type this service expects
+    await kafka.publish_event(
+        payload=DATASET_UPSERTION_EVENT.model_dump(),
+        type_=config.dataset_upsertion_event_type,
+        topic=config.service_name + "-retry",
+        key="test-key",
+        headers={"original_topic": config.dataset_change_event_topic},
+    )
+
+    # wait until the event is processed
+    await asyncio.wait_for(subscriber.run(forever=False), timeout=TIMEOUT)
+
+    # Check that WPS got the event from the retry topic and was able to process it
+    dataset = None
+    for _ in range(RETRIES):
+        await asyncio.sleep(RETRY_INTERVAL)
+        try:
+            dataset = await repository.get_dataset("some-dataset-id")
+        except repository.DatasetNotFoundError:
+            pass
+        else:
+            assert dataset == DATASET
+            break
+    else:
+        assert False, "dataset cannot be retrieved"
