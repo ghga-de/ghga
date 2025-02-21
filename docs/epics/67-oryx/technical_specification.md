@@ -61,11 +61,11 @@ publishes an event, presumably another service will consume that event, meaning 
 will have to share configuration. If the schema is centrally defined, the config
 should be too.
 
-### A Note on "Normal" Events Using the Outbox Pattern
+### A Note on "Normal" (non-outbox, e.g. stateless) Events Using the Outbox Pattern
 We have events that don't communicate state but that nevertheless use the
 outbox pattern solely for persistence. The motivation for storing these *stateless*
 events is to aid in application restoration following the loss of Kafka data.
-The `stateless` events that are persisted and published via the outbox pattern
+The *stateless* events that are persisted and published via the outbox pattern
 always use the `upserted` event type, because deletion isn't an applicable
 concept. The result is a "shoehorned" process that actually needs a dedicated
 mechanism in `hexkit`. That mechanism, a class that mimics some of the outbox
@@ -82,9 +82,9 @@ DAO's functionality, can be created in another epic.
 <tr>
 <td><pre><code>
 <strong>DatasetEventsConfig (stateful)</strong>:
-   dataset_change_event_topic
-   dataset_upsertion_event_type
-   dataset_deletion_event_type
+   dataset_change_topic
+   dataset_upsertion_type
+   dataset_deletion_type
 </code></pre></td>
 <td><pre><code>
 UMS:
@@ -104,9 +104,9 @@ Metldata:
 <tr>
 <td><pre><code>
 <strong>ResourceEventsConfig (stateful)</strong>:
-   resource_change_event_topic
-   resource_upsertion_event_type
-   resource_deletion_event_type
+   resource_change_topic
+   resource_upsertion_type
+   resource_deletion_type
 </code></pre></td>
 <td><pre><code>
 Metldata & MASS:
@@ -119,7 +119,7 @@ Metldata & MASS:
 <tr>
 <td><pre><code>
 <strong>UserEventsTopicConfig (stateful)</strong>:
-   user_event_topic
+   user_topic
 </code></pre></td>
 <td><pre><code>
 UMS & NOS:
@@ -131,8 +131,8 @@ UMS & NOS:
 <tr>
 <td><pre><code>
 <strong>FileMetadataEventsConfig</strong>:
-   file_metadata_event_topic
-   file_metadata_event_type
+   file_metadata_topic
+   file_metadata_type
 </code></pre></td>
 <td><pre><code>
 UCS:
@@ -144,7 +144,7 @@ UCS:
 <tr>
 <td><pre><code>
 <strong>FileUploadReceivedEventsConfig</strong>:
-   file_upload_received_event_topic
+   file_upload_received_topic
 </code></pre></td>
 <td><pre><code>
 (each currently use hexkit's outbox pattern event type)
@@ -158,8 +158,8 @@ IRS:
 <tr>
 <td><pre><code>
 <strong>NotificationEventsConfig</strong>:
-   notification_event_topic
-   notification_event_type
+   notification_topic
+   notification_type
 </code></pre></td>
 <td><pre><code>
 NS & NOS:
@@ -171,7 +171,7 @@ NS & NOS:
 <tr>
 <td><pre><code>
 <strong>FileStagingRequestedEventsConfig</strong>:
-   files_to_stage_event_topic
+   files_to_stage_topic
 </code></pre></td>
 <td><pre><code>
 (both currently use hexkit's outbox pattern event type)
@@ -185,8 +185,8 @@ DCS:
 <tr>
 <td><pre><code>
 <strong>FileStagedEventsConfig</strong>:
-   file_staged_event_topic
-   file_staged_event_type
+   file_staged_topic
+   file_staged_type
 </code></pre></td>
 <td><pre><code>
 IFRS:
@@ -198,8 +198,8 @@ IFRS:
 <tr>
 <td><pre><code>
 <strong>DownloadServedEventsConfig</strong>:
-   download_served_event_topic
-   download_served_event_type
+   download_served_topic
+   download_served_type
 </code></pre></td>
 <td><pre><code>
 DCS:
@@ -211,7 +211,7 @@ DCS:
 <tr>
 <td><pre><code>
 <strong>FileDeletionRequestEventsConfig</strong>:
-   file_deletion_request_event_topic
+   file_deletion_request_topic
 </code></pre></td>
 <td><pre><code>
 (each currently use hexkit's outbox pattern event type)
@@ -223,8 +223,8 @@ PCS, IFRS, DCS, & UCS:
 <tr>
 <td><pre><code>
 <strong>FileDeletedEventsConfig</strong>:
-   file_deleted_event_topic
-   file_deleted_event_type
+   file_deleted_topic
+   file_deleted_type
 </code></pre></td>
 <td><pre><code>
 IFRS, DCS, & UCS:
@@ -236,7 +236,7 @@ IFRS, DCS, & UCS:
 <tr>
 <td><pre><code>
 <strong>FileInterrogationSuccessEventsConfig</strong>:
-   file_interrogations_event_topic
+   file_interrogations_topic
 </code></pre></td>
 <td><pre><code>
 (all currently use hexkit's outbox pattern event type)
@@ -250,8 +250,8 @@ IFRS:
 <tr>
 <td><pre><code>
 <strong>FileInterrogationFailureEventsConfig</strong>:
-   file_interrogations_event_topic
-   interrogation_failure_event_type
+   file_interrogations_topic
+   interrogation_failure_type
 </code></pre></td>
 <td><pre><code>
 IRS:
@@ -266,8 +266,8 @@ UCS:
 <tr>
 <td><pre><code>
 <strong>FileInternallyRegisteredEventsConfig</strong>:
-   file_internally_registered_event_topic
-   file_internally_registered_event_type
+   file_internally_registered_topic
+   file_internally_registered_type
 </code></pre></td>
 <td><pre><code>
 IFRS, DCS, IRS, DINS:
@@ -282,8 +282,8 @@ UCS:
 <tr>
 <td><pre><code>
 <strong>FileRegisteredForDownloadEventsConfig</strong>:
-   file_registered_for_download_event_topic
-   file_registered_for_download_event_type
+   file_registered_for_download_topic
+   file_registered_for_download_type
 </code></pre></td>
 <td><pre><code>
 DCS:
@@ -295,8 +295,8 @@ DCS:
 <tr>
 <td><pre><code>
 <strong>AccessRequestCreatedEventsConfig</strong>:
-   access_request_event_topic
-   access_request_created_event_type
+   access_request_topic
+   access_request_created_type
 </code></pre></td>
 <td><pre><code>
 NOS & ARS:
@@ -308,8 +308,8 @@ NOS & ARS:
 <tr>
 <td><pre><code>
 <strong>AccessRequestAllowedEventsConfig</strong>:
-   access_request_event_topic
-   access_request_allowed_event_type
+   access_request_topic
+   access_request_allowed_type
 </code></pre></td>
 <td><pre><code>
 NOS & ARS:
@@ -321,8 +321,8 @@ NOS & ARS:
 <tr>
 <td><pre><code>
 <strong>AccessRequestDeniedEventsConfig</strong>:
-   access_request_event_topic
-   access_request_denied_event_type
+   access_request_topic
+   access_request_denied_type
 </code></pre></td>
 <td><pre><code>
 NOS & ARS:
@@ -334,8 +334,8 @@ NOS & ARS:
 <tr>
 <td><pre><code>
 <strong>IvaChangeEventsConfig</strong>:
-   iva_state_changed_event_topic
-   iva_state_changed_event_type
+   iva_state_changed_topic
+   iva_state_changed_type
 </code></pre></td>
 <td><pre><code>
 NOS:
@@ -350,8 +350,8 @@ UMS:
 <tr>
 <td><pre><code>
 <strong>SecondFactorRecreatedEventsConfig</strong>:
-   auth_event_topic
-   second_factor_recreated_event_type
+   auth_topic
+   second_factor_recreated_type
 </code></pre></td>
 <td><pre><code>
 NOS:
