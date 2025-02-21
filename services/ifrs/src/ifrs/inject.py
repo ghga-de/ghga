@@ -90,7 +90,12 @@ async def prepare_outbox_subscriber(
             )
         ]
 
-        async with KafkaOutboxSubscriber.construct(
-            config=config, translators=outbox_translators
-        ) as kafka_outbox_subscriber:
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaOutboxSubscriber.construct(
+                config=config,
+                translators=outbox_translators,
+                dlq_publisher=dlq_publisher,
+            ) as kafka_outbox_subscriber,
+        ):
             yield kafka_outbox_subscriber

@@ -10,6 +10,7 @@ mongo_dsn: "mongodb://mongodb:27017"
 db_name: "dev"
 service_instance_id: "001"
 kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: True
 files_to_register_topic: file-interrogations
 files_to_stage_topic: file-downloads
 files_to_delete_topic: file-deletions
