@@ -38,7 +38,7 @@
               }
               @case ('Unverified') {
                 <button
-                  (click)="safeRequestVerification(iva)"
+                  (click)="requestVerification(iva)"
                   class="w-64"
                   mat-stroked-button
                 >
@@ -69,7 +69,11 @@
 
       <ng-container matColumnDef="del">
         <td mat-cell *matCellDef="let iva">
-          <button (click)="safeDelete(iva)" mat-icon-button aria-label="Delete">
+          <button
+            (click)="deleteWhenConfirmed(iva)"
+            mat-icon-button
+            aria-label="Delete"
+          >
             <mat-icon>delete</mat-icon>
           </button>
         </td>

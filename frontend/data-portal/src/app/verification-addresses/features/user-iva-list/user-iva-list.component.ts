@@ -69,7 +69,7 @@ export class UserIvaListComponent implements OnInit {
    * Request verification of the given IVA
    * @param iva - the IVA to be verified
    */
-  requestVerification(iva: Iva): void {
+  #requestVerification(iva: Iva): void {
     this.#ivaService.requestCodeForIva(iva.id).subscribe({
       next: () => {
         this.#notify.showSuccess('Verification has been requested');
@@ -85,7 +85,7 @@ export class UserIvaListComponent implements OnInit {
    * Request verification of the given IVA after confirmation from user
    * @param iva - the IVA to be verified
    */
-  safeRequestVerification(iva: Iva): void {
+  requestVerification(iva: Iva): void {
     this.#confirm.confirm({
       title: 'Request verification of your address',
       message:
@@ -95,7 +95,7 @@ export class UserIvaListComponent implements OnInit {
         ' your request. When the verification code has been transmitted,' +
         ' you will also be notified via e-mail.',
       callback: (confirmed) => {
-        if (confirmed) this.requestVerification(iva);
+        if (confirmed) this.#requestVerification(iva);
       },
     });
   }
@@ -153,7 +153,7 @@ export class UserIvaListComponent implements OnInit {
    * Delete the given IVA
    * @param iva - the IVA to delete
    */
-  delete(iva: Iva): void {
+  #delete(iva: Iva): void {
     this.#ivaService.deleteIva({ ivaId: iva.id }).subscribe({
       next: () => {
         this.#notify.showSuccess('Address has been deleted');
@@ -169,7 +169,7 @@ export class UserIvaListComponent implements OnInit {
    * Delete the given IVA after confirmation from user
    * @param iva - the IVA to delete
    */
-  safeDelete(iva: Iva): void {
+  deleteWhenConfirmed(iva: Iva): void {
     this.#confirm.confirm({
       title: 'Confirm deletion of contact address',
       message:
@@ -179,7 +179,7 @@ export class UserIvaListComponent implements OnInit {
       cancelText: 'Cancel',
       confirmText: 'Confirm deletion',
       callback: (confirmed) => {
-        if (confirmed) this.delete(iva);
+        if (confirmed) this.#delete(iva);
       },
     });
   }

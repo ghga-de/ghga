@@ -37,7 +37,7 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/auth/users/roe@test.dev/ivas': allIvasOfRoe,
 
   // New IVA
-  'POST /api/auth/users/*/ivas': { id: 'TEST123456789' },
+  'POST /api/auth/users/*/ivas': { id: 'ABC123' },
 
   // Delete IVA
   'DELETE /api/auth/users/*/ivas/*': 204,
@@ -47,7 +47,7 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Create IVA verification code
   'POST /api/auth/rpc/ivas/*/create-code': {
-    verification_code: 'TEST123456789',
+    verification_code: 'ABC123',
   },
 
   // Request IVA verification

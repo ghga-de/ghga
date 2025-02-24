@@ -1,0 +1,43 @@
+<h1 mat-dialog-title>Verification code created</h1>
+<div mat-dialog-content>
+  <p>Please send the following verification code to:</p>
+  <table>
+    <tr></tr>
+    <tr>
+      <th>Name:</th>
+      <td>{{ iva.user_name }}</td>
+    </tr>
+    <tr>
+      <th>E-Mail:</th>
+      <td>{{ iva.user_email }}</td>
+    </tr>
+    <tr>
+      <th>Via:</th>
+      <td>{{ typeName(iva) }}</td>
+    </tr>
+    <tr>
+      <th>Address:</th>
+      <td>{{ iva.value }}</td>
+    </tr>
+    <tr>
+      <th>Code:</th>
+      <td class="code">
+        <button
+          mat-fab
+          color="primary"
+          class="float-right mx-2 -mt-4"
+          (click)="copyCode()"
+        >
+          <mat-icon>content_copy</mat-icon>
+        </button>
+        <input type="text" [value]="iva.code" readonly />
+      </td>
+    </tr>
+  </table>
+</div>
+<div mat-dialog-actions cdkTrapFocus>
+  <button mat-button (click)="onClose()">Close and send later</button>
+  <button mat-raised-button (click)="onConfirmTransmission()">
+    Confirm transmission
+  </button>
+</div>

@@ -1,4 +1,7 @@
-.stateUnverified {
+@use '@angular/material' as mat;
+
+.stateUnverified,
+button.invalidate {
   color: #dc2626;
 }
 .stateCodeRequested {
@@ -12,4 +15,29 @@
 }
 .stateVerified {
   color: #16a34a;
+}
+table button {
+  @include mat.button-overrides(
+    (
+      filled-label-text-size: 80%,
+      outlined-label-text-size: 80%,
+    )
+  );
+}
+button.create {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-secondary),
+      text-state-layer-color: var(--mat-sys-on-secondary),
+    )
+  );
+}
+button.confirm {
+  @include mat.button-overrides(
+    (
+      filled-label-text-size: 80%,
+      filled-container-color: var(--mat-sys-tertiary),
+      text-state-layer-color: var(--mat-sys-on-tertiary),
+    )
+  );
 }

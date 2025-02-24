@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { DatePipe } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -13,11 +14,15 @@ import {
   ViewChild,
   ViewChildren,
 } from '@angular/core';
+
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { ConfirmationService } from '@app/shared/services/confirmation.service';
+import { NotificationService } from '@app/shared/services/notification.service';
 import {
   IvaStatePrintable,
   IvaType,
@@ -25,6 +30,7 @@ import {
   UserWithIva,
 } from '@app/verification-addresses/models/iva';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
+import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creation-dialog.component';
 
 const IVA_TYPE_ICONS: { [K in keyof typeof IvaType]: string } = {
   Phone: 'smartphone',
@@ -42,6 +48,7 @@ const IVA_TYPE_ICONS: { [K in keyof typeof IvaType]: string } = {
 @Component({
   selector: 'app-iva-manager-list',
   imports: [
+    DatePipe,
     MatTableModule,
     MatButtonModule,
     MatIconModule,
@@ -52,6 +59,9 @@ const IVA_TYPE_ICONS: { [K in keyof typeof IvaType]: string } = {
   styleUrl: './iva-manager-list.component.scss',
 })
 export class IvaManagerListComponent implements AfterViewInit {
+  #dialog = inject(MatDialog);
+  #confirmationService = inject(ConfirmationService);
+  #notificationService = inject(NotificationService);
   #ivaService = inject(IvaService);
 
   ivas = this.#ivaService.allIvas;
@@ -135,5 +145,103 @@ export class IvaManagerListComponent implements AfterViewInit {
    */
   statusName(iva: UserWithIva): string {
     return IvaStatePrintable[iva.state];
+  }
+
+  /**
+   * Invalidate the given IVA
+   * @param iva - the IVA to be invalidated
+   */
+  #invalidate(iva: UserWithIva): void {
+    this.#ivaService.unverifyIva(iva.id).subscribe({
+      next: () => {
+        this.#notificationService.showSuccess('IVA has been invalidated');
+      },
+      error: (err) => {
+        console.debug(err);
+        this.#notificationService.showError('IVA could not be invalidated');
+      },
+    });
+  }
+
+  /**
+   * Invalidate an IVA after confirmation
+   * @param iva - the IVA to invalidate
+   */
+  invalidateWhenConfirmed(iva: UserWithIva) {
+    this.#confirmationService.confirm({
+      title: 'Confirm invalidation of IVA',
+      message:
+        `Do you really wish to invalidate the ${this.typeName(iva)} IVA of` +
+        ` ${iva.user_name} with address "${iva.value}"?` +
+        ' The user will lose access to any dataset linked to this IVA.',
+      cancelText: 'Cancel',
+      confirmText: 'Confirm invalidation',
+      callback: (confirmed) => {
+        if (confirmed) this.#invalidate(iva);
+      },
+    });
+  }
+
+  /**
+   * Mark verification code as transmitted
+   * @param iva - the IVA for which the code was transmitted
+   */
+  #markAsTransmitted(iva: UserWithIva): void {
+    this.#ivaService.confirmTransmissionForIva(iva.id).subscribe({
+      next: () => {
+        this.#notificationService.showSuccess(
+          'Transmission of verification code confirmed',
+        );
+      },
+      error: (err) => {
+        console.debug(err);
+        this.#notificationService.showError(
+          'Transmission of verification code could not be confirmed',
+        );
+      },
+    });
+  }
+
+  /**
+   * Mark verification code as transmitted after confirmation
+   * @param iva - the IVA for which the code was transmitted
+   */
+  markAsTransmittedWhenConfirmed(iva: UserWithIva) {
+    this.#confirmationService.confirm({
+      title: 'Confirm code transmission',
+      message:
+        'Please confirm the transmission of the verification code' +
+        ` the ${this.typeName(iva)} IVA of` +
+        ` ${iva.user_name} with address "${iva.value}".`,
+      cancelText: 'Cancel',
+      confirmText: 'Confirm transmission',
+      callback: (confirmed) => {
+        if (confirmed) this.#markAsTransmitted(iva);
+      },
+    });
+  }
+
+  /**
+   * (Re)create a verification code
+   * @param iva - the IVA for which the code should be created
+   */
+  createCode(iva: UserWithIva) {
+    this.#ivaService.createCodeForIva(iva.id).subscribe({
+      next: (code) => {
+        this.#notificationService.showSuccess('Verification code has been created');
+        const dialogRef = this.#dialog.open(CodeCreationDialogComponent, {
+          data: { ...iva, code },
+        });
+        dialogRef.afterClosed().subscribe((doConfirm) => {
+          if (doConfirm) {
+            this.#markAsTransmitted(iva);
+          }
+        });
+      },
+      error: (err) => {
+        console.debug(err);
+        this.#notificationService.showError('Verification code could not be created');
+      },
+    });
   }
 }

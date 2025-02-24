@@ -38,7 +38,7 @@ export interface ConfirmDialogData {
 })
 export class ConfirmDialogComponent {
   #dialogRef = inject(MatDialogRef<ConfirmDialogComponent, boolean>);
-  data = inject(MAT_DIALOG_DATA) as ConfirmDialogData;
+  data = inject<ConfirmDialogData>(MAT_DIALOG_DATA);
 
   /**
    * Dialog heading
