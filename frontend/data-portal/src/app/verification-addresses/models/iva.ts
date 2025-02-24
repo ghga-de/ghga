@@ -47,3 +47,10 @@ export interface UserWithIva extends Iva {
   user_name: string;
   user_email: string;
 }
+
+export interface IvaFilter {
+  name: string;
+  fromDate: Date | undefined;
+  toDate: Date | undefined;
+  state: IvaState | undefined;
+}

@@ -18,6 +18,7 @@ import {
 import { provideHttpCache, withHttpCacheInterceptor } from '@ngneat/cashew';
 
 import { withFetch } from '@angular/common/http';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { csrfInterceptor } from '@app/auth/services/csrf.service';
 import { routes, TemplatePageTitleStrategy } from './app.routes';
 
@@ -33,5 +34,6 @@ export const appConfig: ApplicationConfig = {
     // cache all GET requests by default
     provideHttpCache({ strategy: 'implicit' }),
     provideAnimationsAsync(),
+    provideNativeDateAdapter(),
   ],
 };

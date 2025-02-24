@@ -57,6 +57,7 @@
     "@playwright/test": "^1.50.1",
     "@testing-library/angular": "^17.3.5",
     "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/user-event": "^13.1.5",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.1",
     "@typescript-eslint/eslint-plugin": "^8.23.0",

@@ -10,7 +10,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
 import { map, Observable, tap, throwError } from 'rxjs';
-import { Iva, IvaState, IvaType, UserWithIva } from '../models/iva';
+import { Iva, IvaFilter, IvaState, IvaType, UserWithIva } from '../models/iva';
 
 /**
  * IVA service
@@ -81,6 +81,8 @@ export class IvaService {
 
   #ivasUrl = `${this.#authUrl}/ivas`;
 
+  #allIvasFilter = signal<IvaFilter | undefined>(undefined);
+
   // signal to load all users' IVAs
   #loadAll = signal<null | undefined>(undefined);
 
@@ -99,6 +101,31 @@ export class IvaService {
   }
 
   /**
+   * The current filter for the list of all IVAs
+   */
+  allIvasFilter = computed(
+    () =>
+      this.#allIvasFilter() ?? {
+        name: '',
+        fromDate: undefined,
+        toDate: undefined,
+        state: undefined,
+      },
+  );
+
+  /**
+   * Set a filter for the list of all IVAs
+   * @param filter - the filter to apply
+   */
+  setAllIvasFilter(filter: IvaFilter): void {
+    this.#allIvasFilter.set(
+      filter.name || filter.fromDate || filter.toDate || filter.state
+        ? filter
+        : undefined,
+    );
+  }
+
+  /**
    * Internal resource for loading all IVAs
    */
   #allIvas = rxResource<UserWithIva[], null | undefined>({
@@ -109,7 +136,28 @@ export class IvaService {
   /**
    * The list of IVAs with corresponding user data
    */
-  allIvas: Signal<UserWithIva[]> = computed(() => this.#allIvas.value() ?? []);
+  allIvas: Signal<UserWithIva[]> = computed(() => {
+    let ivas = this.#allIvas.value() ?? [];
+    const filter = this.#allIvasFilter();
+    if (ivas.length && filter) {
+      const name = filter.name.trim().toLowerCase();
+      if (name) {
+        ivas = ivas.filter((iva) => iva.user_name.toLowerCase().includes(name));
+      }
+      if (filter.fromDate) {
+        const fromDate = filter.fromDate.toISOString();
+        ivas = ivas.filter((iva) => iva.changed >= fromDate);
+      }
+      if (filter.toDate) {
+        const toDate = filter.toDate.toISOString();
+        ivas = ivas.filter((iva) => iva.changed <= toDate);
+      }
+      if (filter.state) {
+        ivas = ivas.filter((iva) => iva.state === filter.state);
+      }
+    }
+    return ivas;
+  });
 
   /**
    * Whether the list of all IVAs is loading as a signal
