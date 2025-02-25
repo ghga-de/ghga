@@ -74,16 +74,16 @@
 
     <div class="mt-4 flex flex-col">
       <mat-form-field class="container max-w-5xl">
-        <mat-label>File accessions</mat-label>
+        <mat-label>File IDs</mat-label>
         <textarea
           matInput
-          placeholder="accession1, accession2, ..."
+          placeholder="file-id-1, file-id-2, ..."
           [(ngModel)]="files"
         ></textarea>
         <mat-hint class="-mt-2 mb-4">
           <p>
             You can restrict the download to certain files only. To do so, enter the
-            desired file accessions above, separated by whitespace or commas.
+            desired file IDs above, separated by whitespace or commas.
           </p>
           <p>
             Otherwise, leave the field above empty in order to download all files
