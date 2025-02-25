@@ -398,6 +398,7 @@ async def test_upload(
             part_size=8 * 1024**3,
             server_public_key=server_pubkey,
             private_key_path=PRIVATE_KEY_FILE,
+            passphrase=None,
         )
         with uploadable_file.file_path.open("rb") as source_file:
             with open(tmpdir.join("encrypted_file"), "wb") as encrypted_file:

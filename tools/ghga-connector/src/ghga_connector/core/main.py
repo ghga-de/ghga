@@ -17,6 +17,7 @@
 """Main domain logic."""
 
 from pathlib import Path
+from typing import Optional
 
 import httpx
 
@@ -42,6 +43,7 @@ async def upload_file(  # noqa: PLR0913
     my_public_key_path: Path,
     my_private_key_path: Path,
     part_size: int,
+    passphrase: Optional[str] = None,
 ) -> None:
     """Core command to upload a file. Can be called by CLI, GUI, etc."""
     if not my_public_key_path.is_file():
@@ -73,6 +75,7 @@ async def upload_file(  # noqa: PLR0913
             file_path=file_path,
             my_private_key_path=my_private_key_path,
             part_size=part_size,
+            passphrase=passphrase,
             server_public_key=server_public_key,
             uploader=uploader,
         )
@@ -190,8 +193,13 @@ def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> li
 
 
 def decrypt_file(
-    input_file: Path, output_file: Path, decryption_private_key_path: Path
+    input_file: Path,
+    output_file: Path,
+    decryption_private_key_path: Path,
+    passphrase: Optional[str],
 ):
     """Delegate decryption of a file Crypt4GH"""
-    decryptor = Crypt4GHDecryptor(decryption_key_path=decryption_private_key_path)
+    decryptor = Crypt4GHDecryptor(
+        decryption_key_path=decryption_private_key_path, passphrase=passphrase
+    )
     decryptor.decrypt_file(input_path=input_file, output_path=output_file)

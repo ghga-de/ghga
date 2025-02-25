@@ -16,6 +16,7 @@
 """Contains general logic that needs to be exposed to higher level core functionality"""
 
 from pathlib import Path
+from typing import Optional
 
 from ghga_connector.core import exceptions
 from ghga_connector.core.crypt import Crypt4GHEncryptor
@@ -29,6 +30,7 @@ async def run_upload(  # noqa: PLR0913
     file_path: Path,
     my_private_key_path: Path,
     part_size: int,
+    passphrase: Optional[str],
     server_public_key: str,
     uploader: UploaderBase,
 ):
@@ -37,6 +39,7 @@ async def run_upload(  # noqa: PLR0913
         part_size=part_size,
         private_key_path=my_private_key_path,
         server_public_key=server_public_key,
+        passphrase=passphrase,
     )
     chunked_uploader = ChunkedUploader(
         encryptor=encryptor,

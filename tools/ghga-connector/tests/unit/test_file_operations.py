@@ -57,40 +57,51 @@ def test_read_file_parts(from_part: Union[int, None]):
         assert expected_content == obtained_content
 
 
-def test_encryption_decryption():
+@pytest.mark.parametrize(
+    "pk_name,sk_name",
+    [("key.pub", "key.sec"), ("encrypted_key.pub", "encrypted_key.sec")],
+)
+def test_encryption_decryption(pk_name: str, sk_name: str):
     """Encrypt and decrypt a file to check if it is actually encrypted"""
     file_size = 20 * 1024 * 1024
     key_dir = Path(__file__).parent.parent / "fixtures" / "keypair"
-    pubkey_path = key_dir / "key.pub"
-    private_key_path = key_dir / "key.sec"
+    pubkey_path = key_dir / pk_name
+    private_key_path = key_dir / sk_name
 
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
 
-    with NamedTemporaryFile() as in_file:
-        with NamedTemporaryFile() as encrypted_file:
-            with NamedTemporaryFile() as out_file:
-                # fill source file with random data
-                in_file.write(os.urandom(file_size))
-                in_file.seek(0)
+    with (
+        NamedTemporaryFile() as in_file,
+        NamedTemporaryFile() as encrypted_file,
+        NamedTemporaryFile() as out_file,
+    ):
+        # fill source file with random data
+        in_file.write(os.urandom(file_size))
+        in_file.seek(0)
 
-                # produce encrypted file
-                encryptor = Crypt4GHEncryptor(
-                    part_size=8 * 1024**3,
-                    server_public_key=pubkey,
-                    private_key_path=private_key_path,
-                )
+        # produce encrypted file
+        passphrase = "test" if sk_name.startswith("encrypted") else None
+        encryptor = Crypt4GHEncryptor(
+            part_size=8 * 1024**3,
+            server_public_key=pubkey,
+            private_key_path=private_key_path,
+            passphrase=passphrase,
+        )
+        for chunk in encryptor.process_file(file=in_file):  # type: ignore
+            encrypted_file.write(chunk)
 
-                for chunk in encryptor.process_file(file=in_file):  # type: ignore
-                    encrypted_file.write(chunk)
+        # rewind file and check if file is recognized as encrypted
+        in_file.seek(0)
+        encrypted_file_loc = Path(encrypted_file.name)
+        assert is_file_encrypted(encrypted_file_loc)
 
-                in_file.seek(0)
-                encrypted_file_loc = Path(encrypted_file.name)
+        # decrypt file and verifies it matches initial input
+        decryptor = Crypt4GHDecryptor(
+            decryption_key_path=private_key_path, passphrase=passphrase
+        )
+        decryptor.decrypt_file(
+            input_path=encrypted_file_loc,
+            output_path=Path(out_file.name),
+        )
 
-                assert is_file_encrypted(encrypted_file_loc)
-                decryptor = Crypt4GHDecryptor(decryption_key_path=private_key_path)
-                decryptor.decrypt_file(
-                    input_path=encrypted_file_loc,
-                    output_path=Path(out_file.name),
-                )
-
-                assert in_file.read() == out_file.read()
+        assert in_file.read() == out_file.read()

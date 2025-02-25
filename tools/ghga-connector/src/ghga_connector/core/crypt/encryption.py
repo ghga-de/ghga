@@ -20,7 +20,7 @@ import os
 from collections.abc import Generator
 from io import BufferedReader
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import crypt4gh.header
 import crypt4gh.keys
@@ -36,11 +36,12 @@ from .checksums import Checksums
 class Crypt4GHEncryptor(Encryptor):
     """Handles on the fly encryption and checksum calculation"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         part_size: int,
         private_key_path: Path,
         server_public_key: str,
+        passphrase: Optional[str],
         checksums: Checksums = Checksums(),
         file_secret: Union[bytes, None] = None,
     ):
@@ -49,6 +50,7 @@ class Crypt4GHEncryptor(Encryptor):
         self._part_size = part_size
         self._private_key_path = private_key_path
         self._server_public_key = base64.b64decode(server_public_key)
+        self._passphrase = passphrase
         if file_secret is None:
             file_secret = os.urandom(32)
         self._file_secret = file_secret
@@ -76,9 +78,15 @@ class Crypt4GHEncryptor(Encryptor):
         Gather file encryption/decryption secret and assemble a crypt4gh envelope using the
         server's private and the client's public key
         """
-        private_key = crypt4gh.keys.get_private_key(
-            self._private_key_path, callback=None
-        )
+        if self._passphrase:
+            private_key = crypt4gh.keys.get_private_key(
+                filepath=self._private_key_path, callback=lambda: self._passphrase
+            )
+        else:
+            private_key = crypt4gh.keys.get_private_key(
+                filepath=self._private_key_path, callback=None
+            )
+
         keys = [(0, private_key, self._server_public_key)]
         header_content = crypt4gh.header.make_packet_data_enc(0, self._file_secret)
         header_packets = crypt4gh.header.encrypt(header_content, keys)
