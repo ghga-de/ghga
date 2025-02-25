@@ -104,8 +104,9 @@ if __name__ == "__main__":
         helm_index["entries"]["ghga-common"][0]["version"]
     )
 
-    diffs_app_version, diffs_library_version = [], []
+    diffs_app_version, diffs_library_version, current_versions = [], [], []
     for chart_file, chart in charts:
+        current_versions.append(semver.VersionInfo.parse(chart.get("version")))
         current = semver.VersionInfo.parse(chart.get("appVersion"))
         latest = get_latest_published_version(helm_index, chart["name"])
 
@@ -168,10 +169,14 @@ if __name__ == "__main__":
         print("All charts are up-to-date.")
         exit(0)
 
+    if not all(version == current_versions[0] for version in current_versions):
+        raise ValueError("Versions are inconsistent")
+
     max_diff = max(diffs_app_version + diffs_library_version)
     print(f"Max diff: {max_diff}")
-    new_version = bump_version(semver.VersionInfo.parse(args.current_version), max_diff)
-
+    
+    new_version = bump_version(current_versions.pop(), max_diff)
+    
     # Update the version in the Chart.yaml
     for chart_file, chart in charts:
         print(f"Bumping {chart['name']} from {chart['version']} to {new_version}")
