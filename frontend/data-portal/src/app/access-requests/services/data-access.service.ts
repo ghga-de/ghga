@@ -14,7 +14,11 @@ import { NotificationService } from '@app/shared/services/notification.service';
 import { catchError, firstValueFrom, map } from 'rxjs';
 // eslint-disable-next-line boundaries/element-types
 import { DataAccessRequestDialogComponent } from '../features/data-access-request-dialog/data-access-request-dialog.component';
-import { AccessRequest, AccessRequestDialogData } from '../models/access-requests';
+import {
+  AccessRequest,
+  AccessRequestDialogData,
+  GrantedAccessRequest,
+} from '../models/access-requests';
 
 /**
  *  This service handles state and management of access requests (to datasets)
@@ -124,8 +128,29 @@ export class DataAccessService {
     () => this.#accessRequests.value() ?? [],
   );
   grantedAccessRequests = computed(() =>
-    this.accessRequests().filter((ar: AccessRequest) => ar.status == 'allowed'),
+    this.accessRequests()
+      .filter((ar: AccessRequest) => ar.status == 'allowed')
+      .map((request: AccessRequest) => {
+        const expiryDate = new Date(request.access_ends);
+        let grantedAccessRequest: GrantedAccessRequest = {
+          request,
+          isExpired: expiryDate < new Date(),
+          daysRemaining: this.daysUntil(expiryDate),
+        };
+        return grantedAccessRequest;
+      }),
   );
+
+  /**
+   * This function computes the number of full days between now and the date provided
+   * @param dateUntil The reference date.
+   * @returns The number of full days.
+   */
+  daysUntil(dateUntil: Date): number {
+    const date = new Date();
+    const diffTime = dateUntil.getTime() - date.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
 
   pendingAccessRequests = computed(() =>
     this.accessRequests().filter((ar: AccessRequest) => ar.status == 'pending'),
@@ -136,6 +161,16 @@ export class DataAccessService {
   hasError = this.#accessRequests.error;
 }
 
+let dateInOneYear = new Date();
+dateInOneYear.setDate(dateInOneYear.getDate() + 365);
+dateInOneYear.setTime(dateInOneYear.getTime() + 60 * 60 * 1000);
+
+let dateYesterday = new Date();
+dateYesterday.setDate(dateYesterday.getDate() - 1);
+
+let dateOneYearAgo = new Date();
+dateOneYearAgo.setDate(dateOneYearAgo.getDate() - 365);
+
 /**
  * Mock for the Data Access Service
  */
@@ -144,19 +179,42 @@ export class MockDataAccessService {
   hasError = signal(false);
   grantedAccessRequests = signal([
     {
-      id: 'GHGAD15111403130971',
-      user_id: '',
-      dataset_id: 'GHGAD588887987',
-      full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
-      email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
-      request_text: 'unit test request',
-      access_starts: Date.now().toString(),
-      access_ends: Date.now().toString(),
-      request_created: Date.now().toString(),
-      status: 'approved',
-      status_changed: '',
-      changed_by: '',
-      iva_id: '',
+      request: {
+        id: 'GHGAD15111403130971',
+        user_id: '',
+        dataset_id: 'GHGAD588887987',
+        full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
+        email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
+        request_text: 'unit test request',
+        access_starts: Date.now().toString(),
+        access_ends: dateInOneYear.toString(),
+        request_created: Date.now().toString(),
+        status: 'approved',
+        status_changed: '',
+        changed_by: '',
+        iva_id: '',
+      },
+      isExpired: false,
+      daysRemaining: 365,
+    },
+    {
+      request: {
+        id: 'GHGAD15111403130451',
+        user_id: '',
+        dataset_id: 'GHGAD588887987',
+        full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
+        email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
+        request_text: 'unit test request 2',
+        access_starts: dateOneYearAgo.toString(),
+        access_ends: dateYesterday.toString(),
+        request_created: dateOneYearAgo.toString(),
+        status: 'approved',
+        status_changed: '',
+        changed_by: '',
+        iva_id: '',
+      },
+      isExpired: false,
+      daysRemaining: -1,
     },
   ]);
 

@@ -10,13 +10,15 @@
     } @else {
       <p class="text-base">You have the following granted access requests:</p>
       <ul>
-        @for (request of req; track request.id) {
-          <li>
+        @for (grantedRequest of req; track grantedRequest.request.id) {
+          @let request = grantedRequest.request;
+          <li [hidden]="grantedRequest.isExpired">
             For the dataset
             <a routerLink="/dataset/{{ request.dataset_id }}">{{
               request.dataset_id
             }}</a>
-            from {{ request.access_starts }} to {{ request.access_ends }}.
+            from {{ request.access_starts | date }} to {{ request.access_ends | date }} &ndash;
+            <span class="font-bold">{{ grantedRequest.daysRemaining }}</span> days left.
           </li>
         }
       </ul>

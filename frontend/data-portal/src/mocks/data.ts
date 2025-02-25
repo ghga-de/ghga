@@ -434,6 +434,12 @@ endDate.setFullYear(endDate.getFullYear() + 1);
 const access_starts = startDate.toISOString();
 const access_ends = endDate.toISOString();
 
+let dateYesterday = new Date();
+dateYesterday.setDate(dateYesterday.getDate() - 1);
+
+let dateOneYearAgo = new Date();
+dateOneYearAgo.setDate(dateOneYearAgo.getDate() - 365);
+
 export const accessRequests = [
   {
     id: '62bcc452-a70b-47c1-9870-55da40d8e45f',
@@ -459,6 +465,22 @@ export const accessRequests = [
     request_text: 'This is a test request for dataset GHGAD588887988.',
     access_starts: access_starts,
     access_ends: access_ends,
+    request_created: '2023-05-11T12:04:02.000Z',
+    status: 'allowed',
+    status_changed: '2023-05-19T12:04:03.000Z',
+    changed_by: 'doe@test.dev',
+    iva_id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
+  },
+
+  {
+    id: '4ef4ccac-6c0a-4be6-9637-b339251793fb',
+    user_id: 'doe@test.dev',
+    dataset_id: 'GHGAD588887988',
+    full_user_name: 'Dr. John Doe',
+    email: 'j.jdoe@home.org',
+    request_text: 'This is a test request for dataset GHGAD588887988. It is expired.',
+    access_starts: dateOneYearAgo,
+    access_ends: dateYesterday,
     request_created: '2023-05-11T12:04:02.000Z',
     status: 'allowed',
     status_changed: '2023-05-19T12:04:03.000Z',

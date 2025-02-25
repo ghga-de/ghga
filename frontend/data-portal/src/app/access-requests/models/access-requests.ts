@@ -20,6 +20,12 @@ export interface AccessRequest {
   iva_id: null | string;
 }
 
+export interface GrantedAccessRequest {
+  request: AccessRequest;
+  isExpired: boolean;
+  daysRemaining: number;
+}
+
 export interface AccessRequestDialogData {
   datasetID: string;
   email: string;
