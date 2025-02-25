@@ -69,15 +69,9 @@ export const routes: Routes = [
     path: 'access-request-manager',
     canActivate: [() => inject(AuthService).guardDataSteward()],
     loadComponent: () =>
-      import('./portal/features/home-page/home-page.component').then(
-        (m) => m.HomePageComponent,
-      ),
-    /* TODO: once implement, replace redirect with this:
-    loadComponent: () =>
-      import('./access-requests/features/access-request-manager.component').then(
-        (m) => m.AccessRequestManager,
-      ),
-      */
+      import(
+        './access-requests/features/access-request-manager/access-request-manager.component'
+      ).then((m) => m.AccessRequestManagerComponent),
     title: 'Access Request Manager',
   },
   // routes used in the authentication flows

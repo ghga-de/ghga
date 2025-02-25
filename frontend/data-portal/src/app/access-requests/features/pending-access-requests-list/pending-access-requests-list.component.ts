@@ -7,7 +7,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DataAccessService } from '@app/access-requests/services/data-access.service';
+import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.component';
 
 /**
@@ -20,9 +20,9 @@ import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.com
   styleUrl: './pending-access-requests-list.component.scss',
 })
 export class PendingAccessRequestsListComponent {
-  #ars = inject(DataAccessService);
+  #ars = inject(AccessRequestService);
 
-  pendingRequests = this.#ars.pendingAccessRequests;
-  isLoading = this.#ars.isLoading;
-  hasError = this.#ars.hasError;
+  pendingRequests = this.#ars.pendingUserAccessRequests;
+  isLoading = this.#ars.userAccessRequestsAreLoading;
+  hasError = this.#ars.userAccessRequestsError;
 }

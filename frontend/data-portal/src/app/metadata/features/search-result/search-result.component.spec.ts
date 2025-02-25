@@ -11,9 +11,9 @@ import { signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
 import {
-  DataAccessService,
-  MockDataAccessService,
-} from '@app/access-requests/services/data-access.service';
+  AccessRequestService,
+  MockAccessRequestService,
+} from '@app/access-requests/services/access-request.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { SearchResultComponent } from './search-result.component';
 
@@ -43,7 +43,7 @@ describe(SearchResultComponent, () => {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,
         },
-        { provide: DataAccessService, useClass: MockDataAccessService },
+        { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],
     }).compileComponents();
 

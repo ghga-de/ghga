@@ -29,7 +29,7 @@ export class IvaManagerComponent implements OnInit {
   #ivaService = inject(IvaService);
 
   /**
-   * Load the IVAs of the current user when the component is initialized
+   * Load the IVAs when the component is initialized
    */
   ngOnInit(): void {
     this.#ivaService.loadAllIvas();

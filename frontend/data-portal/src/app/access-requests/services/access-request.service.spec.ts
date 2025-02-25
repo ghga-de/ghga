@@ -8,7 +8,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ConfigService } from '@app/shared/services/config.service';
-import { DataAccessService } from './data-access.service';
+import { AccessRequestService } from './access-request.service';
 
 /**
  * Mock the config service as needed by the auth service
@@ -17,8 +17,8 @@ class MockConfigService {
   authUrl = 'http://mock.dev/auth';
 }
 
-describe('DataAccessService', () => {
-  let service: DataAccessService;
+describe('AccessRequestService', () => {
+  let service: AccessRequestService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -28,7 +28,7 @@ describe('DataAccessService', () => {
         { provide: ConfigService, useClass: MockConfigService },
       ],
     });
-    service = TestBed.inject(DataAccessService);
+    service = TestBed.inject(AccessRequestService);
   });
 
   it('should be created', () => {

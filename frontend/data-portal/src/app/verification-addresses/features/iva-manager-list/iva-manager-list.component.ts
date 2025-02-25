@@ -71,7 +71,7 @@ export class IvaManagerListComponent implements AfterViewInit {
   source = new MatTableDataSource<UserWithIva>([]);
 
   defaultTablePageSize = 10;
-  tablePageSizeOptions = [5, 10, 25, 50, 100, 250, 500];
+  tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
 
   #updateSourceEffect = effect(() => (this.source.data = this.ivas()));
 

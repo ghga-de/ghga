@@ -11,9 +11,9 @@ import { ActivatedRoute } from '@angular/router';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import {
-  DataAccessService,
-  MockDataAccessService,
-} from '@app/access-requests/services/data-access.service';
+  AccessRequestService,
+  MockAccessRequestService,
+} from '@app/access-requests/services/access-request.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { DatasetSummaryComponent } from './dataset-summary.component';
 
@@ -38,7 +38,7 @@ describe('DatasetSummaryComponent', () => {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,
         },
-        { provide: DataAccessService, useClass: MockDataAccessService },
+        { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],
     }).compileComponents();
 

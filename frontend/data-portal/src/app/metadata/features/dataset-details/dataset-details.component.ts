@@ -28,7 +28,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Title } from '@angular/platform-browser';
 // eslint-disable-next-line boundaries/element-types
-import { DataAccessService } from '@app/access-requests/services/data-access.service';
+import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { Experiment, File, Sample } from '@app/metadata/models/dataset-details';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
@@ -75,7 +75,7 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   #metadata = inject(MetadataService);
   #dins = inject(DatasetInformationService);
 
-  accessService = inject(DataAccessService);
+  accessService = inject(AccessRequestService);
   datasetDetails = this.#metadata.datasetDetails;
   datasetInformation = this.#dins.datasetInformation;
 

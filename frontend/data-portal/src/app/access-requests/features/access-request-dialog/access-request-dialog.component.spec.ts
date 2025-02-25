@@ -14,7 +14,7 @@ import {
 } from '@angular/material/dialog';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { ConfigService } from '@app/shared/services/config.service';
-import { DataAccessRequestDialogComponent } from './data-access-request-dialog.component';
+import { AccessRequestDialogComponent } from './access-request-dialog.component';
 
 const mockConfig = {
   base_url: 'https://portal.test',
@@ -42,13 +42,13 @@ const mockConfig = {
   default_access_duration_days: 365,
 };
 
-describe('DataAccessRequestDialogComponent', () => {
-  let component: DataAccessRequestDialogComponent;
-  let fixture: ComponentFixture<DataAccessRequestDialogComponent>;
+describe('AccessRequestDialogComponent', () => {
+  let component: AccessRequestDialogComponent;
+  let fixture: ComponentFixture<AccessRequestDialogComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DataAccessRequestDialogComponent, MatDialogModule],
+      imports: [AccessRequestDialogComponent, MatDialogModule],
       providers: [
         provideNativeDateAdapter(),
         {
@@ -61,7 +61,7 @@ describe('DataAccessRequestDialogComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(DataAccessRequestDialogComponent);
+    fixture = TestBed.createComponent(AccessRequestDialogComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('datasetID', 'GHGAD588887987');
     fixture.detectChanges();

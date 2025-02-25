@@ -1,0 +1,70 @@
+@if (accessRequestsAreLoading()) {
+  <p class="text-base">Loading access requests...</p>
+} @else {
+  @let columns = ['dataset', 'user', 'starts', 'ends', 'requested', 'status'];
+  <table
+    mat-table
+    [dataSource]="source"
+    class="mat-elevation-z8"
+    matSort
+    #sort="matSort"
+  >
+    <ng-container matColumnDef="dataset">
+      <th mat-header-cell *matHeaderCellDef class="w-40" mat-sort-header>Dataset</th>
+      <td mat-cell class="text-base" *matCellDef="let ar">
+        {{ ar.dataset_id }}
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="user">
+      <th mat-header-cell *matHeaderCellDef class="w-64" mat-sort-header>User</th>
+      <td mat-cell class="text-base" *matCellDef="let ar">
+        {{ ar.full_user_name }}
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="starts">
+      <th mat-header-cell *matHeaderCellDef class="w-36" mat-sort-header>Starts</th>
+      <td mat-cell class="text-base" *matCellDef="let ar">
+        {{ ar.access_starts | date: 'yyyy-MM-dd' }}
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="ends">
+      <th mat-header-cell *matHeaderCellDef class="w-36" mat-sort-header>Ends</th>
+      <td mat-cell class="text-base" *matCellDef="let ar">
+        {{ ar.access_ends | date: 'yyyy-MM-dd' }}
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="requested">
+      <th mat-header-cell *matHeaderCellDef class="w-36" mat-sort-header>Requested</th>
+      <td mat-cell class="text-base" *matCellDef="let ar">
+        {{ ar.request_created | date: 'yyyy-MM-dd' }}
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef class="w-40" mat-sort-header>Status</th>
+      <td mat-cell class="status-{{ ar.status }}" *matCellDef="let ar">
+        {{ ar.status }}
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="columns"></tr>
+    <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+    <tr class="mat-row" *matNoDataRow>
+      <td class="mat-cell p-4 text-base" colspan="6">
+        No access requests found. Try removing some filter conditions.
+      </td>
+    </tr>
+  </table>
+
+  @if (accessRequests().length > 10) {
+    <mat-paginator
+      [pageSize]="defaultTablePageSize"
+      [pageSizeOptions]="tablePageSizeOptions"
+      showFirstLastButtons
+      itemsPerPageLabel="Access requests per page"
+      aria-label="Select page of access requests"
+      #paginator
+    >
+    </mat-paginator>
+  }
+}

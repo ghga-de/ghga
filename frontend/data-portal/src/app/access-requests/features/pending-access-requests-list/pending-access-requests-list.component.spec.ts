@@ -9,9 +9,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import {
-  DataAccessService,
-  MockDataAccessService,
-} from '@app/access-requests/services/data-access.service';
+  AccessRequestService,
+  MockAccessRequestService,
+} from '@app/access-requests/services/access-request.service';
 import { PendingAccessRequestsListComponent } from './pending-access-requests-list.component';
 
 describe('PendingAccessRequestsListComponent', () => {
@@ -22,7 +22,7 @@ describe('PendingAccessRequestsListComponent', () => {
     await TestBed.configureTestingModule({
       imports: [PendingAccessRequestsListComponent],
       providers: [
-        { provide: DataAccessService, useClass: MockDataAccessService },
+        { provide: AccessRequestService, useClass: MockAccessRequestService },
         {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,

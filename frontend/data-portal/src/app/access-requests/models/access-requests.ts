@@ -4,6 +4,12 @@
  * @license Apache-2.0
  */
 
+export enum AccessRequestStatus {
+  allowed = 'allowed',
+  denied = 'denied',
+  pending = 'pending',
+}
+
 export interface AccessRequest {
   id: string;
   user_id: string;
@@ -14,7 +20,7 @@ export interface AccessRequest {
   access_starts: string;
   access_ends: string;
   request_created: string;
-  status: string;
+  status: AccessRequestStatus;
   status_changed: null | string;
   changed_by: null | string;
   iva_id: null | string;
@@ -33,4 +39,12 @@ export interface AccessRequestDialogData {
   fromDate: Date | undefined;
   untilDate: Date | undefined;
   userId: string;
+}
+
+export interface AccessRequestFilter {
+  datasetId: string;
+  name: string;
+  fromDate: Date | undefined;
+  toDate: Date | undefined;
+  state: AccessRequestStatus | undefined;
 }

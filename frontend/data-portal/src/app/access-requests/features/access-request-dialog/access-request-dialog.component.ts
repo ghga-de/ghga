@@ -27,7 +27,7 @@ const MILLISECONDS_PER_DAY = 86400000;
  * This component contains a form for all the data needed for an access request.
  */
 @Component({
-  selector: 'app-data-access-request-dialog',
+  selector: 'app-access-request-dialog',
   imports: [
     MatDatepickerModule,
     MatHint,
@@ -38,11 +38,11 @@ const MILLISECONDS_PER_DAY = 86400000;
     MatDialogModule,
     MatButtonModule,
   ],
-  templateUrl: './data-access-request-dialog.component.html',
-  styleUrl: './data-access-request-dialog.component.scss',
+  templateUrl: './access-request-dialog.component.html',
+  styleUrl: './access-request-dialog.component.scss',
 })
-export class DataAccessRequestDialogComponent {
-  readonly dialogRef = inject(MatDialogRef<DataAccessRequestDialogComponent>);
+export class AccessRequestDialogComponent {
+  readonly dialogRef = inject(MatDialogRef<AccessRequestDialogComponent>);
   readonly data = inject<AccessRequestDialogData>(MAT_DIALOG_DATA);
   #config = inject(ConfigService);
   readonly result = model(this.data);

@@ -17,7 +17,8 @@
             <a routerLink="/dataset/{{ request.dataset_id }}">{{
               request.dataset_id
             }}</a>
-            from {{ request.access_starts | date }} to {{ request.access_ends | date }} &ndash;
+            from {{ request.access_starts | date }} to
+            {{ request.access_ends | date }} &ndash;
             <span class="font-bold">{{ grantedRequest.daysRemaining }}</span> days left.
           </li>
         }

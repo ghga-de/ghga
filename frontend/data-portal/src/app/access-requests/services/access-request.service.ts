@@ -13,10 +13,11 @@ import { ConfigService } from '@app/shared/services/config.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { catchError, firstValueFrom, map } from 'rxjs';
 // eslint-disable-next-line boundaries/element-types
-import { DataAccessRequestDialogComponent } from '../features/data-access-request-dialog/data-access-request-dialog.component';
+import { AccessRequestDialogComponent } from '../features/access-request-dialog/access-request-dialog.component';
 import {
   AccessRequest,
   AccessRequestDialogData,
+  AccessRequestFilter,
   GrantedAccessRequest,
 } from '../models/access-requests';
 
@@ -26,16 +27,19 @@ import {
 @Injectable({
   providedIn: 'root',
 })
-export class DataAccessService {
-  #dialogRef: MatDialogRef<DataAccessRequestDialogComponent> | undefined;
+export class AccessRequestService {
+  #dialogRef: MatDialogRef<AccessRequestDialogComponent> | undefined;
   #http = inject(HttpClient);
   #auth = inject(AuthService);
   #notification = inject(NotificationService);
   #dialog = inject(MatDialog);
   #userId = computed<string | null>(() => this.#auth.user()?.id || null);
   #config = inject(ConfigService);
+
   #arsBaseUrl = this.#config.arsUrl;
   #arsEndpointUrl = `${this.#arsBaseUrl}/access-requests`;
+  #userAccessRequestsUrl = (userId: string) =>
+    `${this.#arsEndpointUrl}?user_id=${userId}`;
 
   showNewAccessRequestDialog = (datasetID: string) => {
     if (!this.#auth.isAuthenticated()) {
@@ -52,7 +56,7 @@ export class DataAccessService {
       userId: '',
     };
 
-    this.#dialogRef = this.#dialog.open(DataAccessRequestDialogComponent, {
+    this.#dialogRef = this.#dialog.open(AccessRequestDialogComponent, {
       data,
     });
 
@@ -98,7 +102,7 @@ export class DataAccessService {
             ),
           ),
       ).then(async () => {
-        this.#accessRequests.reload();
+        this.#userAccessRequests.reload();
         this.#notification.showSuccess('Your request has been submitted successfully.');
       });
     } catch (error) {
@@ -108,14 +112,17 @@ export class DataAccessService {
     }
   };
 
-  #accessRequests = rxResource<AccessRequest[], string | null>({
+  /**
+   * Internal resource for loading the current user's access requests
+   */
+  #userAccessRequests = rxResource<AccessRequest[], string | null>({
     request: this.#userId,
     loader: ({ request: userId }) => {
       if (!userId) {
         throw new Error('User not authenticated');
       }
       return this.#http
-        .get<AccessRequest[]>(`${this.#arsEndpointUrl}?user_id=${userId}`)
+        .get<AccessRequest[]>(this.#userAccessRequestsUrl(userId))
         .pipe(
           map((ar) =>
             ar.filter(({ status }) => status === 'pending' || status === 'allowed'),
@@ -124,11 +131,18 @@ export class DataAccessService {
     },
   }).asReadonly();
 
-  accessRequests: Signal<AccessRequest[]> = computed(
-    () => this.#accessRequests.value() ?? [],
+  /**
+   * The list of access requests of the current user
+   */
+  userAccessRequests: Signal<AccessRequest[]> = computed(
+    () => this.#userAccessRequests.value() ?? [],
   );
-  grantedAccessRequests = computed(() =>
-    this.accessRequests()
+
+  /**
+   * The list of granted access requests of the current user
+   */
+  grantedUserAccessRequests = computed(() =>
+    this.userAccessRequests()
       .filter((ar: AccessRequest) => ar.status == 'allowed')
       .map((request: AccessRequest) => {
         const expiryDate = new Date(request.access_ends);
@@ -152,13 +166,107 @@ export class DataAccessService {
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  pendingAccessRequests = computed(() =>
-    this.accessRequests().filter((ar: AccessRequest) => ar.status == 'pending'),
+  /**
+   * The list of pending requests of the current user
+   */
+  pendingUserAccessRequests = computed(() =>
+    this.userAccessRequests().filter((ar: AccessRequest) => ar.status == 'pending'),
   );
 
-  isLoading = this.#accessRequests.isLoading;
+  userAccessRequestsAreLoading = this.#userAccessRequests.isLoading;
 
-  hasError = this.#accessRequests.error;
+  userAccessRequestsError = this.#userAccessRequests.error;
+
+  #allAccessRequestsFilter = signal<AccessRequestFilter | undefined>(undefined);
+
+  // signal to load all users' access requests
+  #loadAll = signal<null | undefined>(undefined);
+
+  /**
+   * Load all users' access requests
+   */
+  loadAllAccessRequests(): void {
+    this.#loadAll.set(null);
+  }
+
+  /**
+   * The current filter for the list of all access requests
+   */
+  allAccessRequestsFilter = computed(
+    () =>
+      this.#allAccessRequestsFilter() ?? {
+        name: '',
+        fromDate: undefined,
+        toDate: undefined,
+        state: undefined,
+      },
+  );
+
+  /**
+   * Set a filter for the list of all access requests
+   * @param filter - the filter to apply
+   */
+  setAllAccessRequestsFilter(filter: AccessRequestFilter): void {
+    this.#allAccessRequestsFilter.set(
+      filter.name || filter.fromDate || filter.toDate || filter.state
+        ? filter
+        : undefined,
+    );
+  }
+
+  /**
+   * Internal resource for loading all access requests.
+   * Note: We do the filtering currently only on the client side,
+   * but in principle we can also do some filtering on the sever.
+   */
+  #allAccessRequests = rxResource<AccessRequest[], null | undefined>({
+    request: this.#loadAll,
+    loader: () => this.#http.get<AccessRequest[]>(this.#arsEndpointUrl),
+  });
+
+  /**
+   * The list of access requests
+   */
+  allAccessRequests: Signal<AccessRequest[]> = computed(() => {
+    let requests = this.#allAccessRequests.value() ?? [];
+    const filter = this.#allAccessRequestsFilter();
+    if (requests.length && filter) {
+      const datasetId = filter.datasetId.trim().toLowerCase();
+      if (datasetId) {
+        requests = requests.filter(
+          (ar) => ar.dataset_id.toLowerCase() === filter.datasetId,
+        );
+      }
+      const name = filter.name.trim().toLowerCase();
+      if (name) {
+        requests = requests.filter((ar) =>
+          ar.full_user_name.toLowerCase().includes(name),
+        );
+      }
+      if (filter.fromDate) {
+        const fromDate = filter.fromDate.toISOString();
+        requests = requests.filter((ar) => ar.request_created >= fromDate);
+      }
+      if (filter.toDate) {
+        const toDate = filter.toDate.toISOString();
+        requests = requests.filter((ar) => ar.request_created <= toDate);
+      }
+      if (filter.state) {
+        requests = requests.filter((ar) => ar.status === filter.state);
+      }
+    }
+    return requests;
+  });
+
+  /**
+   * Whether the list of all access requests is loading as a signal
+   */
+  allAccessRequestsAreLoading: Signal<boolean> = this.#allAccessRequests.isLoading;
+
+  /**
+   * The list of all access requests error as a signal
+   */
+  allAccessRequestsError: Signal<unknown> = this.#allAccessRequests.error;
 }
 
 let dateInOneYear = new Date();
@@ -172,12 +280,12 @@ let dateOneYearAgo = new Date();
 dateOneYearAgo.setDate(dateOneYearAgo.getDate() - 365);
 
 /**
- * Mock for the Data Access Service
+ * Mock for the Access Request Service
  */
-export class MockDataAccessService {
-  isLoading = signal(false);
-  hasError = signal(false);
-  grantedAccessRequests = signal([
+export class MockAccessRequestService {
+  userAccessRequestsAreLoading = signal(false);
+  userAccessRequestsError = signal(false);
+  grantedUserAccessRequests = signal([
     {
       request: {
         id: 'GHGAD15111403130971',
@@ -218,7 +326,7 @@ export class MockDataAccessService {
     },
   ]);
 
-  pendingAccessRequests = signal([
+  pendingUserAccessRequests = signal([
     {
       id: 'GHGAD15111403130971',
       user_id: '',
