@@ -8,6 +8,8 @@ import { Component, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { GrantedAccessRequestsListComponent } from '@app/access-requests/features/granted-access-requests-list/granted-access-requests-list.component';
+import { PendingAccessRequestsListComponent } from '@app/access-requests/features/pending-access-requests-list/pending-access-requests-list.component';
 import { AuthService } from '@app/auth/services/auth.service';
 import { UserIvaListComponent } from '@app/verification-addresses/features/user-iva-list/user-iva-list.component';
 
@@ -16,7 +18,14 @@ import { UserIvaListComponent } from '@app/verification-addresses/features/user-
  */
 @Component({
   selector: 'app-account',
-  imports: [MatCardModule, MatIconModule, MatChipsModule, UserIvaListComponent],
+  imports: [
+    MatCardModule,
+    MatIconModule,
+    MatChipsModule,
+    PendingAccessRequestsListComponent,
+    GrantedAccessRequestsListComponent,
+    UserIvaListComponent,
+  ],
   templateUrl: './account.component.html',
   styleUrl: './account.component.scss',
 })

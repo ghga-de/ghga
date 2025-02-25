@@ -1,0 +1,60 @@
+<div class="w-full p-8">
+  <h2 mat-dialog-title>
+    <span class="fa-file-download"></span>Request access for dataset
+    {{ data.datasetID }}
+  </h2>
+  <mat-dialog-content>
+    <mat-form-field class="mt-4 w-full">
+      <mat-label>Details about your request</mat-label>
+      <textarea
+        matInput
+        placeholder="I need access for research on..."
+        [(ngModel)]="description"
+        #details
+      ></textarea>
+    </mat-form-field>
+    <mat-form-field class="mt-4 w-full">
+      <mat-label>Access requested from</mat-label>
+      <input
+        matInput
+        [matDatepicker]="from_picker"
+        [min]="minFromDate"
+        [max]="maxFromDate"
+        [(ngModel)]="fromDate"
+        (dateInput)="fromDateChanged($event)"
+      />
+      <mat-hint>MM/DD/YYYY</mat-hint>
+      <mat-datepicker-toggle matIconSuffix [for]="from_picker"></mat-datepicker-toggle>
+      <mat-datepicker #from_picker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field class="mt-4 w-full">
+      <mat-label>Access requested until</mat-label>
+      <input
+        matInput
+        [matDatepicker]="until_picker"
+        [min]="minUntilDate"
+        [max]="maxUntilDate"
+        [(ngModel)]="untilDate"
+      />
+      <mat-hint>MM/DD/YYYY</mat-hint>
+      <mat-datepicker-toggle matIconSuffix [for]="until_picker"></mat-datepicker-toggle>
+      <mat-datepicker #until_picker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field class="mt-4 w-full">
+      <mat-label>The contact email address to use for this request</mat-label>
+      <input
+        type="email"
+        matInput
+        placeholder="your.email@goes.here"
+        #emailField
+        [(ngModel)]="email"
+      />
+    </mat-form-field>
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button mat-stroked-button class="mr-2" (click)="cancelClick()">Cancel</button>
+    <button mat-raised-button (click)="submitClick()">Submit</button>
+  </mat-dialog-actions>
+</div>

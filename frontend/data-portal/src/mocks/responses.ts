@@ -10,6 +10,7 @@ import {
   allIvasOfRoe,
   datasetInformation,
   datasets,
+  getAccessRequests,
   getDatasetDetails,
   getDatasetSummary,
   metadataGlobalSummary,
@@ -121,6 +122,27 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Simulate creating a work package with a bad file ID
   'POST /api/wps/work-packages?file_ids=["error"]': 403,
+
+  /**
+   * ARS API
+   */
+  // Specific dataset and user access requests
+  'GET /api/ars/access-requests?dataset_id=GHGAD588887987&*': getAccessRequests(
+    'doe@test.dev',
+    'GHGAD588887987',
+  ),
+
+  // Specific dataset and user access requests
+  'GET /api/ars/access-requests?*': getAccessRequests('doe@test.dev'),
+
+  // All access requests
+  'GET /api/ars/access-requests': getAccessRequests(),
+
+  // All access requests
+  'POST /api/ars/access-requests': 204,
+
+  // Patch an access request
+  'PATCH /api/ars/access-requests/*': 204,
 
   /**
    * Static assets

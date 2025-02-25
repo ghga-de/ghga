@@ -7,7 +7,7 @@
     "IVA",
     "metldata",
     "Pydantic",
-    "TOTP",
+    "TOTP"
   ],
   "cSpell.language": "en-GB",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -33,5 +33,6 @@
   "jest.rootPath": "./src/app",
   "remote.localPortHost": "allInterfaces",
   "files.insertFinalNewline": true,
-  "files.trimFinalNewlines": true
+  "files.trimFinalNewlines": true,
+  "typescript.tsdk": "node_modules/typescript/lib"
 }

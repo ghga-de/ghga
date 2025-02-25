@@ -8,6 +8,7 @@ import { Injectable } from '@angular/core';
 
 interface Config {
   base_url: string;
+  ars_url: string;
   auth_url: string;
   dins_url: string;
   mass_url: string;
@@ -25,6 +26,10 @@ interface Config {
   mock_api: boolean;
   mock_oidc: boolean;
   ribbon_text: string;
+  access_upfront_max_days: number;
+  access_grant_min_days: number;
+  access_grant_max_days: number;
+  default_access_duration_days: number;
 }
 
 declare global {
@@ -72,6 +77,14 @@ export class ConfigService {
    */
   get baseUrl(): string {
     return sansEndSlash(this.#config.base_url);
+  }
+
+  /**
+   * Gets the access request service URL from the config object.
+   * @returns the access request service URL sans end slash
+   */
+  get arsUrl(): string {
+    return sansEndSlash(this.#config.ars_url);
   }
 
   /**
@@ -197,5 +210,37 @@ export class ConfigService {
    */
   get ribbonText(): string {
     return this.#config.ribbon_text;
+  }
+
+  /**
+   * Gets the maximum number of days between now and the start of an access grant.
+   * @returns the number of days
+   */
+  get access_upfront_max_days(): number {
+    return this.#config.access_upfront_max_days;
+  }
+
+  /**
+   * Gets the minimum duration of an access grant
+   * @returns the number of days
+   */
+  get access_grant_min_days(): number {
+    return this.#config.access_grant_min_days;
+  }
+
+  /**
+   * Gets the maximum duration of an access grant
+   * @returns the number of days
+   */
+  get access_grant_max_days(): number {
+    return this.#config.access_grant_max_days;
+  }
+
+  /**
+   * Gets the default number of days for an access grant
+   * @returns the number of days
+   */
+  get default_access_duration_days(): number {
+    return this.#config.default_access_duration_days;
   }
 }

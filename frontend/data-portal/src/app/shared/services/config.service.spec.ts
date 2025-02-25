@@ -10,6 +10,7 @@ import { ConfigService } from './config.service';
 
 const mockConfig = {
   base_url: 'https://portal.test',
+  ars_url: 'test/ars',
   auth_url: '/test/auth',
   dins_url: '/test/dins',
   mass_url: '/test/mass',
@@ -27,6 +28,10 @@ const mockConfig = {
   mock_api: true,
   mock_oidc: true,
   ribbon_text: 'Test ribbon text',
+  access_upfront_max_days: 180,
+  access_grant_min_days: 7,
+  access_grant_max_days: 730,
+  default_access_duration_days: 365,
 };
 
 describe('ConfigService', () => {

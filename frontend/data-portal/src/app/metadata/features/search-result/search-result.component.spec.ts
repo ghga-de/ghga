@@ -10,6 +10,10 @@ import { signal } from '@angular/core';
 
 import { ActivatedRoute } from '@angular/router';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
+import {
+  DataAccessService,
+  MockDataAccessService,
+} from '@app/access-requests/services/data-access.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { SearchResultComponent } from './search-result.component';
 
@@ -39,6 +43,7 @@ describe(SearchResultComponent, () => {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,
         },
+        { provide: DataAccessService, useClass: MockDataAccessService },
       ],
     }).compileComponents();
 

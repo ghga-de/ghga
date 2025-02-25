@@ -1,0 +1,25 @@
+@if (hasError()) {
+  <p class="text-base">There was an error retrieving your granted access requests.</p>
+} @else {
+  @if (isLoading()) {
+    <app-stencil></app-stencil>
+  } @else {
+    @let req = grantedRequests();
+    @if (req.length === 0) {
+      <p class="text-base">You do not yet have access to any datasets.</p>
+    } @else {
+      <p class="text-base">You have the following granted access requests:</p>
+      <ul>
+        @for (request of req; track request.id) {
+          <li>
+            For the dataset
+            <a routerLink="/dataset/{{ request.dataset_id }}">{{
+              request.dataset_id
+            }}</a>
+            from {{ request.access_starts }} to {{ request.access_ends }}.
+          </li>
+        }
+      </ul>
+    }
+  }
+}

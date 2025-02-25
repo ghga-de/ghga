@@ -49,7 +49,16 @@ export class MetadataSearchService {
     const skip = this.#skip();
     const facets = this.#facets();
 
-    return this.urlFromParameters(baseUrl, className, facets, query, skip, limit);
+    const newMassQueryUrl = this.urlFromParameters(
+      baseUrl,
+      className,
+      facets,
+      query,
+      skip,
+      limit,
+    );
+
+    return newMassQueryUrl;
   });
 
   #searchResults = rxResource<SearchResults | undefined, string>({
