@@ -7,7 +7,7 @@ import subprocess
 
 """Bump all Helm charts in a directory according to the largest service version difference or library chart update."""
 
-DRY_MODE = True
+DRY_MODE = False
 VALIDATE = False
 
 yaml = YAML()
