@@ -14,6 +14,8 @@
 # limitations under the License.
 """Tests for the outbox (mongokafka) dao publisher."""
 
+from unittest.mock import AsyncMock
+
 import pytest
 from ghga_event_schemas.pydantic_ import FileUploadReceived
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -159,7 +161,9 @@ async def test_republish(joint_fixture: JointFixture):
         # consume the republished events with the dummy translator
         translator = DummySubTranslator(config=joint_fixture.config)
         async with KafkaOutboxSubscriber.construct(
-            config=joint_fixture.config, translators=[translator]
+            config=joint_fixture.config,
+            translators=[translator],
+            dlq_publisher=AsyncMock(),
         ) as subscriber:
             await subscriber.run(forever=False)
             await subscriber.run(forever=False)

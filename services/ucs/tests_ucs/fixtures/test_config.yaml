@@ -20,3 +20,4 @@ upload_rejected_event_type: file_validation_failed
 file_upload_received_collection: fileUploads
 service_instance_id: "001"
 kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: True

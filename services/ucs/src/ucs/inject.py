@@ -22,9 +22,9 @@ from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
 from hexkit.providers.akafka import (
+    ComboTranslator,
     KafkaEventPublisher,
     KafkaEventSubscriber,
-    KafkaOutboxSubscriber,
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
@@ -152,34 +152,21 @@ async def prepare_event_subscriber(
             upload_service=upload_service,
             config=config,
         )
-
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=event_sub_translator
-        ) as kafka_event_subscriber:
-            yield kafka_event_subscriber
-
-
-@asynccontextmanager
-async def prepare_outbox_subscriber(
-    *,
-    config: Config,
-    core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
-) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
-    """Construct and initialize an outbox subscriber with all its dependencies.
-    By default, the core dependencies are automatically prepared but you can also
-    provide them using the core_override parameter.
-    """
-    async with prepare_core_with_override(
-        config=config, core_override=core_override
-    ) as (upload_service, file_metadata_service):
         outbox_translator = FileDeletionRequestedListener(
             upload_service=upload_service, config=config
         )
 
-        async with KafkaOutboxSubscriber.construct(
-            config=config, translators=[outbox_translator]
-        ) as outbox_subscriber:
-            yield outbox_subscriber
+        combo_translator = ComboTranslator(
+            translators=[event_sub_translator, outbox_translator]
+        )
+
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config, translator=combo_translator, dlq_publisher=dlq_publisher
+            ) as kafka_event_subscriber,
+        ):
+            yield kafka_event_subscriber
 
 
 @asynccontextmanager

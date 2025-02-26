@@ -27,7 +27,7 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
     S3ObjectStoragesConfig,
 )
-from hexkit.providers.akafka import KafkaEventSubscriber, KafkaOutboxSubscriber
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
@@ -40,7 +40,6 @@ from ucs.inject import (
     get_file_upload_received_dao,
     prepare_core,
     prepare_event_subscriber,
-    prepare_outbox_subscriber,
     prepare_rest_app,
     prepare_storage_inspector,
 )
@@ -61,7 +60,6 @@ class JointFixture:
     file_metadata_service: FileMetadataServicePort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
-    outbox_subscriber: KafkaOutboxSubscriber
     file_upload_received_dao: FileUploadReceivedDao
     mongodb: MongoDbFixture
     kafka: KafkaFixture
@@ -87,7 +85,10 @@ async def joint_fixture(
     )
 
     # merge configs from different sources with the default one:
-    config = get_config(sources=[mongodb.config, kafka.config, object_storages_config])
+    config = get_config(
+        sources=[mongodb.config, kafka.config, object_storages_config],
+        kafka_enable_dlq=True,
+    )
 
     daos = await DaoCollectionTranslator.construct(provider=mongodb.dao_factory)
     await s3.populate_buckets([bucket_id])
@@ -105,9 +106,6 @@ async def joint_fixture(
         prepare_event_subscriber(
             config=config, core_override=(upload_service, file_metadata_service)
         ) as event_subscriber,
-        prepare_outbox_subscriber(
-            config=config, core_override=(upload_service, file_metadata_service)
-        ) as outbox_subscriber,
         get_file_upload_received_dao(config=config) as file_upload_received_dao,
         AsyncTestClient(app=app) as rest_client,
     ):
@@ -118,7 +116,6 @@ async def joint_fixture(
             file_metadata_service=file_metadata_service,
             rest_client=rest_client,
             event_subscriber=event_subscriber,
-            outbox_subscriber=outbox_subscriber,
             file_upload_received_dao=file_upload_received_dao,
             mongodb=mongodb,
             kafka=kafka,
