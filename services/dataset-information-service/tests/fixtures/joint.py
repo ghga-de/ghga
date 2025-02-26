@@ -15,39 +15,23 @@
 
 """Join the functionality of all fixtures for API-level integration testing."""
 
-__all__ = [
-    "JointFixture",
-    "joint_fixture",
-    "kafka_container_fixture",
-    "kafka_fixture",
-    "mongodb_container_fixture",
-    "mongodb_fixture",
-]
+__all__ = ["JointFixture", "joint_fixture"]
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import httpx
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
-from hexkit.providers.akafka import KafkaEventSubscriber, KafkaOutboxSubscriber
-from hexkit.providers.akafka.testutils import (
-    KafkaFixture,
-    kafka_container_fixture,
-    kafka_fixture,
-)
+from hexkit.providers.akafka import KafkaEventSubscriber
+from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongodb.testutils import (
-    MongoDbFixture,
-    mongodb_container_fixture,
-    mongodb_fixture,
-)
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from dins.adapters.inbound.dao import get_dataset_dao, get_file_information_dao
 from dins.config import Config
 from dins.inject import (
     prepare_core,
     prepare_event_subscriber,
-    prepare_outbox_subscriber,
     prepare_rest_app,
 )
 from dins.ports.inbound.dao import DatasetDaoPort, FileInformationDaoPort
@@ -65,7 +49,6 @@ class JointFixture:
     file_information_dao: FileInformationDaoPort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
-    outbox_subscriber: KafkaOutboxSubscriber
     mongodb: MongoDbFixture
     kafka: KafkaFixture
 
@@ -80,7 +63,8 @@ async def joint_fixture(
         sources=[
             mongodb.config,
             kafka.config,
-        ]
+        ],
+        kafka_enable_dlq=True,
     )
 
     dao_factory = MongoDbDaoFactory(config=config)
@@ -96,10 +80,6 @@ async def joint_fixture(
         prepare_event_subscriber(
             config=config, information_service_override=information_service
         ) as event_subscriber,
-        prepare_outbox_subscriber(
-            config=config,
-            information_service_override=information_service,
-        ) as outbox_subscriber,
         AsyncTestClient(app=app) as rest_client,
     ):
         yield JointFixture(
@@ -109,7 +89,6 @@ async def joint_fixture(
             file_information_dao=file_information_dao,
             rest_client=rest_client,
             event_subscriber=event_subscriber,
-            outbox_subscriber=outbox_subscriber,
             mongodb=mongodb,
             kafka=kafka,
         )

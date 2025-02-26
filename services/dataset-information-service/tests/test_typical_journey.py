@@ -23,14 +23,7 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 
 from dins.core import models
-from tests.fixtures.joint import (
-    JointFixture,
-    joint_fixture,  # noqa: F401
-    kafka_container_fixture,  # noqa: F401
-    kafka_fixture,  # noqa: F401
-    mongodb_container_fixture,  # noqa: F401
-    mongodb_fixture,  # noqa: F401
-)
+from tests.fixtures.joint import JointFixture
 
 FILE_ID_1 = "test-file"
 FILE_ID_2 = "test-file-2"
@@ -98,7 +91,7 @@ pytestmark = pytest.mark.asyncio()
 
 
 async def test_file_information_journey(
-    joint_fixture: JointFixture,  # noqa: F811
+    joint_fixture: JointFixture,
     caplog,
 ):
     """Simulates a typical file information API journey."""
@@ -167,7 +160,7 @@ async def test_file_information_journey(
         type_=CHANGED_TYPE,
         topic=joint_fixture.config.files_to_delete_topic,
     )
-    await joint_fixture.outbox_subscriber.run(forever=False)
+    await joint_fixture.event_subscriber.run(forever=False)
 
     # assert information is gone
     with pytest.raises(ResourceNotFoundError):
@@ -177,7 +170,7 @@ async def test_file_information_journey(
 
 
 async def test_dataset_information_journey(
-    joint_fixture: JointFixture,  # noqa: F811
+    joint_fixture: JointFixture,
     caplog,
 ):
     """Simulates a typical dataset information API journey."""
@@ -287,7 +280,7 @@ async def test_dataset_information_journey(
             type_=CHANGED_TYPE,
             topic=joint_fixture.config.files_to_delete_topic,
         )
-        await joint_fixture.outbox_subscriber.run(forever=False)
+        await joint_fixture.event_subscriber.run(forever=False)
 
     # check endpoint response again
     response = await joint_fixture.rest_client.get(url)

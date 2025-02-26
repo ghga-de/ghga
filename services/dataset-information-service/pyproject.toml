@@ -27,7 +27,7 @@ dependencies = [
     "typer >= 0.12",
     "ghga-service-commons[api] >= 3.3",
     "ghga-event-schemas >= 3.3",
-    "hexkit[akafka,s3,mongodb] >= 4.0",
+    "hexkit[akafka,s3,mongodb] >= 4.1",
 ]
 
 [project.license]

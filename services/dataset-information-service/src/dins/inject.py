@@ -21,7 +21,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
-from hexkit.providers.akafka import KafkaEventSubscriber, KafkaOutboxSubscriber
+from hexkit.providers.akafka import (
+    ComboTranslator,
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+)
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from dins.adapters.inbound import dao
@@ -79,34 +83,21 @@ async def prepare_event_subscriber(
         event_sub_translator = EventSubTranslator(
             config=config, information_service=information_service
         )
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=event_sub_translator
-        ) as event_subscriber:
+        outbox_sub_translator = InformationDeletionRequestedListener(
+            config=config, information_service=information_service
+        )
+        combo_translator = ComboTranslator(
+            translators=[event_sub_translator, outbox_sub_translator]
+        )
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config,
+                translator=combo_translator,
+                dlq_publisher=dlq_publisher,
+            ) as event_subscriber,
+        ):
             yield event_subscriber
-
-
-@asynccontextmanager
-async def prepare_outbox_subscriber(
-    *,
-    config: Config,
-    information_service_override: InformationServicePort | None = None,
-) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
-    """Construct and initialize an event subscriber with all its dependencies.
-    By default, the core dependencies are automatically prepared but you can also
-    provide them using the information_service_override parameter.
-    """
-    async with prepare_core_with_override(
-        config=config, information_service_override=information_service_override
-    ) as information_service:
-        outbox_translators = [
-            InformationDeletionRequestedListener(
-                config=config, information_service=information_service
-            )
-        ]
-        async with KafkaOutboxSubscriber.construct(
-            config=config, translators=outbox_translators
-        ) as kafka_outbox_subscriber:
-            yield kafka_outbox_subscriber
 
 
 @asynccontextmanager
