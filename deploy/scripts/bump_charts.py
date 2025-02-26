@@ -8,6 +8,7 @@ import subprocess
 """Bump all Helm charts in a directory according to the largest service version difference or library chart update."""
 
 DRY_MODE = False
+VALIDATE = False
 
 yaml = YAML()
 yaml.preserve_quotes = True  # Preserve formatting
@@ -144,12 +145,14 @@ if __name__ == "__main__":
         print("All charts are up-to-date.")
         exit(0)
 
-    if not all(version == latest_versions[0] for version in latest_versions):
-        raise ValueError("Versions are inconsistent")
+    if VALIDATE:
+        if not all(version == latest_versions[0] for version in latest_versions):
+            raise ValueError("Versions are inconsistent")
 
     max_diff = max(diffs_app_version + diffs_library_version)
     print(f"Max diff: {max_diff}")
-
+    
+    latest_versions.sort()
     new_version = bump_version(latest_versions.pop(), max_diff)
 
     # Update the version in the Chart.yaml
