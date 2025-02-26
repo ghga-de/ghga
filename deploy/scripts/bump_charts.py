@@ -7,7 +7,7 @@ import subprocess
 
 """Bump all Helm charts in a directory according to the largest service version difference or library chart update."""
 
-DRY_MODE = False
+DRY_MODE = True
 VALIDATE = False
 
 yaml = YAML()
@@ -33,12 +33,19 @@ def get_latest_published_version(
         return None
 
     versions = []
+    app_versions = []
     for entry in helm_index["entries"][chart_name]:
         app_version = entry.get("appVersion")
         if app_version and semver.VersionInfo.is_valid(app_version):
-            versions.append(semver.VersionInfo.parse(app_version))
+            app_versions.append(semver.VersionInfo.parse(app_version))
+        version = entry.get("version")
+        if app_version and semver.VersionInfo.is_valid(version):
+            versions.append(semver.VersionInfo.parse(version))
 
-    return max(versions) if versions else None
+    return {
+        "version": max(versions) if versions else None,
+        "appVersion": max(app_versions) if app_versions else None,
+    }
 
 
 def get_charts(chart_files):
@@ -121,13 +128,16 @@ if __name__ == "__main__":
     for chart_file, chart in charts:
         current = semver.VersionInfo.parse(chart.get("appVersion"))
         latest = get_latest_published_version(helm_index, chart["name"])
-        latest_versions.append(latest)
+        latest_app_version = latest["appVersion"]
+        latest_version = latest["version"]
+        latest_versions.append(latest_version)
+        print(f"Latest published version for {chart['name']}: {latest_version}")
 
-        if current > latest:
+        if current > latest_app_version:
             print(
-                f"AppVersion {current} is newer than latest published {latest} for {chart['name']}"
+                f"AppVersion {current} is newer than latest published {latest_app_version} for {chart['name']}"
             )
-            diffs_app_version.append(get_version_diff(current, latest))
+            diffs_app_version.append(get_version_diff(current, latest_app_version))
 
         for dep in chart.get("dependencies"):
             if dep.get("name") == "ghga-common":
@@ -151,7 +161,7 @@ if __name__ == "__main__":
 
     max_diff = max(diffs_app_version + diffs_library_version)
     print(f"Max diff: {max_diff}")
-    
+
     latest_versions.sort()
     new_version = bump_version(latest_versions.pop(), max_diff)
 
