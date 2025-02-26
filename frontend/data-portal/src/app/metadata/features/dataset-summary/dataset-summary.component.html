@@ -9,12 +9,7 @@
         ><mat-icon>open_in_new</mat-icon>EGA Dataset</a
       >
     }
-    <button
-      mat-raised-button
-      (click)="accessService.showNewAccessRequestDialog(hit().id_)"
-    >
-      <mat-icon>key</mat-icon>Request Access
-    </button>
+    <app-dynamic-access-request-button datasetID="{{ hit().id_ }}" />
     <a mat-raised-button routerLink="/dataset/{{ hit().id_ }}"
       ><mat-icon>database_search</mat-icon>Dataset Details</a
     >

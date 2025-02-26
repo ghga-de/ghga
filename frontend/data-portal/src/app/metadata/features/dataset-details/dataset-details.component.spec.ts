@@ -22,11 +22,24 @@ class MockMetadataService {
   loadDatasetDetails = () => undefined;
 }
 
+import { ActivatedRoute } from '@angular/router';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import {
   AccessRequestService,
   MockAccessRequestService,
 } from '@app/access-requests/services/access-request.service';
+import { AuthService } from '@app/auth/services/auth.service';
 import { screen } from '@testing-library/angular';
+
+/**
+ * Mock a basic version of the auth service
+ */
+export class MockAuthService {
+  fullName = () => 'Dr. John Doe';
+  email = () => 'doe@home.org';
+  role = () => 'data_steward';
+  roleName = () => 'Data Steward';
+}
 
 /**
  * Mock the dataset information service as needed for the dataset details
@@ -47,7 +60,9 @@ describe('DatasetDetailsComponent', () => {
       providers: [
         { provide: MetadataService, useClass: MockMetadataService },
         { provide: DatasetInformationService, useClass: MockDatasetInformationService },
+        { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         provideAnimations(),
       ],
     }).compileComponents();
@@ -88,9 +103,5 @@ describe('DatasetDetailsComponent', () => {
   it('should show dataset description', () => {
     const expected = /^Test dataset with some details for testing\./;
     expect(screen.queryByText(expected)).not.toBeNull();
-  });
-
-  it('should show offer option to request access', () => {
-    expect(screen.getByText('Request Access')).toBeVisible();
   });
 });

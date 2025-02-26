@@ -4,12 +4,7 @@
       <button mat-icon-button (click)="goBack()">
         <mat-icon>keyboard_return</mat-icon>
       </button>
-      <button
-        mat-stroked-button
-        (click)="accessService.showNewAccessRequestDialog(datasetDetails().accession)"
-      >
-        <mat-icon>key</mat-icon>Request Access
-      </button>
+      <app-dynamic-access-request-button datasetID="{{ datasetDetails().accession }}" />
     </div>
     <div>
       <h3>{{ datasetDetails().title }}</h3>

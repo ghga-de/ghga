@@ -14,6 +14,7 @@ import {
   AccessRequestService,
   MockAccessRequestService,
 } from '@app/access-requests/services/access-request.service';
+import { AuthService } from '@app/auth/services/auth.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { SearchResultComponent } from './search-result.component';
 
@@ -30,6 +31,16 @@ const fakeActivatedRoute = {
   snapshot: { data: {} },
 } as ActivatedRoute;
 
+/**
+ * Mock the auth service as needed for the search result component
+ */
+class MockAuthService {
+  fullName = () => 'Dr. John Doe';
+  email = () => 'doe@home.org';
+  role = () => 'data_steward';
+  roleName = () => 'Data Steward';
+}
+
 describe(SearchResultComponent, () => {
   let component: SearchResultComponent;
   let fixture: ComponentFixture<SearchResultComponent>;
@@ -43,6 +54,7 @@ describe(SearchResultComponent, () => {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,
         },
+        { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],
     }).compileComponents();

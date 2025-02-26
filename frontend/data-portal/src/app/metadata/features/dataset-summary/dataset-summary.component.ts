@@ -11,7 +11,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 // eslint-disable-next-line boundaries/element-types
-import { AccessRequestService } from '@app/access-requests/services/access-request.service';
+import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button.component';
 import { Hit } from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { AddPluralS } from '@app/shared/utils/add-plural-s.pipe';
@@ -30,6 +30,7 @@ import { UnderscoreToSpace } from '@app/shared/utils/underscore-to-space.pipe';
     UnderscoreToSpace,
     AddPluralS,
     RouterLink,
+    DynamicAccessRequestButtonComponent,
   ],
   templateUrl: './dataset-summary.component.html',
   styleUrl: './dataset-summary.component.scss',
@@ -39,7 +40,6 @@ export class DatasetSummaryComponent {
 
   hit = input.required<Hit>();
   hitContent = computed(() => this.hit().content);
-  accessService = inject(AccessRequestService);
   summary = this.#metadata.datasetSummary;
   studiesSummary = computed(() => this.summary().studies_summary);
   studiesSummaryStats = computed(() => this.studiesSummary().stats);
