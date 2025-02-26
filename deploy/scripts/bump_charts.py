@@ -49,6 +49,14 @@ def get_charts(chart_files):
 
     return charts
 
+def get_version_diff(version_a: semver.VersionInfo, version_b: semver.VersionInfo) -> semver.VersionInfo:
+    """Calculates the absolute version difference between two versions."""
+    for part in ["major", "minor", "patch"]:
+        if getattr(version_a, part) != getattr(version_b, part):
+            diff = semver.VersionInfo.parse("0.0.0").replace(**{part: abs(getattr(version_a, part) - getattr(version_b, part))})
+            print(f"Diff between {version_a} and {version_b}: {diff}")
+            break
+    return diff
 
 def bump_version(
     base_version: semver.VersionInfo, version_diff: semver.VersionInfo
@@ -87,7 +95,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if "ghga-common" in args.chart_dir:
-        print("Skipping bumping of ghga-common charts")
+        print("Skipping bumping of ghga-common chart")
         exit(0)
 
     print("Bumping Helm charts in", args.chart_dir)
@@ -114,27 +122,8 @@ if __name__ == "__main__":
             print(
                 f"AppVersion {current} is newer than latest published {latest} for {chart['name']}"
             )
-            if current.major > latest.major:
-                diff = semver.VersionInfo(
-                    current.major - latest.major,
-                    0,
-                    0,
-                )
-            elif current.minor > latest.minor:
-                diff = semver.VersionInfo(
-                    0,
-                    current.minor - latest.minor,
-                    0,
-                )
-            elif current.patch > latest.patch:
-                diff = semver.VersionInfo(
-                    0,
-                    0,
-                    current.patch - latest.patch,
-                )
-            diffs_app_version.append(diff)
+            diffs_app_version.append(get_version_diff(current, latest))
 
-        # Check for ghga-common updates
 
         for dep in chart.get("dependencies"):
             if dep.get("name") == "ghga-common":
@@ -144,26 +133,7 @@ if __name__ == "__main__":
             print(
                 f"Library version {current_ghga_common} is older than latest published {latest_ghga_common} for {chart['name']}"
             )
-            if latest_ghga_common.major > current_ghga_common.major:
-                diff = semver.VersionInfo(
-                    latest_ghga_common.major - current_ghga_common.major,
-                    0,
-                    0,
-                )
-            elif latest_ghga_common.minor > current_ghga_common.minor:
-                diff = semver.VersionInfo(
-                    0,
-                    latest_ghga_common.minor - current_ghga_common.minor,
-                    0,
-                )
-            elif latest_ghga_common.patch > current_ghga_common.patch:
-                diff = semver.VersionInfo(
-                    0,
-                    0,
-                    latest_ghga_common.patch - current_ghga_common.patch,
-                )
-            
-            diffs_library_version.append(diff)
+            diffs_library_version.append(get_version_diff(current_ghga_common, latest_ghga_common))
 
     if not diffs_app_version and not diffs_library_version:
         print("All charts are up-to-date.")
@@ -180,9 +150,12 @@ if __name__ == "__main__":
     # Update the version in the Chart.yaml
     for chart_file, chart in charts:
         print(f"Bumping {chart['name']} from {chart['version']} to {new_version}")
-        chart["version"] = str(new_version)
 
-        if diffs_library_version:
+        if diffs_app_version:
+            chart["version"] = str(new_version)
+            print("Updating appVersion, skipping dependency update")
+
+        elif diffs_library_version:
             for dep in chart.get("dependencies"):
                 if dep.get("name") == "ghga-common":
                     print(
