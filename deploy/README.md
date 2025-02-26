@@ -10,6 +10,12 @@ helm search repo ghga
 helm install my-release ghga/<chart>
 ```
 
+### Update Chart
+
+- Update `appVersion` in Chart.yaml to desired version
+- Update values.yaml or add service parameters (only required or parameters which differ from default on purpose)
+- Create PR
+
 ## Developer notes
 
 ### Update library chart `ghga-common` locally
