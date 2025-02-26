@@ -24,9 +24,9 @@ from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
 from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
 from hexkit.providers.akafka import (
+    ComboTranslator,
     KafkaEventPublisher,
     KafkaEventSubscriber,
-    KafkaOutboxSubscriber,
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
@@ -91,9 +91,6 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort, 
         )
 
 
-OutboxCleaner: TypeAlias = Coroutine[Any, Any, None]
-
-
 def prepare_core_with_override(
     *,
     config: Config,
@@ -150,33 +147,26 @@ async def prepare_event_subscriber(
             data_repository=data_repository,
             config=config,
         )
+        outbox_sub_translator = FileDeletionRequestedListener(
+            config=config, data_repository=data_repository
+        )
 
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=event_sub_translator
-        ) as event_subscriber:
+        combo_translator = ComboTranslator(
+            translators=[event_sub_translator, outbox_sub_translator]
+        )
+
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config,
+                translator=combo_translator,
+                dlq_publisher=dlq_publisher,
+            ) as event_subscriber,
+        ):
             yield event_subscriber
 
 
-@asynccontextmanager
-async def prepare_outbox_subscriber(
-    *,
-    config: Config,
-    data_repo_override: DataRepositoryPort | None = None,
-) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
-    """Construct and initialize an event subscriber with all its dependencies.
-    By default, the core dependencies are automatically prepared but you can also
-    provide them using the data_repo_override parameter.
-    """
-    async with prepare_core_with_override(
-        config=config, data_repo_override=data_repo_override
-    ) as data_repository:
-        file_deleted_listener = FileDeletionRequestedListener(
-            config=config, data_repository=data_repository
-        )
-        async with KafkaOutboxSubscriber.construct(
-            config=config, translators=[file_deleted_listener]
-        ) as outbox_subscriber:
-            yield outbox_subscriber
+OutboxCleaner: TypeAlias = Coroutine[Any, Any, None]
 
 
 @asynccontextmanager

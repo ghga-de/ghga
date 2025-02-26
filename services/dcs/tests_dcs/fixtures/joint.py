@@ -38,7 +38,7 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
     S3ObjectStoragesConfig,
 )
-from hexkit.providers.akafka import KafkaEventSubscriber, KafkaOutboxSubscriber
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture, temp_file_object
@@ -52,7 +52,6 @@ from dcs.inject import (
     get_nonstaged_file_requested_dao,
     prepare_core,
     prepare_event_subscriber,
-    prepare_outbox_subscriber,
     prepare_rest_app,
 )
 from dcs.ports.inbound.data_repository import DataRepositoryPort
@@ -100,7 +99,6 @@ class JointFixture:
     data_repository: DataRepositoryPort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
-    outbox_subscriber: KafkaOutboxSubscriber
     nonstaged_file_requested_dao: NonStagedFileRequestedDao
     mongodb: MongoDbFixture
     s3: S3Fixture
@@ -142,7 +140,8 @@ async def joint_fixture(
             kafka.config,
             ekss_config,
             auth_config,
-        ]
+        ],
+        kafka_enable_dlq=True,
     )
 
     # create storage entities:
@@ -156,10 +155,6 @@ async def joint_fixture(
             config=config, data_repo_override=data_repository
         ) as event_subscriber,
         AsyncTestClient(app=app) as rest_client,
-        prepare_outbox_subscriber(
-            config=config,
-            data_repo_override=data_repository,
-        ) as outbox_subscriber,
         get_nonstaged_file_requested_dao(config=config) as nonstaged_file_requested_dao,
     ):
         yield JointFixture(
@@ -168,7 +163,6 @@ async def joint_fixture(
             data_repository=data_repository,
             rest_client=rest_client,
             event_subscriber=event_subscriber,
-            outbox_subscriber=outbox_subscriber,
             nonstaged_file_requested_dao=nonstaged_file_requested_dao,
             mongodb=mongodb,
             s3=s3,
