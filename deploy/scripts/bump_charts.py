@@ -3,6 +3,7 @@ from ruamel.yaml import YAML
 import semver
 import requests
 import argparse
+import subprocess
 
 """Bump all Helm charts in a directory according to the largest service version difference or library chart update."""
 
@@ -49,28 +50,31 @@ def get_charts(chart_files):
 
     return charts
 
-def get_version_diff(version_a: semver.VersionInfo, version_b: semver.VersionInfo) -> semver.VersionInfo:
+
+def get_version_diff(
+    version_a: semver.VersionInfo, version_b: semver.VersionInfo
+) -> semver.VersionInfo:
     """Calculates the absolute version difference between two versions."""
     for part in ["major", "minor", "patch"]:
         if getattr(version_a, part) != getattr(version_b, part):
-            diff = semver.VersionInfo.parse("0.0.0").replace(**{part: abs(getattr(version_a, part) - getattr(version_b, part))})
+            diff = semver.VersionInfo.parse("0.0.0").replace(
+                **{part: abs(getattr(version_a, part) - getattr(version_b, part))}
+            )
             print(f"Diff between {version_a} and {version_b}: {diff}")
             break
     return diff
+
 
 def bump_version(
     base_version: semver.VersionInfo, version_diff: semver.VersionInfo
 ) -> semver.VersionInfo:
     """Applies a semantic version difference to a base version."""
-
-    # Apply the biggest version change
-    new_version = semver.VersionInfo(
-        base_version.major + version_diff.major,
-        base_version.minor + version_diff.minor,
-        base_version.patch + version_diff.patch,
-    )
-
-    return new_version
+    for part in ["major", "minor", "patch"]:
+        if getattr(version_diff, part) > 0:
+            new_version = base_version.replace(
+                **{part: getattr(base_version, part) + getattr(version_diff, part)}
+            )
+            return new_version
 
 
 if __name__ == "__main__":
@@ -94,8 +98,8 @@ if __name__ == "__main__":
     # Parse arguments
     args = parser.parse_args()
 
-    if "ghga-common" in args.chart_dir:
-        print("Skipping bumping of ghga-common chart")
+    if "base" in args.chart_dir:
+        print("Skipping bumping of base")
         exit(0)
 
     print("Bumping Helm charts in", args.chart_dir)
@@ -124,7 +128,6 @@ if __name__ == "__main__":
             )
             diffs_app_version.append(get_version_diff(current, latest))
 
-
         for dep in chart.get("dependencies"):
             if dep.get("name") == "ghga-common":
                 current_ghga_common = semver.VersionInfo.parse(dep.get("version"))
@@ -133,7 +136,9 @@ if __name__ == "__main__":
             print(
                 f"Library version {current_ghga_common} is older than latest published {latest_ghga_common} for {chart['name']}"
             )
-            diffs_library_version.append(get_version_diff(current_ghga_common, latest_ghga_common))
+            diffs_library_version.append(
+                get_version_diff(current_ghga_common, latest_ghga_common)
+            )
 
     if not diffs_app_version and not diffs_library_version:
         print("All charts are up-to-date.")
@@ -144,26 +149,40 @@ if __name__ == "__main__":
 
     max_diff = max(diffs_app_version + diffs_library_version)
     print(f"Max diff: {max_diff}")
-    
+
     new_version = bump_version(current_versions.pop(), max_diff)
-    
+
     # Update the version in the Chart.yaml
     for chart_file, chart in charts:
         print(f"Bumping {chart['name']} from {chart['version']} to {new_version}")
 
+        chart["version"] = str(new_version)
+
         if diffs_app_version:
-            chart["version"] = str(new_version)
             print("Updating appVersion, skipping dependency update")
+            # Dump to files
+            if not DRY_MODE:
+                with Path(chart_file).open("w", encoding="utf-8") as f:
+                    yaml.dump(chart, f)
 
         elif diffs_library_version:
             for dep in chart.get("dependencies"):
                 if dep.get("name") == "ghga-common":
-                    print(
-                        f"Bumping ghga-common from {dep['version']} to {latest_ghga_common} requires to run helm dependency update"
-                    )
-                    dep["version"] = str(latest_ghga_common)
-
-        # Dump to files
-        if not DRY_MODE:
-            with Path(chart_file).open("w", encoding="utf-8") as f:
-                yaml.dump(chart, f)
+                    if dep["version"] != str(latest_ghga_common):
+                        print(
+                            f"Bumping {str(chart_file.parent)} deps ghga-common from {dep['version']} to {latest_ghga_common}"
+                        )
+                        dep["version"] = str(latest_ghga_common)
+                        # Dump to files
+                        if not DRY_MODE:
+                            with Path(chart_file).open("w", encoding="utf-8") as f:
+                                yaml.dump(chart, f)
+                        subprocess.run(
+                            [
+                                "helm",
+                                "dependency",
+                                "update",
+                                str(chart_file.parent),
+                                "--skip-refresh",
+                            ]
+                        )
