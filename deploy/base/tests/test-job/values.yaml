@@ -1,0 +1,16 @@
+image:
+  repository: busybox
+  tag: latest
+
+configPrefix: ""
+
+cronSchedule: "0 0 1 1 0"
+
+parameters:
+  default:
+    foo: bar
+
+containers:
+- name: job
+  type: "job"
+  cmd: "env"
