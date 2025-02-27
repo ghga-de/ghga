@@ -18,6 +18,10 @@
 import logging
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    DatasetEventsConfig,
+    FileInternallyRegisteredEventsConfig,
+)
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
@@ -30,36 +34,10 @@ from dins.ports.inbound.information_service import InformationServicePort
 log = logging.getLogger(__name__)
 
 
-class EventSubTranslatorConfig(BaseSettings):
+class EventSubTranslatorConfig(
+    DatasetEventsConfig, FileInternallyRegisteredEventsConfig
+):
     """Config for publishing file upload-related events."""
-
-    dataset_event_topic: str = Field(
-        default=...,
-        description="Name of the topic for events that inform about datasets.",
-        examples=["metadata-datasets"],
-    )
-    dataset_upsertion_event_type: str = Field(
-        default=...,
-        description="The type of events that inform about new and changed datasets.",
-        examples=["dataset_created"],
-    )
-    dataset_deletion_event_type: str = Field(
-        default=...,
-        description="The type of events that inform about deleted datasets.",
-        examples=["dataset_deleted"],
-    )
-    file_registered_event_topic: str = Field(
-        default=...,
-        description="The name of the topic for events informing about new registered files"
-        " for which the metadata should be made available.",
-        examples=["internal-file-registry"],
-    )
-    file_registered_event_type: str = Field(
-        default=...,
-        description="The name of the type used for events informing about new registered files"
-        " for which the metadata should be made available.",
-        examples=["file_registered"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -77,13 +55,13 @@ class EventSubTranslator(EventSubscriberProtocol):
         self._information_service = information_service
 
         self.topics_of_interest = [
-            config.dataset_event_topic,
-            config.file_registered_event_topic,
+            config.dataset_change_topic,
+            config.file_internally_registered_topic,
         ]
         self.types_of_interest = [
-            config.dataset_deletion_event_type,
-            config.dataset_upsertion_event_type,
-            config.file_registered_event_type,
+            config.dataset_deletion_type,
+            config.dataset_upsertion_type,
+            config.file_internally_registered_type,
         ]
 
     async def _consume_validated(
@@ -98,11 +76,11 @@ class EventSubTranslator(EventSubscriberProtocol):
             topic (str): Name of the topic the event was published to.
             key (str): The key associated with the event.
         """
-        if type_ == self._config.file_registered_event_type:
+        if type_ == self._config.file_internally_registered_type:
             await self._consume_file_internally_registered(payload=payload)
-        elif type_ == self._config.dataset_upsertion_event_type:
+        elif type_ == self._config.dataset_upsertion_type:
             await self._consume_dataset_upserted(payload=payload)
-        elif type_ == self._config.dataset_deletion_event_type:
+        elif type_ == self._config.dataset_deletion_type:
             await self._consume_dataset_deleted(payload=payload)
         else:
             raise RuntimeError(f"Unexpected event of type: {type_}")

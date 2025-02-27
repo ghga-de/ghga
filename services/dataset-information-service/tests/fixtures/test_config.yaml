@@ -7,9 +7,9 @@ kafka_enable_dlq: True
 mongo_dsn: "mongodb://mongodb:27017"
 db_name: "dev"
 
-dataset_event_topic: metadata-datasets
-dataset_deletion_event_type: dataset_deleted
-dataset_upsertion_event_type: dataset_created
+dataset_change_topic: metadata-datasets
+dataset_deletion_type: dataset_deleted
+dataset_upsertion_type: dataset_created
 files_to_delete_topic: file_deletions
-file_registered_event_topic: internal_file_registry
-file_registered_event_type: file_registered
+file_internally_registered_topic: internal_file_registry
+file_internally_registered_type: file_registered

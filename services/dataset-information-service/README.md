@@ -280,27 +280,42 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_event_topic`** *(string, required)*: Name of the topic for events that inform about datasets.
+- **`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
 
 
   Examples:
 
   ```json
-  "metadata-datasets"
+  "file-registrations"
   ```
 
 
-- **`dataset_upsertion_event_type`** *(string, required)*: The type of events that inform about new and changed datasets.
+  ```json
+  "file-registrations-internal"
+  ```
+
+
+- **`file_internally_registered_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
 
 
   Examples:
 
   ```json
-  "dataset_created"
+  "file_internally_registered"
   ```
 
 
-- **`dataset_deletion_event_type`** *(string, required)*: The type of events that inform about deleted datasets.
+- **`dataset_change_topic`** *(string, required)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
+
+
+  Examples:
+
+  ```json
+  "metadata_datasets"
+  ```
+
+
+- **`dataset_deletion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
 
 
   Examples:
@@ -310,23 +325,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_registered_event_topic`** *(string, required)*: The name of the topic for events informing about new registered files for which the metadata should be made available.
+- **`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
 
 
   Examples:
 
   ```json
-  "internal-file-registry"
-  ```
-
-
-- **`file_registered_event_type`** *(string, required)*: The name of the type used for events informing about new registered files for which the metadata should be made available.
-
-
-  Examples:
-
-  ```json
-  "file_registered"
+  "dataset_created"
   ```
 
 

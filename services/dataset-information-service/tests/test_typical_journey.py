@@ -100,8 +100,8 @@ async def test_file_information_journey(
 
     await joint_fixture.kafka.publish_event(
         payload=INCOMING_FILE_PAYLOAD.model_dump(),
-        type_=joint_fixture.config.file_registered_event_type,
-        topic=joint_fixture.config.file_registered_event_topic,
+        type_=joint_fixture.config.file_internally_registered_type,
+        topic=joint_fixture.config.file_internally_registered_topic,
     )
     await joint_fixture.event_subscriber.run(forever=False)
 
@@ -115,8 +115,8 @@ async def test_file_information_journey(
     with caplog.at_level(level=logging.DEBUG, logger="dins.core.information_service"):
         await joint_fixture.kafka.publish_event(
             payload=INCOMING_FILE_PAYLOAD.model_dump(),
-            type_=joint_fixture.config.file_registered_event_type,
-            topic=joint_fixture.config.file_registered_event_topic,
+            type_=joint_fixture.config.file_internally_registered_type,
+            topic=joint_fixture.config.file_internally_registered_topic,
         )
         await joint_fixture.event_subscriber.run(forever=False)
         assert len(caplog.messages) == 1
@@ -132,8 +132,8 @@ async def test_file_information_journey(
     with caplog.at_level(level=logging.DEBUG, logger="dins.core.information_service"):
         await joint_fixture.kafka.publish_event(
             payload=mismatch_mock.model_dump(),
-            type_=joint_fixture.config.file_registered_event_type,
-            topic=joint_fixture.config.file_registered_event_topic,
+            type_=joint_fixture.config.file_internally_registered_type,
+            topic=joint_fixture.config.file_internally_registered_topic,
         )
         await joint_fixture.event_subscriber.run(forever=False)
         assert len(caplog.messages) == 2
@@ -177,8 +177,8 @@ async def test_dataset_information_journey(
     # register dataset and verify
     await joint_fixture.kafka.publish_event(
         payload=INCOMING_DATASET_PAYLOAD.model_dump(),
-        type_=joint_fixture.config.dataset_upsertion_event_type,
-        topic=joint_fixture.config.dataset_event_topic,
+        type_=joint_fixture.config.dataset_upsertion_type,
+        topic=joint_fixture.config.dataset_change_topic,
     )
     await joint_fixture.event_subscriber.run(forever=False)
 
@@ -208,8 +208,8 @@ async def test_dataset_information_journey(
     ):
         await joint_fixture.kafka.publish_event(
             payload=file_payload.model_dump(),
-            type_=joint_fixture.config.file_registered_event_type,
-            topic=joint_fixture.config.file_registered_event_topic,
+            type_=joint_fixture.config.file_internally_registered_type,
+            topic=joint_fixture.config.file_internally_registered_topic,
         )
         await joint_fixture.event_subscriber.run(forever=False)
 
@@ -239,8 +239,8 @@ async def test_dataset_information_journey(
     with caplog.at_level(level=logging.INFO, logger="dins.core.information_service"):
         await joint_fixture.kafka.publish_event(
             payload=UPDATE_DATASET_PAYLOAD.model_dump(),
-            type_=joint_fixture.config.dataset_upsertion_event_type,
-            topic=joint_fixture.config.dataset_event_topic,
+            type_=joint_fixture.config.dataset_upsertion_type,
+            topic=joint_fixture.config.dataset_change_topic,
         )
         await joint_fixture.event_subscriber.run(forever=False)
         assert len(caplog.messages) == 0
@@ -299,8 +299,8 @@ async def test_dataset_information_journey(
 
     await joint_fixture.kafka.publish_event(
         payload=deletion_requested.model_dump(),
-        type_=joint_fixture.config.dataset_deletion_event_type,
-        topic=joint_fixture.config.dataset_event_topic,
+        type_=joint_fixture.config.dataset_deletion_type,
+        topic=joint_fixture.config.dataset_change_topic,
     )
     await joint_fixture.event_subscriber.run(forever=False)
 

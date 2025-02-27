@@ -88,10 +88,10 @@ async def test_consume_from_retry(joint_fixture: JointFixture):
     # Publish the non-outbox event
     await joint_fixture.kafka.publish_event(
         payload=event_payload.model_dump(),
-        type_=config.file_registered_event_type,
+        type_=config.file_internally_registered_type,
         topic=config.service_name + "-retry",
         key="test",
-        headers={"original_topic": config.file_registered_event_topic},
+        headers={"original_topic": config.file_internally_registered_topic},
     )
 
     # Consume the events (successful if it doesn't hang)
