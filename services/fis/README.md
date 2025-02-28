@@ -211,13 +211,13 @@ The service requires the following configuration parameters:
 
   - **Items** *(string)*
 
-- **`file_upload_validation_success_topic`** *(string, required)*: The name of the topic use to publish FileUploadValidationSuccess events.
+- **`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
 
 
   Examples:
 
   ```json
-  "file-upload-validation-success"
+  "file-interrogations"
   ```
 
 

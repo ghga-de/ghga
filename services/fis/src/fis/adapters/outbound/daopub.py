@@ -14,24 +14,16 @@
 # limitations under the License.
 """Adapter for publishing events to other services."""
 
+from ghga_event_schemas.configs import FileInterrogationSuccessEventsConfig
 from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from fis.ports.outbound.daopub import OutboxPublisherFactoryPort
 
 
-class OutboxDaoConfig(BaseSettings):
+class OutboxDaoConfig(FileInterrogationSuccessEventsConfig):
     """Configuration for the outbox DAO and publishing events"""
-
-    file_upload_validation_success_topic: str = Field(
-        default=...,
-        description=(
-            "The name of the topic use to publish FileUploadValidationSuccess events."
-        ),
-        examples=["file-upload-validation-success"],
-    )
 
     file_validations_collection: str = Field(
         default="fileValidations",
@@ -54,7 +46,7 @@ class OutboxDaoPublisherFactory(OutboxPublisherFactoryPort):
         """Configure with provider for the DaoFactoryProtocol"""
         self._dao_publisher_factory = dao_publisher_factory
         self._file_validations_collection = config.file_validations_collection
-        self._file_validations_topic = config.file_upload_validation_success_topic
+        self._file_validations_topic = config.file_interrogations_topic
 
     async def get_file_validation_success_dao(
         self,

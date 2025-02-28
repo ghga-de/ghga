@@ -6,7 +6,7 @@ cors_allowed_methods: null
 cors_allowed_origins: null
 db_name: dev
 docs_url: /docs
-file_upload_validation_success_topic: file-upload-validation-success
+file_interrogations_topic: file-upload-validation-success
 file_validations_collection: fileValidations
 generate_correlation_id: true
 host: 127.0.0.1

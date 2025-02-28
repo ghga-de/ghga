@@ -194,12 +194,12 @@
       "title": "Token Hashes",
       "type": "array"
     },
-    "file_upload_validation_success_topic": {
-      "description": "The name of the topic use to publish FileUploadValidationSuccess events.",
+    "file_interrogations_topic": {
+      "description": "The name of the topic use to publish file interrogation outcome events.",
       "examples": [
-        "file-upload-validation-success"
+        "file-interrogations"
       ],
-      "title": "File Upload Validation Success Topic",
+      "title": "File Interrogations Topic",
       "type": "string"
     },
     "file_validations_collection": {
@@ -495,7 +495,7 @@
     "vault_path",
     "private_key_path",
     "token_hashes",
-    "file_upload_validation_success_topic",
+    "file_interrogations_topic",
     "kafka_servers",
     "mongo_dsn",
     "db_name"

@@ -95,7 +95,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     event_recorder = EventRecorder(
         kafka_servers=joint_fixture.kafka.config.kafka_servers,
-        topic=joint_fixture.config.file_upload_validation_success_topic,
+        topic=joint_fixture.config.file_interrogations_topic,
     )
 
     async with event_recorder:
@@ -140,7 +140,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
     # Check we don't send the event if metadata has already been seen
     event_recorder = EventRecorder(
         kafka_servers=joint_fixture.kafka.config.kafka_servers,
-        topic=joint_fixture.config.file_upload_validation_success_topic,
+        topic=joint_fixture.config.file_interrogations_topic,
     )
 
     async with event_recorder:
@@ -187,7 +187,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     event_recorder = EventRecorder(
         kafka_servers=joint_fixture.kafka.config.kafka_servers,
-        topic=joint_fixture.config.file_upload_validation_success_topic,
+        topic=joint_fixture.config.file_interrogations_topic,
     )
     secret_id = "very_secret_id"
 
@@ -244,7 +244,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
     # No need to mock the secret exchange, as that code path is not entered in this case
     event_recorder = EventRecorder(
         kafka_servers=joint_fixture.kafka.config.kafka_servers,
-        topic=joint_fixture.config.file_upload_validation_success_topic,
+        topic=joint_fixture.config.file_interrogations_topic,
     )
 
     async with event_recorder:
