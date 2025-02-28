@@ -14,22 +14,16 @@
 # limitations under the License.
 """Adapter for publishing outbox events to other services."""
 
+from ghga_event_schemas.configs import FileUploadReceivedEventsConfig
 from ghga_event_schemas.pydantic_ import FileUploadReceived
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from ucs.ports.outbound.daopub import OutboxPublisherFactoryPort
 
 
-class OutboxDaoConfig(BaseSettings):
+class OutboxDaoConfig(FileUploadReceivedEventsConfig):
     """Configuration for the outbox DAO and publishing events"""
-
-    file_upload_received_topic: str = Field(
-        default=...,
-        description=("The name of the topic use to publish FileUploadReceived events."),
-        examples=["file-upload-received"],
-    )
 
     file_upload_received_collection: str = Field(
         default=...,

@@ -47,8 +47,8 @@ async def create_multipart_upload_with_data(
     )
     await joint_fixture.kafka.publish_event(
         payload=file_metadata_event.model_dump(),
-        type_=joint_fixture.config.file_metadata_event_type,
-        topic=joint_fixture.config.file_metadata_event_topic,
+        type_=joint_fixture.config.file_metadata_type,
+        topic=joint_fixture.config.file_metadata_topic,
     )
     # consume the event:
     await joint_fixture.event_subscriber.run(forever=False)
@@ -346,13 +346,13 @@ async def test_deletion_upload_ongoing(joint_fixture: JointFixture):
     await joint_fixture.kafka.publish_event(
         payload=json.loads(deletion_event.model_dump_json()),
         type_="upserted",
-        topic=joint_fixture.config.files_to_delete_topic,
+        topic=joint_fixture.config.file_deletion_request_topic,
     )
 
     # Consume inbound event and check outbound event
     deletion_successful_event = event_schemas.FileDeletionSuccess(file_id=file_id)
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.file_deleted_event_topic
+        in_topic=joint_fixture.config.file_deleted_topic
     ) as recorder:
         await joint_fixture.event_subscriber.run(forever=False)
 
@@ -384,12 +384,12 @@ async def test_deletion_with_no_file(joint_fixture: JointFixture):
     await joint_fixture.kafka.publish_event(
         payload=json.loads(deletion_event.model_dump_json()),
         type_="upserted",
-        topic=joint_fixture.config.files_to_delete_topic,
+        topic=joint_fixture.config.file_deletion_request_topic,
     )
 
     # Consume inbound event
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.file_deleted_event_topic
+        in_topic=joint_fixture.config.file_deleted_topic
     ) as recorder:
         await joint_fixture.upload_service.deletion_requested(file_id=file_id)
 
@@ -406,7 +406,7 @@ async def test_deletion_logs(joint_fixture: JointFixture, logot: Logot):
     await joint_fixture.kafka.publish_event(
         payload=event_schemas.FileDeletionSuccess(file_id=file_id).model_dump(),
         type_="deleted",
-        topic=joint_fixture.config.files_to_delete_topic,
+        topic=joint_fixture.config.file_deletion_request_topic,
         key=file_id,
     )
     # consume that event

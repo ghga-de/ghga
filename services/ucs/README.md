@@ -46,13 +46,13 @@ ucs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`file_upload_received_topic`** *(string, required)*: The name of the topic use to publish FileUploadReceived events.
+- **`file_upload_received_topic`** *(string, required)*: The name of the topic used for FileUploadReceived events.
 
 
   Examples:
 
   ```json
-  "file-upload-received"
+  "received-file-uploads"
   ```
 
 
@@ -66,17 +66,17 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deleted_event_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
+- **`file_deleted_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
 
 
   Examples:
 
   ```json
-  "file-downloads"
+  "file-deletions"
   ```
 
 
-- **`file_deleted_event_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
+- **`file_deleted_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -86,17 +86,62 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_delete_topic`** *(string, required)*: The name of the topic for events informing about files to be deleted.
+- **`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
 
 
   Examples:
 
   ```json
-  "file_deletions"
+  "file-deletion-requests"
   ```
 
 
-- **`file_metadata_event_topic`** *(string, required)*: Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.
+- **`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
+
+
+  Examples:
+
+  ```json
+  "file-registrations"
+  ```
+
+
+  ```json
+  "file-registrations-internal"
+  ```
+
+
+- **`file_internally_registered_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
+
+
+  Examples:
+
+  ```json
+  "file_internally_registered"
+  ```
+
+
+- **`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
+
+
+  Examples:
+
+  ```json
+  "file-interrogations"
+  ```
+
+
+- **`interrogation_failure_type`** *(string, required)*: The type used for events informing about failed file validations.
+
+
+  Examples:
+
+  ```json
+  "file_interrogation_failed"
+  ```
+
+
+- **`file_metadata_topic`** *(string, required)*: Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.
 
 
   Examples:
@@ -106,53 +151,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_metadata_event_type`** *(string, required)*: The type used for events to receive new or changed metadata on files that are expected to be uploaded.
+- **`file_metadata_type`** *(string, required)*: The type used for events to receive new or changed metadata on files that are expected to be uploaded.
 
 
   Examples:
 
   ```json
   "file_metadata_upserted"
-  ```
-
-
-- **`upload_accepted_event_topic`** *(string, required)*: Name of the topic to receive event that indicate that an upload was by downstream services.
-
-
-  Examples:
-
-  ```json
-  "internal-file-registry"
-  ```
-
-
-- **`upload_accepted_event_type`** *(string, required)*: The type used for event that indicate that an upload was by downstream services.
-
-
-  Examples:
-
-  ```json
-  "file_registered"
-  ```
-
-
-- **`upload_rejected_event_topic`** *(string, required)*: Name of the topic used for events informing about rejection of an upload by downstream services due to validation failure.
-
-
-  Examples:
-
-  ```json
-  "file-interrogation"
-  ```
-
-
-- **`upload_rejected_event_type`** *(string, required)*: The type used for events informing about the failure of a file validation.
-
-
-  Examples:
-
-  ```json
-  "file_validation_failed"
   ```
 
 

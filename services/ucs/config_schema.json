@@ -98,9 +98,9 @@
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
     "file_upload_received_topic": {
-      "description": "The name of the topic use to publish FileUploadReceived events.",
+      "description": "The name of the topic used for FileUploadReceived events.",
       "examples": [
-        "file-upload-received"
+        "received-file-uploads"
       ],
       "title": "File Upload Received Topic",
       "type": "string"
@@ -113,76 +113,77 @@
       "title": "File Upload Received Collection",
       "type": "string"
     },
-    "file_deleted_event_topic": {
+    "file_deleted_topic": {
       "description": "Name of the topic used for events indicating that a file has been deleted.",
       "examples": [
-        "file-downloads"
+        "file-deletions"
       ],
-      "title": "File Deleted Event Topic",
+      "title": "File Deleted Topic",
       "type": "string"
     },
-    "file_deleted_event_type": {
+    "file_deleted_type": {
       "description": "The type used for events indicating that a file has been deleted.",
       "examples": [
         "file_deleted"
       ],
-      "title": "File Deleted Event Type",
+      "title": "File Deleted Type",
       "type": "string"
     },
-    "files_to_delete_topic": {
-      "description": "The name of the topic for events informing about files to be deleted.",
+    "file_deletion_request_topic": {
+      "description": "The name of the topic to receive events informing about files to delete.",
       "examples": [
-        "file_deletions"
+        "file-deletion-requests"
       ],
-      "title": "Files To Delete Topic",
+      "title": "File Deletion Request Topic",
       "type": "string"
     },
-    "file_metadata_event_topic": {
+    "file_internally_registered_topic": {
+      "description": "Name of the topic used for events indicating that a file has been registered for download.",
+      "examples": [
+        "file-registrations",
+        "file-registrations-internal"
+      ],
+      "title": "File Internally Registered Topic",
+      "type": "string"
+    },
+    "file_internally_registered_type": {
+      "description": "The type used for event indicating that that a file has been registered for download.",
+      "examples": [
+        "file_internally_registered"
+      ],
+      "title": "File Internally Registered Type",
+      "type": "string"
+    },
+    "file_interrogations_topic": {
+      "description": "The name of the topic use to publish file interrogation outcome events.",
+      "examples": [
+        "file-interrogations"
+      ],
+      "title": "File Interrogations Topic",
+      "type": "string"
+    },
+    "interrogation_failure_type": {
+      "description": "The type used for events informing about failed file validations.",
+      "examples": [
+        "file_interrogation_failed"
+      ],
+      "title": "Interrogation Failure Type",
+      "type": "string"
+    },
+    "file_metadata_topic": {
       "description": "Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.",
       "examples": [
         "metadata"
       ],
-      "title": "File Metadata Event Topic",
+      "title": "File Metadata Topic",
       "type": "string"
     },
-    "file_metadata_event_type": {
+    "file_metadata_type": {
       "description": "The type used for events to receive new or changed metadata on files that are expected to be uploaded.",
       "examples": [
         "file_metadata_upserted"
       ],
-      "title": "File Metadata Event Type",
-      "type": "string"
-    },
-    "upload_accepted_event_topic": {
-      "description": "Name of the topic to receive event that indicate that an upload was by downstream services.",
-      "examples": [
-        "internal-file-registry"
-      ],
-      "title": "Upload Accepted Event Topic",
-      "type": "string"
-    },
-    "upload_accepted_event_type": {
-      "description": "The type used for event that indicate that an upload was by downstream services.",
-      "examples": [
-        "file_registered"
-      ],
-      "title": "Upload Accepted Event Type",
-      "type": "string"
-    },
-    "upload_rejected_event_topic": {
-      "description": "Name of the topic used for events informing about rejection of an upload by downstream services due to validation failure.",
-      "examples": [
-        "file-interrogation"
-      ],
-      "title": "Upload Rejected Event Topic",
-      "type": "string"
-    },
-    "upload_rejected_event_type": {
-      "description": "The type used for events informing about the failure of a file validation.",
-      "examples": [
-        "file_validation_failed"
-      ],
-      "title": "Upload Rejected Event Type",
+      "title": "File Metadata Type",
       "type": "string"
     },
     "log_level": {
@@ -523,15 +524,15 @@
   "required": [
     "file_upload_received_topic",
     "file_upload_received_collection",
-    "file_deleted_event_topic",
-    "file_deleted_event_type",
-    "files_to_delete_topic",
-    "file_metadata_event_topic",
-    "file_metadata_event_type",
-    "upload_accepted_event_topic",
-    "upload_accepted_event_type",
-    "upload_rejected_event_topic",
-    "upload_rejected_event_type",
+    "file_deleted_topic",
+    "file_deleted_type",
+    "file_deletion_request_topic",
+    "file_internally_registered_topic",
+    "file_internally_registered_type",
+    "file_interrogations_topic",
+    "interrogation_failure_type",
+    "file_metadata_topic",
+    "file_metadata_type",
     "service_instance_id",
     "kafka_servers",
     "object_storages",

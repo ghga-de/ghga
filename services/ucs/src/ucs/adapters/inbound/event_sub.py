@@ -18,12 +18,16 @@
 import logging
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    FileDeletionRequestEventsConfig,
+    FileInternallyRegisteredEventsConfig,
+    FileInterrogationFailureEventsConfig,
+    FileMetadataEventsConfig,
+)
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from ucs.core import models
 from ucs.ports.inbound.file_service import FileMetadataServicePort
@@ -32,52 +36,12 @@ from ucs.ports.inbound.upload_service import UploadServicePort
 log = logging.getLogger(__name__)
 
 
-class EventSubTranslatorConfig(BaseSettings):
+class EventSubTranslatorConfig(
+    FileMetadataEventsConfig,
+    FileInterrogationFailureEventsConfig,
+    FileInternallyRegisteredEventsConfig,
+):
     """Config for receiving metadata on files to expect for upload."""
-
-    file_metadata_event_topic: str = Field(
-        default=...,
-        description=(
-            "Name of the topic to receive new or changed metadata on files that shall"
-            + " be registered for uploaded."
-        ),
-        examples=["metadata"],
-    )
-    file_metadata_event_type: str = Field(
-        default=...,
-        description=(
-            "The type used for events to receive new or changed metadata on files that"
-            + " are expected to be uploaded."
-        ),
-        examples=["file_metadata_upserted"],
-    )
-    upload_accepted_event_topic: str = Field(
-        default=...,
-        description=(
-            "Name of the topic to receive event that indicate that an upload was"
-            + " by downstream services."
-        ),
-        examples=["internal-file-registry"],
-    )
-    upload_accepted_event_type: str = Field(
-        default=...,
-        description=(
-            "The type used for event that indicate that an upload was by downstream"
-            + " services."
-        ),
-        examples=["file_registered"],
-    )
-    upload_rejected_event_topic: str = Field(
-        default=...,
-        description="Name of the topic used for events informing about rejection of an "
-        + "upload by downstream services due to validation failure.",
-        examples=["file-interrogation"],
-    )
-    upload_rejected_event_type: str = Field(
-        default=...,
-        description="The type used for events informing about the failure of a file validation.",
-        examples=["file_validation_failed"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -93,14 +57,14 @@ class EventSubTranslator(EventSubscriberProtocol):
     ):
         """Initialize with config parameters and core dependencies."""
         self.topics_of_interest = [
-            config.file_metadata_event_topic,
-            config.upload_accepted_event_topic,
-            config.upload_rejected_event_topic,
+            config.file_metadata_topic,
+            config.file_internally_registered_topic,
+            config.file_interrogations_topic,
         ]
         self.types_of_interest = [
-            config.file_metadata_event_type,
-            config.upload_accepted_event_type,
-            config.upload_rejected_event_type,
+            config.file_metadata_type,
+            config.file_internally_registered_type,
+            config.interrogation_failure_type,
         ]
 
         self._file_metadata_service = file_metadata_service
@@ -150,24 +114,18 @@ class EventSubTranslator(EventSubscriberProtocol):
         key: Ascii,
     ) -> None:
         """Consume events from the topics of interest."""
-        if type_ == self._config.file_metadata_event_type:
+        if type_ == self._config.file_metadata_type:
             await self._consume_file_metadata(payload=payload)
-        elif type_ == self._config.upload_accepted_event_type:
+        elif type_ == self._config.file_internally_registered_type:
             await self._consume_upload_accepted(payload=payload)
-        elif type_ == self._config.upload_rejected_event_type:
+        elif type_ == self._config.interrogation_failure_type:
             await self._consume_validation_failure(payload=payload)
         else:
             raise RuntimeError(f"Unexpected event of type: {type_}")
 
 
-class OutboxSubTranslatorConfig(BaseSettings):
+class OutboxSubTranslatorConfig(FileDeletionRequestEventsConfig):
     """Config for the outbox subscriber"""
-
-    files_to_delete_topic: str = Field(
-        default=...,
-        description="The name of the topic for events informing about files to be deleted.",
-        examples=["file_deletions"],
-    )
 
 
 class FileDeletionRequestedListener(
@@ -185,7 +143,7 @@ class FileDeletionRequestedListener(
         upload_service: UploadServicePort,
     ):
         self._upload_service = upload_service
-        self.event_topic = config.files_to_delete_topic
+        self.event_topic = config.file_deletion_request_topic
 
     async def changed(
         self, resource_id: str, update: event_schemas.FileDeletionRequested

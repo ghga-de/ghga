@@ -58,8 +58,8 @@ async def run_until_uploaded(
     )
     await joint_fixture.kafka.publish_event(
         payload=file_metadata_event.model_dump(),
-        type_=joint_fixture.config.file_metadata_event_type,
-        topic=joint_fixture.config.file_metadata_event_topic,
+        type_=joint_fixture.config.file_metadata_type,
+        topic=joint_fixture.config.file_metadata_topic,
     )
 
     # consume the event:
@@ -206,8 +206,8 @@ async def test_happy_journey(joint_fixture: JointFixture):
     )
     await joint_fixture.kafka.publish_event(
         payload=json.loads(acceptance_event.model_dump_json()),
-        type_=joint_fixture.config.upload_accepted_event_type,
-        topic=joint_fixture.config.upload_accepted_event_topic,
+        type_=joint_fixture.config.file_internally_registered_type,
+        topic=joint_fixture.config.file_internally_registered_topic,
     )
 
     # consume the acceptance event:
@@ -258,8 +258,8 @@ async def test_unhappy_journey(joint_fixture: JointFixture):
 
     await joint_fixture.kafka.publish_event(
         payload=json.loads(failure_event.model_dump_json()),
-        type_=joint_fixture.config.upload_rejected_event_type,
-        topic=joint_fixture.config.upload_rejected_event_topic,
+        type_=joint_fixture.config.interrogation_failure_type,
+        topic=joint_fixture.config.file_interrogations_topic,
     )
 
     # consume the validation failure event:
@@ -309,8 +309,8 @@ async def test_inbox_inspector(caplog, joint_fixture: JointFixture):
 
     await joint_fixture.kafka.publish_event(
         payload=json.loads(failure_event.model_dump_json()),
-        type_=joint_fixture.config.upload_rejected_event_type,
-        topic=joint_fixture.config.upload_rejected_event_topic,
+        type_=joint_fixture.config.interrogation_failure_type,
+        topic=joint_fixture.config.file_interrogations_topic,
     )
 
     # make sure object is present before rejection and removed afterwards
@@ -390,13 +390,13 @@ async def test_happy_deletion(joint_fixture: JointFixture):
     await joint_fixture.kafka.publish_event(
         payload=json.loads(deletion_event.model_dump_json()),
         type_="upserted",
-        topic=joint_fixture.config.files_to_delete_topic,
+        topic=joint_fixture.config.file_deletion_request_topic,
     )
 
     # Consume inbound event and check outbound event
     deletion_successful_event = event_schemas.FileDeletionSuccess(file_id=file_id)
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.file_deleted_event_topic
+        in_topic=joint_fixture.config.file_deleted_topic
     ) as recorder:
         await joint_fixture.event_subscriber.run(forever=False)
 
