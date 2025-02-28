@@ -14,25 +14,17 @@
 # limitations under the License.
 """Adapter for publishing outbox events to other services."""
 
+from ghga_event_schemas.configs import FileStagingRequestedEventsConfig
 from ghga_event_schemas.pydantic_ import NonStagedFileRequested
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from dcs.ports.outbound.daopub import OutboxPublisherFactoryPort
 
 
-class OutboxDaoConfig(BaseSettings):
+class OutboxDaoConfig(FileStagingRequestedEventsConfig):
     """Configuration for the outbox DAO and publishing events"""
 
-    unstaged_download_event_topic: str = Field(
-        default=...,
-        description=(
-            "Name of the topic used for events indicating that a download was requested"
-            + " for a file that is not yet available in the outbox."
-        ),
-        examples=["file-downloads"],
-    )
     unstaged_download_collection: str = Field(
         default=...,
         description=(
@@ -56,7 +48,7 @@ class OutboxDaoPublisherFactory(OutboxPublisherFactoryPort):
         """Configure with provider for the DaoFactoryProtocol"""
         self._dao_publisher_factory = dao_publisher_factory
         self._unstaged_download_collection = config.unstaged_download_collection
-        self._unstaged_download_event_topic = config.unstaged_download_event_topic
+        self._files_to_stage_topic = config.files_to_stage_topic
 
     async def get_nonstaged_file_requested_dao(
         self,
@@ -70,6 +62,6 @@ class OutboxDaoPublisherFactory(OutboxPublisherFactoryPort):
             dto_model=NonStagedFileRequested,
             id_field="file_id",
             dto_to_event=lambda event: event.model_dump(),
-            event_topic=self._unstaged_download_event_topic,
+            event_topic=self._files_to_stage_topic,
             autopublish=True,
         )

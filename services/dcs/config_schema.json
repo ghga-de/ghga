@@ -97,12 +97,13 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
-    "unstaged_download_event_topic": {
+    "files_to_stage_topic": {
       "description": "Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.",
       "examples": [
-        "file-downloads"
+        "file-downloads",
+        "file-stage-requests"
       ],
-      "title": "Unstaged Download Event Topic",
+      "title": "Files To Stage Topic",
       "type": "string"
     },
     "unstaged_download_collection": {
@@ -113,12 +114,12 @@
       "title": "Unstaged Download Collection",
       "type": "string"
     },
-    "files_to_delete_topic": {
+    "file_deletion_request_topic": {
       "description": "The name of the topic to receive events informing about files to delete.",
       "examples": [
-        "file-deletions"
+        "file-deletion-requests"
       ],
-      "title": "Files To Delete Topic",
+      "title": "File Deletion Request Topic",
       "type": "string"
     },
     "log_level": {
@@ -178,68 +179,70 @@
       "title": "Object Storages",
       "type": "object"
     },
-    "files_to_register_topic": {
-      "description": "The name of the topic to receive events informing about new files that shall be made available for download.",
-      "examples": [
-        "internal-file-registry"
-      ],
-      "title": "Files To Register Topic",
-      "type": "string"
-    },
-    "files_to_register_type": {
-      "description": "The type used for events informing about new files that shall be made available for download.",
-      "examples": [
-        "file_registered"
-      ],
-      "title": "Files To Register Type",
-      "type": "string"
-    },
-    "download_served_event_topic": {
-      "description": "Name of the topic used for events indicating that a download of a specified file happened.",
-      "examples": [
-        "file-downloads"
-      ],
-      "title": "Download Served Event Topic",
-      "type": "string"
-    },
-    "download_served_event_type": {
-      "description": "The type used for event indicating that a download of a specified file happened.",
-      "examples": [
-        "donwload_served"
-      ],
-      "title": "Download Served Event Type",
-      "type": "string"
-    },
-    "file_registered_event_topic": {
+    "file_internally_registered_topic": {
       "description": "Name of the topic used for events indicating that a file has been registered for download.",
       "examples": [
-        "file-downloads"
+        "file-registrations",
+        "file-registrations-internal"
       ],
-      "title": "File Registered Event Topic",
+      "title": "File Internally Registered Topic",
       "type": "string"
     },
-    "file_registered_event_type": {
+    "file_internally_registered_type": {
       "description": "The type used for event indicating that that a file has been registered for download.",
       "examples": [
-        "file_registered"
+        "file_internally_registered"
       ],
-      "title": "File Registered Event Type",
+      "title": "File Internally Registered Type",
       "type": "string"
     },
-    "file_deleted_event_topic": {
+    "file_registered_for_download_topic": {
+      "description": "Name of the topic used for events indicating that a file has been registered by the DCS for download.",
+      "examples": [
+        "file-registrations",
+        "file-registrations-download"
+      ],
+      "title": "File Registered For Download Topic",
+      "type": "string"
+    },
+    "file_registered_for_download_type": {
+      "description": "The type used for event indicating that a file has been registered by the DCS for download.",
+      "examples": [
+        "file_registered_for_download"
+      ],
+      "title": "File Registered For Download Type",
+      "type": "string"
+    },
+    "file_deleted_topic": {
       "description": "Name of the topic used for events indicating that a file has been deleted.",
       "examples": [
-        "file-downloads"
+        "file-deletions"
       ],
-      "title": "File Deleted Event Topic",
+      "title": "File Deleted Topic",
       "type": "string"
     },
-    "file_deleted_event_type": {
+    "file_deleted_type": {
       "description": "The type used for events indicating that a file has been deleted.",
       "examples": [
         "file_deleted"
       ],
-      "title": "File Deleted Event Type",
+      "title": "File Deleted Type",
+      "type": "string"
+    },
+    "download_served_topic": {
+      "description": "Name of the topic used for events indicating that a download of a specified file happened.",
+      "examples": [
+        "file-downloads"
+      ],
+      "title": "Download Served Topic",
+      "type": "string"
+    },
+    "download_served_type": {
+      "description": "The type used for event indicating that a download of a specified file happened.",
+      "examples": [
+        "download_served"
+      ],
+      "title": "Download Served Type",
       "type": "string"
     },
     "kafka_servers": {
@@ -654,19 +657,19 @@
     }
   },
   "required": [
-    "unstaged_download_event_topic",
+    "files_to_stage_topic",
     "unstaged_download_collection",
-    "files_to_delete_topic",
+    "file_deletion_request_topic",
     "service_instance_id",
     "object_storages",
-    "files_to_register_topic",
-    "files_to_register_type",
-    "download_served_event_topic",
-    "download_served_event_type",
-    "file_registered_event_topic",
-    "file_registered_event_type",
-    "file_deleted_event_topic",
-    "file_deleted_event_type",
+    "file_internally_registered_topic",
+    "file_internally_registered_type",
+    "file_registered_for_download_topic",
+    "file_registered_for_download_type",
+    "file_deleted_topic",
+    "file_deleted_type",
+    "download_served_topic",
+    "download_served_type",
     "kafka_servers",
     "mongo_dsn",
     "db_name",

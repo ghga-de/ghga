@@ -37,7 +37,7 @@ async def test_outbox_subscriber_routing(joint_fixture: JointFixture):
     await joint_fixture.kafka.publish_event(
         payload=TEST_FILE_DELETION_REQUESTED.model_dump(),
         type_=CHANGE_EVENT_TYPE,
-        topic=joint_fixture.config.files_to_delete_topic,
+        topic=joint_fixture.config.file_deletion_request_topic,
         key=TEST_FILE_ID,
     )
 
@@ -56,7 +56,7 @@ async def test_deletion_logs(joint_fixture: JointFixture, logot: Logot):
     await joint_fixture.kafka.publish_event(
         payload=TEST_FILE_DELETION_REQUESTED.model_dump(),
         type_=DELETE_EVENT_TYPE,
-        topic=joint_fixture.config.files_to_delete_topic,
+        topic=joint_fixture.config.file_deletion_request_topic,
         key=TEST_FILE_ID,
     )
     # consume that event

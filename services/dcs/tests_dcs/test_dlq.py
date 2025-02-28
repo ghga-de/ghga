@@ -35,7 +35,7 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
     await kafka.publish_event(
         payload={"some_key": "some_value"},
         type_="upserted",
-        topic=config.files_to_delete_topic,
+        topic=config.file_deletion_request_topic,
         key="test",
     )
     async with kafka.record_events(in_topic=config.kafka_dlq_topic) as recorder:
@@ -82,16 +82,16 @@ async def test_consume_from_retry(joint_fixture: JointFixture):
         type_="upserted",
         topic=config.service_name + "-retry",
         key="test",
-        headers={"original_topic": config.files_to_delete_topic},
+        headers={"original_topic": config.file_deletion_request_topic},
     )
 
     # Publish the non-outbox event
     await joint_fixture.kafka.publish_event(
         payload=event_payload.model_dump(),
-        type_=config.files_to_register_type,
+        type_=config.file_internally_registered_type,
         topic=config.service_name + "-retry",
         key="test",
-        headers={"original_topic": config.files_to_register_topic},
+        headers={"original_topic": config.file_internally_registered_topic},
     )
 
     # Consume the events (successful if it doesn't hang)

@@ -61,7 +61,7 @@ async def test_dto_to_event(joint_fixture: JointFixture):
             set_new_correlation_id(),
             joint_fixture.kafka.expect_events(
                 events=[expected_event],
-                in_topic=config.unstaged_download_event_topic,
+                in_topic=config.files_to_stage_topic,
             ),
         ):
             await outbox_dao.upsert(dto)
@@ -75,7 +75,7 @@ class DummySubTranslator(DaoSubscriberProtocol):
     consumed_events: list[tuple[str, str]]  # correlation ID, resource ID
 
     def __init__(self, *, config: Config) -> None:
-        self.event_topic = config.unstaged_download_event_topic
+        self.event_topic = config.files_to_stage_topic
         self.consumed_events = []
 
     async def changed(self, resource_id: str, update: NonStagedFileRequested) -> None:
@@ -102,7 +102,7 @@ async def test_partial_publish(joint_fixture: JointFixture):
     async with set_new_correlation_id():
         async with joint_fixture.kafka.expect_events(
             events=[expected_published],
-            in_topic=joint_fixture.config.unstaged_download_event_topic,
+            in_topic=joint_fixture.config.files_to_stage_topic,
         ):
             await joint_fixture.nonstaged_file_requested_dao.insert(published_event)
 
@@ -120,7 +120,7 @@ async def test_partial_publish(joint_fixture: JointFixture):
     # Verify that only the unpublished event is published
     async with joint_fixture.kafka.expect_events(
         events=[expected_unpublished],
-        in_topic=joint_fixture.config.unstaged_download_event_topic,
+        in_topic=joint_fixture.config.files_to_stage_topic,
     ):
         await joint_fixture.nonstaged_file_requested_dao.publish_pending()
 
@@ -143,7 +143,7 @@ async def test_republish(joint_fixture: JointFixture):
             events.append((get_correlation_id(), file_id))
             async with joint_fixture.kafka.expect_events(
                 events=[event],
-                in_topic=joint_fixture.config.unstaged_download_event_topic,
+                in_topic=joint_fixture.config.files_to_stage_topic,
             ):
                 await joint_fixture.nonstaged_file_requested_dao.insert(file_deletion)
 

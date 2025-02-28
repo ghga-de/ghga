@@ -95,7 +95,7 @@ async def test_happy_journey(
                 type_="upserted",
             )
         ],
-        in_topic=joint_fixture.config.unstaged_download_event_topic,
+        in_topic=joint_fixture.config.files_to_stage_topic,
     ):
         response = await joint_fixture.rest_client.get(f"/objects/{drs_id}", timeout=5)
     assert response.status_code == status.HTTP_202_ACCEPTED
@@ -130,10 +130,10 @@ async def test_happy_journey(
         events=[
             ExpectedEvent(
                 payload=json.loads(download_served_event.model_dump_json()),
-                type_=joint_fixture.config.download_served_event_type,
+                type_=joint_fixture.config.download_served_type,
             )
         ],
-        in_topic=joint_fixture.config.download_served_event_topic,
+        in_topic=joint_fixture.config.download_served_topic,
     ):
         drs_object_response = await joint_fixture.rest_client.get(f"/objects/{drs_id}")
 
@@ -207,10 +207,10 @@ async def test_happy_deletion(
         events=[
             ExpectedEvent(
                 payload={"file_id": drs_id},
-                type_=joint_fixture.config.file_deleted_event_type,
+                type_=joint_fixture.config.file_deleted_type,
             )
         ],
-        in_topic=joint_fixture.config.file_deleted_event_topic,
+        in_topic=joint_fixture.config.file_deleted_topic,
     ):
         await data_repository.delete_file(file_id=drs_id)
 

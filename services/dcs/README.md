@@ -74,13 +74,18 @@ dcs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`unstaged_download_event_topic`** *(string, required)*: Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.
+- **`files_to_stage_topic`** *(string, required)*: Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.
 
 
   Examples:
 
   ```json
   "file-downloads"
+  ```
+
+
+  ```json
+  "file-stage-requests"
   ```
 
 
@@ -94,13 +99,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_delete_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
+- **`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
 
 
   Examples:
 
   ```json
-  "file-deletions"
+  "file-deletion-requests"
   ```
 
 
@@ -145,83 +150,93 @@ The service requires the following configuration parameters:
 
   - **Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
 
-- **`files_to_register_topic`** *(string, required)*: The name of the topic to receive events informing about new files that shall be made available for download.
+- **`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
 
 
   Examples:
 
   ```json
-  "internal-file-registry"
+  "file-registrations"
   ```
 
 
-- **`files_to_register_type`** *(string, required)*: The type used for events informing about new files that shall be made available for download.
+  ```json
+  "file-registrations-internal"
+  ```
+
+
+- **`file_internally_registered_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
 
 
   Examples:
 
   ```json
-  "file_registered"
+  "file_internally_registered"
   ```
 
 
-- **`download_served_event_topic`** *(string, required)*: Name of the topic used for events indicating that a download of a specified file happened.
+- **`file_registered_for_download_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered by the DCS for download.
 
 
   Examples:
 
   ```json
-  "file-downloads"
+  "file-registrations"
   ```
 
 
-- **`download_served_event_type`** *(string, required)*: The type used for event indicating that a download of a specified file happened.
+  ```json
+  "file-registrations-download"
+  ```
+
+
+- **`file_registered_for_download_type`** *(string, required)*: The type used for event indicating that a file has been registered by the DCS for download.
 
 
   Examples:
 
   ```json
-  "donwload_served"
+  "file_registered_for_download"
   ```
 
 
-- **`file_registered_event_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
+- **`file_deleted_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
 
 
   Examples:
 
   ```json
-  "file-downloads"
+  "file-deletions"
   ```
 
 
-- **`file_registered_event_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
-
-
-  Examples:
-
-  ```json
-  "file_registered"
-  ```
-
-
-- **`file_deleted_event_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
-
-
-  Examples:
-
-  ```json
-  "file-downloads"
-  ```
-
-
-- **`file_deleted_event_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
+- **`file_deleted_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
 
 
   Examples:
 
   ```json
   "file_deleted"
+  ```
+
+
+- **`download_served_topic`** *(string, required)*: Name of the topic used for events indicating that a download of a specified file happened.
+
+
+  Examples:
+
+  ```json
+  "file-downloads"
+  ```
+
+
+- **`download_served_type`** *(string, required)*: The type used for event indicating that a download of a specified file happened.
+
+
+  Examples:
+
+  ```json
+  "download_served"
   ```
 
 

@@ -18,61 +18,23 @@
 import json
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    DownloadServedEventsConfig,
+    FileDeletedEventsConfig,
+    FileRegisteredForDownloadEventsConfig,
+)
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from dcs.core import models
 from dcs.ports.outbound.event_pub import EventPublisherPort
 
 
-class EventPubTranslatorConfig(BaseSettings):
+class EventPubTranslatorConfig(
+    DownloadServedEventsConfig,
+    FileDeletedEventsConfig,
+    FileRegisteredForDownloadEventsConfig,
+):
     """Config for publishing file download related events."""
-
-    download_served_event_topic: str = Field(
-        default=...,
-        description=(
-            "Name of the topic used for events indicating that a download of a"
-            + " specified file happened."
-        ),
-        examples=["file-downloads"],
-    )
-    download_served_event_type: str = Field(
-        default=...,
-        description=(
-            "The type used for event indicating that a download of a specified"
-            + " file happened."
-        ),
-        examples=["donwload_served"],
-    )
-    file_registered_event_topic: str = Field(
-        default=...,
-        description=(
-            "Name of the topic used for events indicating that a file has"
-            + " been registered for download."
-        ),
-        examples=["file-downloads"],
-    )
-    file_registered_event_type: str = Field(
-        default=...,
-        description=(
-            "The type used for event indicating that that a file has"
-            + " been registered for download."
-        ),
-        examples=["file_registered"],
-    )
-    file_deleted_event_topic: str = Field(
-        default=...,
-        description="Name of the topic used for events indicating that a file has"
-        + " been deleted.",
-        examples=["file-downloads"],
-    )
-    file_deleted_event_type: str = Field(
-        default=...,
-        description="The type used for events indicating that a file has"
-        + " been deleted.",
-        examples=["file_deleted"],
-    )
 
 
 class EventPubTranslator(EventPublisherPort):
@@ -108,8 +70,8 @@ class EventPubTranslator(EventPublisherPort):
 
         await self._provider.publish(
             payload=payload_dict,
-            type_=self._config.download_served_event_type,
-            topic=self._config.download_served_event_topic,
+            type_=self._config.download_served_type,
+            topic=self._config.download_served_topic,
             key=drs_object.file_id,
         )
 
@@ -125,8 +87,8 @@ class EventPubTranslator(EventPublisherPort):
 
         await self._provider.publish(
             payload=payload_dict,
-            type_=self._config.file_registered_event_type,
-            topic=self._config.file_registered_event_topic,
+            type_=self._config.file_registered_for_download_type,
+            topic=self._config.file_registered_for_download_topic,
             key=drs_object.file_id,
         )
 
@@ -137,7 +99,7 @@ class EventPubTranslator(EventPublisherPort):
 
         await self._provider.publish(
             payload=payload_dict,
-            type_=self._config.file_deleted_event_type,
-            topic=self._config.file_deleted_event_topic,
+            type_=self._config.file_deleted_type,
+            topic=self._config.file_deleted_topic,
             key=file_id,
         )

@@ -207,13 +207,13 @@ async def populated_fixture(
 
     await joint_fixture.kafka.publish_event(
         payload=json.loads(file_to_register_event.model_dump_json()),
-        type_=joint_fixture.config.files_to_register_type,
-        topic=joint_fixture.config.files_to_register_topic,
+        type_=joint_fixture.config.file_internally_registered_type,
+        topic=joint_fixture.config.file_internally_registered_topic,
     )
 
     # consume the event:
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.file_registered_event_topic
+        in_topic=joint_fixture.config.file_registered_for_download_topic
     ) as recorder:
         await joint_fixture.event_subscriber.run(forever=False)
 
@@ -221,7 +221,7 @@ async def populated_fixture(
     assert len(recorder.recorded_events) == 1
     assert (
         recorder.recorded_events[0].type_
-        == joint_fixture.config.file_registered_event_type
+        == joint_fixture.config.file_registered_for_download_type
     )
 
     file_registered_event = event_schemas.FileRegisteredForDownload(

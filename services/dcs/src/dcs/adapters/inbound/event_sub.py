@@ -18,12 +18,14 @@
 import logging
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    FileDeletionRequestEventsConfig,
+    FileInternallyRegisteredEventsConfig,
+)
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from dcs.core import models
 from dcs.ports.inbound.data_repository import DataRepositoryPort
@@ -38,25 +40,8 @@ __all__ = [
 ]
 
 
-class EventSubTranslatorConfig(BaseSettings):
+class EventSubTranslatorConfig(FileInternallyRegisteredEventsConfig):
     """Config for receiving events providing metadata on files."""
-
-    files_to_register_topic: str = Field(
-        default=...,
-        description=(
-            "The name of the topic to receive events informing about new files that shall"
-            + " be made available for download."
-        ),
-        examples=["internal-file-registry"],
-    )
-    files_to_register_type: str = Field(
-        default=...,
-        description=(
-            "The type used for events informing about new files that shall"
-            + " be made available for download."
-        ),
-        examples=["file_registered"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -70,8 +55,8 @@ class EventSubTranslator(EventSubscriberProtocol):
         data_repository: DataRepositoryPort,
     ):
         """Initialize with config parameters and core dependencies."""
-        self.topics_of_interest = [config.files_to_register_topic]
-        self.types_of_interest = [config.files_to_register_type]
+        self.topics_of_interest = [config.file_internally_registered_topic]
+        self.types_of_interest = [config.file_internally_registered_type]
 
         self._data_repository = data_repository
         self._config = config
@@ -98,20 +83,14 @@ class EventSubTranslator(EventSubscriberProtocol):
         self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: str
     ) -> None:
         """Consume events from the topics of interest."""
-        if type_ == self._config.files_to_register_type:
+        if type_ == self._config.file_internally_registered_type:
             await self._consume_files_to_register(payload=payload)
         else:
             raise RuntimeError(f"Unexpected event of type: {type_}")
 
 
-class OutboxSubTranslatorConfig(BaseSettings):
+class OutboxSubTranslatorConfig(FileDeletionRequestEventsConfig):
     """Config for the outbox subscriber"""
-
-    files_to_delete_topic: str = Field(
-        default=...,
-        description="The name of the topic to receive events informing about files to delete.",
-        examples=["file-deletions"],
-    )
 
 
 class FileDeletionRequestedListener(
@@ -129,7 +108,7 @@ class FileDeletionRequestedListener(
         data_repository: DataRepositoryPort,
     ):
         self._data_repository = data_repository
-        self.event_topic = config.files_to_delete_topic
+        self.event_topic = config.file_deletion_request_topic
 
     async def changed(
         self, resource_id: str, update: event_schemas.FileDeletionRequested
