@@ -108,67 +108,32 @@ The service requires the following configuration parameters:
 
   - **Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
 
-- **`file_registered_event_topic`** *(string, required)*: Name of the topic used for events indicating that a new file has been internally registered.
+- **`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
 
 
   Examples:
 
   ```json
-  "internal-file-registry"
+  "file-registrations"
   ```
 
 
-- **`file_registered_event_type`** *(string, required)*: The type used for events indicating that a new file has been internally registered.
+  ```json
+  "file-registrations-internal"
+  ```
+
+
+- **`file_internally_registered_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
 
 
   Examples:
 
   ```json
-  "file_registered"
+  "file_internally_registered"
   ```
 
 
-- **`file_staged_event_topic`** *(string, required)*: Name of the topic used for events indicating that a new file has been internally registered.
-
-
-  Examples:
-
-  ```json
-  "internal-file-registry"
-  ```
-
-
-- **`file_staged_event_type`** *(string, required)*: The type used for events indicating that a new file has been internally registered.
-
-
-  Examples:
-
-  ```json
-  "file_staged_for_download"
-  ```
-
-
-- **`file_deleted_event_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
-
-
-  Examples:
-
-  ```json
-  "internal-file-registry"
-  ```
-
-
-- **`file_deleted_event_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
-
-
-  Examples:
-
-  ```json
-  "file_deleted"
-  ```
-
-
-- **`files_to_delete_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
+- **`file_deleted_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -178,7 +143,52 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_register_topic`** *(string, required)*: The name of the topic to receive events informing about new files to register.
+- **`file_deleted_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
+
+
+  Examples:
+
+  ```json
+  "file_deleted"
+  ```
+
+
+- **`file_staged_topic`** *(string, required)*: Name of the topic used for events indicating that a new file has been internally registered.
+
+
+  Examples:
+
+  ```json
+  "file-stagings"
+  ```
+
+
+- **`file_staged_type`** *(string, required)*: The type used for events indicating that a new file has been internally registered.
+
+
+  Examples:
+
+  ```json
+  "file_staged_for_download"
+  ```
+
+
+- **`files_to_stage_topic`** *(string, required)*: Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.
+
+
+  Examples:
+
+  ```json
+  "file-downloads"
+  ```
+
+
+  ```json
+  "file-stage-requests"
+  ```
+
+
+- **`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
 
 
   Examples:
@@ -188,13 +198,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`files_to_stage_topic`** *(string, required)*: The name of the topic to receive events informing about files to stage.
+- **`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
 
 
   Examples:
 
   ```json
-  "file-downloads"
+  "file-deletion-requests"
   ```
 
 

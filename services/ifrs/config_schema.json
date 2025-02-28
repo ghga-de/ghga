@@ -154,76 +154,78 @@
       "title": "Object Storages",
       "type": "object"
     },
-    "file_registered_event_topic": {
-      "description": "Name of the topic used for events indicating that a new file has been internally registered.",
+    "file_internally_registered_topic": {
+      "description": "Name of the topic used for events indicating that a file has been registered for download.",
       "examples": [
-        "internal-file-registry"
+        "file-registrations",
+        "file-registrations-internal"
       ],
-      "title": "File Registered Event Topic",
+      "title": "File Internally Registered Topic",
       "type": "string"
     },
-    "file_registered_event_type": {
-      "description": "The type used for events indicating that a new file has been internally registered.",
+    "file_internally_registered_type": {
+      "description": "The type used for event indicating that that a file has been registered for download.",
       "examples": [
-        "file_registered"
+        "file_internally_registered"
       ],
-      "title": "File Registered Event Type",
+      "title": "File Internally Registered Type",
       "type": "string"
     },
-    "file_staged_event_topic": {
-      "description": "Name of the topic used for events indicating that a new file has been internally registered.",
-      "examples": [
-        "internal-file-registry"
-      ],
-      "title": "File Staged Event Topic",
-      "type": "string"
-    },
-    "file_staged_event_type": {
-      "description": "The type used for events indicating that a new file has been internally registered.",
-      "examples": [
-        "file_staged_for_download"
-      ],
-      "title": "File Staged Event Type",
-      "type": "string"
-    },
-    "file_deleted_event_topic": {
+    "file_deleted_topic": {
       "description": "Name of the topic used for events indicating that a file has been deleted.",
       "examples": [
-        "internal-file-registry"
+        "file-deletions"
       ],
-      "title": "File Deleted Event Topic",
+      "title": "File Deleted Topic",
       "type": "string"
     },
-    "file_deleted_event_type": {
+    "file_deleted_type": {
       "description": "The type used for events indicating that a file has been deleted.",
       "examples": [
         "file_deleted"
       ],
-      "title": "File Deleted Event Type",
+      "title": "File Deleted Type",
       "type": "string"
     },
-    "files_to_delete_topic": {
-      "description": "The name of the topic to receive events informing about files to delete.",
+    "file_staged_topic": {
+      "description": "Name of the topic used for events indicating that a new file has been internally registered.",
       "examples": [
-        "file-deletions"
+        "file-stagings"
       ],
-      "title": "Files To Delete Topic",
+      "title": "File Staged Topic",
       "type": "string"
     },
-    "files_to_register_topic": {
-      "description": "The name of the topic to receive events informing about new files to register.",
+    "file_staged_type": {
+      "description": "The type used for events indicating that a new file has been internally registered.",
       "examples": [
-        "file-interrogations"
+        "file_staged_for_download"
       ],
-      "title": "Files To Register Topic",
+      "title": "File Staged Type",
       "type": "string"
     },
     "files_to_stage_topic": {
-      "description": "The name of the topic to receive events informing about files to stage.",
+      "description": "Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.",
       "examples": [
-        "file-downloads"
+        "file-downloads",
+        "file-stage-requests"
       ],
       "title": "Files To Stage Topic",
+      "type": "string"
+    },
+    "file_interrogations_topic": {
+      "description": "The name of the topic use to publish file interrogation outcome events.",
+      "examples": [
+        "file-interrogations"
+      ],
+      "title": "File Interrogations Topic",
+      "type": "string"
+    },
+    "file_deletion_request_topic": {
+      "description": "The name of the topic to receive events informing about files to delete.",
+      "examples": [
+        "file-deletion-requests"
+      ],
+      "title": "File Deletion Request Topic",
       "type": "string"
     },
     "kafka_servers": {
@@ -402,15 +404,15 @@
   "required": [
     "service_instance_id",
     "object_storages",
-    "file_registered_event_topic",
-    "file_registered_event_type",
-    "file_staged_event_topic",
-    "file_staged_event_type",
-    "file_deleted_event_topic",
-    "file_deleted_event_type",
-    "files_to_delete_topic",
-    "files_to_register_topic",
+    "file_internally_registered_topic",
+    "file_internally_registered_type",
+    "file_deleted_topic",
+    "file_deleted_type",
+    "file_staged_topic",
+    "file_staged_type",
     "files_to_stage_topic",
+    "file_interrogations_topic",
+    "file_deletion_request_topic",
     "kafka_servers",
     "mongo_dsn",
     "db_name",

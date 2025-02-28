@@ -18,9 +18,12 @@
 import logging
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    FileDeletionRequestEventsConfig,
+    FileInterrogationSuccessEventsConfig,
+    FileStagingRequestedEventsConfig,
+)
 from hexkit.protocols.daosub import DaoSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from ifrs.core.models import FileMetadataBase
 from ifrs.ports.inbound.file_registry import FileRegistryPort
@@ -28,25 +31,12 @@ from ifrs.ports.inbound.file_registry import FileRegistryPort
 log = logging.getLogger(__name__)
 
 
-class OutboxSubTranslatorConfig(BaseSettings):
+class OutboxSubTranslatorConfig(
+    FileDeletionRequestEventsConfig,
+    FileInterrogationSuccessEventsConfig,
+    FileStagingRequestedEventsConfig,
+):
     """Config for the outbox subscriber"""
-
-    files_to_delete_topic: str = Field(
-        default=...,
-        description="The name of the topic to receive events informing about files to delete.",
-        examples=["file-deletions"],
-    )
-    files_to_register_topic: str = Field(
-        default=...,
-        description="The name of the topic to receive events informing about new files "
-        + "to register.",
-        examples=["file-interrogations"],
-    )
-    files_to_stage_topic: str = Field(
-        default=...,
-        description="The name of the topic to receive events informing about files to stage.",
-        examples=["file-downloads"],
-    )
 
 
 class NonstagedFileRequestedTranslator(
@@ -100,7 +90,7 @@ class FileDeletionRequestedTranslator(
         file_registry: FileRegistryPort,
     ):
         self._file_registry = file_registry
-        self.event_topic = config.files_to_delete_topic
+        self.event_topic = config.file_deletion_request_topic
 
     async def changed(
         self, resource_id: str, update: event_schemas.FileDeletionRequested
@@ -131,7 +121,7 @@ class FileValidationSuccessTranslator(
         file_registry: FileRegistryPort,
     ):
         self._file_registry = file_registry
-        self.event_topic = config.files_to_register_topic
+        self.event_topic = config.file_interrogations_topic
 
     async def changed(
         self, resource_id: str, update: event_schemas.FileUploadValidationSuccess

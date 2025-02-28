@@ -99,7 +99,7 @@ async def test_reregistration(
     )
 
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.file_registered_event_topic
+        in_topic=joint_fixture.config.file_internally_registered_topic
     ) as recorder:
         await joint_fixture.file_registry.register_file(
             file_without_object_id=file_metadata_base,
@@ -110,13 +110,13 @@ async def test_reregistration(
     assert len(recorder.recorded_events) == 1
     event = recorder.recorded_events[0]
     assert event.payload["object_id"] != ""
-    assert event.type_ == joint_fixture.config.file_registered_event_type
+    assert event.type_ == joint_fixture.config.file_internally_registered_type
 
     # re-register the same file from the staging bucket:
     # (A second event is not expected.)
     async with joint_fixture.kafka.expect_events(
         events=[],
-        in_topic=joint_fixture.config.file_registered_event_topic,
+        in_topic=joint_fixture.config.file_internally_registered_topic,
     ):
         await joint_fixture.file_registry.register_file(
             file_without_object_id=file_metadata_base,
@@ -151,7 +151,7 @@ async def test_reregistration_with_updated_metadata(
     )
 
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.file_registered_event_topic,
+        in_topic=joint_fixture.config.file_internally_registered_topic,
     ) as recorder:
         await joint_fixture.file_registry.register_file(
             file_without_object_id=file_metadata_base,
@@ -162,7 +162,7 @@ async def test_reregistration_with_updated_metadata(
     assert len(recorder.recorded_events) == 1
     event = recorder.recorded_events[0]
     assert event.payload["object_id"] != ""
-    assert event.type_ == joint_fixture.config.file_registered_event_type
+    assert event.type_ == joint_fixture.config.file_internally_registered_type
 
     # try to re-register the same file with updated metadata:
     # Check for correct logging
@@ -262,12 +262,12 @@ async def test_storage_db_inconsistency(joint_fixture: JointFixture):
     [
         (
             TEST_FILE_DELETION_REQUESTED.model_dump(),
-            "files_to_delete_topic",
+            "file_deletion_request_topic",
             "delete_file",
         ),
         (
             TEST_FILE_UPLOAD_VALIDATION_SUCCESS.model_dump(),
-            "files_to_register_topic",
+            "file_interrogations_topic",
             "register_file",
         ),
         (

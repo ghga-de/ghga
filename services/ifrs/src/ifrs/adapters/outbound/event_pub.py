@@ -18,53 +18,23 @@
 import json
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    FileDeletedEventsConfig,
+    FileInternallyRegisteredEventsConfig,
+    FileStagedEventsConfig,
+)
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from ifrs.core import models
 from ifrs.ports.outbound.event_pub import EventPublisherPort
 
 
-class EventPubTranslatorConfig(BaseSettings):
+class EventPubTranslatorConfig(
+    FileStagedEventsConfig,
+    FileDeletedEventsConfig,
+    FileInternallyRegisteredEventsConfig,
+):
     """Config for publishing internal events to the outside."""
-
-    file_registered_event_topic: str = Field(
-        ...,
-        description="Name of the topic used for events indicating that a new file has"
-        + " been internally registered.",
-        examples=["internal-file-registry"],
-    )
-    file_registered_event_type: str = Field(
-        ...,
-        description="The type used for events indicating that a new file has"
-        + " been internally registered.",
-        examples=["file_registered"],
-    )
-    file_staged_event_topic: str = Field(
-        ...,
-        description="Name of the topic used for events indicating that a new file has"
-        + " been internally registered.",
-        examples=["internal-file-registry"],
-    )
-    file_staged_event_type: str = Field(
-        ...,
-        description="The type used for events indicating that a new file has"
-        + " been internally registered.",
-        examples=["file_staged_for_download"],
-    )
-    file_deleted_event_topic: str = Field(
-        ...,
-        description="Name of the topic used for events indicating that a file has"
-        + " been deleted.",
-        examples=["internal-file-registry"],
-    )
-    file_deleted_event_type: str = Field(
-        ...,
-        description="The type used for events indicating that a file has"
-        + " been deleted.",
-        examples=["file_deleted"],
-    )
 
 
 class EventPubTranslator(EventPublisherPort):
@@ -102,8 +72,8 @@ class EventPubTranslator(EventPublisherPort):
 
         await self._provider.publish(
             payload=payload_dict,
-            type_=self._config.file_registered_event_type,
-            topic=self._config.file_registered_event_topic,
+            type_=self._config.file_internally_registered_type,
+            topic=self._config.file_internally_registered_topic,
             key=file.file_id,
         )
 
@@ -128,8 +98,8 @@ class EventPubTranslator(EventPublisherPort):
 
         await self._provider.publish(
             payload=payload_dict,
-            type_=self._config.file_staged_event_type,
-            topic=self._config.file_staged_event_topic,
+            type_=self._config.file_staged_type,
+            topic=self._config.file_staged_topic,
             key=file_id,
         )
 
@@ -140,7 +110,7 @@ class EventPubTranslator(EventPublisherPort):
 
         await self._provider.publish(
             payload=payload_dict,
-            type_=self._config.file_deleted_event_type,
-            topic=self._config.file_deleted_event_topic,
+            type_=self._config.file_deleted_type,
+            topic=self._config.file_deleted_topic,
             key=file_id,
         )

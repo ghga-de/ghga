@@ -56,7 +56,7 @@ async def test_happy_journey(
     )
 
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.file_registered_event_topic,
+        in_topic=joint_fixture.config.file_internally_registered_topic,
     ) as recorder:
         await joint_fixture.file_registry.register_file(
             file_without_object_id=file_metadata_base,
@@ -71,7 +71,7 @@ async def test_happy_journey(
     event = recorder.recorded_events[0]
     assert event.payload["object_id"] != ""
     assert event.payload["encrypted_size"] == stored_metadata.object_size
-    assert event.type_ == joint_fixture.config.file_registered_event_type
+    assert event.type_ == joint_fixture.config.file_internally_registered_type
 
     object_id = cast(str, event.payload["object_id"])
 
@@ -96,11 +96,11 @@ async def test_happy_journey(
                     "target_bucket_id": joint_fixture.outbox_bucket,
                     "s3_endpoint_alias": storage_alias,
                 },
-                type_=joint_fixture.config.file_staged_event_type,
+                type_=joint_fixture.config.file_staged_type,
                 key=file_metadata_base.file_id,
             )
         ],
-        in_topic=joint_fixture.config.file_staged_event_topic,
+        in_topic=joint_fixture.config.file_staged_topic,
     ):
         await joint_fixture.file_registry.stage_registered_file(
             file_id=file_metadata_base.file_id,
@@ -136,10 +136,10 @@ async def test_happy_journey(
         events=[
             ExpectedEvent(
                 payload={"file_id": file_metadata_base.file_id},
-                type_=joint_fixture.config.file_deleted_event_type,
+                type_=joint_fixture.config.file_deleted_type,
             )
         ],
-        in_topic=joint_fixture.config.file_deleted_event_topic,
+        in_topic=joint_fixture.config.file_deleted_topic,
     ):
         await joint_fixture.file_registry.delete_file(
             file_id=file_metadata_base.file_id,
