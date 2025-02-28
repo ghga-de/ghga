@@ -89,6 +89,9 @@
             "lintFilePatterns": ["src/**/*.ts", "src/**/*.html", "**/*.md"]
           }
         }
+      },
+      "i18n": {
+        "sourceLocale": "en-GB"
       }
     }
   },

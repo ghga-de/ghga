@@ -4,10 +4,10 @@
  * @license Apache-2.0
  */
 
-import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
+import { isoDatePipe } from '@app/shared/utils/iso-date.pipe';
 import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.component';
 
 /**
@@ -15,7 +15,7 @@ import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.com
  */
 @Component({
   selector: 'app-granted-access-requests-list',
-  imports: [RouterLink, StencilComponent, DatePipe],
+  imports: [RouterLink, StencilComponent, isoDatePipe],
   templateUrl: './granted-access-requests-list.component.html',
   styleUrl: './granted-access-requests-list.component.scss',
 })

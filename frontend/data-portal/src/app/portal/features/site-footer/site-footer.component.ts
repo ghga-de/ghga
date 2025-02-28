@@ -4,19 +4,19 @@
  * @license Apache-2.0
  */
 
+import { DatePipe } from '@angular/common';
 import { Component, HostBinding } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRipple } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { DateToYearPipe } from '@app/shared/utils/date-to-year.pipe';
 
 /**
  * This is the site footer component
  */
 @Component({
   selector: 'app-site-footer',
-  imports: [RouterLink, MatIconModule, MatButtonModule, MatRipple, DateToYearPipe],
+  imports: [RouterLink, MatIconModule, MatButtonModule, MatRipple, DatePipe],
   templateUrl: './site-footer.component.html',
   styleUrl: './site-footer.component.scss',
 })

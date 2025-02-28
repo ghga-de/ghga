@@ -4,7 +4,6 @@
  * @license Apache-2.0
  */
 
-import { DatePipe } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -23,6 +22,7 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
+import { isoDatePipe } from '@app/shared/utils/iso-date.pipe';
 import {
   IvaStatePrintable,
   IvaType,
@@ -48,7 +48,7 @@ const IVA_TYPE_ICONS: { [K in keyof typeof IvaType]: string } = {
 @Component({
   selector: 'app-iva-manager-list',
   imports: [
-    DatePipe,
+    isoDatePipe,
     MatTableModule,
     MatButtonModule,
     MatIconModule,

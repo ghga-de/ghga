@@ -24,7 +24,7 @@
           <mat-form-field class="grow">
             <mat-label>Changed dates ranging from</mat-label>
             <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
-            <mat-hint>MM/DD/YYYY</mat-hint>
+            <mat-hint>YYYY-MM-DD</mat-hint>
             <mat-datepicker-toggle
               matIconSuffix
               [for]="fromPicker"
@@ -44,7 +44,7 @@
           <mat-form-field class="grow">
             <mat-label>Changed dates ranging to</mat-label>
             <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
-            <mat-hint>MM/DD/YYYY</mat-hint>
+            <mat-hint>YYYY-MM-DD</mat-hint>
             <mat-datepicker-toggle
               matIconSuffix
               [for]="toPicker"

@@ -33,7 +33,7 @@
         Last change
       </th>
       <td mat-cell class="text-base" *matCellDef="let iva">
-        {{ iva.changed | date: 'yyyy-MM-dd' }}
+        {{ iva.changed | isoDate }}
       </td>
     </ng-container>
     <ng-container matColumnDef="state">
