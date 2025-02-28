@@ -149,10 +149,11 @@ export class AccessRequestService {
   allAccessRequestsFilter = computed(
     () =>
       this.#allAccessRequestsFilter() ?? {
+        datasetId: '',
         name: '',
         fromDate: undefined,
         toDate: undefined,
-        state: undefined,
+        status: undefined,
       },
   );
 
@@ -162,7 +163,11 @@ export class AccessRequestService {
    */
   setAllAccessRequestsFilter(filter: AccessRequestFilter): void {
     this.#allAccessRequestsFilter.set(
-      filter.name || filter.fromDate || filter.toDate || filter.state
+      filter.datasetId ||
+        filter.name ||
+        filter.fromDate ||
+        filter.toDate ||
+        filter.status
         ? filter
         : undefined,
     );
@@ -187,8 +192,8 @@ export class AccessRequestService {
     if (requests.length && filter) {
       const datasetId = filter.datasetId.trim().toLowerCase();
       if (datasetId) {
-        requests = requests.filter(
-          (ar) => ar.dataset_id.toLowerCase() === filter.datasetId,
+        requests = requests.filter((ar) =>
+          ar.dataset_id.toLowerCase().includes(datasetId),
         );
       }
       const name = filter.name.trim().toLowerCase();
@@ -205,8 +210,8 @@ export class AccessRequestService {
         const toDate = filter.toDate.toISOString();
         requests = requests.filter((ar) => ar.request_created <= toDate);
       }
-      if (filter.state) {
-        requests = requests.filter((ar) => ar.status === filter.state);
+      if (filter.status) {
+        requests = requests.filter((ar) => ar.status === filter.status);
       }
     }
     return requests;

@@ -46,5 +46,5 @@ export interface AccessRequestFilter {
   name: string;
   fromDate: Date | undefined;
   toDate: Date | undefined;
-  state: AccessRequestStatus | undefined;
+  status: AccessRequestStatus | undefined;
 }

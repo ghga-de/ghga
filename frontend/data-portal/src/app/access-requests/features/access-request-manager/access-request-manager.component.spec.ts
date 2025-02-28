@@ -10,6 +10,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { AccessRequestManagerComponent } from './access-request-manager.component';
 
 import { screen } from '@testing-library/angular';
+import { AccessRequestManagerFilterComponent } from '../access-request-manager-filter/access-request-manager-filter.component';
 import { AccessRequestManagerListComponent } from '../access-request-manager-list/access-request-manager-list.component';
 
 /**
@@ -32,7 +33,12 @@ describe('AccessRequestManagerComponent', () => {
       ],
     })
       .overrideComponent(AccessRequestManagerComponent, {
-        remove: { imports: [AccessRequestManagerListComponent] }, // TODO: also remove filter component
+        remove: {
+          imports: [
+            AccessRequestManagerFilterComponent,
+            AccessRequestManagerListComponent,
+          ],
+        },
       })
       .compileComponents();
 

@@ -6,6 +6,7 @@
 
 import { Component, inject, OnInit } from '@angular/core';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
+import { AccessRequestManagerFilterComponent } from '../access-request-manager-filter/access-request-manager-filter.component';
 import { AccessRequestManagerListComponent } from '../access-request-manager-list/access-request-manager-list.component';
 
 /**
@@ -16,7 +17,7 @@ import { AccessRequestManagerListComponent } from '../access-request-manager-lis
  */
 @Component({
   selector: 'app-access-request-manager',
-  imports: [AccessRequestManagerListComponent],
+  imports: [AccessRequestManagerFilterComponent, AccessRequestManagerListComponent],
   templateUrl: './access-request-manager.component.html',
   styleUrl: './access-request-manager.component.scss',
 })
