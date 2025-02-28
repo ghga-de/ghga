@@ -21,8 +21,8 @@ const PREFIXES = ['', 'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'];
 })
 export class ParseBytes implements PipeTransform {
   /**
-   * The transform method executes the business logic of the Pipe
-   * @param bytes - Bytes as number
+   * This function converts a number of bytes to a human-readable string
+   * @param bytes Bytes as number
    * @returns Human readable size string, e.g. 5 kB
    */
   transform(bytes: number | null | undefined): string {

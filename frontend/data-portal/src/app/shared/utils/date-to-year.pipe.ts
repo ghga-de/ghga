@@ -14,8 +14,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class DateToYearPipe implements PipeTransform {
   /**
-   * The transform method executes the business logic of the Pipe
-   * @param date This function will get the year for the provided date and return it as a string
+   * This method will get the year for the provided date and return it as a string
+   * @param date The Date object to extract the year from
    * @returns the year as a string
    */
   transform(date: Date): string {

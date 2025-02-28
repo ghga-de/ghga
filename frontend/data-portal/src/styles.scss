@@ -19,6 +19,13 @@
     local('Lexend'),
     url(./assets/fonts/Lexend.ttf) format('truetype');
 }
+// Add Monospaced font (Illinois) based on Lexend
+@font-face {
+  font-family: 'Illinois';
+  src:
+    local('Illinois'),
+    url(./assets/fonts/Illinois_Mono_Regular.ttf) format('truetype');
+}
 
 // Include theme styles for core and each component used in your app.
 // Alternatively, you can import and @include the theme mixins for each component
