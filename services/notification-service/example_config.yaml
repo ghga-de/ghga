@@ -21,8 +21,8 @@ log_level: INFO
 log_traceback: true
 mongo_dsn: '**********'
 mongo_timeout: null
-notification_event_topic: notifications
-notification_event_type: notification
+notification_topic: notifications
+notification_type: notification
 plaintext_email_template: 'Dear $recipient_name,
 
 

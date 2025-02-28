@@ -172,20 +172,20 @@
       "description": "The maximum amount of time (in seconds) to wait for a connection to the SMTP server. If set to `None`, the operation will wait indefinitely.",
       "title": "Smtp Timeout"
     },
-    "notification_event_topic": {
-      "description": "Name of the event topic used to track notification events",
+    "notification_topic": {
+      "description": "Name of the topic used for notification events.",
       "examples": [
         "notifications"
       ],
-      "title": "Notification Event Topic",
+      "title": "Notification Topic",
       "type": "string"
     },
-    "notification_event_type": {
-      "description": "The type to use for events containing content to be sent",
+    "notification_type": {
+      "description": "The type used for notification events.",
       "examples": [
         "notification"
       ],
-      "title": "Notification Event Type",
+      "title": "Notification Type",
       "type": "string"
     },
     "kafka_servers": {
@@ -315,8 +315,8 @@
     "from_address",
     "smtp_host",
     "smtp_port",
-    "notification_event_topic",
-    "notification_event_type",
+    "notification_topic",
+    "notification_type",
     "kafka_servers"
   ],
   "title": "ModSettings",

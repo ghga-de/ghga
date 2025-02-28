@@ -208,8 +208,8 @@ async def test_consume_thru_send(joint_fixture: JointFixture):
             "recipient_name": "Yolanda Martinez",
             "plaintext_body": "Where are you, where are you, Yolanda?",
         },
-        type_=joint_fixture.config.notification_event_type,
-        topic=joint_fixture.config.notification_event_topic,
+        type_=joint_fixture.config.notification_type,
+        topic=joint_fixture.config.notification_topic,
     )
 
     with pytest.raises(SmtpClient.ConnectionAttemptError):
@@ -284,8 +284,8 @@ async def test_idempotence_and_transmission(joint_fixture: JointFixture):
 
     await joint_fixture.kafka.publish_event(
         payload=notification_event.model_dump(),
-        type_=joint_fixture.config.notification_event_type,
-        topic=joint_fixture.config.notification_event_topic,
+        type_=joint_fixture.config.notification_type,
+        topic=joint_fixture.config.notification_topic,
     )
 
     # generate the hash sum for the notification
@@ -318,8 +318,8 @@ async def test_idempotence_and_transmission(joint_fixture: JointFixture):
     # Now publish the same event again
     await joint_fixture.kafka.publish_event(
         payload=notification_event.model_dump(),
-        type_=joint_fixture.config.notification_event_type,
-        topic=joint_fixture.config.notification_event_topic,
+        type_=joint_fixture.config.notification_type,
+        topic=joint_fixture.config.notification_topic,
     )
 
     # Consume the event, which should NOT send anything and create no ConnectionError

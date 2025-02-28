@@ -16,36 +16,24 @@
 """Event subscriber details for notification events"""
 
 import ghga_event_schemas.pydantic_ as event_schemas
+from ghga_event_schemas.configs import NotificationEventsConfig
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from ns.ports.inbound.notifier import NotifierPort
 
 
-class EventSubTranslatorConfig(BaseSettings):
+class EventSubTranslatorConfig(NotificationEventsConfig):
     """Config for the event subscriber"""
-
-    notification_event_topic: str = Field(
-        default=...,
-        description="Name of the event topic used to track notification events",
-        examples=["notifications"],
-    )
-    notification_event_type: str = Field(
-        default=...,
-        description="The type to use for events containing content to be sent",
-        examples=["notification"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
     """A translator that can consume Notification events"""
 
     def __init__(self, *, config: EventSubTranslatorConfig, notifier: NotifierPort):
-        self.topics_of_interest = [config.notification_event_topic]
-        self.types_of_interest = [config.notification_event_type]
+        self.topics_of_interest = [config.notification_topic]
+        self.types_of_interest = [config.notification_type]
         self._config = config
         self._notifier = notifier
 
@@ -61,7 +49,7 @@ class EventSubTranslator(EventSubscriberProtocol):
     ) -> None:
         """Consumes an event"""
         if (
-            type_ == self._config.notification_event_type
-            and topic == self._config.notification_event_topic
+            type_ == self._config.notification_type
+            and topic == self._config.notification_topic
         ):
             await self._send_notification(payload=payload)

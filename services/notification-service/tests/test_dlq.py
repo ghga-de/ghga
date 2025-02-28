@@ -32,8 +32,8 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
     # Publish an event with a bogus payload to a topic/type this service expects
     await kafka.publish_event(
         payload={"some_key": "some_value"},
-        type_=config.notification_event_type,
-        topic=config.notification_event_topic,
+        type_=config.notification_type,
+        topic=config.notification_topic,
         key="test",
     )
     async with kafka.record_events(in_topic=config.kafka_dlq_topic) as recorder:
@@ -64,10 +64,10 @@ async def test_consume_from_retry(kafka: KafkaFixture):
     # Publish an event with a proper payload to a topic/type this service expects
     await kafka.publish_event(
         payload=sample_notification,
-        type_=config.notification_event_type,
+        type_=config.notification_type,
         topic=config.service_name + "-retry",
         key="test",
-        headers={"original_topic": config.notification_event_topic},
+        headers={"original_topic": config.notification_topic},
     )
 
     # Consume the event

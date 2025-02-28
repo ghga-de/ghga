@@ -10,7 +10,7 @@ The Notification Service (NS) handles notification kafka events.
 The Notification Service is a microservice intended to provide general notification capabilities. At this time, notifications are only generated via Kafka events, and they are only issued via email.
 However, the architecture of the service would allow for the addition of other submission options, such as REST APIs, as well as new notification channels, such as SMS, with relatively little work.
 
-To send an email notification using this service, publish a kafka event conforming to the Notification event schema to the topic configured under "notification_event_topic" (see configuration details below). Because email client authentication is handled by the notification service itself, nothing beyond publishing the event is required.
+To send an email notification using this service, publish a kafka event conforming to the Notification event schema to the topic configured under "notification_topic" (see configuration details below). Because email client authentication is handled by the notification service itself, nothing beyond publishing the event is required.
 
 
 ### Typical operation
@@ -175,7 +175,7 @@ The service requires the following configuration parameters:
 
     - *null*
 
-- **`notification_event_topic`** *(string, required)*: Name of the event topic used to track notification events.
+- **`notification_topic`** *(string, required)*: Name of the topic used for notification events.
 
 
   Examples:
@@ -185,7 +185,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`notification_event_type`** *(string, required)*: The type to use for events containing content to be sent.
+- **`notification_type`** *(string, required)*: The type used for notification events.
 
 
   Examples:
