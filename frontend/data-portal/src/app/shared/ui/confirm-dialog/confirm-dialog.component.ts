@@ -20,6 +20,7 @@ export interface ConfirmDialogData {
   message: string;
   cancelText?: string;
   confirmText?: string;
+  confirmClass?: string;
 }
 
 /**
@@ -70,6 +71,14 @@ export class ConfirmDialogComponent {
    */
   get confirmText(): string {
     return this.data.confirmText || 'Continue';
+  }
+
+  /**
+   * Class of confirm button
+   * @returns the class name of the confirm button
+   */
+  get confirmClass(): string {
+    return this.data.confirmClass || '';
   }
 
   /**

@@ -6,7 +6,12 @@
   <button mat-button (click)="onCancel()">
     {{ cancelText }}
   </button>
-  <button mat-raised-button cdkFocusInitial (click)="onConfirm()">
+  <button
+    mat-raised-button
+    [class]="confirmClass"
+    cdkFocusInitial
+    (click)="onConfirm()"
+  >
     {{ confirmText }}
   </button>
 </div>

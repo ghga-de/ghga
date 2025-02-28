@@ -78,8 +78,8 @@
     </mat-form-field>
   </mat-dialog-content>
   <mat-dialog-actions>
-    <button mat-stroked-button class="mr-2" (click)="cancelClick()">Cancel</button>
-    <button mat-raised-button [disabled]="submitDisabled()" (click)="submitClick()">
+    <button mat-stroked-button class="mr-2" (click)="cancel()">Cancel</button>
+    <button mat-raised-button [disabled]="submitDisabled()" (click)="submit()">
       Submit
     </button>
   </mat-dialog-actions>

@@ -96,14 +96,35 @@ export class AccessRequestDialogComponent {
   }
 
   /**
-   * This function takes a From Control to validate it against the constraints of the from date
+   * Validate a date against a given interval
+   * @param inDate - The date to validate
+   * @param min - The minimum date
+   * @param max - The maximum date
+   * @returns a validation error with either minDate or maxDate set or null
+   */
+  #validateDateAgainstMinAndMax(
+    inDate: Date,
+    min: Date,
+    max: Date,
+  ): ValidationErrors | null {
+    if (!inDate) return { invalid: true };
+    if (inDate < min) {
+      return { minDate: true };
+    } else if (inDate > max) {
+      return { maxDate: true };
+    }
+    return null;
+  }
+
+  /**
+   * Validate a Form Control against the constraints of the from date
    * @param control The form Control to validate
    * @returns a validation error or null
    */
-  fromDateValidator = (
+  #fromDateValidator = (
     control: AbstractControl<Date, Date>,
   ): ValidationErrors | null => {
-    const ret = this.validateDateAgainstMinAndMax(
+    const ret = this.#validateDateAgainstMinAndMax(
       control.value,
       this.minFromDate,
       this.maxFromDate,
@@ -112,15 +133,20 @@ export class AccessRequestDialogComponent {
     return ret;
   };
 
+  readonly fromFormControl = new FormControl('', [
+    Validators.required,
+    (control) => this.#fromDateValidator(control),
+  ]);
+
   /**
-   * This function takes a From Control to validate it against the constraints of the until date
+   * Validate a Form Control against the constraints of the until date
    * @param control The form Control to validate
    * @returns a validation error or null
    */
-  untilDateValidator = (
+  #untilDateValidator = (
     control: AbstractControl<Date, Date>,
   ): ValidationErrors | null => {
-    const ret = this.validateDateAgainstMinAndMax(
+    const ret = this.#validateDateAgainstMinAndMax(
       control.value,
       this.minUntilDate,
       this.maxUntilDate,
@@ -129,10 +155,21 @@ export class AccessRequestDialogComponent {
     return ret;
   };
 
-  getErrorMessageForValidationState = (
+  readonly untilFormControl = new FormControl('', [
+    Validators.required,
+    (control) => this.#untilDateValidator(control),
+  ]);
+
+  /**
+   * Get an error message for a given validation state
+   * @param name - The name of the date (e.g. start or end)
+   * @param error - The validation error with minDate, maxDate or invalid set
+   * @returns an error message as a string
+   */
+  getErrorMessageForValidationState(
     name: string,
     error: ValidationErrors | null,
-  ): string => {
+  ): string {
     if (!error) {
       return '';
     } else if (error['invalid']) {
@@ -144,55 +181,44 @@ export class AccessRequestDialogComponent {
     } else {
       return '';
     }
-  };
-
-  validateDateAgainstMinAndMax = (
-    inDate: Date,
-    min: Date,
-    max: Date,
-  ): ValidationErrors | null => {
-    if (!inDate) return { invalid: true };
-    if (inDate < min) {
-      return { minDate: true };
-    } else if (inDate > max) {
-      return { maxDate: true };
-    }
-    return null;
-  };
+  }
 
   /**
-   * The form controls need to be defined AFTER the previous functions because of the scope binding of this.
+   * Update the error message for the description form control
    */
-  readonly fromFormControl = new FormControl('', [
-    Validators.required,
-    this.fromDateValidator.bind(this),
-  ]);
-  readonly untilFormControl = new FormControl('', [
-    Validators.required,
-    this.untilDateValidator.bind(this),
-  ]);
-
-  updateDescriptionErrorMessage = () => {
+  updateDescriptionErrorMessage() {
     if (this.descriptionFormControl.hasError('required')) {
       this.descriptionErrorMessage.set('Please provide a reason for this request.');
     } else {
       this.descriptionErrorMessage.set('');
     }
-  };
+  }
 
-  fromDateChanged = ($event: MatDatepickerInputEvent<Date, string>) => {
+  /**
+   * Update the error message based on the from date form control
+   * @param $event - The event that triggered the change
+   */
+  fromDateChanged($event: MatDatepickerInputEvent<Date, string>) {
     if ($event.value) {
       this.updateUntilRangeForFromValue($event.value);
     }
-  };
+  }
 
-  untilDateChanged = ($event: MatDatepickerInputEvent<Date, string>) => {
+  /**
+   * Update the error message based on the until date form control
+   * @param $event - The event that triggered the change
+   */
+  untilDateChanged($event: MatDatepickerInputEvent<Date, string>) {
     if ($event.value) {
       this.updateFromRangeForUntilValue($event.value);
     }
-  };
+  }
 
-  updateFromRangeForUntilValue = (date: Date) => {
+  /**
+   * Update the range for the from date based on the until date
+   * @param date - The until date to update the range for
+   */
+  updateFromRangeForUntilValue(date: Date): void {
     const currentDate = this.todayMidnight;
 
     const newFromMinDate = new Date(
@@ -211,9 +237,13 @@ export class AccessRequestDialogComponent {
 
     this.minFromDate = newFromMinDate;
     this.maxFromDate = newFromMaxDate;
-  };
+  }
 
-  updateUntilRangeForFromValue = (date: Date) => {
+  /**
+   * Update the range for the until date based on the from date
+   * @param date - The frin date to update the range for
+   */
+  updateUntilRangeForFromValue(date: Date): void {
     const newUntilMinDate = new Date(
       date.getTime() + this.#config.access_grant_min_days * MILLISECONDS_PER_DAY,
     );
@@ -223,17 +253,12 @@ export class AccessRequestDialogComponent {
 
     this.minUntilDate = newUntilMinDate;
     this.maxUntilDate = newUntilMaxDate;
-  };
+  }
 
-  cancelClick = () => {
-    this.dialogRef.close(undefined);
-  };
-
-  submitClick = () => {
-    this.dialogRef.close(this.data);
-  };
-
-  updateEmailErrorMessage = () => {
+  /**
+   * Update the error message for the email form control
+   */
+  updateEmailErrorMessage(): void {
     if (this.emailFormControl.hasError('required')) {
       this.emailErrorMessage.set('You must enter an email address');
     } else if (this.emailFormControl.hasError('email')) {
@@ -241,5 +266,19 @@ export class AccessRequestDialogComponent {
     } else {
       this.emailErrorMessage.set('');
     }
-  };
+  }
+
+  /**
+   * Close the dialog without submitting the data
+   */
+  cancel(): void {
+    this.dialogRef.close(undefined);
+  }
+
+  /**
+   * Submit the access request and close the dialog
+   */
+  submit(): void {
+    this.dialogRef.close(this.data);
+  }
 }

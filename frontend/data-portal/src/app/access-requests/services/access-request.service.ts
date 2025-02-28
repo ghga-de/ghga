@@ -10,7 +10,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { catchError, firstValueFrom, map } from 'rxjs';
+import { catchError, firstValueFrom, map, Observable, tap } from 'rxjs';
 import {
   AccessRequest,
   AccessRequestDialogData,
@@ -83,7 +83,7 @@ export class AccessRequestService {
           ),
         );
     },
-  }).asReadonly();
+  });
 
   /**
    * The list of access requests of the current user
@@ -226,6 +226,37 @@ export class AccessRequestService {
    * The list of all access requests error as a signal
    */
   allAccessRequestsError: Signal<unknown> = this.#allAccessRequests.error;
+
+  /**
+   * Update the lists of access requests locally
+   * @param accessRequest - the access request that has been modified
+   */
+  #updateAccessRequestLocally(accessRequest: AccessRequest): void {
+    const update = (accessRequests: AccessRequest[]) =>
+      accessRequests.map((ar) => (ar.id === accessRequest.id ? accessRequest : ar));
+
+    accessRequest.status_changed = new Date().toISOString();
+    accessRequest.changed_by = this.#auth.user()?.id || null;
+
+    this.#userAccessRequests.value.set(update(this.userAccessRequests()));
+    this.#allAccessRequests.value.set(update(this.allAccessRequests()));
+  }
+
+  /**
+   * Process an access request, i.e. approve or disapprove it.
+   * This can only be done by a data steward.
+   * Currently, we can only set the status, and the selected IVA,
+   * other fields like the access dates cannot be modified here.
+   * This method also updates the local state if the modification was successful.
+   * @param accessRequest - the access request with the new status
+   * @returns An observable that emits null when the request has been processed
+   */
+  processRequest(accessRequest: AccessRequest): Observable<null> {
+    const { id, iva_id, status } = accessRequest;
+    return this.#http
+      .patch<null>(`${this.#arsEndpointUrl}/${id}`, { iva_id, status })
+      .pipe(tap(() => this.#updateAccessRequestLocally(accessRequest)));
+  }
 }
 
 let dateInOneYear = new Date();

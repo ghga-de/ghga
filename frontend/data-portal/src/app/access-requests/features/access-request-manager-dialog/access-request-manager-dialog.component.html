@@ -1,0 +1,83 @@
+<div class="w-full p-3">
+  <h2 mat-dialog-title>Access Request Detail</h2>
+  <mat-dialog-content>
+    <table class="detail mb-4 w-full">
+      <tr>
+        <th>Dataset:</th>
+        <td>{{ data.dataset_id }}</td>
+      </tr>
+      <tr>
+        <th>Requester:</th>
+        <td>{{ data.full_user_name }}</td>
+      </tr>
+      <tr>
+        <th>Contact e-Mail:</th>
+        <td>{{ data.email }}</td>
+      </tr>
+      <tr>
+        <th>Request details:</th>
+        <td>{{ data.request_text }}</td>
+      </tr>
+    </table>
+    <p>The request has been made on {{ data.request_created | date }}.</p>
+    <p>
+      Acess has been requested from {{ data.access_starts | date }} until
+      {{ data.access_ends | date }}.
+    </p>
+    <p>
+      Access request is currently <strong>{{ data.status }}</strong
+      >.
+    </p>
+    @if (ivasAreLoading()) {
+      <p>Loading verification addresses...</p>
+    } @else if (ivasError() || !ivas().length) {
+      <p>No corresponding verification addresses found, cannot process request.</p>
+    } @else {
+      <label for="iva-selection">
+        Please select the verification address that should be used to secure the access
+        request:
+      </label>
+      <mat-radio-group [(ngModel)]="ivaId" id="iva-selection-label">
+        <table class="ivas mt-2">
+          @for (iva of ivas(); track iva.id) {
+            <tr>
+              <td>
+                <mat-radio-button class="example-radio-button" [value]="iva.id">
+                  {{ typeAndValue(iva) }}
+                </mat-radio-button>
+              </td>
+              <td class="iva{{ iva.state }}">
+                {{ iva.state }}
+              </td>
+            </tr>
+          }
+        </table>
+      </mat-radio-group>
+    }
+    <br />
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <div class="mr-2">
+      <button mat-stroked-button (click)="cancel()">Cancel</button>
+    </div>
+    <div class="flex-grow"></div>
+    <div class="ml-2">
+      <button
+        mat-raised-button
+        class="error mr-2"
+        (click)="safeDeny()"
+        [disabled]="!ivaId() || data.status === 'denied'"
+      >
+        Deny
+      </button>
+      <button
+        mat-raised-button
+        class="success ml-2"
+        (click)="safeAllow()"
+        [disabled]="!ivaId() || data.status === 'allowed'"
+      >
+        Allow
+      </button>
+    </div>
+  </mat-dialog-actions>
+</div>

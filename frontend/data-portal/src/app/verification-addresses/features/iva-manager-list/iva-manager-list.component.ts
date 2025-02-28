@@ -153,9 +153,7 @@ export class IvaManagerListComponent implements AfterViewInit {
    */
   #invalidate(iva: UserWithIva): void {
     this.#ivaService.unverifyIva(iva.id).subscribe({
-      next: () => {
-        this.#notificationService.showSuccess('IVA has been invalidated');
-      },
+      next: () => this.#notificationService.showSuccess('IVA has been invalidated'),
       error: (err) => {
         console.debug(err);
         this.#notificationService.showError('IVA could not be invalidated');

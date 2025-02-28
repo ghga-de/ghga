@@ -176,3 +176,23 @@ main a {
   color: var(--mat-sys-on-error-container);
   border-color: var(--mat-sys-error);
 }
+
+button.success {
+  @include mat.button-overrides(
+    (
+      filled-container-color: green,
+      protected-container-color: green,
+      filled-label-text-color: var(--mat-sys-on-secondary),
+    )
+  );
+}
+
+button.error {
+  @include mat.button-overrides(
+    (
+      filled-container-color: red,
+      protected-container-color: red,
+      filled-label-text-color: var(--mat-sys-on-secondary),
+    )
+  );
+}

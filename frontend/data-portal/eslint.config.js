@@ -119,6 +119,14 @@ export default [
                 ],
               ],
             },
+            // access requests context may import from verification addresses context
+            {
+              from: [['features', { context: 'access-requests' }]],
+              allow: [
+                ['service', { context: 'verification-addresses' }],
+                ['model', { context: 'verification-addresses' }],
+              ],
+            },
             // main may only import config and main app modules
             {
               from: ['main'],
