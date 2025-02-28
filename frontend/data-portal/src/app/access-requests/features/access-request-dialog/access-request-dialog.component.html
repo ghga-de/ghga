@@ -9,20 +9,33 @@
       <textarea
         matInput
         placeholder="I need access for research on..."
+        [formControl]="descriptionFormControl"
         [(ngModel)]="description"
+        (blur)="updateDescriptionErrorMessage()"
         #details
       ></textarea>
+      @if (descriptionErrorMessage()) {
+        <mat-error>
+          {{ descriptionErrorMessage() }}
+        </mat-error>
+      }
     </mat-form-field>
     <mat-form-field class="mt-4 w-full">
       <mat-label>Access requested from</mat-label>
       <input
         matInput
+        [formControl]="fromFormControl"
         [matDatepicker]="from_picker"
         [min]="minFromDate"
         [max]="maxFromDate"
         [(ngModel)]="fromDate"
         (dateInput)="fromDateChanged($event)"
       />
+      @if (fromDateErrorMessage()) {
+        <mat-error>
+          {{ fromDateErrorMessage() }}
+        </mat-error>
+      }
       <mat-hint>MM/DD/YYYY</mat-hint>
       <mat-datepicker-toggle matIconSuffix [for]="from_picker"></mat-datepicker-toggle>
       <mat-datepicker #from_picker></mat-datepicker>
@@ -32,11 +45,17 @@
       <mat-label>Access requested until</mat-label>
       <input
         matInput
+        [formControl]="untilFormControl"
         [matDatepicker]="until_picker"
         [min]="minUntilDate"
         [max]="maxUntilDate"
         [(ngModel)]="untilDate"
       />
+      @if (untilDateErrorMessage()) {
+        <mat-error>
+          {{ untilDateErrorMessage() }}
+        </mat-error>
+      }
       <mat-hint>MM/DD/YYYY</mat-hint>
       <mat-datepicker-toggle matIconSuffix [for]="until_picker"></mat-datepicker-toggle>
       <mat-datepicker #until_picker></mat-datepicker>
@@ -49,12 +68,19 @@
         matInput
         placeholder="your.email@goes.here"
         #emailField
+        [formControl]="emailFormControl"
         [(ngModel)]="email"
+        (blur)="updateEmailErrorMessage()"
       />
+      @if (emailFormControl.invalid) {
+        <mat-error>{{ emailErrorMessage() }}</mat-error>
+      }
     </mat-form-field>
   </mat-dialog-content>
   <mat-dialog-actions>
     <button mat-stroked-button class="mr-2" (click)="cancelClick()">Cancel</button>
-    <button mat-raised-button (click)="submitClick()">Submit</button>
+    <button mat-raised-button [disabled]="submitDisabled()" (click)="submitClick()">
+      Submit
+    </button>
   </mat-dialog-actions>
 </div>
