@@ -27,9 +27,9 @@ mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json
 port: 8080
-resource_change_event_topic: searchable_resources
-resource_deletion_event_type: searchable_resource_deleted
-resource_upsertion_event_type: searchable_resource_upserted
+resource_change_topic: searchable_resources
+resource_deletion_type: searchable_resource_deleted
+resource_upsertion_type: searchable_resource_upserted
 searchable_classes:
   Dataset:
     description: Dataset grouping files under controlled access.

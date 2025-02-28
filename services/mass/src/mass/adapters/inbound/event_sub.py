@@ -18,14 +18,13 @@
 import logging
 
 import ghga_event_schemas.pydantic_ as event_schemas
+from ghga_event_schemas.configs import ResourceEventsConfig
 from ghga_event_schemas.validation import (
     EventSchemaValidationError,
     get_validated_payload,
 )
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from mass.core.models import Resource
 from mass.ports.inbound.query_handler import QueryHandlerPort
@@ -44,27 +43,8 @@ UNEXPECTED_EVENT_LOG_MESSAGE = "Received unexpected event of type '%s'"
 log = logging.getLogger(__name__)
 
 
-class EventSubTranslatorConfig(BaseSettings):
+class EventSubTranslatorConfig(ResourceEventsConfig):
     """Config for the event subscriber"""
-
-    resource_change_event_topic: str = Field(
-        ...,
-        description=(
-            "Name of the event topic used to track resource deletion "
-            + "and upsertion events"
-        ),
-        examples=["searchable_resource"],
-    )
-    resource_deletion_event_type: str = Field(
-        ...,
-        description="The type to use for events with deletion instructions",
-        examples=["searchable_resource_deleted"],
-    )
-    resource_upsertion_event_type: str = Field(
-        ...,
-        description="The type to use for events with upsert instructions",
-        examples=["searchable_resource_upserted"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -73,10 +53,10 @@ class EventSubTranslator(EventSubscriberProtocol):
     def __init__(
         self, *, config: EventSubTranslatorConfig, query_handler: QueryHandlerPort
     ):
-        self.topics_of_interest = [config.resource_change_event_topic]
+        self.topics_of_interest = [config.resource_change_topic]
         self.types_of_interest = [
-            config.resource_deletion_event_type,
-            config.resource_upsertion_event_type,
+            config.resource_deletion_type,
+            config.resource_upsertion_type,
         ]
         self._config = config
         self._query_handler = query_handler
@@ -146,9 +126,9 @@ class EventSubTranslator(EventSubscriberProtocol):
     ) -> None:
         """Consumes an event"""
         log.info(EVENT_RECEIVED_LOG_MESSAGE, type)
-        if type_ == self._config.resource_deletion_event_type:
+        if type_ == self._config.resource_deletion_type:
             await self._handle_deletion(payload=payload)
-        elif type_ == self._config.resource_upsertion_event_type:
+        elif type_ == self._config.resource_upsertion_type:
             await self._handle_upsertion(payload=payload)
         else:
             log.warning(UNEXPECTED_EVENT_LOG_MESSAGE, type)

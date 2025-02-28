@@ -115,15 +115,15 @@ async def test_event_sub_logging(
     assert all_results.count > 0
 
     event_to_use = (
-        joint_fixture.config.resource_upsertion_event_type
+        joint_fixture.config.resource_upsertion_type
         if event_type == "upsert"
-        else joint_fixture.config.resource_deletion_event_type
+        else joint_fixture.config.resource_deletion_type
     )
 
     await joint_fixture.publish_event(
         payload=resource.model_dump(),
         type_=event_to_use,
-        topic=joint_fixture.config.resource_change_event_topic,
+        topic=joint_fixture.config.resource_change_topic,
         key=f"dataset_embedded_{resource.accession}",
     )
 

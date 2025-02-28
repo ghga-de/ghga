@@ -66,8 +66,8 @@ async def test_resource_upsert(
     # publish the event
     await joint_fixture.publish_event(
         payload=payload,
-        type_=joint_fixture.config.resource_upsertion_event_type,
-        topic=joint_fixture.config.resource_change_event_topic,
+        type_=joint_fixture.config.resource_upsertion_type,
+        topic=joint_fixture.config.resource_change_topic,
         key=f"dataset_embedded_{resource_id}",
     )
 
@@ -106,8 +106,8 @@ async def test_resource_delete(joint_fixture: JointFixture):
 
     await joint_fixture.publish_event(
         payload=resource_info.model_dump(),
-        type_=joint_fixture.config.resource_deletion_event_type,
-        topic=joint_fixture.config.resource_change_event_topic,
+        type_=joint_fixture.config.resource_deletion_type,
+        topic=joint_fixture.config.resource_change_topic,
         key=f"dataset_embedded_{resource_info.accession}",
     )
 
@@ -130,8 +130,8 @@ async def test_event_subscriber_dlq(joint_fixture: JointFixture):
     # Publish an event with a bogus payload to a topic/type this service expects
     await joint_fixture.publish_event(
         payload={"some_key": "some_value"},
-        type_=config.resource_upsertion_event_type,
-        topic=config.resource_change_event_topic,
+        type_=config.resource_upsertion_type,
+        topic=config.resource_change_topic,
         key="test",
     )
     async with joint_fixture._kafka.record_events(
@@ -168,10 +168,10 @@ async def test_consume_from_retry(kafka: KafkaFixture):
     # Publish an event with a proper payload to a topic/type this service expects
     await kafka.publish_event(
         payload=payload,
-        type_=config.resource_upsertion_event_type,
+        type_=config.resource_upsertion_type,
         topic=config.service_name + "-retry",
         key="test",
-        headers={"original_topic": config.resource_change_event_topic},
+        headers={"original_topic": config.resource_change_topic},
     )
 
     # Consume the event

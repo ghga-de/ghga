@@ -109,17 +109,17 @@ The service requires the following configuration parameters:
 
   - **Additional properties**: Refer to *[#/$defs/SearchableClass](#%24defs/SearchableClass)*.
 
-- **`resource_change_event_topic`** *(string, required)*: Name of the event topic used to track resource deletion and upsertion events.
+- **`resource_change_topic`** *(string, required)*: Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.
 
 
   Examples:
 
   ```json
-  "searchable_resource"
+  "searchable_resources"
   ```
 
 
-- **`resource_deletion_event_type`** *(string, required)*: The type to use for events with deletion instructions.
+- **`resource_deletion_type`** *(string, required)*: Type used for events indicating the deletion of a previously existing resource.
 
 
   Examples:
@@ -129,7 +129,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`resource_upsertion_event_type`** *(string, required)*: The type to use for events with upsert instructions.
+- **`resource_upsertion_type`** *(string, required)*: Type used for events indicating the upsert of a resource.
 
 
   Examples:
