@@ -14,28 +14,23 @@
 # limitations under the License.
 """Outbox-pattern DAO to communicate database state via kafka."""
 
+from ghga_event_schemas.configs import FileDeletionRequestEventsConfig
 from ghga_event_schemas.pydantic_ import FileDeletionRequested
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from pcs.ports.outbound.daopub import OutboxPublisherFactoryPort
 
 __all__ = ["OutboxDaoConfig", "OutboxDaoPublisherFactory"]
 
 
-class OutboxDaoConfig(BaseSettings):
+class OutboxDaoConfig(FileDeletionRequestEventsConfig):
     """Configuration for the outbox DAO and publishing events"""
 
     file_deletions_collection: str = Field(
         default="fileDeletions",
         description="The name of the collection used to store file deletion requests.",
         examples=["fileDeletions"],
-    )
-    files_to_delete_topic: str = Field(
-        default=...,
-        description="The name of the topic to receive events informing about files to delete.",
-        examples=["file-deletions"],
     )
 
 
@@ -51,7 +46,7 @@ class OutboxDaoPublisherFactory(OutboxPublisherFactoryPort):
         """Configure with provider for the DaoFactoryProtocol"""
         self._dao_publisher_factory = dao_publisher_factory
         self._file_deletions_collection = config.file_deletions_collection
-        self._file_deletion_topic = config.files_to_delete_topic
+        self._file_deletion_topic = config.file_deletion_request_topic
 
     async def get_file_deletion_dao(self) -> DaoPublisher[FileDeletionRequested]:
         """Construct a DAO for interacting with file deletion requests in the database.

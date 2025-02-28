@@ -59,7 +59,7 @@ async def test_happy_journey(joint_fixture: JointFixture):
 
     async with joint_fixture.kafka.expect_events(
         events=[expected_event],
-        in_topic=joint_fixture.config.files_to_delete_topic,
+        in_topic=joint_fixture.config.file_deletion_request_topic,
     ):
         headers = Headers({"Authorization": f"Bearer {joint_fixture.token}"})
         response = await joint_fixture.rest_client.delete(
@@ -93,7 +93,7 @@ async def test_dto_deletion(joint_fixture: JointFixture):
         expected_upsertion = expected_event_from_file_id("upserted", TEST_FILE_ID)
         async with joint_fixture.kafka.expect_events(
             events=[expected_upsertion],
-            in_topic=joint_fixture.config.files_to_delete_topic,
+            in_topic=joint_fixture.config.file_deletion_request_topic,
         ):
             await joint_fixture.dao.insert(
                 event_schemas.FileDeletionRequested(file_id=TEST_FILE_ID)
@@ -105,6 +105,6 @@ async def test_dto_deletion(joint_fixture: JointFixture):
         )
         async with joint_fixture.kafka.expect_events(
             events=[expected_deletion],
-            in_topic=joint_fixture.config.files_to_delete_topic,
+            in_topic=joint_fixture.config.file_deletion_request_topic,
         ):
             await joint_fixture.dao.delete(TEST_FILE_ID)

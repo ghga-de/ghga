@@ -5,7 +5,7 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 docs_url: /docs
-files_to_delete_topic: file-deletions
+file_deletion_request_topic: file-deletions
 host: 127.0.0.1
 kafka_servers:
   - kafka:9092

@@ -2,6 +2,14 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "file_deletion_request_topic": {
+      "description": "The name of the topic to receive events informing about files to delete.",
+      "examples": [
+        "file-deletion-requests"
+      ],
+      "title": "File Deletion Request Topic",
+      "type": "string"
+    },
     "file_deletions_collection": {
       "default": "fileDeletions",
       "description": "The name of the collection used to store file deletion requests.",
@@ -9,14 +17,6 @@
         "fileDeletions"
       ],
       "title": "File Deletions Collection",
-      "type": "string"
-    },
-    "files_to_delete_topic": {
-      "description": "The name of the topic to receive events informing about files to delete.",
-      "examples": [
-        "file-deletions"
-      ],
-      "title": "Files To Delete Topic",
       "type": "string"
     },
     "log_level": {
@@ -356,7 +356,7 @@
     }
   },
   "required": [
-    "files_to_delete_topic",
+    "file_deletion_request_topic",
     "service_instance_id",
     "token_hashes",
     "kafka_servers",

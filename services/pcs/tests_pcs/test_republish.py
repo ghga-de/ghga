@@ -37,7 +37,7 @@ class DummySubTranslator(DaoSubscriberProtocol):
     consumed_events: list[tuple[str, str]]  # correlation ID, resource ID
 
     def __init__(self, *, config: Config) -> None:
-        self.event_topic = config.files_to_delete_topic
+        self.event_topic = config.file_deletion_request_topic
         self.consumed_events = []
 
     async def changed(self, resource_id: str, update: FileDeletionRequested) -> None:
@@ -65,7 +65,7 @@ async def test_partial_publish(joint_fixture: JointFixture):
     async with set_new_correlation_id():
         async with joint_fixture.kafka.expect_events(
             events=[expected_published],
-            in_topic=joint_fixture.config.files_to_delete_topic,
+            in_topic=joint_fixture.config.file_deletion_request_topic,
         ):
             await joint_fixture.dao.insert(published_event)
 
@@ -83,7 +83,7 @@ async def test_partial_publish(joint_fixture: JointFixture):
     # Verify that only the unpublished event is published
     async with joint_fixture.kafka.expect_events(
         events=[expected_unpublished],
-        in_topic=joint_fixture.config.files_to_delete_topic,
+        in_topic=joint_fixture.config.file_deletion_request_topic,
     ):
         await joint_fixture.dao.publish_pending()
 
@@ -105,7 +105,8 @@ async def test_republish(joint_fixture: JointFixture):
         async with set_new_correlation_id():
             events.append((get_correlation_id(), file_id))
             async with joint_fixture.kafka.expect_events(
-                events=[event], in_topic=joint_fixture.config.files_to_delete_topic
+                events=[event],
+                in_topic=joint_fixture.config.file_deletion_request_topic,
             ):
                 await joint_fixture.dao.insert(file_deletion)
 

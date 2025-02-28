@@ -57,6 +57,16 @@ pcs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- **`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
+
+
+  Examples:
+
+  ```json
+  "file-deletion-requests"
+  ```
+
+
 - **`file_deletions_collection`** *(string)*: The name of the collection used to store file deletion requests. Default: `"fileDeletions"`.
 
 
@@ -64,16 +74,6 @@ The service requires the following configuration parameters:
 
   ```json
   "fileDeletions"
-  ```
-
-
-- **`files_to_delete_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
-
-
-  Examples:
-
-  ```json
-  "file-deletions"
   ```
 
 
