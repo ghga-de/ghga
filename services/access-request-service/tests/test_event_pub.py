@@ -34,10 +34,10 @@ from ars.core.models import AccessRequest, AccessRequestStatus
 pytestmark = pytest.mark.asyncio()
 
 dummy_config = EventPubTranslatorConfig(
-    access_request_allowed_event_type="access_request_allowed",
-    access_request_created_event_type="access_request_created",
-    access_request_denied_event_type="access_request_denied",
-    access_request_events_topic="access_requests",
+    access_request_allowed_type="access_request_allowed",
+    access_request_created_type="access_request_created",
+    access_request_denied_type="access_request_denied",
+    access_request_topic="access_requests",
 )
 
 
@@ -93,8 +93,8 @@ async def test_access_request_events(status: str):
     publish_method = getattr(event_publisher, f"publish_request_{status}")
     await publish_method(request=request)
 
-    expected_topic = dummy_config.access_request_events_topic
-    expected_type = getattr(dummy_config, f"access_request_{status}_event_type")
+    expected_topic = dummy_config.access_request_topic
+    expected_type = getattr(dummy_config, f"access_request_{status}_type")
     expected_payload = AccessRequestDetails(
         user_id=request.user_id, dataset_id=request.dataset_id
     ).model_dump()

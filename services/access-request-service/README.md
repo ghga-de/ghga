@@ -63,17 +63,27 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`access_request_events_topic`** *(string, required)*: The topic used for events related to access requests.
+- **`access_request_topic`** *(string, required)*: Name of the event topic used to consume access request events.
 
 
   Examples:
 
   ```json
-  "access_requests"
+  "access-requests"
   ```
 
 
-- **`access_request_created_event_type`** *(string, required)*: The type to use for 'access request created' events.
+- **`access_request_denied_type`** *(string, required)*: The type to use for access request denied events.
+
+
+  Examples:
+
+  ```json
+  "access_request_denied"
+  ```
+
+
+- **`access_request_created_type`** *(string, required)*: The type to use for access request created events.
 
 
   Examples:
@@ -83,23 +93,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`access_request_allowed_event_type`** *(string, required)*: The type to use for 'access request allowed' events.
+- **`access_request_allowed_type`** *(string, required)*: The type to use for access request allowed events.
 
 
   Examples:
 
   ```json
   "access_request_allowed"
-  ```
-
-
-- **`access_request_denied_event_type`** *(string, required)*: The type to use for 'access request denied' events.
-
-
-  Examples:
-
-  ```json
-  "access_request_denied"
   ```
 
 

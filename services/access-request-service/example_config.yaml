@@ -1,9 +1,9 @@
 access_grant_max_days: 730
 access_grant_min_days: 7
-access_request_allowed_event_type: access_request_allowed
-access_request_created_event_type: access_request_created
-access_request_denied_event_type: access_request_denied
-access_request_events_topic: access_request_events
+access_request_allowed_type: access_request_allowed
+access_request_created_type: access_request_created
+access_request_denied_type: access_request_denied
+access_request_topic: access_request_events
 access_upfront_max_days: 180
 api_root_path: ''
 auth_algs:

@@ -82,7 +82,7 @@ async def test_create_access_request(
 ):
     """Test that an active user can create an access request."""
     kafka = joint_fixture.kafka
-    topic = joint_fixture.config.access_request_events_topic
+    topic = joint_fixture.config.access_request_topic
     async with kafka.record_events(in_topic=topic) as recorder:
         response = await joint_fixture.rest_client.post(
             "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -101,9 +101,7 @@ async def test_create_access_request(
         "user_id": CREATION_DATA["user_id"],
         "dataset_id": CREATION_DATA["dataset_id"],
     }
-    assert (
-        recorded_event.type_ == joint_fixture.config.access_request_created_event_type
-    )
+    assert recorded_event.type_ == joint_fixture.config.access_request_created_type
 
 
 async def test_create_access_request_unauthorized(
@@ -321,7 +319,7 @@ async def test_patch_access_request(
 
     # set status to allowed as data steward
     kafka = joint_fixture.kafka
-    topic = joint_fixture.config.access_request_events_topic
+    topic = joint_fixture.config.access_request_topic
     async with kafka.record_events(in_topic=topic) as recorder:
         response = await joint_fixture.rest_client.patch(
             f"/access-requests/{access_request_id}",
@@ -348,9 +346,7 @@ async def test_patch_access_request(
         "user_id": CREATION_DATA["user_id"],
         "dataset_id": CREATION_DATA["dataset_id"],
     }
-    assert (
-        recorded_event.type_ == joint_fixture.config.access_request_allowed_event_type
-    )
+    assert recorded_event.type_ == joint_fixture.config.access_request_allowed_type
 
     # get request as user
     response = await client.get("/access-requests", headers=auth_headers_doe)
