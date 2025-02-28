@@ -64,8 +64,8 @@ async def test_dataset_registration(
     # register a dataset by publishing an event
     await kafka.publish_event(
         payload=DATASET_UPSERTION_EVENT.model_dump(),
-        topic=config.dataset_change_event_topic,
-        type_=config.dataset_upsertion_event_type,
+        topic=config.dataset_change_topic,
+        type_=config.dataset_upsertion_type,
         key="test-key",
     )
     # wait until the event is processed
@@ -110,8 +110,8 @@ async def test_dataset_update(
     updated_dataset = updated_dataset.model_copy(update={"title": "Changed dataset 1"})
     await kafka.publish_event(
         payload=updated_dataset.model_dump(),
-        topic=config.dataset_change_event_topic,
-        type_=config.dataset_upsertion_event_type,
+        topic=config.dataset_change_topic,
+        type_=config.dataset_upsertion_type,
         key="test-key",
     )
     await asyncio.wait_for(subscriber.run(forever=False), timeout=TIMEOUT)
@@ -143,8 +143,8 @@ async def test_dataset_deletion(
     deleted_dataset = DATASET_DELETION_EVENT
     await kafka.publish_event(
         payload=deleted_dataset.model_dump(),
-        topic=config.dataset_change_event_topic,
-        type_=config.dataset_deletion_event_type,
+        topic=config.dataset_change_topic,
+        type_=config.dataset_deletion_type,
         key="test-key",
     )
     await asyncio.wait_for(subscriber.run(forever=False), timeout=TIMEOUT)
@@ -171,8 +171,8 @@ async def test_event_subscriber_dlq(
     # Publish an event with a bogus payload to a topic/type this service expects
     await kafka.publish_event(
         payload={"some_key": "some_value"},
-        topic=config.dataset_change_event_topic,
-        type_=config.dataset_upsertion_event_type,
+        topic=config.dataset_change_topic,
+        type_=config.dataset_upsertion_type,
         key="test-key",
     )
 
@@ -204,10 +204,10 @@ async def test_consume_from_retry(
     # Publish an event with a proper payload to a topic/type this service expects
     await kafka.publish_event(
         payload=DATASET_UPSERTION_EVENT.model_dump(),
-        type_=config.dataset_upsertion_event_type,
+        type_=config.dataset_upsertion_type,
         topic=config.service_name + "-retry",
         key="test-key",
-        headers={"original_topic": config.dataset_change_event_topic},
+        headers={"original_topic": config.dataset_change_topic},
     )
 
     # wait until the event is processed

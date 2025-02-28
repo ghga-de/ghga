@@ -313,7 +313,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_change_event_topic`** *(string, required)*: Name of the topic for events that inform about datasets.
+- **`dataset_change_topic`** *(string, required)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
 
 
   Examples:
@@ -323,23 +323,23 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`dataset_upsertion_event_type`** *(string, required)*: The type of events that inform about new and changed datasets.
-
-
-  Examples:
-
-  ```json
-  "dataset_created"
-  ```
-
-
-- **`dataset_deletion_event_type`** *(string, required)*: The type of events that inform about deleted datasets.
+- **`dataset_deletion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
 
 
   Examples:
 
   ```json
   "dataset_deleted"
+  ```
+
+
+- **`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+
+
+  Examples:
+
+  ```json
+  "dataset_created"
   ```
 
 

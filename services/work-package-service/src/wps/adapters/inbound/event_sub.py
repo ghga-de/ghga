@@ -20,11 +20,10 @@ import logging
 from contextlib import suppress
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import DatasetEventsConfig
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from wps.core.models import Dataset, DatasetFile, WorkType
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
@@ -34,24 +33,8 @@ __all__ = ["EventSubTranslator", "EventSubTranslatorConfig"]
 log = logging.getLogger(__name__)
 
 
-class EventSubTranslatorConfig(BaseSettings):
+class EventSubTranslatorConfig(DatasetEventsConfig):
     """Config for dataset creation related events."""
-
-    dataset_change_event_topic: str = Field(
-        ...,
-        description="Name of the topic for events that inform about datasets.",
-        examples=["metadata_datasets"],
-    )
-    dataset_upsertion_event_type: str = Field(
-        ...,
-        description="The type of events that inform about new and changed datasets.",
-        examples=["dataset_created"],
-    )
-    dataset_deletion_event_type: str = Field(
-        ...,
-        description="The type of events that inform about deleted datasets.",
-        examples=["dataset_deleted"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -66,14 +49,14 @@ class EventSubTranslator(EventSubscriberProtocol):
     ):
         """Initialize with config parameters and core dependencies."""
         self.topics_of_interest = [
-            config.dataset_change_event_topic,
+            config.dataset_change_topic,
         ]
         self.types_of_interest = [
-            config.dataset_upsertion_event_type,
-            config.dataset_deletion_event_type,
+            config.dataset_upsertion_type,
+            config.dataset_deletion_type,
         ]
-        self._dataset_upsertion_event_type = config.dataset_upsertion_event_type
-        self._dataset_deletion_event_type = config.dataset_deletion_event_type
+        self._dataset_upsertion_type = config.dataset_upsertion_type
+        self._dataset_deletion_type = config.dataset_deletion_type
         self._repository = work_package_repository
 
     async def _handle_upsertion(self, payload: JsonObject):
@@ -130,7 +113,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             topic (str): Name of the topic the event was published to.
             key: A key used for routing the event.
         """
-        if type_ == self._dataset_upsertion_event_type:
+        if type_ == self._dataset_upsertion_type:
             await self._handle_upsertion(payload)
-        elif type_ == self._dataset_deletion_event_type:
+        elif type_ == self._dataset_deletion_type:
             await self._handle_deletion(payload)
