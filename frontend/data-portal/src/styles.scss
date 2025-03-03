@@ -180,8 +180,8 @@ main a {
 button.success {
   @include mat.button-overrides(
     (
-      filled-container-color: green,
-      protected-container-color: green,
+      filled-container-color: #172,
+      protected-container-color: #172,
       filled-label-text-color: var(--mat-sys-on-secondary),
     )
   );
@@ -190,8 +190,8 @@ button.success {
 button.error {
   @include mat.button-overrides(
     (
-      filled-container-color: red,
-      protected-container-color: red,
+      filled-container-color: #c11,
+      protected-container-color: #c11,
       filled-label-text-color: var(--mat-sys-on-secondary),
     )
   );
