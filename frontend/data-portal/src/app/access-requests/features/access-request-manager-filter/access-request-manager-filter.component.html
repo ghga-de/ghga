@@ -38,7 +38,7 @@
           <mat-form-field class="grow">
             <mat-label>Request created from</mat-label>
             <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
-            <mat-hint>YYYY-MM-DD</mat-hint>
+            <mat-hint>{{ dateInputFormatHint }}</mat-hint>
             <mat-datepicker-toggle
               matIconSuffix
               [for]="fromPicker"
@@ -58,7 +58,7 @@
           <mat-form-field class="grow">
             <mat-label>Request created until</mat-label>
             <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
-            <mat-hint>YYYY-MM-DD</mat-hint>
+            <mat-hint>{{ dateInputFormatHint }}</mat-hint>
             <mat-datepicker-toggle
               matIconSuffix
               [for]="toPicker"

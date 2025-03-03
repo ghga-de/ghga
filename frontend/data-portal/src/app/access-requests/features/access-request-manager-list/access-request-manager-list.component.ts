@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { DatePipe } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -20,7 +21,6 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { isoDatePipe } from '@app/shared/utils/iso-date.pipe';
 import { AccessRequestManagerDialogComponent } from '../access-request-manager-dialog/access-request-manager-dialog.component';
 
 /**
@@ -31,7 +31,7 @@ import { AccessRequestManagerDialogComponent } from '../access-request-manager-d
  */
 @Component({
   selector: 'app-access-request-manager-list',
-  imports: [MatTableModule, MatSortModule, MatPaginatorModule, isoDatePipe],
+  imports: [MatTableModule, MatSortModule, MatPaginatorModule, DatePipe],
   templateUrl: './access-request-manager-list.component.html',
   styleUrl: './access-request-manager-list.component.scss',
 })

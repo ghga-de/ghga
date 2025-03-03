@@ -4,10 +4,11 @@
  * @license Apache-2.0
  */
 
+import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
-import { isoDatePipe } from '@app/shared/utils/iso-date.pipe';
+import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.component';
 
 /**
@@ -15,11 +16,12 @@ import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.com
  */
 @Component({
   selector: 'app-pending-access-requests-list',
-  imports: [RouterLink, StencilComponent, isoDatePipe],
+  imports: [RouterLink, StencilComponent, DatePipe],
   templateUrl: './pending-access-requests-list.component.html',
   styleUrl: './pending-access-requests-list.component.scss',
 })
 export class PendingAccessRequestsListComponent {
+  readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   #ars = inject(AccessRequestService);
 
   pendingRequests = this.#ars.pendingUserAccessRequests;

@@ -20,6 +20,7 @@ import {
 } from '@app/access-requests/models/access-requests';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
+import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import {
   Iva,
   IvaState,
@@ -40,6 +41,7 @@ import { IvaService } from '@app/verification-addresses/services/iva.service';
 export class AccessRequestManagerDialogComponent implements OnInit {
   readonly dialogRef = inject(MatDialogRef<AccessRequestManagerDialogComponent>);
   readonly data = inject<AccessRequest>(MAT_DIALOG_DATA);
+  readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   #ivaService = inject(IvaService);
   #confirmationService = inject(ConfirmationService);
   #notificationService = inject(NotificationService);

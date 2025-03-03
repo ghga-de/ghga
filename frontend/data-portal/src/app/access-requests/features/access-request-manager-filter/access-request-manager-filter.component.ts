@@ -14,6 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AccessRequestStatus } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
+import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
 
 /**
  * Access Request Manager Filter component.
@@ -39,6 +40,8 @@ export class AccessRequestManagerFilterComponent {
   #ars = inject(AccessRequestService);
 
   #filter = this.#ars.allAccessRequestsFilter;
+
+  readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
 
   /**
    * The model for the filter properties

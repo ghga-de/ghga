@@ -155,11 +155,15 @@ export default [
             {
               from: ['config'],
               disallow: ['*'],
-              message: 'Config modules can only import routes and auth services',
+              message: 'Config modules can only import routes, utils and auth services',
             },
             {
               from: ['config'],
-              allow: ['routes', ['service', { context: 'auth' }]],
+              allow: [
+                'routes',
+                ['service', { context: 'auth' }],
+                ['util', { context: 'shared' }],
+              ],
             },
             // modules for routes may import feature components
             {

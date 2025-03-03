@@ -24,19 +24,19 @@
     <ng-container matColumnDef="starts">
       <th mat-header-cell *matHeaderCellDef class="w-36" mat-sort-header>Starts</th>
       <td mat-cell class="text-base" *matCellDef="let ar">
-        {{ ar.access_starts | isoDate }}
+        {{ ar.access_starts | date }}
       </td>
     </ng-container>
     <ng-container matColumnDef="ends">
       <th mat-header-cell *matHeaderCellDef class="w-36" mat-sort-header>Ends</th>
       <td mat-cell class="text-base" *matCellDef="let ar">
-        {{ ar.access_ends | isoDate }}
+        {{ ar.access_ends | date }}
       </td>
     </ng-container>
     <ng-container matColumnDef="requested">
       <th mat-header-cell *matHeaderCellDef class="w-36" mat-sort-header>Requested</th>
       <td mat-cell class="text-base" *matCellDef="let ar">
-        {{ ar.request_created | isoDate }}
+        {{ ar.request_created | date }}
       </td>
     </ng-container>
     <ng-container matColumnDef="status">

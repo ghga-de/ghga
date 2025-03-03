@@ -16,8 +16,8 @@
             <a routerLink="/dataset/{{ request.dataset_id }}">{{
               request.dataset_id
             }}</a>
-            from {{ request.access_starts | isoDate }} to
-            {{ request.access_ends | isoDate }}.
+            from {{ request.access_starts | date: friendlyDateFormat }} to
+            {{ request.access_ends | date: friendlyDateFormat }}.
           </li>
         }
       </ul>

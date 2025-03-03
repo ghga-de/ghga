@@ -27,6 +27,7 @@ import { MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AccessRequestDialogData } from '@app/access-requests/models/access-requests';
 import { ConfigService } from '@app/shared/services/config.service';
+import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
 
 const MILLISECONDS_PER_DAY = 86400000;
 
@@ -61,6 +62,7 @@ export class AccessRequestDialogComponent {
   readonly result = model(this.data);
   readonly email = model(this.data.email);
   readonly description = model(this.data.description);
+  readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
   fromDate = model(this.data.fromDate);
   untilDate = model(this.data.untilDate);
   todayMidnight = new Date();
