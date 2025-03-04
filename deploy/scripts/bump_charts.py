@@ -182,7 +182,7 @@ if __name__ == "__main__":
             print(
                 f"Version {current_version} is newer than latest published {latest_version} for {chart['name']}"
             )
-            chart_file.append(get_version_diff(current_version, latest_version))
+            diff_version.append(get_version_diff(current_version, latest_version))
 
         if current_app_version > latest_app_version:
             print(
