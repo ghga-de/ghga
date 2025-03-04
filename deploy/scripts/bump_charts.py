@@ -202,7 +202,7 @@ if __name__ == "__main__":
                 get_version_diff(current_ghga_common, latest_ghga_common)
             )
 
-    if not diffs_app_version and not diffs_library_version:
+    if not diffs_app_version and not diffs_library_version and not diff_version:
         print("All charts are up-to-date.")
         exit(0)
 
@@ -227,12 +227,13 @@ if __name__ == "__main__":
 
         chart["version"] = str(new_version)
 
-        if diffs_app_version:
+        if diffs_app_version or diff_version:
             print("Updating appVersion, skipping dependency update")
             # Dump to files
             if not DRY_MODE:
                 with Path(chart_file).open("w", encoding="utf-8") as f:
                     yaml.dump(chart, f)
+            continue
 
         elif diffs_library_version:
             for dep in chart.get("dependencies"):
