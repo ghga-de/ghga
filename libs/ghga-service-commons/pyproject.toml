@@ -23,7 +23,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "3.3.0"
+version = "3.4.0"
 description = "A library that contains common functionality used in services of GHGA"
 dependencies = [
     "pydantic >=2, <3",
@@ -35,11 +35,11 @@ text = "Apache 2.0"
 [project.optional-dependencies]
 api = [
     "fastapi>=0.115.3, <0.116",
-    "uvicorn[standard]>=0.29, <0.30",
+    "uvicorn[standard]>=0.34, <0.35",
     "ghga-service-commons[http,objectstorage]",
 ]
 http = [
-    "httpx>=0.27, < 0.28",
+    "httpx>=0.27, <0.29",
 ]
 auth = [
     "jwcrypto>=1.5.6, <2",

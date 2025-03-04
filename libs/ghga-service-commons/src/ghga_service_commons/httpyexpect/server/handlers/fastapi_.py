@@ -32,7 +32,7 @@ def configure_exception_handler(app: FastAPI) -> None:
     """
 
     @app.exception_handler(HttpException)
-    def exception_handler(
+    def httpy_exception_handler(
         request: Request,
         # (The above is required by the corresponding FastAPI interface but not used here)
         exc: HttpException,
@@ -43,3 +43,18 @@ def configure_exception_handler(app: FastAPI) -> None:
         into a FastAPI JSONResponse.
         """
         return JSONResponse(status_code=exc.status_code, content=exc.body.model_dump())
+
+    @app.exception_handler(500)
+    def unhandled_exception_handler(
+        request: Request,
+        # (The above is required by the corresponding FastAPI interface but not used here)
+        exc: HttpException,
+    ) -> JSONResponse:
+        """Attach a custom 500 exception handler to the FastAPI app.
+
+        This exception handler should properly wrap unhandled exceptions so they only
+        propagate a generic message instead of carrying the actual exception message.
+        """
+        return JSONResponse(
+            status_code=500, content={"message": "Internal Server Error."}
+        )
