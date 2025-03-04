@@ -168,19 +168,27 @@ if __name__ == "__main__":
     )
 
     diffs_app_version, diffs_library_version, latest_versions = [], [], []
+    diff_version = []
     for chart_file, chart in charts:
-        current = VersionInfo.parse(chart.get("appVersion"))
+        current_app_version = VersionInfo.parse(chart.get("appVersion"))
+        current_version = VersionInfo.parse(chart.get("version"))
         latest = get_latest_published_version(helm_index, chart["name"])
         latest_app_version = latest["appVersion"]
         latest_version = latest["version"]
         latest_versions.append(latest_version)
         print(f"Latest published version for {chart['name']}: {latest_version}")
 
-        if current > latest_app_version:
+        if current_version > latest_version:
             print(
-                f"AppVersion {current} is newer than latest published {latest_app_version} for {chart['name']}"
+                f"Version {current_version} is newer than latest published {latest_version} for {chart['name']}"
             )
-            diffs_app_version.append(get_version_diff(current, latest_app_version))
+            chart_file.append(get_version_diff(current_version, latest_version))
+
+        if current_app_version > latest_app_version:
+            print(
+                f"AppVersion {current_app_version} is newer than latest published {latest_app_version} for {chart['name']}"
+            )
+            diffs_app_version.append(get_version_diff(current_app_version, latest_app_version))
 
         for dep in chart.get("dependencies"):
             if dep.get("name") == "ghga-common":
@@ -202,7 +210,9 @@ if __name__ == "__main__":
         if not all(version == latest_versions[0] for version in latest_versions):
             raise ValueError("Versions are inconsistent")
 
-    if diffs_app_version:
+    if diff_version:
+        max_diff = max(diff_version)
+    elif diffs_app_version:
         max_diff = max(diffs_app_version)
     elif diffs_library_version:
         max_diff = max(diffs_library_version)
