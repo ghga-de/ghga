@@ -18,8 +18,8 @@ serviceInstanceIdConsumer: nos-consumer-1
 
 parameters:
   default:
-    central_data_stewardship_email: ""
-    helpdesk_email: ""
+    central_data_stewardship_email: helpdesk@ghga.de
+    helpdesk_email: helpdesk@ghga.de
 
 
 containers:
