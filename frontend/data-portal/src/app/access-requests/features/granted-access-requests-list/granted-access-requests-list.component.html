@@ -4,15 +4,15 @@
   @if (isLoading()) {
     <app-stencil></app-stencil>
   } @else {
-    @let req = grantedRequests();
-    @if (req.length === 0) {
+    @let requests = grantedRequests();
+    @if (requests.length === 0) {
       <p class="text-base">You do not yet have access to any datasets.</p>
     } @else {
       <p class="text-base">You have the following granted access requests:</p>
       <ul>
-        @for (grantedRequest of req; track grantedRequest.request.id) {
+        @for (grantedRequest of requests; track grantedRequest.request.dataset_id) {
           @let request = grantedRequest.request;
-          <li [hidden]="grantedRequest.isExpired">
+          <li>
             For the dataset
             <a routerLink="/dataset/{{ request.dataset_id }}">{{
               request.dataset_id
@@ -23,6 +23,9 @@
           </li>
         }
       </ul>
+      <button routerLink="/work-package" mat-raised-button class="mt-8">
+        <mat-icon>download</mat-icon>Set up a download token
+      </button>
     }
   }
 }

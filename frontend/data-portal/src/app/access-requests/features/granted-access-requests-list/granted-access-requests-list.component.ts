@@ -5,8 +5,10 @@
  */
 
 import { DatePipe } from '@angular/common';
-import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, computed, inject } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { RouterLink, RouterModule } from '@angular/router';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.component';
@@ -16,7 +18,14 @@ import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.com
  */
 @Component({
   selector: 'app-granted-access-requests-list',
-  imports: [RouterLink, StencilComponent, DatePipe],
+  imports: [
+    RouterLink,
+    StencilComponent,
+    DatePipe,
+    MatIconModule,
+    MatButtonModule,
+    RouterModule,
+  ],
   templateUrl: './granted-access-requests-list.component.html',
   styleUrl: './granted-access-requests-list.component.scss',
 })
@@ -24,7 +33,9 @@ export class GrantedAccessRequestsListComponent {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   #ars = inject(AccessRequestService);
 
-  grantedRequests = this.#ars.grantedUserAccessRequests;
+  grantedRequests = computed(() =>
+    this.#ars.grantedUserAccessRequests().filter((r) => !r.isExpired),
+  );
   isLoading = this.#ars.userAccessRequestsAreLoading;
   hasError = this.#ars.userAccessRequestsError;
 }
