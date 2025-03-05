@@ -9,7 +9,7 @@ helpdesk_email: test@test.def
 iva_state_changed_event_topic: ivas
 iva_state_changed_event_type: iva_state_changed
 kafka_dlq_topic: dlq
-kafka_enable_dlq: false
+kafka_enable_dlq: true
 kafka_max_message_size: 1048576
 kafka_max_retries: 0
 kafka_retry_backoff: 0

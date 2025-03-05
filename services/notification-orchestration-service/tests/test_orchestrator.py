@@ -186,8 +186,16 @@ async def test_missing_user_id_access_requests(
             topic=joint_fixture.config.access_request_events_topic,
         )
 
-        with pytest.raises(joint_fixture.orchestrator.MissingUserError):
+        async with joint_fixture.kafka.record_events(
+            in_topic=joint_fixture.config.kafka_dlq_topic, capture_headers=True
+        ) as recorder:
             await joint_fixture.event_subscriber.run(forever=False)
+        assert recorder.recorded_events
+        assert recorder.recorded_events[0].headers is not None
+        assert (
+            recorder.recorded_events[0].headers.get("exc_class", "")
+            == "MissingUserError"
+        )
         logot.assert_logged(
             logged.error(
                 f"Unable to publish '{notification_name}' notification as"
@@ -230,8 +238,16 @@ async def test_missing_user_id_iva_state_changes(
             topic=joint_fixture.config.access_request_events_topic,
         )
 
-        with pytest.raises(joint_fixture.orchestrator.MissingUserError):
+        async with joint_fixture.kafka.record_events(
+            in_topic=joint_fixture.config.kafka_dlq_topic, capture_headers=True
+        ) as recorder:
             await joint_fixture.event_subscriber.run(forever=False)
+        assert recorder.recorded_events
+        assert recorder.recorded_events[0].headers is not None
+        assert (
+            recorder.recorded_events[0].headers.get("exc_class", "")
+            == "MissingUserError"
+        )
         logot.assert_logged(
             logged.error(
                 f"Unable to publish '{notification_name}' notification as user"

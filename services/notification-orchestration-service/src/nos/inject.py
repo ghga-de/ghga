@@ -19,9 +19,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from hexkit.providers.akafka import (
+    ComboTranslator,
     KafkaEventPublisher,
     KafkaEventSubscriber,
-    KafkaOutboxSubscriber,
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
@@ -45,9 +45,7 @@ async def prepare_core(
     dao_factory = MongoDbDaoFactory(config=config)
     user_dao = await user_dao_factory(dao_factory=dao_factory)
 
-    async with (
-        KafkaEventPublisher.construct(config=config) as event_publisher,
-    ):
+    async with KafkaEventPublisher.construct(config=config) as event_publisher:
         notification_emitter = NotificationEmitter(
             config=config, event_publisher=event_publisher
         )
@@ -84,32 +82,20 @@ async def prepare_event_subscriber(
             orchestrator=orchestrator,
             config=config,
         )
-
-        async with KafkaEventSubscriber.construct(
-            config=config, translator=event_sub_translator
-        ) as event_subscriber:
-            yield event_subscriber
-
-
-@asynccontextmanager
-async def prepare_outbox_subscriber(
-    *,
-    config: Config,
-    core_override: OrchestratorPort | None = None,
-) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
-    """Construct and initialize an outbox subscriber with all its dependencies.
-    By default, the core dependencies are automatically prepared but you can also
-    provide them using the override parameter.
-    """
-    async with prepare_core_with_override(
-        config=config, core_override=core_override
-    ) as orchestrator:
         outbox_sub_translator = OutboxSubTranslator(
             orchestrator=orchestrator,
             config=config,
         )
+        combo_translator = ComboTranslator(
+            translators=[event_sub_translator, outbox_sub_translator]
+        )
 
-        async with KafkaOutboxSubscriber.construct(
-            config=config, translators=[outbox_sub_translator]
-        ) as outbox_subscriber:
-            yield outbox_subscriber
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config,
+                translator=combo_translator,
+                dlq_publisher=dlq_publisher,
+            ) as event_subscriber,
+        ):
+            yield event_subscriber

@@ -26,7 +26,7 @@ description = "The Notification Orchestration Service controls the creation of n
 dependencies = [
     "typer >= 0.9.0",
     "ghga-event-schemas >= 3.3.0",
-    "hexkit[akafka,mongodb] >= 4",
+    "hexkit[akafka,mongodb] >= 4.1",
     "pydantic[email]>=2, <3",
 ]
 

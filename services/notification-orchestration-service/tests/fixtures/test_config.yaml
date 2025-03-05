@@ -15,3 +15,4 @@ iva_state_changed_event_type: iva_state_changed
 user_events_topic: users
 second_factor_recreated_event_topic: auth
 second_factor_recreated_event_type: second_factor_recreated
+kafka_enable_dlq: True

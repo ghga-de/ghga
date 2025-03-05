@@ -27,9 +27,8 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_fixture,
 )
 
-from tests.fixtures.joint import JointFixture, get_joint_fixture
+from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
 
-joint_fixture = get_joint_fixture()
 TEST_USER = event_schemas.User(
     user_id="test_id",
     name="test user",
@@ -39,7 +38,7 @@ TEST_USER = event_schemas.User(
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def insert_test_data(joint_fixture: JointFixture):
+async def insert_test_data(joint_fixture: JointFixture):  # noqa: F811
     """Fixture that inserts TEST_USER into the database and deletes it after the tests
     are done.
 

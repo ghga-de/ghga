@@ -51,7 +51,7 @@ async def test_user_data_deletion(joint_fixture: JointFixture, user_id: str):
     )
 
     # 3. Run the outbox subscriber.
-    await joint_fixture.outbox_subscriber.run(forever=False)
+    await joint_fixture.event_subscriber.run(forever=False)
 
     # 4. Check that the user data is not found.
     with pytest.raises(ResourceNotFoundError):
@@ -99,7 +99,7 @@ async def test_user_data_upsert(
     )
 
     # Run the outbox subscriber.
-    await joint_fixture.outbox_subscriber.run(forever=False)
+    await joint_fixture.event_subscriber.run(forever=False)
 
     # Check that the user data is found.
     result = await joint_fixture.user_dao.get_by_id(user.user_id)
@@ -167,4 +167,4 @@ async def test_user_reregistration_notifications(
 
     # Run the outbox subscriber and check that the expected notifications were emitted.
     async with joint_fixture.kafka.expect_events(expected_events, in_topic=topic):
-        await joint_fixture.outbox_subscriber.run(forever=False)
+        await joint_fixture.event_subscriber.run(forever=False)

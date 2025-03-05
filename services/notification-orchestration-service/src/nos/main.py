@@ -15,12 +15,10 @@
 #
 """Top-level functions for the service"""
 
-import asyncio
-
 from hexkit.log import configure_logging
 
 from nos.config import Config
-from nos.inject import prepare_event_subscriber, prepare_outbox_subscriber
+from nos.inject import prepare_event_subscriber
 
 
 async def consume_events(run_forever: bool = True):
@@ -28,11 +26,5 @@ async def consume_events(run_forever: bool = True):
     config = Config()  # type: ignore
 
     configure_logging(config=config)
-    async with (
-        prepare_event_subscriber(config=config) as event_subscriber,
-        prepare_outbox_subscriber(config=config) as outbox_subscriber,
-    ):
-        await asyncio.gather(
-            event_subscriber.run(forever=run_forever),
-            outbox_subscriber.run(forever=run_forever),
-        )
+    async with prepare_event_subscriber(config=config) as event_subscriber:
+        await event_subscriber.run(forever=run_forever)
