@@ -109,13 +109,11 @@ async def get_drs_object(
 
     expires_after = config.presigned_url_expires_after
     cache_control_header = {"Cache-Control": f"max-age={expires_after}, private"}
-
     try:
         drs_object = await data_repository.access_drs_object(drs_id=object_id)
         return Response(
             content=drs_object.model_dump_json(), headers=cache_control_header
         )
-
     except data_repository.RetryAccessLaterError as retry_later_error:
         # tell client to retry after 5 minutes
         response = http_responses.HttpObjectNotInOutboxResponse(

@@ -535,6 +535,26 @@ The service requires the following configuration parameters:
   ```
 
 
+- **`http_call_timeout`** *(integer)*: Time in seconds after which http calls from this service should timeout. Exclusive minimum: `0`. Default: `3`.
+
+
+  Examples:
+
+  ```json
+  1
+  ```
+
+
+  ```json
+  5
+  ```
+
+
+  ```json
+  60
+  ```
+
+
 - **`outbox_cache_timeout`** *(integer)*: Time in days since last access after which a file present in the outbox should be unstaged and has to be requested from permanent storage again for the next request. Default: `7`.
 
 

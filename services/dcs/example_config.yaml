@@ -35,6 +35,7 @@ file_registered_for_download_type: file_registered
 files_to_stage_topic: file-downloads
 generate_correlation_id: true
 host: 127.0.0.1
+http_call_timeout: 3
 kafka_dlq_topic: dlq
 kafka_enable_dlq: true
 kafka_max_message_size: 1048576

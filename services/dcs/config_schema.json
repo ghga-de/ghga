@@ -473,6 +473,18 @@
       "title": "Presigned URL expiration time in seconds",
       "type": "integer"
     },
+    "http_call_timeout": {
+      "default": 3,
+      "description": "Time in seconds after which http calls from this service should timeout",
+      "examples": [
+        1,
+        5,
+        60
+      ],
+      "exclusiveMinimum": 0,
+      "title": "Http Call Timeout",
+      "type": "integer"
+    },
     "outbox_cache_timeout": {
       "default": 7,
       "description": "Time in days since last access after which a file present in the outbox should be unstaged and has to be requested from permanent storage again for the next request.",

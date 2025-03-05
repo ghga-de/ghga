@@ -90,6 +90,11 @@ class DataRepositoryConfig(BaseSettings):
         title="Presigned URL expiration time in seconds",
         examples=[30, 60],
     )
+    http_call_timeout: PositiveInt = Field(
+        default=3,
+        description="Time in seconds after which http calls from this service should timeout",
+        examples=[1, 5, 60],
+    )
     outbox_cache_timeout: int = Field(
         default=7,
         description="Time in days since last access after which a file present in the "
@@ -367,6 +372,7 @@ class DataRepository(DataRepositoryPort):
                 secret_id=drs_object.decryption_secret_id,
                 receiver_public_key=public_key,
                 api_base=self._config.ekss_base_url,
+                timeout=self._config.http_call_timeout,
             )
         except (
             exceptions.BadResponseCodeError,
@@ -408,6 +414,7 @@ class DataRepository(DataRepositoryPort):
             delete_secret_from_ekss(
                 secret_id=drs_object.decryption_secret_id,
                 api_base=self._config.ekss_base_url,
+                timeout=self._config.http_call_timeout,
             )
             log.debug(f"Successfully deleted secret for '{file_id}' from EKSS.")
 

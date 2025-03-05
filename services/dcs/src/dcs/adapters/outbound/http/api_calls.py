@@ -24,7 +24,7 @@ from dcs.adapters.outbound.http.exception_translation import ResponseExceptionTr
 
 
 def get_envelope_from_ekss(
-    *, secret_id: str, receiver_public_key: str, api_base: str
+    *, secret_id: str, receiver_public_key: str, api_base: str, timeout: int
 ) -> str:
     """Calls EKSS to get an envelope for an encrypted file, using the receivers
     public key as well as the id of the file secret.
@@ -34,7 +34,7 @@ def get_envelope_from_ekss(
     ).decode()
     api_url = f"{api_base}/secrets/{secret_id}/envelopes/{receiver_public_key_base64}"
     try:
-        response = httpx.get(url=api_url, timeout=60)
+        response = httpx.get(url=api_url, timeout=timeout)
     except httpx.RequestError as request_error:
         raise exceptions.RequestFailedError(url=api_base) from request_error
 
@@ -57,12 +57,12 @@ def get_envelope_from_ekss(
     return content
 
 
-def delete_secret_from_ekss(*, secret_id: str, api_base: str) -> None:
+def delete_secret_from_ekss(*, secret_id: str, api_base: str, timeout: int) -> None:
     """Calls EKSS to delete a file secret"""
     api_url = f"{api_base}/secrets/{secret_id}"
 
     try:
-        response = httpx.delete(url=api_url, timeout=60)
+        response = httpx.delete(url=api_url, timeout=timeout)
     except httpx.RequestError as request_error:
         raise exceptions.RequestFailedError(url=api_base) from request_error
 
