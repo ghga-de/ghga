@@ -67,7 +67,7 @@ describe('AccessRequestManagerFilterComponent', () => {
   it('should set the filter after typing a name', async () => {
     const textbox = screen.getByRole('textbox', { name: 'User name' });
 
-    userEvent.type(textbox, 'Doe');
+    await userEvent.type(textbox, 'Doe');
     await fixture.whenStable();
 
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
@@ -82,11 +82,11 @@ describe('AccessRequestManagerFilterComponent', () => {
   it('should set the filter after selecting a status', async () => {
     const combobox = screen.getByRole('combobox', { name: 'All status values' });
 
-    userEvent.click(combobox);
+    await userEvent.click(combobox);
     await fixture.whenStable();
 
     const option = screen.getByRole('option', { name: 'allowed' });
-    userEvent.click(option);
+    await userEvent.click(option);
     await fixture.whenStable();
 
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({

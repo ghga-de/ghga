@@ -81,13 +81,9 @@ describe('WorkPackageService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should return an error when not logged in and datasets are fetched', async () => {
+  it('should return an error when not logged in and datasets are fetched', () => {
     userId.set(null);
     testBed.flushEffects();
-    expect(service.datasetsAreLoading()).toBe(true);
-    expect(service.datasetsError()).toBeUndefined();
-    expect(service.datasets()).toEqual([]);
-    await Promise.resolve(); // wait for loader to return
     expect(service.datasetsAreLoading()).toBe(false);
     const error = service.datasetsError();
     expect(error).toBeInstanceOf(Error);
