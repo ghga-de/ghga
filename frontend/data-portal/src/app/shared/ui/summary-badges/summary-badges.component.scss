@@ -1,0 +1,27 @@
+@use '@angular/material' as mat;
+
+mat-chip {
+  @include mat.chips-overrides(
+    (
+      label-text-size: var(--mat-sys-label-medium-size),
+      container-height: 75%,
+    )
+  );
+}
+
+ul li mat-chip {
+  @include mat.chips-overrides(
+    (
+      label-text-size: var(--mat-sys-label-small-size),
+    )
+  );
+}
+
+.show_more ~ li,
+.show_more:checked + label {
+  display: none;
+}
+
+.show_more:checked ~ li {
+  display: list-item;
+}

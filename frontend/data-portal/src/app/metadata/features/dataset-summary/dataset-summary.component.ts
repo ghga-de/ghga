@@ -15,7 +15,7 @@ import { DynamicAccessRequestButtonComponent } from '@app/access-requests/featur
 import { Hit } from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { AddPluralS } from '@app/shared/utils/add-plural-s.pipe';
-import { UnderscoreToSpace } from '@app/shared/utils/underscore-to-space.pipe';
+import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summary-badges.component';
 
 /**
  * Component for the content of the expansion panel for each dataset found in the search results
@@ -27,10 +27,10 @@ import { UnderscoreToSpace } from '@app/shared/utils/underscore-to-space.pipe';
     MatChipsModule,
     MatIconModule,
     MatButtonModule,
-    UnderscoreToSpace,
     AddPluralS,
     RouterLink,
     DynamicAccessRequestButtonComponent,
+    SummaryBadgesComponent,
   ],
   templateUrl: './dataset-summary.component.html',
   styleUrl: './dataset-summary.component.scss',

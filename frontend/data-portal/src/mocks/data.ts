@@ -152,6 +152,7 @@ export const datasetSummary: DatasetSummary = {
       phenotypic_features: [
         { value: 'Test Phenotype 1', count: 2 },
         { value: 'Test Phenotype 2', count: 1 },
+        { value: 'Test Phenotype 3', count: 1 },
       ],
     },
   },
@@ -175,11 +176,13 @@ export const datasetSummary: DatasetSummary = {
     },
   },
   files_summary: {
-    count: 27,
+    count: 30,
     stats: {
       format: [
         { value: 'FASTQ', count: 22 },
         { value: 'BAM', count: 5 },
+        { value: 'TXT', count: 2 },
+        { value: 'PDF', count: 1 },
       ],
     },
   },

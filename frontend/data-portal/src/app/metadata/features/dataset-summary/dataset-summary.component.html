@@ -71,35 +71,14 @@
             Tissue{{ samplesTissues().length | addPluralS }}
           </p>
           @if (samplesTissues().length > 0) {
-            <ul class="ms-6">
-              @for (tissue of samplesTissues(); track tissue.value) {
-                <li>
-                  <mat-chip class="small-chips mb-0.5 text-xs"
-                    ><span class="uppercase">{{ tissue.value }} </span>
-                    <strong>{{ tissue.count }}</strong></mat-chip
-                  >
-                </li>
-              }
-            </ul>
+            <app-summary-badges [data]="samplesTissues()" />
           }
           <p>
             <strong>{{ samplesPhenotypes().length }}</strong>
             Phenotypic Feature{{ samplesPhenotypes().length | addPluralS }}
           </p>
           @if (samplesPhenotypes().length > 0) {
-            <ul class="ms-6">
-              @for (
-                phenotypic_feature of samplesPhenotypes();
-                track phenotypic_feature.value
-              ) {
-                <li>
-                  <mat-chip class="small-chips mb-0.5"
-                    ><span class="uppercase">{{ phenotypic_feature.value }} </span
-                    ><strong>{{ phenotypic_feature.count }}</strong></mat-chip
-                  >
-                </li>
-              }
-            </ul>
+            <app-summary-badges [data]="samplesPhenotypes()" />
           }
         </div>
       </div>
@@ -112,18 +91,12 @@
         <div>
           <p><strong>File Summary:</strong></p>
           <p>
-            <strong>{{ studiesSummary().count }}</strong> File{{
-              studiesSummary().count | addPluralS
+            <strong>{{ filesSummary().count }}</strong> File{{
+              filesSummary().count | addPluralS
             }}
           </p>
           @if (filesSummary().count > 0) {
-            <ul class="ps-5">
-              @for (format of filesFormats(); track format.value) {
-                <li class="list-disc uppercase">
-                  {{ format.value }} <strong>{{ format.count }}</strong>
-                </li>
-              }
-            </ul>
+            <app-summary-badges [data]="filesFormats()" />
           }
         </div>
       </div>
@@ -144,14 +117,7 @@
             Platform{{ experimentsPlatforms().length | addPluralS }}
           </p>
           @if (experimentsPlatforms().length > 0) {
-            <ul class="ps-5">
-              @for (platform of experimentsPlatforms(); track platform.value) {
-                <li class="list-disc uppercase">
-                  {{ platform.value | underscoreToSpace }}
-                  <strong>{{ platform.count }}</strong>
-                </li>
-              }
-            </ul>
+            <app-summary-badges [data]="experimentsPlatforms()" />
           }
         </div>
       </div>

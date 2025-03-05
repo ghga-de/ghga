@@ -1,0 +1,31 @@
+<ul class="ps-5">
+  @for (
+    item of data();
+    track item.value;
+    let idx = $index;
+    let count = $count;
+    let last = $last
+  ) {
+    <li>
+      <mat-chip class="small-chips mb-0.5 text-xs"
+        ><span class="uppercase">{{ item.value | underscoreToSpace }} </span>
+        <strong>{{ item.count }}</strong></mat-chip
+      >
+    </li>
+    @if (count > 3) {
+      @if (idx === 2) {
+        <input type="checkbox" id="show_more_tissue" class="show_more hidden" />
+        <label for="show_more_tissue" class="text-secondary underline"
+          >Show {{ count - 3 }} more…</label
+        >
+      }
+      @if (last) {
+        <li>
+          <label for="show_more_tissue" class="text-secondary underline"
+            >Show less…</label
+          >
+        </li>
+      }
+    }
+  }
+</ul>
