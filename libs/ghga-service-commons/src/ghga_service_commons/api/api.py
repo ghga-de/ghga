@@ -24,11 +24,10 @@ import http
 import logging
 import time
 from collections.abc import Sequence
-from functools import partial
 from typing import Optional, Union
 
 import uvicorn
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from hexkit.correlation import (
     InvalidCorrelationIdError,
@@ -38,8 +37,8 @@ from hexkit.correlation import (
 )
 from pydantic import Field
 from pydantic_settings import BaseSettings
-from starlette.middleware.base import BaseHTTPMiddleware
 
+from ghga_service_commons.httpyexpect.models import HttpExceptionBody
 from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
     configure_exception_handler,
 )
@@ -49,7 +48,6 @@ __all__ = [
     "ApiConfigBase",
     "UnexpectedCorrelationIdError",
     "configure_app",
-    "correlation_id_middleware",
     "get_validated_correlation_id",
     "run_server",
     "set_header_correlation_id",
@@ -197,72 +195,142 @@ class UnexpectedCorrelationIdError(RuntimeError):
         super().__init__(message)
 
 
-async def correlation_id_middleware(
-    request: Request, call_next, generate_correlation_id: bool
-):
-    """Ensure request header has a valid correlation ID.
+class CorrelationIdMiddleware:
+    """ASGI middleware setting the correlation ID.
 
-    Set the correlation ID ContextVar before passing on the request.
+    The middleware sets the correlation ID ContextVar before processing the request.
+    It makes sure the request headers either contain such an ID or generates one.
+    It also ensures that the response headers contain the correlation ID.
 
-    Raises:
-        InvalidCorrelationIdError: If a correlation ID is invalid or empty (and
-            `generate_correlation_id` is False)
-        UnexpectedCorrelationIdError: If the correlation ID is already in the response
-            headers but the value is not what it should be.
+    If a correlation ID is invalid or empty (and `generate_correlation_id` is False)
+    then a "bad request" status is returned as an InvalidCorrelationIdError. If the
+    correlation ID is already in the response headers, but the value is not what it
+    should be, an UnexpectedCorrelationIdError is produced as an internal server error.
     """
-    correlation_id = request.headers.get(CORRELATION_ID_HEADER_NAME, "")
 
-    # Validate the correlation ID. If validation fails, return a Response with status 400.
-    try:
-        validated_correlation_id = get_validated_correlation_id(
-            correlation_id, generate_correlation_id
-        )
-    except InvalidCorrelationIdError:
-        return Response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content="Correlation ID missing or invalid.",
-        )
+    def __init__(self, app, generate_correlation_id: bool):
+        """Initialize with the app."""
+        self.app = app
+        self.generate_correlation_id = generate_correlation_id
 
-    # Update header if the validated value differs
-    if validate_correlation_id != correlation_id:
-        set_header_correlation_id(request, validated_correlation_id)
+    async def __call__(self, scope, receive, send):
+        """Process an ASGI connection."""
+        if scope["type"] != "http":
+            # Only process HTTP requests
+            await self.app(scope, receive, send)
+            return
 
-    # Set the correlation ID ContextVar
-    async with set_correlation_id(validated_correlation_id):
-        response: Response = await call_next(request)
+        request = Request(scope)
+        headers = request.headers
 
-        # Update the response to include the correlation ID
-        cid_in_response = response.headers.get(CORRELATION_ID_HEADER_NAME, "")
-        if not cid_in_response:
-            response.headers.append(
-                CORRELATION_ID_HEADER_NAME, validated_correlation_id
+        correlation_id = headers.get(CORRELATION_ID_HEADER_NAME, "")
+
+        # Validate the correlation ID.
+        # If validation fails, create a response with bad request status.
+        try:
+            validated_correlation_id = get_validated_correlation_id(
+                correlation_id, self.generate_correlation_id
             )
-        elif cid_in_response != validated_correlation_id:
-            raise UnexpectedCorrelationIdError(correlation_id=cid_in_response)
-        return response
+        except InvalidCorrelationIdError as error:
+            # report the plain error without any traceback
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": status.HTTP_400_BAD_REQUEST,
+                    "headers": [(b"content-type", b"application/json")],
+                }
+            )
+            await send(
+                {
+                    "type": "http.response.body",
+                    "body": HttpExceptionBody(
+                        exception_id="invalidCorrelationId",
+                        description=str(error),
+                        data={},
+                    )
+                    .model_dump_json()
+                    .encode("utf-8"),
+                }
+            )
+            return
+
+        # Update header if the validated value differs
+        if validated_correlation_id != correlation_id:
+            set_header_correlation_id(request, validated_correlation_id)
+
+        async def send_wrapper(message):
+            """Modify the response headers"""
+            if message["type"] == "http.response.start":
+                # Get the original response headers
+                headers = message.setdefault("headers", [])
+                header_name = CORRELATION_ID_HEADER_NAME.lower().encode()
+                header_value = validated_correlation_id.encode()
+                for header in headers:
+                    key = header[0]
+                    if key.lower() == header_name:
+                        value = header[1]
+                        if value != header_value:
+                            # If the correlation ID is already set, but the value is
+                            # different from what we expect, raise an error.
+                            raise UnexpectedCorrelationIdError(correlation_id=value)
+                headers.append((header_name, header_value))
+            await send(message)
+
+        # Set the correlation ID ContextVar
+        async with set_correlation_id(validated_correlation_id):
+            await self.app(scope, receive, send_wrapper)
 
 
-async def request_logging_middleware(request: Request, call_next):
-    """Measure and log the amount of time it takes to process the HTTP request."""
-    url = request.url
-    start_time = time.perf_counter()
-    response = await call_next(request)
-    duration = int(round((time.perf_counter() - start_time) * 1000))
-    try:
-        status_phrase = http.HTTPStatus(response.status_code).phrase
-    except ValueError:
-        status_phrase = ""
-    msg = f'{request.method} {url} "{response.status_code} {status_phrase}" - {duration} ms'
-    log.info(
-        msg,
-        extra={
-            "method": request.method,
-            "url": str(url),
-            "status_code": response.status_code,
-            "duration_ms": duration,
-        },
-    )
-    return response
+class RequestLoggingMiddleware:
+    """ASGI middleware that logs request processing times.
+
+    Besides the processing time, it also logs the request method, URL as well as
+    the response status code, so that this can replace the normal access logging.
+    """
+
+    def __init__(self, app):
+        """Initialize with the app."""
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        """Process an ASGI connection."""
+        if scope["type"] != "http":
+            # Only process HTTP requests
+            await self.app(scope, receive, send)
+            return
+
+        start_time = time.perf_counter()
+
+        request = Request(scope)
+        url = request.url
+        method = request.method
+
+        # if no status code is produced, report an internal server error
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        async def send_wrapper(message):
+            """Wrap the send function to capture the status code."""
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            duration = int(round((time.perf_counter() - start_time) * 1000))
+            try:
+                status_phrase = http.HTTPStatus(status_code).phrase
+            except ValueError:
+                status_phrase = ""
+            msg = f'{method} {url} "{status_code} {status_phrase}" - {duration} ms'
+            extra = {
+                "method": method,
+                "url": str(url),
+                "status_code": status_code,
+                "duration_ms": duration,
+            }
+            log.info(msg, extra=extra)
 
 
 def configure_app(app: FastAPI, config: ApiConfigBase):
@@ -282,15 +350,9 @@ def configure_app(app: FastAPI, config: ApiConfigBase):
     if config.cors_allow_credentials is not None:
         kwargs["allow_credentials"] = config.cors_allow_credentials
 
+    app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(CorrelationIdMiddleware, config.generate_correlation_id)
     app.add_middleware(CORSMiddleware, **kwargs)
-    app.add_middleware(BaseHTTPMiddleware, dispatch=request_logging_middleware)
-    app.add_middleware(
-        BaseHTTPMiddleware,
-        dispatch=partial(
-            correlation_id_middleware,
-            generate_correlation_id=config.generate_correlation_id,
-        ),
-    )
 
     # Configure the exception handler to issue error according to httpyexpect model:
     configure_exception_handler(app)
