@@ -18,9 +18,10 @@
 from typing import Union
 
 import httpx
+from tenacity import RetryError
 
 from ghga_connector.constants import CACHE_MIN_FRESH, TIMEOUT_LONG
-from ghga_connector.core import WorkPackageAccessor, exceptions
+from ghga_connector.core import WorkPackageAccessor, exceptions, retry_handler
 
 from .structs import (
     RetryResponse,
@@ -84,7 +85,7 @@ async def get_file_authorization(
     return UrlAndHeaders(url, headers)
 
 
-async def get_download_url(
+async def get_download_url(  # noqa: C901, PLR0912
     *,
     client: httpx.AsyncClient,
     url_and_headers: UrlAndHeaders,
@@ -101,12 +102,27 @@ async def get_download_url(
     url = url_and_headers.endpoint_url
 
     try:
-        response = await client.get(
-            url=url, headers=url_and_headers.headers, timeout=TIMEOUT_LONG
+        response: httpx.Response = await retry_handler(
+            fn=client.get,
+            url=url,
+            headers=url_and_headers.headers,
+            timeout=TIMEOUT_LONG,
         )
-    except httpx.RequestError as request_error:
-        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
-        raise exceptions.RequestFailedError(url=url) from request_error
+
+    except RetryError as retry_error:
+        wrapped_exception = retry_error.last_attempt.exception()
+
+        if isinstance(wrapped_exception, httpx.RequestError):
+            exceptions.raise_if_connection_failed(
+                request_error=wrapped_exception, url=url
+            )
+            raise exceptions.RequestFailedError(url=url) from retry_error
+        elif wrapped_exception:
+            raise wrapped_exception from retry_error
+        elif result := retry_error.last_attempt.result():
+            response = result
+        else:
+            raise
 
     status_code = response.status_code
     if status_code != 200:
