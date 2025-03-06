@@ -146,6 +146,12 @@ if __name__ == "__main__":
         help="Current version which should be bumped",
         default="7.0.0",
     )  # Optional argument
+    parser.add_argument(
+        "--library-chart-version",
+        type=str,
+        help="Library chart version which should be used",
+        default="",
+    )  # Optional argument
 
     # Parse arguments
     args = parser.parse_args()
@@ -163,9 +169,13 @@ if __name__ == "__main__":
     # Get all charts in a directory
     chart_files = list(Path(args.chart_dir).rglob("Chart.yaml"))
     charts = list(zip(chart_files, get_charts(chart_files)))
-    latest_ghga_common = VersionInfo.parse(
-        helm_index["entries"]["ghga-common"][0]["version"]
-    )
+    
+    if not args.library_chart_version:
+        latest_ghga_common = VersionInfo.parse(
+            helm_index["entries"]["ghga-common"][0]["version"]
+        )
+    else:
+        latest_ghga_common = VersionInfo.parse(args.library_chart_version)
 
     diffs_app_version, diffs_library_version, latest_versions = [], [], []
     diff_version = []
