@@ -33,16 +33,16 @@ export class GlobalSummaryComponent {
   #notify = inject(NotificationService);
   #metadata = inject(MetadataStatsService);
 
-  isLoading = this.#metadata.globalSummaryIsLoading;
-  error = this.#metadata.globalSummaryError;
+  #stats = this.#metadata.globalSummary;
 
   #errorEffect = effect(() => {
-    if (this.error()) {
+    if (this.#stats.error()) {
       this.#notify.showWarning('Error fetching statistics');
     }
   });
 
-  stats = this.#metadata.globalSummary;
+  stats = computed(() => this.#stats.value());
+  isLoading = computed(() => this.#stats.isLoading());
 
   datasets = computed(() => this.stats().Dataset);
   platforms = computed(() => this.stats().ExperimentMethod);

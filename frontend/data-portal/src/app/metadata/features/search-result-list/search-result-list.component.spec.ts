@@ -6,7 +6,6 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { signal } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { searchResults } from '@app/../mocks/data';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search.service';
@@ -17,11 +16,13 @@ import { SearchResultListComponent } from './search-result-list.component';
  * Mock the metadata service as needed for the results list
  */
 class MockMetadataSearchService {
-  searchResults = signal(searchResults);
-  searchResultsError = signal(undefined);
-  searchResultsAreLoading = signal(false);
-  searchResultsLimit = signal(10);
-  searchResultsSkip = signal(0);
+  searchResults = {
+    value: () => searchResults,
+    isLoading: () => false,
+    error: () => undefined,
+  };
+  searchResultsLimit = () => 10;
+  searchResultsSkip = () => 0;
 }
 
 describe('SearchResultListComponent', () => {

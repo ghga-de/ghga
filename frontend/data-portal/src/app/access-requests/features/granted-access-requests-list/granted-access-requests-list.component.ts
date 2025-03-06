@@ -36,6 +36,6 @@ export class GrantedAccessRequestsListComponent {
   grantedRequests = computed(() =>
     this.#ars.grantedUserAccessRequests().filter((r) => !r.isExpired),
   );
-  isLoading = this.#ars.userAccessRequestsAreLoading;
-  hasError = this.#ars.userAccessRequestsError;
+  isLoading = this.#ars.userAccessRequests.isLoading;
+  hasError = this.#ars.userAccessRequests.error;
 }

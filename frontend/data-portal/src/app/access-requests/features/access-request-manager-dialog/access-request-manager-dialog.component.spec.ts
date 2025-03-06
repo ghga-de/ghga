@@ -19,9 +19,11 @@ import { screen } from '@testing-library/angular';
  */
 class MockIvaService {
   loadUserIvas = () => undefined;
-  userIvas = () => allIvasOfDoe;
-  userIvasAreLoading = () => false;
-  userIvasError = () => undefined;
+  userIvas = {
+    value: () => allIvasOfDoe,
+    isLoading: () => false,
+    error: () => undefined,
+  };
 }
 
 describe('AccessRequestManagerDialogComponent', () => {

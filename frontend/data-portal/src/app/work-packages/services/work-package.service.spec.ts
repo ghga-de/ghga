@@ -81,32 +81,30 @@ describe('WorkPackageService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should return an error when not logged in and datasets are fetched', () => {
+  it('should return an empty list when not logged in and datasets are fetched', () => {
     userId.set(null);
     testBed.flushEffects();
-    expect(service.datasetsAreLoading()).toBe(false);
-    const error = service.datasetsError();
-    expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toBe('User not authenticated');
-    expect(service.datasets()).toEqual([]);
+    expect(service.datasets.isLoading()).toBe(false);
+    expect(service.datasets.error()).toBeUndefined();
+    expect(service.datasets.value()).toEqual([]);
   });
 
   it('should get the datasets of an authenticated user', async () => {
-    expect(service.datasetsAreLoading()).toBe(true);
-    expect(service.datasetsError()).toBeUndefined();
-    expect(service.datasets()).toEqual([]);
+    expect(service.datasets.isLoading()).toBe(false);
+    expect(service.datasets.error()).toBeUndefined();
+    expect(service.datasets.value()).toEqual([]);
     userId.set('test-user-id');
     testBed.flushEffects();
-    expect(service.datasetsAreLoading()).toBe(true);
-    expect(service.datasetsError()).toBeUndefined();
-    expect(service.datasets()).toEqual([]);
+    expect(service.datasets.isLoading()).toBe(true);
+    expect(service.datasets.error()).toBeUndefined();
+    expect(service.datasets.value()).toEqual([]);
     const req = httpMock.expectOne('http://mock.dev/wps/users/test-user-id/datasets');
     expect(req.request.method).toBe('GET');
     req.flush([TEST_DATASET]);
     await Promise.resolve(); // wait for loader to return
-    expect(service.datasetsAreLoading()).toBe(false);
-    expect(service.datasetsError()).toBeUndefined();
-    expect(service.datasets()).toEqual([TEST_DATASET]);
+    expect(service.datasets.isLoading()).toBe(false);
+    expect(service.datasets.error()).toBeUndefined();
+    expect(service.datasets.value()).toEqual([TEST_DATASET]);
   });
 
   it('should create a work package for download', (done) => {

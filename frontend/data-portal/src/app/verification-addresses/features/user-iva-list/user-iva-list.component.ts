@@ -30,9 +30,10 @@ export class UserIvaListComponent implements OnInit {
   #notify = inject(NotificationService);
   #ivaService = inject(IvaService);
 
-  ivas = this.#ivaService.userIvas;
-  ivasAreLoading = this.#ivaService.userIvasAreLoading;
-  ivasError = this.#ivaService.userIvasError;
+  #ivas = this.#ivaService.userIvas;
+  ivas = this.#ivas.value;
+  ivasAreLoading = this.#ivas.isLoading;
+  ivasError = this.#ivas.error;
 
   ivaSource = new MatTableDataSource<Iva>([]);
 

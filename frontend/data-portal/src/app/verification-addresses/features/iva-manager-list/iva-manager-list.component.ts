@@ -64,9 +64,10 @@ export class IvaManagerListComponent implements AfterViewInit {
   #notificationService = inject(NotificationService);
   #ivaService = inject(IvaService);
 
-  ivas = this.#ivaService.allIvas;
-  ivasAreLoading = this.#ivaService.allIvasAreLoading;
-  ivasError = this.#ivaService.allIvasError;
+  #ivas = this.#ivaService.allIvas;
+  ivas = this.#ivaService.allIvasFiltered;
+  ivasAreLoading = this.#ivas.isLoading;
+  ivasError = this.#ivas.error;
 
   source = new MatTableDataSource<UserWithIva>([]);
 

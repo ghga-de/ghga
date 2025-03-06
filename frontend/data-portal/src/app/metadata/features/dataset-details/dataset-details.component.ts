@@ -79,8 +79,9 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   #metadata = inject(MetadataService);
   #dins = inject(DatasetInformationService);
 
-  datasetDetails = this.#metadata.datasetDetails;
-  datasetInformation = this.#dins.datasetInformation;
+  #datasetDetails = this.#metadata.datasetDetails;
+  datasetDetails = this.#datasetDetails.value;
+  datasetInformation = this.#dins.datasetInformation.value;
 
   dap = computed(() => this.datasetDetails().data_access_policy);
   dac = computed(() => this.dap().data_access_committee);
@@ -144,13 +145,13 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   );
 
   #datasetDetailsErrorEffect = effect(() => {
-    if (this.#metadata.datasetDetailsError()) {
+    if (this.#datasetDetails.error()) {
       this.#notify.showError('Error fetching dataset details.');
     }
   });
 
   #datasetInformationErrorEffect = effect(() => {
-    if (this.#dins.datasetInformationError()) {
+    if (this.#dins.datasetInformation.error()) {
       this.#notify.showError('Error fetching dataset file information.');
     }
   });

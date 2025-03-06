@@ -41,16 +41,15 @@ export class SearchResultComponent {
   hitContent = computed(() => this.hit().content);
 
   summary = this.#metadata.datasetSummary;
-  summaryIsLoading = this.#metadata.datasetSummaryIsLoading;
-  studiesSummary = computed(() => this.summary().studies_summary);
+  studiesSummary = computed(() => this.summary.value().studies_summary);
   studiesSummaryStats = computed(() => this.studiesSummary().stats);
-  samplesSummary = computed(() => this.summary().samples_summary);
+  samplesSummary = computed(() => this.summary.value().samples_summary);
   samplesSex = computed(() => this.samplesSummary().stats.sex);
   samplesTissues = computed(() => this.samplesSummary().stats.tissues);
   samplesPhenotypes = computed(() => this.samplesSummary().stats.phenotypic_features);
-  filesSummary = computed(() => this.summary().files_summary);
+  filesSummary = computed(() => this.summary.value().files_summary);
   filesFormats = computed(() => this.filesSummary().stats.format);
-  experimentsSummary = computed(() => this.summary().experiments_summary);
+  experimentsSummary = computed(() => this.summary.value().experiments_summary);
   experimentsPlatforms = computed(
     () => this.experimentsSummary().stats.experiment_methods,
   );
@@ -64,7 +63,7 @@ export class SearchResultComponent {
   }
 
   #errorEffect = effect(() => {
-    if (this.#metadata.datasetSummaryError()) {
+    if (this.summary.error()) {
       this.#notify.showError('Error fetching dataset summary.');
     }
   });

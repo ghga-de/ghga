@@ -63,9 +63,11 @@ export class MetadataBrowserComponent implements OnInit {
   searchTerm = '';
   lastSearchQuery = this.#metadataSearch.query;
   lastSearchFilterFacets = this.#metadataSearch.facets;
-  facets = computed(() => this.#metadataSearch.searchResults().facets);
-  numResults = computed(() => this.#metadataSearch.searchResults().count);
-  loading = computed(() => this.#metadataSearch.searchResultsAreLoading());
+  #searchResults = this.#metadataSearch.searchResults;
+  searchResults = this.#searchResults.value;
+  facets = computed(() => this.searchResults().facets);
+  numResults = computed(() => this.searchResults().count);
+  loading = computed(() => this.#searchResults.isLoading());
 
   /**
    * On init, define the default values of the search variables
@@ -174,7 +176,7 @@ export class MetadataBrowserComponent implements OnInit {
   }
 
   #errorEffect = effect(() => {
-    if (this.#metadataSearch.searchResultsError()) {
+    if (this.#metadataSearch.searchResults.error()) {
       this.#notify.showError('Error fetching search results.');
     }
   });

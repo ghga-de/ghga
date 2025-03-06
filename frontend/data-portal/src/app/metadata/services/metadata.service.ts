@@ -4,11 +4,9 @@
  * @license Apache-2.0
  */
 
-import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal, Signal } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { httpResource } from '@angular/common/http';
+import { inject, Injectable, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config.service';
-import { of } from 'rxjs';
 import { DatasetDetails, emptyDatasetDetails } from '../models/dataset-details';
 import { DatasetSummary, emptyDatasetSummary } from '../models/dataset-summary';
 
@@ -21,8 +19,6 @@ import { DatasetSummary, emptyDatasetSummary } from '../models/dataset-summary';
   providedIn: 'root',
 })
 export class MetadataService {
-  #http = inject(HttpClient);
-
   #config = inject(ConfigService);
   #metldataUrl = this.#config.metldataUrl;
 
@@ -32,30 +28,16 @@ export class MetadataService {
   #summaryID = signal<string | undefined>(undefined);
   #detailsID = signal<string | undefined>(undefined);
 
-  #datasetSummary = rxResource({
-    request: this.#summaryID,
-    loader: ({ request: id }) => {
-      if (!id) return of(undefined);
-      return this.#http.get<DatasetSummary>(`${this.#datasetSummaryUrl}/${id}`);
+  /**
+   * The dataset summary (empty while loading) as a resource
+   */
+  datasetSummary = httpResource<DatasetSummary>(
+    () => {
+      const id = this.#summaryID();
+      return id ? `${this.#datasetSummaryUrl}/${id}` : undefined;
     },
-  });
-
-  /**
-   * The dataset summary (empty while loading) as a signal
-   */
-  datasetSummary: Signal<DatasetSummary> = computed(
-    () => this.#datasetSummary.value() ?? emptyDatasetSummary,
-  );
-
-  /**
-   * Whether the dataset summary is loading as a signal
-   */
-  datasetSummaryIsLoading: Signal<boolean> = this.#datasetSummary.isLoading;
-
-  /**
-   * The dataset summary error as a signal
-   */
-  datasetSummaryError: Signal<unknown> = this.#datasetSummary.error;
+    { defaultValue: emptyDatasetSummary },
+  ).asReadonly();
 
   /**
    * Load the dataset summary for the given dataset ID
@@ -65,13 +47,16 @@ export class MetadataService {
     this.#summaryID.set(id);
   }
 
-  #datasetDetails = rxResource({
-    request: this.#detailsID,
-    loader: ({ request: id }) => {
-      if (!id) return of(undefined);
-      return this.#http.get<DatasetDetails>(`${this.#datasetDetailsUrl}/${id}`);
+  /**
+   * The dataset details (empty while loading) as a resource
+   */
+  datasetDetails = httpResource<DatasetDetails>(
+    () => {
+      const id = this.#detailsID();
+      return id ? `${this.#datasetDetailsUrl}/${id}` : undefined;
     },
-  });
+    { defaultValue: emptyDatasetDetails },
+  ).asReadonly();
 
   /**
    * Load the dataset details for the given dataset ID
@@ -80,21 +65,4 @@ export class MetadataService {
   loadDatasetDetails(id: string): void {
     this.#detailsID.set(id);
   }
-
-  /**
-   * The dataset details (empty while loading) as a signal
-   */
-  datasetDetails: Signal<DatasetDetails> = computed(
-    () => this.#datasetDetails.value() ?? emptyDatasetDetails,
-  );
-
-  /**
-   * Whether the dataset details are loading as a signal
-   */
-  datasetDetailsIsLoading: Signal<boolean> = this.#datasetDetails.isLoading;
-
-  /**
-   * The dataset details error as a signal
-   */
-  datasetDetailsError: Signal<unknown> = this.#datasetDetails.error;
 }

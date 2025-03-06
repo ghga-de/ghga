@@ -40,7 +40,7 @@ export class DatasetSummaryComponent {
 
   hit = input.required<Hit>();
   hitContent = computed(() => this.hit().content);
-  summary = this.#metadata.datasetSummary;
+  summary = this.#metadata.datasetSummary.value;
   studiesSummary = computed(() => this.summary().studies_summary);
   studiesSummaryStats = computed(() => this.studiesSummary().stats);
   samplesSummary = computed(() => this.summary().samples_summary);

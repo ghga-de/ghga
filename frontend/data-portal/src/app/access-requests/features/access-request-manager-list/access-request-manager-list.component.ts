@@ -40,9 +40,10 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
   #dialog = inject(MatDialog);
   #notificationService = inject(NotificationService);
 
-  accessRequests = this.#ars.allAccessRequests;
-  accessRequestsAreLoading = this.#ars.allAccessRequestsAreLoading;
-  accessRequestsError = this.#ars.allAccessRequestsError;
+  #accessRequests = this.#ars.allAccessRequests;
+  accessRequests = this.#ars.allAccessRequestsFiltered;
+  accessRequestsAreLoading = this.#accessRequests.isLoading;
+  accessRequestsError = this.#accessRequests.error;
 
   source = new MatTableDataSource<AccessRequest>([]);
 

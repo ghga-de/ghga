@@ -14,9 +14,7 @@ import { UserIvaListComponent } from './user-iva-list.component';
  */
 class MockIvaService {
   loadUserIvas = () => undefined;
-  userIvas = () => [];
-  userIvasAreLoading = () => false;
-  userIvasError = () => undefined;
+  userIvas = { value: () => [], isLoading: () => false, error: () => undefined };
 }
 
 describe('UserIvaListComponent', () => {

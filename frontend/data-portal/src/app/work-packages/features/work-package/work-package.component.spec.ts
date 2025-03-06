@@ -4,11 +4,9 @@
  * @license Apache-2.0
  */
 
-import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { datasets } from '@app/../mocks/data';
-import { Dataset } from '@app/work-packages/models/dataset';
 import { WorkPackageService } from '@app/work-packages/services/work-package.service';
 import { WorkPackageComponent } from './work-package.component';
 
@@ -18,9 +16,11 @@ import { screen } from '@testing-library/angular';
  * Mock the work package service as needed for the work package component
  */
 class MockWorkPackageService {
-  datasets = signal<Dataset[]>(datasets);
-  datasetsAreLoading = signal<boolean>(false);
-  datasetsError = signal<unknown>(undefined);
+  datasets = {
+    value: () => datasets,
+    isLoading: () => false,
+    error: () => undefined,
+  };
 }
 
 describe('WorkPackageComponent', () => {

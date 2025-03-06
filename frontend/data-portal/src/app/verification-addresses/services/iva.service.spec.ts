@@ -46,7 +46,6 @@ describe('IvaService', () => {
   beforeEach(() => {
     testBed = TestBed.configureTestingModule({
       providers: [
-        IvaService,
         { provide: AuthService, useClass: MockAuthService },
         { provide: ConfigService, useClass: MockConfigService },
         provideHttpClient(),
@@ -67,122 +66,122 @@ describe('IvaService', () => {
   });
 
   it('should not auto-load anything', async () => {
-    expect(service.userIvasAreLoading()).toBe(false);
-    expect(service.allIvasAreLoading()).toBe(false);
+    expect(service.userIvas.isLoading()).toBe(false);
+    expect(service.allIvas.isLoading()).toBe(false);
     testBed.flushEffects();
     // at this point loaders should have been called
-    expect(service.userIvasAreLoading()).toBe(false);
-    expect(service.userIvas()).toEqual([]);
-    expect(service.allIvasAreLoading()).toBe(false);
-    expect(service.allIvas()).toEqual([]);
+    expect(service.userIvas.isLoading()).toBe(false);
+    expect(service.userIvas.value()).toEqual([]);
+    expect(service.allIvas.isLoading()).toBe(false);
+    expect(service.allIvas.value()).toEqual([]);
     // and httpMock.verify() should report an error
   });
 
   it('should get the IVAs of the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.flushEffects();
-    expect(service.userIvasAreLoading()).toBe(false);
+    expect(service.userIvas.isLoading()).toBe(false);
     service.loadUserIvas();
-    expect(service.userIvasAreLoading()).toBe(true);
-    expect(service.userIvasError()).toBeUndefined();
-    expect(service.userIvas()).toEqual([]);
-    expect(service.allIvasAreLoading()).toBe(false);
+    expect(service.userIvas.isLoading()).toBe(true);
+    expect(service.userIvas.error()).toBeUndefined();
+    expect(service.userIvas.value()).toEqual([]);
+    expect(service.allIvas.isLoading()).toBe(false);
     testBed.flushEffects();
     const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev/ivas');
     expect(req.request.method).toBe('GET');
     req.flush(allIvasOfDoe);
     await Promise.resolve(); // wait for loader to return
-    expect(service.userIvasAreLoading()).toBe(false);
-    expect(service.userIvasError()).toBeUndefined();
-    expect(service.userIvas()).toEqual(allIvasOfDoe);
+    expect(service.userIvas.isLoading()).toBe(false);
+    expect(service.userIvas.error()).toBeUndefined();
+    expect(service.userIvas.value()).toEqual(allIvasOfDoe);
   });
 
   it('should not get IVAs of current user if not authenticated', async () => {
     currentUserId.set(null); // mock logout
     testBed.flushEffects();
-    expect(service.userIvasAreLoading()).toBe(false);
+    expect(service.userIvas.isLoading()).toBe(false);
     service.loadUserIvas();
-    expect(service.userIvasAreLoading()).toBe(false);
-    expect(service.userIvasError()).toBeUndefined();
-    expect(service.userIvas()).toEqual([]);
-    expect(service.allIvasAreLoading()).toBe(false);
+    expect(service.userIvas.isLoading()).toBe(false);
+    expect(service.userIvas.error()).toBeUndefined();
+    expect(service.userIvas.value()).toEqual([]);
+    expect(service.allIvas.isLoading()).toBe(false);
     testBed.flushEffects();
     await Promise.resolve();
-    expect(service.userIvasAreLoading()).toBe(false);
-    expect(service.userIvasError()).toBeUndefined();
-    expect(service.userIvas()).toEqual([]);
+    expect(service.userIvas.isLoading()).toBe(false);
+    expect(service.userIvas.error()).toBeUndefined();
+    expect(service.userIvas.value()).toEqual([]);
   });
 
   it('should get the IVAs of another user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.flushEffects();
     service.loadUserIvas('roe@test.dev');
-    expect(service.userIvasAreLoading()).toBe(true);
-    expect(service.userIvasError()).toBeUndefined();
-    expect(service.userIvas()).toEqual([]);
-    expect(service.allIvasAreLoading()).toBe(false);
+    expect(service.userIvas.isLoading()).toBe(true);
+    expect(service.userIvas.error()).toBeUndefined();
+    expect(service.userIvas.value()).toEqual([]);
+    expect(service.allIvas.isLoading()).toBe(false);
     testBed.flushEffects();
     const req = httpMock.expectOne('http://mock.dev/auth/users/roe@test.dev/ivas');
     expect(req.request.method).toBe('GET');
     req.flush(allIvasOfRoe);
     await Promise.resolve(); // wait for loader to return
-    expect(service.userIvasAreLoading()).toBe(false);
-    expect(service.userIvasError()).toBeUndefined();
-    expect(service.userIvas()).toEqual(allIvasOfRoe);
+    expect(service.userIvas.isLoading()).toBe(false);
+    expect(service.userIvas.error()).toBeUndefined();
+    expect(service.userIvas.value()).toEqual(allIvasOfRoe);
   });
 
   it('should pass authorization errors when getting IVAs of a user', async () => {
     service.loadUserIvas('roe@test.dev');
-    expect(service.userIvasAreLoading()).toBe(true);
-    expect(service.userIvasError()).toBeUndefined();
-    expect(service.userIvas()).toEqual([]);
-    expect(service.allIvasAreLoading()).toBe(false);
+    expect(service.userIvas.isLoading()).toBe(true);
+    expect(service.userIvas.error()).toBeUndefined();
+    expect(service.userIvas.value()).toEqual([]);
+    expect(service.allIvas.isLoading()).toBe(false);
     testBed.flushEffects();
     const req = httpMock.expectOne('http://mock.dev/auth/users/roe@test.dev/ivas');
     expect(req.request.method).toBe('GET');
     req.flush('Mock Error', { status: 401, statusText: 'Unauthorized' });
     await Promise.resolve(); // wait for loader to return
-    expect(service.userIvasAreLoading()).toBe(false);
-    const error = service.userIvasError() as { status: number; statusText: string };
+    expect(service.userIvas.isLoading()).toBe(false);
+    const error = service.userIvas.error() as { status: number; statusText: string };
     expect(error).toBeDefined();
     expect(error.status).toBe(401);
     expect(error.statusText).toBe('Unauthorized');
-    expect(service.userIvas()).toEqual([]);
+    expect(service.userIvas.value()).toEqual([]);
   });
 
   it('should get all IVAs', async () => {
     service.loadAllIvas();
-    expect(service.allIvasAreLoading()).toBe(true);
-    expect(service.allIvasError()).toBeUndefined();
-    expect(service.allIvas()).toEqual([]);
-    expect(service.userIvasAreLoading()).toBe(false);
+    expect(service.allIvas.isLoading()).toBe(true);
+    expect(service.allIvas.error()).toBeUndefined();
+    expect(service.allIvas.value()).toEqual([]);
+    expect(service.userIvas.isLoading()).toBe(false);
     testBed.flushEffects();
     const req = httpMock.expectOne('http://mock.dev/auth/ivas');
     expect(req.request.method).toBe('GET');
     req.flush(allIvas);
     await Promise.resolve(); // wait for loader to return
-    expect(service.allIvasAreLoading()).toBe(false);
-    expect(service.allIvasError()).toBeUndefined();
-    expect(service.allIvas()).toEqual(allIvas);
+    expect(service.allIvas.isLoading()).toBe(false);
+    expect(service.allIvas.error()).toBeUndefined();
+    expect(service.allIvas.value()).toEqual(allIvas);
   });
 
   it('should pass server errors when getting all IVAs', async () => {
     service.loadAllIvas();
-    expect(service.allIvasAreLoading()).toBe(true);
-    expect(service.allIvasError()).toBeUndefined();
-    expect(service.allIvas()).toEqual([]);
-    expect(service.userIvasAreLoading()).toBe(false);
+    expect(service.allIvas.isLoading()).toBe(true);
+    expect(service.allIvas.error()).toBeUndefined();
+    expect(service.allIvas.value()).toEqual([]);
+    expect(service.userIvas.isLoading()).toBe(false);
     testBed.flushEffects();
     const req = httpMock.expectOne('http://mock.dev/auth/ivas');
     expect(req.request.method).toBe('GET');
     req.flush('Mock Error', { status: 401, statusText: 'Server Error' });
     await Promise.resolve(); // wait for loader to return
-    expect(service.allIvasAreLoading()).toBe(false);
-    const error = service.allIvasError() as { status: number; statusText: string };
+    expect(service.allIvas.isLoading()).toBe(false);
+    const error = service.allIvas.error() as { status: number; statusText: string };
     expect(error).toBeDefined();
     expect(error.status).toBe(401);
     expect(error.statusText).toBe('Server Error');
-    expect(service.allIvas()).toEqual([]);
+    expect(service.allIvas.value()).toEqual([]);
   });
 
   it('should create an IVA for the current user', (done) => {

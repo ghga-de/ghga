@@ -4,13 +4,12 @@
  * @license Apache-2.0
  */
 
-import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal, Signal } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { HttpClient, httpResource } from '@angular/common/http';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { catchError, firstValueFrom, map, Observable, tap } from 'rxjs';
+import { catchError, firstValueFrom, Observable, tap } from 'rxjs';
 import {
   AccessRequest,
   AccessRequestDialogData,
@@ -28,7 +27,7 @@ export class AccessRequestService {
   #http = inject(HttpClient);
   #auth = inject(AuthService);
   #notification = inject(NotificationService);
-  #userId = computed<string | null>(() => this.#auth.user()?.id || null);
+  #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #config = inject(ConfigService);
 
   #arsBaseUrl = this.#config.arsUrl;
@@ -56,7 +55,7 @@ export class AccessRequestService {
             ),
           ),
       ).then(async () => {
-        this.#userAccessRequests.reload();
+        this.userAccessRequests.reload();
         this.#notification.showSuccess('Your request has been submitted successfully.');
       });
     } catch (error) {
@@ -67,36 +66,28 @@ export class AccessRequestService {
   };
 
   /**
-   * Internal resource for loading the current user's access requests
+   * Resource for loading the current user's access requests
    */
-  #userAccessRequests = rxResource<AccessRequest[], string | null>({
-    request: this.#userId,
-    loader: ({ request: userId }) => {
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-      return this.#http
-        .get<AccessRequest[]>(this.#userAccessRequestsUrl(userId))
-        .pipe(
-          map((ar) =>
-            ar.filter(({ status }) => status === 'pending' || status === 'allowed'),
-          ),
-        );
+  userAccessRequests = httpResource<AccessRequest[]>(
+    () => {
+      const userId = this.#userId();
+      return userId ? this.#userAccessRequestsUrl(userId) : undefined;
     },
-  });
-
-  /**
-   * The list of access requests of the current user
-   */
-  userAccessRequests: Signal<AccessRequest[]> = computed(
-    () => this.#userAccessRequests.value() ?? [],
+    {
+      parse: (raw) =>
+        (raw as AccessRequest[]).filter(
+          ({ status }) => status === 'pending' || status === 'allowed',
+        ),
+      defaultValue: [],
+    },
   );
 
   /**
    * The list of granted access requests of the current user
    */
   grantedUserAccessRequests = computed(() =>
-    this.userAccessRequests()
+    this.userAccessRequests
+      .value()
       .filter((ar: AccessRequest) => ar.status == 'allowed')
       .map((request: AccessRequest) => {
         const expiryDate = new Date(request.access_ends);
@@ -124,23 +115,21 @@ export class AccessRequestService {
    * The list of pending requests of the current user
    */
   pendingUserAccessRequests = computed(() =>
-    this.userAccessRequests().filter((ar: AccessRequest) => ar.status == 'pending'),
+    this.userAccessRequests
+      .value()
+      .filter((ar: AccessRequest) => ar.status == 'pending'),
   );
-
-  userAccessRequestsAreLoading = this.#userAccessRequests.isLoading;
-
-  userAccessRequestsError = this.#userAccessRequests.error;
 
   #allAccessRequestsFilter = signal<AccessRequestFilter | undefined>(undefined);
 
   // signal to load all users' access requests
-  #loadAll = signal<null | undefined>(undefined);
+  #loadAll = signal<boolean>(false);
 
   /**
    * Load all users' access requests
    */
   loadAllAccessRequests(): void {
-    this.#loadAll.set(null);
+    this.#loadAll.set(true);
   }
 
   /**
@@ -174,20 +163,22 @@ export class AccessRequestService {
   }
 
   /**
-   * Internal resource for loading all access requests.
+   * Resource for loading all access requests.
    * Note: We do the filtering currently only on the client side,
    * but in principle we can also do some filtering on the sever.
    */
-  #allAccessRequests = rxResource<AccessRequest[], null | undefined>({
-    request: this.#loadAll,
-    loader: () => this.#http.get<AccessRequest[]>(this.#arsEndpointUrl),
-  });
+  allAccessRequests = httpResource<AccessRequest[]>(
+    () => (this.#loadAll() ? this.#arsEndpointUrl : undefined),
+    {
+      defaultValue: [],
+    },
+  );
 
   /**
-   * The list of access requests
+   * Signal that gets all access requests filtered by the current filter
    */
-  allAccessRequests: Signal<AccessRequest[]> = computed(() => {
-    let requests = this.#allAccessRequests.value() ?? [];
+  allAccessRequestsFiltered = computed(() => {
+    let requests = this.allAccessRequests.value();
     const filter = this.#allAccessRequestsFilter();
     if (requests.length && filter) {
       const datasetId = filter.datasetId.trim().toLowerCase();
@@ -218,16 +209,6 @@ export class AccessRequestService {
   });
 
   /**
-   * Whether the list of all access requests is loading as a signal
-   */
-  allAccessRequestsAreLoading: Signal<boolean> = this.#allAccessRequests.isLoading;
-
-  /**
-   * The list of all access requests error as a signal
-   */
-  allAccessRequestsError: Signal<unknown> = this.#allAccessRequests.error;
-
-  /**
    * Update the lists of access requests locally
    * @param accessRequest - the access request that has been modified
    */
@@ -238,8 +219,8 @@ export class AccessRequestService {
     accessRequest.status_changed = new Date().toISOString();
     accessRequest.changed_by = this.#auth.user()?.id || null;
 
-    this.#userAccessRequests.value.set(update(this.userAccessRequests()));
-    this.#allAccessRequests.value.set(update(this.allAccessRequests()));
+    this.userAccessRequests.value.set(update(this.userAccessRequests.value()));
+    this.allAccessRequests.value.set(update(this.allAccessRequests.value()));
   }
 
   /**
@@ -273,8 +254,10 @@ dateOneYearAgo.setDate(dateOneYearAgo.getDate() - 365);
  * Mock for the Access Request Service
  */
 export class MockAccessRequestService {
-  userAccessRequestsAreLoading = signal(false);
-  userAccessRequestsError = signal(false);
+  userAccessRequests = {
+    isLoading: signal(false),
+    error: signal(undefined),
+  };
   grantedUserAccessRequests = signal([
     {
       request: {
@@ -315,7 +298,6 @@ export class MockAccessRequestService {
       daysRemaining: -1,
     },
   ]);
-
   pendingUserAccessRequests = signal([
     {
       id: 'GHGAD15111403130971',

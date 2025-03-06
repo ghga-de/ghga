@@ -6,8 +6,6 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { signal } from '@angular/core';
-
 import { ActivatedRoute } from '@angular/router';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
 import {
@@ -22,9 +20,11 @@ import { SearchResultComponent } from './search-result.component';
  * Mock the metadata service as needed for the dataset summary
  */
 class MockMetadataService {
-  datasetSummary = signal(datasetSummary);
-  datasetSummaryError = signal(undefined);
-  datasetSummaryIsLoading = signal(false);
+  datasetSummary = {
+    value: () => datasetSummary,
+    isLoading: () => false,
+    error: () => undefined,
+  };
 }
 
 const fakeActivatedRoute = {

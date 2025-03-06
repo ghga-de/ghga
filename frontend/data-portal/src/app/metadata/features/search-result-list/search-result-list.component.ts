@@ -32,9 +32,10 @@ const NUM_STENCILS = 3;
 export class SearchResultListComponent {
   paginate = output<PageEvent>();
   #metadataSearch = inject(MetadataSearchService);
-  results = this.#metadataSearch.searchResults;
-  loading = this.#metadataSearch.searchResultsAreLoading;
-  error = this.#metadataSearch.searchResultsError;
+  #searchResults = this.#metadataSearch.searchResults;
+  results = this.#searchResults.value;
+  loading = this.#searchResults.isLoading;
+  error = this.#searchResults.error;
   pageSize = this.#metadataSearch.searchResultsLimit;
   pageIndex = computed(() => {
     const pageSize = this.pageSize();

@@ -6,7 +6,6 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { signal } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { datasetDetails, datasetInformation } from '@app/../mocks/data';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information.service';
@@ -17,8 +16,11 @@ import { DatasetDetailsComponent } from './dataset-details.component';
  * Mock the metadata service as needed for the dataset details
  */
 class MockMetadataService {
-  datasetDetails = signal(datasetDetails);
-  datasetDetailsError = signal(undefined);
+  datasetDetails = {
+    value: () => datasetDetails,
+    isLoading: () => false,
+    error: () => undefined,
+  };
   loadDatasetDetails = () => undefined;
 }
 
@@ -45,8 +47,11 @@ export class MockAuthService {
  * Mock the dataset information service as needed for the dataset details
  */
 class MockDatasetInformationService {
-  datasetInformation = signal(datasetInformation);
-  datasetInformationError = signal(undefined);
+  datasetInformation = {
+    value: () => datasetInformation,
+    isLoading: () => false,
+    error: () => undefined,
+  };
   loadDatasetInformation = () => undefined;
 }
 

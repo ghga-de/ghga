@@ -46,9 +46,10 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   #confirmationService = inject(ConfirmationService);
   #notificationService = inject(NotificationService);
 
-  ivas = this.#ivaService.userIvas;
-  ivasAreLoading = this.#ivaService.userIvasAreLoading;
-  ivasError = this.#ivaService.userIvasError;
+  #ivas = this.#ivaService.userIvas;
+  ivas = this.#ivas.value;
+  ivasAreLoading = this.#ivas.isLoading;
+  ivasError = this.#ivas.error;
 
   ivaId = model<string | undefined>(undefined);
 

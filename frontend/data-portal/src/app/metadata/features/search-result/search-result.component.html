@@ -10,7 +10,7 @@
       <div class="line-clamp-2 text-ellipsis">{{ hitContent().title }}</div>
     </div></mat-expansion-panel-header
   >
-  @if (summaryIsLoading()) {
+  @if (summary.isLoading()) {
     <app-dataset-summary-stencil />
   } @else {
     <app-dataset-summary [hit]="hit()" />

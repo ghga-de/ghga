@@ -4,12 +4,11 @@
  * @license Apache-2.0
  */
 
-import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, Signal } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { HttpClient, httpResource } from '@angular/common/http';
+import { computed, inject, Injectable } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
-import { map, Observable, throwError } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { Dataset } from '../models/dataset';
 import { WorkPackage, WorkPackageResponse } from '../models/work-package';
 
@@ -26,46 +25,24 @@ export class WorkPackageService {
   #workPackagesUrl = `${this.#wpsUrl}/work-packages`;
 
   #auth = inject(AuthService);
-  #userId = computed<string | null>(() => this.#auth.user()?.id || null);
+  #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
 
   /**
-   * Internal resource for loading datasets
+   * Resource for loading datasets
    */
-  #datasets = rxResource<Dataset[], string | null>({
-    request: this.#userId,
-    loader: ({ request: userId }) => {
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-      return (
-        this.#http
-          .get<Dataset[]>(`${this.#usersUrl}/${userId}/datasets`)
-          // for now, this only covers downloads
-          .pipe(
-            map((datasets) =>
-              datasets.filter(
-                ({ stage }) => stage === 'upload' || stage === 'download',
-              ),
-            ),
-          )
-      );
+  datasets = httpResource<Dataset[]>(
+    () => {
+      const userId = this.#userId();
+      return userId ? `${this.#usersUrl}/${userId}/datasets` : undefined;
     },
-  }).asReadonly();
-
-  /**
-   * The list of datasets belonging to the logged in user
-   */
-  datasets: Signal<Dataset[]> = computed(() => this.#datasets.value() ?? []);
-
-  /**
-   * Whether the datasets list is loading as a signal
-   */
-  datasetsAreLoading: Signal<boolean> = this.#datasets.isLoading;
-
-  /**
-   * The dataset list error as a signal
-   */
-  datasetsError: Signal<unknown> = this.#datasets.error;
+    {
+      parse: (raw) =>
+        (raw as Dataset[]).filter(
+          ({ stage }) => stage === 'upload' || stage === 'download',
+        ),
+      defaultValue: [],
+    },
+  ).asReadonly();
 
   /**
    * Create a work package for download

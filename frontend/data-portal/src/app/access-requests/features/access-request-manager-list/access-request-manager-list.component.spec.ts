@@ -15,9 +15,12 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
  * Mock the access request service as needed by the access request manager list component
  */
 class MockAccessRequestService {
-  allAccessRequests = () => accessRequests;
-  allAccessRequestsAreLoading = () => false;
-  allAccessRequestsError = () => undefined;
+  allAccessRequests = {
+    value: () => accessRequests,
+    isLoading: () => false,
+    error: () => undefined,
+  };
+  allAccessRequestsFiltered = () => this.allAccessRequests.value();
 }
 
 describe('AccessRequestManagerListComponent', () => {

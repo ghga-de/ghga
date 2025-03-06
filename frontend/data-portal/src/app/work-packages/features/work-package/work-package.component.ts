@@ -53,8 +53,6 @@ export class WorkPackageComponent {
   #wpService = inject(WorkPackageService);
 
   datasets = this.#wpService.datasets;
-  datasetsAreLoading = this.#wpService.datasetsAreLoading;
-  datasetsError = this.#wpService.datasetsError;
 
   selectedDataset = signal<Dataset | undefined>(undefined);
 
@@ -75,7 +73,7 @@ export class WorkPackageComponent {
    * @param id The ID of the dataset to select
    */
   selectDataset(id: string): void {
-    this.selectedDataset.set(this.datasets().find((d) => d.id === id));
+    this.selectedDataset.set(this.datasets.value().find((d) => d.id === id));
   }
 
   /**

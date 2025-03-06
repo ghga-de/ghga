@@ -18,8 +18,11 @@ import { MetadataBrowserComponent } from './metadata-browser.component';
  * Mock the metadata service as needed for the metadata browser
  */
 class MockMetadataSearchService {
-  searchResults = signal(searchResults);
-  searchResultsError = signal(undefined);
+  searchResults = {
+    value: () => searchResults,
+    isLoading: () => false,
+    error: () => undefined,
+  };
   searchResultsAreLoading = signal(false);
   loadQueryParameters = () => undefined;
   query = signal('');

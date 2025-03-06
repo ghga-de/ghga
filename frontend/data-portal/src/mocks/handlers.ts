@@ -150,10 +150,12 @@ function createHandlersForResponses(responses: {
 function noMockHandler(path: string): RequestHandler[] {
   return [
     http.get(path, () => undefined),
-    http.delete(path, () => undefined),
+    http.head(path, () => undefined),
+    http.options(path, () => undefined),
     http.patch(path, () => undefined),
     http.post(path, () => undefined),
     http.put(path, () => undefined),
+    http.delete(path, () => undefined),
   ];
 }
 
@@ -175,6 +177,8 @@ if (config.mock_oidc) {
 if (config.mock_api) {
   handlers.push(...createHandlersForResponses(apiResponses));
   handlers.push(...noMockHandler('/@ng/*')); // hot module replacement
+  handlers.push(...noMockHandler('/@fs/*')); // static files
+  handlers.push(...noMockHandler('/chunk-*')); // code chunks
 } else {
   handlers.push(...noMockHandler('/*'));
 }

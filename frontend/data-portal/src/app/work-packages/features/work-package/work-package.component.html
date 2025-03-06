@@ -19,7 +19,7 @@
         <mat-icon>content_copy</mat-icon>
       </button>
       <p>Please use the following token to {{ tokenAction() }} the selected dataset:</p>
-      <pre class="mb-3 overflow-auto whitespace-pre-wrap text-green-900">{{
+      <pre class="mb-3 overflow-auto whitespace-pre-wrap text-base text-green-900">{{
         token()
       }}</pre>
       <p>Make sure to copy the token now as you will not be able to see this again!</p>
@@ -34,13 +34,13 @@
     allows downloading or uploading the files of a dataset for which you have
     corresponding permissions.
   </p>
-  @if (datasetsAreLoading()) {
+  @if (datasets.isLoading()) {
     <p>Loading your datasets...</p>
-  } @else if (datasetsError()) {
+  } @else if (datasets.error()) {
     <mat-card appearance="outlined" class="error">
       <mat-card-content>Cannot load datasets. Please try again later.</mat-card-content>
     </mat-card>
-  } @else if (datasets().length === 0) {
+  } @else if (!datasets.value().length) {
     <mat-card appearance="outlined" class="error">
       <mat-card-content
         >You currently cannot download or upload any datasets.</mat-card-content
@@ -53,7 +53,7 @@
       <mat-form-field class="container max-w-lg">
         <mat-label>Available datasets</mat-label>
         <mat-select (selectionChange)="selectDataset($event.value)">
-          @for (dataset of datasets(); track dataset) {
+          @for (dataset of datasets.value(); track dataset) {
             <mat-option [value]="dataset.id"
               >{{ dataset.id }}: {{ dataset.title }}</mat-option
             >

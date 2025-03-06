@@ -35,7 +35,7 @@ export class DynamicAccessRequestButtonComponent {
   #auth = inject(AuthService);
   #notification = inject(NotificationService);
   #dialog = inject(MatDialog);
-  #userId = computed<string | null>(() => this.#auth.user()?.id || null);
+  #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #pendingAccessRequests = computed(() =>
     this.#accessRequestService
       .pendingUserAccessRequests()
@@ -68,7 +68,7 @@ export class DynamicAccessRequestButtonComponent {
       description: '',
       fromDate: undefined,
       untilDate: undefined,
-      userId: this.#userId() ?? '',
+      userId: this.#userId() || '',
     };
 
     this.#dialog
