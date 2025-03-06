@@ -1,0 +1,53 @@
+image:
+  repository: test
+  tag: 0.0.0
+
+configPrefix: test
+
+# Service parameters
+
+# Service base path
+apiBasePath: /test/
+# Name of the database
+dbName: test
+# This parameter is used as Kafka's group id
+serviceName: test-service-name
+# This parameter specifies the client id in Kafka
+serviceInstanceId: test-service-instance-id
+# This parameter is used as Kafka's group id
+serviceNameConsumer: test-service-name-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: test-service-instance-id-consumer
+
+parameters:
+  default:
+    foo: bar
+  rest:
+    service_instance_id: 'rest.1'
+  consumer:
+    service_instance_id: 'consumer.1'
+
+containers:
+- name: rest
+  type: "rest"
+  cmd:  test
+  config:
+    name: parameters-rest
+    key: parameters-rest
+
+vaultAgent:
+  enabled: true
+
+kafkaUser:
+  enabled: true
+
+topics:
+  testEvent:
+    topic:
+      name: test_event_topic
+      value: "my-topic"
+    types:
+    - name: test_event_type
+      value: searchable_resource_deleted
+    - name: resource_upsertion_event_type
+      value: searchable_resource_upserted

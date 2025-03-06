@@ -1,0 +1,23 @@
+---
+# Source: test-service/templates/service.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-service
+  namespace: "testing-remove-release-prefix"
+  labels:
+    app.kubernetes.io/name: test-service
+    helm.sh/chart: test-service-0.0.0
+    app.kubernetes.io/instance: test-service
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: test-service
+    app.kubernetes.io/instance: test-service

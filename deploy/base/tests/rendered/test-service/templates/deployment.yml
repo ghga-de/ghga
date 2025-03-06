@@ -1,0 +1,139 @@
+---
+# Source: test-service/templates/deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-service
+  namespace: "testing-remove-release-prefix"
+  labels:
+    app.kubernetes.io/name: test-service
+    helm.sh/chart: test-service-0.0.0
+    app.kubernetes.io/instance: test-service
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    app: test-service
+  annotations:
+    configmap-hash: 3aeb595e6f617b483410469acd65afb0067cb17642d026dccb8fd14d05f98b60
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: test-service
+      app.kubernetes.io/instance: test-service
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        configmap-hash: 3aeb595e6f617b483410469acd65afb0067cb17642d026dccb8fd14d05f98b60
+        
+        vault.hashicorp.com/tls-skip-verify: "false"
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/agent-cache-enable: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "false"
+        vault.hashicorp.com/agent-run-as-same-user: "true"
+        vault.hashicorp.com/role: "service-role"
+        
+          
+          
+          
+        helm.sh/revision: "1"
+      labels:
+        app.kubernetes.io/name: test-service
+        helm.sh/chart: test-service-0.0.0
+        app.kubernetes.io/instance: test-service
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/version: "0.0.0"
+        app: test-service
+    spec:
+      serviceAccountName: test-service
+      
+      shareProcessNamespace: true
+      restartPolicy: Always
+      enableServiceLinks: true
+      containers:
+        - image: docker.io/test:0.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          
+          args:
+            - if [ -d "/vault/secrets" ]; then
+                cd /vault/secrets;
+                for f in *; do
+                  if [ -f "$f" ]; then
+                    . "$f";
+                  fi;
+                done;
+              fi;
+              test;
+          
+          name: test-service-rest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            tcpSocket:
+              port: 8080
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            tcpSocket:
+              port: 8080
+          resources:
+            limits:
+              cpu: 1500m
+              memory: 2048M
+            requests:
+              cpu: 1000m
+              memory: 1024M
+          volumeMounts:
+            - name: parameters-rest
+              mountPath: /home/appuser/.test.yaml
+              subPath: .test.yaml
+              readOnly: true
+            - mountPath: "/kafka-secrets/"
+              name: kafka-secret
+              readOnly: true
+            - mountPath:  "/cluster-ca-cert/"
+              name: cluster-ca-cert
+              readOnly: true
+      volumes:
+        - name: parameters-rest
+          configMap:
+            name: test-service
+            items:
+            - key: parameters-rest
+              path: .test.yaml
+        - name: kafka-secret
+          secret:
+            secretName: testing-remove-release-prefix-test-service
+            optional: false
+        - name: cluster-ca-cert
+          secret:
+            secretName: kafka-cluster-ca-cert
+            optional: false      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: test-service
+                    app.kubernetes.io/name: test-service
+                topologyKey: kubernetes.io/hostname
+              weight: 1

@@ -1,0 +1,38 @@
+---
+# Source: test-service/templates/configmap.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-service
+data:
+  parameters-rest: |
+    foo: bar
+    service_instance_id: rest.1
+  
+    test_event_topic: my-topic
+    test_event_type: searchable_resource_deleted
+    resource_upsertion_event_type: searchable_resource_upserted
+    kafka_ssl_password: ""
+    kafka_ssl_cafile: /cluster-ca-cert/ca.crt
+    kafka_ssl_certfile: /kafka-secrets/user.crt
+    kafka_ssl_keyfile: /kafka-secrets/user.key
+    kafka_security_protocol: SSL
+    api_root_path: /test/
+    db_name: test
+    service_name: test-service-name
+    service_instance_id: test-service-instance-id
+  parameters: |
+    foo: bar
+  
+    test_event_topic: my-topic
+    test_event_type: searchable_resource_deleted
+    resource_upsertion_event_type: searchable_resource_upserted
+    kafka_ssl_password: ""
+    kafka_ssl_cafile: /cluster-ca-cert/ca.crt
+    kafka_ssl_certfile: /kafka-secrets/user.crt
+    kafka_ssl_keyfile: /kafka-secrets/user.key
+    kafka_security_protocol: SSL
+    api_root_path: /test/
+    db_name: test
+    service_name: test-service-name
+    service_instance_id: test-service-instance-id

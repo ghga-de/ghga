@@ -1,0 +1,33 @@
+---
+# Source: test-service/templates/kafkauser.yml
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  labels:
+    strimzi.io/cluster: kafka
+  name: testing-remove-release-prefix-test-service
+  namespace: strimzi  
+spec:
+  authentication:
+    type: tls
+  authorization:
+    acls:
+    
+    - operation: All
+      resource:
+        name: 'my-topic'
+        patternType: literal
+        type: topic
+    - operation: All
+      resource:
+        name: '*'
+        patternType: literal
+        type: group
+    type: simple
+  template:
+    secret:
+      metadata:
+        annotations:
+          reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+          reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: testing-remove-release-prefix
+          reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"

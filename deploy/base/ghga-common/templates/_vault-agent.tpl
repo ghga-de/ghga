@@ -8,7 +8,6 @@ vault.hashicorp.com/agent-cache-enable: "true"
 vault.hashicorp.com/agent-pre-populate-only: "false"
 vault.hashicorp.com/agent-run-as-same-user: "true"
 vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
-vault.hashicorp.com/auth-path: "{{ .Values.vaultAgent.authPath }}"
 
 {{- if .Values.vaultAgent.secrets -}}
 
