@@ -170,7 +170,7 @@ if __name__ == "__main__":
     chart_files = list(Path(args.chart_dir).rglob("Chart.yaml"))
     charts = list(zip(chart_files, get_charts(chart_files)))
     
-    if not args.library_chart_version:
+    if not args.library_chart_version or args.library_chart_version == "0.0.0":
         latest_ghga_common = VersionInfo.parse(
             helm_index["entries"]["ghga-common"][0]["version"]
         )
