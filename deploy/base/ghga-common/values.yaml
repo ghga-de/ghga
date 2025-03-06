@@ -202,10 +202,10 @@ exports:
 
     vaultAgent:
       enabled: false
-      authPath: kubernetes
       role: service-role
       pgrepPattern: python
       secrets:
+        generic: []
         mongodb:
           enabled: false
           secretPath: database/creds/my-role

@@ -71,4 +71,26 @@ vault.hashicorp.com/agent-inject-secret-{{ $secretName }}: {{ $vaultSecretPath }
 {{- end }}
 
 {{- end -}}
+
+{{/* Template which injects all KV pairs into the pod's environment */}}
+{{- if .Values.vaultAgent.secrets.generic }}
+
+{{ range $secretName, $secret := .Values.vaultAgent.secrets.generic -}}
+
+{{- $vaultSecretPath := $secret.secretPath }}
+{{- $mountPath := $secret.mountPath }}
+{{- $dataKey := $secret.dataKey }}
+{{- $parameterName := $secret.parameterName }}
+
+vault.hashicorp.com/agent-inject-command-$secret.name: |
+  kill -TERM $(pgrep {{ hasKey $secret "pgrepPattern" | ternary $secret.pgrepPattern "python" }})
+vault.hashicorp.com/agent-inject-secret-$secret.name: {{ $vaultSecretPath }}
+vault.hashicorp.com/agent-inject-template-$secret.name: |
+vault.hashicorp.com/agent-inject-template-{{ $secretName }}: |
+  {{ print `{{ with secret ` ($vaultSecretPath | quote)  ` -}}` }}
+  export {{ $.Values.configPrefix | upper }}_{{ $parameterName | upper }}='{{ print `{{ index .Data.data ` (hasKey $secret "dataKey" | ternary $secret.dataKey $secret.parameterName | quote) ` }}` }}'
+  {{ `{{- end }}` }}
+{{- end -}}
+{{- end -}}
+
 {{- end -}}
