@@ -35,10 +35,37 @@ spec:
         vault.hashicorp.com/agent-pre-populate-only: "false"
         vault.hashicorp.com/agent-run-as-same-user: "true"
         vault.hashicorp.com/role: "service-role"
-        
-          
-          
-          
+        vault.hashicorp.com/agent-inject-command-service-secrets: |
+          kill -TERM $(pgrep )
+        vault.hashicorp.com/agent-inject-secret-service-secrets: operational-secrets/data/unique/apps/archive/service
+        vault.hashicorp.com/agent-inject-template-service-secrets: |
+          {{ with secret "operational-secrets/data/unique/apps/archive/service" -}}
+          {{ if .Data.data }}{{- range $k, $v := .Data.data }}
+          export TEST_{{ $k }}='{{ $v }}'
+          {{- end }}{{- end }}{{- end }}
+        vault.hashicorp.com/agent-inject-file-crypt4ghInternalPriv: /keys/crypt4gh-internal/crypt4gh.sec
+        vault.hashicorp.com/agent-inject-template-crypt4ghInternalPriv: |
+          {{ with secret "operational-secrets/data/shared/managed-keys/crypt4gh-internal" -}}
+          {{ index .Data.data "crypt4gh.sec" }}
+          {{- end }}
+        vault.hashicorp.com/agent-inject-command-crypt4ghInternalPriv: |
+          kill -TERM $(pgrep python)
+        vault.hashicorp.com/agent-inject-secret-crypt4ghInternalPriv: operational-secrets/data/shared/managed-keys/crypt4gh-internal
+        vault.hashicorp.com/agent-inject-file-crypt4ghExternalPriv: /keys/crypt4gh-external/crypt4gh.sec
+        vault.hashicorp.com/agent-inject-template-crypt4ghExternalPriv: |
+          {{ with secret "operational-secrets/data/shared/managed-keys/crypt4gh-external" -}}
+          {{ index .Data.data "crypt4gh.sec" }}
+          {{- end }}
+        vault.hashicorp.com/agent-inject-command-crypt4ghExternalPriv: |
+          kill -TERM $(pgrep python)
+        vault.hashicorp.com/agent-inject-secret-crypt4ghExternalPriv: operational-secrets/data/shared/managed-keys/crypt4gh-external
+        vault.hashicorp.com/agent-inject-command-ghga-auth-public: |
+          kill -TERM $(pgrep python)
+        vault.hashicorp.com/agent-inject-secret-ghga-auth-public: operational-secrets/data/shared/managed-keys/ghga-auth/public
+        vault.hashicorp.com/agent-inject-template-ghga-auth-public: |
+          {{ with secret "operational-secrets/data/shared/managed-keys/ghga-auth/public" -}}
+          export TEST_AUTH_KEY='{{ index .Data.data "key" }}'
+          {{- end }}
         helm.sh/revision: "1"
       labels:
         app.kubernetes.io/name: test-service

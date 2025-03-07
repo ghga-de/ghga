@@ -205,7 +205,7 @@ exports:
       role: service-role
       pgrepPattern: python
       secrets:
-        generic: []
+        generic: {}
         mongodb:
           enabled: false
           secretPath: database/creds/my-role

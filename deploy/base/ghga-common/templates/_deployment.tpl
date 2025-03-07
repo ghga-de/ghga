@@ -39,7 +39,7 @@ spec:
         {{- if .Values.podAnnotations }}
         {{- .Values.podAnnotations | toYaml | nindent 8 }}
         {{- end }}
-        {{- if .Values.vaultAgent.enabled -}}
+        {{- if .Values.vaultAgent.enabled }}
         {{- include "ghga-common.vaultAgentAnnotations" . | nindent 8 }}
         {{- end }}
         helm.sh/revision: {{ .Release.Revision | quote }}

@@ -37,6 +37,23 @@ containers:
 
 vaultAgent:
   enabled: true
+  secrets:
+    generic:
+      ghga-auth-public:
+        path: operational-secrets/data/shared/managed-keys/ghga-auth/public
+        parameterName: AUTH_KEY
+        dataKey: key
+    mongodb:
+      enabled: false
+    service:
+      enabled: true
+    crypt4ghInternalPub:
+      enabled: false
+    crypt4ghInternalPriv:
+      enabled: true
+    crypt4ghExternalPriv:
+      enabled: true
+
 
 kafkaUser:
   enabled: true
