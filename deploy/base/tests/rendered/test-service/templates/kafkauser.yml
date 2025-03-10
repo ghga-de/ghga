@@ -5,7 +5,7 @@ kind: KafkaUser
 metadata:
   labels:
     strimzi.io/cluster: kafka
-  name: testing-remove-release-prefix-test-service
+  name: test-test-service
   namespace: strimzi  
 spec:
   authentication:
@@ -29,5 +29,5 @@ spec:
       metadata:
         annotations:
           reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
-          reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: testing-remove-release-prefix
+          reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: test
           reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"

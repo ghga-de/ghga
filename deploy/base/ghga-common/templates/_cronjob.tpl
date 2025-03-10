@@ -34,6 +34,9 @@ spec:
             {{- if .Values.podAnnotations }}
             {{- .Values.podAnnotations | toYaml | nindent 12}}
             {{- end }}
+            {{- if .Values.vaultAgent.enabled }}
+            {{- include "ghga-common.vaultAgentAnnotations" . | nindent 8 }}
+            {{- end }}
           labels: {{- include "common.labels.standard" . | nindent 12 }}
             app: {{ include "common.names.fullname" . }}
             {{- if .Values.podLabels }}
@@ -73,8 +76,13 @@ spec:
             securityContext: {{- omit $.Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
             volumeMounts:
             - name: {{ $container.config.name | default "config" }}
+              {{- if $container.config.fileName }}
+              mountPath: /home/{{ $container.config.appuser | default "appuser" }}/{{ $container.config.fileName }}
+              subPath: {{ $container.config.fileName }}
+              {{- else }}
               mountPath: /home/{{ $container.config.appuser | default "appuser" }}/.{{ $.Values.configPrefix }}.yaml
               subPath: .{{ $.Values.configPrefix }}.yaml
+              {{- end }}
               readOnly: true
             {{- if $.Values.extraVolumeMounts }}
             {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
@@ -96,7 +104,11 @@ spec:
               name: {{ include "common.names.fullname" $ }}
               items:
               - key: {{ $container.config.key | default "parameters" }}
+                {{- if $container.config.fileName }}
+                path: {{ $container.config.fileName }}
+                {{- else }}
                 path: .{{ $.Values.configPrefix }}.yaml
+                {{- end }}
           {{- end }}
           {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}

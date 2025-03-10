@@ -1,5 +1,6 @@
 {{- define "ghga-common.vaultAgentAnnotations" -}}
 {{/* Vault agent boilerplate */}}
+{{- $envPrefix := eq .Values.configPrefix "" | ternary "" (print .Values.configPrefix "_" | upper) }}
 vault.hashicorp.com/tls-skip-verify: "false"
 vault.hashicorp.com/agent-inject: "true"
 vault.hashicorp.com/agent-init-first: "true"
@@ -18,8 +19,8 @@ vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
 vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: {{ $vaultSecretPath }}
 vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
   {{ print `{{- with secret "` $vaultSecretPath `" -}}` }}
-  export {{ .Values.configPrefix | upper }}_DB_URL="{{ $connectionString }}"
-  export {{ .Values.configPrefix | upper }}_DB_CONNECTION_STR=${{ .Values.configPrefix | upper }}_DB_URL
+  export {{  $envPrefix }}DB_URL="{{ $connectionString }}"
+  export {{  $envPrefix }}DB_CONNECTION_STR=${{ $envPrefix }}DB_URL
   {{`{{- end -}}`}}
 {{- end -}}
 {{- end -}}
@@ -34,7 +35,7 @@ vault.hashicorp.com/agent-inject-secret-service-secrets: {{ $vaultSecretPath }}
 vault.hashicorp.com/agent-inject-template-service-secrets: |
   {{ print `{{ with secret "` $vaultSecretPath `" -}}` }}
   {{`{{ if .Data.data }}{{- range $k, $v := .Data.data }}`}}
-  export {{ .Values.configPrefix | upper }}_{{`{{ $k }}='{{ $v }}'`}}
+  export {{  $envPrefix }}{{`{{ $k }}='{{ $v }}'`}}
   {{`{{- end }}{{- end }}{{- end }}`}}
 {{- end -}}
 {{- end -}}
@@ -58,7 +59,7 @@ vault.hashicorp.com/agent-inject-template-{{ $secretName }}: |
   {{- else }}
 vault.hashicorp.com/agent-inject-template-{{ $secretName }}: |
   {{ print `{{ with secret ` ($vaultSecretPath | quote)  ` -}}` }}
-  export {{ $.Values.configPrefix | upper }}_{{ $parameterName | upper }}_='{{ print `{{ index .Data.data ` ($dataKey | quote) ` }}` }}'
+  export {{  $envPrefix }}{{ $parameterName | upper }}_='{{ print `{{ index .Data.data ` ($dataKey | quote) ` }}` }}'
   {{ `{{- end }}` }}
   {{- end }}
 vault.hashicorp.com/agent-inject-command-{{ $secretName }}: |
@@ -81,7 +82,7 @@ vault.hashicorp.com/agent-inject-command-{{ $secretName }}: |
 vault.hashicorp.com/agent-inject-secret-{{ $secretName }}: {{ $vaultSecretPath }}
 vault.hashicorp.com/agent-inject-template-{{ $secretName }}: |
   {{ print `{{ with secret ` ($vaultSecretPath | quote)  ` -}}` }}
-  export {{ $.Values.configPrefix | upper }}_{{ $parameterName | upper }}='{{ print `{{ index .Data.data ` (hasKey $secret "dataKey" | ternary $secret.dataKey $secret.parameterName | quote) ` }}` }}'
+  export {{ $envPrefix }}{{ $parameterName | upper }}='{{ print `{{ index .Data.data ` (hasKey $secret "dataKey" | ternary $secret.dataKey $secret.parameterName | quote) ` }}` }}'
   {{ `{{- end }}` }}
 {{- end -}}
 {{- end -}}

@@ -4,7 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-service
-  namespace: "testing-remove-release-prefix"
+  namespace: "test"
   labels:
     app.kubernetes.io/name: test-service
     helm.sh/chart: test-service-0.0.0
@@ -148,7 +148,7 @@ spec:
               path: .test.yaml
         - name: kafka-secret
           secret:
-            secretName: testing-remove-release-prefix-test-service
+            secretName: test-test-service
             optional: false
         - name: cluster-ca-cert
           secret:
