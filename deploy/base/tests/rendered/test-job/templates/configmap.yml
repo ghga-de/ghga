@@ -1,0 +1,16 @@
+---
+# Source: test-job/templates/configmap.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-job
+data:
+  parameters-default: |
+    foo: bar
+  
+    
+    
+    
+    
+  parameters: |
+    foo: bar

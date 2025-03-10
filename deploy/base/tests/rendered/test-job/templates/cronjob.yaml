@@ -1,0 +1,73 @@
+---
+# Source: test-job/templates/cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: test-job
+  namespace: "test"
+  labels:
+    app.kubernetes.io/name: test-job
+    helm.sh/chart: test-job-0.0.0
+    app.kubernetes.io/instance: test-job
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    app: test-job
+  annotations:
+spec:
+  schedule: 0 0 1 1 0
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: test-job
+        helm.sh/chart: test-job-0.0.0
+        app.kubernetes.io/instance: test-job
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/version: "0.0.0"
+    spec:
+      template:
+        metadata:
+          annotations:
+          labels:
+            app.kubernetes.io/name: test-job
+            helm.sh/chart: test-job-0.0.0
+            app.kubernetes.io/instance: test-job
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/version: "0.0.0"
+            app: test-job
+        spec:
+          restartPolicy: "OnFailure"
+          serviceAccountName: test-job
+          shareProcessNamespace: false
+          containers:
+          - image: docker.io/busybox:latest
+            imagePullPolicy: Always
+            command: ["sh", "-c"]
+            
+            args:
+              - sleep 100000000;
+            
+            name: test-job-job
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 1000
+              seccompProfile:
+                type: RuntimeDefault
+            volumeMounts:
+            - name: config
+              mountPath: /home/appuser/.config.yaml
+              subPath: .config.yaml
+              readOnly: true
+          volumes:
+          - name: config
+            configMap:
+              name: test-job
+              items:
+              - key: parameters
+                path: .config.yaml

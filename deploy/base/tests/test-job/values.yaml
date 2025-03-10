@@ -2,7 +2,7 @@ image:
   repository: busybox
   tag: latest
 
-configPrefix: ""
+configPrefix: config
 
 cronSchedule: "0 0 1 1 0"
 
@@ -12,5 +12,7 @@ parameters:
 
 containers:
 - name: job
-  type: "job"
-  cmd: "env"
+  type: default
+  cmd: sleep 100000000
+  config:
+    key: parameters

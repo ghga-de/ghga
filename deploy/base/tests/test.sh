@@ -1,3 +1,14 @@
-helm dep up test-service --skip-refresh
-helm template test-service ./test-service --output-dir ./rendered
-helm lint ./test-service
+#!/bin/bash
+
+# Check if an argument is provided
+if [ -z "$1" ]; then
+  echo "Usage: $0 <service-name>"
+  exit 1
+fi
+
+SERVICE_NAME=$1
+
+# Run Helm commands with the provided service name
+helm dep up "$SERVICE_NAME" --skip-refresh
+helm template "$SERVICE_NAME" ./"$SERVICE_NAME" --output-dir ./rendered
+helm lint ./"$SERVICE_NAME"

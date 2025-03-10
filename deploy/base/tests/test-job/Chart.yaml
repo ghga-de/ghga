@@ -1,4 +1,4 @@
-name: yaml-mirage
+name: test-job
 description: A meta-absurdist reflection on templating—where structure dissolves into recursion, defaults deceive, and clarity is an illusion.
 type: application
 
@@ -19,7 +19,7 @@ apiVersion: v2
 
 dependencies:
 - name: ghga-common
-  version: 3.0.0-alpha.1
+  version: 2.1.6
   repository: file://../../ghga-common
   import-values:
   - defaults

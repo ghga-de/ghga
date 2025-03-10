@@ -71,6 +71,44 @@ spec:
             {{- if $.Values.containerSecurityContext.enabled }}
             name: {{ $.Release.Name }}-{{ $container.name }}
             securityContext: {{- omit $.Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
+            volumeMounts:
+            - name: {{ $container.config.name | default "config" }}
+              mountPath: /home/{{ $container.config.appuser | default "appuser" }}/.{{ $.Values.configPrefix }}.yaml
+              subPath: .{{ $.Values.configPrefix }}.yaml
+              readOnly: true
+            {{- if $.Values.extraVolumeMounts }}
+            {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
+            {{- if $.Values.kafkaUser.enabled }}
+            - mountPath: "/kafka-secrets/"
+              name: kafka-secret
+              readOnly: true
+            - mountPath:  "/cluster-ca-cert/"
+              name: cluster-ca-cert
+              readOnly: true
+            {{- end }}
+            {{- end }}
+          {{- end }}
+          volumes:
+          {{- range $container := .Values.containers }}
+          - name: {{ $container.config.name | default "config" }}
+            configMap:
+              name: {{ include "common.names.fullname" $ }}
+              items:
+              - key: {{ $container.config.key | default "parameters" }}
+                path: .{{ $.Values.configPrefix }}.yaml
+          {{- end }}
+          {{- if .Values.extraVolumes }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+          {{- end }}
+          {{- if .Values.kafkaUser.enabled }}
+          - name: kafka-secret
+            secret:
+              secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
+              optional: false
+          - name: cluster-ca-cert
+            secret:
+              secretName: {{ .Values.kafkaUser.caCertSecretName }}
+              optional: false
           {{- end }}
 {{- end -}}
