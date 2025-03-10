@@ -1,63 +1,15 @@
-# Default values for remotebackup.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
 image:
   repository: ghga/devops-remotebackup
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-
-podAnnotations: {}
-
-podSecurityContext:
-  {}
-  # fsGroup: 2000
-
-securityContext:
-  {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
-
-service:
-  type: ClusterIP
-  port: 80
-
-resources:
-  {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
-
-restartPolicy: Never
 schedule: "0 3 * * *"
-successfulJobsHistoryLimit: 5
 
-# Are passed as environment variables to the Pod
-env_vars: {}
+configPrefix: ""
 
-runCommands: remotebackup backup
-
-# Parameters which are passed to the config.yaml file.
-parameters: {}
-  # database:
-  #   mongodb:
-  #     mongorestore:
-  #       excluded_namespaces:
-  #         - admin.system.users
-  #   encryption:
-  #     key: "*****"
+containers:
+- name: default
+  type: default
+  cmd: remotebackup backup
+  config:
+    name: config
+    fileName: .config.yaml
