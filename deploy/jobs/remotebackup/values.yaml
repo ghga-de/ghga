@@ -2,7 +2,7 @@ image:
   repository: ghga/devops-remotebackup
   pullPolicy: IfNotPresent
 
-schedule: "0 3 * * *"
+cronSchedule: "0 3 * * *"
 
 configPrefix: ""
 
