@@ -288,7 +288,7 @@ There are only the following two exceptions where the token will be also added b
   - the user must be already registered
   - the `id` field of the auth context will contain the internal id of the user, and it must correspond to the `user_id` in the path
 
-The `role` field is set in the "token exchange" code that converts the OIDC token to an internal access token. This code checks whether the current user is active and has a valid claim granting a GHGA role. In addition to checking the validity of the claim, the code now also needs to check whether the claim has the `iva_id` field set which is associated with an existing IVA in the verified state.
+The `roles` field is set in the "token exchange" code that converts the OIDC token to an internal access token. This code checks whether the current user is active and has valid claims granting GHGA roles. In addition to checking the validity of the claim, the code now also needs to check whether the claim has the `iva_id` field set which is associated with an existing IVA in the verified state.
 
 ### Service Commons Library
 
@@ -308,7 +308,7 @@ The Auth Adapter should store user sessions using a `Session` model with the fol
 - `user_name`: string (full name of the user)
 - `user_email`: string (email address of the user)
 - `user_title`: optional string (academic title of the user)
-- `role`: optional string (role of the user)
+- `roles`: array of strings (roles of the user)
 - `state`: enum (see section on Session states)
 - `csrf_token`: string (the CSRF token for the session)
 - `totp_token`: TOTPToken (the TOTP token object of the user, if created)
@@ -322,7 +322,7 @@ The backed user session can be requested by the frontend using the `/rpc/login` 
 - `name` = `Session.user_name`
 - `email` = `Session.user_email`
 - `state` = `Session.state`
-- `role` = `Session.role` (if set)
+- `roles` = `Session.roles`
 - `csrf` = `Session.csrf_token`
 - `timeout` = number of seconds until the session times out if not used
 - `extends` = number of seconds that the session can still be extended
