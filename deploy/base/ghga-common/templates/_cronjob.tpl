@@ -22,7 +22,7 @@ metadata:
     {{- end }}
 spec:
   schedule: {{ .Values.cronSchedule }}
-  successfulJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
   failedJobsHistoryLimit: 1
   jobTemplate:
     metadata:

@@ -199,6 +199,8 @@ exports:
     configPrefix: ""
 
     enableServiceLinks: true
+    
+    successfulJobsHistoryLimit: 5
 
     vaultAgent:
       enabled: false
@@ -234,3 +236,4 @@ exports:
           dataKey: crypt4gh.sec
           renderToFile: true
           parameterName: CRYPT4GH_PRIVATE_KEY
+

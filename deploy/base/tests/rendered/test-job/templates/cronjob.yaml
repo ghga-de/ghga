@@ -4,7 +4,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: test-job
-  namespace: "test"
+  namespace: "emissary"
   labels:
     app.kubernetes.io/name: test-job
     helm.sh/chart: test-job-0.0.0
@@ -15,7 +15,7 @@ metadata:
   annotations:
 spec:
   schedule: 0 0 1 1 0
-  successfulJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 1
   jobTemplate:
     metadata:
