@@ -2,15 +2,15 @@
   <span class="text-3xl">User Account</span>
 </h1>
 <h2>
-  <span class="align-middle text-2xl"
+  <span class="flex text-2xl"
     >{{ fullName() }}
     @if (roleName()) {
-      <mat-chip> {{ roleName() }} </mat-chip>
+      <mat-chip class="ms-2">{{ roleName() }}</mat-chip>
     }
   </span>
 </h2>
 
-<mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">
+<mat-card appearance="outlined" class="my-4 p-2 text-primary">
   <mat-card-header>
     <mat-card-title>Email</mat-card-title>
     <mat-card-subtitle
@@ -25,7 +25,11 @@
     </p>
     <p>
       You can change this email address in your
-      <a href="https://profile.aai.lifescience-ri.eu/profile" target="_blank"
+      <a
+        class="text-quaternary hover:text-secondary focus:text-secondary"
+        href="https://profile.aai.lifescience-ri.eu/profile"
+        target="_blank"
+        rel="noreferrer noopener"
         >LS Login profile<mat-icon [inline]="true" class="align-middle"
           >open_in_new</mat-icon
         ></a
@@ -34,7 +38,7 @@
   </mat-card-content>
 </mat-card>
 
-<mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">
+<mat-card appearance="outlined" class="my-4 p-2 text-primary">
   <mat-card-header>
     <mat-card-title>Contact addresses for account verification </mat-card-title>
     <mat-card-subtitle
@@ -47,7 +51,7 @@
   ></mat-card-content>
 </mat-card>
 
-<mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">
+<mat-card appearance="outlined" class="my-4 p-2 text-primary">
   <mat-card-header>
     <mat-card-title>Dataset Access</mat-card-title>
     <mat-card-subtitle
@@ -62,7 +66,7 @@
   </mat-card-content>
 </mat-card>
 
-<mat-card appearance="outlined" class="my-4 min-h-56 p-2 text-primary">
+<mat-card appearance="outlined" class="my-4 p-2 text-primary">
   <mat-card-header>
     <mat-card-title>Pending Access Requests</mat-card-title>
     <mat-card-subtitle

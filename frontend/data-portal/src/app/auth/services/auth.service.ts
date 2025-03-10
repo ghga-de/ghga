@@ -360,7 +360,7 @@ export class AuthService {
         this.#csrf.token = null;
         sessionStorage.removeItem('afterLogin');
         this.#router.navigate(['/']);
-        this.#notify.showSuccess('You have been logged out.');
+        this.#notify.showInfo('You have been logged out.');
       });
     }
   }

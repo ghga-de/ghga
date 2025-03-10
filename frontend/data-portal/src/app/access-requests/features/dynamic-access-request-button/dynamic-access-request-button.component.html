@@ -1,16 +1,24 @@
 @switch (status()) {
   @case ('pending') {
-    <button mat-raised-button [disabled]="true">
-      <mat-icon>key</mat-icon> Pending Access Request …
+    <button mat-raised-button class="raised-button-quaternary w-full" [disabled]="true">
+      <mat-icon>key</mat-icon> Pending Request …
     </button>
   }
   @case ('allowed') {
-    <button mat-raised-button routerLink="/work-package">
+    <button
+      mat-raised-button
+      class="raised-button-quaternary w-full"
+      routerLink="/work-package"
+    >
       <mat-icon>download</mat-icon>Download the Data
     </button>
   }
   @default {
-    <button mat-raised-button (click)="showNewAccessRequestDialog()">
+    <button
+      mat-raised-button
+      class="raised-button-quaternary w-full"
+      (click)="showNewAccessRequestDialog()"
+    >
       <mat-icon>key</mat-icon>Request Access
     </button>
   }

@@ -196,3 +196,11 @@ button.error {
     )
   );
 }
+
+.raised-button-quaternary {
+  @include mat.button-overrides(
+    (
+      protected-container-color: var(--mat-sys-quaternary),
+    )
+  );
+}

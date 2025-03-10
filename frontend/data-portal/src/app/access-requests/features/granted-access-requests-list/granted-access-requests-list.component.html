@@ -14,16 +14,22 @@
           @let request = grantedRequest.request;
           <li>
             For the dataset
-            <a routerLink="/dataset/{{ request.dataset_id }}">{{
-              request.dataset_id
-            }}</a>
+            <a
+              class="text-quaternary hover:text-secondary focus:text-secondary"
+              routerLink="/dataset/{{ request.dataset_id }}"
+              >{{ request.dataset_id }}</a
+            >
             from {{ request.access_starts | date: friendlyDateFormat }} to
             {{ request.access_ends | date: friendlyDateFormat }} &ndash;
             <span class="font-bold">{{ grantedRequest.daysRemaining }}</span> days left.
           </li>
         }
       </ul>
-      <button routerLink="/work-package" mat-raised-button class="mt-8">
+      <button
+        routerLink="/work-package"
+        mat-raised-button
+        class="raised-button-quaternary mt-8"
+      >
         <mat-icon>download</mat-icon>Set up a download token
       </button>
     }

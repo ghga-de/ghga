@@ -9,10 +9,32 @@ mat-chip {
   );
 }
 
-a {
-  @include mat.button-overrides(
+mat-expansion-panel {
+  margin-bottom: 0.5em;
+
+  @include mat.expansion-overrides(
     (
-      protected-container-color: var(--mat-sys-quaternary),
+      header-hover-state-layer-color: var(--mat-sys-surface-variant),
+    )
+  );
+}
+
+mat-expansion-panel .mat-expansion-panel-header {
+  background-color: var(--mat-sys-surface-dim);
+}
+
+div {
+  @include mat.sort-overrides(
+    (
+      arrow-color: var(--mat-sys-tertiary),
+    )
+  );
+}
+
+table.mat-mdc-table {
+  @include mat.table-overrides(
+    (
+      header-headline-weight: var(--mat-sys-label-large-weight-prominent),
     )
   );
 }

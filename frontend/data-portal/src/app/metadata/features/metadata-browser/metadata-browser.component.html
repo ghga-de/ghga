@@ -1,7 +1,7 @@
 <div class="grid grid-cols-12 grid-rows-none gap-x-5">
   <div class="col-span-9 col-start-4">
     <div class="flex w-full justify-between pb-4">
-      <mat-chip-set aria-label="search and filters">
+      <mat-chip-set aria-label="search and filters" class="filter-chips">
         @if (lastSearchQuery() !== '') {
           <mat-chip (removed)="clearSearchQuery()">
             Keyword: {{ lastSearchQuery() }}
@@ -25,7 +25,7 @@
           }
         }
       </mat-chip-set>
-      <div>
+      <mat-chip-set>
         <mat-chip>
           <div class="flex content-around">
             <span class="mr-1">Total Datasets:</span>
@@ -41,7 +41,7 @@
             }
           </div>
         </mat-chip>
-      </div>
+      </mat-chip-set>
     </div>
   </div>
   <aside class="col-span-3">

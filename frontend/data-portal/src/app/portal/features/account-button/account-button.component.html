@@ -19,16 +19,16 @@
       <p>You are logged in as {{ roleName() }}.</p>
     }
     <button (click)="gotoAccount()" mat-menu-item>
-      <mat-icon>account_circle</mat-icon>
-      <span>Your GHGA account page</span>
+      <mat-icon class="text-secondary">account_circle</mat-icon>
+      <span class="text-secondary">Your GHGA account page</span>
     </button>
     <button (click)="manageLsLogin()" mat-menu-item>
-      <mat-icon>open_in_new</mat-icon>
-      <span>Manage LS Login account</span>
+      <mat-icon class="text-quaternary">open_in_new</mat-icon>
+      <span class="text-quaternary">Manage LS Login account</span>
     </button>
     <button (click)="onLogout()" mat-menu-item>
-      <mat-icon>logout</mat-icon>
-      <span>Log out</span>
+      <mat-icon class="text-tertiary">logout</mat-icon>
+      <span class="text-tertiary">Log out</span>
     </button>
   </mat-menu>
 } @else if (isLoggedIn()) {
@@ -47,12 +47,12 @@
       you can start using your account.
     </p>
     <button (click)="continue()" mat-menu-item>
-      <mat-icon>arrow_forward</mat-icon>
-      <span>Complete {{ ongoingProcess() }} </span>
+      <mat-icon class="text-quaternary">arrow_forward</mat-icon>
+      <span class="text-quaternary">Complete {{ ongoingProcess() }} </span>
     </button>
     <button (click)="onLogout()" mat-menu-item>
-      <mat-icon>logout</mat-icon>
-      <span>Cancel and log out</span>
+      <mat-icon class="text-quaternary">logout</mat-icon>
+      <span class="text-quaternary">Cancel and log out</span>
     </button>
   </mat-menu>
 } @else {
@@ -64,21 +64,20 @@
   >
     <mat-icon>login</mat-icon>
   </button>
-  <mat-menu #menu="matMenu" class="p-3">
+  <mat-menu #menu="matMenu" class="px-3 py-1">
     <h2>Login</h2>
-    <p>
+    <p class="mb-3 text-xs">
       You can browse our datasets without an account, but if you wish to access research
       data, you must log in to the portal via LS Login.
     </p>
-    <p class="mb-4">
-      LS Login lets you authenticate using your existing accounts at third parties (your
-      home university, research institute or a commercial service) and link it to your
-      LS ID. Alternatively, you can also activate an LS account with username and
-      password.
+    <p class="mb-6 text-xs">
+      LS Login lets you authenticate using existing third party accounts (from a home
+      university, research institute or a commercial service) and link it to your LS ID.
+      Alternatively, you can also activate an LS account with username and password.
     </p>
     <button (click)="onLogin()" mat-menu-item matTooltip="Log in via LS Login">
-      <mat-icon>login</mat-icon>
-      <img src="assets/images/ls-login.png" alt="LS Login" />
+      <mat-icon class="text-quaternary">login</mat-icon>
+      <img src="assets/images/ls-login.png" alt="LS Login" class="my-2" />
     </button>
   </mat-menu>
 }

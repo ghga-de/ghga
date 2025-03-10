@@ -48,10 +48,10 @@ export class NewIvaDialogComponent {
    * Value prompts for the different IVA types
    */
   valuePrompts: { [key in keyof typeof IvaType]: string } = {
-    Phone: 'Please enter your phone number to receive SMS messages:',
+    Phone: 'Please enter your phone number to receive an SMS:',
     Fax: '', // do not show this option
     PostalAddress: 'Please enter your postal address:',
-    InPerson: 'Where can we meet you?',
+    InPerson: 'Please enter a meeting location:',
   };
 
   /**

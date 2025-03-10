@@ -25,6 +25,7 @@ export class ConfirmationService {
    * @param opts.confirmText - optional text for the confirm button
    * @param opts.confirmClass - optional class for the confirm button
    * @param opts.callback - function to call when the dialog is closed
+   * @param opts.panelClass - optional class for the dialog panel
    * The callback receives a boolean indicating whether the dialog was confirmed
    */
   confirm({
@@ -33,6 +34,7 @@ export class ConfirmationService {
     cancelText,
     confirmText,
     confirmClass,
+    panelClass,
     callback,
   }: {
     title?: string;
@@ -40,6 +42,7 @@ export class ConfirmationService {
     cancelText?: string;
     confirmText?: string;
     confirmClass?: string;
+    panelClass?: string | string[];
     callback?: (confirmed: boolean | undefined) => void;
   }): void {
     const dialogRef = this.#dialog.open(ConfirmDialogComponent, {
@@ -50,6 +53,7 @@ export class ConfirmationService {
         confirmText,
         confirmClass,
       },
+      panelClass: panelClass,
     });
 
     dialogRef.afterClosed().subscribe((result) => {

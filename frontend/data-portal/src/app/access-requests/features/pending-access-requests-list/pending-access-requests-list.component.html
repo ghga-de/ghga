@@ -13,9 +13,11 @@
         @for (request of req; track request.id) {
           <li>
             For the dataset
-            <a routerLink="/dataset/{{ request.dataset_id }}">{{
-              request.dataset_id
-            }}</a>
+            <a
+              class="text-quaternary hover:text-secondary focus:text-secondary"
+              routerLink="/dataset/{{ request.dataset_id }}"
+              >{{ request.dataset_id }}</a
+            >
             from {{ request.access_starts | date: friendlyDateFormat }} to
             {{ request.access_ends | date: friendlyDateFormat }}.
           </li>

@@ -1,5 +1,5 @@
 <div class="pt-4 text-sm">
-  <div class="float-right ms-6 flex flex-col gap-y-2">
+  <div class="float-right ms-6 flex w-52 flex-col gap-y-2">
     @if (hitContent().alias !== '') {
       <a
         mat-stroked-button
@@ -10,7 +10,10 @@
       >
     }
     <app-dynamic-access-request-button datasetID="{{ hit().id_ }}" />
-    <a mat-raised-button routerLink="/dataset/{{ hit().id_ }}"
+    <a
+      mat-raised-button
+      class="raised-button-quaternary"
+      routerLink="/dataset/{{ hit().id_ }}"
       ><mat-icon>database_search</mat-icon>Dataset Details</a
     >
   </div>

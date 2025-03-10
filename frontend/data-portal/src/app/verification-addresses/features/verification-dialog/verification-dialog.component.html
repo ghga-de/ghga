@@ -1,6 +1,6 @@
 <h1 mat-dialog-title>Contact address verification</h1>
 <div mat-dialog-content>
-  <p style="max-width: 32em">
+  <p class="mb-5 max-w-md">
     We sent a verification code to your selected contact address ({{ address() }}).
     Please enter it here:
   </p>
@@ -16,7 +16,7 @@
         maxlength="6"
       />
     </mat-form-field>
-    <div class="min-h-6">
+    <div>
       @if (
         !codeControl.valid &&
         codeControl.dirty &&

@@ -14,34 +14,3 @@ mat-expansion-panel {
 mat-expansion-panel .mat-expansion-panel-header {
   background-color: var(--mat-sys-surface-dim);
 }
-
-mat-chip {
-  @include mat.chips-overrides(
-    (
-      label-text-size: var(--mat-sys-label-medium-size),
-      container-height: 75%,
-    )
-  );
-}
-
-ul li mat-chip {
-  @include mat.chips-overrides(
-    (
-      label-text-size: var(--mat-sys-label-small-size),
-    )
-  );
-}
-
-p {
-  margin-bottom: 2px;
-}
-
-a {
-  @include mat.button-overrides(
-    (
-      outlined-label-text-size: var(--mat-sys-label-large-size),
-      protected-label-text-size: var(--mat-sys-label-large-size),
-      protected-container-color: var(--mat-sys-quaternary),
-    )
-  );
-}

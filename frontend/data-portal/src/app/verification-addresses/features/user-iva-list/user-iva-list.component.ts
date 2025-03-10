@@ -61,7 +61,7 @@ export class UserIvaListComponent implements OnInit {
   typeAndValue(iva: Iva): string {
     let text = IvaTypePrintable[iva.type];
     if (iva.value) {
-      text += `: ${iva.value}`;
+      text += `: ${iva.value}`;
     }
     return text;
   }
@@ -90,7 +90,7 @@ export class UserIvaListComponent implements OnInit {
     this.#confirm.confirm({
       title: 'Request verification of your address',
       message:
-        'We will send a verification code to the selected address (' +
+        'We will send a verification code to the address selected for verification (' +
         this.typeAndValue(iva) +
         '). Please allow some time for processing' +
         ' your request. When the verification code has been transmitted,' +
@@ -98,6 +98,7 @@ export class UserIvaListComponent implements OnInit {
       callback: (confirmed) => {
         if (confirmed) this.#requestVerification(iva);
       },
+      panelClass: 'text-justify',
     });
   }
 

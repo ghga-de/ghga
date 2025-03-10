@@ -31,7 +31,7 @@
           <div class="text-center">
             @switch (iva.state) {
               @case ('Verified') {
-                <div class="text-bold text-base text-green-500">
+                <div class="text-bold text-base text-success">
                   Address has been verified
                   <mat-icon class="align-bottom">done</mat-icon>
                 </div>
@@ -57,7 +57,7 @@
                 </button>
               }
               @default {
-                <div class="text-bold text-base text-orange-500">
+                <div class="text-bold text-base text-warning">
                   Verification requested
                   <mat-icon class="align-bottom">pending</mat-icon>
                 </div>
@@ -82,7 +82,7 @@
       <tr mat-row *matRowDef="let row; columns: ['value', 'state', 'del']"></tr>
     </table>
   }
-  <button (click)="enterNew()" mat-raised-button class="mt-4">
+  <button (click)="enterNew()" mat-raised-button class="raised-button-quaternary mt-4">
     <mat-icon>add</mat-icon>Add contact address
   </button>
 }

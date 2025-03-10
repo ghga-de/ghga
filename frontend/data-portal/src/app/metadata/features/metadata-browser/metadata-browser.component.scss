@@ -1,6 +1,6 @@
 @use '@angular/material' as mat;
 
-mat-chip-set mat-chip {
+mat-chip-set.filter-chips mat-chip {
   @include mat.chips-overrides(
     (
       outline-color: var(--mat-sys-tertiary),

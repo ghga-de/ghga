@@ -1,10 +1,10 @@
 @use '@angular/material' as mat;
 
 button {
-    @include mat.button-overrides(
-      (
-        protected-container-color: var(--mat-sys-quaternary),
-        protected-label-text-size: var(--mat-sys-label-large-size),
-      )
-    );
-  }
+  @include mat.button-overrides(
+    (
+      outlined-label-text-size: var(--mat-sys-label-large-size),
+      protected-label-text-size: var(--mat-sys-label-large-size),
+    )
+  );
+}
