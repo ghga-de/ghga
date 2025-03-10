@@ -39,90 +39,90 @@
       ],
       "title": "Mongo Timeout"
     },
-    "notification_event_topic": {
+    "notification_topic": {
       "description": "Name of the topic used for notification events.",
       "examples": [
         "notifications"
       ],
-      "title": "Notification Event Topic",
+      "title": "Notification Topic",
       "type": "string"
     },
-    "notification_event_type": {
+    "notification_type": {
       "description": "The type used for notification events.",
       "examples": [
         "notification"
       ],
-      "title": "Notification Event Type",
+      "title": "Notification Type",
       "type": "string"
     },
-    "user_events_topic": {
+    "user_topic": {
       "default": "users",
       "description": "The name of the topic containing user events.",
-      "title": "User Events Topic",
+      "title": "User Topic",
       "type": "string"
     },
-    "access_request_events_topic": {
-      "description": "Name of the event topic used to consume access request events",
+    "auth_topic": {
+      "description": "The name of the topic containing auth-related events.",
       "examples": [
-        "access_requests"
+        "auth-events"
       ],
-      "title": "Access Request Events Topic",
+      "title": "Auth Topic",
       "type": "string"
     },
-    "access_request_created_event_type": {
-      "description": "The type to use for access request created events",
-      "examples": [
-        "access_request_created"
-      ],
-      "title": "Access Request Created Event Type",
-      "type": "string"
-    },
-    "access_request_allowed_event_type": {
-      "description": "The type to use for access request allowed events",
-      "examples": [
-        "access_request_allowed"
-      ],
-      "title": "Access Request Allowed Event Type",
-      "type": "string"
-    },
-    "access_request_denied_event_type": {
-      "description": "The type to use for access request denied events",
-      "examples": [
-        "access_request_denied"
-      ],
-      "title": "Access Request Denied Event Type",
-      "type": "string"
-    },
-    "iva_state_changed_event_topic": {
-      "description": "The name of the topic containing IVA events.",
-      "examples": [
-        "ivas"
-      ],
-      "title": "Iva State Changed Event Topic",
-      "type": "string"
-    },
-    "iva_state_changed_event_type": {
-      "description": "The type to use for iva state changed events.",
-      "examples": [
-        "iva_state_changed"
-      ],
-      "title": "Iva State Changed Event Type",
-      "type": "string"
-    },
-    "second_factor_recreated_event_topic": {
-      "description": "The name of the topic containing second factor recreation events.",
-      "examples": [
-        "auth"
-      ],
-      "title": "Second Factor Recreated Event Topic",
-      "type": "string"
-    },
-    "second_factor_recreated_event_type": {
+    "second_factor_recreated_type": {
       "description": "The event type for recreation of the second factor for authentication",
       "examples": [
         "second_factor_recreated"
       ],
-      "title": "Second Factor Recreated Event Type",
+      "title": "Second Factor Recreated Type",
+      "type": "string"
+    },
+    "iva_state_changed_topic": {
+      "description": "The name of the topic containing IVA events.",
+      "examples": [
+        "ivas"
+      ],
+      "title": "Iva State Changed Topic",
+      "type": "string"
+    },
+    "iva_state_changed_type": {
+      "description": "The type to use for iva state changed events.",
+      "examples": [
+        "iva_state_changed"
+      ],
+      "title": "Iva State Changed Type",
+      "type": "string"
+    },
+    "access_request_topic": {
+      "description": "Name of the event topic used to consume access request events",
+      "examples": [
+        "access-requests"
+      ],
+      "title": "Access Request Topic",
+      "type": "string"
+    },
+    "access_request_denied_type": {
+      "description": "The type to use for access request denied events",
+      "examples": [
+        "access_request_denied"
+      ],
+      "title": "Access Request Denied Type",
+      "type": "string"
+    },
+    "access_request_created_type": {
+      "description": "The type to use for access request created events",
+      "examples": [
+        "access_request_created"
+      ],
+      "title": "Access Request Created Type",
+      "type": "string"
+    },
+    "access_request_allowed_type": {
+      "description": "The type to use for access request allowed events",
+      "examples": [
+        "access_request_allowed"
+      ],
+      "title": "Access Request Allowed Type",
       "type": "string"
     },
     "service_name": {
@@ -307,16 +307,16 @@
   "required": [
     "mongo_dsn",
     "db_name",
-    "notification_event_topic",
-    "notification_event_type",
-    "access_request_events_topic",
-    "access_request_created_event_type",
-    "access_request_allowed_event_type",
-    "access_request_denied_event_type",
-    "iva_state_changed_event_topic",
-    "iva_state_changed_event_type",
-    "second_factor_recreated_event_topic",
-    "second_factor_recreated_event_type",
+    "notification_topic",
+    "notification_type",
+    "auth_topic",
+    "second_factor_recreated_type",
+    "iva_state_changed_topic",
+    "iva_state_changed_type",
+    "access_request_topic",
+    "access_request_denied_type",
+    "access_request_created_type",
+    "access_request_allowed_type",
     "service_instance_id",
     "kafka_servers",
     "central_data_stewardship_email",

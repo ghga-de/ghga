@@ -16,59 +16,30 @@
 """Event subscriber definition."""
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import UserEventsConfig
+from ghga_event_schemas.configs.stateless import (
+    AccessRequestAllowedEventsConfig,
+    AccessRequestCreatedEventsConfig,
+    AccessRequestDeniedEventsConfig,
+    IvaChangeEventsConfig,
+    SecondFactorRecreatedEventsConfig,
+)
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from nos.ports.inbound.orchestrator import OrchestratorPort
 
 
-class EventSubTranslatorConfig(BaseSettings):
+class EventSubTranslatorConfig(
+    AccessRequestAllowedEventsConfig,
+    AccessRequestCreatedEventsConfig,
+    AccessRequestDeniedEventsConfig,
+    IvaChangeEventsConfig,
+    SecondFactorRecreatedEventsConfig,
+):
     """Config for the event subscriber"""
-
-    access_request_events_topic: str = Field(
-        default=...,
-        description="Name of the event topic used to consume access request events",
-        examples=["access_requests"],
-    )
-    access_request_created_event_type: str = Field(
-        default=...,
-        description="The type to use for access request created events",
-        examples=["access_request_created"],
-    )
-    access_request_allowed_event_type: str = Field(
-        default=...,
-        description="The type to use for access request allowed events",
-        examples=["access_request_allowed"],
-    )
-    access_request_denied_event_type: str = Field(
-        default=...,
-        description="The type to use for access request denied events",
-        examples=["access_request_denied"],
-    )
-    iva_state_changed_event_topic: str = Field(
-        default=...,
-        description="The name of the topic containing IVA events.",
-        examples=["ivas"],
-    )
-    iva_state_changed_event_type: str = Field(
-        default=...,
-        description="The type to use for iva state changed events.",
-        examples=["iva_state_changed"],
-    )
-    second_factor_recreated_event_topic: str = Field(
-        default=...,
-        description="The name of the topic containing second factor recreation events.",
-        examples=["auth"],
-    )
-    second_factor_recreated_event_type: str = Field(
-        default=...,
-        description="The event type for recreation of the second factor for authentication",
-        examples=["second_factor_recreated"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -78,16 +49,16 @@ class EventSubTranslator(EventSubscriberProtocol):
         self, *, config: EventSubTranslatorConfig, orchestrator: OrchestratorPort
     ):
         self.topics_of_interest = [
-            config.access_request_events_topic,
-            config.iva_state_changed_event_topic,
-            config.second_factor_recreated_event_topic,
+            config.access_request_topic,
+            config.iva_state_changed_topic,
+            config.auth_topic,
         ]
         self.types_of_interest = [
-            config.access_request_created_event_type,
-            config.access_request_allowed_event_type,
-            config.access_request_denied_event_type,
-            config.iva_state_changed_event_type,
-            config.second_factor_recreated_event_type,
+            config.access_request_created_type,
+            config.access_request_allowed_type,
+            config.access_request_denied_type,
+            config.iva_state_changed_type,
+            config.second_factor_recreated_type,
         ]
         self._config = config
         self._orchestrator = orchestrator
@@ -128,27 +99,22 @@ class EventSubTranslator(EventSubscriberProtocol):
         """Consumes an event"""
         match type_:
             case _ if type_ in (
-                self._config.access_request_created_event_type,
-                self._config.access_request_allowed_event_type,
-                self._config.access_request_denied_event_type,
+                self._config.access_request_created_type,
+                self._config.access_request_allowed_type,
+                self._config.access_request_denied_type,
             ):
                 await self._handle_access_request(type_, payload)
-            case self._config.iva_state_changed_event_type:
+            case self._config.iva_state_changed_type:
                 if key.startswith("all-"):
                     await self._handle_all_ivas_reset(payload=payload)
                 else:
                     await self._handle_iva_state_change(payload=payload)
-            case self._config.second_factor_recreated_event_type:
+            case self._config.second_factor_recreated_type:
                 await self._handle_second_factor_recreated(payload=payload)
 
 
-class OutboxSubTranslatorConfig(BaseSettings):
+class OutboxSubTranslatorConfig(UserEventsConfig):
     """Config for the outbox subscriber"""
-
-    user_events_topic: str = Field(
-        default="users",
-        description="The name of the topic containing user events.",
-    )
 
 
 class OutboxSubTranslator(DaoSubscriberProtocol[event_schemas.User]):
@@ -165,7 +131,7 @@ class OutboxSubTranslator(DaoSubscriberProtocol[event_schemas.User]):
     ):
         self._config = config
         self._orchestrator = orchestrator
-        self.event_topic = config.user_events_topic
+        self.event_topic = config.user_topic
 
     async def changed(self, resource_id: str, update: event_schemas.User) -> None:
         """Consume change event (created or updated) for user data."""

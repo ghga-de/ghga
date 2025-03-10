@@ -58,15 +58,15 @@ class Orchestrator(OrchestratorPort):
                 When the provided user ID does not exist in the DB.
         """
         event_type_assets: dict[str, tuple[str, Callable]] = {
-            self._config.access_request_created_event_type: (
+            self._config.access_request_created_type: (
                 "Access Request Created",
                 self._access_request_created,
             ),
-            self._config.access_request_allowed_event_type: (
+            self._config.access_request_allowed_type: (
                 "Access Request Allowed",
                 self._access_request_allowed,
             ),
-            self._config.access_request_denied_event_type: (
+            self._config.access_request_denied_type: (
                 "Access Request Denied",
                 self._access_request_denied,
             ),

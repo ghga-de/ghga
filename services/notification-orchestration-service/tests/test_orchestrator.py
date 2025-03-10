@@ -98,7 +98,7 @@ async def test_access_request(
     test_user = await joint_fixture.user_dao.get_by_id(TEST_USER.user_id)
 
     event_type_to_use = getattr(
-        joint_fixture.config, f"access_request_{event_type}_event_type"
+        joint_fixture.config, f"access_request_{event_type}_type"
     )
 
     assert event_type_to_use
@@ -120,12 +120,12 @@ async def test_access_request(
     expected = [
         ExpectedEvent(
             payload=user_notification.model_dump(),
-            type_=joint_fixture.config.notification_event_type,
+            type_=joint_fixture.config.notification_type,
             key=test_user.email,
         ),
         ExpectedEvent(
             payload=data_steward_notification.model_dump(),
-            type_=joint_fixture.config.notification_event_type,
+            type_=joint_fixture.config.notification_type,
             key=joint_fixture.config.central_data_stewardship_email,
         ),
     ]
@@ -134,13 +134,13 @@ async def test_access_request(
     await joint_fixture.kafka.publish_event(
         payload=access_request_payload(test_user.user_id),
         type_=event_type_to_use,
-        topic=joint_fixture.config.access_request_events_topic,
+        topic=joint_fixture.config.access_request_topic,
     )
 
     # Consume the event, triggering the generation of two notifications
     async with joint_fixture.kafka.expect_events(
         events=expected,
-        in_topic=joint_fixture.config.notification_event_topic,
+        in_topic=joint_fixture.config.notification_topic,
     ):
         await joint_fixture.event_subscriber.run(forever=False)
 
@@ -148,12 +148,12 @@ async def test_access_request(
     await joint_fixture.kafka.publish_event(
         payload=access_request_payload(test_user.user_id),
         type_=event_type_to_use,
-        topic=joint_fixture.config.access_request_events_topic,
+        topic=joint_fixture.config.access_request_topic,
     )
 
     async with joint_fixture.kafka.expect_events(
         events=expected,
-        in_topic=joint_fixture.config.notification_event_topic,
+        in_topic=joint_fixture.config.notification_topic,
     ):
         await joint_fixture.event_subscriber.run(forever=False)
 
@@ -167,9 +167,9 @@ async def test_missing_user_id_access_requests(
     payload = access_request_payload("bogus_user_id")
 
     event_types = (
-        joint_fixture.config.access_request_created_event_type,
-        joint_fixture.config.access_request_allowed_event_type,
-        joint_fixture.config.access_request_denied_event_type,
+        joint_fixture.config.access_request_created_type,
+        joint_fixture.config.access_request_allowed_type,
+        joint_fixture.config.access_request_denied_type,
     )
     notification_names = (
         "Access Request Created",
@@ -183,7 +183,7 @@ async def test_missing_user_id_access_requests(
         await joint_fixture.kafka.publish_event(
             payload=payload,
             type_=event_type,
-            topic=joint_fixture.config.access_request_events_topic,
+            topic=joint_fixture.config.access_request_topic,
         )
 
         async with joint_fixture.kafka.record_events(
@@ -218,10 +218,10 @@ async def test_missing_user_id_iva_state_changes(
     )
 
     event_types = (
-        joint_fixture.config.iva_state_changed_event_type,  # requested
-        joint_fixture.config.iva_state_changed_event_type,  # transmitted
-        joint_fixture.config.iva_state_changed_event_type,  # verified
-        joint_fixture.config.iva_state_changed_event_type,  # unverified
+        joint_fixture.config.iva_state_changed_type,  # requested
+        joint_fixture.config.iva_state_changed_type,  # transmitted
+        joint_fixture.config.iva_state_changed_type,  # verified
+        joint_fixture.config.iva_state_changed_type,  # unverified
     )
     notification_names = (
         "IVA Code Requested",
@@ -235,7 +235,7 @@ async def test_missing_user_id_iva_state_changes(
         await joint_fixture.kafka.publish_event(
             payload=payload,
             type_=event_type,
-            topic=joint_fixture.config.access_request_events_topic,
+            topic=joint_fixture.config.access_request_topic,
         )
 
         async with joint_fixture.kafka.record_events(
@@ -303,8 +303,8 @@ async def test_iva_state_change(
     # Publish the trigger event
     await joint_fixture.kafka.publish_event(
         payload=trigger_event.model_dump(),
-        type_=joint_fixture.config.iva_state_changed_event_type,
-        topic=joint_fixture.config.iva_state_changed_event_topic,
+        type_=joint_fixture.config.iva_state_changed_type,
+        topic=joint_fixture.config.iva_state_changed_topic,
         key=TEST_USER.user_id,
     )
 
@@ -351,14 +351,14 @@ async def test_iva_state_change(
             expected_events.append(
                 ExpectedEvent(
                     payload=notification.model_dump(),
-                    type_=joint_fixture.config.notification_event_type,
+                    type_=joint_fixture.config.notification_type,
                 )
             )
 
     # Consume the event and verify that the expected events are published
     async with joint_fixture.kafka.expect_events(
         events=expected_events,
-        in_topic=joint_fixture.config.notification_event_topic,
+        in_topic=joint_fixture.config.notification_topic,
     ):
         await joint_fixture.event_subscriber.run(forever=False)
 
@@ -376,8 +376,8 @@ async def test_all_ivas_reset(joint_fixture: JointFixture):
     # Publish the trigger event
     await joint_fixture.kafka.publish_event(
         payload=trigger_event.model_dump(),
-        type_=joint_fixture.config.iva_state_changed_event_type,
-        topic=joint_fixture.config.iva_state_changed_event_topic,
+        type_=joint_fixture.config.iva_state_changed_type,
+        topic=joint_fixture.config.iva_state_changed_topic,
         key=f"all-{TEST_USER.user_id}",
     )
 
@@ -397,13 +397,13 @@ If you have any questions, please contact the GHGA Helpdesk: {helpdesk_email}
 
     expected_event = ExpectedEvent(
         payload=expected_notification.model_dump(),
-        type_=joint_fixture.config.notification_event_type,
+        type_=joint_fixture.config.notification_type,
     )
 
     # consume the event and verify that the expected event is published
     async with joint_fixture.kafka.expect_events(
         events=[expected_event],
-        in_topic=joint_fixture.config.notification_event_topic,
+        in_topic=joint_fixture.config.notification_topic,
     ):
         await joint_fixture.event_subscriber.run(forever=False)
 
@@ -418,8 +418,8 @@ async def test_second_factor_recreated_notification(joint_fixture: JointFixture)
     # Publish the trigger event
     await joint_fixture.kafka.publish_event(
         payload=payload.model_dump(),
-        type_=joint_fixture.config.second_factor_recreated_event_type,
-        topic=joint_fixture.config.second_factor_recreated_event_topic,
+        type_=joint_fixture.config.second_factor_recreated_type,
+        topic=joint_fixture.config.auth_topic,
         key=TEST_USER.user_id,
     )
 
@@ -439,12 +439,12 @@ async def test_second_factor_recreated_notification(joint_fixture: JointFixture)
 
     expected_event = ExpectedEvent(
         payload=expected_notification.model_dump(),
-        type_=joint_fixture.config.notification_event_type,
+        type_=joint_fixture.config.notification_type,
     )
 
     # consume the event and verify that the expected event is published
     async with joint_fixture.kafka.expect_events(
         events=[expected_event],
-        in_topic=joint_fixture.config.notification_event_topic,
+        in_topic=joint_fixture.config.notification_topic,
     ):
         await joint_fixture.event_subscriber.run(forever=False)

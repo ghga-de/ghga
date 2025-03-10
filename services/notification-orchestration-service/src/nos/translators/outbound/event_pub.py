@@ -16,10 +16,9 @@
 """Translators that target the event publishing protocol."""
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import NotificationEventsConfig
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from nos.core.notifications import Notification
 from nos.ports.outbound.notification_emitter import NotificationEmitterPort
@@ -27,19 +26,8 @@ from nos.ports.outbound.notification_emitter import NotificationEmitterPort
 __all__ = ["NotificationEmitter", "NotificationEmitterConfig"]
 
 
-class NotificationEmitterConfig(BaseSettings):
+class NotificationEmitterConfig(NotificationEventsConfig):
     """Config for sending notification events."""
-
-    notification_event_topic: str = Field(
-        default=...,
-        description=("Name of the topic used for notification events."),
-        examples=["notifications"],
-    )
-    notification_event_type: str = Field(
-        default=...,
-        description=("The type used for notification events."),
-        examples=["notification"],
-    )
 
 
 class NotificationEmitter(NotificationEmitterPort):
@@ -52,8 +40,8 @@ class NotificationEmitter(NotificationEmitterPort):
         event_publisher: EventPublisherProtocol,
     ):
         """Initialize with config and a provider of the EventPublisherProtocol."""
-        self._event_topic = config.notification_event_topic
-        self._event_type = config.notification_event_type
+        self._event_topic = config.notification_topic
+        self._event_type = config.notification_type
         self._event_publisher = event_publisher
 
     async def notify(

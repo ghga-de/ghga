@@ -97,7 +97,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`notification_event_topic`** *(string, required)*: Name of the topic used for notification events.
+- **`notification_topic`** *(string, required)*: Name of the topic used for notification events.
 
 
   Examples:
@@ -107,7 +107,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`notification_event_type`** *(string, required)*: The type used for notification events.
+- **`notification_type`** *(string, required)*: The type used for notification events.
 
 
   Examples:
@@ -117,49 +117,29 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`user_events_topic`** *(string)*: The name of the topic containing user events. Default: `"users"`.
+- **`user_topic`** *(string)*: The name of the topic containing user events. Default: `"users"`.
 
-- **`access_request_events_topic`** *(string, required)*: Name of the event topic used to consume access request events.
-
-
-  Examples:
-
-  ```json
-  "access_requests"
-  ```
-
-
-- **`access_request_created_event_type`** *(string, required)*: The type to use for access request created events.
+- **`auth_topic`** *(string, required)*: The name of the topic containing auth-related events.
 
 
   Examples:
 
   ```json
-  "access_request_created"
+  "auth-events"
   ```
 
 
-- **`access_request_allowed_event_type`** *(string, required)*: The type to use for access request allowed events.
+- **`second_factor_recreated_type`** *(string, required)*: The event type for recreation of the second factor for authentication.
 
 
   Examples:
 
   ```json
-  "access_request_allowed"
+  "second_factor_recreated"
   ```
 
 
-- **`access_request_denied_event_type`** *(string, required)*: The type to use for access request denied events.
-
-
-  Examples:
-
-  ```json
-  "access_request_denied"
-  ```
-
-
-- **`iva_state_changed_event_topic`** *(string, required)*: The name of the topic containing IVA events.
+- **`iva_state_changed_topic`** *(string, required)*: The name of the topic containing IVA events.
 
 
   Examples:
@@ -169,7 +149,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`iva_state_changed_event_type`** *(string, required)*: The type to use for iva state changed events.
+- **`iva_state_changed_type`** *(string, required)*: The type to use for iva state changed events.
 
 
   Examples:
@@ -179,23 +159,43 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`second_factor_recreated_event_topic`** *(string, required)*: The name of the topic containing second factor recreation events.
+- **`access_request_topic`** *(string, required)*: Name of the event topic used to consume access request events.
 
 
   Examples:
 
   ```json
-  "auth"
+  "access-requests"
   ```
 
 
-- **`second_factor_recreated_event_type`** *(string, required)*: The event type for recreation of the second factor for authentication.
+- **`access_request_denied_type`** *(string, required)*: The type to use for access request denied events.
 
 
   Examples:
 
   ```json
-  "second_factor_recreated"
+  "access_request_denied"
+  ```
+
+
+- **`access_request_created_type`** *(string, required)*: The type to use for access request created events.
+
+
+  Examples:
+
+  ```json
+  "access_request_created"
+  ```
+
+
+- **`access_request_allowed_type`** *(string, required)*: The type to use for access request allowed events.
+
+
+  Examples:
+
+  ```json
+  "access_request_allowed"
   ```
 
 

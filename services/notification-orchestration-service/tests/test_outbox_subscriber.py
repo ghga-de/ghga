@@ -46,7 +46,7 @@ async def test_user_data_deletion(joint_fixture: JointFixture, user_id: str):
     await joint_fixture.kafka.publish_event(
         payload={},
         type_=DELETE_EVENT_TYPE,
-        topic=joint_fixture.config.user_events_topic,
+        topic=joint_fixture.config.user_topic,
         key=user_id,
     )
 
@@ -94,7 +94,7 @@ async def test_user_data_upsert(
     await joint_fixture.kafka.publish_event(
         payload=user.model_dump(),
         type_=CHANGE_EVENT_TYPE,
-        topic=joint_fixture.config.user_events_topic,
+        topic=joint_fixture.config.user_topic,
         key=user.user_id,
     )
 
@@ -133,7 +133,7 @@ async def test_user_reregistration_notifications(
     await joint_fixture.kafka.publish_event(
         payload=user.model_dump(),
         type_=CHANGE_EVENT_TYPE,
-        topic=joint_fixture.config.user_events_topic,
+        topic=joint_fixture.config.user_topic,
         key=user.user_id,
     )
 
@@ -155,10 +155,10 @@ async def test_user_reregistration_notifications(
         )
 
     # Compile expected events list
-    topic = joint_fixture.config.notification_event_topic
+    topic = joint_fixture.config.notification_topic
     expected_events = [
         ExpectedEvent(
-            type_=joint_fixture.config.notification_event_type,
+            type_=joint_fixture.config.notification_type,
             payload=notification.model_dump(),
             key=notification.recipient_email,
         )
