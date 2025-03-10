@@ -121,9 +121,10 @@ def get_version_diff(version_a: VersionInfo, version_b: VersionInfo) -> VersionI
 
 def bump_version(base_version: VersionInfo, version_diff: VersionInfo) -> VersionInfo:
     """Applies a semantic version difference to a base version."""
+    new_version = VersionInfo.parse("0.0.0")
     for part in ["major", "minor", "patch"]:
         if getattr(version_diff, part) > 0:
-            new_version = base_version.replace(
+            new_version = new_version.replace(
                 **{part: getattr(base_version, part) + getattr(version_diff, part)}
             )
             return new_version
