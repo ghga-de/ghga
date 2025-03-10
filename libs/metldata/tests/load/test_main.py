@@ -44,10 +44,10 @@ pytestmark = pytest.mark.asyncio()
 async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # noqa: F811
     """Test the happy path of using the load artifacts endpoint."""
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.dataset_change_event_topic
+        in_topic=joint_fixture.config.dataset_change_topic
     ) as dataset_recorder:
         async with joint_fixture.kafka.record_events(
-            in_topic=joint_fixture.config.resource_change_event_topic
+            in_topic=joint_fixture.config.resource_change_topic
         ) as resource_recorder:
             response = await joint_fixture.client.post(
                 "/rpc/load-artifacts",
@@ -145,10 +145,10 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
 
     # submit changed request
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.dataset_change_event_topic
+        in_topic=joint_fixture.config.dataset_change_topic
     ) as dataset_recorder:
         async with joint_fixture.kafka.record_events(
-            in_topic=joint_fixture.config.resource_change_event_topic
+            in_topic=joint_fixture.config.resource_change_topic
         ) as resource_recorder:
             response = await joint_fixture.client.post(
                 "/rpc/load-artifacts",
@@ -162,7 +162,7 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
         if event.key == f"dataset_embedded_{changed_accession}":
             assert event.type_ == joint_fixture.config.resource_upsertion_type
         else:
-            assert event.type_ == joint_fixture.config.resource_deletion_event_type
+            assert event.type_ == joint_fixture.config.resource_deletion_type
 
     assert len(dataset_recorder.recorded_events) == 3
 
@@ -177,10 +177,10 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
 
     # submit an empty request:
     async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.dataset_change_event_topic
+        in_topic=joint_fixture.config.dataset_change_topic
     ) as dataset_recorder:
         async with joint_fixture.kafka.record_events(
-            in_topic=joint_fixture.config.resource_change_event_topic
+            in_topic=joint_fixture.config.resource_change_topic
         ) as resource_recorder:
             response = await joint_fixture.client.post(
                 "/rpc/load-artifacts",
@@ -191,7 +191,7 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
 
     assert len(resource_recorder.recorded_events) == 9
     for event in resource_recorder.recorded_events:
-        assert event.type_ == joint_fixture.config.resource_deletion_event_type
+        assert event.type_ == joint_fixture.config.resource_deletion_type
 
     assert len(dataset_recorder.recorded_events) == 1
     for event in dataset_recorder.recorded_events:

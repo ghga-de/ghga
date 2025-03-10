@@ -197,7 +197,7 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
-dataset_change_event_topic: metadata_datasets
+dataset_change_topic: metadata_datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
 db_name: dev_db
@@ -227,8 +227,8 @@ openapi_url: /openapi.json
 port: 8080
 primary_artifact_name: embedded_public
 primary_dataset_name: EmbeddedDataset
-resource_change_event_topic: searchable_resources
-resource_deletion_event_type: searchable_resource_deleted
+resource_change_topic: searchable_resources
+resource_deletion_type: searchable_resource_deleted
 resource_upsertion_type: searchable_resource_upserted
 service_instance_id: '001'
 service_name: metldata

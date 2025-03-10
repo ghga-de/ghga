@@ -26,7 +26,7 @@ description = "metldata - A framework for handling metadata based on ETL, CQRS, 
 dependencies = [
     "hexkit[akafka,mongodb] >=4, <5",
     "ghga-service-commons[api,auth] >=3.3, <4",
-    "ghga-event-schemas >=3.0.0, <4",
+    "ghga-event-schemas >=4.1, <5",
     "typer>=0.12",
     "linkml==1.6.1",
     "linkml-runtime==1.6.0",

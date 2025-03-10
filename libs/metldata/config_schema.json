@@ -304,36 +304,20 @@
       "title": "Kafka Retry Backoff",
       "type": "integer"
     },
-    "primary_artifact_name": {
-      "description": "Name of the artifact from which the information for outgoing change events is derived.",
-      "examples": [
-        "embedded_public"
-      ],
-      "title": "Primary Artifact Name",
-      "type": "string"
-    },
-    "primary_dataset_name": {
-      "description": "Name of the resource class corresponding to the embedded_dataset slot.",
-      "examples": [
-        "EmbeddedDataset"
-      ],
-      "title": "Primary Dataset Name",
-      "type": "string"
-    },
-    "resource_change_event_topic": {
+    "resource_change_topic": {
       "description": "Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.",
       "examples": [
         "searchable_resources"
       ],
-      "title": "Resource Change Event Topic",
+      "title": "Resource Change Topic",
       "type": "string"
     },
-    "resource_deletion_event_type": {
+    "resource_deletion_type": {
       "description": "Type used for events indicating the deletion of a previously existing resource.",
       "examples": [
         "searchable_resource_deleted"
       ],
-      "title": "Resource Deletion Event Type",
+      "title": "Resource Deletion Type",
       "type": "string"
     },
     "resource_upsertion_type": {
@@ -344,12 +328,12 @@
       "title": "Resource Upsertion Type",
       "type": "string"
     },
-    "dataset_change_event_topic": {
+    "dataset_change_topic": {
       "description": "Name of the topic announcing, among other things, the list of files included in a new dataset.",
       "examples": [
         "metadata_datasets"
       ],
-      "title": "Dataset Change Event Topic",
+      "title": "Dataset Change Topic",
       "type": "string"
     },
     "dataset_deletion_type": {
@@ -366,6 +350,22 @@
         "dataset_created"
       ],
       "title": "Dataset Upsertion Type",
+      "type": "string"
+    },
+    "primary_artifact_name": {
+      "description": "Name of the artifact from which the information for outgoing change events is derived.",
+      "examples": [
+        "embedded_public"
+      ],
+      "title": "Primary Artifact Name",
+      "type": "string"
+    },
+    "primary_dataset_name": {
+      "description": "Name of the resource class corresponding to the embedded_dataset slot.",
+      "examples": [
+        "EmbeddedDataset"
+      ],
+      "title": "Primary Dataset Name",
       "type": "string"
     },
     "host": {
@@ -513,14 +513,14 @@
     "mongo_dsn",
     "db_name",
     "kafka_servers",
-    "primary_artifact_name",
-    "primary_dataset_name",
-    "resource_change_event_topic",
-    "resource_deletion_event_type",
+    "resource_change_topic",
+    "resource_deletion_type",
     "resource_upsertion_type",
-    "dataset_change_event_topic",
+    "dataset_change_topic",
     "dataset_deletion_type",
     "dataset_upsertion_type",
+    "primary_artifact_name",
+    "primary_dataset_name",
     "artifact_infos",
     "loader_token_hashes"
   ],
