@@ -23,3 +23,5 @@ vaultAgent:
   secrets:
     mongodb:
       enabled: true
+      vaultAgent:
+      parameterName: TEST_DB

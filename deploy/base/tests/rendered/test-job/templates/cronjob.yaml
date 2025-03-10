@@ -29,22 +29,22 @@ spec:
       template:
         metadata:
           annotations:
-        
-        vault.hashicorp.com/tls-skip-verify: "false"
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/agent-init-first: "true"
-        vault.hashicorp.com/agent-cache-enable: "true"
-        vault.hashicorp.com/agent-pre-populate-only: "false"
-        vault.hashicorp.com/agent-run-as-same-user: "true"
-        vault.hashicorp.com/role: "service-role"
-        vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
-          kill -TERM $(pgrep )
-        vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: database/creds/my-role
-        vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
-          {{- with secret "database/creds/my-role" -}}
-          export DB_URL="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
-          export DB_CONNECTION_STR=$DB_URL
-          {{- end -}}
+            
+            vault.hashicorp.com/tls-skip-verify: "false"
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-init-first: "true"
+            vault.hashicorp.com/agent-cache-enable: "true"
+            vault.hashicorp.com/agent-pre-populate-only: "false"
+            vault.hashicorp.com/agent-run-as-same-user: "true"
+            vault.hashicorp.com/role: "service-role"
+            vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
+              kill -TERM $(pgrep )
+            vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: database/creds/my-role
+            vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
+              {{- with secret "database/creds/my-role" -}}
+              export TEST_DB="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
+              export DB_CONNECTION_STR=$TEST_DB
+              {{- end -}}
           labels:
             app.kubernetes.io/name: test-job
             helm.sh/chart: test-job-0.0.0

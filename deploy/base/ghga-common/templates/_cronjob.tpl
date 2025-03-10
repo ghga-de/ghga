@@ -35,7 +35,7 @@ spec:
             {{- .Values.podAnnotations | toYaml | nindent 12}}
             {{- end }}
             {{- if .Values.vaultAgent.enabled }}
-            {{- include "ghga-common.vaultAgentAnnotations" . | nindent 8 }}
+            {{- include "ghga-common.vaultAgentAnnotations" . | nindent 12 }}
             {{- end }}
           labels: {{- include "common.labels.standard" . | nindent 12 }}
             app: {{ include "common.names.fullname" . }}
