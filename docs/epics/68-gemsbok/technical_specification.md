@@ -58,14 +58,15 @@ class PersistentKafkaPublisher(EventPublisherProtocol):
 ### Background - Different Event Categories
 We currently publish two categories of events ("categories" is used to avoid confusion 
 with the event `type`):
-2. "Normal"/"non-outbox"-category Events
+
+1. "Normal"/"non-outbox"-category Events
    - E.g. file staging requests, file upload validation success, notifications, etc.
    - These events communicate, for example, that something happened or must be done
    - They are inherently concerned with *action* and are therefore *stateless*.
    - These events are not currently stored in the database and there is no easy way
      to retrigger them if Kafka data is lost.
    - This event category predates the outbox category is considered our default
-3. "Outbox"-category Events
+2. "Outbox"-category Events
    - E.g. user info published by the `UMS`.
    - These events share the latest state of domain object info with the goal of
      helping other services maintain their own copy of the shared information.
