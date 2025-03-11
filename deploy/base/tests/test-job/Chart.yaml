@@ -19,7 +19,7 @@ apiVersion: v2
 
 dependencies:
 - name: ghga-common
-  version: 2.1.11
+  version: 2.1.12
   repository: file://../../ghga-common
   import-values:
   - defaults

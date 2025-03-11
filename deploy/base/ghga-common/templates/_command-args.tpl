@@ -9,8 +9,7 @@ command: ["sh", "-c"]
 {{ if (index . 0).Values.vaultAgent.enabled }}
 args:
   - if [ -d "/vault/secrets" ]; then
-      cd /vault/secrets;
-      for f in *; do
+      for f in /vault/secrets/*; do
         if [ -f "$f" ]; then
           . "$f";
         fi;
