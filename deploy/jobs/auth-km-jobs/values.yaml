@@ -6,8 +6,8 @@ configPrefix: auth_km_jobs
 cronSchedule: "0 0 1 1 0"
 
 containers:
-- name: job
-  type: "job"
+- name: default
+  type: default
   cmd: "run refresh-int-keys"
   config: {}
 # internal: run refresh-int-keys
