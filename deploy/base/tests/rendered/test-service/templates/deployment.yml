@@ -27,13 +27,12 @@ spec:
     metadata:
       annotations:
         configmap-hash: 3aeb595e6f617b483410469acd65afb0067cb17642d026dccb8fd14d05f98b60
-        
-        vault.hashicorp.com/tls-skip-verify: "false"
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/agent-init-first: "true"
         vault.hashicorp.com/agent-cache-enable: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/agent-pre-populate-only: "false"
         vault.hashicorp.com/agent-run-as-same-user: "true"
+        vault.hashicorp.com/tls-skip-verify: "false"
         vault.hashicorp.com/role: "service-role"
         vault.hashicorp.com/agent-inject-command-service-secrets: |
           kill -TERM $(pgrep python)

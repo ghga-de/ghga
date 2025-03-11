@@ -204,6 +204,13 @@ exports:
 
     vaultAgent:
       enabled: false
+      annotations:
+        vault.hashicorp.com/tls-skip-verify: "false"
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/agent-cache-enable: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "false"
+        vault.hashicorp.com/agent-run-as-same-user: "true"
       role: service-role
       pgrepPattern: python
       secrets:

@@ -29,13 +29,12 @@ spec:
       template:
         metadata:
           annotations:
-            
-            vault.hashicorp.com/tls-skip-verify: "false"
-            vault.hashicorp.com/agent-inject: "true"
-            vault.hashicorp.com/agent-init-first: "true"
             vault.hashicorp.com/agent-cache-enable: "true"
+            vault.hashicorp.com/agent-init-first: "true"
+            vault.hashicorp.com/agent-inject: "true"
             vault.hashicorp.com/agent-pre-populate-only: "false"
             vault.hashicorp.com/agent-run-as-same-user: "true"
+            vault.hashicorp.com/tls-skip-verify: "false"
             vault.hashicorp.com/role: "service-role"
             vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
               kill -TERM $(pgrep python)

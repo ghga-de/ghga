@@ -1,12 +1,7 @@
 {{- define "ghga-common.vaultAgentAnnotations" -}}
 {{/* Vault agent boilerplate */}}
 {{- $envPrefix := eq .Values.configPrefix "" | ternary "" (print .Values.configPrefix "_" | upper) }}
-vault.hashicorp.com/tls-skip-verify: "false"
-vault.hashicorp.com/agent-inject: "true"
-vault.hashicorp.com/agent-init-first: "true"
-vault.hashicorp.com/agent-cache-enable: "true"
-vault.hashicorp.com/agent-pre-populate-only: "false"
-vault.hashicorp.com/agent-run-as-same-user: "true"
+{{- .Values.vaultAgent.annotations | toYaml }}
 vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
 {{- if .Values.vaultAgent.secrets -}}
 {{/* Template to inject MongoDB connection string derived from Vault database engine */}}
