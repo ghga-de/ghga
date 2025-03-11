@@ -128,6 +128,8 @@ def bump_version(base_version: VersionInfo, version_diff: VersionInfo) -> Versio
                 **{part: getattr(base_version, part) + getattr(version_diff, part)}
             )
             return new_version
+        else:
+            new_version = new_version.replace(**{part: getattr(base_version, part)})
 
 
 if __name__ == "__main__":
