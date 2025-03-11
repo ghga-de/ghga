@@ -18,7 +18,7 @@ containerSecurityContext:
 containers:
 - name: rest
   type: "rest"
-  cmd: "python /service/configure_build_serve/run.py"
+  cmd: "node /home/appuser/run.mjs"
   config:
     name: parameters
     key: parameters
