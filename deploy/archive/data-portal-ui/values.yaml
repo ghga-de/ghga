@@ -13,6 +13,8 @@ parameters:
 
 containerSecurityContext:
   readOnlyRootFilesystem: false
+  # In Data-Portal-UI, node is user 1000 and appuser is user 1001
+  runAsUser: 1001
 
 # Type needs to be fixed, it is used for exposed pods and probes
 containers:
