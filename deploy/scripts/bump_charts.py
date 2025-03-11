@@ -125,7 +125,7 @@ def bump_version(base_version: VersionInfo, version_diff: VersionInfo) -> Versio
     for part in ["major", "minor", "patch"]:
         if getattr(version_diff, part) > 0:
             new_version = new_version.replace(
-                **{part: getattr(base_version, part) + getattr(version_diff, part)}
+                **{part: getattr(base_version, part) + 1}
             )
             return new_version
         else:
