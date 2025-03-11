@@ -36,7 +36,7 @@ spec:
         vault.hashicorp.com/agent-run-as-same-user: "true"
         vault.hashicorp.com/role: "service-role"
         vault.hashicorp.com/agent-inject-command-service-secrets: |
-          kill -TERM $(pgrep )
+          kill -TERM $(pgrep python)
         vault.hashicorp.com/agent-inject-secret-service-secrets: operational-secrets/data/unique/apps/archive/service
         vault.hashicorp.com/agent-inject-template-service-secrets: |
           {{ with secret "operational-secrets/data/unique/apps/archive/service" -}}

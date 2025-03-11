@@ -15,7 +15,7 @@ vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
 {{- $vaultSecretPath := .Values.vaultAgent.secrets.mongodb.secretPath }}
 {{- $connectionString := .Values.vaultAgent.secrets.mongodb.connectionString }}
 vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
-  kill -TERM $(pgrep {{ .Values.vaultAgent.secrets.mongodb.pgrepPattern }})
+  kill -TERM $(pgrep {{ .Values.vaultAgent.pgrepPattern }})
 vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: {{ $vaultSecretPath }}
 vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
   {{ print `{{- with secret "` $vaultSecretPath `" -}}` }}
@@ -30,7 +30,7 @@ vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
 {{- if .Values.vaultAgent.secrets.service.enabled }}
 {{- $vaultSecretPath := .Values.vaultAgent.secrets.service.secretPath }}
 vault.hashicorp.com/agent-inject-command-service-secrets: |
-  kill -TERM $(pgrep {{ .Values.vaultAgent.secrets.service.pgrepPattern }})
+  kill -TERM $(pgrep {{ .Values.vaultAgent.pgrepPattern }})
 vault.hashicorp.com/agent-inject-secret-service-secrets: {{ $vaultSecretPath }}
 vault.hashicorp.com/agent-inject-template-service-secrets: |
   {{ print `{{ with secret "` $vaultSecretPath `" -}}` }}
@@ -78,7 +78,7 @@ vault.hashicorp.com/agent-inject-secret-{{ $secretName }}: {{ $vaultSecretPath }
 {{- $dataKey := $secret.dataKey }}
 {{- $parameterName := $secret.parameterName }}
 vault.hashicorp.com/agent-inject-command-{{ $secretName }}: |
-  kill -TERM $(pgrep {{ hasKey $secret "pgrepPattern" | ternary $secret.pgrepPattern "python" }})
+  kill -TERM $(pgrep {{ $.Values.vaultAgent.pgrepPattern }})
 vault.hashicorp.com/agent-inject-secret-{{ $secretName }}: {{ $vaultSecretPath }}
 vault.hashicorp.com/agent-inject-template-{{ $secretName }}: |
   {{ print `{{ with secret ` ($vaultSecretPath | quote)  ` -}}` }}
