@@ -68,19 +68,19 @@ class AuthContext(BaseModel):
         title="User ID",
         description="The internal ID of the authenticated user in GHGA",
     )
-    role: Optional[str] = Field(
-        default=None,
-        title="User role",
-        description="Possible special role of the user in GHGA",
+    roles: list[str] = Field(
+        default=[],
+        title="User roles",
+        description="Possible special roles of the user in GHGA",
     )
 
 
 def has_role(context: AuthContext, role: str) -> bool:
     """Check whether the user with the given context has the given role."""
-    user_role = context.role
-    if user_role and "@" not in role:
-        user_role = user_role.split("@", 1)[0]
-    return role == user_role
+    user_roles = context.roles
+    if "@" in role:
+        return role in user_roles
+    return any(user_role.split("@", 1)[0] == role for user_role in user_roles)
 
 
 class AuthConfig(JWTAuthConfig):

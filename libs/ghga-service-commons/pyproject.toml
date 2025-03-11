@@ -23,7 +23,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "3.4.1"
+version = "4.0.0"
 description = "A library that contains common functionality used in services of GHGA"
 dependencies = [
     "pydantic >=2, <3",
@@ -171,6 +171,7 @@ no_site_packages = false
 [tool.pytest.ini_options]
 minversion = "8.0"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.tox]
-legacy_tox_ini = "    [tox]\n    env_list = py3{9,12}\n\n    [gh-actions]\n    python =\n        3.9: py39\n        3.10: py310\n        3.11: py311\n        3.12: py312\n\n    [testenv]\n    pass_env =\n        TC_HOST\n        DOCKER_HOST\n    deps =\n        --no-deps -r ./lock/requirements-dev.txt\n    commands = pytest {posargs}\n"
+legacy_tox_ini = "    [tox]\n    env_list = py3{9,12,13}\n\n    [gh-actions]\n    python =\n        3.9: py39\n        3.10: py310\n        3.11: py311\n        3.12: py312\n        3.13: py313\n\n    [testenv]\n    pass_env =\n        TC_HOST\n        DOCKER_HOST\n    deps =\n        --no-deps -r ./lock/requirements-dev.txt\n    commands = pytest {posargs}\n"

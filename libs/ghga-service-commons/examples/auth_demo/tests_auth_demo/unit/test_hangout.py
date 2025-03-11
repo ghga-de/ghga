@@ -16,32 +16,31 @@
 
 """Test the core application."""
 
-from pytest import fixture, mark
+import pytest
 
 from auth_demo.core import Hangout, HangoutConfig
 
+pytestmark = pytest.mark.asyncio
 
-@fixture
+
+@pytest.fixture
 def hangout() -> Hangout:
     """Provide demo application with default configuration."""
     config = HangoutConfig()
     return Hangout(config=config)
 
 
-@mark.asyncio
 async def test_reception(hangout):
     """Test the reception method."""
     assert await hangout.reception() == "Hello, anonymous user!"
     assert await hangout.reception("John") == "Hello, John!"
 
 
-@mark.asyncio
 async def test_lobby(hangout):
     """Test the lobby method."""
     assert await hangout.lobby("John") == "Hello, John!"
 
 
-@mark.asyncio
 async def test_lounge(hangout):
     """Test the lounge method."""
     assert await hangout.lounge("John") == "Hello, dear John, have a beer!"

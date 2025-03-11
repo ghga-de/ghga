@@ -32,7 +32,7 @@ context_kwargs = {
     "iat": utc_datetime(2022, 11, 15, 12, 0, 0),
     "exp": utc_datetime(2022, 11, 15, 13, 0, 0),
     "id": "some-internal-id",
-    "role": "admin",
+    "roles": ["admin"],
 }
 
 
@@ -45,12 +45,12 @@ def test_create_auth_context():
 def test_has_role():
     """Test that roles of the GHGA auth context can be checked."""
     context = AuthContext(**context_kwargs)  # type: ignore
-    assert context.role == "admin"
+    assert context.roles == ["admin"]
     assert has_role(context, "admin")
     assert not has_role(context, "operator")
     assert not has_role(context, "admin@home")
     assert not has_role(context, "admin@office")
-    context.role = "admin@office"
+    context.roles = ["admin@office"]
     assert has_role(context, "admin")
     assert not has_role(context, "operator")
     assert has_role(context, "admin@office")

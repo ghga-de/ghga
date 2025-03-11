@@ -19,12 +19,14 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
+import pytest
 from jwcrypto import jwk, jwt
 from pydantic import BaseModel
-from pytest import fixture, mark, raises
 
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+
+pytestmark = pytest.mark.asyncio
 
 AUTH_KEY_PAIR = jwk.JWK.generate(kty="RSA", size=2048)
 
@@ -57,7 +59,7 @@ class AuthConfig(JWTAuthConfig):
     }
 
 
-@fixture
+@pytest.fixture
 def jwt_auth():
     """Get a JWT based auth provider for testing."""
     config = AuthConfig()
@@ -104,7 +106,6 @@ def create_token(
     return token.serialize()
 
 
-@mark.asyncio
 async def test_valid_context(jwt_auth):
     """Test getting a valid auth context."""
     token = create_token()
@@ -118,7 +119,6 @@ async def test_valid_context(jwt_auth):
     assert str(context.expiry - context.issued) == "0:10:00"
 
 
-@mark.asyncio
 async def test_admin_context(jwt_auth):
     """Test getting a valid auth context for an admin."""
     token = create_token("Jane Roe", TokenModifier.ADMIN)
@@ -132,36 +132,32 @@ async def test_admin_context(jwt_auth):
     assert str(context.expiry - context.issued) == "0:10:00"
 
 
-@mark.asyncio
 async def test_empty_token(jwt_auth):
     """Test getting an auth context with empty token."""
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Empty token"
-    with raises(expected_error, match=expected_message):
+    with pytest.raises(expected_error, match=expected_message):
         await jwt_auth.get_context("")
 
 
-@mark.asyncio
 async def test_invalid_key(jwt_auth):
     """Test getting an auth context with invalid signing key."""
     token = create_token(modify=TokenModifier.BAD_KEY)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Verification failed"
-    with raises(expected_error, match=expected_message):
+    with pytest.raises(expected_error, match=expected_message):
         await jwt_auth.get_context(token)
 
 
-@mark.asyncio
 async def test_invalid_algorithm(jwt_auth):
     """Test getting an auth context with invalid signature algorithm."""
     token = create_token(modify=TokenModifier.BAD_ALG)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: .*Algorithm not allowed"
-    with raises(expected_error, match=expected_message):
+    with pytest.raises(expected_error, match=expected_message):
         await jwt_auth.get_context(token)
 
 
-@mark.asyncio
 async def test_corrupted_token(jwt_auth):
     """Test getting an auth context with corrupted token."""
     token = create_token()
@@ -170,35 +166,32 @@ async def test_corrupted_token(jwt_auth):
     token = token[:-3] + last_chars
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Verification failed"
-    with raises(expected_error, match=expected_message):
+    with pytest.raises(expected_error, match=expected_message):
         await jwt_auth.get_context(token)
 
 
-@mark.asyncio
 async def test_expired_context(jwt_auth):
     """Test getting an expired auth context."""
     token = create_token(modify=TokenModifier.EXPIRED)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Expired at"
-    with raises(expected_error, match=expected_message):
+    with pytest.raises(expected_error, match=expected_message):
         await jwt_auth.get_context(token)
 
 
-@mark.asyncio
 async def test_missing_subject(jwt_auth):
     """Test getting an auth context with missing claim."""
     token = create_token(modify=TokenModifier.NO_SUB)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Claim sub is missing"
-    with raises(expected_error, match=expected_message):
+    with pytest.raises(expected_error, match=expected_message):
         await jwt_auth.get_context(token)
 
 
-@mark.asyncio
 async def test_invalid_subject(jwt_auth):
     """Test getting an auth context with invalid claim."""
     token = create_token(modify=TokenModifier.BAD_SUB)
     expected_error = jwt_auth.AuthContextValidationError
     expected_message = "Not a valid token: Claim .* not a String"
-    with raises(expected_error, match=expected_message):
+    with pytest.raises(expected_error, match=expected_message):
         await jwt_auth.get_context(token)

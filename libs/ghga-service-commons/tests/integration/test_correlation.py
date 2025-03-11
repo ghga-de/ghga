@@ -41,8 +41,9 @@ from ghga_service_commons.http.correlation import (
     attach_correlation_id_to_requests,
 )
 
-VALID_CORRELATION_ID = "5deb0e61-5058-4e96-92d4-0529d045832e"
 pytestmark = pytest.mark.asyncio()
+
+VALID_CORRELATION_ID = "5deb0e61-5058-4e96-92d4-0529d045832e"
 
 
 @pytest.mark.parametrize(

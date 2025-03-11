@@ -18,8 +18,8 @@
 
 import base64
 
+import pytest
 from nacl.public import PrivateKey, PublicKey
-from pytest import raises
 
 from ghga_service_commons.utils.crypt import (
     KeyPair,
@@ -52,9 +52,9 @@ def test_decode_valid_key():
 
 def test_decode_invalid_key():
     """Test that invalid base64 encoded can be detected."""
-    with raises(ValueError, match="Incorrect padding"):
+    with pytest.raises(ValueError, match="Incorrect padding"):
         decode_key("foo")
-    with raises(ValueError, match="Invalid key"):
+    with pytest.raises(ValueError, match="Invalid key"):
         decode_key(base64.b64encode(b"foo").decode("ascii"))
 
 
@@ -65,7 +65,7 @@ def test_encode_valid_key():
 
 def test_encode_invalid_key():
     """Test that invalid raw keys can be detected."""
-    with raises(ValueError, match="Invalid key"):
+    with pytest.raises(ValueError, match="Invalid key"):
         encode_key(b"foo")
 
 

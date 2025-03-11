@@ -25,6 +25,8 @@ from auth_demo.config import Config
 from auth_demo.inject import prepare_rest_app
 from ghga_service_commons.api.testing import AsyncTestClient
 
+pytestmark = pytest.mark.asyncio
+
 
 async def get_app() -> FastAPI:
     """Get the demo app."""
@@ -56,7 +58,6 @@ def get_token(users: list[dict], name: str) -> str:
     return token
 
 
-@pytest.mark.asyncio
 async def test_index(client):
     """Test the index endpoint."""
     response = await client.get("/")
@@ -68,7 +69,6 @@ async def test_index(client):
     assert "reception" in res["endpoints"]
 
 
-@pytest.mark.asyncio
 async def test_users(client):
     """Test the users endpoint."""
     response = await client.get("/users")
@@ -81,7 +81,6 @@ async def test_users(client):
     assert get_token(users, "Ada")
 
 
-@pytest.mark.asyncio
 async def test_status(client):
     """Test the status endpoint."""
     response = await client.get("/status")
@@ -100,7 +99,6 @@ async def test_status(client):
     assert res["status"].startswith("logged in until")
 
 
-@pytest.mark.asyncio
 async def test_reception(client):
     """Test the reception endpoint."""
     response = await client.get("/reception")
@@ -121,7 +119,6 @@ async def test_reception(client):
     assert res == {"message": "Hello, Grace Hopper!"}
 
 
-@pytest.mark.asyncio
 async def test_lobby(client):
     """Test the lobby endpoint."""
     response = await client.get("/lobby")
@@ -138,7 +135,6 @@ async def test_lobby(client):
     assert res == {"message": "Hello, Ada Lovelace!"}
 
 
-@pytest.mark.asyncio
 async def test_lounge(client):
     """Test the lounge endpoint."""
     response = await client.get("/lounge")

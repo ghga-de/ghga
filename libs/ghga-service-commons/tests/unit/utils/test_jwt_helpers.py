@@ -15,8 +15,8 @@
 
 """Test the utils.jwt_helpers module."""
 
+import pytest
 from jwcrypto.common import JWException
-from pytest import raises
 
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
@@ -32,7 +32,7 @@ def test_sign_and_validate():
     assert isinstance(key_dict, dict)
     assert key_dict["kty"] == "EC" and key_dict["crv"] == "P-256"
     assert key_dict["d"] and key_dict["x"] and key_dict["y"]
-    claims = {"name": "John Doe", "role": "admin"}
+    claims = {"name": "John Doe", "status": "VIP"}
     token = sign_and_serialize_token(claims, key, valid_seconds=300)
     assert isinstance(token, str)
     assert len(token) > 80
@@ -47,5 +47,5 @@ def test_sign_and_validate():
     last_chars = token[-3:]
     last_chars = "bar" if last_chars == "foo" else "foo"
     token = token[:-3] + last_chars
-    with raises(JWException):
+    with pytest.raises(JWException):
         decode_and_validate_token(token, key)
