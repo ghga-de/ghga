@@ -9,6 +9,7 @@ containers:
 - name: job
   type: "job"
   cmd: "run refresh-int-keys"
+  config: {}
 # internal: run refresh-int-keys
 # external: run refresh-ext-keys
 # wps: run refresh-wps-keys
