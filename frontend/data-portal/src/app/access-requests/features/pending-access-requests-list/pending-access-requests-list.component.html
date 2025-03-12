@@ -16,6 +16,7 @@
             <a
               class="text-quaternary hover:text-secondary focus:text-secondary"
               routerLink="/dataset/{{ request.dataset_id }}"
+              data-umami-event="Pending Access Requests List Dataset Clicked"
               >{{ request.dataset_id }}</a
             >
             from {{ request.access_starts | date: friendlyDateFormat }} to

@@ -18,15 +18,27 @@
     @if (roleNames().length) {
       <p>You are logged in as a {{ roleNames()[0] }}.</p>
     }
-    <button (click)="gotoAccount()" mat-menu-item>
+    <button
+      (click)="gotoAccount()"
+      mat-menu-item
+      data-umami-event="Account Button Menu Account Clicked"
+    >
       <mat-icon class="text-secondary">account_circle</mat-icon>
       <span class="text-secondary">Your GHGA account page</span>
     </button>
-    <button (click)="manageLsLogin()" mat-menu-item>
+    <button
+      (click)="manageLsLogin()"
+      mat-menu-item
+      data-umami-event="Account Button Menu LS Login Clicked"
+    >
       <mat-icon class="text-quaternary">open_in_new</mat-icon>
       <span class="text-quaternary">Manage LS Login account</span>
     </button>
-    <button (click)="onLogout()" mat-menu-item>
+    <button
+      (click)="onLogout()"
+      mat-menu-item
+      data-umami-event="Account Button Menu Logout Clicked"
+    >
       <mat-icon class="text-tertiary">logout</mat-icon>
       <span class="text-tertiary">Log out</span>
     </button>
@@ -37,6 +49,7 @@
     [matMenuTriggerFor]="menu"
     aria-label="Log out"
     matTooltip="Log out from the GHGA portal"
+    data-umami-event="Account Button Log Out Clicked"
   >
     <mat-icon>logout</mat-icon>
   </button>
@@ -46,11 +59,19 @@
       You need to complete your {{ ongoingProcess() }} with the GHGA Data Portal before
       you can start using your account.
     </p>
-    <button (click)="continue()" mat-menu-item>
+    <button
+      (click)="continue()"
+      mat-menu-item
+      data-umami-event="Account Button Menu Continue Clicked"
+    >
       <mat-icon class="text-quaternary">arrow_forward</mat-icon>
       <span class="text-quaternary">Complete {{ ongoingProcess() }} </span>
     </button>
-    <button (click)="onLogout()" mat-menu-item>
+    <button
+      (click)="onLogout()"
+      mat-menu-item
+      data-umami-event="Account Button Menu Cancel Clicked"
+    >
       <mat-icon class="text-quaternary">logout</mat-icon>
       <span class="text-quaternary">Cancel and log out</span>
     </button>
@@ -75,7 +96,12 @@
       university, research institute or a commercial service) and link it to your LS ID.
       Alternatively, you can also activate an LS account with username and password.
     </p>
-    <button (click)="onLogin()" mat-menu-item matTooltip="Log in via LS Login">
+    <button
+      (click)="onLogin()"
+      mat-menu-item
+      matTooltip="Log in via LS Login"
+      data-umami-event="Account Button Menu LS Login Clicked"
+    >
       <mat-icon class="text-quaternary">login</mat-icon>
       <img src="assets/images/ls-login.png" alt="LS Login" class="my-2" />
     </button>

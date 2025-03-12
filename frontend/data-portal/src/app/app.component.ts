@@ -10,6 +10,7 @@ import { RouterOutlet } from '@angular/router';
 import { SiteFooterComponent } from '@app/portal/features/site-footer/site-footer.component';
 import { SiteHeaderComponent } from '@app/portal/features/site-header/site-header.component';
 import { VersionRibbonComponent } from '@app/portal/features/version-ribbon/version-ribbon.component';
+import { UmamiService } from './shared/services/umami.service';
 
 /**
  * This is the root component of the application.
@@ -26,6 +27,7 @@ import { VersionRibbonComponent } from '@app/portal/features/version-ribbon/vers
 })
 export class AppComponent implements OnInit {
   #matIconReg = inject(MatIconRegistry);
+  #umami = inject(UmamiService);
 
   /**
    * Run on App component initialization

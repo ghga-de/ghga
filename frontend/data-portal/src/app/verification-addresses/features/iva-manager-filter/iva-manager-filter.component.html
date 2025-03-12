@@ -16,6 +16,7 @@
             aria-label="Remove filter for user name"
             [class.invisible]="!this.name()"
             (click)="this.name.set('')"
+            data-umami-event="IVA Manager Filters User Name Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>
@@ -36,6 +37,7 @@
             aria-label="Remove filter for dates ranging from"
             [class.invisible]="!this.fromDate()"
             (click)="this.fromDate.set(undefined)"
+            data-umami-event="IVA Manager Filters Changed Dates From Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>
@@ -56,6 +58,7 @@
             aria-label="Remove filter for dates ranging from"
             [class.invisible]="!this.toDate()"
             (click)="this.toDate.set(undefined)"
+            data-umami-event="IVA Manager Filters Changed Dates To Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>
@@ -80,6 +83,7 @@
             aria-label="Remove filter for status"
             [class.invisible]="!this.state()"
             (click)="this.state.set(undefined)"
+            data-umami-event="IVA Manager Filters State Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>

@@ -9,6 +9,7 @@
       mat-raised-button
       class="raised-button-quaternary w-full"
       routerLink="/work-package"
+      data-umami-event="Dynamic Access Request Button Download Clicked"
     >
       <mat-icon>download</mat-icon>Download the Data
     </button>
@@ -18,6 +19,7 @@
       mat-raised-button
       class="raised-button-quaternary w-full"
       (click)="showNewAccessRequestDialog()"
+      data-umami-event="Dynamic Access Request Button Request Access Clicked"
     >
       <mat-icon>key</mat-icon>Request Access
     </button>

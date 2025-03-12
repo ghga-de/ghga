@@ -1,7 +1,11 @@
 <mat-toolbar>
   <mat-toolbar-row class="align-center flex justify-between">
     <div class="flex h-full basis-1/4">
-      <a matRipple routerLink="/" class="flex h-full flex-nowrap items-center px-4 py-3"
+      <a
+        matRipple
+        routerLink="/"
+        class="flex h-full flex-nowrap items-center px-4 py-3"
+        data-umami-event="Site Header Home Clicked"
         ><img
           src="assets/images/ghga-logo-clean.png"
           class="max-h-12"
@@ -21,12 +25,14 @@
         mat-button
         routerLink="/"
         class="homeLink mx-1"
+        data-umami-event="Site Header Home Clicked"
         >Home</a
       ><a
         [id]="['browse', 'dataset'].includes(route()) ? 'activePage' : ''"
         mat-button
         routerLink="/browse"
         class="mx-1"
+        data-umami-event="Site Header Browse Clicked"
         >Browse Data</a
       >
       <a
@@ -35,6 +41,7 @@
         target="_blank"
         rel="noreferrer noopener"
         class="mx-1 flex-row-reverse"
+        data-umami-event="Site Header Open FAQ Clicked"
         >FAQ<mat-icon class="float-right">open_in_new</mat-icon></a
       >
       <a
@@ -43,6 +50,7 @@
         target="_blank"
         rel="noreferrer noopener"
         class="mx-1 flex-row-reverse"
+        data-umami-event="Site Header Open Documentation Clicked"
         >Docs<mat-icon class="float-right">open_in_new</mat-icon></a
       ><app-admin-menu></app-admin-menu>
     </mat-nav-list>

@@ -15,6 +15,7 @@
             aria-label="Remove filter for dataset ID"
             [class.invisible]="!this.datasetId()"
             (click)="this.datasetId.set('')"
+            data-umami-event="Access Request Filters Dataset ID Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>
@@ -30,6 +31,7 @@
             aria-label="Remove filter for user name"
             [class.invisible]="!this.name()"
             (click)="this.name.set('')"
+            data-umami-event="Access Request Filters User Name Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>
@@ -50,6 +52,7 @@
             aria-label="Remove filter for dates ranging from"
             [class.invisible]="!this.fromDate()"
             (click)="this.fromDate.set(undefined)"
+            data-umami-event="Access Request Filters Request Created From Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>
@@ -70,6 +73,7 @@
             aria-label="Remove filter for dates ranging from"
             [class.invisible]="!this.toDate()"
             (click)="this.toDate.set(undefined)"
+            data-umami-event="Access Request Filters Request Created Until Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>
@@ -94,6 +98,7 @@
             aria-label="Remove filter for status"
             [class.invisible]="!this.status()"
             (click)="this.status.set(undefined)"
+            data-umami-event="Access Request Filters Status Clear Clicked"
           >
             <mat-icon>cancel</mat-icon>
           </button>

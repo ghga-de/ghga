@@ -1,7 +1,11 @@
 <div>
   @if (datasetDetails().accession !== '') {
     <div class="mb-2 flex items-center justify-between">
-      <button mat-icon-button (click)="goBack()">
+      <button
+        mat-icon-button
+        (click)="goBack()"
+        data-umami-event="Dataset Details Back Clicked"
+      >
         <mat-icon>keyboard_return</mat-icon>
       </button>
       <app-dynamic-access-request-button datasetID="{{ datasetDetails().accession }}" />
@@ -61,6 +65,7 @@
               [href]="'https://ega-archive.org/datasets/' + study().ega_accession"
               target="_blank"
               rel="noopener noreferrer"
+              data-umami-event="Dataset Details Visit EGA Study Page Clicked"
               ><mat-icon>open_in_new</mat-icon>Visit EGA Study Page</a
             >
           }
@@ -115,6 +120,7 @@
                     [href]="'https://www.doi.org/' + pub.doi"
                     target="_blank"
                     rel="noopener noreferrer"
+                    data-umami-event="Dataset Details Publication DOI Clicked"
                     ><mat-icon>open_in_new</mat-icon>View Publication</a
                   >
                 }
@@ -168,6 +174,7 @@
               [href]="dap().policy_url"
               target="_blank"
               rel="noopener noreferrer"
+              data-umami-event="Dataset Details Visit DAP Policy Clicked"
               ><mat-icon>open_in_new</mat-icon>Data Access Info Form</a
             >
           }
@@ -430,6 +437,7 @@
                       mat-icon-button
                       [cdkCopyToClipboard]="file.file_information?.sha256_hash"
                       (click)="notifyCopied()"
+                      data-umami-event="Dataset Details File Hash Copied"
                     >
                       <mat-icon class="text-[20px]/[24px]">content_copy</mat-icon>
                     </button>

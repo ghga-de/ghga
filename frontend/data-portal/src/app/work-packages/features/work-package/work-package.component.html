@@ -7,7 +7,12 @@
   </p>
   <p>
     Please <a routerLink="." (click)="reset()">try again</a> later or
-    <a href="https://www.ghga.de/about-us/contact">contact us</a> for support.
+    <a
+      href="https://www.ghga.de/about-us/contact"
+      data-umami-event="Work Package Contact Us Clicked"
+      >contact us</a
+    >
+    for support.
   </p>
 } @else if (token()) {
   <p class="font-bold text-green-600">
@@ -15,7 +20,13 @@
   </p>
   <mat-card appearance="raised" class="mb-4">
     <mat-card-content>
-      <button mat-fab color="primary" class="float-right ml-4" (click)="copyToken()">
+      <button
+        mat-fab
+        color="primary"
+        class="float-right ml-4"
+        (click)="copyToken()"
+        data-umami-event="Work Package Copy Token Clicked"
+      >
         <mat-icon>content_copy</mat-icon>
       </button>
       <p>Please use the following token to {{ tokenAction() }} the selected dataset:</p>
@@ -25,7 +36,13 @@
       <p>Make sure to copy the token now as you will not be able to see this again!</p>
     </mat-card-content>
   </mat-card>
-  <button mat-raised-button color="primary" class="mb-4 mt-4" (click)="reset()">
+  <button
+    mat-raised-button
+    color="primary"
+    class="mb-4 mt-4"
+    (click)="reset()"
+    data-umami-event="Work Package Reset Clicked"
+  >
     <mat-icon>add</mat-icon> Generate another access token
   </button>
 } @else {
@@ -113,7 +130,13 @@
       </mat-form-field>
     </div>
     @if (pubKey() && !pubKeyError()) {
-      <button mat-raised-button color="primary" class="mb-4 mt-4" (click)="submit()">
+      <button
+        mat-raised-button
+        color="primary"
+        class="mb-4 mt-4"
+        (click)="submit()"
+        data-umami-event="Work Package Submit Clicked"
+      >
         <mat-icon>{{ dataset.stage }}</mat-icon> Generate an access token for
         {{ dataset.stage }}
       </button>

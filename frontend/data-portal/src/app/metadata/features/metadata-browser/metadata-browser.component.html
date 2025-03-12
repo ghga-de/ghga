@@ -5,7 +5,10 @@
         @if (lastSearchQuery() !== '') {
           <mat-chip (removed)="clearSearchQuery()">
             Keyword: {{ lastSearchQuery() }}
-            <button matChipRemove>
+            <button
+              matChipRemove
+              data-umami-event="Metadata Browser Search Query Clear Clicked"
+            >
               <mat-icon>cancel</mat-icon>
             </button></mat-chip
           >
@@ -16,7 +19,10 @@
               @if (lastSearchFilterFacets()[facet.key].indexOf(option.value) !== -1) {
                 <mat-chip (removed)="removeFacet(facet.key + '#' + option.value)">
                   {{ facet.name }}: {{ option.value }}
-                  <button matChipRemove>
+                  <button
+                    matChipRemove
+                    data-umami-event="Metadata Browser Facet Clear Clicked"
+                  >
                     <mat-icon>cancel</mat-icon>
                   </button>
                 </mat-chip>
@@ -93,8 +99,21 @@
           }
         }
         <div class="mt-8 grid grid-cols-2 gap-5">
-          <button mat-stroked-button (click)="clear($event)">Clear</button>
-          <button mat-flat-button (click)="submit($event)" type="submit">Filter</button>
+          <button
+            mat-stroked-button
+            (click)="clear($event)"
+            data-umami-event="Metadata Browser Clear Clicked"
+          >
+            Clear
+          </button>
+          <button
+            mat-flat-button
+            (click)="submit($event)"
+            type="submit"
+            data-umami-event="Metadata Browser Submit Clicked"
+          >
+            Filter
+          </button>
         </div>
       </form>
     </div>

@@ -9,7 +9,13 @@
     are using two-factor authentication and verification of your identity via a contact
     address that is separate from your primary E-Mail contact address.
   </p>
-  <button mat-raised-button (click)="confirmRegistration()">Continue</button>
+  <button
+    mat-raised-button
+    (click)="confirmRegistration()"
+    data-umami-event="Setup TOTP Newly Registered Continue Clicked"
+  >
+    Continue
+  </button>
 } @else if (hasLostToken() && !lostTokenConfirmed()) {
   <p>
     In the case that you lost your phone or the setup of your authenticator app, you can
@@ -21,8 +27,21 @@
       verified again.
     </strong>
   </p>
-  <button mat-stroked-button (click)="cancelLostToken()" class="mr-2">Cancel</button>
-  <button mat-raised-button (click)="lostTokenConfirmed.set(true)">Continue</button>
+  <button
+    mat-stroked-button
+    (click)="cancelLostToken()"
+    class="mr-2"
+    data-umami-event="Setup TOTP Lost Token Cancel Clicked"
+  >
+    Cancel
+  </button>
+  <button
+    mat-raised-button
+    (click)="lostTokenConfirmed.set(true)"
+    data-umami-event="Setup TOTP Lost Token Continue Clicked"
+  >
+    Continue
+  </button>
 } @else {
   @let uri = setupUri() | async;
   @if (uri) {
@@ -58,6 +77,7 @@
           matTooltip="Copy setup key"
           matTooltipPosition="right"
           matTooltipHideDelay="100000"
+          data-umami-event="Setup TOTP Copy Secret Clicked"
         >
           <mat-icon>content_copy</mat-icon>
         </button>
@@ -67,6 +87,7 @@
       mat-stroked-button
       class="manual-setup-button mr-2"
       (click)="showManualSetup = !showManualSetup"
+      data-umami-event="Setup TOTP Manual Setup Toggle Clicked"
     >
       @if (showManualSetup) {
         Hide
@@ -75,11 +96,21 @@
       }
       manual setup instructions
     </button>
-    <button mat-raised-button (click)="completeSetup()">Continue</button>
+    <button
+      mat-raised-button
+      (click)="completeSetup()"
+      data-umami-event="Setup TOTP Continue Clicked"
+    >
+      Continue
+    </button>
   } @else if (uri === undefined) {
     <p>Generating the TOTP setup...</p>
   } @else {
     <p>Error setting up two-factor authentication.</p>
-    <p><a routerLink="/">Go back to the home page.</a></p>
+    <p>
+      <a routerLink="/" data-umami-event="Setup TOTP Go Back Clicked"
+        >Go back to the home page.</a
+      >
+    </p>
   }
 }

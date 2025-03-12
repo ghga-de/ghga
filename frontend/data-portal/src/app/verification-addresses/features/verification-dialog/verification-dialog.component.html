@@ -29,12 +29,19 @@
   </form>
 </div>
 <div mat-dialog-actions cdkTrapFocus>
-  <button mat-button (click)="onCancel()">Cancel</button>
+  <button
+    mat-button
+    (click)="onCancel()"
+    data-umami-event="Verification Dialog Cancel Clicked"
+  >
+    Cancel
+  </button>
   <button
     id="submit-code"
     mat-raised-button
     [disabled]="!codeControl.valid"
     (click)="onSubmit()"
+    data-umami-event="Verification Dialog Submit Clicked"
   >
     Submit
   </button>

@@ -20,12 +20,24 @@
     />
   </mat-form-field>
   <div class="mb-4">
-    <button id="submit-auth" mat-raised-button (click)="onSubmit()">Submit</button>
+    <button
+      id="submit-auth"
+      mat-raised-button
+      (click)="onSubmit()"
+      data-umami-event="Confirm TOTP Submit Clicked"
+    >
+      Submit
+    </button>
   </div>
 </form>
 <p class="flex items-center text-sm">
   Difficulty signing in?
-  <button class="ms-2" mat-stroked-button (click)="onLostToken()">
+  <button
+    class="ms-2"
+    mat-stroked-button
+    (click)="onLostToken()"
+    data-umami-event="Confirm TOTP Lost Token Clicked"
+  >
     Get new 2FA setup
   </button>
 </p>

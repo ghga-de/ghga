@@ -1,6 +1,10 @@
 <nav class="mt-2 w-full bg-primary text-white" color="primary">
   <div class="flex flex-wrap justify-around divide-x pb-5 pt-2 no-underline">
-    <a mat-ripple routerLink="/" class="grow content-center"
+    <a
+      mat-ripple
+      routerLink="/"
+      class="grow content-center"
+      data-umami-event="Site Footer Home Clicked"
       ><div class="flex w-full justify-center">
         <img src="assets/images/ghga-logo.png" alt="GHGA Logo" class="max-h-12" />
       </div>
@@ -17,9 +21,14 @@
       rel="noreferrer noopener"
       href="https://ghga.de"
       class="grow content-start py-4 text-center"
+      data-umami-event="Site Footer Open GHGA Clicked"
       ><span class="block text-7xl"><mat-icon inline="true">globe</mat-icon></span
       >GHGA Website<mat-icon>open_in_new</mat-icon></a
-    ><a mat-ripple routerLink="/browse" class="grow content-start py-4 text-center"
+    ><a
+      mat-ripple
+      routerLink="/browse"
+      class="grow content-start py-4 text-center"
+      data-umami-event="Site Footer Browse Clicked"
       ><span class="block text-7xl"><mat-icon inline="true">database</mat-icon></span
       >Browse Data</a
     ><a
@@ -28,6 +37,7 @@
       rel="noreferrer noopener"
       href="https://docs.ghga.de/faq/"
       class="grow content-start py-4 text-center"
+      data-umami-event="Site Footer Open FAQ Clicked"
       ><span class="block text-7xl"><mat-icon inline="true">help</mat-icon></span
       >FAQ<mat-icon>open_in_new</mat-icon></a
     ><a
@@ -36,6 +46,7 @@
       rel="noreferrer noopener"
       href="https://docs.ghga.de/"
       class="grow content-start py-4 text-center"
+      data-umami-event="Site Footer Open Documentation Clicked"
       ><span class="block text-7xl"><mat-icon inline="true">docs</mat-icon></span
       >GHGA User<br />Documentation<mat-icon>open_in_new</mat-icon></a
     >
@@ -50,6 +61,7 @@
     target="_blank"
     rel="noreferrer noopener"
     href="https://genomic.social/@ghga"
+    data-umami-event="Site Footer Mastodon Clicked"
     ><mat-icon inline="true" fontSet="fab" fontIcon="fa-mastodon"></mat-icon
   ></a>
   <a
@@ -57,6 +69,7 @@
     target="_blank"
     rel="noreferrer noopener"
     href="https://www.linkedin.com/company/the-german-human-genome-phenome-archive/"
+    data-umami-event="Site Footer LinkedIn Clicked"
     ><mat-icon inline="true" fontSet="fab" fontIcon="fa-linkedin"></mat-icon
   ></a>
   <a
@@ -64,6 +77,7 @@
     target="_blank"
     rel="noreferrer noopener"
     href="https://bsky.app/profile/ghga.bsky.social"
+    data-umami-event="Site Footer Bluesky Clicked"
   >
     <mat-icon inline="true" fontSet="fab" fontIcon="fa-bluesky"></mat-icon
   ></a>
@@ -72,6 +86,7 @@
     target="_blank"
     rel="noreferrer noopener"
     href="https://github.com/ghga-de"
+    data-umami-event="Site Footer GitHub Clicked"
     ><mat-icon inline="true" fontSet="fab" fontIcon="fa-github"></mat-icon
   ></a>
   <a
@@ -79,6 +94,7 @@
     target="_blank"
     rel="noreferrer noopener"
     href="https://www.youtube.com/channel/UC7Yqi4gBl86drcUxwwEe6EA"
+    data-umami-event="Site Footer YouTube Clicked"
     ><mat-icon inline="true" fontSet="fab" fontIcon="fa-youtube"></mat-icon
   ></a>
   <a
@@ -86,16 +102,32 @@
     target="_blank"
     rel="noreferrer noopener"
     href="https://www.ghga.de/about-us/contact"
+    data-umami-event="Site Footer Contact Clicked"
     ><mat-icon inline="true">email</mat-icon></a
   >
 </div>
 <div class="w-full pb-4 text-sm">
   <p class="text-center">©{{ date | date: 'YYYY' }} GHGA. All Rights Reserved.</p>
   <p class="text-center">
-    <a href="https://www.ghga.de/imprint" class="underline">Imprint</a>
+    <a
+      href="https://www.ghga.de/imprint"
+      class="underline"
+      data-umami-event="Site Footer Imprint Clicked"
+      >Imprint</a
+    >
     |
-    <a href="https://www.ghga.de/data-protection" class="underline">Data Protection</a>
+    <a
+      href="https://www.ghga.de/data-protection"
+      class="underline"
+      data-umami-event="Site Footer Data Protection Clicked"
+      >Data Protection</a
+    >
     |
-    <a href="https://zenodo.org/records/11146387" class="underline">Terms of Use</a>
+    <a
+      href="https://zenodo.org/records/11146387"
+      class="underline"
+      data-umami-event="Site Footer Terms of Use Clicked"
+      >Terms of Use</a
+    >
   </p>
 </div>

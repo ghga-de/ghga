@@ -62,7 +62,13 @@
   </mat-dialog-content>
   <mat-dialog-actions>
     <div class="mr-2">
-      <button mat-stroked-button (click)="cancel()">Cancel</button>
+      <button
+        mat-stroked-button
+        (click)="cancel()"
+        data-umami-event="Access Request Manager Cancel Clicked"
+      >
+        Cancel
+      </button>
     </div>
     <div class="flex-grow"></div>
     <div class="ml-2">
@@ -71,6 +77,7 @@
         class="error mr-2"
         (click)="safeDeny()"
         [disabled]="!ivaId() || data.status === 'denied'"
+        data-umami-event="Access Request Manager Deny Clicked"
       >
         Deny
       </button>
@@ -79,6 +86,7 @@
         class="success ml-2"
         (click)="safeAllow()"
         [disabled]="!ivaId() || data.status === 'allowed'"
+        data-umami-event="Access Request Manager Allow Clicked"
       >
         Allow
       </button>

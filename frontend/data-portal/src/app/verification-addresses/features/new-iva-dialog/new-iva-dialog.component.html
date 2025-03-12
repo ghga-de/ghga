@@ -32,12 +32,15 @@
     }
 
     <div mat-dialog-actions>
-      <button mat-button (click)="onCancel()">Cancel</button>
+      <button mat-button (click)="onCancel()" data-umami-event="New IVA Cancel Clicked">
+        Cancel
+      </button>
       <button
         id="submit-code"
         mat-raised-button
         [disabled]="!type || !value"
         (click)="onSubmit()"
+        data-umami-event="New IVA Submit Clicked"
       >
         Submit
       </button>

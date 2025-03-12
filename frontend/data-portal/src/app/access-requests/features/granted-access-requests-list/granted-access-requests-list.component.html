@@ -17,6 +17,7 @@
             <a
               class="text-quaternary hover:text-secondary focus:text-secondary"
               routerLink="/dataset/{{ request.dataset_id }}"
+              data-umami-event="Granted Access Requests List Dataset Clicked"
               >{{ request.dataset_id }}</a
             >
             from {{ request.access_starts | date: friendlyDateFormat }} to
@@ -29,6 +30,7 @@
         routerLink="/work-package"
         mat-raised-button
         class="raised-button-quaternary mt-8"
+        data-umami-event="Granted Access Requests List Download Clicked"
       >
         <mat-icon>download</mat-icon>Set up a download token
       </button>

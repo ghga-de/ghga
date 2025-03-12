@@ -50,6 +50,7 @@
             (click)="createCode(iva)"
             class="create my-2 mr-4 w-40"
             mat-flat-button
+            data-umami-event="IVA Manager List Create Code Clicked"
           >
             <mat-icon>pin</mat-icon>
             @if (iva.state === 'CodeCreated') {
@@ -65,6 +66,7 @@
             (click)="markAsTransmittedWhenConfirmed(iva)"
             class="confirm my-2 mr-4 w-52"
             mat-flat-button
+            data-umami-event="IVA Manager List Confirm Transmission Clicked"
           >
             <mat-icon>mark_chat_read</mat-icon>
             Confirm transmission
@@ -75,6 +77,7 @@
             (click)="invalidateWhenConfirmed(iva)"
             class="invalidate my-2 w-36"
             mat-stroked-button
+            data-umami-event="IVA Manager List Invalidate Clicked"
           >
             <mat-icon>cancel_presentation</mat-icon>
             Invalidate

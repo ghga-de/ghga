@@ -35,3 +35,6 @@ access_grant_max_days: 730
 oidc_account_url: https://profile.aai.lifescience-ri.eu/profile
 
 ribbon_text: 'Staging v$v'
+
+umami_url: https://umami.foundational.testing.ghga.dev/umami
+umami_website_id: 9b8be8ec-ff79-4dda-9af4-f695787e0610

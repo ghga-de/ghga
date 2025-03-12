@@ -78,8 +78,20 @@
     </mat-form-field>
   </mat-dialog-content>
   <mat-dialog-actions>
-    <button mat-stroked-button class="mr-2" (click)="cancel()">Cancel</button>
-    <button mat-raised-button [disabled]="submitDisabled()" (click)="submit()">
+    <button
+      mat-stroked-button
+      class="mr-2"
+      (click)="cancel()"
+      data-umami-event="Create Access Request Cancel Clicked"
+    >
+      Cancel
+    </button>
+    <button
+      mat-raised-button
+      [disabled]="submitDisabled()"
+      (click)="submit()"
+      data-umami-event="Create Access Request Submit Clicked"
+    >
       Submit
     </button>
   </mat-dialog-actions>

@@ -3,7 +3,11 @@
   <p>{{ message }}</p>
 </div>
 <div mat-dialog-actions cdkTrapFocus>
-  <button mat-button (click)="onCancel()">
+  <button
+    mat-button
+    (click)="onCancel()"
+    data-umami-event="Confirm Dialog Cancel Clicked"
+  >
     {{ cancelText }}
   </button>
   <button
@@ -11,6 +15,7 @@
     [class]="confirmClass"
     cdkFocusInitial
     (click)="onConfirm()"
+    data-umami-event="Confirm Dialog Confirm Clicked"
   >
     {{ confirmText }}
   </button>

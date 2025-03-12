@@ -32,6 +32,8 @@ const mockConfig = {
   access_grant_min_days: 7,
   access_grant_max_days: 730,
   default_access_duration_days: 365,
+  umami_url: '',
+  umami_website_id: '',
 };
 
 describe('ConfigService', () => {
