@@ -34,8 +34,8 @@ class MockMetadataService {
 class MockAuthService {
   fullName = () => 'Dr. John Doe';
   email = () => 'doe@home.org';
-  role = () => 'data_steward';
-  roleName = () => 'Data Steward';
+  roles = () => ['data_steward'];
+  roleNames = () => ['Data Steward'];
 }
 
 describe('DatasetSummaryComponent', () => {

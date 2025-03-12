@@ -21,7 +21,7 @@ export const USER = {
   name: 'John Doe',
   title: 'Dr.',
   full_name: 'Dr. John Doe',
-  role: 'data_steward',
+  roles: ['data_steward'],
   state: 'Authenticated',
 } as User;
 
@@ -53,9 +53,9 @@ class MockAuthService {
   user = computed(() => (this.isAuthenticated() ? USER : null));
   name = computed(() => this.user()?.name);
   fullName = computed(() => this.user()?.full_name);
-  role = computed(() => this.user()?.role);
-  roleName = computed(() =>
-    this.role() ? RoleNames[this.role() as keyof typeof RoleNames] : undefined,
+  roles = computed(() => this.user()?.roles ?? []);
+  roleNames = computed(() =>
+    this.roles() ? this.roles().map((role) => RoleNames[role]) : [],
   );
 }
 

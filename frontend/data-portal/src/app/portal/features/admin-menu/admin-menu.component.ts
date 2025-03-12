@@ -25,7 +25,7 @@ export class AdminMenuComponent {
   #auth = inject(AuthService);
   #baseRoute = inject(BaseRouteService);
   #route = this.#baseRoute.route;
-  isDataSteward = computed(() => this.#auth.role() === 'data_steward');
+  isDataSteward = computed(() => this.#auth.roles().includes('data_steward'));
   isIvaManagerRoute = computed<boolean>(() => this.#route() === 'iva-manager');
   isAccessRequestsManagerRoute = computed<boolean>(
     () => this.#route() === 'access-request-manager',

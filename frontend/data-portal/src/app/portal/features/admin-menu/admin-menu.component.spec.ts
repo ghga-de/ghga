@@ -14,7 +14,7 @@ import { AdminMenuComponent } from './admin-menu.component';
  * Mock the auth service as needed for the admin menu
  */
 class MockAuthService {
-  role = () => 'data_steward';
+  roles = () => ['data_steward'];
 }
 
 const fakeActivatedRoute = {

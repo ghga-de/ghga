@@ -30,7 +30,7 @@ import {
   of,
   timeout,
 } from 'rxjs';
-import { LoginState, RoleNames, User, UserBasicData } from '../models/user';
+import { LoginState, RoleNames, User, UserBasicData, UserRole } from '../models/user';
 import { CsrfService } from './csrf.service';
 
 /**
@@ -120,15 +120,15 @@ export class AuthService {
   email = computed<string | undefined>(() => this.user()?.email);
 
   /**
-   * Get the role of the current user as a signal
+   * Get the roles of the current user as a signal
    */
-  role = computed<string | undefined>(() => this.user()?.role);
+  roles = computed<UserRole[]>(() => this.user()?.roles ?? []);
 
   /**
    * Get the readable name of the role of the current user as a signal
    */
-  roleName = computed<string | undefined>(() =>
-    this.role() ? RoleNames[this.role() as keyof typeof RoleNames] : undefined,
+  roleNames = computed<string[]>(() =>
+    this.roles() ? this.roles().map((role) => RoleNames[role]) : [],
   );
 
   /**
@@ -333,7 +333,7 @@ export class AuthService {
    */
   async guardDataSteward(): Promise<boolean> {
     const state = await this.#determineSessionState();
-    if (state === 'Authenticated' && this.role() === 'data_steward') return true;
+    if (state === 'Authenticated' && this.roles().includes('data_steward')) return true;
     this.#notify.showWarning(
       (state === 'Authenticated' ? 'Insufficient permissions' : 'Please login') +
         ' to continue with the requested action.',
@@ -360,7 +360,7 @@ export class AuthService {
         this.#csrf.token = null;
         sessionStorage.removeItem('afterLogin');
         this.#router.navigate(['/']);
-        this.#notify.showInfo('You have been logged out.');
+        this.#notify.showSuccess('You have been logged out.');
       });
     }
   }
@@ -392,6 +392,15 @@ export class AuthService {
       if (!(user.ext_id && user.name && user.email)) {
         throw new Error('Missing properties in user session');
       }
+      if ('role' in user || !user.roles) {
+        // backward compatibility with auth service < 3
+        const oldUser = user as { role?: string | null; roles?: string[] };
+        const role = oldUser['role'];
+        if (!oldUser.roles) oldUser.roles = role ? [role] : [];
+        delete oldUser.role;
+      }
+      // remove unsupported role names
+      user.roles = user.roles.filter((role) => role in RoleNames);
     } catch (error) {
       console.error('Cannot parse user session:', session, error);
       return undefined;

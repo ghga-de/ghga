@@ -42,6 +42,11 @@ export interface UserRegisteredData extends UserBasicData {
 }
 
 /**
+ * Type alias for user roles (the enum keys which are strings)
+ */
+export type UserRole = keyof typeof RoleNames;
+
+/**
  * User session interface
  *
  * Contains all data describing the user and the user session.
@@ -53,7 +58,7 @@ export interface User extends UserRegisteredData {
   id?: string;
   full_name: string;
   state: LoginState;
-  role?: keyof typeof RoleNames;
+  roles: UserRole[];
   csrf: string;
   timeout?: number;
   extends?: number;

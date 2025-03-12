@@ -43,7 +43,7 @@ export const user: User = {
   title: 'Dr.',
   full_name: 'Dr. John Doe',
   email: 'doe@home.org',
-  role: 'data_steward',
+  roles: ['data_steward'],
   state: INITIAL_LOGIN_STATE,
   csrf: 'mock-csrf-token',
   timeout: 3600,
@@ -62,7 +62,6 @@ export function setOidcUser() {
     access_token: 'test123',
     token_type: 'Bearer',
     scope: OIDC_SCOPE,
-    role: user.role,
     profile: {
       sub: user.ext_id,
       sid: null,

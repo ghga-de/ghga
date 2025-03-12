@@ -25,6 +25,7 @@ class MockAuthService {
       full_name: 'Dr. John Doe',
       email: 'john@ghga.de',
       state: 'LoggedIn',
+      roles: [],
       csrf: 'dummy-csrf',
       ext_id: 'john@op.dev',
     };

@@ -42,7 +42,7 @@ export class AccountButtonComponent {
   sessionState = this.#auth.sessionState;
   name = this.#auth.name;
   fullName = this.#auth.fullName;
-  roleName = this.#auth.roleName;
+  roleNames = this.#auth.roleNames;
 
   /**
    * User login

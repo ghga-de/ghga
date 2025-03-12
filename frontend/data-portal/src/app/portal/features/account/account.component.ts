@@ -32,6 +32,6 @@ import { UserIvaListComponent } from '@app/verification-addresses/features/user-
 export class AccountComponent {
   #auth = inject(AuthService);
   fullName = this.#auth.fullName;
-  roleName = this.#auth.roleName;
+  roleNames = this.#auth.roleNames;
   email = this.#auth.email;
 }

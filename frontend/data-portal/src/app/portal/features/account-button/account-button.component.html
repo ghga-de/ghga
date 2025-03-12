@@ -15,8 +15,8 @@
   </button>
   <mat-menu #menu="matMenu" class="p-3">
     <h4>Hello, {{ fullName() || 'User' }}!</h4>
-    @if (roleName()) {
-      <p>You are logged in as {{ roleName() }}.</p>
+    @if (roleNames().length) {
+      <p>You are logged in as a {{ roleNames()[0] }}.</p>
     }
     <button (click)="gotoAccount()" mat-menu-item>
       <mat-icon class="text-secondary">account_circle</mat-icon>

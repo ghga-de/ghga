@@ -4,8 +4,8 @@
 <h2>
   <span class="flex text-2xl"
     >{{ fullName() }}
-    @if (roleName()) {
-      <mat-chip class="ms-2">{{ roleName() }}</mat-chip>
+    @for (roleName of roleNames(); track roleName) {
+      <mat-chip class="ms-2">{{ roleName }}</mat-chip>
     }
   </span>
 </h2>
