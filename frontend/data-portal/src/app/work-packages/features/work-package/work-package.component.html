@@ -30,7 +30,7 @@
         <mat-icon>content_copy</mat-icon>
       </button>
       <p>Please use the following token to {{ tokenAction() }} the selected dataset:</p>
-      <pre class="mb-3 overflow-auto whitespace-pre-wrap text-base text-green-900">{{
+      <pre class="mb-3 overflow-auto text-base whitespace-pre-wrap text-green-900">{{
         token()
       }}</pre>
       <p>Make sure to copy the token now as you will not be able to see this again!</p>
@@ -39,7 +39,7 @@
   <button
     mat-raised-button
     color="primary"
-    class="mb-4 mt-4"
+    class="mt-4 mb-4"
     (click)="reset()"
     data-umami-event="Work Package Reset Clicked"
   >
@@ -133,7 +133,7 @@
       <button
         mat-raised-button
         color="primary"
-        class="mb-4 mt-4"
+        class="mt-4 mb-4"
         (click)="submit()"
         data-umami-event="Work Package Submit Clicked"
       >

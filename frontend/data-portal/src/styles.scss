@@ -8,9 +8,15 @@
 @use './assets/scss/fontawesome-brands';
 
 // Add Tailwind CSS
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@use 'tailwind';
+
+hr {
+  border-color: var(--color-outline, --color-gray-200);
+}
+
+.border {
+  border-color: var(--color-outline, --color-gray-200);
+}
 
 // Add Lexend font
 @font-face {

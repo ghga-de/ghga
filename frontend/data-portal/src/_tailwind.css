@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: var(--mat-sys-primary);
+  --color-secondary: var(--mat-sys-secondary);
+  --color-tertiary: var(--mat-sys-tertiary);
+  --color-quaternary: var(--mat-sys-quaternary);
+  --color-quinary: var(--mat-sys-quinary);
+  --color-error: var(--mat-sys-error);
+  --color-warning: var(--color-amber-500);
+  --color-success: var(--color-green-500);
+  --color-info: var(--color-indigo-500);
+  --color-outline: var(--color-gray-200);
+}
