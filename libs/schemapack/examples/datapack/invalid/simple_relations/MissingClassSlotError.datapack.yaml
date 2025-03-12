@@ -7,5 +7,3 @@ resources:
     example_dataset:
       content:
         dac_contact: dac@example.org
-      relations:
-        files: []

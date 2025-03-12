@@ -8,4 +8,6 @@ resources:
         dac_contact: dac@example.org
       relations:
         files:
-          - not_existing_file # <-
+          targetClass: File
+          targetResources:
+            - not_existing_file # <-

@@ -5,11 +5,15 @@ resources:
     a1:
       content: {}
       relations:
-        b: b1
+        b:
+          targetClass: B
+          targetResources: b1
     a2:
       content: {}
       relations:
-        b: b2
+        b:
+          targetClass: B
+          targetResources: b2
   B:
     b1:
       content: {}

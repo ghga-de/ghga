@@ -6,5 +6,7 @@ resources:
     a1:
       content: {}
       relations:
-        b: [] # <-
+        b:
+          targetClass: B
+          targetResources: [] # <-
   B: {}

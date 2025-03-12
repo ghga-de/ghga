@@ -5,25 +5,41 @@ resources:
             content: {}
             relations:
                 teammates:
-                    - Bob
-                    - Charlie
-                manager: Dave
+                    targetClass: Person
+                    targetResources:
+                        - Bob
+                        - Charlie
+                manager:
+                    targetClass: Person
+                    targetResources: Dave
         Bob:
             content: {}
             relations:
                 teammates:
-                    - Alice
-                    - Charlie
-                manager: Dave
+                    targetClass: Person
+                    targetResources:
+                        - Alice
+                        - Charlie
+                manager:
+                    targetClass: Person
+                    targetResources: Dave
         Charlie:
             content: {}
             relations:
                 teammates:
-                    - Alice
-                    - Bob
-                manager: Dave
+                    targetClass: Person
+                    targetResources:
+                        - Alice
+                        - Bob
+                manager:
+                    targetClass: Person
+                    targetResources: Dave
         Dave:
             content: {}
             relations:
-                teammates: []
-                manager: null
+                teammates:
+                    targetClass: Person
+                    targetResources: []
+                manager:
+                    targetClass: Person
+                    targetResources: null

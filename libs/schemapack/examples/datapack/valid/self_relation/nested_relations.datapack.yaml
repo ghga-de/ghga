@@ -6,13 +6,19 @@ resources:
       content: {}
       relations:
         some_relation:
-          - b
+          targetClass: SomeClass
+          targetResources:
+            - b
     b:
       content: {}
       relations:
         some_relation:
-          - c
+          targetClass: SomeClass
+          targetResources:
+            - c
     c:
       content: {}
       relations:
-        some_relation: []
+        some_relation:
+          targetClass: SomeClass
+          targetResources: []

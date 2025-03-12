@@ -63,13 +63,16 @@ class MissingMandatoryOriginValidationPlugin(ClassValidationPlugin):
         not_referenced_target_id_by_relation: dict[str, set[str]] = {}
 
         for relation_name, relation in self._relations_of_interest.items():
-            referenced_target_ids = {
-                target_id
-                for resource in class_resources.values()
-                for target_id in resource.get_target_id_set(
-                    relation_name, do_not_raise=True
-                )
-            }
+            try:
+                referenced_target_ids = {
+                    target_id
+                    for resource in class_resources.values()
+                    for target_id in resource.relations[
+                        relation_name
+                    ].get_target_resources_as_set()
+                }
+            except KeyError:
+                referenced_target_ids = set()
 
             all_possible_target_ids = set(
                 datapack.resources.get(relation.targetClass, {})

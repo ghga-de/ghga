@@ -46,11 +46,17 @@ class ExpectedRootValidationPlugin(GlobalValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
+        missing = []
         if not datapack.rootResource:
+            missing.append("root resource")
+        if not datapack.rootClass:
+            missing.append("root class")
+
+        if missing:
             raise ValidationPluginError(
-                type_="ExpectedRootResourceError",
+                type_="ExpectedRootDefinitionError",
                 message=(
-                    "The schemapack has a root class defined but the datapack is"
-                    "missing a root resource."
+                    "The schemapack has a root class defined but the datapack "
+                    f"is missing a {' and '.join(missing)}."
                 ),
             )

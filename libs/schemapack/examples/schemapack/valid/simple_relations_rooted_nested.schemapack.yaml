@@ -1,0 +1,42 @@
+# a simple schemapack:
+schemapack: 0.3.0
+classes:
+  A:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      b:
+        targetClass: B
+        multiple:
+          origin: true
+          target: true
+        mandatory:
+          origin: false
+          target: true
+      c:
+        targetClass: C
+        multiple:
+          origin: true
+          target: true
+        mandatory:
+          origin: false
+          target: true
+  B:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      c:
+        targetClass: C
+        multiple:
+          origin: true
+          target: false
+        mandatory:
+          origin: true
+          target: true
+  C:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+rootClass: A

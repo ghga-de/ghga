@@ -19,10 +19,10 @@
 from schemapack._internals.spec.schemapack import (
     SUPPORTED_SCHEMA_PACK_VERSIONS,
     ClassDefinition,
+    ClassRelation,
     IDSpec,
     MandatoryRelationSpec,
     MultipleRelationSpec,
-    Relation,
     SchemaPack,
     SupportedSchemaPackVersions,
 )
@@ -30,10 +30,10 @@ from schemapack._internals.spec.schemapack import (
 __all__ = [
     "SUPPORTED_SCHEMA_PACK_VERSIONS",
     "ClassDefinition",
+    "ClassRelation",
     "IDSpec",
     "MandatoryRelationSpec",
     "MultipleRelationSpec",
-    "Relation",
     "SchemaPack",
     "SupportedSchemaPackVersions",
 ]

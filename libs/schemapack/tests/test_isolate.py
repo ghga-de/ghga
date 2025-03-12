@@ -92,8 +92,8 @@ def test_isolate(
     expected_rooted_schemapack = load_schemapack(expected_rooted_schemapack_path)
 
     rooted_schemapack, rooted_datapack = isolate(
-        class_name=resource_class,
-        resource_id=resource_id,
+        root_class_name=resource_class,
+        root_resource_id=resource_id,
         schemapack=schemapack,
         datapack=datapack,
     )
@@ -111,8 +111,8 @@ def test_isolate_with_non_existing_class():
 
     with pytest.raises(exceptions.ClassNotFoundError) as error:
         isolate(
-            class_name="NonExistingClass",
-            resource_id="example_dataset_1",
+            root_class_name="NonExistingClass",
+            root_resource_id="example_dataset_1",
             schemapack=schemapack,
             datapack=datapack,
         )
@@ -128,8 +128,8 @@ def test_isolate_with_non_existing_resource():
 
     with pytest.raises(exceptions.ResourceNotFoundError):
         isolate(
-            class_name="Dataset",
-            resource_id="NonExistingResource",
+            root_class_name="Dataset",
+            root_resource_id="NonExistingResource",
             schemapack=schemapack,
             datapack=datapack,
         )

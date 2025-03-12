@@ -9,4 +9,6 @@ resources:
           - test # Is this comment causing problems?
       relations:
         some_relation:
-          - a
+          targetClass: SomeClass
+          targetResources:
+            - a

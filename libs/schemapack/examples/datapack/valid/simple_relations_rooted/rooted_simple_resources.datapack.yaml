@@ -20,6 +20,9 @@ resources:
         dac_contact: dac@example.org
       relations:
         files:
-          - example_file_a
-          - example_file_b
+          targetClass: File
+          targetResources:
+            - example_file_a
+            - example_file_b
 rootResource: example_dataset_1
+rootClass: Dataset

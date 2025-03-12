@@ -14,5 +14,9 @@ resources:
         dac_contact: dac@example.org
       relations:
         files:
-          - example_file_a
-        non_existing_property: [] # <-
+          targetClass: File
+          targetResources:
+            - example_file_a
+        non_existing_property: # <-
+          targetClass: File
+          targetResources: []

@@ -108,7 +108,9 @@ def identify_resource_dependencies(  # noqa: C901
             ) from error
 
         try:
-            target_ids = target_resource.get_target_id_set(relation_name)
+            target_ids = target_resource.relations[
+                relation_name
+            ].get_target_resources_as_set()
         except KeyError as error:
             raise ValidationAssumptionError(
                 context="relation resolution in datapack"
@@ -213,7 +215,9 @@ def isolate_resource(
         include_target=True,
     )
     rooted_datapack = downscope_datapack(datapack=datapack, resource_map=dependency_map)
-    rooted_datapack = rooted_datapack.model_copy(update={"rootResource": resource_id})
+    rooted_datapack = rooted_datapack.model_copy(
+        update={"rootResource": resource_id, "rootClass": class_name}
+    )
     return rooted_datapack
 
 
@@ -302,8 +306,8 @@ def isolate_class(*, class_name: ClassName, schemapack: SchemaPack) -> SchemaPac
 
 def isolate(
     *,
-    class_name: ClassName,
-    resource_id: ResourceId,
+    root_class_name: ClassName,
+    root_resource_id: ResourceId,
     schemapack: SchemaPack,
     datapack: DataPack,
 ) -> tuple[SchemaPack, DataPack]:
@@ -323,11 +327,11 @@ def isolate(
             If it became apparent that the datapack was not already validated against
             the schemapack.
     """
-    rooted_schemapack = isolate_class(class_name=class_name, schemapack=schemapack)
+    rooted_schemapack = isolate_class(class_name=root_class_name, schemapack=schemapack)
     rooted_datapack = isolate_resource(
         datapack=datapack,
-        class_name=class_name,
-        resource_id=resource_id,
+        class_name=root_class_name,
+        resource_id=root_resource_id,
         schemapack=schemapack,
     )
     return rooted_schemapack, rooted_datapack

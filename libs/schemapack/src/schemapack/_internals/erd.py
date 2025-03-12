@@ -18,7 +18,7 @@
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from schemapack._internals.spec.schemapack import ClassDefinition, Relation
+from schemapack._internals.spec.schemapack import ClassDefinition, ClassRelation
 from schemapack.spec.schemapack import SchemaPack
 
 
@@ -85,7 +85,7 @@ def export_class_entity(
 
 
 def export_class_relation(
-    class_name: str, property_name: str, relation: Relation
+    class_name: str, property_name: str, relation: ClassRelation
 ) -> str:
     """Export a relation between two classes in mermaid format.
 

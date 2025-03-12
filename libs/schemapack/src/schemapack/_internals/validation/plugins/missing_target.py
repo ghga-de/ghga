@@ -61,7 +61,7 @@ class MissingMandatoryTargetValidationPlugin(ResourceValidationPlugin):
 
         for relation_name in self._relations_of_interest:
             try:
-                target_resource_ids = resource.relations[relation_name]
+                target_resource_ids = resource.relations[relation_name].targetResources
             except KeyError:
                 # This is an error but needs to be handled by another validation plugin:
                 continue

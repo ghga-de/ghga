@@ -69,9 +69,12 @@ class TargetOverlapValidationPlugin(ClassValidationPlugin):
             counter: Counter[str] = Counter()
 
             for resource in class_resources.values():
-                resource_target_ids = resource.get_target_id_set(
-                    relation_name, do_not_raise=True
-                )
+                try:
+                    resource_target_ids = resource.relations[
+                        relation_name
+                    ].get_target_resources_as_set()
+                except KeyError:
+                    resource_target_ids = frozenset()
 
                 counter.update(resource_target_ids)
 

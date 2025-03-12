@@ -28,7 +28,8 @@ ERD_DIR = EXAMPLES_DIR / "erd"
 DATAPACK_DIR = EXAMPLES_DIR / "datapack"
 VALID_DATAPACK_DIR = DATAPACK_DIR / "valid"
 INVALID_DATAPACK_DIR = DATAPACK_DIR / "invalid"
-DENORMALIZED_DIR = EXAMPLES_DIR / "denormalized"
+DENORMALIZED_DEEP_EMBEDDING_DIR = EXAMPLES_DIR / "denormalized" / "deep_embedding"
+DENORMALIZED_CUSTOM_EMBEDDING_DIR = EXAMPLES_DIR / "denormalized" / "custom_embedding"
 
 schemapack_suffix = ".schemapack.yaml"
 datapack_suffix = ".datapack.yaml"
@@ -103,7 +104,12 @@ def list_denormalized_in_dir(dir: Path) -> dict[str, Path]:
     return list_examples_in_nested_dir(dir, suffix=denomalizated_suffix)
 
 
-DENORMALIZED_PATHS = list_denormalized_in_dir(DENORMALIZED_DIR)
+DENORMALIZED_DEEP_EMBEDDING_PATHS = list_denormalized_in_dir(
+    DENORMALIZED_DEEP_EMBEDDING_DIR
+)
+DENORMALIZED_CUSTOM_EMBEDDING_PATHS = list_denormalized_in_dir(
+    DENORMALIZED_CUSTOM_EMBEDDING_DIR
+)
 
 
 def list_erds_in_dir(dir: Path) -> dict[str, Path]:

@@ -24,27 +24,62 @@ from schemapack import denormalize, load_datapack, load_schemapack
 from schemapack.exceptions import CircularRelationError
 from schemapack.utils import read_json_or_yaml_mapping
 from tests.fixtures.examples import (
-    DENORMALIZED_PATHS,
+    DENORMALIZED_CUSTOM_EMBEDDING_PATHS,
+    DENORMALIZED_DEEP_EMBEDDING_PATHS,
     VALID_DATAPACK_PATHS,
     VALID_SCHEMAPACK_PATHS,
 )
 
 
-@pytest.mark.parametrize(
-    "name, expected_denomalizated_path",
-    DENORMALIZED_PATHS.items(),
-    ids=DENORMALIZED_PATHS.keys(),
-)
-def test_denormalize(name: str, expected_denomalizated_path: Path):
-    """Test the denormalize function with valid datapacks."""
+def run_denormalization_test(
+    name: str,
+    expected_denormalized_path: Path,
+    ignored_relations: dict[str, list[str]] | None = None,
+):
+    """Run the denormalization test with optional ignored relations."""
     schemapack_name = name.split(".")[0]
     schemapack = load_schemapack(VALID_SCHEMAPACK_PATHS[schemapack_name])
     datapack = load_datapack(VALID_DATAPACK_PATHS[name])
-    expected_denomalizated = read_json_or_yaml_mapping(expected_denomalizated_path)
+    expected_denormalized = read_json_or_yaml_mapping(expected_denormalized_path)
+    denormalized = (
+        denormalize(
+            datapack=datapack,
+            schemapack=schemapack,
+            ignored_relations=ignored_relations,
+        )
+        if ignored_relations
+        else denormalize(datapack=datapack, schemapack=schemapack)
+    )
 
-    denomalizated = denormalize(datapack=datapack, schemapack=schemapack)
+    assert denormalized == expected_denormalized
 
-    assert denomalizated == expected_denomalizated
+
+@pytest.mark.parametrize(
+    "name, expected_denormalized_path",
+    DENORMALIZED_DEEP_EMBEDDING_PATHS.items(),
+    ids=DENORMALIZED_DEEP_EMBEDDING_PATHS.keys(),
+)
+def test_denormalize_deep_embedding(name: str, expected_denormalized_path: Path):
+    """Test the denormalize function with valid datapacks."""
+    run_denormalization_test(name, expected_denormalized_path)
+
+
+IGNORED_RELATIONS = {
+    "simple_nested_relations": {"B": ["c"]},
+    "rooted_simple_resources": {"Dataset": ["files"]},
+    "rooted_circular_relations": {"SomeClass": ["some_relation"]},
+}
+
+
+@pytest.mark.parametrize(
+    "name, expected_denormalized_path",
+    DENORMALIZED_CUSTOM_EMBEDDING_PATHS.items(),
+    ids=DENORMALIZED_CUSTOM_EMBEDDING_PATHS.keys(),
+)
+def test_denormalize_custom_embedding(name: str, expected_denormalized_path: Path):
+    """Test the denormalize function with valid datapacks."""
+    ignored_relations = IGNORED_RELATIONS[name.split(".")[-1]]
+    run_denormalization_test(name, expected_denormalized_path, ignored_relations)
 
 
 @pytest.mark.parametrize(

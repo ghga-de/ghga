@@ -41,9 +41,6 @@ from schemapack._internals.validation.plugins.multiple_target import (
 from schemapack._internals.validation.plugins.one_to_many_overlap import (
     TargetOverlapValidationPlugin,
 )
-from schemapack._internals.validation.plugins.target_id import (
-    TargetIdValidationPlugin,
-)
 from schemapack._internals.validation.plugins.unexpected_root import (
     UnexpectedRootValidationPlugin,
 )
@@ -52,9 +49,6 @@ from schemapack._internals.validation.plugins.unknown_class import (
 )
 from schemapack._internals.validation.plugins.unknown_relations import (
     UnknownRelationValidationPlugin,
-)
-from schemapack._internals.validation.plugins.unkown_root_resource import (
-    UnkownRootResourceValidationPlugin,
 )
 
 __all__ = [
@@ -70,5 +64,4 @@ __all__ = [
     "UnexpectedRootValidationPlugin",
     "UnknownClassSlotValidationPlugin",
     "UnknownRelationValidationPlugin",
-    "UnkownRootResourceValidationPlugin",
 ]

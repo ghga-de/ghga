@@ -105,9 +105,19 @@ def test_datapack_target_id_ordering_upon_dump():
                 "TestClass": {
                     "test_resource": {
                         "content": {},
-                        "relations": {"test_relations": unsorted_target_ids},
+                        "relations": {
+                            "test_relations": {
+                                "targetClass": "SomeClass",
+                                "targetResources": unsorted_target_ids,
+                            }
+                        },
                     }
-                }
+                },
+                "SomeClass": {
+                    "a": {"content": {}, "relations": {}},
+                    "b": {"content": {}, "relations": {}},
+                    "c": {"content": {}, "relations": {}},
+                },
             },
         }
     )
@@ -117,6 +127,6 @@ def test_datapack_target_id_ordering_upon_dump():
     assert (
         serialize_datapack["resources"]["TestClass"]["test_resource"]["relations"][
             "test_relations"
-        ]
+        ]["targetResources"]
         == sorted_target_ids
     )

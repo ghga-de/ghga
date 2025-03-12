@@ -14,5 +14,7 @@ resources:
         dac_contact: dac@example.org
       relations:
         files:
-          - example_file_a
-          - example_file_a # <-
+          targetClass: File
+          targetResources:
+            - example_file_a
+            - example_file_a # <-

@@ -1,5 +1,4 @@
-# This datapack has a circular relation between two resources:
-# (This is valid, but no denormalization can be performed.)
+# Using a root class that is not in datapack classes
 datapack: 0.3.0
 resources:
   SomeClass:
@@ -9,13 +8,13 @@ resources:
         some_relation:
           targetClass: SomeClass
           targetResources:
-            - b # <-
+            - b
     b:
       content: {}
       relations:
         some_relation:
           targetClass: SomeClass
           targetResources:
-            - a # <-
+            - a
+rootClass: SomeOtherClass # <-
 rootResource: a
-rootClass: SomeClass

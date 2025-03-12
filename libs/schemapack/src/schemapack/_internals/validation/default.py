@@ -29,19 +29,16 @@ from schemapack._internals.validation.plugins import (
     MissingMandatoryTargetValidationPlugin,
     MissingRelationValidationPlugin,
     MultipleTargetValidationPlugin,
-    TargetIdValidationPlugin,
     TargetOverlapValidationPlugin,
     UnexpectedRootValidationPlugin,
     UnknownClassSlotValidationPlugin,
     UnknownRelationValidationPlugin,
-    UnkownRootResourceValidationPlugin,
 )
 
 DEFAULT_GLOBAL_PLUGIN_REGISTRY: list[type[GlobalValidationPlugin]] = [
     MissingClassSlotValidationPlugin,
     UnknownClassSlotValidationPlugin,
     ExpectedRootValidationPlugin,
-    UnkownRootResourceValidationPlugin,
     UnexpectedRootValidationPlugin,
 ]
 DEFAULT_CLASS_PLUGIN_REGISTRY: list[type[ClassValidationPlugin]] = [
@@ -50,7 +47,6 @@ DEFAULT_CLASS_PLUGIN_REGISTRY: list[type[ClassValidationPlugin]] = [
 ]
 DEFAULT_RESOURCE_PLUGIN_REGISTRY: list[type[ResourceValidationPlugin]] = [
     ContentSchemaValidationPlugin,
-    TargetIdValidationPlugin,
     MissingRelationValidationPlugin,
     UnknownRelationValidationPlugin,
     MultipleTargetValidationPlugin,

@@ -6,29 +6,53 @@ resources:
       content: {}
       relations:
         many_to_many:
-          - b1
-          - b2
+          targetClass: B
+          targetResources:
+            - b1
+            - b2
         one_to_many:
-          - b1
-          - b2
-        many_to_one: b1
-        one_to_one: b1
+          targetClass: B
+          targetResources:
+            - b1
+            - b2
+        many_to_one:
+          targetClass: B
+          targetResources: b1
+        one_to_one:
+          targetClass: B
+          targetResources: b1
     a2:
       content: {}
       relations:
         many_to_many:
-          - b1 # may overlap with a1.relations.many_to_many
+          targetClass: B
+          targetResources:
+            - b1 # may overlap with a1.relations.many_to_many
         one_to_many:
-          - b3 # must not overlap with a1.relations.one_to_many
-        many_to_one: b1 # may be the same as a1.relations.many_to_one
-        one_to_one: b2 # must be different that the one_to_one relation of a1 and a3
+          targetClass: B
+          targetResources:
+            - b3 # must not overlap with a1.relations.one_to_many
+        many_to_one:
+          targetClass: B
+          targetResources: b1 # may be the same as a1.relations.many_to_one
+        one_to_one:
+          targetClass: B
+          targetResources: b2 # must be different that the one_to_one relation of a1 and a3
     a3:
       content: {}
       relations:
-        many_to_many: [] # may be empty
-        one_to_many: [] # may be empty
-        many_to_one: b2 # may also be different than a1.relations.many_to_one
-        one_to_one: b3 # must be different that the one_to_one relation of a1 and a2
+        many_to_many:
+          targetClass: B
+          targetResources: [] # may be empty
+        one_to_many:
+          targetClass: B
+          targetResources: [] # may be empty
+        many_to_one:
+          targetClass: B
+          targetResources: b2 # may also be different than a1.relations.many_to_one
+        one_to_one:
+          targetClass: B
+          targetResources: b3 # must be different that the one_to_one relation of a1 and a2
   B:
     b1:
       content: {}

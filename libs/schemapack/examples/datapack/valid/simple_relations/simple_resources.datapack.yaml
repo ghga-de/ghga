@@ -25,11 +25,15 @@ resources:
         dac_contact: dac@example.org
       relations:
         files:
-          - example_file_a
-          - example_file_b
+          targetClass: File
+          targetResources:
+            - example_file_a
+            - example_file_b
     example_dataset_2:
       content:
         dac_contact: dac@example.org
       relations:
         files:
-          - example_file_c
+          targetClass: File
+          targetResources:
+            - example_file_c

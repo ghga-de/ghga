@@ -1,13 +1,11 @@
-# Contains a slot for a class that does not exist in the schemapack:
+# Every target class defined in the relations must be present in the datapack
 datapack: 0.3.0
 resources:
-  File: {}
   Dataset:
     example_dataset:
       content:
         dac_contact: dac@example.org
       relations:
         files:
-          targetClass: File
+          targetClass: File # <-
           targetResources: []
-  NoExistingClass: {} # <-

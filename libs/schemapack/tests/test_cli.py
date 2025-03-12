@@ -41,6 +41,7 @@ from tests.fixtures.examples import (
 from tests.fixtures.utils import (
     assert_formatted_string,
     loads_json_or_yaml_mapping,
+    strip_ansi_escape_sequences,
 )
 
 yaml = ruamel.yaml.YAML(typ="rt")
@@ -53,7 +54,7 @@ def test_version():
     """Test the version command."""
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == exit_codes.SUCCESS == 0
-    assert result.stdout.strip() == str(schemapack_version)
+    assert strip_ansi_escape_sequences(result.stdout).strip() == str(schemapack_version)
 
 
 def generate_validate_command(
@@ -198,7 +199,7 @@ def test_condense_schemapack(json_format: bool, abbreviate: bool):
     result = runner.invoke(cli, command)
     assert result.exit_code == exit_codes.SUCCESS == 0
 
-    observed_str = result.stdout
+    observed_str = strip_ansi_escape_sequences(result.stdout)
     assert_formatted_string(observed_str, json_format=json_format)
 
     observed_dict = loads_json_or_yaml_mapping(observed_str)
@@ -236,7 +237,7 @@ def test_isolate_resource(json_format: bool, abbreviate: bool):
     result = runner.invoke(cli, command)
     assert result.exit_code == exit_codes.SUCCESS == 0
 
-    observed_str = result.output
+    observed_str = strip_ansi_escape_sequences(result.output)
     assert_formatted_string(observed_str, json_format=json_format)
 
     observed_dict = loads_json_or_yaml_mapping(observed_str)
@@ -314,7 +315,7 @@ def test_isolate_class(json_format: bool, abbreviate: bool):
     result = runner.invoke(cli, command)
     assert result.exit_code == exit_codes.SUCCESS == 0
 
-    observed_str = result.output
+    observed_str = strip_ansi_escape_sequences(result.output)
     assert_formatted_string(observed_str, json_format=json_format)
 
     observed_dict = loads_json_or_yaml_mapping(observed_str)
@@ -360,4 +361,4 @@ def test_export_mermaid(tmp_path, props: list[str], example_suffix: str):
     ]
     result = runner.invoke(cli, args)
     assert result.exit_code == exit_codes.SUCCESS == 0
-    assert result.output == erd.read_text()
+    assert strip_ansi_escape_sequences(result.output) == erd.read_text()

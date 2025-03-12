@@ -1,0 +1,5 @@
+# The result of custom embedding on a datapack with circular relations.
+# Denormalization is possible when 'some_relation' is excluded from the embedding.
+alias: a
+some_relation:
+  - b

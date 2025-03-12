@@ -6,10 +6,13 @@ resources:
       content: {}
       relations:
         some_relation:
-          - b
+          targetClass: SomeClass
+          targetResources:
+            - b
     b:
       content: {}
       relations:
         some_relation:
-          - a
-rootResource: non_existing_resource
+          targetClass: SomeClass
+          targetResources:
+            - a

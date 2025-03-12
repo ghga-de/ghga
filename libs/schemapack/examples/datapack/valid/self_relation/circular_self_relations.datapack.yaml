@@ -7,4 +7,6 @@ resources:
       content: {}
       relations:
         some_relation:
-          - a # <-
+          targetClass: SomeClass
+          targetResources:
+            - a # <-

@@ -6,7 +6,9 @@ resources:
     a1:
       content: {}
       relations:
-        b: b1
+        b:
+          targetClass: B
+          targetResources: b1
   B:
     b1:
       content: {}

@@ -1,0 +1,49 @@
+datapack: 0.3.0
+resources:
+  A:
+    a1:
+      content:
+        property_a: property_of_a1
+      relations:
+        b:
+          targetClass: B
+          targetResources:
+            - b1
+            - b2
+            - b3
+        c:
+          targetClass: C
+          targetResources:
+            - c1
+            - c2
+  B:
+    b1:
+      content:
+        property_b: property_of_b1
+      relations:
+        c:
+          targetClass: C
+          targetResources: c1
+    b2:
+      content:
+        property_b: property_of_b2
+      relations:
+        c:
+          targetClass: C
+          targetResources: c2
+    b3:
+      content:
+        property_b: property_of_b3
+      relations:
+        c:
+          targetClass: C
+          targetResources: c2
+  C:
+    c1:
+      content:
+        property_c: property_of_c1
+    c2:
+      content:
+        property_c: property_of_c2
+rootClass: A
+rootResource: a1

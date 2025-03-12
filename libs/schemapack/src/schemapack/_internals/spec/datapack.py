@@ -21,11 +21,11 @@ Warning: This is an internal part of the library and might change without notice
 
 import typing
 from collections import Counter
-from collections.abc import Iterable
-from typing import Annotated, Any, Literal, TypeAlias
+from collections.abc import Iterable, Mapping
+from typing import Annotated, Any, Literal, Self, TypeAlias
 
 from arcticfreeze import FrozenDict, freeze
-from pydantic import BeforeValidator, Field, WrapSerializer
+from pydantic import BeforeValidator, Field, WrapSerializer, model_validator
 from pydantic_core import PydanticCustomError
 
 from schemapack._internals.spec.base import _FrozenNoExtraBaseModel
@@ -84,6 +84,45 @@ ContentPropertyValue: TypeAlias = Annotated[
 ]
 
 
+class ResourceRelation(_FrozenNoExtraBaseModel):
+    """A model defining relations of a resource to other resources."""
+
+    targetClass: ClassName = Field(  # noqa: N815 - following JSON conventions
+        ...,
+        description=("The name of the target class of the relation."),
+    )
+    targetResources: ResourceId | ResourceIdSet | None = Field(  # noqa: N815 - following JSON conventions
+        ...,
+        description=(
+            "Provides the ID(s) of target resources of the targetClass. Depending on"
+            + " the corresponding schemapack definition, this field could be one of the"
+            + " following types:"
+            + " (1) a id of a single target resource (schemapack assumes that"
+            + " multiple.target is False),"
+            + " (2) None (schemapack assumes that multiple.target and mandatory.target"
+            + " are both False),"
+            + " (3) a set of ids of target resources (schemapack assumes that"
+            + " multiple.target is True),"
+            + " (4) an empty set (schemapack assumes that multiple.target is True and"
+            + " mandatory.target is False)."
+        ),
+    )
+
+    def get_target_resources_as_set(self) -> frozenset[ResourceId]:
+        """Get target resources as a set independent of the multiplicity or
+        mandatoriness. This is even the case if the actual value in the relations dict
+        is a single
+        string (translated into a list of length one) or None (translated into an
+        empty set). If do_not_raise is True, the method will return an empty set
+        even if the relation name does not exist in the relations dict.
+        """
+        if self.targetResources is None:
+            return frozenset()
+        if isinstance(self.targetResources, frozenset):
+            return self.targetResources
+        return frozenset({self.targetResources})
+
+
 class Resource(_FrozenNoExtraBaseModel):
     """A model defining content and relations of a resource
     of a specific class.
@@ -97,49 +136,14 @@ class Resource(_FrozenNoExtraBaseModel):
         ),
     )
 
-    relations: FrozenDict[RelationPropertyName, ResourceId | None | ResourceIdSet] = (
-        Field(
-            FrozenDict(),
-            description=(
-                "A dictionary containing the relations of the resource to other resources."
-                + " Each key correspond to the name of a relation property as per the"
-                + " schemapack definition. Each value could be one of the following types"
-                + " depending on the corresponding schemapack definition:"
-                + " (1) a id of a single target resource (multiple.target is False),"
-                + " (2) None (multiple.target and mandatory.target are both False),"
-                + " (3) a set of ids of target resources (multiple.target is True),"
-                + " (4) an empty set (multiple.target is True and mandatory.target is"
-                + " False)."
-            ),
-        )
+    relations: FrozenDict[RelationPropertyName, ResourceRelation] = Field(
+        FrozenDict(),
+        description=(
+            "A dictionary containing the relations of the resource to other resources."
+            + " Each key correspond to the name of a relation property. Each value"
+            + "  contains the target class and target resource(s) of the relation."
+        ),
     )
-
-    def get_target_id_set(
-        self, relation_name: RelationPropertyName, do_not_raise: bool = False
-    ) -> frozenset[ResourceId]:
-        """Get the target ids for the given relation always represented as a set.
-        This is even the case if the actual value in the relations dict is a single
-        string (translated into a list of length one) or None (translated into an
-        empty set). If do_not_raise is True, the method will return an empty set
-        even if the relation name does not exist in the relations dict.
-
-        Raises:
-            KeyError:
-                If the given relation name does not exist in the relations dict and
-                do_not_raise is False.
-        """
-        try:
-            targets = self.relations[relation_name]
-        except KeyError:
-            if do_not_raise:
-                return frozenset()
-            raise
-
-        if targets is None:
-            return frozenset()
-        if isinstance(targets, frozenset):
-            return targets
-        return frozenset({targets})
 
 
 class DataPack(_FrozenNoExtraBaseModel):
@@ -167,11 +171,117 @@ class DataPack(_FrozenNoExtraBaseModel):
     rootResource: str | None = Field(  # noqa: N815 - following JSON conventions
         None,
         description=(
-            "Defines the id of the resource that should act as root. This means"
+            "Defines the id of the resource of the class defined in `className`"
+            + " that should act as root. This means"
             + " that, in addition to the root resource itself, the datapack must only"
             + " contain resources that are direct or indirect (dependencies of"
             + " dependencies) of the root resource."
-            + " Please note, the datapack must define a root resource if the"
-            + " corresponding schemapack defines a root class and vice versa."
         ),
     )
+
+    rootClass: ClassName | None = Field(  # noqa: N815 - following JSON conventions
+        None,
+        description=(
+            "Defines the class name of the resource that should act as root. This means"
+            + " that, in addition to the root resource itself, the datapack must only"
+            + " contain resources that are direct or indirect (dependencies of"
+            + " dependencies) of the root resource."
+        ),
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_root_duality(cls, value: Mapping) -> Mapping | None:
+        """Ensures that both 'rootClass' and 'rootResource' are either present or absent."""
+        missing = [key for key in ("rootClass", "rootResource") if not value.get(key)]
+
+        if len(missing) == 1:
+            raise PydanticCustomError(
+                "DatapackRootDualityError",
+                "Invalid DataPack due to missing field '{missing}'.",
+                {"missing": missing[0]},
+            )
+
+        return value
+
+    @model_validator(mode="after")
+    def validate_root_class(self) -> Self:
+        """Checks if 'rootClass' exists in DataPack resources when specified."""
+        if self.rootClass and self.rootClass not in self.resources:
+            raise PydanticCustomError(
+                "UnknownRootClassError",
+                "The class '{root_class}'"
+                + " given as root class does not exist among the DataPack resources",
+                {"root_class": self.rootClass},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_root_resource(self) -> Self:
+        """Checks if 'rootResource' exists in DataPack resources when specified."""
+        if self.rootClass and self.rootResource not in self.resources[self.rootClass]:
+            raise PydanticCustomError(
+                "UnkownRootResourceError",
+                "The specified root resource with ID '{root_resource}' of class "
+                + " '{root_class}' does not exist.",
+                {"root_resource": self.rootResource, "root_class": self.rootClass},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_relation_classes(self) -> Self:
+        """Checks if the `targetClass` of relations defined in a datapack exists
+        within datapack resources.
+        """
+        non_found_classes: dict[str, str] = {}  # target_class -> relation_name
+
+        for resources in self.resources.values():
+            for resource in resources.values():
+                for relation_name, relation in resource.relations.items():
+                    if relation.targetClass not in self.resources:
+                        non_found_classes[relation.targetClass] = relation_name
+
+        if non_found_classes:
+            raise PydanticCustomError(
+                "TargetClassNotFoundError",
+                "Did not find the target class of the following relations (relation"
+                + " names): {non_found_classes}",
+                {
+                    "non_found_classes": ", ".join(
+                        f"'{target_class}' ('{relation_name}')"
+                        for target_class, relation_name in non_found_classes.items()
+                    )
+                },
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_relation_resources(self) -> Self:
+        """Checks if the `targetResources` of relations defined in a datapack exists
+        within its corresponding `targetClass`.
+        """
+        non_found_target_ids: dict[str, str] = {}  # target_id -> relation_name
+
+        for resources in self.resources.values():
+            for resource in resources.values():
+                for relation_name, relation in resource.relations.items():
+                    target_ids = relation.get_target_resources_as_set()
+                    for target_id in target_ids:
+                        if target_id not in self.resources.get(
+                            relation.targetClass, set()
+                        ):
+                            non_found_target_ids[target_id] = relation_name
+
+        if non_found_target_ids:
+            raise PydanticCustomError(
+                "TargetIdNotFoundError",
+                "Did not find a target resource for the following ID(s) (relation"
+                + " names): {non_found_target_ids}",
+                {
+                    "non_found_target_ids": ", ".join(
+                        f"'{target_id}' ('{relation_name}')"
+                        for target_id, relation_name in non_found_target_ids.items()
+                    )
+                },
+            )
+        return self

@@ -24,7 +24,7 @@ from schemapack.spec.schemapack import SchemaPack
 
 class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
     """A global-scoped validation plugin validating that a datapack has no root resource
-    defined.
+    and root class defined.
     This plugin is only relevant if the schemapack has no root class defined.
     """
 
@@ -47,11 +47,17 @@ class UnexpectedRootValidationPlugin(GlobalValidationPlugin):
         Raises:
             schemapack.exceptions.ValidationPluginError: If validation fails.
         """
+        defined = []
         if datapack.rootResource:
+            defined.append("root resource")
+        if datapack.rootClass:
+            defined.append("root class")
+
+        if defined:
             raise ValidationPluginError(
-                type_="UnexpectedRootResourceError",
+                type_="UnexpectedRootDefinitionError",
                 message=(
                     "The schemapack has no root class defined but the datapack "
-                    "specifies a root resource."
+                    f"specifies a {' and '.join(defined)}."
                 ),
             )

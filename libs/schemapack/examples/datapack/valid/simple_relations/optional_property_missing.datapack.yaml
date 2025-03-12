@@ -13,4 +13,6 @@ resources:
       content: {} # missing non require property dac_contact
       relations:
         files:
-          - example_file_a
+          targetClass: File
+          targetResources:
+            - example_file_a

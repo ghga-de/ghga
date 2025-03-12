@@ -16,6 +16,7 @@
 """Utils for Fixture handling."""
 
 import json
+import re
 from pathlib import Path
 
 import ruamel.yaml
@@ -89,3 +90,15 @@ def loads_json_or_yaml_mapping(string: str):
         dict: The loaded mapping.
     """
     return yaml.load(string)
+
+
+def strip_ansi_escape_sequences(text: str) -> str:
+    """Removes ansi escape characters from a string.
+
+    Args:
+        text (str): Text to be stripped from ansi characters
+
+    Returns:
+        text: Text without ansi characters
+    """
+    return re.sub(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])", "", text)

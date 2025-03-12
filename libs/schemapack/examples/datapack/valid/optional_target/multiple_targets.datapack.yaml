@@ -7,8 +7,10 @@ resources:
       content: {}
       relations:
         b:
-          - b1
-          - b2
+          targetClass: B
+          targetResources:
+            - b1
+            - b2
   B:
     b1:
       content: {}

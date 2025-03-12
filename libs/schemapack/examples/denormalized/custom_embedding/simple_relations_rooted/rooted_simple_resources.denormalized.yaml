@@ -1,0 +1,6 @@
+# The result of partial embedding where "files" are not fully embedded
+alias: example_dataset_1
+dac_contact: dac@example.org
+files:
+  - example_file_a
+  - example_file_b

@@ -20,6 +20,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from typing import TypeAlias
 
+from schemapack._internals.spec.custom_types import RelationPropertyName
 from schemapack.exceptions import CircularRelationError, ValidationAssumptionError
 from schemapack.spec.custom_types import ClassName, ResourceId
 from schemapack.spec.datapack import DataPack
@@ -32,6 +33,7 @@ def denormalize(  # noqa: PLR0912,C901
     *,
     datapack: DataPack,
     schemapack: SchemaPack,
+    ignored_relations: Mapping[ClassName, list[RelationPropertyName]] | None = None,
     _resource_blacklist: Mapping[ClassName, set[ResourceId]] | None = None,
     _alt_root_class_name: ClassName | None = None,
     _alt_root_resource_id: ResourceId | None = None,
@@ -45,6 +47,9 @@ def denormalize(  # noqa: PLR0912,C901
             The datapack to be denormalized. Must be rooted.
         schemapack:
             The schemapack to be used for looking up the classes of relations.
+        ignored_relations:
+            An optional list defining which relation should not be embedded for which
+            datapack root class.
         _resource_blacklist:
             An optional blacklist of resources (a mapping with resource ids as values
             and class names as keys) that cause an error to be raised if they are
@@ -68,12 +73,12 @@ def denormalize(  # noqa: PLR0912,C901
             If a circular relation is detected.
     """
     if not datapack.rootResource:
-        raise ValueError("Datapack must be rooted.")
+        raise ValueError("Datapack must have a root resource.")
 
-    if not schemapack.rootClass:
-        raise ValueError("Schemapack must be rooted.")
+    if not datapack.rootClass:
+        raise ValueError("Datapack must have a root class.")
 
-    root_class_name = _alt_root_class_name or schemapack.rootClass
+    root_class_name = _alt_root_class_name or datapack.rootClass
     root_resource_id = _alt_root_resource_id or datapack.rootResource
 
     resource_blacklist: dict[ClassName, set[ResourceId]] = defaultdict(set)
@@ -102,13 +107,21 @@ def denormalize(  # noqa: PLR0912,C901
     }
     denormalized_object.update(root_resource.content)
 
-    for relation_name, target_ids in root_resource.relations.items():
-        try:
-            relation_definition = root_class_definition.relations[relation_name]
-        except KeyError as error:
-            raise ValidationAssumptionError(context="relation resolution") from error
+    for relation_name, resource_relations in root_resource.relations.items():
+        target_ids = resource_relations.targetResources
+        target_class_name = resource_relations.targetClass
 
-        target_class_name = relation_definition.targetClass
+        if ignored_relations and relation_name in ignored_relations.get(
+            root_class_name, {}
+        ):
+            denormalized_object[relation_name] = (
+                [*sorted(target_ids)]
+                if isinstance(target_ids, frozenset)
+                else target_ids
+                if isinstance(target_ids, str)
+                else []
+            )
+            continue
 
         if isinstance(target_ids, frozenset):
             denormalized_object[relation_name] = []
@@ -130,17 +143,21 @@ def denormalize(  # noqa: PLR0912,C901
                 target_resource = denormalize(
                     datapack=datapack,
                     schemapack=schemapack,
+                    ignored_relations=ignored_relations,
                     _resource_blacklist=resource_blacklist,
                     _alt_root_class_name=target_class_name,
                     _alt_root_resource_id=target_id,
                 )
 
-                denormalized_object[relation_name].append(target_resource)  # type: ignore
+                denormalized_object[relation_name].append(  # type: ignore
+                    target_resource
+                )
 
         elif isinstance(target_ids, str):
             denormalized_object[relation_name] = denormalize(
                 datapack=datapack,
                 schemapack=schemapack,
+                ignored_relations=ignored_relations,
                 _resource_blacklist=resource_blacklist,
                 _alt_root_class_name=target_class_name,
                 _alt_root_resource_id=target_ids,
