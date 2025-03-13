@@ -8,7 +8,8 @@ configPrefix: mass
 # Service base path
 apiBasePath: /mass/
 # Name of the database
-dbName: mass
+mongodb:
+  dbName: mass
 # This parameter is used as Kafka's group id
 serviceName: mass-rest
 # This parameter specifies the client id in Kafka

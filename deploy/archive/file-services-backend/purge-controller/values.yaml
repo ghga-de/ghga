@@ -8,7 +8,8 @@ configPrefix: pcs
 # Service base path
 apiBasePath: /pcs/
 # Name of the database
-dbName: purge-controller
+mongodb:
+  dbName: purge-controller
 # This parameter is used as Kafka's group id
 serviceName: pcs-rest
 # This parameter specifies the client id in Kafka

@@ -8,7 +8,8 @@ configPrefix: dcs
 # Service base path
 apiBasePath: /ga4gh/drs/v1/
 # Name of the database
-dbName: download-controller
+mongodb:
+  dbName: download-controller
 # This parameter is used as Kafka's group id
 serviceName: dcs-rest
 # This parameter specifies the client id in Kafka

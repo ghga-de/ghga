@@ -8,7 +8,8 @@ configPrefix: dins
 # Service base path
 apiBasePath: /dins/
 # Name of the database
-dbName: dataset-information
+mongodb:
+  dbName: dataset-information
 # This parameter is used as Kafka's group id
 serviceName: dins-rest
 # This parameter specifies the client id in Kafka

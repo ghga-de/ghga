@@ -8,7 +8,8 @@ configPrefix: fis
 # Service base path
 apiBasePath: /fis/
 # Name of the database
-dbName: file-ingest
+mongodb:
+  dbName: file-ingest
 # This parameter is used as Kafka's group id
 serviceName: fis-rest
 # This parameter specifies the client id in Kafka

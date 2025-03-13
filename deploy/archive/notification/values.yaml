@@ -6,7 +6,8 @@ configPrefix: ns
 # Service parameters
 
 # Name of the database
-dbName: notification
+mongodb:
+  dbName: notification
 # This parameter is used as Kafka's group id
 serviceName: ns-consumer
 # This parameter specifies the client id in Kafka
