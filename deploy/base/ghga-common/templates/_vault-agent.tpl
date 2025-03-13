@@ -7,7 +7,14 @@ vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
 {{/* Template to inject MongoDB connection string derived from Vault database engine */}}
 {{- if .Values.vaultAgent.secrets.mongodb }}
 {{- if .Values.vaultAgent.secrets.mongodb.enabled }}
-{{- $vaultSecretPath := .Values.vaultAgent.secrets.mongodb.secretPath }}
+{{- $vaultSecretPath := "" }}
+{{- if ne .Values.vaultAgent.secrets.mongodb.secretPath "" }}
+{{- $vaultSecretPath = .Values.vaultAgent.secrets.mongodb.secretPath }}
+{{- else }}
+{{- with .Values.mongodb.service }}
+{{- $vaultSecretPath = list (list $.Values.environment.name .namespace .name | join "-") "creds" $.Release.Name | join "/" }}
+{{- end }}
+{{- end }}
 {{- $connectionString := .Values.vaultAgent.secrets.mongodb.connectionString }}
 vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
   kill -TERM $(pgrep {{ .Values.vaultAgent.pgrepPattern }})
@@ -23,7 +30,14 @@ vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
 {{/* Template which injects all KV pairs into the pod's environment */}}
 {{- if .Values.vaultAgent.secrets.service }}
 {{- if .Values.vaultAgent.secrets.service.enabled }}
-{{- $vaultSecretPath := .Values.vaultAgent.secrets.service.secretPath }}
+{{- $vaultSecretPath := "" }}
+{{- if ne .Values.vaultAgent.secrets.service.secretPath "" }}
+{{- $vaultSecretPath = .Values.vaultAgent.secrets.service.secretPath }}
+{{- else }}
+{{- with .Values.vaultAgent.secrets.service.pathPrefix }}
+{{- $vaultSecretPath = list . $.Values.environment.name $.Release.Name | join "/" }}
+{{- end }}
+{{- end }}
 vault.hashicorp.com/agent-inject-command-service-secrets: |
   kill -TERM $(pgrep {{ .Values.vaultAgent.pgrepPattern }})
 vault.hashicorp.com/agent-inject-secret-service-secrets: {{ $vaultSecretPath }}

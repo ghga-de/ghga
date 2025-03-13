@@ -9,7 +9,8 @@ configPrefix: test
 # Service base path
 apiBasePath: /test/
 # Name of the database
-dbName: test
+mongodb:
+  dbName: test
 # This parameter is used as Kafka's group id
 serviceName: test-service-name
 # This parameter specifies the client id in Kafka
@@ -44,7 +45,7 @@ vaultAgent:
         parameterName: AUTH_KEY
         dataKey: key
     mongodb:
-      enabled: false
+      enabled: true
     service:
       enabled: true
     crypt4ghInternalPub:

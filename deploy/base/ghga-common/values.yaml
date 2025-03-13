@@ -185,7 +185,14 @@ exports:
       clusterNamespace: strimzi
       caCertSecretName: kafka-cluster-ca-cert
 
-    dbName: ""
+    mongodb:
+      dbName: ""
+      host: mongodb.mongodb.svc.cluster.local
+      service:
+        namespace: mongodb
+        name: mongodb
+      
+
     apiBasePath: ""
     serviceName: ""
     serviceInstanceId: ""
@@ -202,6 +209,9 @@ exports:
     
     successfulJobsHistoryLimit: 5
 
+    environment:
+      name: default
+
     vaultAgent:
       enabled: false
       annotations:
@@ -217,11 +227,12 @@ exports:
         generic: {}
         mongodb:
           enabled: false
-          secretPath: database/creds/my-role
+          secretPath: ""
           connectionString: "mongodb://{{username}}:{{password}}@mongodb:27017/admin"
         service:
           enabled: false
-          secretPath: operational-secrets/data/unique/apps/archive/service
+          secretPath: ""
+          pathPrefix: operational-secrets/data/unique/apps/archive
         crypt4ghInternalPub:
           enabled: false
           secretPath: "operational-secrets/data/shared/managed-keys/crypt4gh-internal"

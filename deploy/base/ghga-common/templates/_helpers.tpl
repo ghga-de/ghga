@@ -10,6 +10,9 @@
 {{- if .Values.dbName -}}
     db_name: {{ .Values.dbNamePrefix | empty | ternary .Values.dbName (cat .Values.dbNamePrefix "-" .Values.dbName ) | nospace }}
 {{- end -}}
+{{- if .Values.mongodb.dbName -}}
+    db_name: {{ .Values.dbNamePrefix | empty | ternary .Values.mongodb.dbName (cat .Values.dbNamePrefix "-" .Values.mongodb.dbName ) | nospace }}
+{{- end -}}
 {{- end -}}
 {{- define "ghga-common.serviceName" -}}
 {{- if .Values.serviceName -}}
