@@ -6,7 +6,8 @@ configPrefix: nos
 # Service parameters
 
 # Name of the database
-dbName: notification-orchestration
+mongodb:
+  dbName: notification-orchestration
 # This parameter is used as Kafka's group id
 serviceName: nos-consumer
 # This parameter specifies the client id in Kafka

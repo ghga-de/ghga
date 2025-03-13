@@ -6,7 +6,8 @@ configPrefix: ifrs
 # Service parameters
 
 # Name of the database
-dbName: internal-file-registry
+mongodb:
+  dbName: internal-file-registry
 # This parameter is used as Kafka's group id
 serviceName: ifrs
 # This parameter specifies the client id in Kafka

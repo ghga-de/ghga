@@ -8,7 +8,8 @@ configPrefix: ars
 # Service base path
 apiBasePath: /ars/
 # Name of the database
-dbName: access-request
+mongodb:
+  dbName: access-request
 # This parameter is used as Kafka's group id
 serviceName: ars-rest
 # This parameter specifies the client id in Kafka

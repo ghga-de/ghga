@@ -8,7 +8,8 @@ configPrefix: metldata
 # Service base path
 apiBasePath: /metldata/
 # Name of the database
-dbName: metadata-artifacts
+mongodb:
+  dbName: metadata-artifacts
 # This parameter is used as Kafka's group id
 serviceName: metldata
 # This parameter specifies the client id in Kafka
