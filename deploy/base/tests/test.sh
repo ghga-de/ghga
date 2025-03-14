@@ -10,5 +10,5 @@ SERVICE_NAME=$1
 
 # Run Helm commands with the provided service name
 helm dep up "$SERVICE_NAME" --skip-refresh
-helm template "$SERVICE_NAME" ./"$SERVICE_NAME" --output-dir ./rendered
+helm template --namespace test  "$SERVICE_NAME" ./"$SERVICE_NAME" --output-dir ./rendered
 helm lint ./"$SERVICE_NAME"

@@ -221,7 +221,8 @@ exports:
         vault.hashicorp.com/agent-cache-enable: "true"
         vault.hashicorp.com/agent-pre-populate-only: "false"
         vault.hashicorp.com/agent-run-as-same-user: "true"
-      role: service-role
+      role: ""
+      rolePrefix: ""
       pgrepPattern: python
       secrets:
         generic: {}

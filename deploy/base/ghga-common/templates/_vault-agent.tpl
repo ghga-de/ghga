@@ -2,7 +2,15 @@
 {{/* Vault agent boilerplate */}}
 {{- $envPrefix := eq .Values.configPrefix "" | ternary "" (print .Values.configPrefix "_" | upper) }}
 {{- .Values.vaultAgent.annotations | toYaml }}
+{{- if .Values.vaultAgent.role }}
 vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
+{{- else if .Values.vaultAgent.rolePrefix }}
+vault.hashicorp.com/role: "{{ .Values.vaultAgent.rolePrefix }}-{{ .Release.Name }}"
+{{- else }}
+vault.hashicorp.com/role: "{{ .Release.Name }}"
+{{- end }}
+{{- if .Values.vaultAgent.authMethod }}
+{{- end }}
 {{- if .Values.vaultAgent.secrets -}}
 {{/* Template to inject MongoDB connection string derived from Vault database engine */}}
 {{- if .Values.vaultAgent.secrets.mongodb }}
