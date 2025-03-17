@@ -24,4 +24,4 @@ containers:
   config:
     name: parameters
     key: parameters
-    appuser: node
+    appuser: appuser
