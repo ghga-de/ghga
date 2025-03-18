@@ -75,3 +75,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (66) [Irukandji](./66-irukandji/technical_specification.md): Schemapack
 - (67) [Oryx](./67-oryx/technical_specification.md): Kafka Event Config Standardization
 - (68) [Gemsbok](./68-gemsbok/technical_specification.md): Persistent Event Publisher
+- (69) [Common Kingslayer](./69-common-kingslayer/technical_specification.md): OpenTelemetry in file services
