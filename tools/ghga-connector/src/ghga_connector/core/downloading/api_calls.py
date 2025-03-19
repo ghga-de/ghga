@@ -21,7 +21,7 @@ import httpx
 from tenacity import RetryError
 
 from ghga_connector.constants import CACHE_MIN_FRESH, TIMEOUT_LONG
-from ghga_connector.core import WorkPackageAccessor, exceptions, retry_handler
+from ghga_connector.core import RetryHandler, WorkPackageAccessor, exceptions
 
 from .structs import (
     RetryResponse,
@@ -31,7 +31,7 @@ from .structs import (
 
 
 async def _get_authorization(
-    file_id: str, work_package_accessor: WorkPackageAccessor
+    file_id: str, work_package_accessor: WorkPackageAccessor, bust_cache: bool = False
 ) -> httpx.Headers:
     """
     Fetch work order token using accessor and prepare DCS endpoint URL and headers for a
@@ -41,7 +41,9 @@ async def _get_authorization(
     for at least another `CACHE_MIN_FRESH` seconds.
     """
     # fetch a work order token
-    decrypted_token = await work_package_accessor.get_work_order_token(file_id=file_id)
+    decrypted_token = await work_package_accessor.get_work_order_token(
+        file_id=file_id, bust_cache=bust_cache
+    )
     # build headers
     headers = httpx.Headers(
         {
@@ -71,7 +73,7 @@ async def get_envelope_authorization(
 
 
 async def get_file_authorization(
-    file_id: str, work_package_accessor: WorkPackageAccessor
+    file_id: str, work_package_accessor: WorkPackageAccessor, bust_cache: bool = False
 ) -> UrlAndHeaders:
     """
     Fetch work order token using accessor and prepare DCS endpoint URL and headers to get
@@ -80,7 +82,9 @@ async def get_file_authorization(
     # build URL
     url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}"
     headers = await _get_authorization(
-        file_id=file_id, work_package_accessor=work_package_accessor
+        file_id=file_id,
+        work_package_accessor=work_package_accessor,
+        bust_cache=bust_cache,
     )
     return UrlAndHeaders(url, headers)
 
@@ -89,6 +93,7 @@ async def get_download_url(  # noqa: C901, PLR0912
     *,
     client: httpx.AsyncClient,
     url_and_headers: UrlAndHeaders,
+    bust_cache: bool = False,
 ) -> Union[RetryResponse, URLResponse]:
     """
     Perform a RESTful API call to retrieve a presigned download URL.
@@ -100,12 +105,23 @@ async def get_download_url(  # noqa: C901, PLR0912
         is returned.
     """
     url = url_and_headers.endpoint_url
+    headers = url_and_headers.headers
+
+    if bust_cache:
+        # update cache-control headers to get fresh response from source
+        cache_control_headers = headers.get("Cache-Control")
+        if not cache_control_headers:
+            cache_control_headers = ["max-age=0"]
+        else:
+            cache_control_headers = [cache_control_headers, "max-age=0"]
+        headers["Cache-Control"] = ",".join(cache_control_headers)
 
     try:
+        retry_handler = RetryHandler.basic()
         response: httpx.Response = await retry_handler(
             fn=client.get,
             url=url,
-            headers=url_and_headers.headers,
+            headers=headers,
             timeout=TIMEOUT_LONG,
         )
 

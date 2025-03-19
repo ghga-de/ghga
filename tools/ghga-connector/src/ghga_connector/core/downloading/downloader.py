@@ -18,6 +18,7 @@
 import asyncio
 import base64
 import gc
+import logging
 from asyncio import PriorityQueue, Queue, Semaphore, Task, create_task
 from collections.abc import Coroutine
 from io import BufferedWriter
@@ -31,10 +32,10 @@ from ghga_connector.core import (
     AbstractMessageDisplay,
     PartRange,
     ResponseExceptionTranslator,
+    RetryHandler,
     WorkPackageAccessor,
     calc_part_ranges,
     exceptions,
-    retry_handler,
 )
 
 from .abstract_downloader import DownloaderBase
@@ -45,6 +46,8 @@ from .api_calls import (
 )
 from .progress_bar import ProgressBar
 from .structs import RetryResponse, URLResponse
+
+logger = logging.getLogger(__name__)
 
 
 class TaskHandler:
@@ -80,6 +83,10 @@ class TaskHandler:
                 self.cancel_tasks()
                 raise exception
         self._tasks.discard(task)
+        logger.debug(
+            "Finished download task. Remaining: %i",
+            len([task for task in asyncio.all_tasks() if not task.done()]),
+        )
 
     async def gather(self):
         """Await all remaining tasks."""
@@ -115,6 +122,7 @@ class Downloader(DownloaderBase):
         self._message_display.display(
             f"Fetching work order token and download URL for {self._file_id}"
         )
+        logger.debug("Initial fetch of download URL for file %s", self._file_id)
         url_response = await self.fetch_download_url()
         part_ranges = calc_part_ranges(
             part_size=part_size, total_file_size=url_response.file_size
@@ -123,10 +131,17 @@ class Downloader(DownloaderBase):
         task_handler = TaskHandler()
 
         # start async part download to intermediate queue
+        logger.debug("Scheduling download for file %s", self._file_id)
         for part_range in part_ranges:
             task_handler.schedule(self.download_to_queue(part_range=part_range))
 
+        logger.debug(
+            "Current amount of download tasks after scheduling: %i",
+            len([task for task in asyncio.all_tasks() if not task.done()]),
+        )
+
         # get file header envelope
+        logger.debug("Fetching Crypt4GH envelope for file %s", self._file_id)
         try:
             envelope = await self.get_file_header_envelope()
         except (
@@ -146,8 +161,10 @@ class Downloader(DownloaderBase):
             ) as progress_bar,
         ):
             # put envelope in file
+            logger.debug("Writing Crypt4GH envelope for file %s", self._file_id)
             file.write(envelope)
             # start download task
+            logger.debug("Starting to write file parts to disk for %s", self._file_id)
             write_to_file = Task(
                 self.drain_queue_to_file(
                     file=file,
@@ -165,7 +182,7 @@ class Downloader(DownloaderBase):
             else:
                 await write_to_file
 
-    async def fetch_download_url(self) -> URLResponse:
+    async def fetch_download_url(self, bust_cache: bool = False) -> URLResponse:
         """Fetch a work order token and retrieve the download url.
 
         Returns a URLResponse containing two elements:
@@ -177,9 +194,23 @@ class Downloader(DownloaderBase):
                 file_id=self._file_id,
                 work_package_accessor=self._work_package_accessor,
             )
-            response = await get_download_url(
-                client=self._client, url_and_headers=url_and_headers
-            )
+            try:
+                response = await get_download_url(
+                    client=self._client,
+                    url_and_headers=url_and_headers,
+                    bust_cache=bust_cache,
+                )
+            except exceptions.UnauthorizedAPICallError:
+                url_and_headers = await get_file_authorization(
+                    file_id=self._file_id,
+                    work_package_accessor=self._work_package_accessor,
+                    bust_cache=True,
+                )
+                response = await get_download_url(
+                    client=self._client,
+                    url_and_headers=url_and_headers,
+                    bust_cache=True,
+                )
         except exceptions.BadResponseCodeError as error:
             self._message_display.failure(
                 f"The request for file {self._file_id} returned an unexpected HTTP status code: {error.response_code}."
@@ -209,7 +240,12 @@ class Downloader(DownloaderBase):
         url = url_and_headers.endpoint_url
         # Make function call to get download url
         try:
-            response = await self._client.get(url=url, headers=url_and_headers.headers)
+            retry_handler = RetryHandler.basic()
+            response: httpx.Response = await retry_handler(
+                fn=self._client.get,
+                headers=url_and_headers.headers,
+                url=url,
+            )
         except httpx.RequestError as request_error:
             raise exceptions.RequestFailedError(url=url) from request_error
 
@@ -254,9 +290,17 @@ class Downloader(DownloaderBase):
             url_and_headers = await self.fetch_download_url()
             url = url_and_headers.download_url
             try:
-                await self.download_content_range(
-                    url=url, start=part_range.start, end=part_range.stop
-                )
+                try:
+                    await self.download_content_range(
+                        url=url, start=part_range.start, end=part_range.stop
+                    )
+                except exceptions.UnauthorizedAPICallError:
+                    url_and_headers = await self.fetch_download_url(bust_cache=True)
+                    url = url_and_headers.download_url
+                    logger.debug("Encountered 403, trying again with new URL: %s", url)
+                    await self.download_content_range(
+                        url=url, start=part_range.start, end=part_range.stop
+                    )
             except Exception as exception:
                 raise exceptions.DownloadError(reason=str(exception)) from exception
 
@@ -276,6 +320,7 @@ class Downloader(DownloaderBase):
         )
 
         try:
+            retry_handler = RetryHandler.basic()
             response: httpx.Response = await retry_handler(
                 fn=self._client.get, url=url, headers=headers
             )
@@ -300,6 +345,11 @@ class Downloader(DownloaderBase):
         if status_code in (200, 206):
             await self._queue.put((start, response.content))
             return
+
+        if status_code == 403:
+            raise exceptions.UnauthorizedAPICallError(
+                url=url, cause="Presigned URL is likely expired."
+            )
 
         raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
 

@@ -16,6 +16,7 @@
 """CLI-specific wrappers around core functions."""
 
 import asyncio
+import logging
 import os
 import sys
 from dataclasses import dataclass
@@ -301,6 +302,10 @@ async def async_download(  # noqa: PLR0913
     overwrite: bool = False,
 ):
     """Download files asynchronously"""
+    # enable debug logging
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
+
     if not my_public_key_path.is_file():
         raise exceptions.PubKeyFileDoesNotExistError(public_key_path=my_public_key_path)
 

@@ -35,7 +35,7 @@ class DownloaderBase(ABC):
         """Download file to the specified location and manage lower level details."""
 
     @abstractmethod
-    def fetch_download_url(self) -> Coroutine[URLResponse, Any, Any]:
+    def fetch_download_url(self, bust_cache: bool) -> Coroutine[URLResponse, Any, Any]:
         """Wait until download URL can be generated.
         Returns a URLResponse containing two elements:
             1. the download url

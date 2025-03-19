@@ -14,8 +14,7 @@
 # limitations under the License.
 """Handling session initialization for httpx"""
 
-from contextlib import asynccontextmanager, contextmanager
-from functools import cached_property
+from contextlib import asynccontextmanager
 from typing import Union
 
 import hishel
@@ -33,11 +32,11 @@ from ghga_connector.config import CONFIG
 from ghga_connector.constants import TIMEOUT
 
 
-class HttpxClientConfigurator:
+class RetryHandler:
     """Helper class to make max_retries user configurable"""
 
-    @cached_property
-    def retry_handler(self):
+    @classmethod
+    def basic(cls):
         """Configure client retry handler with exponential backoff"""
         return AsyncRetrying(
             reraise=True,
@@ -58,22 +57,6 @@ class HttpxClientConfigurator:
         )
 
 
-retry_handler = HttpxClientConfigurator().retry_handler
-
-
-@contextmanager
-def httpx_client():
-    """Yields a context manager httpx client and closes it afterward"""
-    with httpx.Client(
-        timeout=TIMEOUT,
-        limits=httpx.Limits(
-            max_connections=CONFIG.max_concurrent_downloads,
-            max_keepalive_connections=CONFIG.max_concurrent_downloads,
-        ),
-    ) as client:
-        yield client
-
-
 def get_cache_transport(
     wrapped_transport: Union[httpx.AsyncBaseTransport, None] = None,
 ) -> hishel.AsyncCacheTransport:
@@ -84,7 +67,8 @@ def get_cache_transport(
     """
     cache_transport = hishel.AsyncCacheTransport(
         transport=wrapped_transport or httpx.AsyncHTTPTransport(),
-        storage=hishel.AsyncInMemoryStorage(ttl=1800),  # persist for 30 minutes
+        # set ttl to expected lifetime of presigned URL - min-fresh
+        storage=hishel.AsyncInMemoryStorage(ttl=57, capacity=512),
         controller=hishel.Controller(
             cacheable_methods=["POST", "GET"],
             cacheable_status_codes=[200, 201],

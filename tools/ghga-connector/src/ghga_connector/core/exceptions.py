@@ -338,7 +338,7 @@ class StartUploadError(RuntimeError):
 
 
 class UnauthorizedAPICallError(RuntimeError):
-    """Thrown when a 403 is returned from a call requiring a work order token for authorization"""
+    """Thrown when a 403 is returned from a call requiring authorization."""
 
     def __init__(self, *, url: str, cause: str):
         message = f"Could not authorize call to '{url}': {cause}"
