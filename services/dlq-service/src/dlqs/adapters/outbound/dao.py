@@ -15,7 +15,6 @@
 """DAO and Aggregator implementation"""
 
 import logging
-from typing import Any
 
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb.provider import document_to_dto
@@ -61,7 +60,7 @@ class Aggregator(AggregatorPort):
 
         Raises:
         - `ValueError` if `skip` or `limit` is invalid.
-        - `AggregationError` if the aggregation fails.
+        - `AggregationError` if the event retrieval fails.
         """
         if skip < 0:
             raise ValueError(f"Skip must be 0 or greater, got {skip}")
@@ -69,22 +68,19 @@ class Aggregator(AggregatorPort):
         if limit is not None and limit < 1:
             raise ValueError(f"Limit must be greater than 0 if supplied, got {limit}")
 
-        pipeline: list[dict[str, Any]] = [
-            {"$match": {"dlq_info.service": service, "topic": topic}},
-            {"$sort": {"timestamp": 1}},
-        ]
-
-        if skip:
-            pipeline.append({"$skip": skip})
-
-        if limit:
-            pipeline.append({"$limit": limit})
-
         try:
-            results = self._collection.aggregate(pipeline=pipeline)
+            results_cursor = self._collection.find(
+                filter={"dlq_info.service": service, "topic": topic}
+            ).sort("timestamp", 1)
+            if skip:
+                results_cursor = results_cursor.skip(skip)
+            if limit:
+                results_cursor = results_cursor.limit(limit)
+
+            results = await results_cursor.to_list()
             return [
                 document_to_dto(item, id_field="dlq_id", dto_model=StoredDLQEvent)
-                async for item in results
+                for item in results
             ]
         except OperationFailure as err:
             params_as_string = f"{{{service=}, {topic=}, {skip=}, {limit=}}}"

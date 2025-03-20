@@ -47,6 +47,6 @@ class AggregatorPort(ABC):
 
         Raises:
         - `ValueError` if `skip` or `limit` is invalid.
-        - `AggregationError` if the aggregation fails.
+        - `AggregationError` if the event retrieval fails.
         """
         ...

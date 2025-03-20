@@ -15,7 +15,7 @@
 
 """Unit tests for the Aggregator class"""
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 from pymongo.errors import OperationFailure
@@ -23,20 +23,14 @@ from pymongo.errors import OperationFailure
 from dlqs.adapters.outbound.dao import Aggregator
 
 
-@pytest.mark.parametrize("err_on_find_one", [True, False])
 @pytest.mark.asyncio
-async def test_db_error_handling(err_on_find_one: bool):
+async def test_db_error_handling():
     """Test that the Aggregator translates Pymongo errors correctly.
 
-    Both `aggregate` and `find_one` methods are mocked to raise an `OperationFailure`.
+    The collection methods are mocked to raise an `OperationFailure`.
     """
     mock_collection = Mock()
-    mock_collection.aggregate.side_effect = OperationFailure("Something went wrong")
-    mock_collection.find_one = AsyncMock()
-    if err_on_find_one:
-        mock_collection.find_one.side_effect = OperationFailure("Something went wrong")
-    else:
-        mock_collection.find_one.return_value = [1]  # just something to let code pass
+    mock_collection.find.side_effect = OperationFailure("Something went wrong")
 
     aggregator = Aggregator(collection=mock_collection)
     with pytest.raises(Aggregator.AggregationError):
