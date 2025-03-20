@@ -117,22 +117,36 @@ class InformationService(InformationServicePort):
             log.debug("Found mapping for dataset %s.", dataset_id)
         except ResourceNotFoundError as error:
             dataset_not_found = self.DatasetNotFoundError(dataset_accession=dataset_id)
-            log.warning(dataset_not_found)
+            log.debug(dataset_not_found)
             raise dataset_not_found from error
 
-        file_information: list[FileAccession | FileInformation] = []
+        file_ids_mapping = {"accession": {"$in": dataset.file_accessions}}
 
-        for file_accession in sorted(dataset.file_accessions):
-            try:
-                current_file_information = await self.serve_file_information(
-                    file_accession
-                )
-                file_information.append(current_file_information)
-            except self.InformationNotFoundError:
-                file_information.append(FileAccession(accession=file_accession))
-        return DatasetFileInformation(
-            accession=dataset_id, file_information=file_information
+        file_informations = [
+            single_file_information
+            async for single_file_information in self._file_information_dao.find_all(
+                mapping=file_ids_mapping
+            )
+        ]
+
+        matched_accessions = {
+            file_information.accession for file_information in file_informations
+        }
+        missing_accessions = set(dataset.file_accessions) - matched_accessions
+
+        log.debug(
+            f"{dataset_id}: File information found: [{matched_accessions}]; Missing: [{missing_accessions}]"
         )
+
+        file_accessions = [
+            FileAccession(accession=accession) for accession in missing_accessions
+        ]
+
+        combined = sorted(
+            file_informations + file_accessions, key=lambda x: x.accession
+        )
+
+        return DatasetFileInformation(accession=dataset_id, file_information=combined)
 
     async def serve_file_information(self, file_id: str) -> FileInformation:
         """Retrieve stored public information for the given file ID to be served by the API."""
@@ -141,7 +155,7 @@ class InformationService(InformationServicePort):
             log.debug("Found information for file %s.", file_id)
         except ResourceNotFoundError as error:
             information_not_found = self.InformationNotFoundError(file_id=file_id)
-            log.warning(information_not_found)
+            log.debug(information_not_found)
             raise information_not_found from error
 
         return file_information
