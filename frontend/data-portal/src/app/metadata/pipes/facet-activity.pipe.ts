@@ -5,7 +5,6 @@
  */
 
 import { Pipe, PipeTransform } from '@angular/core';
-// eslint-disable-next-line boundaries/element-types
 import { FacetFilterSetting } from '../models/facet-filter';
 
 /**

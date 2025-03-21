@@ -31,9 +31,9 @@ import { Title } from '@angular/platform-browser';
 // eslint-disable-next-line boundaries/element-types
 import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button.component';
 import { Experiment, File, Sample } from '@app/metadata/models/dataset-details';
+import { StorageAlias } from '@app/metadata/pipes/storage-alias.pipe';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
-import { StorageAlias } from '@app/metadata/utils/storage-alias.pipe';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { AddPluralS } from '@app/shared/utils/add-plural-s.pipe';
 import { ParseBytes } from '@app/shared/utils/parse-bytes.pipe';

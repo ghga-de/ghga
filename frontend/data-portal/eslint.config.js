@@ -193,19 +193,24 @@ export default [
               message: 'UI components should not import services',
             },
             {
-              from: ['service', 'model', 'util'],
+              from: ['service', 'pipe', 'model', 'util'],
               disallow: ['features', 'ui'],
               message: 'Components should not be imported from other kinds of modules',
             },
             {
-              from: ['model'],
+              from: ['pipe'],
               disallow: ['service'],
-              message: 'Services should not be imported from models',
+              message: 'Services should not be imported from pipes',
+            },
+            {
+              from: ['model'],
+              disallow: ['service', 'pipe'],
+              message: 'Services and pipes should not be imported from models',
             },
             {
               from: ['util'],
-              disallow: ['service', 'model'],
-              message: 'Services and models should not be imported from utilities',
+              disallow: ['service', 'pipe'],
+              message: 'Services and pipes should not be imported from utilities',
             },
             // Auth service may be imported in other contexts
             {
@@ -277,6 +282,12 @@ export default [
         {
           type: 'service',
           pattern: 'src/app/*/services',
+          mode: 'folder',
+          capture: ['context'],
+        },
+        {
+          type: 'pipe',
+          pattern: 'src/app/*/pipes',
           mode: 'folder',
           capture: ['context'],
         },
