@@ -22,7 +22,6 @@ import { getBackendErrorMessage, MaybeBackendError } from '@app/shared/utils/err
 import { Dataset } from '@app/work-packages/models/dataset';
 import { WorkPackage } from '@app/work-packages/models/work-package';
 import { WorkPackageService } from '@app/work-packages/services/work-package.service';
-import { Buffer } from 'buffer';
 
 /**
  * Work package creation page component
@@ -109,18 +108,37 @@ export class WorkPackageComponent {
       return 1; // key is empty after trimming
     }
     // Base64 decode the key
-    const binKey = Buffer.from(key, 'base64');
-    if (!binKey) {
+    let binKey: Uint8Array;
+    try {
+      const binStr = atob(key);
+      binKey = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) {
+        binKey[i] = binStr.charCodeAt(i);
+      }
+    } catch {
       return 3; // key is not a valid Base64 string
     }
-    if (binKey?.length !== 32) {
+    if (binKey.length !== 32) {
       // key does not have the right length for a Crypt4GH public key
-      if (!Buffer.compare(binKey.subarray(0, 5), Buffer.from('c4gh-', 'ascii'))) {
+      const prefix = new TextEncoder().encode('c4gh-');
+      if (this.#compareUint8Arrays(binKey.subarray(0, 5), prefix)) {
         return 2; // key is actually a Base64 encoded Crypt4GH private key
       }
       return 3; // key is something else
     }
     return 0; // key seems to be ok
+  }
+
+  /**
+   * Compare two Uint8Array objects for equality
+   * @param arr1 - the first array
+   * @param arr2 - the second array
+   * @returns true if the arrays are equal, false otherwise
+   */
+  #compareUint8Arrays(arr1: Uint8Array, arr2: Uint8Array): boolean {
+    return (
+      arr1.length === arr2.length && arr1.every((value, index) => value === arr2[index])
+    );
   }
 
   /**

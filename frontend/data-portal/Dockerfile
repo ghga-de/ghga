@@ -8,7 +8,7 @@ FROM base AS builder
 RUN npm install --global corepack@0.32.0
 RUN corepack prepare pnpm@10.5.2 --activate
 # install static web server
-RUN apk add curl sudo which
+RUN apk add curl jq sudo which
 RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sh
 # build the service
 WORKDIR /service
@@ -16,6 +16,8 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 COPY . .
 RUN npm run build
+# create base package.json with just name and version
+RUN jq '{name, version, type}' package.json > ./package.json.run
 
 # RUNNER: a container to run the service
 FROM base AS runner
@@ -26,9 +28,11 @@ USER appuser
 COPY --from=builder /service/dist/data-portal/browser ./dist
 # install static web server
 COPY --from=builder /usr/local/bin/static-web-server /usr/local/bin
+# copy the base package.json with name and version
+COPY --from=builder /service/package.json.run ./package.json
 # make the config file writeable to the appuser
 USER root
-RUN touch ./dist/config.js && chown appuser ./dist/config.js
+RUN touch ./dist/config.js && chown appuser ./dist/config.js ./package.json
 USER appuser
 # install run script
 COPY ./run.js ./run.mjs
