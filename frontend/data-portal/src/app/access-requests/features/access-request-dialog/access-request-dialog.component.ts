@@ -48,7 +48,6 @@ const MILLISECONDS_PER_DAY = 86400000;
     MatButtonModule,
   ],
   templateUrl: './access-request-dialog.component.html',
-  styleUrl: './access-request-dialog.component.scss',
 })
 export class AccessRequestDialogComponent {
   readonly emailFormControl = new FormControl('', [

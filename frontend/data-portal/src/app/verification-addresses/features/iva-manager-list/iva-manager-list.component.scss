@@ -1,43 +1,29 @@
 @use '@angular/material' as mat;
 
-.stateUnverified,
-button.invalidate {
-  color: #dc2626;
-}
-.stateCodeRequested {
-  color: #ea580c;
-}
-.stateCodeCreated {
-  color: #d97706;
-}
-.stateCodeTransmitted {
-  color: #0d9488;
-}
-.stateVerified {
-  color: #16a34a;
-}
-table button {
+button {
   @include mat.button-overrides(
     (
-      filled-label-text-size: 80%,
-      outlined-label-text-size: 80%,
+      filled-label-text-size: 90%,
+      outlined-label-text-size: 90%,
+      outlined-outline-color: var(--mat-sys-error),
+      outlined-label-text-color: var(--mat-sys-error),
     )
   );
 }
-button.create {
+
+button.create-code-button {
   @include mat.button-overrides(
     (
-      filled-container-color: var(--mat-sys-secondary),
-      text-state-layer-color: var(--mat-sys-on-secondary),
+      filled-container-color: var(--mat-sys-quaternary),
     )
   );
 }
-button.confirm {
-  @include mat.button-overrides(
+
+table {
+  @include mat.table-overrides(
     (
-      filled-label-text-size: 80%,
-      filled-container-color: var(--mat-sys-tertiary),
-      text-state-layer-color: var(--mat-sys-on-tertiary),
+      header-headline-size: var(--mat-sys-title-medium-size),
+      row-item-label-text-size: var(--mat-sys-body-large-size),
     )
   );
 }

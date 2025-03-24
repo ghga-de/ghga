@@ -23,7 +23,6 @@ import { IvaManagerListComponent } from '../iva-manager-list/iva-manager-list.co
     IvaManagerFilterComponent,
   ],
   templateUrl: './iva-manager.component.html',
-  styleUrl: './iva-manager.component.scss',
 })
 export class IvaManagerComponent implements OnInit {
   #ivaService = inject(IvaService);

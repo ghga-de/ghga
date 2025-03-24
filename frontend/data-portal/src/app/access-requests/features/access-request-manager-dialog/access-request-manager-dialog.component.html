@@ -3,19 +3,19 @@
   <mat-dialog-content>
     <table class="detail mb-4 w-full">
       <tr>
-        <th>Dataset:</th>
+        <th class="pe-1 text-start">Dataset ID:</th>
         <td>{{ data.dataset_id }}</td>
       </tr>
       <tr>
-        <th>Requester:</th>
+        <th class="pe-1 text-start">Requester:</th>
         <td>{{ data.full_user_name }}</td>
       </tr>
       <tr>
-        <th>Contact e-Mail:</th>
+        <th class="w-32 pe-1 text-start">Contact e-Mail:</th>
         <td>{{ data.email }}</td>
       </tr>
       <tr>
-        <th>Request details:</th>
+        <th class="pe-1 text-start align-top">Request details:</th>
         <td>{{ data.request_text }}</td>
       </tr>
     </table>
@@ -28,8 +28,11 @@
       {{ data.access_starts | date: friendlyDateFormat }} until
       {{ data.access_ends | date: friendlyDateFormat }}.
     </p>
-    <p>
-      Access request is currently <strong>{{ data.status }}</strong
+    <p class="mb-5">
+      Access request is currently
+      <strong class="{{ data.status | AccessRequestStatusClassPipe }}">{{
+        data.status
+      }}</strong
       >.
     </p>
     @if (ivasAreLoading()) {
@@ -37,21 +40,26 @@
     } @else if (ivasError() || !ivas().length) {
       <p>No corresponding verification addresses found, cannot process request.</p>
     } @else {
-      <label for="iva-selection">
-        Please select the verification address that should be used to secure the access
-        request:
+      <label for="iva-selection-group" class="text-lg">
+        @if (allowedAccessRequestIvaId()) {
+          If you wish to change the verification address used for this access request,
+          please select it below:
+        } @else {
+          Please select the verification address that should be used to secure the
+          access request:
+        }
       </label>
-      <mat-radio-group [(ngModel)]="ivaId" id="iva-selection-label">
+      <mat-radio-group [(ngModel)]="selectedIvaIdRadioButton" id="iva-selection-group">
         <table class="ivas mt-2">
           @for (iva of ivas(); track iva.id) {
             <tr>
               <td>
-                <mat-radio-button class="example-radio-button" [value]="iva.id">
-                  {{ typeAndValue(iva) }}
+                <mat-radio-button [value]="iva.id">
+                  {{ (iva.type | IvaTypePipe: iva.value).typeAndValue }}
                 </mat-radio-button>
               </td>
-              <td class="iva{{ iva.state }}">
-                {{ iva.state }}
+              <td class="{{ (iva.state | IvaStatePipe).class }} w-40 ps-4">
+                {{ (iva.state | IvaStatePipe).display }}
               </td>
             </tr>
           }
@@ -74,21 +82,35 @@
     <div class="ml-2">
       <button
         mat-raised-button
-        class="error mr-2"
+        class="error mr-1"
         (click)="safeDeny()"
-        [disabled]="!ivaId() || data.status === 'denied'"
         data-umami-event="Access Request Manager Deny Clicked"
+        [disabled]="data.status === 'denied'"
       >
-        Deny
+        @if (allowedAccessRequestIvaId()) {
+          Revoke access
+        } @else if (this.data.status === 'denied') {
+          Denied
+        } @else {
+          Deny
+        }
       </button>
       <button
         mat-raised-button
-        class="success ml-2"
+        class="success"
         (click)="safeAllow()"
-        [disabled]="!ivaId() || data.status === 'allowed'"
         data-umami-event="Access Request Manager Allow Clicked"
+        [disabled]="
+          !selectedIvaIdRadioButton() ||
+          (data.status === 'allowed' &&
+            selectedIvaIdRadioButton() === allowedAccessRequestIvaId())
+        "
       >
-        Allow
+        @if (allowedAccessRequestIvaId()) {
+          Change address
+        } @else {
+          Allow
+        }
       </button>
     </div>
   </mat-dialog-actions>

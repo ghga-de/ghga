@@ -7,7 +7,7 @@
       <div class="flex grow flex-col gap-2">
         <div class="flex gap-2">
           <mat-form-field class="grow">
-            <mat-label>User name</mat-label>
+            <mat-label>Name of user</mat-label>
             <input matInput [(ngModel)]="name" />
             <mat-hint>You can also filter with partial names</mat-hint>
           </mat-form-field>
@@ -15,6 +15,7 @@
             mat-icon-button
             aria-label="Remove filter for user name"
             [class.invisible]="!this.name()"
+            class="pb-2.5"
             (click)="this.name.set('')"
             data-umami-event="IVA Manager Filters User Name Clear Clicked"
           >
@@ -23,7 +24,7 @@
         </div>
         <div class="flex gap-2">
           <mat-form-field class="grow">
-            <mat-label>Changed dates ranging from</mat-label>
+            <mat-label>Last modified from</mat-label>
             <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
             <mat-hint>{{ dateInputFormatHint }}</mat-hint>
             <mat-datepicker-toggle
@@ -36,6 +37,7 @@
             mat-icon-button
             aria-label="Remove filter for dates ranging from"
             [class.invisible]="!this.fromDate()"
+            class="pb-2.5"
             (click)="this.fromDate.set(undefined)"
             data-umami-event="IVA Manager Filters Changed Dates From Clear Clicked"
           >
@@ -44,7 +46,7 @@
         </div>
         <div class="flex gap-2">
           <mat-form-field class="grow">
-            <mat-label>Changed dates ranging to</mat-label>
+            <mat-label>Last modified until</mat-label>
             <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
             <mat-hint>{{ dateInputFormatHint }}</mat-hint>
             <mat-datepicker-toggle
@@ -57,6 +59,7 @@
             mat-icon-button
             aria-label="Remove filter for dates ranging from"
             [class.invisible]="!this.toDate()"
+            class="pb-2.5"
             (click)="this.toDate.set(undefined)"
             data-umami-event="IVA Manager Filters Changed Dates To Clear Clicked"
           >
@@ -82,6 +85,7 @@
             mat-icon-button
             aria-label="Remove filter for status"
             [class.invisible]="!this.state()"
+            class="pb-2.5"
             (click)="this.state.set(undefined)"
             data-umami-event="IVA Manager Filters State Clear Clicked"
           >

@@ -6,9 +6,10 @@
   --color-tertiary: var(--mat-sys-tertiary);
   --color-quaternary: var(--mat-sys-quaternary);
   --color-quinary: var(--mat-sys-quinary);
+  --color-outline: var(--mat-sys-outline);
   --color-error: var(--mat-sys-error);
-  --color-warning: var(--color-amber-500);
-  --color-success: var(--color-green-500);
-  --color-info: var(--color-indigo-500);
-  --color-outline: var(--color-gray-200);
+  --color-danger: var(--color-orange-600);
+  --color-warning: var(--color-amber-600);
+  --color-success: var(--color-green-600);
+  --color-info: var(--color-indigo-600);
 }

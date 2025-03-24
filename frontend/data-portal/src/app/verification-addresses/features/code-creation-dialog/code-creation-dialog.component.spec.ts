@@ -70,7 +70,7 @@ describe('CodeCreationDialogComponent', () => {
     const compiled = fixture.nativeElement;
     const content = compiled.querySelector('.mat-mdc-dialog-content');
     expect(content).toBeTruthy();
-    expect(content.textContent).toContain('+441234567890004');
+    expect(content.textContent).toContain('+491234567890000');
   });
 
   it('should display the verification code in an input field', () => {

@@ -220,14 +220,18 @@
               #sortExperiments="matSort"
             >
               <ng-container matColumnDef="accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Experiment ID</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                  Experiment ID
+                </th>
                 <td mat-cell *matCellDef="let experiment">
                   {{ experiment.accession }}
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="ega_accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>EGA ID</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                  EGA ID
+                </th>
                 <td mat-cell *matCellDef="let experiment">
                   {{ experiment.ega_accession }}
                 </td>
@@ -239,7 +243,9 @@
               </ng-container>
 
               <ng-container matColumnDef="description">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Description</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-2/5">
+                  Description
+                </th>
                 <td mat-cell *matCellDef="let experiment">
                   {{ experiment.description }}
                 </td>
@@ -290,19 +296,25 @@
               #sortSamples="matSort"
             >
               <ng-container matColumnDef="accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Sample ID</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                  Sample ID
+                </th>
                 <td mat-cell *matCellDef="let sample">{{ sample.accession }}</td>
               </ng-container>
 
               <ng-container matColumnDef="ega_accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>EGA ID</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                  EGA ID
+                </th>
                 <td mat-cell *matCellDef="let sample">
                   {{ sample.ega_accession }}
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="description">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Description</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-2/5">
+                  Description
+                </th>
                 <td mat-cell *matCellDef="let sample">
                   {{ sample.description }}
                 </td>
@@ -380,12 +392,16 @@
               #sortFiles="matSort"
             >
               <ng-container matColumnDef="accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>File ID</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                  File ID
+                </th>
                 <td mat-cell *matCellDef="let file">{{ file.accession }}</td>
               </ng-container>
 
               <ng-container matColumnDef="ega_accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>EGA ID</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                  EGA ID
+                </th>
                 <td mat-cell *matCellDef="let file">
                   {{ file.ega_accession }}
                 </td>
@@ -435,6 +451,7 @@
                     >
                     <button
                       mat-icon-button
+                      matTooltip="Copy full hash to clipboard"
                       [cdkCopyToClipboard]="file.file_information?.sha256_hash"
                       (click)="notifyCopied()"
                       data-umami-event="Dataset Details File Hash Copied"

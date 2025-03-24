@@ -56,7 +56,7 @@ describe('AccessRequestManagerDialogComponent', () => {
   });
 
   it('should show the dataset ID in a table row', () => {
-    const row = screen.getByRole('row', { name: 'Dataset: GHGAD588887987' });
+    const row = screen.getByRole('row', { name: 'Dataset ID: GHGAD588887987' });
     expect(row).toBeVisible();
   });
 
@@ -67,7 +67,7 @@ describe('AccessRequestManagerDialogComponent', () => {
 
   it('should show the requester details in a table row', () => {
     const row = screen.getByRole('row', {
-      name: 'Request details: This is a test request for dataset GHGAD588887987.',
+      name: 'Request details: This is a test request for dataset GHGAD588887987. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
     });
     expect(row).toBeVisible();
   });
@@ -79,7 +79,7 @@ describe('AccessRequestManagerDialogComponent', () => {
 
   it('should show the third IVA as a radio button and not selected', () => {
     const button = screen.getByRole('radio', {
-      name: 'Postal Address: Wilhelmstr. 123',
+      name: 'Postal Address: c/o Weird Al Yankovic, Dr. John Doe, Wilhelmstraße 123, Apartment 25, Floor 2, 72072 Tübingen, Baden-Württemberg, Deutschland',
     });
     expect(button).not.toBeChecked();
   });

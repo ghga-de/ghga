@@ -65,7 +65,7 @@ describe('AccessRequestManagerFilterComponent', () => {
   });
 
   it('should set the filter after typing a name', async () => {
-    const textbox = screen.getByRole('textbox', { name: 'User name' });
+    const textbox = screen.getByRole('textbox', { name: 'Name of user' });
 
     await userEvent.type(textbox, 'Doe');
     await fixture.whenStable();
@@ -85,7 +85,7 @@ describe('AccessRequestManagerFilterComponent', () => {
     await userEvent.click(combobox);
     await fixture.whenStable();
 
-    const option = screen.getByRole('option', { name: 'allowed' });
+    const option = screen.getByRole('option', { name: 'Allowed' });
     await userEvent.click(option);
     await fixture.whenStable();
 

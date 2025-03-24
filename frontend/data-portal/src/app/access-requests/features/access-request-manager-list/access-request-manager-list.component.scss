@@ -1,15 +1,10 @@
-.status-denied {
-  color: #dc2626;
-}
-.status-pending {
-  color: #d97706;
-}
-.status-allowed {
-  color: #16a34a;
-}
+@use '@angular/material' as mat;
 
-tr[mat-row]:hover {
-  cursor: pointer;
-  transition: background-color 0.2s;
-  background-color: rgba(0, 0, 0, 0.05);
+table {
+  @include mat.table-overrides(
+    (
+      header-headline-size: var(--mat-sys-title-medium-size),
+      row-item-label-text-size: var(--mat-sys-body-large-size),
+    )
+  );
 }

@@ -18,7 +18,8 @@ import {
 } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { IvaType, IvaTypePrintable } from '@app/verification-addresses/models/iva';
+import { IvaType } from '@app/verification-addresses/models/iva';
+import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 
 /**
  * IVA creation dialog component
@@ -57,9 +58,12 @@ export class NewIvaDialogComponent {
   /**
    * All possible IVA types
    */
-  types = Object.entries(IvaTypePrintable)
+  types = Object.entries(IvaType)
     .filter((entry) => this.valuePrompts[entry[0] as keyof typeof IvaType])
-    .map((entry) => ({ value: entry[0] as keyof typeof IvaType, text: entry[1] }));
+    .map((entry) => ({
+      value: entry[0] as keyof typeof IvaType,
+      text: new IvaTypePipe().transform(entry[1]).display,
+    }));
 
   valueField = viewChild('valueField', { read: ElementRef });
 

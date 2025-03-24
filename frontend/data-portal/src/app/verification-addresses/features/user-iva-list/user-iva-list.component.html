@@ -22,7 +22,7 @@
     <table mat-table [dataSource]="ivaSource" class="mat-elevation-z8">
       <ng-container matColumnDef="value">
         <td mat-cell class="max-w-72 text-base" *matCellDef="let iva">
-          {{ typeAndValue(iva) }}
+          {{ (iva.type | IvaTypePipe).typeAndValue }}
         </td>
       </ng-container>
 

@@ -14,6 +14,7 @@
             mat-icon-button
             aria-label="Remove filter for dataset ID"
             [class.invisible]="!this.datasetId()"
+            class="pb-2.5"
             (click)="this.datasetId.set('')"
             data-umami-event="Access Request Filters Dataset ID Clear Clicked"
           >
@@ -22,7 +23,7 @@
         </div>
         <div class="flex gap-2">
           <mat-form-field class="grow">
-            <mat-label>User name</mat-label>
+            <mat-label>Name of user</mat-label>
             <input matInput [(ngModel)]="name" />
             <mat-hint>You can also filter with partial names</mat-hint>
           </mat-form-field>
@@ -30,6 +31,7 @@
             mat-icon-button
             aria-label="Remove filter for user name"
             [class.invisible]="!this.name()"
+            class="pb-2.5"
             (click)="this.name.set('')"
             data-umami-event="Access Request Filters User Name Clear Clicked"
           >
@@ -38,7 +40,7 @@
         </div>
         <div class="flex gap-2">
           <mat-form-field class="grow">
-            <mat-label>Request created from</mat-label>
+            <mat-label>Request creation date from</mat-label>
             <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
             <mat-hint>{{ dateInputFormatHint }}</mat-hint>
             <mat-datepicker-toggle
@@ -51,6 +53,7 @@
             mat-icon-button
             aria-label="Remove filter for dates ranging from"
             [class.invisible]="!this.fromDate()"
+            class="pb-2.5"
             (click)="this.fromDate.set(undefined)"
             data-umami-event="Access Request Filters Request Created From Clear Clicked"
           >
@@ -59,7 +62,7 @@
         </div>
         <div class="flex gap-2">
           <mat-form-field class="grow">
-            <mat-label>Request created until</mat-label>
+            <mat-label>Request creation date until</mat-label>
             <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
             <mat-hint>{{ dateInputFormatHint }}</mat-hint>
             <mat-datepicker-toggle
@@ -72,6 +75,7 @@
             mat-icon-button
             aria-label="Remove filter for dates ranging from"
             [class.invisible]="!this.toDate()"
+            class="pb-2.5"
             (click)="this.toDate.set(undefined)"
             data-umami-event="Access Request Filters Request Created Until Clear Clicked"
           >
@@ -89,7 +93,9 @@
             </mat-label>
             <mat-select [(ngModel)]="status">
               @for (opt of statusOptions; track opt) {
-                <mat-option [value]="opt.value">{{ opt.text }}</mat-option>
+                <mat-option [value]="opt.value">{{
+                  opt.text | CapitalisePipe
+                }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -97,6 +103,7 @@
             mat-icon-button
             aria-label="Remove filter for status"
             [class.invisible]="!this.status()"
+            class="pb-2.5"
             (click)="this.status.set(undefined)"
             data-umami-event="Access Request Filters Status Clear Clicked"
           >

@@ -20,6 +20,14 @@ export const IvaStatePrintable: { [K in keyof typeof IvaState]: string } = {
   Verified: 'Verified',
 };
 
+export const IvaStateClass: { [K in keyof typeof IvaState]: string } = {
+  Unverified: 'text-error',
+  CodeRequested: 'text-warning',
+  CodeCreated: 'text-quaternary',
+  CodeTransmitted: '',
+  Verified: 'text-success',
+};
+
 export enum IvaType {
   Phone = 'Phone',
   Fax = 'Fax',
@@ -32,6 +40,13 @@ export const IvaTypePrintable: { [K in keyof typeof IvaType]: string } = {
   Fax: 'Fax',
   PostalAddress: 'Postal Address',
   InPerson: 'In Person',
+};
+
+export const IvaTypeIcon: { [K in keyof typeof IvaType]: string } = {
+  Phone: 'smartphone',
+  Fax: 'fax',
+  PostalAddress: 'local_post_office',
+  InPerson: 'handshakes',
 };
 
 export interface Iva {

@@ -19,7 +19,6 @@ import { AccessRequestManagerListComponent } from '../access-request-manager-lis
   selector: 'app-access-request-manager',
   imports: [AccessRequestManagerFilterComponent, AccessRequestManagerListComponent],
   templateUrl: './access-request-manager.component.html',
-  styleUrl: './access-request-manager.component.scss',
 })
 export class AccessRequestManagerComponent implements OnInit {
   #ars = inject(AccessRequestService);

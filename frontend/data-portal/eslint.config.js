@@ -125,6 +125,7 @@ export default [
               allow: [
                 ['service', { context: 'verification-addresses' }],
                 ['model', { context: 'verification-addresses' }],
+                ['pipe', { context: 'verification-addresses' }],
               ],
             },
             // main may only import config and main app modules

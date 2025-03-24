@@ -14,6 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AccessRequestStatus } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
+import { Capitalise } from '@app/shared/utils/capitalise.pipe';
 import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
 
 /**
@@ -32,6 +33,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
     MatSelectModule,
     MatFormFieldModule,
     MatIconModule,
+    Capitalise,
   ],
   templateUrl: './access-request-manager-filter.component.html',
   styleUrl: './access-request-manager-filter.component.scss',

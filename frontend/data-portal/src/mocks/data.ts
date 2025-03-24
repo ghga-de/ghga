@@ -29,16 +29,6 @@ export const allIvas: UserWithIva[] = [
     user_email: 'roe@home.org',
   },
   {
-    id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
-    type: IvaType.Phone,
-    value: '+441234567890004',
-    changed: '2024-02-01T00:00:00',
-    state: IvaState.Verified,
-    user_id: 'doe@test.dev',
-    user_name: 'Dr. John Doe',
-    user_email: 'doe@home.org',
-  },
-  {
     id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
     type: IvaType.Phone,
     value: '+491234567890000',
@@ -49,9 +39,20 @@ export const allIvas: UserWithIva[] = [
     user_email: 'doe@home.org',
   },
   {
+    id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
+    type: IvaType.Phone,
+    value: '+441234567890004',
+    changed: '2024-02-01T00:00:00',
+    state: IvaState.Verified,
+    user_id: 'doe@test.dev',
+    user_name: 'Dr. John Doe',
+    user_email: 'doe@home.org',
+  },
+  {
     id: 'fc3c0ad8-01a4-4eb1-b8f3-40b04bb4bcb2',
     type: IvaType.PostalAddress,
-    value: 'Wilhelmstr. 123',
+    value:
+      'c/o Weird Al Yankovic, Dr. John Doe, Wilhelmstraße 123, Apartment 25, Floor 2, 72072 Tübingen, Baden-Württemberg, Deutschland',
     changed: '2024-04-01T00:00:00',
     state: IvaState.CodeTransmitted,
     user_id: 'doe@test.dev',
@@ -450,7 +451,8 @@ export const accessRequests = [
     dataset_id: 'GHGAD588887987',
     full_user_name: 'Dr. John Doe',
     email: 'doe@home.org',
-    request_text: 'This is a test request for dataset GHGAD588887987.',
+    request_text:
+      'This is a test request for dataset GHGAD588887987. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
     access_starts: access_starts,
     access_ends: access_ends,
     request_created: '2023-05-09T12:04:02.000Z',
@@ -471,7 +473,7 @@ export const accessRequests = [
     status: 'allowed',
     status_changed: '2023-05-19T12:04:03.000Z',
     changed_by: 'doe@test.dev',
-    iva_id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
+    iva_id: 'fc3c0ad8-01a4-4eb1-b8f3-40b04bb4bcb2',
   },
   {
     id: '4ef4ccac-6c0a-4be6-9637-b339251793fb',

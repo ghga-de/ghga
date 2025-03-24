@@ -23,21 +23,11 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
-import {
-  IvaStatePrintable,
-  IvaType,
-  IvaTypePrintable,
-  UserWithIva,
-} from '@app/verification-addresses/models/iva';
+import { UserWithIva } from '@app/verification-addresses/models/iva';
+import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
+import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
 import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creation-dialog.component';
-
-const IVA_TYPE_ICONS: { [K in keyof typeof IvaType]: string } = {
-  Phone: 'smartphone',
-  Fax: 'fax',
-  PostalAddress: 'local_post_office',
-  InPerson: 'handshakes',
-};
 
 /**
  * IVA Manager List component.
@@ -54,6 +44,8 @@ const IVA_TYPE_ICONS: { [K in keyof typeof IvaType]: string } = {
     MatIconModule,
     MatSortModule,
     MatPaginatorModule,
+    IvaTypePipe,
+    IvaStatePipe,
   ],
   templateUrl: './iva-manager-list.component.html',
   styleUrl: './iva-manager-list.component.scss',
@@ -122,33 +114,6 @@ export class IvaManagerListComponent implements AfterViewInit {
   }
 
   /**
-   * Get the type name of an IVA
-   * @param iva - the IVA in question
-   * @returns the printable type name
-   */
-  typeName(iva: UserWithIva): string {
-    return IvaTypePrintable[iva.type];
-  }
-
-  /**
-   * Get a suitable icon for an IVA
-   * @param iva - the IVA in question
-   * @returns the icon corresponding to the type
-   */
-  typeIconName(iva: UserWithIva): string {
-    return IVA_TYPE_ICONS[iva.type];
-  }
-
-  /**
-   * Get the status name of an IVA
-   * @param iva - the IVA in question
-   * @returns the printable status name
-   */
-  statusName(iva: UserWithIva): string {
-    return IvaStatePrintable[iva.state];
-  }
-
-  /**
    * Invalidate the given IVA
    * @param iva - the IVA to be invalidated
    */
@@ -170,7 +135,7 @@ export class IvaManagerListComponent implements AfterViewInit {
     this.#confirmationService.confirm({
       title: 'Confirm invalidation of IVA',
       message:
-        `Do you really wish to invalidate the ${this.typeName(iva)} IVA of` +
+        `Do you really wish to invalidate the ${new IvaTypePipe().transform(iva.type).display} IVA of` +
         ` ${iva.user_name} with address "${iva.value}"?` +
         ' The user will lose access to any dataset linked to this IVA.',
       cancelText: 'Cancel',
@@ -210,7 +175,7 @@ export class IvaManagerListComponent implements AfterViewInit {
       title: 'Confirm code transmission',
       message:
         'Please confirm the transmission of the verification code' +
-        ` the ${this.typeName(iva)} IVA of` +
+        ` the ${new IvaTypePipe().transform(iva.type).display} IVA of` +
         ` ${iva.user_name} with address "${iva.value}".`,
       cancelText: 'Cancel',
       confirmText: 'Confirm transmission',

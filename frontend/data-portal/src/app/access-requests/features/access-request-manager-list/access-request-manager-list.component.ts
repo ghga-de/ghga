@@ -19,6 +19,7 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
+import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { AccessRequestManagerDialogComponent } from '../access-request-manager-dialog/access-request-manager-dialog.component';
@@ -31,7 +32,13 @@ import { AccessRequestManagerDialogComponent } from '../access-request-manager-d
  */
 @Component({
   selector: 'app-access-request-manager-list',
-  imports: [MatTableModule, MatSortModule, MatPaginatorModule, DatePipe],
+  imports: [
+    MatTableModule,
+    MatSortModule,
+    MatPaginatorModule,
+    DatePipe,
+    AccessRequestStatusClassPipe,
+  ],
   templateUrl: './access-request-manager-list.component.html',
   styleUrl: './access-request-manager-list.component.scss',
 })

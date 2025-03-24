@@ -51,7 +51,7 @@
     </div>
   </div>
   <aside class="col-span-3">
-    <div class="rounded-lg border p-3">
+    <mat-card appearance="outlined" class="p-3">
       <form [formGroup]="searchFormGroup" (keydown.enter)="$event.preventDefault()">
         <mat-form-field class="w-full">
           <input
@@ -116,7 +116,7 @@
           </button>
         </div>
       </form>
-    </div>
+    </mat-card>
   </aside>
   <div class="col-span-9 col-start-4">
     <app-search-result-list (paginate)="paginate($event)"></app-search-result-list>

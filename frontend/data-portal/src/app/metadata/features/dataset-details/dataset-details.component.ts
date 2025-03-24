@@ -27,6 +27,7 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Title } from '@angular/platform-browser';
 // eslint-disable-next-line boundaries/element-types
 import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button.component';
@@ -67,6 +68,7 @@ const COLUMNS = {
     MatIconModule,
     ClipboardModule,
     DynamicAccessRequestButtonComponent,
+    MatTooltipModule,
   ],
   templateUrl: './dataset-details.component.html',
   styleUrl: './dataset-details.component.scss',

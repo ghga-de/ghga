@@ -1,54 +1,46 @@
 @if (ivasAreLoading()) {
-  <p class="text-base">Loading contact addresses..</p>
+  <p>Loading contact addresses..</p>
 } @else {
   @let columns = ['user', 'type', 'value', 'changed', 'state', 'actions'];
-  <table
-    mat-table
-    [dataSource]="source"
-    class="mat-elevation-z8"
-    matSort
-    #sort="matSort"
-  >
+  <table mat-table [dataSource]="source" class="text-base" matSort #sort="matSort">
     <ng-container matColumnDef="user">
-      <th mat-header-cell *matHeaderCellDef class="w-64" mat-sort-header>User</th>
-      <td mat-cell class="text-base" *matCellDef="let iva">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>User</th>
+      <td mat-cell *matCellDef="let iva">
         {{ iva.user_name }}
       </td>
     </ng-container>
     <ng-container matColumnDef="type">
-      <th mat-header-cell *matHeaderCellDef class="w-44" mat-sort-header>Type</th>
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
       <td mat-cell *matCellDef="let iva">
-        <mat-icon class="mr-3">{{ typeIconName(iva) }}</mat-icon
-        ><span class="align-super">{{ typeName(iva) }}</span>
+        <mat-icon class="mr-3">{{ (iva.type | IvaTypePipe).icon }}</mat-icon
+        ><span class="align-super">{{ (iva.type | IvaTypePipe).display }}</span>
       </td>
     </ng-container>
     <ng-container matColumnDef="value">
-      <th mat-header-cell *matHeaderCellDef class="w-64" mat-sort-header>Address</th>
-      <td mat-cell class="text-base" *matCellDef="let iva">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Address</th>
+      <td mat-cell *matCellDef="let iva" class="w-1/4">
         {{ iva.value }}
       </td>
     </ng-container>
     <ng-container matColumnDef="changed">
-      <th mat-header-cell *matHeaderCellDef class="w-36" mat-sort-header>
-        Last change
-      </th>
-      <td mat-cell class="text-base" *matCellDef="let iva">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Last modified</th>
+      <td mat-cell *matCellDef="let iva">
         {{ iva.changed | date }}
       </td>
     </ng-container>
     <ng-container matColumnDef="state">
-      <th mat-header-cell *matHeaderCellDef class="w-40" mat-sort-header>Status</th>
-      <td mat-cell class="state{{ iva.state }}" *matCellDef="let iva">
-        {{ statusName(iva) }}
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+      <td mat-cell class="{{ (iva.state | IvaStatePipe).class }}" *matCellDef="let iva">
+        {{ (iva.state | IvaStatePipe).display }}
       </td>
     </ng-container>
     <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef>Actions</th>
-      <td mat-cell class="text-base" *matCellDef="let iva">
+      <th mat-header-cell *matHeaderCellDef class="w-[600px]">Actions</th>
+      <td mat-cell class="space-x-3 py-2" *matCellDef="let iva">
         @if (iva.state === 'CodeRequested' || iva.state === 'CodeCreated') {
           <button
             (click)="createCode(iva)"
-            class="create my-2 mr-4 w-40"
+            class="create-code-button w-44"
             mat-flat-button
             data-umami-event="IVA Manager List Create Code Clicked"
           >
@@ -64,18 +56,18 @@
         @if (iva.state === 'CodeCreated') {
           <button
             (click)="markAsTransmittedWhenConfirmed(iva)"
-            class="confirm my-2 mr-4 w-52"
+            class="w-56"
             mat-flat-button
             data-umami-event="IVA Manager List Confirm Transmission Clicked"
           >
-            <mat-icon>mark_chat_read</mat-icon>
+            <mat-icon>mark_email_read</mat-icon>
             Confirm transmission
           </button>
         }
         @if (iva.state !== 'Unverified') {
           <button
             (click)="invalidateWhenConfirmed(iva)"
-            class="invalidate my-2 w-36"
+            class="w-36"
             mat-stroked-button
             data-umami-event="IVA Manager List Invalidate Clicked"
           >

@@ -5,7 +5,7 @@
  */
 
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, model, OnInit } from '@angular/core';
+import { Component, effect, inject, model, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -18,14 +18,13 @@ import {
   AccessRequest,
   AccessRequestStatus,
 } from '@app/access-requests/models/access-requests';
+import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
-import {
-  Iva,
-  IvaState,
-  IvaTypePrintable,
-} from '@app/verification-addresses/models/iva';
+import { IvaState } from '@app/verification-addresses/models/iva';
+import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
+import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
 
 /**
@@ -34,9 +33,17 @@ import { IvaService } from '@app/verification-addresses/services/iva.service';
  */
 @Component({
   selector: 'app-access-request-manager-dialog',
-  imports: [FormsModule, MatDialogModule, MatButtonModule, MatRadioModule, DatePipe],
+  imports: [
+    FormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatRadioModule,
+    DatePipe,
+    AccessRequestStatusClassPipe,
+    IvaTypePipe,
+    IvaStatePipe,
+  ],
   templateUrl: './access-request-manager-dialog.component.html',
-  styleUrl: './access-request-manager-dialog.component.scss',
 })
 export class AccessRequestManagerDialogComponent implements OnInit {
   readonly dialogRef = inject(MatDialogRef<AccessRequestManagerDialogComponent>);
@@ -51,7 +58,8 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   ivasAreLoading = this.#ivas.isLoading;
   ivasError = this.#ivas.error;
 
-  ivaId = model<string | undefined>(undefined);
+  selectedIvaIdRadioButton = model<string | undefined>(undefined);
+  allowedAccessRequestIvaId = signal<string | undefined>(undefined);
 
   #ivasErrorEffect = effect(() => {
     if (this.ivasError()) {
@@ -61,7 +69,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
 
   #ivasLoadedEffect = effect(() => {
     if (!this.ivasAreLoading() && !this.ivasError() && this.ivas().length) {
-      this.#preSelectBestIva();
+      this.#preSelectIvaRadioButton();
     }
   });
 
@@ -80,10 +88,10 @@ export class AccessRequestManagerDialogComponent implements OnInit {
    * Allow the access request after confirmation.
    */
   safeAllow(): void {
-    if (!this.ivaId()) return;
-    const iva = this.ivas().find((iva) => iva.id === this.ivaId());
+    if (!this.selectedIvaIdRadioButton()) return;
+    const iva = this.ivas().find((iva) => iva.id === this.selectedIvaIdRadioButton());
     if (!iva) return;
-    const typeAndValue = this.typeAndValue(iva);
+    const typeAndValue = new IvaTypePipe().transform(iva.type, iva.value).typeAndValue;
     this.#confirmationService.confirm({
       title: 'Confirm approval of the access request',
       message:
@@ -93,7 +101,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
       confirmText: 'Confirm approval',
       confirmClass: 'success',
       callback: (approvalConfirmed) => {
-        if (approvalConfirmed) this.#allow();
+        if (approvalConfirmed) this.#allowRequestAndCloseDialog();
       },
     });
   }
@@ -102,12 +110,11 @@ export class AccessRequestManagerDialogComponent implements OnInit {
    * Deny the access request after confirmation.
    */
   safeDeny(): void {
-    if (!this.ivaId()) return;
     this.#confirmationService.confirm({
-      title: 'Confirm rejection of the access request',
+      title: 'Confirm denial of the access request',
       message: 'Please confirm that the access request shall be denied.',
       cancelText: 'Cancel',
-      confirmText: 'Confirm rejection',
+      confirmText: 'Confirm denial',
       confirmClass: 'error',
       callback: (denialConfirmed) => {
         if (denialConfirmed) this.#deny();
@@ -118,11 +125,11 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   /**
    * Allow the access request and close the dialog.
    */
-  #allow = () => {
-    if (!this.ivaId()) return;
+  #allowRequestAndCloseDialog = () => {
+    if (!this.selectedIvaIdRadioButton()) return;
     const data = {
       ...this.data,
-      iva_id: this.ivaId,
+      iva_id: this.selectedIvaIdRadioButton,
       status: AccessRequestStatus.allowed,
     };
     this.dialogRef.close(data);
@@ -132,33 +139,32 @@ export class AccessRequestManagerDialogComponent implements OnInit {
    * Deny the access request and close the dialog.
    */
   #deny = () => {
-    if (!this.ivaId()) return;
     const data = {
       ...this.data,
-      iva_id: this.ivaId,
+      iva_id: this.selectedIvaIdRadioButton,
       status: AccessRequestStatus.denied,
     };
     this.dialogRef.close(data);
   };
 
   /**
-   * Combine type and value of an IVA to display to the user
-   * @param iva - the IVA of which you want to get the type and value
-   * @returns a string that combines the type and value of the IVA
+   * Pre-select the radio button for the IVA that best matches
+   * (the IVA used for an allowed access request or the best option for a pending or denied one)
    */
-  typeAndValue(iva: Iva): string {
-    let text = IvaTypePrintable[iva.type];
-    if (iva.value) {
-      text += `: ${iva.value}`;
+  #preSelectIvaRadioButton(): void {
+    if (this.data.iva_id) {
+      this.allowedAccessRequestIvaId.set(this.data.iva_id);
+      this.selectedIvaIdRadioButton.set(this.data.iva_id);
+    } else {
+      this.#bestIvaForPendingOrDeniedAR();
     }
-    return text;
   }
 
   /**
-   * Pre-select the "best" IVA for the user.
+   * Pre-select the "best" IVA for a pending or denied access request.
    * The best IVA is the one which is closest to being verified and latest.
    */
-  #preSelectBestIva(): void {
+  #bestIvaForPendingOrDeniedAR(): void {
     let bestRank: number | undefined = undefined;
     let lastChanged: string | undefined = undefined;
     let ivaId: string | undefined = undefined;
@@ -180,6 +186,6 @@ export class AccessRequestManagerDialogComponent implements OnInit {
         ivaId = iva.id;
       }
     }
-    this.ivaId.set(ivaId);
+    this.selectedIvaIdRadioButton.set(ivaId);
   }
 }

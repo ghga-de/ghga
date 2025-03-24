@@ -1,23 +1,17 @@
-th {
-  text-align: right;
-  padding: 2px;
-  padding-right: 4px;
-  vertical-align: text-bottom;
-}
-td {
-  padding: 2px;
-  vertical-align: text-bottom;
+@use '@angular/material' as mat;
 
-  &.code {
-    padding-top: 8px;
-    padding-bottom: 16px;
-    width: 100%;
-    input {
-      font-size: 150%;
-      width: 6em;
-      padding: 3px;
-      background-color: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-    }
-  }
+div {
+  @include mat.dialog-overrides(
+    (
+      supporting-text-size: var(--mat-sys-body-large-size),
+    )
+  );
+}
+
+.mat-mdc-form-field {
+  width: 10rem;
+}
+
+.mat-mdc-form-field-input-control.mat-mdc-form-field-input-control {
+  font-size: 1.5rem;
 }

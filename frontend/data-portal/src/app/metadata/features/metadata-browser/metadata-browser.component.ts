@@ -7,6 +7,7 @@
 import { Component, computed, effect, inject, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -42,6 +43,7 @@ const DEFAULT_SKIP_VALUE = 0;
     FacetActivityPipe,
     SearchResultListComponent,
     StencilComponent,
+    MatCardModule,
   ],
   templateUrl: './metadata-browser.component.html',
   styleUrl: './metadata-browser.component.scss',

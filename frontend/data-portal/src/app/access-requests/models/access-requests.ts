@@ -10,6 +10,14 @@ export enum AccessRequestStatus {
   pending = 'pending',
 }
 
+export const AccessRequestStatusClass: {
+  [K in keyof typeof AccessRequestStatus]: string;
+} = {
+  denied: 'text-error',
+  pending: 'text-info',
+  allowed: 'text-success',
+};
+
 export interface AccessRequest {
   id: string;
   user_id: string;

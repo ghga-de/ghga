@@ -11,7 +11,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { Iva, IvaType, IvaTypePrintable } from '@app/verification-addresses/models/iva';
+import { Iva, IvaType } from '@app/verification-addresses/models/iva';
+import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
 import { NewIvaDialogComponent } from '../new-iva-dialog/new-iva-dialog.component';
 import { VerificationDialogComponent } from '../verification-dialog/verification-dialog.component';
@@ -21,7 +22,13 @@ import { VerificationDialogComponent } from '../verification-dialog/verification
  */
 @Component({
   selector: 'app-user-iva-list',
-  imports: [MatTableModule, MatButtonModule, MatIconModule, MatDialogModule],
+  imports: [
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule,
+    IvaTypePipe,
+  ],
   templateUrl: './user-iva-list.component.html',
 })
 export class UserIvaListComponent implements OnInit {
@@ -54,19 +61,6 @@ export class UserIvaListComponent implements OnInit {
   }
 
   /**
-   * Combine type and value of an IVA to display to the user
-   * @param iva - the IVA of which you want to get the type and value
-   * @returns a string that combines the type and value of the IVA
-   */
-  typeAndValue(iva: Iva): string {
-    let text = IvaTypePrintable[iva.type];
-    if (iva.value) {
-      text += `: ${iva.value}`;
-    }
-    return text;
-  }
-
-  /**
    * Request verification of the given IVA
    * @param iva - the IVA to be verified
    */
@@ -91,7 +85,7 @@ export class UserIvaListComponent implements OnInit {
       title: 'Request verification of your address',
       message:
         'We will send a verification code to the address selected for verification (' +
-        this.typeAndValue(iva) +
+        new IvaTypePipe().transform(iva.type).typeAndValue +
         '). Please allow some time for processing' +
         ' your request. When the verification code has been transmitted,' +
         ' you will also be notified via e-mail.',
@@ -140,7 +134,7 @@ export class UserIvaListComponent implements OnInit {
    * @param iva - the IVA to verify
    */
   enterVerificationCode(iva: Iva): void {
-    const address = this.typeAndValue(iva);
+    const address = new IvaTypePipe().transform(iva.type).typeAndValue;
     const dialogRef = this.#dialog.open(VerificationDialogComponent, {
       data: { address },
     });
@@ -175,7 +169,7 @@ export class UserIvaListComponent implements OnInit {
     this.#confirm.confirm({
       title: 'Confirm deletion of contact address',
       message:
-        `Please confirm deleting the ${this.typeAndValue(iva)}.` +
+        `Please confirm deleting the ${new IvaTypePipe().transform(iva.type).typeAndValue}.` +
         ' Remember that you will lose access to any datasets' +
         ' whose access was linked to that address.',
       cancelText: 'Cancel',
