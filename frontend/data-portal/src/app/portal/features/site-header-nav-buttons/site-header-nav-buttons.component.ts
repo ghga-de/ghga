@@ -24,5 +24,8 @@ export class SiteHeaderNavButtonsComponent {
   #baseRoute = inject(BaseRouteService);
 
   route = this.#baseRoute.route;
-  browseInRoute = computed(() => ['browse', 'dataset'].includes(this.route()));
+  /**
+   * Whether the "Browse" navigation button should be highlighted as being active
+   */
+  browseActive = computed(() => ['browse', 'dataset'].includes(this.route()));
 }

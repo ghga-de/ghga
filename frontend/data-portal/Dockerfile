@@ -6,7 +6,7 @@ RUN apk upgrade --no-cache --available
 FROM base AS builder
 # install pnpm
 RUN npm install --global corepack@0.32.0
-RUN corepack prepare pnpm@10.5.2 --activate
+RUN corepack prepare pnpm@10.6.5 --activate
 # install static web server
 RUN apk add curl jq sudo which
 RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sh

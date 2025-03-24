@@ -6,7 +6,7 @@
 
 import { Component, input } from '@angular/core';
 import { MatChipsModule } from '@angular/material/chips';
-import { UnderscoreToSpace } from '@app/shared/utils/underscore-to-space.pipe';
+import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
 
 /**
  * A component for badges for dataset summaries

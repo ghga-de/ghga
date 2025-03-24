@@ -14,7 +14,7 @@ import { RouterLink } from '@angular/router';
 import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button.component';
 import { Hit } from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata.service';
-import { AddPluralS } from '@app/shared/utils/add-plural-s.pipe';
+import { AddPluralS } from '@app/shared/pipes/add-plural-s.pipe';
 import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summary-badges.component';
 
 /**

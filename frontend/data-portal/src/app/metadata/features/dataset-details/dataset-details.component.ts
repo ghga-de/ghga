@@ -35,10 +35,10 @@ import { Experiment, File, Sample } from '@app/metadata/models/dataset-details';
 import { StorageAlias } from '@app/metadata/pipes/storage-alias.pipe';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
+import { AddPluralS } from '@app/shared/pipes/add-plural-s.pipe';
+import { ParseBytes } from '@app/shared/pipes/parse-bytes.pipe';
+import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { AddPluralS } from '@app/shared/utils/add-plural-s.pipe';
-import { ParseBytes } from '@app/shared/utils/parse-bytes.pipe';
-import { UnderscoreToSpace } from '@app/shared/utils/underscore-to-space.pipe';
 
 const COLUMNS = {
   experiments: 'accession ega_accession title description method platform',

@@ -9,9 +9,9 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MetadataStatsService } from '@app/metadata/services/metadata-stats.service';
+import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil.component';
-import { UnderscoreToSpace } from '@app/shared/utils/underscore-to-space.pipe';
 
 /**
  * Component for the global summary cards
