@@ -15,10 +15,6 @@ mat-toolbar-row {
   height: fit-content;
 }
 
-a#activePage {
-  background-color: var(--mat-sys-tertiary);
-}
-
 mat-toolbar-row div a:hover,
 mat-toolbar-row div a:active {
   background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 8%);
@@ -28,15 +24,27 @@ mat-toolbar-row div a:focus {
   background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
 }
 
-mat-nav-list a {
-  @include mat.button-overrides(
+button {
+  @include mat.icon-button-overrides(
     (
-      text-state-layer-color: var(--mat-sys-on-primary),
+      icon-color: var(--mat-sys-on-primary),
+      state-layer-color: var(--mat-sys-on-primary),
     )
   );
 }
 
-mat-nav-list a mat-icon {
-  scale: 0.8;
-  margin: 0 -5px 0 0;
+div {
+  @include mat.sidenav-overrides(
+    (
+      container-background-color: var(--mat-sys-primary),
+    )
+  );
+}
+
+.mat-drawer-backdrop.mat-drawer-shown {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
 }

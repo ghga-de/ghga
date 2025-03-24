@@ -12,7 +12,7 @@ import { screen } from '@testing-library/angular';
 
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccountButtonComponent } from '../account-button/account-button.component';
-import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
+import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-header-nav-buttons.component';
 import { SiteHeaderComponent } from './site-header.component';
 
 describe('SiteHeaderComponent', () => {
@@ -30,7 +30,9 @@ describe('SiteHeaderComponent', () => {
       ],
     })
       .overrideComponent(SiteHeaderComponent, {
-        remove: { imports: [AccountButtonComponent, AdminMenuComponent] },
+        remove: {
+          imports: [AccountButtonComponent, SiteHeaderNavButtonsComponent],
+        },
       })
       .compileComponents();
   });

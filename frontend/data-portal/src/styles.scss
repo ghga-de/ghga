@@ -214,3 +214,11 @@ button.error {
     )
   );
 }
+
+mat-sidenav-container > div.mat-drawer-backdrop.mat-drawer-shown {
+  position: fixed;
+}
+
+mat-sidenav-container.mat-sidenav-container {
+  z-index: 2;
+}

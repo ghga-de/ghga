@@ -1,0 +1,33 @@
+<a
+  [id]="route() === '' ? 'activePage' : ''"
+  mat-button
+  routerLink="/"
+  class="homeLink mx-1"
+  data-umami-event="Site Header Home Clicked"
+  >Home</a
+><a
+  [id]="browseInRoute() ? 'activePage' : ''"
+  mat-button
+  routerLink="/browse"
+  class="mx-1"
+  data-umami-event="Site Header Browse Clicked"
+  >Browse Data</a
+>
+<a
+  mat-button
+  href="https://docs.ghga.de/faq/"
+  target="_blank"
+  rel="noreferrer noopener"
+  class="mx-1 flex-row-reverse"
+  data-umami-event="Site Header Open FAQ Clicked"
+  >FAQ<mat-icon class="float-right">open_in_new</mat-icon></a
+>
+<a
+  mat-button
+  href="https://docs.ghga.de/"
+  target="_blank"
+  rel="noreferrer noopener"
+  class="mx-1 flex-row-reverse"
+  data-umami-event="Site Header Open Documentation Clicked"
+  >Docs<mat-icon class="float-right">open_in_new</mat-icon></a
+><app-admin-menu></app-admin-menu>

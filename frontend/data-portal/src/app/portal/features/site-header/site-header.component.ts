@@ -4,15 +4,15 @@
  * @license Apache-2.0
  */
 
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatNavList } from '@angular/material/list';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink } from '@angular/router';
-import { BaseRouteService } from '@app/shared/services/base-route.service';
 import { AccountButtonComponent } from '../account-button/account-button.component';
-import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
+import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-header-nav-buttons.component';
 
 /**
  * This is the site header component
@@ -28,12 +28,9 @@ import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
     MatIconModule,
     RouterLink,
     AccountButtonComponent,
-    AdminMenuComponent,
+    MatSidenavModule,
+    SiteHeaderNavButtonsComponent,
   ],
   styleUrl: './site-header.component.scss',
 })
-export class SiteHeaderComponent {
-  #baseRoute = inject(BaseRouteService);
-
-  route = this.#baseRoute.route;
-}
+export class SiteHeaderComponent {}

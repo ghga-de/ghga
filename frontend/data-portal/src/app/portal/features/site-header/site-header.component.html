@@ -1,6 +1,6 @@
 <mat-toolbar>
   <mat-toolbar-row class="align-center flex justify-between">
-    <div class="flex h-full basis-1/4">
+    <div class="flex h-full xl:basis-1/4">
       <a
         matRipple
         routerLink="/"
@@ -14,47 +14,56 @@
         <div class="ms-2 border-l ps-2 pt-1 uppercase">
           <span class="border-quinary text-quinary text-3xl leading-3 tracking-wider"
             >Data</span
-          ><br /><span>Portal</span>
+          ><br /><span class="text-quinary">Portal</span>
         </div></a
       >
     </div>
 
-    <mat-nav-list class="my-8 basis-1/2 text-center">
-      <a
-        [id]="route() === '' ? 'activePage' : ''"
-        mat-button
-        routerLink="/"
-        class="homeLink mx-1"
-        data-umami-event="Site Header Home Clicked"
-        >Home</a
-      ><a
-        [id]="['browse', 'dataset'].includes(route()) ? 'activePage' : ''"
-        mat-button
-        routerLink="/browse"
-        class="mx-1"
-        data-umami-event="Site Header Browse Clicked"
-        >Browse Data</a
+    <div class="hidden lg:block xl:basis-1/2">
+      <mat-nav-list class="my-8 text-center">
+        <app-site-header-nav-buttons />
+      </mat-nav-list>
+    </div>
+
+    <div class="my-4 hidden text-right lg:block xl:basis-1/4">
+      <app-account-button></app-account-button>
+    </div>
+
+    <div class="lg:hidden">
+      <mat-sidenav-container class="relative z-2 flex-[1_0_auto]">
+        <mat-sidenav
+          #sidenav
+          fixedInViewport="true"
+          mode="over"
+          disableClose="false"
+          position="end"
+          class="border-quaternary border-l-1 text-center"
+        >
+          <div class="h-21 content-center pe-4 text-end">
+            <button
+              mat-icon-button
+              aria-label="Open navigation Menu"
+              (click)="sidenav.toggle()"
+            >
+              <mat-icon class="text-white">menu</mat-icon>
+            </button>
+          </div>
+          <mat-nav-list>
+            <app-site-header-nav-buttons
+              class="mb-4 grid grid-cols-1 gap-y-2 px-4" /><app-account-button /></mat-nav-list
+        ></mat-sidenav>
+        <mat-sidenav-container></mat-sidenav-container>
+      </mat-sidenav-container>
+    </div>
+
+    <div class="lg:hidden">
+      <button
+        mat-icon-button
+        aria-label="Open navigation Menu"
+        (click)="sidenav.toggle()"
       >
-      <a
-        mat-button
-        href="https://docs.ghga.de/faq/"
-        target="_blank"
-        rel="noreferrer noopener"
-        class="mx-1 flex-row-reverse"
-        data-umami-event="Site Header Open FAQ Clicked"
-        >FAQ<mat-icon class="float-right">open_in_new</mat-icon></a
-      >
-      <a
-        mat-button
-        href="https://docs.ghga.de/"
-        target="_blank"
-        rel="noreferrer noopener"
-        class="mx-1 flex-row-reverse"
-        data-umami-event="Site Header Open Documentation Clicked"
-        >Docs<mat-icon class="float-right">open_in_new</mat-icon></a
-      ><app-admin-menu></app-admin-menu>
-    </mat-nav-list>
-    <div class="my-4 basis-1/4 text-right">
-      <app-account-button></app-account-button></div
-  ></mat-toolbar-row>
+        <mat-icon class="text-white">menu</mat-icon>
+      </button>
+    </div></mat-toolbar-row
+  >
 </mat-toolbar>
