@@ -48,7 +48,7 @@ auth_context_doe = AuthContext(
     name="John Doe",
     email="john@home.org",
     title=AcademicTitle.DR,
-    role=None,
+    roles=[],
     iat=IAT,
     exp=EXP,
 )
@@ -59,7 +59,7 @@ auth_context_steward = AuthContext(
     name="Rod Steward",
     email="steward@ghga.de",
     title=None,
-    role="data_steward@ghga.de",
+    roles=["data_steward@ghga.de"],
     iat=IAT,
     exp=EXP,
 )

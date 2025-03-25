@@ -56,7 +56,7 @@ AUTH_CLAIMS_STEWARD = {
     "name": "Rod Steward",
     "email": "steward@ghga.de",
     "id": "id-of-rod-steward@ghga.de",
-    "role": "data_steward@ghga.de",
+    "roles": ["data_steward@ghga.de"],
 }
 
 
