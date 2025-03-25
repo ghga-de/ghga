@@ -16,29 +16,21 @@
 
 """Event subscriber for dataset deletion events."""
 
+from ghga_event_schemas.configs import DatasetEventsConfig
 from ghga_event_schemas.pydantic_ import MetadataDatasetID
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from ..ports.deletion import DatasetDeletionPort
 
 
-class EventSubTranslatorConfig(BaseSettings):
-    """Configuration for the event subscriber."""
+class EventSubTranslatorConfig(DatasetEventsConfig):
+    """Configuration for the event subscriber.
 
-    dataset_deletion_event_topic: str = Field(
-        default=...,
-        description="The name of the topic announcing dataset deletions",
-        examples=["metadata_datasets"],
-    )
-    dataset_deletion_event_type: str = Field(
-        default=...,
-        description="The type used for events announcing a dataset deletion",
-        examples=["dataset_deleted"],
-    )
+    This is only used to remove access grants for datasets
+    which have been deleted.
+    """
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -48,8 +40,8 @@ class EventSubTranslator(EventSubscriberProtocol):
         self, *, config: EventSubTranslatorConfig, handler: DatasetDeletionPort
     ):
         """Initialize the translator."""
-        self.topics_of_interest = [config.dataset_deletion_event_topic]
-        self.types_of_interest = [config.dataset_deletion_event_type]
+        self.topics_of_interest = [config.dataset_change_topic]
+        self.types_of_interest = [config.dataset_deletion_type]
         self._config = config
         self._handler = handler
 

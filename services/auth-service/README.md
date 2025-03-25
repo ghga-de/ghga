@@ -84,23 +84,49 @@ The service requires the following configuration parameters:
 
 - **`second_factor_recreated_event_type`** *(string)*: The event type for recreation of the second factor for authentication. Default: `"second_factor_recreated"`.
 
-- **`iva_events_topic`** *(string)*: The name of the topic for IVA related events. Default: `"ivas"`.
+- **`iva_state_changed_topic`** *(string, required)*: The name of the topic containing IVA events.
 
-- **`iva_state_changed_event_type`** *(string)*: The event type for IVA state changes. Default: `"iva_state_changed"`.
 
-- **`dataset_deletion_event_topic`** *(string)*: the topic of the event announcing dataset deletions. Default: `"metadata_datasets"`.
+  Examples:
 
-- **`dataset_deletion_event_type`** *(string)*: the type of the event announcing dataset deletions. Default: `"dataset_deleted"`.
+  ```json
+  "ivas"
+  ```
+
+
+- **`iva_state_changed_type`** *(string, required)*: The type to use for iva state changed events.
+
+
+  Examples:
+
+  ```json
+  "iva_state_changed"
+  ```
+
+
+- **`dataset_change_topic`** *(string)*: the topic of the event announcing dataset deletions. Default: `"metadata_datasets"`.
+
+- **`dataset_deletion_type`** *(string)*: the type of the event announcing dataset deletions. Default: `"dataset_deleted"`.
+
+- **`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+
+
+  Examples:
+
+  ```json
+  "dataset_created"
+  ```
+
 
 - **`claims_collection`** *(string)*: Name of the collection for user claims. Default: `"claims"`.
+
+- **`user_topic`** *(string)*: The name of the topic containing user events. Default: `"users"`.
 
 - **`users_collection`** *(string)*: Name of the collection for users. Default: `"users"`.
 
 - **`user_tokens_collection`** *(string)*: Name of the collection for user tokens. Default: `"user_tokens"`.
 
 - **`ivas_collection`** *(string)*: Name of the collection for IVAs. Default: `"ivas"`.
-
-- **`user_events_topic`** *(string)*: The name of the topic for user related events. Default: `"users"`.
 
 - **`service_name`** *(string)*: Short name of this service. Default: `"auth_service"`.
 

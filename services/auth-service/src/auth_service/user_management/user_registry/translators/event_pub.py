@@ -39,11 +39,11 @@ class EventPubTranslatorConfig(BaseSettings):
         default="second_factor_recreated",
         description="The event type for recreation of the second factor for authentication",
     )
-    iva_events_topic: str = Field(
+    iva_state_changed_topic: str = Field(
         default="ivas",
         description="The name of the topic for IVA related events",
     )
-    iva_state_changed_event_type: str = Field(
+    iva_state_changed_type: str = Field(
         default="iva_state_changed",
         description="The event type for IVA state changes",
     )
@@ -84,9 +84,9 @@ class EventPubTranslator(EventPublisherPort):
         ).model_dump()
         await self._event_publisher.publish(
             payload=payload,
-            type_=self._config.iva_state_changed_event_type,
+            type_=self._config.iva_state_changed_type,
             key=f"iva-{iva.id}",
-            topic=self._config.iva_events_topic,
+            topic=self._config.iva_state_changed_topic,
         )
 
     async def publish_ivas_reset(self, *, user_id: str) -> None:
@@ -99,7 +99,7 @@ class EventPubTranslator(EventPublisherPort):
         ).model_dump()
         await self._event_publisher.publish(
             payload=payload,
-            type_=self._config.iva_state_changed_event_type,
+            type_=self._config.iva_state_changed_type,
             key=f"all-{user_id}",
-            topic=self._config.iva_events_topic,
+            topic=self._config.iva_state_changed_topic,
         )

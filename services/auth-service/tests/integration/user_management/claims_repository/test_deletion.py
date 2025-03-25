@@ -76,8 +76,8 @@ async def test_deletion_handler(
     await claim_dao.insert(claim)
     assert await claim_dao.find_one(mapping={"user_id": "some-user-id"})
 
-    event_type = config.dataset_deletion_event_type
-    event_topic = config.dataset_deletion_event_topic
+    event_type = config.dataset_deletion_type
+    event_topic = config.dataset_change_topic
     payload = {"accession": "DS0815"}
 
     async with prepare_event_subscriber(config=config) as event_subscriber:

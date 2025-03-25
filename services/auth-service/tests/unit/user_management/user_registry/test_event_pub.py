@@ -40,8 +40,8 @@ custom_config = default_config.model_copy(
     update={
         "auth_events_topic": "custom_auth",
         "second_factor_recreated_event_type": "custom_second_factor_recreated",
-        "iva_events_topic": "custom_ivas",
-        "iva_state_changed_event_type": "custom_iva_state_changed",
+        "iva_state_changed_topic": "custom_ivas",
+        "iva_state_changed_type": "custom_iva_state_changed",
     }
 )
 
@@ -109,7 +109,7 @@ class IvaEventPublisher(DummyEventPublisher):
     """A event publisher for testing IVA related notifications."""
 
     def __init__(self, config: EventPubTranslatorConfig):
-        super().__init__(config.iva_events_topic, config.iva_state_changed_event_type)
+        super().__init__(config.iva_state_changed_topic, config.iva_state_changed_type)
 
 
 async def test_publish_iva_state_changed(config: EventPubTranslatorConfig):

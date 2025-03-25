@@ -76,34 +76,52 @@
       "title": "Second Factor Recreated Event Type",
       "type": "string"
     },
-    "iva_events_topic": {
-      "default": "ivas",
-      "description": "The name of the topic for IVA related events",
-      "title": "Iva Events Topic",
+    "iva_state_changed_topic": {
+      "description": "The name of the topic containing IVA events.",
+      "examples": [
+        "ivas"
+      ],
+      "title": "Iva State Changed Topic",
       "type": "string"
     },
-    "iva_state_changed_event_type": {
-      "default": "iva_state_changed",
-      "description": "The event type for IVA state changes",
-      "title": "Iva State Changed Event Type",
+    "iva_state_changed_type": {
+      "description": "The type to use for iva state changed events.",
+      "examples": [
+        "iva_state_changed"
+      ],
+      "title": "Iva State Changed Type",
       "type": "string"
     },
-    "dataset_deletion_event_topic": {
+    "dataset_change_topic": {
       "default": "metadata_datasets",
       "description": "the topic of the event announcing dataset deletions",
-      "title": "Dataset Deletion Event Topic",
+      "title": "Dataset Change Topic",
       "type": "string"
     },
-    "dataset_deletion_event_type": {
+    "dataset_deletion_type": {
       "default": "dataset_deleted",
       "description": "the type of the event announcing dataset deletions",
-      "title": "Dataset Deletion Event Type",
+      "title": "Dataset Deletion Type",
+      "type": "string"
+    },
+    "dataset_upsertion_type": {
+      "description": "Type used for events announcing a new dataset overview.",
+      "examples": [
+        "dataset_created"
+      ],
+      "title": "Dataset Upsertion Type",
       "type": "string"
     },
     "claims_collection": {
       "default": "claims",
       "description": "Name of the collection for user claims",
       "title": "Claims Collection",
+      "type": "string"
+    },
+    "user_topic": {
+      "default": "users",
+      "description": "The name of the topic containing user events.",
+      "title": "User Topic",
       "type": "string"
     },
     "users_collection": {
@@ -122,12 +140,6 @@
       "default": "ivas",
       "description": "Name of the collection for IVAs",
       "title": "Ivas Collection",
-      "type": "string"
-    },
-    "user_events_topic": {
-      "default": "users",
-      "description": "The name of the topic for user related events",
-      "title": "User Events Topic",
       "type": "string"
     },
     "service_name": {
@@ -784,6 +796,9 @@
     }
   },
   "required": [
+    "iva_state_changed_topic",
+    "iva_state_changed_type",
+    "dataset_upsertion_type",
     "service_instance_id",
     "kafka_servers",
     "mongo_dsn"

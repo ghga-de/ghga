@@ -1321,7 +1321,8 @@ async def test_happy_path_for_verifying_an_iva(
     assert iva_id
 
     record_events = partial(
-        full_client.kafka.record_events, in_topic=full_client.config.iva_events_topic
+        full_client.kafka.record_events,
+        in_topic=full_client.config.iva_state_changed_topic,
     )
     expected_payload = {
         "user_id": user_id,
