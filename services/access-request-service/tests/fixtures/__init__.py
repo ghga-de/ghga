@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -92,10 +92,7 @@ class JointFixture(NamedTuple):
 async def joint_fixture(
     mongodb: MongoDbFixture, kafka: KafkaFixture
 ) -> AsyncGenerator[JointFixture, None]:
-    """A fixture that embeds all other fixtures for API-level integration testing
-
-    **Do not call directly** Instead, use get_joint_fixture().
-    """
+    """A fixture that embeds all other fixtures for API-level integration testing."""
     config = Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
         download_access_url="http://access",

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,7 @@ from pytest_httpx import HTTPXMock
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
 
-pytestmark = pytest.mark.asyncio()
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 DOWNLOAD_ACCESS_URL = "http://test-access:1234"
@@ -41,7 +41,7 @@ VALID_UNTIL = utc_datetime(2020, 12, 31, 23, 59)
 URL = f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/ivas/{IVA_ID}/datasets/{DATASET_ID}"
 
 
-@async_fixture(name="access_grant", scope="session")
+@async_fixture(name="access_grant", scope="session", loop_scope="session")
 async def fixture_access_grant() -> AsyncGenerator[AccessGrantsAdapter, None]:
     """Get configured access grant test adapter."""
     config = AccessGrantsConfig(download_access_url=DOWNLOAD_ACCESS_URL)
