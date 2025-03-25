@@ -126,7 +126,7 @@ The service requires the following configuration parameters:
 
 - **`work_package_valid_days`** *(integer)*: How many days a work package (and its access token) stays valid. Default: `30`.
 
-- **`work_package_signing_key`** *(string, format: password, required)*: The private key for signing work order tokens.
+- **`work_package_signing_key`** *(string, format: password, required, write-only)*: The private key for signing work order tokens.
 
 
   Examples:
@@ -136,7 +136,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/. Length must be at least 1.
 
 
   Examples:
@@ -196,7 +196,7 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
+- **`kafka_ssl_password`** *(string, format: password, write-only)*: Optional password to be used for the client private key. Default: `""`.
 
 - **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
