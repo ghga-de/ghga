@@ -18,7 +18,7 @@
 
 import base64
 import hashlib
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 # nacl is used for encryption of TOTP secrets
@@ -38,7 +38,7 @@ from ..ports.totp import TOTPHandlerPort
 __all__ = ["TOTPAlgorithm", "TOTPConfig", "TOTPHandler", "TOTPToken"]
 
 
-class TOTPAlgorithm(str, Enum):
+class TOTPAlgorithm(StrEnum):
     """Hash algorithm used for TOTP code generation"""
 
     SHA1 = "sha1"

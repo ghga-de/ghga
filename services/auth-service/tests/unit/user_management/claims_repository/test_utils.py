@@ -23,7 +23,7 @@ import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from auth_service.user_management.claims_repository.core.utils import (
-    is_data_steward,
+    get_active_roles,
     iva_is_verified,
     user_exists,
     user_is_active,
@@ -138,8 +138,8 @@ async def test_iva_is_verified(state: IvaState):
 
 
 @pytest.mark.parametrize("state", IvaState)
-async def test_is_data_steward_with_iva(state: IvaState):
-    """Data steward claim must have an IVA that is in the verified state."""
+async def test_get_active_roles_with_iva(state: IvaState):
+    """Internal role claims must have an IVA that is in the verified state."""
     user_id = "james@ghga.de"
     user_dao = cast(UserDao, DummyUserDao(id_=user_id))
     claim_dao = cast(ClaimDao, DummyClaimDao())
@@ -154,17 +154,58 @@ async def test_is_data_steward_with_iva(state: IvaState):
         changed=now,
     )
     iva_dao = cast(IvaDao, DummyIvaDao([iva]))
-    expected_is_data_steward = state == IvaState.VERIFIED
+    expected_roles = ["data_steward"] if state == IvaState.VERIFIED else []
     assert (
-        await is_data_steward(
+        await get_active_roles(
             user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
         )
-        == expected_is_data_steward
+        == expected_roles
     )
 
 
-async def test_is_data_steward_without_iva_id():
-    """Data steward claim must have an associated IVA ID."""
+async def test_get_active_roles_deduplicates_roles():
+    """Internal role claims are deduplicated."""
+    user_id = "james@ghga.de"
+    iva_id = "some-iva-id"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+
+    now = now_as_utc()
+    iva = Iva(
+        id=iva_id,
+        user_id=user_id,
+        value="foo",
+        type=IvaType.IN_PERSON,
+        state=IvaState.VERIFIED,
+        created=now,
+        changed=now,
+    )
+    iva_dao = cast(IvaDao, DummyIvaDao([iva]))
+
+    # add claims with 3 different roles (one unsupported) each 3 times
+    claim = await claim_dao.get_by_id("data-steward-claim-id")
+    assert claim.visa_value == "data_steward@some.org"
+
+    for i in range(3):
+        for role in ["data_steward", "bad_role", "admin"]:
+            await claim_dao.insert(
+                claim.model_copy(
+                    update={
+                        "id": f"add-claim-id-{role}-{i + 1}",
+                        "iva_id": iva_id,
+                        "visa_value": f"{role}@some.org",
+                    }
+                )
+            )
+
+    # we should only get the 2 supported roles, and each only once
+    assert await get_active_roles(
+        user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
+    ) == ["admin", "data_steward"]
+
+
+async def test_get_active_roles_without_iva_id():
+    """Active internal role claims must have an associated IVA ID."""
     user_id = "james@ghga.de"
     user_dao = cast(UserDao, DummyUserDao(id_=user_id))
     claim_dao = cast(ClaimDao, DummyClaimDao())
@@ -174,35 +215,38 @@ async def test_is_data_steward_without_iva_id():
     claim = await claim_dao.get_by_id("data-steward-claim-id")
     assert not claim.iva_id
     iva_dao = cast(IvaDao, DummyIvaDao())
-    assert not await is_data_steward(
+    active_roles = await get_active_roles(
         user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
     )
+    assert active_roles == []
 
 
-async def test_is_data_steward_with_non_existing_iva():
-    """Data steward claim must have an existing IVA."""
+async def test_get_active_roles_with_non_existing_iva():
+    """Active internal role claims must have an existing IVA."""
     user_id = "james@ghga.de"
     user_dao = cast(UserDao, DummyUserDao(id_=user_id))
     claim_dao = cast(ClaimDao, DummyClaimDao())
     iva_dao = cast(IvaDao, DummyIvaDao([]))
-    assert not await is_data_steward(
+    active_roles = await get_active_roles(
         user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
     )
+    assert active_roles == []
 
 
-async def test_is_data_steward_with_wrong_claim():
-    """Data steward claim must have the proper type."""
+async def test_get_active_roles_with_wrong_claim():
+    """Active internal role claims must have the proper type."""
     user_id = "john@ghga.de"
     user_dao = cast(UserDao, DummyUserDao(id_=user_id))
     claim_dao = cast(ClaimDao, DummyClaimDao())
     iva_dao = cast(IvaDao, DummyIvaDao())
-    assert not await is_data_steward(
+    active_roles = await get_active_roles(
         user_id, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
     )
+    assert active_roles == []
 
 
-async def test_is_data_steward_with_expired_claim():
-    """Data steward claim must have a claim that is not expired."""
+async def test_get_active_roles_with_expired_claim():
+    """Active internal role claims must not be expired."""
     user_id = "james@ghga.de"
     user_dao = cast(UserDao, DummyUserDao(id_=user_id))
     claim_dao = cast(ClaimDao, DummyClaimDao())
@@ -210,42 +254,48 @@ async def test_is_data_steward_with_expired_claim():
     claim = await claim_dao.get_by_id("data-steward-claim-id")
     now = now_as_utc()
     assert claim.valid_from <= now <= claim.valid_until
-    assert await is_data_steward(
+    assert await get_active_roles(
         user_id,
         user_dao=user_dao,
         iva_dao=iva_dao,
         claim_dao=claim_dao,
         now=lambda: now,
+    ) == ["data_steward"]
+    assert (
+        await get_active_roles(
+            user_id,
+            user_dao=user_dao,
+            iva_dao=iva_dao,
+            claim_dao=claim_dao,
+            now=lambda: claim.valid_from - timedelta(1),
+        )
+        == []
     )
-    assert not await is_data_steward(
-        user_id,
-        user_dao=user_dao,
-        iva_dao=iva_dao,
-        claim_dao=claim_dao,
-        now=lambda: claim.valid_from - timedelta(1),
-    )
-    assert not await is_data_steward(
-        user_id,
-        user_dao=user_dao,
-        iva_dao=iva_dao,
-        claim_dao=claim_dao,
-        now=lambda: claim.valid_until + timedelta(1),
+    assert (
+        await get_active_roles(
+            user_id,
+            user_dao=user_dao,
+            iva_dao=iva_dao,
+            claim_dao=claim_dao,
+            now=lambda: claim.valid_until + timedelta(1),
+        )
+        == []
     )
 
 
-async def test_is_data_steward_with_revoked_claim():
-    """Data steward claim must not have been revoked."""
+async def test_get_active_roles_with_revoked_claim():
+    """Active internal role claims must not have been revoked."""
     user_id = "james@ghga.de"
     user_dao = cast(UserDao, DummyUserDao(id_=user_id))
     claim_dao = cast(ClaimDao, DummyClaimDao())
     iva_dao = cast(IvaDao, DummyIvaDao())
 
-    assert await is_data_steward(
+    assert await get_active_roles(
         user_id,
         user_dao=user_dao,
         iva_dao=iva_dao,
         claim_dao=claim_dao,
-    )
+    ) == ["data_steward"]
 
     claim = await claim_dao.get_by_id("data-steward-claim-id")
     assert claim.revocation_date is None
@@ -253,53 +303,59 @@ async def test_is_data_steward_with_revoked_claim():
     claim = await claim_dao.get_by_id("data-steward-claim-id")
     assert claim.revocation_date
 
-    assert not await is_data_steward(
-        user_id,
-        user_dao=user_dao,
-        iva_dao=iva_dao,
-        claim_dao=claim_dao,
+    assert (
+        await get_active_roles(
+            user_id,
+            user_dao=user_dao,
+            iva_dao=iva_dao,
+            claim_dao=claim_dao,
+        )
+        == []
     )
 
 
-async def test_is_data_steward_with_non_existing_user():
-    """Data steward claim must have an associated user."""
+async def test_get_active_roles_with_non_existing_user():
+    """Active internal role claims must have an associated user."""
     user_id = "james@ghga.de"
     user_dao = cast(UserDao, DummyUserDao(id_=user_id))
     claim_dao = cast(ClaimDao, DummyClaimDao())
     iva_dao = cast(IvaDao, DummyIvaDao())
 
-    assert await is_data_steward(
+    assert await get_active_roles(
         user_id,
         user_dao=user_dao,
         iva_dao=iva_dao,
         claim_dao=claim_dao,
-    )
+    ) == ["data_steward"]
 
     user_dao = cast(UserDao, DummyUserDao(id_="jane@ghga.de"))
-    assert not await is_data_steward(
-        user_id,
-        user_dao=user_dao,
-        iva_dao=iva_dao,
-        claim_dao=claim_dao,
+    assert (
+        await get_active_roles(
+            user_id,
+            user_dao=user_dao,
+            iva_dao=iva_dao,
+            claim_dao=claim_dao,
+        )
+        == []
     )
 
 
 @pytest.mark.parametrize("status", UserStatus)
-async def test_is_data_steward_with_inactive_user(status: UserStatus):
-    """Data steward must have an active user status."""
+async def test_get_active_role_with_inactive_user(status: UserStatus):
+    """Active internal roles must have an active user status."""
     user_id = "james@ghga.de"
     claim_dao = cast(ClaimDao, DummyClaimDao())
     iva_dao = cast(IvaDao, DummyIvaDao())
 
     for status in UserStatus:
         user_dao = cast(UserDao, DummyUserDao(id_=user_id, status=status))
-        expected_is_data_steward = status == UserStatus.ACTIVE
+        expected_roles = ["data_steward"] if status == UserStatus.ACTIVE else []
         assert (
-            await is_data_steward(
+            await get_active_roles(
                 user_id,
                 user_dao=user_dao,
                 iva_dao=iva_dao,
                 claim_dao=claim_dao,
             )
-            == expected_is_data_steward
+            == expected_roles
         )

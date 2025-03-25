@@ -22,12 +22,13 @@ from ghga_service_commons.utils.utc_dates import now_as_utc, utc_datetime
 
 from auth_service.config import CONFIG
 from auth_service.user_management.claims_repository.core.claims import (
+    Role,
     create_controlled_access_claim,
-    create_data_steward_claim,
+    create_internal_role_claim,
     dataset_id_for_download_access,
     get_dataset_for_value,
+    get_role_from_claim,
     has_download_access_for_dataset,
-    is_data_steward_claim,
     is_internal_claim,
     is_valid_claim,
 )
@@ -90,20 +91,20 @@ def test_is_internal_claim():
     assert check_tampered_claim(asserted_by=AuthorityLevel.SELF)
 
 
-def test_create_data_steward_claim():
-    """Test that a data steward claim can be created."""
-    created_claim = create_data_steward_claim(
-        user_id="some-user-id", iva_id="some-claim_id"
+def test_create_internal_role_claim():
+    """Test that an internal role claim can be created for all roles."""
+    created_claim = create_internal_role_claim(
+        user_id="some-user-id", role=Role.DATA_STEWARD, iva_id="some-claim_id"
     )
     assert created_claim.user_id == "some-user-id"
     assert created_claim.iva_id == "some-claim_id"
     assert is_valid_claim(created_claim)
-    assert is_data_steward_claim(created_claim)
+    assert get_role_from_claim(created_claim) is Role.DATA_STEWARD
     assert not has_download_access_for_dataset(created_claim, "DS0815")
 
 
-def test_is_data_steward_claim():
-    """Test that the data steward role can be derived from a claim."""
+def test_get_role_from_role_claim():
+    """Test that a role can be derived from a claim."""
     good_claim = Claim(
         id="claim-id",
         user_id="user-id",
@@ -116,11 +117,11 @@ def test_is_data_steward_claim():
         valid_until=utc_datetime(2022, 11, 20),
         creation_date=utc_datetime(2022, 11, 1),
     )
-    assert is_data_steward_claim(good_claim)
+    assert get_role_from_claim(good_claim) is Role.DATA_STEWARD
 
-    def check_tampered_claim(**kwargs):
+    def check_tampered_claim(role: Role | None = None, **kwargs):
         bad_claim = good_claim.model_copy(update=kwargs)
-        return not is_data_steward_claim(bad_claim)
+        return get_role_from_claim(bad_claim) is role
 
     assert check_tampered_claim(visa_type=VisaType.AFFILIATION_AND_ROLE)
     assert check_tampered_claim(source="https://wrong.org")
@@ -128,6 +129,8 @@ def test_is_data_steward_claim():
     assert check_tampered_claim(asserted_by=AuthorityLevel.SELF)
     assert check_tampered_claim(visa_value="data_inspector")
     assert check_tampered_claim(visa_value=["data_steward@some.org"])
+    assert not check_tampered_claim(visa_value="admin@some.org")
+    assert check_tampered_claim(visa_value="admin@some.org", role=Role.ADMIN)
 
 
 def test_create_controlled_access_claim():
@@ -144,7 +147,7 @@ def test_create_controlled_access_claim():
     assert created_claim.iva_id == "some-iva-id"
     assert get_dataset_for_value(str(created_claim.visa_value)) == "DS0815"
     assert is_valid_claim(created_claim)
-    assert not is_data_steward_claim(created_claim)
+    assert get_role_from_claim(created_claim) is None
     assert has_download_access_for_dataset(created_claim, "DS0815")
     assert dataset_id_for_download_access(created_claim) == "DS0815"
 

@@ -15,7 +15,7 @@
 
 """User model classes used as DTOs and core entities."""
 
-from enum import Enum
+from enum import StrEnum
 from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -26,14 +26,14 @@ from . import BaseDto
 __all__ = ["StatusChange", "User", "UserData", "UserStatus"]
 
 
-class UserStatus(str, Enum):
+class UserStatus(StrEnum):
     """User status enum"""
 
     ACTIVE = "active"
     INACTIVE = "inactive"
 
 
-class AcademicTitle(str, Enum):
+class AcademicTitle(StrEnum):
     """Academic title"""
 
     DR = "Dr."

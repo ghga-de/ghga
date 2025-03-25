@@ -98,7 +98,7 @@ _map_session_dict_to_object = {
     "name": "user_name",
     "email": "user_email",
     "title": "user_title",
-    "role": "role",
+    "roles": "roles",
     "csrf": "csrf_token",
 }
 

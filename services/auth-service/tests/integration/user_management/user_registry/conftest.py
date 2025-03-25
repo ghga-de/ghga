@@ -15,6 +15,8 @@
 
 """Test configuration for the user management"""
 
+from typing import Any
+
 import pytest
 
 from ....fixtures import auth_keys
@@ -44,11 +46,11 @@ def user_headers() -> dict[str, str]:
 
 
 @pytest.fixture(autouse=True, scope="package")
-def steward_headers() -> dict[str, str]:
+def steward_headers() -> dict[str, Any]:
     """Get headers with authorization for a user with data steward role."""
     return get_headers_for(
         id="steve-internal",
         name="Steve Steward",
         email="steve@archive.org",
-        role="data_steward",
+        roles=["data_steward"],
     )

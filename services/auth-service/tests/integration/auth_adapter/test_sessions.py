@@ -19,6 +19,7 @@
 import json
 from base64 import b64encode
 from collections.abc import Mapping
+from typing import Any
 
 import pytest
 from fastapi import FastAPI, status
@@ -81,9 +82,7 @@ def setup_daos(
     app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
 
-def assert_session_header(
-    response: Response, expected: Mapping[str, str | int]
-) -> None:
+def assert_session_header(response: Response, expected: Mapping[str, Any]) -> None:
     """Assert that the response session header is as expected."""
     session_header = response.headers.get("X-Session")
     assert session_header
@@ -185,6 +184,7 @@ async def test_login_with_unregistered_user(
             "name": "John Doe",
             "email": "john@home.org",
             "state": "NeedsRegistration",
+            "roles": [],
         },
     )
 
@@ -235,6 +235,7 @@ async def test_login_with_registered_user(
             "name": "John Doe",
             "email": "john@home.org",
             "state": "Registered",
+            "roles": [],
         },
     )
 
@@ -266,6 +267,7 @@ async def test_login_with_registered_user_and_name_change(
             "name": "John Doe Jr.",
             "email": "john@home.org",
             "state": "NeedsReRegistration",
+            "roles": [],
         },
     )
 
@@ -297,6 +299,7 @@ async def test_login_with_registered_user_with_title(
             "email": "john@home.org",
             "title": "Dr.",
             "state": "Registered",
+            "roles": [],
         },
     )
 
@@ -377,6 +380,7 @@ async def test_login_with_cookie_and_unregistered_user(bare_client: BareClient):
             "name": "John Doe",
             "email": "john@home.org",
             "state": "NeedsRegistration",
+            "roles": [],
         },
     )
 
@@ -406,6 +410,7 @@ async def test_login_with_cookie_and_registered_user(bare_client: BareClient):
             "name": "John Doe",
             "email": "john@home.org",
             "state": "Registered",
+            "roles": [],
         },
     )
 
@@ -438,7 +443,7 @@ async def test_login_with_cookie_and_registered_data_steward(
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     assert SESSION_COOKIE not in response.cookies
-    expected_session_header = {
+    expected_session_header: dict[str, Any] = {
         "id": "james@ghga.de",
         "ext_id": "james@aai.org",
         "name": "James Steward",
@@ -446,8 +451,9 @@ async def test_login_with_cookie_and_registered_data_steward(
         "state": "Registered",
         "title": "Dr.",
     }
-    if iva_state == IvaState.VERIFIED:
-        expected_session_header["role"] = "data_steward"
+    expected_session_header["roles"] = (
+        ["data_steward"] if iva_state == IvaState.VERIFIED else []
+    )
     assert_session_header(response, expected_session_header)
 
 
@@ -480,5 +486,6 @@ async def test_login_with_cookie_but_without_csrf_token(bare_client: BareClient)
             "name": "John Doe",
             "email": "john@home.org",
             "state": "Registered",
+            "roles": [],
         },
     )

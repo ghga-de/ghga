@@ -162,7 +162,7 @@ The service requires the following configuration parameters:
 
 - **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
+- **`kafka_ssl_password`** *(string, format: password, write-only)*: Optional password to be used for the client private key. Default: `""`.
 
 - **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
@@ -279,7 +279,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/. Length must be at least 1.
 
 
   Examples:
@@ -368,7 +368,7 @@ The service requires the following configuration parameters:
 
   - **Any of**
 
-    - *string, format: uri*
+    - *string, format: uri*: Length must be at least 1.
 
     - *null*
 
@@ -593,7 +593,7 @@ The service requires the following configuration parameters:
 
   - **Items**: Refer to *[#/$defs/UserWithIVA](#%24defs/UserWithIVA)*.
 
-- **`oidc_authority_url`** *(string, format: uri)*: external OIDC authority URL used by the auth adapter. Default: `"https://login.aai.lifescience-ri.eu/oidc/"`.
+- **`oidc_authority_url`** *(string, format: uri)*: external OIDC authority URL used by the auth adapter. Length must be between 1 and 2083 (inclusive). Default: `"https://login.aai.lifescience-ri.eu/oidc/"`.
 
 - **`oidc_issuer`** *(string)*: external OIDC issuer for access tokens used by the auth adapter (URL format with or without end slash, determined using OIDC discovery if empty). Default: `"https://login.aai.lifescience-ri.eu/oidc/"`.
 
@@ -601,13 +601,13 @@ The service requires the following configuration parameters:
 
   - **Any of**
 
-    - *string, format: uri*
+    - *string, format: uri*: Length must be between 1 and 2083 (inclusive).
 
     - *null*
 
 - **`oidc_client_id`** *(string)*: the registered OIDC client ID. Default: `"ghga-data-portal"`.
 
-- **`organization_url`** *(string, format: uri)*: the URL used as source for internal claims. Default: `"https://ghga.de"`.
+- **`organization_url`** *(string, format: uri)*: the URL used as source for internal claims. Length must be between 1 and 2083 (inclusive). Default: `"https://ghga.de"`.
 
 ## Definitions
 

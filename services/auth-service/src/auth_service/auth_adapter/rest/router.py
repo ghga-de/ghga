@@ -35,7 +35,7 @@ from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import SecretStr
 
 from auth_service.config import CONFIG
-from auth_service.user_management.claims_repository.core.utils import is_data_steward
+from auth_service.user_management.claims_repository.core.utils import get_active_roles
 from auth_service.user_management.claims_repository.deps import ClaimDaoDependency
 from auth_service.user_management.user_registry.deps import (
     IvaDaoDependency,
@@ -169,13 +169,13 @@ async def login(  # noqa: C901, PLR0913
             detail="User account is disabled",
         )
 
-    async def _is_data_steward(user: User) -> bool:
-        """Check whether the given user is a data steward.
+    async def _get_roles(user: User) -> list[str]:
+        """Get the active roles of the given user.
 
-        This includes the check whether a corresponding IVA has been verified.
+        This includes the check whether the corresponding IVAs have been verified.
         """
         # if the user exists, the account is active at this point
-        return await is_data_steward(user.id, iva_dao=iva_dao, claim_dao=claim_dao)
+        return await get_active_roles(user.id, iva_dao=iva_dao, claim_dao=claim_dao)
 
     async def _has_totp_token(user: User) -> bool:
         """Check whether the given user has a TOTP token."""
@@ -188,7 +188,7 @@ async def login(  # noqa: C901, PLR0913
     await session_store.save_session(
         session,
         user=user,
-        is_data_steward=_is_data_steward,
+        get_roles=_get_roles,
         has_totp_token=_has_totp_token,
     )
 

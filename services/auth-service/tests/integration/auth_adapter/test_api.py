@@ -95,14 +95,14 @@ def assert_has_authorization_header(response, session):
     assert internal_token
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "role", "exp", "iat"}
+    expected_claims = {"id", "name", "email", "title", "roles", "exp", "iat"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == session.user_id
     assert claims["name"] == session.user_name
     assert claims["email"] == session.user_email
     assert claims["title"] == session.user_title
-    assert claims["role"] == session.role
+    assert claims["roles"] == session.roles
     assert isinstance(claims["iat"], int)
     assert isinstance(claims["exp"], int)
     assert claims["iat"] <= int(now_as_utc().timestamp()) < claims["exp"]
@@ -345,14 +345,14 @@ async def test_post_user_with_session(bare_client: BareClient, httpx_mock: HTTPX
 
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "exp", "iat", "role"}
+    expected_claims = {"id", "name", "email", "title", "exp", "iat", "roles"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == "john@aai.org"
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
     assert claims["title"] is None
-    assert claims["role"] is None
+    assert claims["roles"] == []
 
     iat = claims["iat"]
     assert isinstance(iat, int)
@@ -442,14 +442,14 @@ async def test_put_registered_user_with_session(
 
     claims = get_claims_from_token(internal_token)
     assert isinstance(claims, dict)
-    expected_claims = {"id", "name", "email", "title", "exp", "iat", "role"}
+    expected_claims = {"id", "name", "email", "title", "exp", "iat", "roles"}
 
     assert set(claims) == expected_claims
     assert claims["id"] == "john@ghga.de"
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
     assert claims["title"] is None
-    assert claims["role"] is None
+    assert claims["roles"] == []
 
     iat = claims["iat"]
     assert isinstance(iat, int)
@@ -574,4 +574,4 @@ async def test_log_auth_info(
     assert record.method == "PUT"
     assert record.path == "/some/path"
     assert record.user == session.user_id
-    assert record.role == session.role
+    assert record.roles == session.roles

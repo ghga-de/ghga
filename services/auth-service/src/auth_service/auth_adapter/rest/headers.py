@@ -17,6 +17,7 @@
 
 import json
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import Request, Response, status
 
@@ -43,7 +44,7 @@ def session_to_header(
     session: Session, timeouts: Callable[[Session], tuple[int, int]] | None = None
 ) -> str:
     """Serialize a session to a response header value to be used by the frontend."""
-    session_dict: dict[str, str | int] = {
+    session_dict: dict[str, Any] = {
         "ext_id": session.ext_id,
         "name": session.user_name,
         "email": session.user_email,
@@ -54,8 +55,7 @@ def session_to_header(
         session_dict["id"] = session.user_id
     if session.user_title:
         session_dict["title"] = session.user_title
-    if session.role:
-        session_dict["role"] = session.role
+    session_dict["roles"] = session.roles
     if timeouts:
         timeout_soft, timeout_hard = timeouts(session)
         session_dict["timeout"] = timeout_soft

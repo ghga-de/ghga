@@ -18,7 +18,7 @@
 An IVA is an "indendent verification address" used to verify a user's identity.
 """
 
-from enum import Enum
+from enum import StrEnum
 from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -40,7 +40,7 @@ __all__ = [
 ]
 
 
-class IvaType(str, Enum):
+class IvaType(StrEnum):
     """The type of IVA"""
 
     PHONE = "Phone"
@@ -49,7 +49,7 @@ class IvaType(str, Enum):
     IN_PERSON = "InPerson"
 
 
-class IvaState(str, Enum):
+class IvaState(StrEnum):
     """The state of an IVA"""
 
     UNVERIFIED = "Unverified"

@@ -17,7 +17,7 @@
 """Managing user sessions that keep track of authentication state."""
 
 import secrets
-from enum import Enum
+from enum import StrEnum
 from typing import Protocol
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
@@ -30,7 +30,7 @@ from ..ports.session_store import BaseSession, SessionStorePort
 from .totp import TOTPToken
 
 
-class SessionState(str, Enum):
+class SessionState(StrEnum):
     """The state of a user session."""
 
     NEEDS_REGISTRATION = "NeedsRegistration"
@@ -59,7 +59,7 @@ class Session(BaseSession):
     user_title: str | None = Field(
         default=None, description="Optional academic title of the user"
     )
-    role: str | None = Field(default=None, description="Optional role of the user")
+    roles: list[str] = Field(default=[], description="Optional roles of the user")
     state: SessionState = Field(
         default=SessionState.NEEDS_REGISTRATION,
         description="The authentication state of the user session",
@@ -105,6 +105,14 @@ class AsyncUserPredicate(Protocol):
         ...
 
 
+class AsyncUserRoleFetcher(Protocol):
+    """An async function that fetches the roles of users."""
+
+    async def __call__(self, user: User) -> list[str]:
+        """Call the role fetcher function."""
+        ...
+
+
 class SessionStore(SessionStorePort[Session]):
     """A store for user sessions that is independent of the storage mechanism."""
 
@@ -135,7 +143,7 @@ class SessionStore(SessionStorePort[Session]):
         user_email: str,
         user_id: str | None = None,
         user_title: str | None = None,
-        role: str | None = None,
+        roles: list[str] | None = None,
     ) -> Session:
         """Create a new user session without saving it."""
         session_id = self._generate_session_id()
@@ -148,7 +156,7 @@ class SessionStore(SessionStorePort[Session]):
             user_name=user_name,
             user_email=user_email,
             user_title=user_title,
-            role=role,
+            roles=roles or [],
             csrf_token=csrf_token,
             created=created,
             last_used=created,
@@ -182,7 +190,7 @@ class SessionStore(SessionStorePort[Session]):
         self,
         session: Session,
         user: User | None = None,
-        is_data_steward: AsyncUserPredicate | None = None,
+        get_roles: AsyncUserRoleFetcher | None = None,
         has_totp_token: AsyncUserPredicate | None = None,
     ) -> None:
         """Update the given user session."""
@@ -198,8 +206,8 @@ class SessionStore(SessionStorePort[Session]):
                 session.user_email = user.email
                 session.user_title = user.title
                 session.state = SessionState.REGISTERED
-                if is_data_steward and await is_data_steward(user):
-                    session.role = "data_steward"
+                roles = await get_roles(user) if get_roles else []
+                session.roles = roles
             if (
                 session.state is SessionState.REGISTERED
                 and has_totp_token

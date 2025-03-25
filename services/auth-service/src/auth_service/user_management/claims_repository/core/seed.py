@@ -30,8 +30,8 @@ from auth_service.user_management.user_registry.models.users import User, UserSt
 
 from ..models.claims import VisaType
 from ..models.config import UserWithIVA
-from .claims import create_data_steward_claim
-from .utils import is_data_steward_claim
+from .claims import Role, create_internal_role_claim
+from .utils import get_role_from_claim
 
 __all__ = ["seed_data_steward_claims"]
 
@@ -42,7 +42,8 @@ async def _remove_existing_data_steward_claims(*, claim_dao: ClaimDao) -> None:
     """Remove all existing data steward claims"""
     num_removed_claims = 0
     async for claim in claim_dao.find_all(mapping={"visa_type": VisaType.GHGA_ROLE}):
-        if is_data_steward_claim(claim):
+        role = get_role_from_claim(claim)
+        if role is Role.DATA_STEWARD:
             await claim_dao.delete(claim.id)
             num_removed_claims += 1
     log.info("Removed %d existing data steward claim(s).", num_removed_claims)
@@ -152,7 +153,7 @@ async def _add_configured_data_steward_claims(
                 "Added missing IVA for data steward with external ID %r.", ext_id
             )
         # add the data steward claim for that user and that IVA
-        claim = create_data_steward_claim(user.id, iva.id)
+        claim = create_internal_role_claim(user.id, Role.DATA_STEWARD, iva.id)
         await claim_dao.insert(claim)
         log.info("Added data steward role for %r to the claims repository.", ext_id)
 

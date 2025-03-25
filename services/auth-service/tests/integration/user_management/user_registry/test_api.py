@@ -641,7 +641,7 @@ async def test_patch_user_as_same_user(
     assert error == {"detail": "Not authorized to make this modification."}
     # check that they cannot even change their status as data stewards
     headers = get_headers_for(
-        id=id_, name="Max Headroom", email="max@example.org", role="data_steward"
+        id=id_, name="Max Headroom", email="max@example.org", roles=["data_steward"]
     )
     response = await full_client.patch(
         f"/users/{id_}", json=update_data, headers=headers
@@ -768,7 +768,10 @@ async def test_delete_user_as_same_user(bare_client: BareClient):
 
     # and even data stewards cannot delete their own accounts
     headers = get_headers_for(
-        id="some-id", name="Max Headroom", email="max@example.org", role="data_steward"
+        id="some-id",
+        name="Max Headroom",
+        email="max@example.org",
+        roles=["data_steward"],
     )
     response = await bare_client.delete("/users/some-id", headers=headers)
 

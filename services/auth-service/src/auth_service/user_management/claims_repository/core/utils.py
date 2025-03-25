@@ -27,9 +27,9 @@ from auth_service.user_management.user_registry.models.users import UserStatus
 
 from ..deps import ClaimDao
 from ..models.claims import VisaType
-from .claims import is_data_steward_claim, is_valid_claim
+from .claims import get_role_from_claim, is_valid_claim
 
-__all__ = ["is_data_steward", "user_exists", "user_with_iva_exists"]
+__all__ = ["get_active_roles", "user_exists", "user_with_iva_exists"]
 
 
 async def user_exists(user_id: str, *, user_dao: UserDao) -> bool:
@@ -82,28 +82,30 @@ async def iva_is_verified(user_id: str, iva_id: str | None, *, iva_dao: IvaDao) 
     return iva.user_id == user_id and iva.state == IvaState.VERIFIED
 
 
-async def is_data_steward(
+async def get_active_roles(
     user_id: str,
     *,
     claim_dao: ClaimDao,
     iva_dao: IvaDao,
     user_dao: UserDao | None = None,
     now: Callable[[], UTCDatetime] = now_as_utc,
-):
-    """Check whether the user with the given ID is an active data steward.
+) -> list[str]:
+    """Get the active roles of the user with the given ID.
 
-    If no User DAO is provided, the user is assumed to exist and be active.
-    We also require that the data steward claim has a verified associated IVA.
+    If no User DAO is provided, the user is assumed to exist and be active,
+    otherwise we check this as a requirement for having any active roles.
+
+    For a role to be considered active, we require that the corresponding
+    claim has a verified associated IVA.
     """
     if user_dao and not await user_is_active(user_id, user_dao=user_dao):
-        return False
+        return []
+    roles = set()
     async for claim in claim_dao.find_all(
         mapping={"user_id": user_id, "visa_type": VisaType.GHGA_ROLE}
     ):
-        if (
-            is_valid_claim(claim, now=now)
-            and is_data_steward_claim(claim)
-            and await iva_is_verified(user_id, claim.iva_id, iva_dao=iva_dao)
-        ):
-            return True
-    return False
+        if is_valid_claim(claim, now=now):
+            role = get_role_from_claim(claim)
+            if role and await iva_is_verified(user_id, claim.iva_id, iva_dao=iva_dao):
+                roles.add(str(role))
+    return sorted(roles)

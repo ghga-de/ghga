@@ -73,7 +73,8 @@ def test_session_to_header_ascii():
     )
     assert session_to_header(session) == (
         '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
-        '"state":"NeedsRegistration","csrf":"some-csrf-token","id":"some-user-id"}'
+        '"state":"NeedsRegistration","csrf":"some-csrf-token",'
+        '"id":"some-user-id","roles":[]}'
     )
 
 
@@ -91,7 +92,8 @@ def test_session_to_header_non_ascii():
     )
     assert session_to_header(session) == (
         '{"ext_id":"john@aai.org","name":"Svante Pääbo","email":"svante@home.se",'
-        '"state":"NeedsRegistration","csrf":"a-csrf-token","id":"a-user-id"}'
+        '"state":"NeedsRegistration","csrf":"a-csrf-token",'
+        '"id":"a-user-id","roles":[]}'
     )
 
 
@@ -108,7 +110,7 @@ def test_session_to_header_without_optional_properties():
     )
     assert session_to_header(session) == (
         '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
-        '"state":"NeedsRegistration","csrf":"some-csrf-token"}'
+        '"state":"NeedsRegistration","csrf":"some-csrf-token","roles":[]}'
     )
 
 
@@ -121,7 +123,7 @@ def test_session_to_header_with_optional_properties():
         user_name="John Doe",
         user_email="john@home.org",
         user_title="Dr.",
-        role="data_steward@ghga.de",
+        roles=["data_steward@ghga.de"],
         csrf_token="some-csrf-token",
         created=NOW,
         last_used=NOW,
@@ -129,7 +131,7 @@ def test_session_to_header_with_optional_properties():
     assert session_to_header(session, lambda _session: (42, 144)) == (
         '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
         '"state":"NeedsRegistration","csrf":"some-csrf-token",'
-        '"id":"some-user-id","title":"Dr.","role":"data_steward@ghga.de",'
+        '"id":"some-user-id","title":"Dr.","roles":["data_steward@ghga.de"],'
         '"timeout":42,"extends":144}'
     )
 

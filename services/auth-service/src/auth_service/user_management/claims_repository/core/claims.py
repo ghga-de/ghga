@@ -18,6 +18,7 @@
 
 from collections.abc import Callable
 from datetime import timedelta
+from enum import StrEnum
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
@@ -25,13 +26,14 @@ from ....config import CONFIG
 from ..models.claims import AuthorityLevel, Claim, VisaType
 
 __all__ = [
+    "Role",
     "create_controlled_access_claim",
     "create_controlled_access_filter",
-    "create_data_steward_claim",
+    "create_internal_role_claim",
     "dataset_id_for_download_access",
     "get_dataset_for_value",
+    "get_role_from_claim",
     "has_download_access_for_dataset",
-    "is_data_steward_claim",
     "is_internal_claim",
     "is_valid_claim",
 ]
@@ -39,7 +41,15 @@ __all__ = [
 
 INTERNAL_SOURCE = CONFIG.organization_url
 INTERNAL_DOMAIN = INTERNAL_SOURCE.host
-DATA_STEWARD_ROLE = "data_steward"
+
+
+class Role(StrEnum):
+    """All supported role names for internal roles."""
+
+    ADMIN = "admin"
+    DATA_STEWARD = "data_steward"
+
+
 DATASET_PREFIX = str(INTERNAL_SOURCE).rstrip("/") + "/datasets/"
 
 
@@ -63,18 +73,18 @@ def is_internal_claim(claim: Claim, visa_type: VisaType) -> bool:
     )
 
 
-# Data Steward Claims
+# Internal Role Claims
 
 
-def create_data_steward_claim(
-    user_id: str, iva_id: str | None = None, valid_days=365
+def create_internal_role_claim(
+    user_id: str, role: Role, iva_id: str | None = None, valid_days=365
 ) -> Claim:
     """Create a claim for a data steward with the given IVA."""
     valid_from = now_as_utc()
     valid_until = now_as_utc() + timedelta(days=valid_days)
     return Claim(
         visa_type=VisaType.GHGA_ROLE,
-        visa_value=f"{DATA_STEWARD_ROLE}@{INTERNAL_DOMAIN}",
+        visa_value=f"{role}@{INTERNAL_DOMAIN}",
         assertion_date=valid_from,
         valid_from=valid_from,
         valid_until=valid_until,
@@ -89,18 +99,23 @@ def create_data_steward_claim(
     )
 
 
-def is_data_steward_claim(claim: Claim) -> bool:
-    """Check whether the given claim asserts a data steward role.
+def get_role_from_claim(claim: Claim) -> Role | None:
+    """Get the internal role from a claim
 
-    This function does not check the existence and status of an associated IVA.
+    The function checks whether the claim is a supported internal role claim
+    and returns the corresponding role if that is the case and None otherwise.
+    Note that this function does not check the validity of the claim
+    nor does it check the existence and status of an associated IVA.
     """
     if not is_internal_claim(claim, VisaType.GHGA_ROLE):
-        return False
+        return None
     visa_value = claim.visa_value
     if not isinstance(visa_value, str):
-        return False
+        return None
     role_name = visa_value.split("@", 1)[0]
-    return role_name == DATA_STEWARD_ROLE
+    if role_name not in Role:
+        return None
+    return Role(role_name)
 
 
 # Controlled Access Claims

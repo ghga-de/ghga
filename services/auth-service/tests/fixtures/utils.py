@@ -141,7 +141,7 @@ def create_access_token(
 def create_internal_token(
     key: jwk.JWK | None = None,
     expired: bool = False,
-    **kwargs: None | int | str,
+    **kwargs: Any,
 ) -> str:
     """Create an internal token that can be used for testing.
 
@@ -153,7 +153,7 @@ def create_internal_token(
     kty = key["kty"]
     assert kty in ("EC", "RSA")
     header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
-    claims: dict[str, None | int | str] = {
+    claims: dict[str, Any] = {
         "name": "John Doe",
         "email": "john@home.org",
         "status": "active",
@@ -178,7 +178,7 @@ def create_internal_token(
 def get_headers_for(
     key: jwk.JWK | None = None,
     expired: bool = False,
-    **kwargs: None | int | str,
+    **kwargs: Any,
 ) -> dict[str, str]:
     """Create the headers for an internal token with the given arguments.
 
@@ -284,12 +284,11 @@ class DummyUserDao:
             else:
                 yield user
 
-    async def insert(self, dto: User) -> User:
+    async def insert(self, dto: User) -> None:
         """Insert the dummy user."""
         dto = dto.model_copy(update={"id": dto.ext_id.replace("@aai.org", "@ghga.de")})
         user = User(**dto.model_dump())
         self.users.append(user)
-        return user
 
     async def update(self, dto: User) -> None:
         """Update the dummy user."""
@@ -363,11 +362,10 @@ class DummyIvaDao:
             else:
                 yield iva
 
-    async def insert(self, dto: Iva) -> Iva:
+    async def insert(self, dto: Iva) -> None:
         """Insert a dummy IVA."""
         dto = Iva(**dto.model_dump())
         self.ivas.append(dto)
-        return dto
 
     async def update(self, dto: Iva) -> None:
         """Update a dummy IVA."""
@@ -455,15 +453,6 @@ class DummyClaimDao:
                 return claim
         raise ResourceNotFoundError(id_=id_)
 
-    async def update(self, dto: Claim) -> None:
-        """Update a claim."""
-        for index, claim in enumerate(self.claims):
-            if claim.id == dto.id:
-                self.claims[index] = dto
-                break
-        else:
-            raise ResourceNotFoundError(id_=dto.id)
-
     async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[Claim]:
         """Find all dummy user claims."""
         mapping = json.loads(json.dumps(mapping))
@@ -475,6 +464,20 @@ class DummyClaimDao:
                     break
             else:
                 yield claim
+
+    async def update(self, dto: Claim) -> None:
+        """Update a dummy user claim."""
+        for index, claim in enumerate(self.claims):
+            if claim.id == dto.id:
+                self.claims[index] = dto
+                break
+        else:
+            raise ResourceNotFoundError(id_=dto.id)
+
+    async def insert(self, dto: Claim) -> None:
+        """Insert a dummy user claim."""
+        claim = Claim(**dto.model_dump())
+        self.claims.append(claim)
 
     async def delete(self, id_: str) -> None:
         """Delete a dummy user claim."""

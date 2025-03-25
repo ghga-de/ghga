@@ -15,7 +15,7 @@
 
 """Claims model classes used as DTOs and core entities."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Any
 from uuid import uuid4
 
@@ -54,7 +54,7 @@ Accession = Annotated[
 ]
 
 
-class VisaType(str, Enum):
+class VisaType(StrEnum):
     """Type of a visa"""
 
     # Standard Visa Types
@@ -67,7 +67,7 @@ class VisaType(str, Enum):
     GHGA_ROLE = "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0"
 
 
-class AuthorityLevel(str, Enum):
+class AuthorityLevel(StrEnum):
     """Type of asserting authority"""
 
     SELF = "self"
@@ -77,7 +77,7 @@ class AuthorityLevel(str, Enum):
     DAC = "dac"  # data access committee
 
 
-class MatchClaim(str, Enum):
+class MatchClaim(StrEnum):
     """Possible visa claim names for conditions"""
 
     BY = "by"
@@ -85,7 +85,7 @@ class MatchClaim(str, Enum):
     VALUE = "value"
 
 
-class MatchType(str, Enum):
+class MatchType(StrEnum):
     """Type of matching a claim value"""
 
     CONST = "const"
@@ -196,15 +196,11 @@ class ClaimUpdate(BaseDto):
     revocation_date: UTCDatetime = Field(default=..., description="Date of revocation")
 
 
-def new_uuid4() -> str:
-    return str(uuid4())
-
-
 class Claim(ClaimCreation):
     """A claim about a user with a user ID and all data"""
 
     id: str = Field(  # actually UUID
-        default_factory=new_uuid4, description="Internal claim ID"
+        default_factory=lambda: str(uuid4()), description="Internal claim ID"
     )
 
     user_id: str = Field(  # actually UUID
