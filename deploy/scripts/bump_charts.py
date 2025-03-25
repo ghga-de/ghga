@@ -110,11 +110,14 @@ def get_charts(chart_files: list[Path]) -> list[dict[str, any]]:
 def get_version_diff(version_a: VersionInfo, version_b: VersionInfo) -> VersionInfo:
     """Calculates the absolute version difference between two versions."""
     diff = VersionInfo.parse("0.0.0")
-    for part in ["major", "minor", "patch"]:
+    for part in ["major", "minor", "patch", "prerelease"]:
         if getattr(version_a, part) != getattr(version_b, part):
-            diff = diff.replace(
-                **{part: abs(getattr(version_a, part) - getattr(version_b, part))}
-            )
+            if part == "prerelease":
+                diff = diff.bump_patch()
+            else:
+                diff = diff.replace(
+                    **{part: abs(getattr(version_a, part) - getattr(version_b, part))}
+                )
             print(f"Diff between {version_a} and {version_b}: {diff}")
             break
     return diff
