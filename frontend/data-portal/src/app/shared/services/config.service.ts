@@ -61,9 +61,7 @@ function withEndSlash(url: string): string {
 /**
  * The config service provides access to the configuration of the application.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class ConfigService {
   #config: Config;
 

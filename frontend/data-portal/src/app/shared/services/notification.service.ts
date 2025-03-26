@@ -12,9 +12,7 @@ import { CustomSnackBarComponent } from '../ui/custom-snack-bar/custom-snack-bar
 /**
  * A service that can show various kinds of notifications to the user
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class NotificationService {
   #snackBar = inject(MatSnackBar);
 

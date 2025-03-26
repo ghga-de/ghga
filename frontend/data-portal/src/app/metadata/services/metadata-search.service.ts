@@ -15,9 +15,7 @@ import { SearchResults, emptySearchResults } from '../models/search-results';
  *
  * This service provides the functionality to fetch search results from the server via MASS.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class MetadataSearchService {
   #config = inject(ConfigService);
   #massUrl = this.#config.massUrl;

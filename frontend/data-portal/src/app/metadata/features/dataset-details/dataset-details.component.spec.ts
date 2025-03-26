@@ -63,14 +63,19 @@ describe('DatasetDetailsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DatasetDetailsComponent],
       providers: [
-        { provide: MetadataService, useClass: MockMetadataService },
         { provide: DatasetInformationService, useClass: MockDatasetInformationService },
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         provideAnimations(),
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(DatasetDetailsComponent, {
+        set: {
+          providers: [{ provide: MetadataService, useClass: MockMetadataService }],
+        },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(DatasetDetailsComponent);
     component = fixture.componentInstance;

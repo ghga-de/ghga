@@ -22,9 +22,7 @@ declare global {
  * Umami is a user analytics tool that generates user behavior data that we can monitor in real time in a dashboard.
  * This service creates an instance of the tracker and is injected in the root component of the app.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class UmamiService {
   #config = inject(ConfigService);
   #router = inject(Router);

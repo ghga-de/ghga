@@ -14,19 +14,7 @@ import {
   MockAccessRequestService,
 } from '@app/access-requests/services/access-request.service';
 import { AuthService } from '@app/auth/services/auth.service';
-import { MetadataService } from '@app/metadata/services/metadata.service';
 import { DatasetSummaryComponent } from './dataset-summary.component';
-
-/**
- * Mock the metadata service as needed for the dataset summary
- */
-class MockMetadataService {
-  datasetSummary = {
-    value: () => datasetSummary,
-    isLoading: () => false,
-    error: () => undefined,
-  };
-}
 
 /**
  * Mock the auth service as needed for the Dataset Summary Component
@@ -46,19 +34,19 @@ describe('DatasetSummaryComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DatasetSummaryComponent],
       providers: [
-        { provide: MetadataService, useClass: MockMetadataService },
         {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,
         },
-        { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: AuthService, useClass: MockAuthService },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DatasetSummaryComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('hit', searchResults.hits.at(0));
+    fixture.componentRef.setInput('summary', datasetSummary);
     await fixture.whenStable();
   });
 

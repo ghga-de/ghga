@@ -16,17 +16,6 @@ import { AuthService } from '@app/auth/services/auth.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { SearchResultComponent } from './search-result.component';
 
-/**
- * Mock the metadata service as needed for the dataset summary
- */
-class MockMetadataService {
-  datasetSummary = {
-    value: () => datasetSummary,
-    isLoading: () => false,
-    error: () => undefined,
-  };
-}
-
 const fakeActivatedRoute = {
   snapshot: { data: {} },
 } as ActivatedRoute;
@@ -39,6 +28,17 @@ class MockAuthService {
   email = () => 'doe@home.org';
   roles = () => ['data_steward'];
   roleNames = () => ['Data Steward'];
+}
+
+/**
+ * Mock the metadata service as needed for the search result component
+ */
+class MockMetadataService {
+  datasetSummary = {
+    value: () => datasetSummary,
+    isLoading: () => false,
+    error: () => undefined,
+  };
 }
 
 describe(SearchResultComponent, () => {
@@ -55,9 +55,16 @@ describe(SearchResultComponent, () => {
           useValue: fakeActivatedRoute,
         },
         { provide: AuthService, useClass: MockAuthService },
+        { provide: MetadataService, useClass: MockMetadataService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(SearchResultComponent, {
+        set: {
+          providers: [{ provide: MetadataService, useClass: MockMetadataService }],
+        },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(SearchResultComponent);
     component = fixture.componentInstance;

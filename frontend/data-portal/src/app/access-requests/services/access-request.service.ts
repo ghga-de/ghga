@@ -20,9 +20,7 @@ import {
 /**
  *  This service handles state and management of access requests (to datasets)
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class AccessRequestService {
   #http = inject(HttpClient);
   #auth = inject(AuthService);

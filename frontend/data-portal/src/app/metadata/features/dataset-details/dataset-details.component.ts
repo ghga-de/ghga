@@ -70,6 +70,7 @@ const COLUMNS = {
     DynamicAccessRequestButtonComponent,
     MatTooltipModule,
   ],
+  providers: [MetadataService],
   templateUrl: './dataset-details.component.html',
   styleUrl: './dataset-details.component.scss',
 })
@@ -184,7 +185,7 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
       case 'sex':
         return sample.individual.sex;
       case 'phenotype':
-        return sample.individual.phenotypic_features_terms.join(', ');
+        return (sample.individual.phenotypic_features_terms || []).join(', ');
       case 'tissue':
         return sample.biospecimen_tissue_term;
       default:

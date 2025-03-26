@@ -28,31 +28,22 @@ import { DatasetSummaryStencilComponent } from '../dataset-summary/dataset-summa
     DatasetSummaryComponent,
     DatasetSummaryStencilComponent,
   ],
+  providers: [MetadataService],
   templateUrl: './search-result.component.html',
   styleUrl: './search-result.component.scss',
 })
 export class SearchResultComponent {
   #notify = inject(NotificationService);
   #metadata = inject(MetadataService);
+  #summary = this.#metadata.datasetSummary;
 
   asStencil = input<boolean>(false);
 
   hit = input.required<Hit>();
   hitContent = computed(() => this.hit().content);
 
-  summary = this.#metadata.datasetSummary;
-  studiesSummary = computed(() => this.summary.value().studies_summary);
-  studiesSummaryStats = computed(() => this.studiesSummary().stats);
-  samplesSummary = computed(() => this.summary.value().samples_summary);
-  samplesSex = computed(() => this.samplesSummary().stats.sex);
-  samplesTissues = computed(() => this.samplesSummary().stats.tissues);
-  samplesPhenotypes = computed(() => this.samplesSummary().stats.phenotypic_features);
-  filesSummary = computed(() => this.summary.value().files_summary);
-  filesFormats = computed(() => this.filesSummary().stats.format);
-  experimentsSummary = computed(() => this.summary.value().experiments_summary);
-  experimentsPlatforms = computed(
-    () => this.experimentsSummary().stats.experiment_methods,
-  );
+  summary = this.#summary.value;
+  isLoading = this.#summary.isLoading;
 
   /**
    * On opening of the search result expansible panel,
@@ -63,7 +54,7 @@ export class SearchResultComponent {
   }
 
   #errorEffect = effect(() => {
-    if (this.summary.error()) {
+    if (this.#summary.error()) {
       this.#notify.showError('Error fetching dataset summary.');
     }
   });

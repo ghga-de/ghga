@@ -24,6 +24,7 @@ describe('MetadataService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        MetadataService,
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ConfigService, useClass: MockConfigService },

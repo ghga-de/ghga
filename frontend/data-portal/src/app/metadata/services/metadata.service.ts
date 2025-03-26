@@ -13,11 +13,13 @@ import { DatasetSummary, emptyDatasetSummary } from '../models/dataset-summary';
 /**
  * Metadata query service
  *
- * This service provides the functionality to fetch dataset summaries and details from the server.
+ * This service provides the functionality to fetch dataset summaries
+ * and dataset details using the metldata API.
+ *
+ * Note that this service must be injected at the component level
+ * since multiple different summaries can be visible at the same time.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable()
 export class MetadataService {
   #config = inject(ConfigService);
   #metldataUrl = this.#config.metldataUrl;

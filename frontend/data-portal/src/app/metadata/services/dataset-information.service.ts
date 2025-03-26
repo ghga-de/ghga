@@ -17,9 +17,7 @@ import {
  *
  * This service provides the functionality to fetch aggregated information on datasets.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class DatasetInformationService {
   #config = inject(ConfigService);
   #dinsUrl = this.#config.dinsUrl;

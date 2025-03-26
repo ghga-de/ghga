@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -12,8 +12,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 // eslint-disable-next-line boundaries/element-types
 import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button.component';
+import { DatasetSummary } from '@app/metadata/models/dataset-summary';
 import { Hit } from '@app/metadata/models/search-results';
-import { MetadataService } from '@app/metadata/services/metadata.service';
 import { AddPluralS } from '@app/shared/pipes/add-plural-s.pipe';
 import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summary-badges.component';
 
@@ -36,11 +36,9 @@ import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summar
   styleUrl: './dataset-summary.component.scss',
 })
 export class DatasetSummaryComponent {
-  #metadata = inject(MetadataService);
-
   hit = input.required<Hit>();
   hitContent = computed(() => this.hit().content);
-  summary = this.#metadata.datasetSummary.value;
+  summary = input.required<DatasetSummary>();
   studiesSummary = computed(() => this.summary().studies_summary);
   studiesSummaryStats = computed(() => this.studiesSummary().stats);
   samplesSummary = computed(() => this.summary().samples_summary);
