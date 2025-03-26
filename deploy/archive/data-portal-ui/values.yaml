@@ -25,3 +25,4 @@ containers:
     name: parameters
     key: parameters
     appuser: appuser
+    mountPath: /home/appuser/data-portal.yaml
