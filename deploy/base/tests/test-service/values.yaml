@@ -35,6 +35,7 @@ containers:
   config:
     name: parameters-rest
     key: parameters-rest
+    #mountPath: /app/config
 
 vaultAgent:
   enabled: true

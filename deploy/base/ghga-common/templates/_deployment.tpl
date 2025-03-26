@@ -110,7 +110,11 @@ spec:
           {{- end }}
           volumeMounts:
             - name: {{ $container.config.name | default "config" }}
+              {{- if $container.config.mountPath }}
+              mountPath: {{ $container.config.mountPath }}
+              {{- else }}
               mountPath: /home/{{ $container.config.appuser | default "appuser" }}/.{{ $.Values.configPrefix }}.yaml
+              {{- end }}
               subPath: .{{ $.Values.configPrefix }}.yaml
               readOnly: true
             {{- if $.Values.extraVolumeMounts }}
