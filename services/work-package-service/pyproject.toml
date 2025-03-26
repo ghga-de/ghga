@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=78.0.2",
+    "setuptools>=78.1",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -26,7 +26,7 @@ description = "Work Package Service"
 dependencies = [
     "ghga-event-schemas~=5.0.0",
     "ghga-service-commons[api,auth,crypt]>=4.0",
-    "hexkit[akafka,mongodb]>=4.2",
+    "hexkit[akafka,mongodb]>=4.3",
     "httpx>=0.28",
     "typer>=0.15",
 ]
