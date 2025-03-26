@@ -41,6 +41,7 @@ spec:
           {{- with secret "default-mongodb-mongodb/creds/test-service" -}}
           export TEST_DB_URL="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
           export TEST_DB_CONNECTION_STR=$TEST_DB_URL
+          export TEST_MONGO_DSN=$TEST_DB_URL
           {{- end -}}
         vault.hashicorp.com/agent-inject-command-service-secrets: |
           kill -TERM $(pgrep python)
