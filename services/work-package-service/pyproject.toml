@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wps"
-version = "3.0.0"
+version = "3.0.1"
 description = "Work Package Service"
 dependencies = [
     "ghga-event-schemas~=5.0.0",
