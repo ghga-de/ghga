@@ -51,10 +51,10 @@ containers:
 topics:
   datasetChangeEvent:
     topic:
-      name: dataset_change_event_topic
+      name: dataset_change_topic
       value: metadata-datasets
     types:
-    - name: dataset_upsertion_event_type
+    - name: dataset_upsertion_type
       value: dataset_created
-    - name: dataset_deletion_event_type
+    - name: dataset_deletion_type
       value: dataset_deleted

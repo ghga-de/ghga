@@ -47,19 +47,21 @@ topics:
       value: second_factor_recreated
   ivaEvents:
     topic:
-      name: iva_events_topic
+      name: iva_state_changed_topic
       value: ivas
     types:
-    - name: iva_state_changed_event_type
+    - name: iva_state_changed_type
       value: iva_state_changed
-  datasetDeletionEvent:
+  datasetChangeEvent:
     topic:
-      name: dataset_deletion_event_topic
+      name: dataset_change_topic
       value: metadata-datasets
     types:
-    - name: dataset_deletion_event_type
+    - name: dataset_deletion_type
       value: dataset_deleted
+    - name: dataset_upsertion_type
+      value: dataset_created
   userEvents:
     topic:
-      name: user_events_topic
+      name: user_topic
       value: users
