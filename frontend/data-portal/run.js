@@ -60,12 +60,13 @@ function readSettings() {
   const settings = { ...defaultSettings, ...specificSettings };
 
   // Override settings with environment variables
+  // (the env var name must be fully lower case or upper case, but not mixed)
   const prefix = NAME.replace('-', '_');
   for (const key in settings) {
     if (!settings.hasOwnProperty(key)) continue;
     const envVarName = `${prefix}_${key}`;
     const value = settings[key];
-    let envVarValue = process.env[envVarName];
+    let envVarValue = process.env[envVarName] ?? process.env[envVarName.toUpperCase()];
     if (envVarValue === undefined) continue;
     const isObject = typeof value === 'object' && value !== null;
     if (isObject) {
