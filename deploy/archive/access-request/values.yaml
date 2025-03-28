@@ -33,6 +33,7 @@ containers:
 
 topics:
   fileRegisteredEvent:
+    # as producer
     topic:
       name: access_request_topic
       value: access-requests

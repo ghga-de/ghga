@@ -39,6 +39,7 @@ containers:
 
 topics:
   authEvents:
+    # as producer
     topic:
       name: auth_events_topic
       value: auth
@@ -46,6 +47,7 @@ topics:
     - name: second_factor_recreated_event_type
       value: second_factor_recreated
   ivaEvents:
+    # as producer
     topic:
       name: iva_state_changed_topic
       value: ivas
@@ -53,6 +55,7 @@ topics:
     - name: iva_state_changed_type
       value: iva_state_changed
   datasetChangeEvent:
+    # as consumer
     topic:
       name: dataset_change_topic
       value: metadata-datasets
@@ -62,6 +65,7 @@ topics:
     - name: dataset_upsertion_type
       value: dataset_created
   userEvents:
+    # as producer
     topic:
       name: user_topic
       value: users
