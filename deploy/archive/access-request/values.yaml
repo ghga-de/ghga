@@ -33,13 +33,14 @@ containers:
 
 topics:
   fileRegisteredEvent:
+    # as producer
     topic:
-      name: access_request_events_topic
+      name: access_request_topic
       value: access-requests
     types:
-    - name: access_request_created_event_type
+    - name: access_request_created_type
       value: access_request_created
-    - name: access_request_allowed_event_type
+    - name: access_request_allowed_type
       value: access_request_allowed
-    - name: access_request_denied_event_type
+    - name: access_request_denied_type
       value: access_request_denied
