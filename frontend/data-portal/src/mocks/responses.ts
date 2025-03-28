@@ -138,7 +138,7 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // All access requests
   'GET /api/ars/access-requests': getAccessRequests(),
 
-  // All access requests
+  // Create an access request
   'POST /api/ars/access-requests': 204,
 
   // Patch an access request

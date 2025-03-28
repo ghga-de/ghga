@@ -39,6 +39,8 @@
       <p>Loading verification addresses...</p>
     } @else if (ivasError() || !ivas().length) {
       <p>No corresponding verification addresses found, cannot process request.</p>
+    } @else if (data.status === 'denied') {
+      <p>This status cannot be reverted.</p>
     } @else {
       <label for="iva-selection-group" class="text-lg">
         @if (allowedAccessRequestIvaId()) {
@@ -55,11 +57,11 @@
             <tr>
               <td>
                 <mat-radio-button [value]="iva.id">
-                  {{ (iva.type | IvaTypePipe: iva.value).typeAndValue }}
+                  {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}
                 </mat-radio-button>
               </td>
-              <td class="{{ (iva.state | IvaStatePipe).class }} w-40 ps-4">
-                {{ (iva.state | IvaStatePipe).display }}
+              <td [class]="(iva.state | IvaStatePipe).class" class="w-40 ps-4">
+                {{ (iva.state | IvaStatePipe).name }}
               </td>
             </tr>
           }
@@ -69,49 +71,58 @@
     <br />
   </mat-dialog-content>
   <mat-dialog-actions>
-    <div class="mr-2">
+    @if (
+      ivasAreLoading() || ivasError() || !ivas().length || data.status === 'denied'
+    ) {
       <button
         mat-stroked-button
         (click)="cancel()"
-        data-umami-event="Access Request Manager Cancel Clicked"
+        data-umami-event="Access Request Manager Close Clicked"
       >
-        Cancel
+        Close
       </button>
-    </div>
-    <div class="flex-grow"></div>
-    <div class="ml-2">
-      <button
-        mat-raised-button
-        class="error mr-1"
-        (click)="safeDeny()"
-        data-umami-event="Access Request Manager Deny Clicked"
-        [disabled]="data.status === 'denied'"
-      >
-        @if (allowedAccessRequestIvaId()) {
-          Revoke access
-        } @else if (this.data.status === 'denied') {
-          Denied
-        } @else {
-          Deny
-        }
-      </button>
-      <button
-        mat-raised-button
-        class="success"
-        (click)="safeAllow()"
-        data-umami-event="Access Request Manager Allow Clicked"
-        [disabled]="
-          !selectedIvaIdRadioButton() ||
-          (data.status === 'allowed' &&
-            selectedIvaIdRadioButton() === allowedAccessRequestIvaId())
-        "
-      >
-        @if (allowedAccessRequestIvaId()) {
-          Change address
-        } @else {
-          Allow
-        }
-      </button>
-    </div>
+    } @else {
+      <div class="mr-2">
+        <button
+          mat-stroked-button
+          (click)="cancel()"
+          data-umami-event="Access Request Manager Cancel Clicked"
+        >
+          Cancel
+        </button>
+      </div>
+      <div class="flex-grow"></div>
+      <div class="ml-2">
+        <button
+          mat-raised-button
+          class="error mr-1"
+          (click)="safeDeny()"
+          data-umami-event="Access Request Manager Deny Clicked"
+        >
+          @if (allowedAccessRequestIvaId()) {
+            Revoke access
+          } @else {
+            Deny
+          }
+        </button>
+        <button
+          mat-raised-button
+          class="success"
+          (click)="safeAllow()"
+          data-umami-event="Access Request Manager Allow Clicked"
+          [disabled]="
+            !selectedIvaIdRadioButton() ||
+            (data.status === 'allowed' &&
+              selectedIvaIdRadioButton() === allowedAccessRequestIvaId())
+          "
+        >
+          @if (allowedAccessRequestIvaId()) {
+            Change address
+          } @else {
+            Allow
+          }
+        </button>
+      </div>
+    }
   </mat-dialog-actions>
 </div>

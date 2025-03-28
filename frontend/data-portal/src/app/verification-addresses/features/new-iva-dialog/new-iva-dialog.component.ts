@@ -38,12 +38,14 @@ import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
     MatDialogActions,
     MatButtonToggleModule,
   ],
+  providers: [IvaTypePipe],
   templateUrl: './new-iva-dialog.component.html',
 })
 export class NewIvaDialogComponent {
   #dialogRef = inject(
     MatDialogRef<NewIvaDialogComponent, { type: IvaType; value: string }>,
   );
+  #ivaTypePipe = inject(IvaTypePipe);
 
   /**
    * Value prompts for the different IVA types
@@ -56,13 +58,22 @@ export class NewIvaDialogComponent {
   };
 
   /**
+   * Get the display name for an IVA type
+   * @param type the IVA type in question
+   * @returns the display name
+   */
+  #ivaTypeName(type: IvaType): string {
+    return this.#ivaTypePipe.transform(type).name;
+  }
+
+  /**
    * All possible IVA types
    */
   types = Object.entries(IvaType)
     .filter((entry) => this.valuePrompts[entry[0] as keyof typeof IvaType])
     .map((entry) => ({
       value: entry[0] as keyof typeof IvaType,
-      text: new IvaTypePipe().transform(entry[1]).display,
+      text: this.#ivaTypeName(entry[1]),
     }));
 
   valueField = viewChild('valueField', { read: ElementRef });

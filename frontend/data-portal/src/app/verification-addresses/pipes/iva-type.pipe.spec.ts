@@ -13,22 +13,34 @@ describe('IvaTypePipe', () => {
     expect(pipe).toBeTruthy();
   });
 
-  it('should return {display: "SMS",typeAndValue: "SMS: +49123456789",icon: "smartphone"} for type Phone and value "49123456789"', () => {
+  it('should show "None" for an empty type', () => {
     const pipe = new IvaTypePipe();
-    const result = pipe.transform(IvaType['Phone'], '+49123456789');
+    for (const type of [null, undefined, '']) {
+      const result = pipe.transform(type as unknown as IvaType);
+      expect(result).toStrictEqual({ name: 'None', icon: 'warning' });
+    }
+  });
+
+  it('should show the type itself for an unknown type', () => {
+    const pipe = new IvaTypePipe();
+    const result = pipe.transform('Unknown type' as IvaType);
+    expect(result).toStrictEqual({ name: 'Unknown type', icon: 'warning' });
+  });
+
+  it('should properly transform the SMS type', () => {
+    const pipe = new IvaTypePipe();
+    const result = pipe.transform(IvaType['Phone']);
     expect(result).toStrictEqual({
-      display: 'SMS',
-      typeAndValue: 'SMS: +49123456789',
+      name: 'SMS',
       icon: 'smartphone',
     });
   });
 
-  it('should return {display: "In Person",typeAndValue: "In Person: ",icon: "handshakes"} for type InPerson', () => {
+  it('should properly transform the InPerson type', () => {
     const pipe = new IvaTypePipe();
     const result = pipe.transform(IvaType['InPerson']);
     expect(result).toStrictEqual({
-      display: 'In Person',
-      typeAndValue: 'In Person: ',
+      name: 'In Person',
       icon: 'handshakes',
     });
   });

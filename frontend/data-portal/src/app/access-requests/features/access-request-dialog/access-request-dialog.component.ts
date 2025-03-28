@@ -50,18 +50,17 @@ const MILLISECONDS_PER_DAY = 86400000;
   templateUrl: './access-request-dialog.component.html',
 })
 export class AccessRequestDialogComponent {
-  readonly emailFormControl = new FormControl('', [
-    Validators.required,
-    Validators.email,
-  ]);
-  readonly descriptionFormControl = new FormControl('', [Validators.required]);
   readonly dialogRef = inject(MatDialogRef<AccessRequestDialogComponent>);
   readonly data = inject<AccessRequestDialogData>(MAT_DIALOG_DATA);
   #config = inject(ConfigService);
-  readonly result = model(this.data);
-  readonly email = model(this.data.email);
-  readonly description = model(this.data.description);
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
+  readonly emailFormControl = new FormControl(this.data.email, [
+    Validators.required,
+    Validators.email,
+  ]);
+  readonly descriptionFormControl = new FormControl(this.data.description, [
+    Validators.required,
+  ]);
   fromDate = model(this.data.fromDate);
   untilDate = model(this.data.untilDate);
   todayMidnight = new Date();
@@ -242,7 +241,7 @@ export class AccessRequestDialogComponent {
 
   /**
    * Update the range for the until date based on the from date
-   * @param date - The frin date to update the range for
+   * @param date - The from date to update the range for
    */
   updateUntilRangeForFromValue(date: Date): void {
     const newUntilMinDate = new Date(
@@ -280,6 +279,11 @@ export class AccessRequestDialogComponent {
    * Submit the access request and close the dialog
    */
   submit(): void {
-    this.dialogRef.close(this.data);
+    const description = this.descriptionFormControl.value;
+    const fromDate = this.fromDate();
+    const untilDate = this.untilDate();
+    const email = this.emailFormControl.value;
+    const data = { ...this.data, description, fromDate, untilDate, email };
+    this.dialogRef.close(data);
   }
 }

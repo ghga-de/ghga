@@ -47,6 +47,7 @@ import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creati
     IvaTypePipe,
     IvaStatePipe,
   ],
+  providers: [IvaTypePipe],
   templateUrl: './iva-manager-list.component.html',
   styleUrl: './iva-manager-list.component.scss',
 })
@@ -55,6 +56,7 @@ export class IvaManagerListComponent implements AfterViewInit {
   #confirmationService = inject(ConfirmationService);
   #notificationService = inject(NotificationService);
   #ivaService = inject(IvaService);
+  #ivaTypePipe = inject(IvaTypePipe);
 
   #ivas = this.#ivaService.allIvas;
   ivas = this.#ivaService.allIvasFiltered;
@@ -102,6 +104,15 @@ export class IvaManagerListComponent implements AfterViewInit {
   }
 
   /**
+   * Get the display name for the IVA type
+   * @param iva the IVA in question
+   * @returns the display name for the type
+   */
+  #ivaTypeName(iva: UserWithIva): string {
+    return this.#ivaTypePipe.transform(iva.type).name;
+  }
+
+  /**
    * After the view has been initialised
    * assign the sorting of the table to the data source
    */
@@ -132,10 +143,11 @@ export class IvaManagerListComponent implements AfterViewInit {
    * @param iva - the IVA to invalidate
    */
   invalidateWhenConfirmed(iva: UserWithIva) {
+    const ivaType = this.#ivaTypeName(iva);
     this.#confirmationService.confirm({
       title: 'Confirm invalidation of IVA',
       message:
-        `Do you really wish to invalidate the ${new IvaTypePipe().transform(iva.type).display} IVA of` +
+        `Do you really wish to invalidate the ${ivaType} IVA of` +
         ` ${iva.user_name} with address "${iva.value}"?` +
         ' The user will lose access to any dataset linked to this IVA.',
       cancelText: 'Cancel',
@@ -171,12 +183,12 @@ export class IvaManagerListComponent implements AfterViewInit {
    * @param iva - the IVA for which the code was transmitted
    */
   markAsTransmittedWhenConfirmed(iva: UserWithIva) {
+    const ivaType = this.#ivaTypeName(iva);
     this.#confirmationService.confirm({
       title: 'Confirm code transmission',
       message:
         'Please confirm the transmission of the verification code' +
-        ` the ${new IvaTypePipe().transform(iva.type).display} IVA of` +
-        ` ${iva.user_name} with address "${iva.value}".`,
+        ` the ${ivaType} IVA of ${iva.user_name} with address "${iva.value}".`,
       cancelText: 'Cancel',
       confirmText: 'Confirm transmission',
       callback: (confirmed) => {

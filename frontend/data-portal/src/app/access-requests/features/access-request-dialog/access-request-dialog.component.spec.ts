@@ -51,12 +51,9 @@ describe('AccessRequestDialogComponent', () => {
       imports: [AccessRequestDialogComponent, MatDialogModule],
       providers: [
         provideNativeDateAdapter(),
-        {
-          provide: MatDialogRef,
-          useValue: {},
-        },
-        { provide: MAT_DIALOG_DATA, useValue: {} },
         provideAnimationsAsync(),
+        { provide: MatDialogRef, useValue: {} },
+        { provide: MAT_DIALOG_DATA, useValue: {} },
         { provide: ConfigService, useValue: mockConfig },
       ],
     }).compileComponents();

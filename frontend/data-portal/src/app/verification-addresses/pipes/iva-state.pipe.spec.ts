@@ -13,9 +13,29 @@ describe('IvaStatePipe', () => {
     expect(pipe).toBeTruthy();
   });
 
-  it('should return {display:"Code Requested",class:"text-warning"} for CodeRequested', () => {
+  it('should show "None" for an empty state', () => {
     const pipe = new IvaStatePipe();
-    const result = pipe.transform(IvaState['CodeRequested']);
-    expect(result).toStrictEqual({ display: 'Code Requested', class: 'text-warning' });
+    for (const state of [null, undefined, '']) {
+      const result = pipe.transform(state as unknown as IvaState);
+      expect(result).toStrictEqual({ name: 'None', class: 'text-error' });
+    }
+  });
+
+  it('should show the state itself for an unknown state', () => {
+    const pipe = new IvaStatePipe();
+    const result = pipe.transform('Unknown state' as IvaState);
+    expect(result).toStrictEqual({ name: 'Unknown state', class: 'text-error' });
+  });
+
+  it('should work properly for the CodeRequested state', () => {
+    const pipe = new IvaStatePipe();
+    const result = pipe.transform(IvaState.CodeRequested);
+    expect(result).toStrictEqual({ name: 'Code Requested', class: 'text-warning' });
+  });
+
+  it('should work properly for the CodeRequested state', () => {
+    const pipe = new IvaStatePipe();
+    const result = pipe.transform(IvaState.Verified);
+    expect(result).toStrictEqual({ name: 'Verified', class: 'text-success' });
   });
 });

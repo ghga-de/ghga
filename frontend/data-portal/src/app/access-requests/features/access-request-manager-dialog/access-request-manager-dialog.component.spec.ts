@@ -35,7 +35,10 @@ describe('AccessRequestManagerDialogComponent', () => {
       imports: [AccessRequestManagerDialogComponent],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
-        { provide: MAT_DIALOG_DATA, useValue: accessRequests[0] },
+        {
+          provide: MAT_DIALOG_DATA,
+          useValue: { ...accessRequests[0], status: 'pending' },
+        },
         { provide: MatDialogRef, useValue: {} },
         provideNoopAnimations(),
       ],

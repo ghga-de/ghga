@@ -29,6 +29,7 @@ import { VerificationDialogComponent } from '../verification-dialog/verification
     MatDialogModule,
     IvaTypePipe,
   ],
+  providers: [IvaTypePipe],
   templateUrl: './user-iva-list.component.html',
 })
 export class UserIvaListComponent implements OnInit {
@@ -45,6 +46,18 @@ export class UserIvaListComponent implements OnInit {
   ivaSource = new MatTableDataSource<Iva>([]);
 
   #updateIvaSourceEffect = effect(() => (this.ivaSource.data = this.ivas()));
+
+  #ivaTypePipe = inject(IvaTypePipe);
+
+  /**
+   * Get the type and value of the IVA
+   * @param iva the IVA in question
+   * @returns the type and value of the IVA combined as address
+   */
+  #ivaAddress(iva: Iva): string {
+    const ivaType = this.#ivaTypePipe.transform(iva.type).name;
+    return `${ivaType}: ${iva.value}`;
+  }
 
   /**
    * Load the IVAs of the current user when the component is initialized
@@ -81,11 +94,12 @@ export class UserIvaListComponent implements OnInit {
    * @param iva - the IVA to be verified
    */
   requestVerification(iva: Iva): void {
+    const address = this.#ivaAddress(iva);
     this.#confirm.confirm({
       title: 'Request verification of your address',
       message:
         'We will send a verification code to the address selected for verification (' +
-        new IvaTypePipe().transform(iva.type).typeAndValue +
+        address +
         '). Please allow some time for processing' +
         ' your request. When the verification code has been transmitted,' +
         ' you will also be notified via e-mail.',
@@ -134,7 +148,7 @@ export class UserIvaListComponent implements OnInit {
    * @param iva - the IVA to verify
    */
   enterVerificationCode(iva: Iva): void {
-    const address = new IvaTypePipe().transform(iva.type).typeAndValue;
+    const address = this.#ivaAddress(iva);
     const dialogRef = this.#dialog.open(VerificationDialogComponent, {
       data: { address },
     });
@@ -166,10 +180,11 @@ export class UserIvaListComponent implements OnInit {
    * @param iva - the IVA to delete
    */
   deleteWhenConfirmed(iva: Iva): void {
+    const address = this.#ivaAddress(iva);
     this.#confirm.confirm({
       title: 'Confirm deletion of contact address',
       message:
-        `Please confirm deleting the ${new IvaTypePipe().transform(iva.type).typeAndValue}.` +
+        `Please confirm deleting the ${address}.` +
         ' Remember that you will lose access to any datasets' +
         ' whose access was linked to that address.',
       cancelText: 'Cancel',

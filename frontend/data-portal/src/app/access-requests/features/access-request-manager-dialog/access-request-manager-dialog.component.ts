@@ -22,7 +22,7 @@ import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
-import { IvaState } from '@app/verification-addresses/models/iva';
+import { Iva, IvaState } from '@app/verification-addresses/models/iva';
 import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
 import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
@@ -43,6 +43,7 @@ import { IvaService } from '@app/verification-addresses/services/iva.service';
     IvaTypePipe,
     IvaStatePipe,
   ],
+  providers: [IvaTypePipe],
   templateUrl: './access-request-manager-dialog.component.html',
 })
 export class AccessRequestManagerDialogComponent implements OnInit {
@@ -58,6 +59,8 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   ivasAreLoading = this.#ivas.isLoading;
   ivasError = this.#ivas.error;
 
+  #ivaTypePipe = inject(IvaTypePipe);
+
   selectedIvaIdRadioButton = model<string | undefined>(undefined);
   allowedAccessRequestIvaId = signal<string | undefined>(undefined);
 
@@ -72,6 +75,15 @@ export class AccessRequestManagerDialogComponent implements OnInit {
       this.#preSelectIvaRadioButton();
     }
   });
+
+  /**
+   * Get the display name for the IVA type
+   * @param iva the IVA in question
+   * @returns the display name for the type
+   */
+  #ivaTypeName(iva: Iva): string {
+    return this.#ivaTypePipe.transform(iva.type).name;
+  }
 
   /**
    * Load the IVAs of the user when the component is initialized
@@ -91,12 +103,12 @@ export class AccessRequestManagerDialogComponent implements OnInit {
     if (!this.selectedIvaIdRadioButton()) return;
     const iva = this.ivas().find((iva) => iva.id === this.selectedIvaIdRadioButton());
     if (!iva) return;
-    const typeAndValue = new IvaTypePipe().transform(iva.type, iva.value).typeAndValue;
+    const ivaType = this.#ivaTypeName(iva);
     this.#confirmationService.confirm({
       title: 'Confirm approval of the access request',
       message:
         'Please confirm that the access request shall be allowed' +
-        ` and coupled to ${typeAndValue}.`,
+        ` and coupled to ${ivaType}: ${iva.value}.`,
       cancelText: 'Cancel',
       confirmText: 'Confirm approval',
       confirmClass: 'success',
@@ -129,7 +141,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
     if (!this.selectedIvaIdRadioButton()) return;
     const data = {
       ...this.data,
-      iva_id: this.selectedIvaIdRadioButton,
+      iva_id: this.selectedIvaIdRadioButton(),
       status: AccessRequestStatus.allowed,
     };
     this.dialogRef.close(data);
@@ -141,7 +153,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   #deny = () => {
     const data = {
       ...this.data,
-      iva_id: this.selectedIvaIdRadioButton,
+      iva_id: this.selectedIvaIdRadioButton(),
       status: AccessRequestStatus.denied,
     };
     this.dialogRef.close(data);

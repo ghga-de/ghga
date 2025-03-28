@@ -10,7 +10,6 @@
         matInput
         placeholder="I need access for research on..."
         [formControl]="descriptionFormControl"
-        [(ngModel)]="description"
         (blur)="updateDescriptionErrorMessage()"
         #details
       ></textarea>
@@ -69,7 +68,6 @@
         placeholder="your.email@goes.here"
         #emailField
         [formControl]="emailFormControl"
-        [(ngModel)]="email"
         (blur)="updateEmailErrorMessage()"
       />
       @if (emailFormControl.invalid) {

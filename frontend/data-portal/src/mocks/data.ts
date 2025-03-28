@@ -456,7 +456,7 @@ export const accessRequests = [
     access_starts: access_starts,
     access_ends: access_ends,
     request_created: '2023-05-09T12:04:02.000Z',
-    status: 'pending',
+    status: 'denied',
     status_changed: null,
     changed_by: null,
   },

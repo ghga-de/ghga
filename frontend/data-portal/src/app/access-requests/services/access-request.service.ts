@@ -9,7 +9,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { catchError, firstValueFrom, Observable, tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import {
   AccessRequest,
   AccessRequestDialogData,
@@ -34,33 +34,29 @@ export class AccessRequestService {
     `${this.#arsEndpointUrl}?user_id=${userId}`;
 
   performAccessRequest = (data: AccessRequestDialogData) => {
-    try {
-      firstValueFrom(
-        this.#http
-          .post<void>(this.#arsEndpointUrl, {
-            user_id: data.userId,
-            dataset_id: data.datasetID,
-            email: data.email,
-            request_text: data.description,
-            access_starts: data.fromDate?.toDateString(),
-            access_ends: data.untilDate?.toDateString(),
-          })
-          .pipe(
-            catchError(async () =>
-              this.#notification.showError(
-                'There was an error submitting your access request.',
-              ),
-            ),
-          ),
-      ).then(async () => {
-        this.userAccessRequests.reload();
-        this.#notification.showSuccess('Your request has been submitted successfully.');
+    this.#http
+      .post<void>(this.#arsEndpointUrl, {
+        user_id: data.userId,
+        dataset_id: data.datasetID,
+        email: data.email,
+        request_text: data.description,
+        access_starts: data.fromDate?.toISOString(),
+        access_ends: data.untilDate?.toISOString(),
+      })
+      .subscribe({
+        next: () => {
+          this.userAccessRequests.reload();
+          this.#notification.showSuccess(
+            'Your request has been submitted successfully.',
+          );
+        },
+        error: (err) => {
+          console.error(err);
+          this.#notification.showError(
+            'Your access request could not be submitted. Please try again later.',
+          );
+        },
       });
-    } catch (error) {
-      this.#notification.showError(
-        'There was an error submitting your access request: ' + error,
-      );
-    }
   };
 
   /**

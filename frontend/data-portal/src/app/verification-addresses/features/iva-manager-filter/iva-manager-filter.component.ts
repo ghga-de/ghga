@@ -34,6 +34,7 @@ import { IvaService } from '@app/verification-addresses/services/iva.service';
     MatFormFieldModule,
     MatIconModule,
   ],
+  providers: [IvaStatePipe],
   templateUrl: './iva-manager-filter.component.html',
   styleUrl: './iva-manager-filter.component.scss',
 })
@@ -41,6 +42,8 @@ export class IvaManagerFilterComponent {
   #ivaService = inject(IvaService);
 
   #filter = this.#ivaService.allIvasFilter;
+
+  #ivaStatePipe = inject(IvaStatePipe);
 
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
 
@@ -65,10 +68,19 @@ export class IvaManagerFilterComponent {
   });
 
   /**
+   * Get the display name for the IVA state
+   * @param state the IVA state in question
+   * @returns the display name for the state
+   */
+  #ivaStateName(state: IvaState): string {
+    return this.#ivaStatePipe.transform(state).name;
+  }
+
+  /**
    * All IVA status values with printable text.
    */
   stateOptions = Object.entries(IvaState).map((entry) => ({
     value: entry[0] as keyof typeof IvaState,
-    text: new IvaStatePipe().transform(entry[1]).display,
+    text: this.#ivaStateName(entry[1]),
   }));
 }
