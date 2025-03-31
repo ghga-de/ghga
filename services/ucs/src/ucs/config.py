@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,14 +20,10 @@ from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 
-from ucs.adapters.inbound.event_sub import (
-    EventSubTranslatorConfig,
-    OutboxSubTranslatorConfig,
-)
-from ucs.adapters.outbound.daopub import OutboxDaoConfig
+from ucs.adapters.inbound.event_sub import EventSubTranslatorConfig
 from ucs.adapters.outbound.event_pub import EventPubTranslatorConfig
 
 SERVICE_NAME = "ucs"
@@ -37,14 +33,12 @@ SERVICE_NAME = "ucs"
 class Config(
     ApiConfigBase,
     MongoKafkaConfig,
-    MongoDbConfig,
+    MigrationConfig,
     S3ObjectStoragesConfig,
     KafkaConfig,
     LoggingConfig,
     EventSubTranslatorConfig,
-    OutboxSubTranslatorConfig,
     EventPubTranslatorConfig,
-    OutboxDaoConfig,
 ):
     """Config parameters and their defaults."""
 

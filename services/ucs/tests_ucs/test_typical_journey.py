@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,6 @@ from tests_ucs.fixtures.joint import JointFixture
 from ucs.core.models import UploadStatus
 
 TARGET_BUCKET_ID = "test-staging"
-CHANGED = "upserted"
 
 pytestmark = pytest.mark.asyncio()
 
@@ -95,7 +94,10 @@ async def run_until_uploaded(
 
     # check for the  events:
     assert len(recorder.recorded_events) == 1
-    assert recorder.recorded_events[0].type_ == CHANGED
+    assert (
+        recorder.recorded_events[0].type_
+        == joint_fixture.config.file_upload_received_type
+    )
     payload = event_schemas.FileUploadReceived(**recorder.recorded_events[0].payload)
     assert payload.file_id == file_to_register.file_id
     assert payload.expected_decrypted_sha256 == file_to_register.decrypted_sha256
@@ -389,7 +391,7 @@ async def test_happy_deletion(joint_fixture: JointFixture):
     deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
     await joint_fixture.kafka.publish_event(
         payload=json.loads(deletion_event.model_dump_json()),
-        type_="upserted",
+        type_=joint_fixture.config.file_deletion_request_type,
         topic=joint_fixture.config.file_deletion_request_topic,
     )
 

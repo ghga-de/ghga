@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""In this module object construction and dependency injection is carried out."""
+"""Top-level service functions"""
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 
 from ucs.config import Config
 from ucs.inject import (
-    get_file_upload_received_dao,
+    get_persistent_publisher,
     prepare_event_subscriber,
     prepare_rest_app,
     prepare_storage_inspector,
@@ -63,8 +63,8 @@ async def publish_events(*, all: bool = False):
     config = Config()
     configure_logging(config=config)
 
-    async with get_file_upload_received_dao(config=config) as dao:
+    async with get_persistent_publisher(config=config) as persistent_publisher:
         if all:
-            await dao.republish()
+            await persistent_publisher.republish()
         else:
-            await dao.publish_pending()
+            await persistent_publisher.publish_pending()

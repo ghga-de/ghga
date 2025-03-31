@@ -46,7 +46,7 @@ ucs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`file_upload_received_topic`** *(string, required)*: The name of the topic used for FileUploadReceived events.
+- <a id="properties/file_upload_received_topic"></a>**`file_upload_received_topic`** *(string, required)*: The name of the topic used for FileUploadReceived events.
 
 
   Examples:
@@ -56,17 +56,17 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_upload_received_collection`** *(string, required)*: The name of the collection used to store FileUploadReceived events. The value should use hyphens in place of underscores if needed.
+- <a id="properties/file_upload_received_type"></a>**`file_upload_received_type`** *(string, required)*: The name of the type used for FileUploadReceived events.
 
 
   Examples:
 
   ```json
-  "fileUploads"
+  "file_upload_received"
   ```
 
 
-- **`file_deleted_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
+- <a id="properties/file_deleted_topic"></a>**`file_deleted_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -76,7 +76,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deleted_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
+- <a id="properties/file_deleted_type"></a>**`file_deleted_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
 
 
   Examples:
@@ -86,7 +86,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
+- <a id="properties/file_deletion_request_topic"></a>**`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
 
 
   Examples:
@@ -96,7 +96,17 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
+- <a id="properties/file_deletion_request_type"></a>**`file_deletion_request_type`** *(string, required)*: The type used for events indicating that a request to delete a file has been received.
+
+
+  Examples:
+
+  ```json
+  "file_deletion_requested"
+  ```
+
+
+- <a id="properties/file_internally_registered_topic"></a>**`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
 
 
   Examples:
@@ -111,7 +121,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_internally_registered_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
+- <a id="properties/file_internally_registered_type"></a>**`file_internally_registered_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
 
 
   Examples:
@@ -121,7 +131,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
+- <a id="properties/file_interrogations_topic"></a>**`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
 
 
   Examples:
@@ -131,7 +141,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`interrogation_failure_type`** *(string, required)*: The type used for events informing about failed file validations.
+- <a id="properties/interrogation_failure_type"></a>**`interrogation_failure_type`** *(string, required)*: The type used for events informing about failed file validations.
 
 
   Examples:
@@ -141,7 +151,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_metadata_topic`** *(string, required)*: Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.
+- <a id="properties/file_metadata_topic"></a>**`file_metadata_topic`** *(string, required)*: Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.
 
 
   Examples:
@@ -151,7 +161,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_metadata_type`** *(string, required)*: The type used for events to receive new or changed metadata on files that are expected to be uploaded.
+- <a id="properties/file_metadata_type"></a>**`file_metadata_type`** *(string, required)*: The type used for events to receive new or changed metadata on files that are expected to be uploaded.
 
 
   Examples:
@@ -161,11 +171,11 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
-- **`service_name`** *(string)*: Default: `"ucs"`.
+- <a id="properties/service_name"></a>**`service_name`** *(string)*: Default: `"ucs"`.
 
-- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- <a id="properties/service_instance_id"></a>**`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -175,13 +185,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
+- <a id="properties/log_format"></a>**`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/log_format/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/log_format/anyOf/1"></a>*null*
 
 
   Examples:
@@ -196,11 +206,11 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+- <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
+- <a id="properties/kafka_servers"></a>**`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
-  - **Items** *(string)*
+  - <a id="properties/kafka_servers/items"></a>**Items** *(string)*
 
 
   Examples:
@@ -212,17 +222,17 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
+- <a id="properties/kafka_security_protocol"></a>**`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
 
-- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+- <a id="properties/kafka_ssl_cafile"></a>**`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
 
-- **`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
+- <a id="properties/kafka_ssl_certfile"></a>**`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
 
-- **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
+- <a id="properties/kafka_ssl_keyfile"></a>**`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
+- <a id="properties/kafka_ssl_password"></a>**`kafka_ssl_password`** *(string, format: password, write-only)*: Optional password to be used for the client private key. Default: `""`.
 
-- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+- <a id="properties/generate_correlation_id"></a>**`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
 
   Examples:
@@ -237,7 +247,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+- <a id="properties/kafka_max_message_size"></a>**`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
 
 
   Examples:
@@ -252,7 +262,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
+- <a id="properties/kafka_max_retries"></a>**`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
 
 
   Examples:
@@ -282,7 +292,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
+- <a id="properties/kafka_enable_dlq"></a>**`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
 
 
   Examples:
@@ -297,7 +307,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
+- <a id="properties/kafka_dlq_topic"></a>**`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
 
 
   Examples:
@@ -307,7 +317,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
+- <a id="properties/kafka_retry_backoff"></a>**`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
 
 
   Examples:
@@ -337,11 +347,11 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`object_storages`** *(object, required)*: Can contain additional properties.
+- <a id="properties/object_storages"></a>**`object_storages`** *(object, required)*: Can contain additional properties.
 
-  - **Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
+  - <a id="properties/object_storages/additionalProperties"></a>**Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
 
-- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- <a id="properties/mongo_dsn"></a>**`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/. Length must be at least 1.
 
 
   Examples:
@@ -351,7 +361,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
+- <a id="properties/db_name"></a>**`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
@@ -361,13 +371,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`mongo_timeout`**: Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). Default: `null`.
+- <a id="properties/mongo_timeout"></a>**`mongo_timeout`**: Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). Default: `null`.
 
   - **Any of**
 
-    - *integer*: Exclusive minimum: `0`.
+    - <a id="properties/mongo_timeout/anyOf/0"></a>*integer*: Exclusive minimum: `0`.
 
-    - *null*
+    - <a id="properties/mongo_timeout/anyOf/1"></a>*null*
 
 
   Examples:
@@ -387,29 +397,90 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
+- <a id="properties/db_version_collection"></a>**`db_version_collection`** *(string, required)*: The name of the collection containing DB version information for this service.
 
-- **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 
-- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
+  Examples:
 
-- **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+  ```json
+  "ifrsDbVersions"
+  ```
 
-- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
 
-- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
+- <a id="properties/migration_wait_sec"></a>**`migration_wait_sec`** *(integer, required)*: The number of seconds to wait before checking the DB version again.
 
-- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
-- **`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
+  Examples:
+
+  ```json
+  5
+  ```
+
+
+  ```json
+  30
+  ```
+
+
+  ```json
+  180
+  ```
+
+
+- <a id="properties/migration_max_wait_sec"></a>**`migration_max_wait_sec`**: The maximum number of seconds to wait for migrations to complete before raising an error. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/migration_max_wait_sec/anyOf/0"></a>*integer*
 
-      - **Items** *(string)*
+    - <a id="properties/migration_max_wait_sec/anyOf/1"></a>*null*
 
-    - *null*
+
+  Examples:
+
+  ```json
+  null
+  ```
+
+
+  ```json
+  300
+  ```
+
+
+  ```json
+  600
+  ```
+
+
+  ```json
+  3600
+  ```
+
+
+- <a id="properties/host"></a>**`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
+
+- <a id="properties/port"></a>**`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
+
+- <a id="properties/auto_reload"></a>**`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
+
+- <a id="properties/workers"></a>**`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+
+- <a id="properties/api_root_path"></a>**`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
+
+- <a id="properties/openapi_url"></a>**`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
+
+- <a id="properties/docs_url"></a>**`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
+
+- <a id="properties/cors_allowed_origins"></a>**`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/cors_allowed_origins/anyOf/0"></a>*array*
+
+      - <a id="properties/cors_allowed_origins/anyOf/0/items"></a>**Items** *(string)*
+
+    - <a id="properties/cors_allowed_origins/anyOf/1"></a>*null*
 
 
   Examples:
@@ -422,13 +493,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
+- <a id="properties/cors_allow_credentials"></a>**`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
 
   - **Any of**
 
-    - *boolean*
+    - <a id="properties/cors_allow_credentials/anyOf/0"></a>*boolean*
 
-    - *null*
+    - <a id="properties/cors_allow_credentials/anyOf/1"></a>*null*
 
 
   Examples:
@@ -441,15 +512,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
+- <a id="properties/cors_allowed_methods"></a>**`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_methods/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_methods/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_methods/anyOf/1"></a>*null*
 
 
   Examples:
@@ -461,15 +532,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_headers/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_headers/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_headers/anyOf/1"></a>*null*
 
 
   Examples:
@@ -501,7 +572,7 @@ to talk to an S3 service in the backend.<br>  Args:
         https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file
         Defaults to None. Cannot contain additional properties.
 
-  - **`s3_endpoint_url`** *(string, required)*: URL to the S3 API.
+  - <a id="%24defs/S3Config/properties/s3_endpoint_url"></a>**`s3_endpoint_url`** *(string, required)*: URL to the S3 API.
 
 
     Examples:
@@ -511,7 +582,7 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - **`s3_access_key_id`** *(string, required)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
+  - <a id="%24defs/S3Config/properties/s3_access_key_id"></a>**`s3_access_key_id`** *(string, required)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
 
 
     Examples:
@@ -521,7 +592,7 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - **`s3_secret_access_key`** *(string, format: password, required)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
+  - <a id="%24defs/S3Config/properties/s3_secret_access_key"></a>**`s3_secret_access_key`** *(string, format: password, required, write-only)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
 
 
     Examples:
@@ -531,13 +602,13 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - **`s3_session_token`**: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html. Default: `null`.
+  - <a id="%24defs/S3Config/properties/s3_session_token"></a>**`s3_session_token`**: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html. Default: `null`.
 
     - **Any of**
 
-      - *string, format: password*
+      - <a id="%24defs/S3Config/properties/s3_session_token/anyOf/0"></a>*string, format: password*
 
-      - *null*
+      - <a id="%24defs/S3Config/properties/s3_session_token/anyOf/1"></a>*null*
 
 
     Examples:
@@ -547,13 +618,13 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - **`aws_config_ini`**: Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file. Default: `null`.
+  - <a id="%24defs/S3Config/properties/aws_config_ini"></a>**`aws_config_ini`**: Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file. Default: `null`.
 
     - **Any of**
 
-      - *string, format: path*
+      - <a id="%24defs/S3Config/properties/aws_config_ini/anyOf/0"></a>*string, format: path*
 
-      - *null*
+      - <a id="%24defs/S3Config/properties/aws_config_ini/anyOf/1"></a>*null*
 
 
     Examples:
@@ -565,9 +636,9 @@ to talk to an S3 service in the backend.<br>  Args:
 
 - <a id="%24defs/S3ObjectStorageNodeConfig"></a>**`S3ObjectStorageNodeConfig`** *(object)*: Configuration for one specific object storage node and one bucket in it.<br>  The bucket is the main bucket that the service is responsible for. Cannot contain additional properties.
 
-  - **`bucket`** *(string, required)*
+  - <a id="%24defs/S3ObjectStorageNodeConfig/properties/bucket"></a>**`bucket`** *(string, required)*
 
-  - **`credentials`**: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
+  - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`**: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
 
 
 ### Usage:

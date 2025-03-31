@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,9 @@
 
 from pathlib import Path
 
+from ghga_event_schemas.pydantic_ import FileUploadReceived
+from ghga_service_commons.utils.utc_dates import now_as_utc
+
 BASE_DIR = Path(__file__).parent.resolve()
 
 
@@ -28,3 +31,18 @@ def null_func(*args, **kwargs):
 def is_success_http_code(http_code: int) -> bool:
     """Checks if a http response code indicates success (a 2xx code)."""
     return http_code >= 200 and http_code < 300
+
+
+def make_test_event(file_id: str) -> FileUploadReceived:
+    """Return a FileUploadReceived event with the given file ID."""
+    event = FileUploadReceived(
+        upload_date=now_as_utc().isoformat(),
+        file_id=file_id,
+        object_id="",
+        bucket_id="",
+        s3_endpoint_alias="",
+        decrypted_size=0,
+        submitter_public_key="",
+        expected_decrypted_sha256="",
+    )
+    return event

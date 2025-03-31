@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,6 @@ from fastapi import status
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.s3.testutils import upload_part_via_url
-from logot import Logot, logged
 
 from tests_ucs.fixtures.example_data import UPLOAD_DETAILS_1
 from tests_ucs.fixtures.joint import JointFixture
@@ -345,7 +344,7 @@ async def test_deletion_upload_ongoing(joint_fixture: JointFixture):
     deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
     await joint_fixture.kafka.publish_event(
         payload=json.loads(deletion_event.model_dump_json()),
-        type_="upserted",
+        type_=joint_fixture.config.file_deletion_request_type,
         topic=joint_fixture.config.file_deletion_request_topic,
     )
 
@@ -383,7 +382,7 @@ async def test_deletion_with_no_file(joint_fixture: JointFixture):
     deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
     await joint_fixture.kafka.publish_event(
         payload=json.loads(deletion_event.model_dump_json()),
-        type_="upserted",
+        type_=joint_fixture.config.file_deletion_request_type,
         topic=joint_fixture.config.file_deletion_request_topic,
     )
 
@@ -395,27 +394,3 @@ async def test_deletion_with_no_file(joint_fixture: JointFixture):
 
     # Check for event
     assert len(recorder.recorded_events) == 0
-
-
-async def test_deletion_logs(joint_fixture: JointFixture, logot: Logot):
-    """Test that the outbox subscriber logs deletions correctly.
-    Consume a 'DELETED' event type for the outbox event.
-    """
-    file_id = "file_id123"
-    # publish test event
-    await joint_fixture.kafka.publish_event(
-        payload=event_schemas.FileDeletionSuccess(file_id=file_id).model_dump(),
-        type_="deleted",
-        topic=joint_fixture.config.file_deletion_request_topic,
-        key=file_id,
-    )
-    # consume that event
-    await joint_fixture.event_subscriber.run(forever=False)
-
-    # verify the log
-    logot.assert_logged(
-        logged.warning(
-            "Received DELETED-type event for FileDeletionRequested"
-            + f" with resource ID '{file_id}'",
-        )
-    )

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,14 +18,19 @@
 import json
 
 from ghga_event_schemas import pydantic_ as event_schemas
-from ghga_event_schemas.configs import FileDeletedEventsConfig
+from ghga_event_schemas.configs import (
+    FileDeletedEventsConfig,
+    FileUploadReceivedEventsConfig,
+)
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.eventpub import EventPublisherProtocol
 
+from ucs.core import models
 from ucs.ports.outbound.event_pub import EventPublisherPort
 
 
-class EventPubTranslatorConfig(FileDeletedEventsConfig):
-    """Config for publishing file upload-related events."""
+class EventPubTranslatorConfig(FileDeletedEventsConfig, FileUploadReceivedEventsConfig):
+    """Config for publishing file upload- or deletion-related events."""
 
 
 class EventPubTranslator(EventPublisherPort):
@@ -49,4 +54,32 @@ class EventPubTranslator(EventPublisherPort):
             type_=self._config.file_deleted_type,
             topic=self._config.file_deleted_topic,
             key=file_id,
+        )
+
+    async def publish_upload_received(  # noqa: PLR0913
+        self,
+        *,
+        file_metadata: models.FileMetadata,
+        upload_date: UTCDatetime,
+        submitter_public_key: str,
+        object_id: str,
+        bucket_id: str,
+        storage_alias: str,
+    ) -> None:
+        """Publish an event relaying that a new file upload was received."""
+        event_payload = event_schemas.FileUploadReceived(
+            s3_endpoint_alias=storage_alias,
+            file_id=file_metadata.file_id,
+            object_id=object_id,
+            bucket_id=bucket_id,
+            upload_date=upload_date.isoformat(),
+            submitter_public_key=submitter_public_key,
+            decrypted_size=file_metadata.decrypted_size,
+            expected_decrypted_sha256=file_metadata.decrypted_sha256,
+        )
+        await self._provider.publish(
+            payload=json.loads(event_payload.model_dump_json()),
+            type_=self._config.file_upload_received_type,
+            topic=self._config.file_upload_received_topic,
+            key=event_payload.file_id,
         )

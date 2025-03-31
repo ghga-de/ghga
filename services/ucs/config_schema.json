@@ -105,12 +105,12 @@
       "title": "File Upload Received Topic",
       "type": "string"
     },
-    "file_upload_received_collection": {
-      "description": "The name of the collection used to store FileUploadReceived events. The value should use hyphens in place of underscores if needed.",
+    "file_upload_received_type": {
+      "description": "The name of the type used for FileUploadReceived events.",
       "examples": [
-        "fileUploads"
+        "file_upload_received"
       ],
-      "title": "File Upload Received Collection",
+      "title": "File Upload Received Type",
       "type": "string"
     },
     "file_deleted_topic": {
@@ -135,6 +135,14 @@
         "file-deletion-requests"
       ],
       "title": "File Deletion Request Topic",
+      "type": "string"
+    },
+    "file_deletion_request_type": {
+      "description": "The type used for events indicating that a request to delete a file has been received.",
+      "examples": [
+        "file_deletion_requested"
+      ],
+      "title": "File Deletion Request Type",
       "type": "string"
     },
     "file_internally_registered_topic": {
@@ -397,6 +405,43 @@
       ],
       "title": "Mongo Timeout"
     },
+    "db_version_collection": {
+      "description": "The name of the collection containing DB version information for this service",
+      "examples": [
+        "ifrsDbVersions"
+      ],
+      "title": "Db Version Collection",
+      "type": "string"
+    },
+    "migration_wait_sec": {
+      "description": "The number of seconds to wait before checking the DB version again",
+      "examples": [
+        5,
+        30,
+        180
+      ],
+      "title": "Migration Wait Sec",
+      "type": "integer"
+    },
+    "migration_max_wait_sec": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+      "examples": [
+        null,
+        300,
+        600,
+        3600
+      ],
+      "title": "Migration Max Wait Sec"
+    },
     "host": {
       "default": "127.0.0.1",
       "description": "IP of the host.",
@@ -523,10 +568,11 @@
   },
   "required": [
     "file_upload_received_topic",
-    "file_upload_received_collection",
+    "file_upload_received_type",
     "file_deleted_topic",
     "file_deleted_type",
     "file_deletion_request_topic",
+    "file_deletion_request_type",
     "file_internally_registered_topic",
     "file_internally_registered_type",
     "file_interrogations_topic",
@@ -537,7 +583,9 @@
     "kafka_servers",
     "object_storages",
     "mongo_dsn",
-    "db_name"
+    "db_name",
+    "db_version_collection",
+    "migration_wait_sec"
   ],
   "title": "ModSettings",
   "type": "object"

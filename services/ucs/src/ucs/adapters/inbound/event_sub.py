@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,6 @@ from ghga_event_schemas.configs import (
 )
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
-from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 
 from ucs.core import models
@@ -40,8 +39,9 @@ class EventSubTranslatorConfig(
     FileMetadataEventsConfig,
     FileInterrogationFailureEventsConfig,
     FileInternallyRegisteredEventsConfig,
+    FileDeletionRequestEventsConfig,
 ):
-    """Config for receiving metadata on files to expect for upload."""
+    """Config for event consumption"""
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -60,8 +60,10 @@ class EventSubTranslator(EventSubscriberProtocol):
             config.file_metadata_topic,
             config.file_internally_registered_topic,
             config.file_interrogations_topic,
+            config.file_deletion_request_topic,
         ]
         self.types_of_interest = [
+            config.file_deletion_request_type,
             config.file_metadata_type,
             config.file_internally_registered_type,
             config.interrogation_failure_type,
@@ -105,6 +107,17 @@ class EventSubTranslator(EventSubscriberProtocol):
 
         await self._upload_service.reject_latest(file_id=validated_payload.file_id)
 
+    async def _consume_file_deletion_request(self, *, payload: JsonObject) -> None:
+        """Consume file deletion request events.
+
+        Idempotence is handled by the core, so no intermediary is required.
+        """
+        validated_payload = get_validated_payload(
+            payload=payload, schema=event_schemas.FileDeletionRequested
+        )
+
+        await self._upload_service.deletion_requested(file_id=validated_payload.file_id)
+
     async def _consume_validated(
         self,
         *,
@@ -120,42 +133,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             await self._consume_upload_accepted(payload=payload)
         elif type_ == self._config.interrogation_failure_type:
             await self._consume_validation_failure(payload=payload)
+        elif type_ == self._config.file_deletion_request_type:
+            await self._consume_file_deletion_request(payload=payload)
         else:
             raise RuntimeError(f"Unexpected event of type: {type_}")
-
-
-class OutboxSubTranslatorConfig(FileDeletionRequestEventsConfig):
-    """Config for the outbox subscriber"""
-
-
-class FileDeletionRequestedListener(
-    DaoSubscriberProtocol[event_schemas.FileDeletionRequested]
-):
-    """A class that consumes FileDeletionRequested events."""
-
-    event_topic: str
-    dto_model = event_schemas.FileDeletionRequested
-
-    def __init__(
-        self,
-        *,
-        config: OutboxSubTranslatorConfig,
-        upload_service: UploadServicePort,
-    ):
-        self._upload_service = upload_service
-        self.event_topic = config.file_deletion_request_topic
-
-    async def changed(
-        self, resource_id: str, update: event_schemas.FileDeletionRequested
-    ) -> None:
-        """Consume change event for File Deletion Requests.
-        Idempotence is handled by the core, so no intermediary is required.
-        """
-        await self._upload_service.deletion_requested(file_id=update.file_id)
-
-    async def deleted(self, resource_id: str) -> None:
-        """Consume event indicating the deletion of a File Deletion Request."""
-        log.warning(
-            "Received DELETED-type event for FileDeletionRequested with resource ID '%s'",
-            resource_id,
-        )

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,22 +21,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
-from hexkit.providers.akafka import (
-    ComboTranslator,
-    KafkaEventPublisher,
-    KafkaEventSubscriber,
-)
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
-from ucs.adapters.inbound.event_sub import (
-    EventSubTranslator,
-    FileDeletionRequestedListener,
-)
+from ucs.adapters.inbound.event_sub import EventSubTranslator
 from ucs.adapters.inbound.fastapi_ import dummies
 from ucs.adapters.inbound.fastapi_.configure import get_configured_app
 from ucs.adapters.outbound.dao import DaoCollectionTranslator
-from ucs.adapters.outbound.daopub import OutboxDaoPublisherFactory
 from ucs.adapters.outbound.event_pub import EventPubTranslator
 from ucs.config import Config
 from ucs.core.file_service import FileMetadataServive
@@ -44,29 +36,21 @@ from ucs.core.storage_inspector import InboxInspector
 from ucs.core.upload_service import UploadService
 from ucs.ports.inbound.file_service import FileMetadataServicePort
 from ucs.ports.inbound.upload_service import UploadServicePort
-from ucs.ports.outbound.daopub import FileUploadReceivedDao
 
 
 @asynccontextmanager
-async def get_mongo_kafka_dao_factory(
-    config: Config,
-) -> AsyncGenerator[MongoKafkaDaoPublisherFactory, None]:
-    """Get a MongoDB DAO publisher factory."""
-    async with MongoKafkaDaoPublisherFactory.construct(config=config) as factory:
-        yield factory
-
-
-@asynccontextmanager
-async def get_file_upload_received_dao(
-    *, config: Config
-) -> AsyncGenerator[FileUploadReceivedDao, None]:
-    """Get a FileUploadValidationSuccess dao."""
-    async with get_mongo_kafka_dao_factory(config=config) as dao_publisher_factory:
-        outbox_dao_factory = OutboxDaoPublisherFactory(
-            config=config, dao_publisher_factory=dao_publisher_factory
-        )
-        outbox_dao = await outbox_dao_factory.get_file_upload_received_dao()
-        yield outbox_dao
+async def get_persistent_publisher(
+    config: Config, dao_factory: MongoDbDaoFactory | None = None
+) -> AsyncGenerator[PersistentKafkaPublisher, None]:
+    """Construct and return a PersistentKafkaPublisher."""
+    dao_factory = dao_factory or MongoDbDaoFactory(config=config)
+    async with PersistentKafkaPublisher.construct(
+        config=config,
+        dao_factory=dao_factory,
+        compacted_topics={config.file_deleted_topic, config.file_upload_received_topic},
+        collection_name="ucsPersistedEvents",
+    ) as persistent_publisher:
+        yield persistent_publisher
 
 
 @asynccontextmanager
@@ -79,18 +63,14 @@ async def prepare_core(
     dao_factory = MongoDbDaoFactory(config=config)
     dao_collection = await DaoCollectionTranslator.construct(provider=dao_factory)
 
-    async with (
-        KafkaEventPublisher.construct(config=config) as kafka_event_publisher,
-        get_file_upload_received_dao(config=config) as file_upload_received_dao,
-    ):
+    async with get_persistent_publisher(config=config) as persistent_publisher:
         event_pub_translator = EventPubTranslator(
-            config=config, provider=kafka_event_publisher
+            config=config, provider=persistent_publisher
         )
         upload_service = UploadService(
             daos=dao_collection,
             object_storages=object_storages,
             event_publisher=event_pub_translator,
-            file_upload_received_dao=file_upload_received_dao,
         )
         file_metadata_service = FileMetadataServive(daos=dao_collection)
         yield upload_service, file_metadata_service
@@ -152,18 +132,13 @@ async def prepare_event_subscriber(
             upload_service=upload_service,
             config=config,
         )
-        outbox_translator = FileDeletionRequestedListener(
-            upload_service=upload_service, config=config
-        )
-
-        combo_translator = ComboTranslator(
-            translators=[event_sub_translator, outbox_translator]
-        )
 
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,
             KafkaEventSubscriber.construct(
-                config=config, translator=combo_translator, dlq_publisher=dlq_publisher
+                config=config,
+                translator=event_sub_translator,
+                dlq_publisher=dlq_publisher,
             ) as kafka_event_subscriber,
         ):
             yield kafka_event_subscriber

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,7 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
     # Publish an event with a bogus payload to a topic/type this service expects
     await kafka.publish_event(
         payload={"some_key": "some_value"},
-        type_="upserted",
+        type_=config.file_deletion_request_type,
         topic=config.file_deletion_request_topic,
         key="test",
     )
@@ -50,41 +50,21 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
 
 
 async def test_consume_from_retry(joint_fixture: JointFixture):
-    """Verify that this service will correctly get events from the retry topic.
-
-    This involves publishing both outbox and non-outbox events to the retry
-    topic to ensure they are consumed without issue.
-    """
+    """Verify that this service will correctly get events from the retry topic."""
     # Override the kafka test fixture's default for kafka_enable_dlq
     config = joint_fixture.config
     assert config.kafka_enable_dlq
 
-    outbox_payload = event_schemas.FileDeletionRequested(file_id="123")
-    event_payload = event_schemas.FileUploadValidationFailure(
-        bucket_id="test",
-        upload_date="2025-02-25T16:15:28.148287+00:00",
-        file_id="",
-        object_id="",
-        s3_endpoint_alias="",
-        reason="test",
-    )
+    payload = event_schemas.FileDeletionRequested(file_id="123")
 
     # Publish an event with a proper payload to a topic/type this service expects
     await joint_fixture.kafka.publish_event(
-        payload=outbox_payload.model_dump(),
-        type_="upserted",
+        payload=payload.model_dump(),
+        type_=config.file_deletion_request_type,
         topic=config.service_name + "-retry",
         key="test",
         headers={"original_topic": config.file_deletion_request_topic},
     )
-    await joint_fixture.kafka.publish_event(
-        payload=event_payload.model_dump(),
-        type_=config.interrogation_failure_type,
-        topic=config.service_name + "-retry",
-        key="test",
-        headers={"original_topic": config.file_interrogations_topic},
-    )
 
     # Consume the events
-    await joint_fixture.event_subscriber.run(forever=False)
     await joint_fixture.event_subscriber.run(forever=False)

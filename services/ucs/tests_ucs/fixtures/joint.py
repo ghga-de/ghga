@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,6 @@ from tests_ucs.fixtures.example_data import STORAGE_ALIASES
 from ucs.adapters.outbound.dao import DaoCollectionTranslator
 from ucs.config import Config
 from ucs.inject import (
-    get_file_upload_received_dao,
     prepare_core,
     prepare_event_subscriber,
     prepare_rest_app,
@@ -47,7 +46,6 @@ from ucs.ports.inbound.file_service import FileMetadataServicePort
 from ucs.ports.inbound.storage_inspector import StorageInspectorPort
 from ucs.ports.inbound.upload_service import UploadServicePort
 from ucs.ports.outbound.dao import DaoCollectionPort
-from ucs.ports.outbound.daopub import FileUploadReceivedDao
 
 
 @dataclass
@@ -60,7 +58,6 @@ class JointFixture:
     file_metadata_service: FileMetadataServicePort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
-    file_upload_received_dao: FileUploadReceivedDao
     mongodb: MongoDbFixture
     kafka: KafkaFixture
     s3: S3Fixture
@@ -106,7 +103,6 @@ async def joint_fixture(
         prepare_event_subscriber(
             config=config, core_override=(upload_service, file_metadata_service)
         ) as event_subscriber,
-        get_file_upload_received_dao(config=config) as file_upload_received_dao,
         AsyncTestClient(app=app) as rest_client,
     ):
         yield JointFixture(
@@ -116,7 +112,6 @@ async def joint_fixture(
             file_metadata_service=file_metadata_service,
             rest_client=rest_client,
             event_subscriber=event_subscriber,
-            file_upload_received_dao=file_upload_received_dao,
             mongodb=mongodb,
             kafka=kafka,
             s3=s3,
