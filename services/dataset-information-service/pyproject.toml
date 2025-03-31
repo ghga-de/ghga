@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=69",
+    "setuptools>=78.1",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -26,7 +26,7 @@ description = "Dataset Information Service - Providing public metadata about fil
 dependencies = [
     "typer >= 0.12",
     "ghga-service-commons[api] >= 3.3",
-    "ghga-event-schemas >= 4.1",
+    "ghga-event-schemas >= 5.0",
     "hexkit[akafka,s3,mongodb] >= 4.1",
 ]
 
@@ -146,8 +146,9 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "8.3"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,14 +20,12 @@ import logging
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     DatasetEventsConfig,
+    FileDeletionRequestEventsConfig,
     FileInternallyRegisteredEventsConfig,
 )
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
-from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from dins.ports.inbound.information_service import InformationServicePort
 
@@ -35,7 +33,9 @@ log = logging.getLogger(__name__)
 
 
 class EventSubTranslatorConfig(
-    DatasetEventsConfig, FileInternallyRegisteredEventsConfig
+    DatasetEventsConfig,
+    FileInternallyRegisteredEventsConfig,
+    FileDeletionRequestEventsConfig,
 ):
     """Config for publishing file upload-related events."""
 
@@ -57,11 +57,13 @@ class EventSubTranslator(EventSubscriberProtocol):
         self.topics_of_interest = [
             config.dataset_change_topic,
             config.file_internally_registered_topic,
+            config.file_deletion_request_topic,
         ]
         self.types_of_interest = [
             config.dataset_deletion_type,
             config.dataset_upsertion_type,
             config.file_internally_registered_type,
+            config.file_deletion_request_type,
         ]
 
     async def _consume_validated(
@@ -82,6 +84,8 @@ class EventSubTranslator(EventSubscriberProtocol):
             await self._consume_dataset_upserted(payload=payload)
         elif type_ == self._config.dataset_deletion_type:
             await self._consume_dataset_deleted(payload=payload)
+        elif type_ == self._config.file_deletion_request_type:
+            await self._consume_file_deletion_requested(payload=payload)
         else:
             raise RuntimeError(f"Unexpected event of type: {type_}")
 
@@ -121,43 +125,12 @@ class EventSubTranslator(EventSubscriberProtocol):
             dataset_id=validated_payload.accession
         )
 
-
-class OutboxSubTranslatorConfig(BaseSettings):
-    """Config for the outbox subscriber"""
-
-    files_to_delete_topic: str = Field(
-        default=...,
-        description="The name of the topic for events informing about files to be deleted.",
-        examples=["file-deletions"],
-    )
-
-
-class InformationDeletionRequestedListener(
-    DaoSubscriberProtocol[event_schemas.FileDeletionRequested]
-):
-    """A class that consumes FileDeletionRequested events."""
-
-    event_topic: str
-    dto_model = event_schemas.FileDeletionRequested
-
-    def __init__(
-        self,
-        *,
-        config: OutboxSubTranslatorConfig,
-        information_service: InformationServicePort,
-    ):
-        self.event_topic = config.files_to_delete_topic
-        self.information_service = information_service
-
-    async def changed(
-        self, resource_id: str, update: event_schemas.FileDeletionRequested
-    ) -> None:
-        """Consume change event for File Deletion Requests."""
-        await self.information_service.delete_file_information(file_id=update.file_id)
-
-    async def deleted(self, resource_id: str) -> None:
-        """Consume event indicating the deletion of a File Deletion Request."""
-        log.warning(
-            "Received DELETED-type event for FileDeletionRequested with resource ID '%s'",
-            resource_id,
+    async def _consume_file_deletion_requested(self, *, payload: JsonObject):
+        """Consume an event requesting that a file deletion."""
+        validated_payload = get_validated_payload(
+            payload=payload,
+            schema=event_schemas.FileDeletionRequested,
+        )
+        await self._information_service.delete_file_information(
+            file_id=validated_payload.file_id
         )

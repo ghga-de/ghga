@@ -9,9 +9,10 @@ dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
 db_name: dev
 docs_url: /docs
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
 file_internally_registered_topic: internal_file_registry
 file_internally_registered_type: file_registered
-files_to_delete_topic: file_deletions
 generate_correlation_id: true
 host: 127.0.0.1
 kafka_dlq_topic: dlq

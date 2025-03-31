@@ -2,14 +2,6 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
-    "files_to_delete_topic": {
-      "description": "The name of the topic for events informing about files to be deleted.",
-      "examples": [
-        "file-deletions"
-      ],
-      "title": "Files To Delete Topic",
-      "type": "string"
-    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -214,6 +206,22 @@
       ],
       "title": "Mongo Timeout"
     },
+    "file_deletion_request_topic": {
+      "description": "The name of the topic to receive events informing about files to delete.",
+      "examples": [
+        "file-deletion-requests"
+      ],
+      "title": "File Deletion Request Topic",
+      "type": "string"
+    },
+    "file_deletion_request_type": {
+      "description": "The type used for events indicating that a request to delete a file has been received.",
+      "examples": [
+        "file_deletion_requested"
+      ],
+      "title": "File Deletion Request Type",
+      "type": "string"
+    },
     "file_internally_registered_topic": {
       "description": "Name of the topic used for events indicating that a file has been registered for download.",
       "examples": [
@@ -380,11 +388,12 @@
     }
   },
   "required": [
-    "files_to_delete_topic",
     "service_instance_id",
     "kafka_servers",
     "mongo_dsn",
     "db_name",
+    "file_deletion_request_topic",
+    "file_deletion_request_type",
     "file_internally_registered_topic",
     "file_internally_registered_type",
     "dataset_change_topic",

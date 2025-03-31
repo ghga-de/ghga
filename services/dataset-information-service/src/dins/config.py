@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,10 +19,7 @@ from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 
-from dins.adapters.inbound.event_sub import (
-    EventSubTranslatorConfig,
-    OutboxSubTranslatorConfig,
-)
+from dins.adapters.inbound.event_sub import EventSubTranslatorConfig
 
 SERVICE_NAME = "dins"
 
@@ -33,7 +30,6 @@ class Config(
     EventSubTranslatorConfig,
     MongoKafkaConfig,
     LoggingConfig,
-    OutboxSubTranslatorConfig,
 ):
     """Config parameters and their defaults."""
 

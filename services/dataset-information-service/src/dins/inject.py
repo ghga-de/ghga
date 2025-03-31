@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,18 +21,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
-from hexkit.providers.akafka import (
-    ComboTranslator,
-    KafkaEventPublisher,
-    KafkaEventSubscriber,
-)
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from dins.adapters.inbound import dao
-from dins.adapters.inbound.event_sub import (
-    EventSubTranslator,
-    InformationDeletionRequestedListener,
-)
+from dins.adapters.inbound.event_sub import EventSubTranslator
 from dins.adapters.inbound.fastapi_ import dummies
 from dins.adapters.inbound.fastapi_.configure import get_configured_app
 from dins.config import Config
@@ -83,17 +76,11 @@ async def prepare_event_subscriber(
         event_sub_translator = EventSubTranslator(
             config=config, information_service=information_service
         )
-        outbox_sub_translator = InformationDeletionRequestedListener(
-            config=config, information_service=information_service
-        )
-        combo_translator = ComboTranslator(
-            translators=[event_sub_translator, outbox_sub_translator]
-        )
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,
             KafkaEventSubscriber.construct(
                 config=config,
-                translator=combo_translator,
+                translator=event_sub_translator,
                 dlq_publisher=dlq_publisher,
             ) as event_subscriber,
         ):

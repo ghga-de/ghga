@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,6 @@ from tests.fixtures.joint import JointFixture
 FILE_ID_1 = "test-file"
 FILE_ID_2 = "test-file-2"
 FILE_ID_3 = "test-file-3"
-CHANGED_TYPE = "upserted"
 DECRYPTED_SHA256 = "fake-checksum"
 DECRYPTED_SIZE = 12345678
 
@@ -157,8 +156,8 @@ async def test_file_information_journey(
 
     await joint_fixture.kafka.publish_event(
         payload=deletion_requested.model_dump(),
-        type_=CHANGED_TYPE,
-        topic=joint_fixture.config.files_to_delete_topic,
+        type_=joint_fixture.config.file_deletion_request_type,
+        topic=joint_fixture.config.file_deletion_request_topic,
     )
     await joint_fixture.event_subscriber.run(forever=False)
 
@@ -277,8 +276,8 @@ async def test_dataset_information_journey(
 
         await joint_fixture.kafka.publish_event(
             payload=deletion_requested.model_dump(),
-            type_=CHANGED_TYPE,
-            topic=joint_fixture.config.files_to_delete_topic,
+            type_=joint_fixture.config.file_deletion_request_type,
+            topic=joint_fixture.config.file_deletion_request_topic,
         )
         await joint_fixture.event_subscriber.run(forever=False)
 

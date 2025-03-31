@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,8 +34,8 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
     # Publish an event with a bogus payload to a topic/type this service expects
     await kafka.publish_event(
         payload={"some_key": "some_value"},
-        type_="upserted",
-        topic=config.files_to_delete_topic,
+        type_=config.file_deletion_request_type,
+        topic=config.file_deletion_request_topic,
         key="test",
     )
     async with kafka.record_events(in_topic=config.kafka_dlq_topic) as recorder:
@@ -52,48 +52,23 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
 async def test_consume_from_retry(joint_fixture: JointFixture):
     """Verify that this service will correctly get events from the retry topic.
 
-    This involves publishing both outbox and non-outbox events to the retry
-    topic to ensure they are consumed without issue.
+    This involves publishing an event to the retry
+    topic to ensure it can be consumed without issue.
     """
     # Override the kafka test fixture's default for kafka_enable_dlq
     config = joint_fixture.config
     assert config.kafka_enable_dlq
 
-    outbox_payload = event_schemas.FileDeletionRequested(file_id="123")
-    event_payload = event_schemas.FileInternallyRegistered(
-        bucket_id="test",
-        upload_date="2025-02-25T16:15:28.148287+00:00",
-        file_id="",
-        object_id="",
-        s3_endpoint_alias="",
-        decrypted_size=12345678,
-        decrypted_sha256="fake-checksum",
-        encrypted_size=123456789,
-        encrypted_part_size=1,
-        encrypted_parts_md5=["some", "checksum"],
-        encrypted_parts_sha256=["some", "checksum"],
-        content_offset=1234,
-        decryption_secret_id="some-secret",
-    )
+    payload = event_schemas.FileDeletionRequested(file_id="123")
 
-    # Publish the outbox event
+    # Publish the event
     await joint_fixture.kafka.publish_event(
-        payload=outbox_payload.model_dump(),
-        type_="upserted",
+        payload=payload.model_dump(),
+        type_=config.file_deletion_request_type,
         topic=config.service_name + "-retry",
         key="test",
-        headers={"original_topic": config.files_to_delete_topic},
+        headers={"original_topic": config.file_deletion_request_topic},
     )
 
-    # Publish the non-outbox event
-    await joint_fixture.kafka.publish_event(
-        payload=event_payload.model_dump(),
-        type_=config.file_internally_registered_type,
-        topic=config.service_name + "-retry",
-        key="test",
-        headers={"original_topic": config.file_internally_registered_topic},
-    )
-
-    # Consume the events (successful if it doesn't hang)
-    await joint_fixture.event_subscriber.run(forever=False)
+    # Consume the event (successful if it doesn't hang)
     await joint_fixture.event_subscriber.run(forever=False)
