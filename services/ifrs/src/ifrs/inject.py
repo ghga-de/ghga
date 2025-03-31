@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,19 +20,35 @@ from contextlib import asynccontextmanager
 
 from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaOutboxSubscriber
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
-from ifrs.adapters.inbound.event_sub import (
-    FileDeletionRequestedTranslator,
-    FileValidationSuccessTranslator,
-    NonstagedFileRequestedTranslator,
-)
+from ifrs.adapters.inbound.event_sub import EventSubTranslator
 from ifrs.adapters.outbound import dao
 from ifrs.adapters.outbound.event_pub import EventPubTranslator
 from ifrs.config import Config
 from ifrs.core.file_registry import FileRegistry
 from ifrs.ports.inbound.file_registry import FileRegistryPort
+
+
+@asynccontextmanager
+async def get_persistent_publisher(
+    config: Config, dao_factory: MongoDbDaoFactory | None = None
+) -> AsyncGenerator[PersistentKafkaPublisher, None]:
+    """Construct and return a PersistentKafkaPublisher."""
+    dao_factory = dao_factory or MongoDbDaoFactory(config=config)
+    async with PersistentKafkaPublisher.construct(
+        config=config,
+        dao_factory=dao_factory,
+        compacted_topics={
+            config.file_deleted_topic,
+            config.file_internally_registered_topic,
+        },
+        topics_not_stored={config.file_staged_topic},
+        collection_name="ifrsPersistedEvents",
+    ) as persistent_publisher:
+        yield persistent_publisher
 
 
 @asynccontextmanager
@@ -42,9 +58,11 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[FileRegistryPort, No
     object_storages = S3ObjectStorages(config=config)
     file_metadata_dao = await dao.get_file_metadata_dao(dao_factory=dao_factory)
 
-    async with KafkaEventPublisher.construct(config=config) as kafka_event_publisher:
+    async with get_persistent_publisher(
+        config=config, dao_factory=dao_factory
+    ) as persistent_kafka_publisher:
         event_publisher = EventPubTranslator(
-            config=config, provider=kafka_event_publisher
+            config=config, provider=persistent_kafka_publisher
         )
         file_registry = FileRegistry(
             file_metadata_dao=file_metadata_dao,
@@ -69,11 +87,11 @@ def prepare_core_with_override(
 
 
 @asynccontextmanager
-async def prepare_outbox_subscriber(
+async def prepare_event_subscriber(
     *,
     config: Config,
     core_override: FileRegistryPort | None = None,
-) -> AsyncGenerator[KafkaOutboxSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber, None]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the core_override parameter.
@@ -81,21 +99,13 @@ async def prepare_outbox_subscriber(
     async with prepare_core_with_override(
         config=config, core_override=core_override
     ) as file_registry:
-        outbox_translators = [
-            cls(config=config, file_registry=file_registry)
-            for cls in (
-                FileDeletionRequestedTranslator,
-                FileValidationSuccessTranslator,
-                NonstagedFileRequestedTranslator,
-            )
-        ]
-
+        translator = EventSubTranslator(config=config, file_registry=file_registry)
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,
-            KafkaOutboxSubscriber.construct(
+            KafkaEventSubscriber.construct(
                 config=config,
-                translators=outbox_translators,
+                translator=translator,
                 dlq_publisher=dlq_publisher,
-            ) as kafka_outbox_subscriber,
+            ) as kafka_event_subscriber,
         ):
-            yield kafka_outbox_subscriber
+            yield kafka_event_subscriber

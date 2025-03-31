@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,9 @@ from ghga_event_schemas.configs import (
     FileInterrogationSuccessEventsConfig,
     FileStagingRequestedEventsConfig,
 )
-from hexkit.protocols.daosub import DaoSubscriberProtocol
+from ghga_event_schemas.validation import get_validated_payload
+from hexkit.custom_types import JsonObject
+from hexkit.protocols.eventsub import EventSubscriberProtocol
 
 from ifrs.core.models import FileMetadataBase
 from ifrs.ports.inbound.file_registry import FileRegistryPort
@@ -31,124 +33,95 @@ from ifrs.ports.inbound.file_registry import FileRegistryPort
 log = logging.getLogger(__name__)
 
 
-class OutboxSubTranslatorConfig(
+class EventSubTranslatorConfig(
+    FileStagingRequestedEventsConfig,
     FileDeletionRequestEventsConfig,
     FileInterrogationSuccessEventsConfig,
-    FileStagingRequestedEventsConfig,
 ):
-    """Config for the outbox subscriber"""
+    """Config for the event subscriber"""
 
 
-class NonstagedFileRequestedTranslator(
-    DaoSubscriberProtocol[event_schemas.NonStagedFileRequested]
-):
-    """A class that consumes NonStagedFileRequested events."""
-
-    event_topic: str
-    dto_model = event_schemas.NonStagedFileRequested
+class EventSubTranslator(EventSubscriberProtocol):
+    """An event sub translator"""
 
     def __init__(
-        self,
-        *,
-        config: OutboxSubTranslatorConfig,
-        file_registry: FileRegistryPort,
+        self, config: EventSubTranslatorConfig, file_registry: FileRegistryPort
     ):
         self._file_registry = file_registry
-        self.event_topic = config.files_to_stage_topic
+        self._config = config
+        self.topics_of_interest = [
+            config.files_to_stage_topic,
+            config.file_deletion_request_topic,
+            config.file_interrogations_topic,
+        ]
+        self.types_of_interest = [
+            config.files_to_stage_type,
+            config.file_deletion_request_type,
+            config.interrogation_success_type,
+        ]
 
-    async def changed(
-        self, resource_id: str, update: event_schemas.NonStagedFileRequested
-    ) -> None:
-        """Consume change event (created or updated) for download request data."""
+    async def _consume_file_staging_request(self, *, payload: JsonObject):
+        """Consume an event requesting a file to be staged to the outbox bucket"""
+        validated_payload = get_validated_payload(
+            payload, event_schemas.NonStagedFileRequested
+        )
+
         await self._file_registry.stage_registered_file(
-            file_id=resource_id,
-            decrypted_sha256=update.decrypted_sha256,
-            outbox_object_id=update.target_object_id,
-            outbox_bucket_id=update.target_bucket_id,
+            file_id=validated_payload.file_id,
+            decrypted_sha256=validated_payload.decrypted_sha256,
+            outbox_object_id=validated_payload.target_object_id,
+            outbox_bucket_id=validated_payload.target_bucket_id,
         )
 
-    async def deleted(self, resource_id: str) -> None:
-        """This should never be called because these events are stateless and not saved."""
-        log.error(
-            "Received DELETED-type event for NonStagedFileRequested with resource ID '%s'",
-            resource_id,
+    async def _consume_file_deletion_request(self, *, payload: JsonObject):
+        """Consume an event requesting a file to be deleted"""
+        validated_payload = get_validated_payload(
+            payload, event_schemas.FileDeletionRequested
         )
+        await self._file_registry.delete_file(file_id=validated_payload.file_id)
 
-
-class FileDeletionRequestedTranslator(
-    DaoSubscriberProtocol[event_schemas.FileDeletionRequested]
-):
-    """A class that consumes FileDeletionRequested events."""
-
-    event_topic: str
-    dto_model = event_schemas.FileDeletionRequested
-
-    def __init__(
-        self,
-        *,
-        config: OutboxSubTranslatorConfig,
-        file_registry: FileRegistryPort,
-    ):
-        self._file_registry = file_registry
-        self.event_topic = config.file_deletion_request_topic
-
-    async def changed(
-        self, resource_id: str, update: event_schemas.FileDeletionRequested
-    ) -> None:
-        """Consume change event (created or updated) for File Deletion Requests."""
-        await self._file_registry.delete_file(file_id=resource_id)
-
-    async def deleted(self, resource_id: str) -> None:
-        """This should never be called because these events are stateless and not saved."""
-        log.error(
-            "Received DELETED-type event for FileDeletionRequested with resource ID '%s'",
-            resource_id,
+    async def _consume_file_interrogation_success(self, *, payload: JsonObject):
+        """Consume an event indicating that a file has passed validation"""
+        validated_payload = get_validated_payload(
+            payload, event_schemas.FileUploadValidationSuccess
         )
-
-
-class FileValidationSuccessTranslator(
-    DaoSubscriberProtocol[event_schemas.FileUploadValidationSuccess]
-):
-    """A class that consumes FileUploadValidationSuccess events."""
-
-    event_topic: str
-    dto_model = event_schemas.FileUploadValidationSuccess
-
-    def __init__(
-        self,
-        *,
-        config: OutboxSubTranslatorConfig,
-        file_registry: FileRegistryPort,
-    ):
-        self._file_registry = file_registry
-        self.event_topic = config.file_interrogations_topic
-
-    async def changed(
-        self, resource_id: str, update: event_schemas.FileUploadValidationSuccess
-    ) -> None:
-        """Consume change event (created or updated) for FileUploadValidationSuccess events."""
         file_without_object_id = FileMetadataBase(
-            file_id=resource_id,
-            decrypted_sha256=update.decrypted_sha256,
-            decrypted_size=update.decrypted_size,
-            upload_date=update.upload_date,
-            decryption_secret_id=update.decryption_secret_id,
-            encrypted_part_size=update.encrypted_part_size,
-            encrypted_parts_md5=update.encrypted_parts_md5,
-            encrypted_parts_sha256=update.encrypted_parts_sha256,
-            content_offset=update.content_offset,
-            storage_alias=update.s3_endpoint_alias,
+            file_id=validated_payload.file_id,
+            decrypted_sha256=validated_payload.decrypted_sha256,
+            decrypted_size=validated_payload.decrypted_size,
+            upload_date=validated_payload.upload_date,
+            decryption_secret_id=validated_payload.decryption_secret_id,
+            encrypted_part_size=validated_payload.encrypted_part_size,
+            encrypted_parts_md5=validated_payload.encrypted_parts_md5,
+            encrypted_parts_sha256=validated_payload.encrypted_parts_sha256,
+            content_offset=validated_payload.content_offset,
+            storage_alias=validated_payload.s3_endpoint_alias,
         )
 
         await self._file_registry.register_file(
             file_without_object_id=file_without_object_id,
-            staging_object_id=update.object_id,
-            staging_bucket_id=update.bucket_id,
+            staging_object_id=validated_payload.object_id,
+            staging_bucket_id=validated_payload.bucket_id,
         )
 
-    async def deleted(self, resource_id: str) -> None:
-        """This should never be called because these events are stateless and not saved."""
-        log.error(
-            "Received DELETED-type event for FileUploadValidationSuccess with resource ID '%s'",
-            resource_id,
-        )
+    async def _consume_validated(
+        self, *, payload: JsonObject, type_: str, topic: str, key: str
+    ):
+        """Process an inbound event"""
+        if (
+            topic == self._config.files_to_stage_topic
+            and type_ == self._config.files_to_stage_type
+        ):
+            await self._consume_file_staging_request(payload=payload)
+        elif (
+            topic == self._config.file_deletion_request_topic
+            and type_ == self._config.file_deletion_request_type
+        ):
+            await self._consume_file_deletion_request(payload=payload)
+        elif (
+            topic == self._config.file_interrogations_topic
+            and type_ == self._config.interrogation_success_type
+        ):
+            await self._consume_file_interrogation_success(payload=payload)
+        else:
+            raise RuntimeError(f"Unexpected event of type: {type_}")

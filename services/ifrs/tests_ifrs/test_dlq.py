@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import KafkaFixture
 
-from ifrs.inject import prepare_outbox_subscriber
+from ifrs.inject import prepare_event_subscriber
 from tests_ifrs.fixtures.config import get_config
 
 pytestmark = pytest.mark.asyncio()
@@ -33,13 +33,13 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
     # Publish an event with a bogus payload to a topic/type this service expects
     await kafka.publish_event(
         payload={"some_key": "some_value"},
-        type_="upserted",
+        type_=config.file_deletion_request_type,
         topic=config.file_deletion_request_topic,
         key="test",
     )
     async with kafka.record_events(in_topic=config.kafka_dlq_topic) as recorder:
         # Consume the event, which should error and get sent to the DLQ
-        async with prepare_outbox_subscriber(config=config) as event_subscriber:
+        async with prepare_event_subscriber(config=config) as event_subscriber:
             await event_subscriber.run(forever=False)
     assert recorder.recorded_events
     assert len(recorder.recorded_events) == 1
@@ -58,12 +58,12 @@ async def test_consume_from_retry(kafka: KafkaFixture):
     # Publish an event with a proper payload to a topic/type this service expects
     await kafka.publish_event(
         payload=payload.model_dump(),
-        type_="upserted",
+        type_=config.file_deletion_request_type,
         topic=config.service_name + "-retry",
         key="test",
         headers={"original_topic": config.file_deletion_request_topic},
     )
 
     # Consume the event
-    async with prepare_outbox_subscriber(config=config) as event_subscriber:
+    async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=False)

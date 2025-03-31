@@ -1,15 +1,17 @@
 db_name: dev
-db_version_collection: ifrsDbVersions
-file_deleted_topic: internal-file-registry
+file_deleted_topic: file-deletions
 file_deleted_type: file_deleted
-file_deletion_request_topic: file-deletions
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
 file_internally_registered_topic: internal-file-registry
 file_internally_registered_type: file_registered
 file_interrogations_topic: file-interrogations
-file_staged_topic: internal-file-registry
+file_staged_topic: file-stagings
 file_staged_type: file_staged_for_download
 files_to_stage_topic: file-downloads
+files_to_stage_type: file_staging_requested
 generate_correlation_id: true
+interrogation_success_type: file_interrogation_success
 kafka_dlq_topic: dlq
 kafka_enable_dlq: true
 kafka_max_message_size: 1048576
@@ -25,7 +27,6 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
-migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 object_storages:

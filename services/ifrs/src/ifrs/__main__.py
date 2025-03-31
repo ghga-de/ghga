@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,13 @@
 
 """Entrypoint of the package"""
 
-import asyncio
-
-from ifrs.main import consume_events
+from ifrs.cli import cli
 
 
-def run_forever():
-    """Main entrypoint for setup.cfg"""
-    asyncio.run(consume_events(run_forever=True))
+def run():
+    """Run the service"""
+    cli()
 
 
 if __name__ == "__main__":
-    run_forever()
+    run()

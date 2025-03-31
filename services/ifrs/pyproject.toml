@@ -29,7 +29,7 @@ classifiers = [
 Repository = "https://github.com/ghga-de/file-services-backend/tree/main/services/ifrs"
 
 [project.scripts]
-ifrs = "ifrs.__main__:run_forever"
+ifrs = "ifrs.__main__:cli"
 
 [project.license]
 text = "Apache 2.0"

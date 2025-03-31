@@ -203,15 +203,6 @@
       "title": "File Staged Type",
       "type": "string"
     },
-    "files_to_stage_topic": {
-      "description": "Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.",
-      "examples": [
-        "file-downloads",
-        "file-stage-requests"
-      ],
-      "title": "Files To Stage Topic",
-      "type": "string"
-    },
     "file_interrogations_topic": {
       "description": "The name of the topic use to publish file interrogation outcome events.",
       "examples": [
@@ -220,12 +211,44 @@
       "title": "File Interrogations Topic",
       "type": "string"
     },
+    "interrogation_success_type": {
+      "description": "The type used for events informing about successful file validations.",
+      "examples": [
+        "file_interrogation_success"
+      ],
+      "title": "Interrogation Success Type",
+      "type": "string"
+    },
     "file_deletion_request_topic": {
       "description": "The name of the topic to receive events informing about files to delete.",
       "examples": [
         "file-deletion-requests"
       ],
       "title": "File Deletion Request Topic",
+      "type": "string"
+    },
+    "file_deletion_request_type": {
+      "description": "The type used for events indicating that a request to delete a file has been received.",
+      "examples": [
+        "file_deletion_requested"
+      ],
+      "title": "File Deletion Request Type",
+      "type": "string"
+    },
+    "files_to_stage_topic": {
+      "description": "Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.",
+      "examples": [
+        "file-staging-requests"
+      ],
+      "title": "Files To Stage Topic",
+      "type": "string"
+    },
+    "files_to_stage_type": {
+      "description": "The type used for non-staged file request events",
+      "examples": [
+        "file_staging_requested"
+      ],
+      "title": "Files To Stage Type",
       "type": "string"
     },
     "kafka_servers": {
@@ -381,24 +404,6 @@
         null
       ],
       "title": "Mongo Timeout"
-    },
-    "db_version_collection": {
-      "description": "The name of the collection containing DB version information for this service",
-      "examples": [
-        "ifrsDbVersions"
-      ],
-      "title": "Db Version Collection",
-      "type": "string"
-    },
-    "migration_wait_sec": {
-      "description": "The number of seconds to wait before checking the DB version again",
-      "examples": [
-        5,
-        30,
-        180
-      ],
-      "title": "Migration Wait Sec",
-      "type": "integer"
     }
   },
   "required": [
@@ -410,14 +415,15 @@
     "file_deleted_type",
     "file_staged_topic",
     "file_staged_type",
-    "files_to_stage_topic",
     "file_interrogations_topic",
+    "interrogation_success_type",
     "file_deletion_request_topic",
+    "file_deletion_request_type",
+    "files_to_stage_topic",
+    "files_to_stage_type",
     "kafka_servers",
     "mongo_dsn",
-    "db_name",
-    "db_version_collection",
-    "migration_wait_sec"
+    "db_name"
   ],
   "title": "ModSettings",
   "type": "object"

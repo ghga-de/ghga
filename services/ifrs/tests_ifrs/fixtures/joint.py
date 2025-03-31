@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,7 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
     S3ObjectStoragesConfig,
 )
-from hexkit.providers.akafka.provider import KafkaOutboxSubscriber
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -38,7 +38,7 @@ from hexkit.providers.s3.testutils import S3Fixture
 
 from ifrs.adapters.outbound.dao import get_file_metadata_dao
 from ifrs.config import Config
-from ifrs.inject import prepare_core, prepare_outbox_subscriber
+from ifrs.inject import prepare_core, prepare_event_subscriber
 from ifrs.ports.inbound.file_registry import FileRegistryPort
 from ifrs.ports.outbound.dao import FileMetadataDaoPort
 from tests_ifrs.fixtures.config import get_config
@@ -67,10 +67,10 @@ class JointFixture:
     file_metadata_dao: FileMetadataDaoPort
     file_registry: FileRegistryPort
     kafka: KafkaFixture
-    outbox_subscriber: KafkaOutboxSubscriber
     outbox_bucket: str
     staging_bucket: str
     storage_aliases: StorageAliases
+    event_subscriber: KafkaEventSubscriber
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -99,10 +99,10 @@ async def joint_fixture(
 
     # Prepare the file registry (core)
     async with prepare_core(config=config) as file_registry:
-        async with prepare_outbox_subscriber(
+        async with prepare_event_subscriber(
             config=config,
             core_override=file_registry,
-        ) as outbox_subscriber:
+        ) as event_subscriber:
             yield JointFixture(
                 config=config,
                 mongodb=mongodb,
@@ -110,7 +110,7 @@ async def joint_fixture(
                 file_metadata_dao=file_metadata_dao,
                 file_registry=file_registry,
                 kafka=kafka,
-                outbox_subscriber=outbox_subscriber,
+                event_subscriber=event_subscriber,
                 outbox_bucket=OUTBOX_BUCKET,
                 staging_bucket=STAGING_BUCKET,
                 storage_aliases=storage_aliases,

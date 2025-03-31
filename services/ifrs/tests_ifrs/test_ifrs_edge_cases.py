@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,6 @@ import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.custom_types import JsonObject
-from hexkit.providers.akafka.provider.daosub import CHANGE_EVENT_TYPE
 from hexkit.providers.s3.testutils import (
     FileObject,
     S3Fixture,  # noqa: F401
@@ -258,44 +257,49 @@ async def test_storage_db_inconsistency(joint_fixture: JointFixture):
 
 
 @pytest.mark.parametrize(
-    "upsertion_event, topic_config_name, method_name",
+    "event, topic_config_name, type_config_name, method_name",
     [
         (
             TEST_FILE_DELETION_REQUESTED.model_dump(),
             "file_deletion_request_topic",
+            "file_deletion_request_type",
             "delete_file",
         ),
         (
             TEST_FILE_UPLOAD_VALIDATION_SUCCESS.model_dump(),
             "file_interrogations_topic",
+            "interrogation_success_type",
             "register_file",
         ),
         (
             TEST_NONSTAGED_FILE_REQUESTED.model_dump(),
             "files_to_stage_topic",
+            "files_to_stage_type",
             "stage_registered_file",
         ),
     ],
 )
-async def test_outbox_subscriber_routing(
+async def test_event_subscriber_routing(
     joint_fixture: JointFixture,
-    upsertion_event: JsonObject,
+    event: JsonObject,
     topic_config_name: str,
+    type_config_name: str,
     method_name: str,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Make sure the outbox subscriber calls the correct method on the file registry."""
+    """Make sure the event subscriber calls the correct method on the file registry."""
     topic = getattr(joint_fixture.config, topic_config_name)
+    type_ = getattr(joint_fixture.config, type_config_name)
     mock = AsyncMock()
     monkeypatch.setattr(joint_fixture.file_registry, method_name, mock)
     await joint_fixture.kafka.publish_event(
-        payload=upsertion_event,
-        type_=CHANGE_EVENT_TYPE,
+        payload=event,
+        type_=type_,
         topic=topic,
         key=TEST_FILE_ID,
     )
 
-    await joint_fixture.outbox_subscriber.run(forever=False)
+    await joint_fixture.event_subscriber.run(forever=False)
     mock.assert_awaited_once()
 
 

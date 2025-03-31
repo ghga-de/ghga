@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,17 +19,17 @@ from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.mongodb import MongoDbConfig
 
-from ifrs.adapters.inbound.event_sub import OutboxSubTranslatorConfig
+from ifrs.adapters.inbound.event_sub import EventSubTranslatorConfig
 from ifrs.adapters.outbound.event_pub import EventPubTranslatorConfig
-from ifrs.migration_logic import MigrationConfig
 
 
 @config_from_yaml(prefix="ifrs")
 class Config(
-    MigrationConfig,
+    MongoDbConfig,
     KafkaConfig,
-    OutboxSubTranslatorConfig,
+    EventSubTranslatorConfig,
     EventPubTranslatorConfig,
     S3ObjectStoragesConfig,
     LoggingConfig,

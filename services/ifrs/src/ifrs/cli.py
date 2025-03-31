@@ -13,5 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Subpackage defining a inbound/primary/driving adapters according to the
-Hexagonal Architecture Concept."""
+"""Entrypoint of the package"""
+
+import asyncio
+from typing import Annotated
+
+import typer
+
+from ifrs.main import consume_events, publish_events
+
+cli = typer.Typer()
+
+
+@cli.command(name="consume-events")
+def sync_consume_events(run_forever: bool = True):
+    """Run an event consumer listening to the specified topic."""
+    asyncio.run(consume_events(run_forever=run_forever))
+
+
+@cli.command(name="publish-events")
+def sync_run_publish_events(
+    all: Annotated[
+        bool,
+        typer.Option(help="Set to (re)publish all events regardless of status"),
+    ] = False,
+):
+    """Publish pending events."""
+    asyncio.run(publish_events(all=all))
