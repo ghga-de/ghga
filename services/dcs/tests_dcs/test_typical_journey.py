@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -92,7 +92,7 @@ async def test_happy_journey(
         events=[
             ExpectedEvent(
                 payload=json.loads(non_staged_requested_event.model_dump_json()),
-                type_="upserted",
+                type_=joint_fixture.config.files_to_stage_type,
             )
         ],
         in_topic=joint_fixture.config.files_to_stage_topic,

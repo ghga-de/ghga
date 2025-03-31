@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,14 +49,12 @@ from dcs.adapters.outbound.dao import get_drs_dao
 from dcs.config import Config, WorkOrderTokenConfig
 from dcs.core import models
 from dcs.inject import (
-    get_nonstaged_file_requested_dao,
     prepare_core,
     prepare_event_subscriber,
     prepare_rest_app,
 )
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort
-from dcs.ports.outbound.daopub import NonStagedFileRequestedDao
 from tests_dcs.fixtures.config import get_config
 from tests_dcs.fixtures.utils import (
     generate_token_signing_keys,
@@ -99,7 +97,6 @@ class JointFixture:
     data_repository: DataRepositoryPort
     rest_client: httpx.AsyncClient
     event_subscriber: KafkaEventSubscriber
-    nonstaged_file_requested_dao: NonStagedFileRequestedDao
     mongodb: MongoDbFixture
     s3: S3Fixture
     kafka: KafkaFixture
@@ -147,7 +144,7 @@ async def joint_fixture(
     # create storage entities:
     await s3.populate_buckets(buckets=[bucket_id])
 
-    # prepare everything except the outbox subscriber
+    # prepare everything
     async with (
         prepare_core(config=config) as data_repository,
         prepare_rest_app(config=config, data_repo_override=data_repository) as app,
@@ -155,7 +152,6 @@ async def joint_fixture(
             config=config, data_repo_override=data_repository
         ) as event_subscriber,
         AsyncTestClient(app=app) as rest_client,
-        get_nonstaged_file_requested_dao(config=config) as nonstaged_file_requested_dao,
     ):
         yield JointFixture(
             config=config,
@@ -163,7 +159,6 @@ async def joint_fixture(
             data_repository=data_repository,
             rest_client=rest_client,
             event_subscriber=event_subscriber,
-            nonstaged_file_requested_dao=nonstaged_file_requested_dao,
             mongodb=mongodb,
             s3=s3,
             kafka=kafka,

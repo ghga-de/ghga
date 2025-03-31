@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@ from ghga_event_schemas.configs import (
     DownloadServedEventsConfig,
     FileDeletedEventsConfig,
     FileRegisteredForDownloadEventsConfig,
+    FileStagingRequestedEventsConfig,
 )
 from hexkit.protocols.eventpub import EventPublisherProtocol
 
@@ -33,6 +34,7 @@ class EventPubTranslatorConfig(
     DownloadServedEventsConfig,
     FileDeletedEventsConfig,
     FileRegisteredForDownloadEventsConfig,
+    FileStagingRequestedEventsConfig,
 ):
     """Config for publishing file download related events."""
 
@@ -48,6 +50,26 @@ class EventPubTranslator(EventPublisherPort):
         """Initialize with configs and a provider of the EventPublisherProtocol."""
         self._config = config
         self._provider = provider
+
+    async def nonstaged_file_requested(
+        self, *, drs_object: models.DrsObject, bucket_id: str
+    ):
+        """Publish an event to request staging of the corresponding file"""
+        payload = event_schemas.NonStagedFileRequested(
+            s3_endpoint_alias=drs_object.s3_endpoint_alias,
+            file_id=drs_object.file_id,
+            target_object_id=drs_object.object_id,
+            target_bucket_id=bucket_id,
+            decrypted_sha256=drs_object.decrypted_sha256,
+        )
+        payload_dict = json.loads(payload.model_dump_json())
+
+        await self._provider.publish(
+            payload=payload_dict,
+            topic=self._config.files_to_stage_topic,
+            type_=self._config.files_to_stage_type,
+            key=drs_object.file_id,
+        )
 
     async def download_served(
         self,

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,50 +23,39 @@ from fastapi import FastAPI
 from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
 from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
-from hexkit.providers.akafka import (
-    ComboTranslator,
-    KafkaEventPublisher,
-    KafkaEventSubscriber,
-)
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
-from dcs.adapters.inbound.event_sub import (
-    EventSubTranslator,
-    FileDeletionRequestedListener,
-)
+from dcs.adapters.inbound.event_sub import EventSubTranslator
 from dcs.adapters.inbound.fastapi_ import dummies
 from dcs.adapters.inbound.fastapi_.configure import get_configured_app
 from dcs.adapters.outbound.dao import get_drs_dao
-from dcs.adapters.outbound.daopub import OutboxDaoPublisherFactory
 from dcs.adapters.outbound.event_pub import EventPubTranslator
 from dcs.config import Config
 from dcs.core.auth_policies import WorkOrderContext
 from dcs.core.data_repository import DataRepository
 from dcs.ports.inbound.data_repository import DataRepositoryPort
-from dcs.ports.outbound.daopub import NonStagedFileRequestedDao
 
 
 @asynccontextmanager
-async def get_mongo_kafka_dao_factory(
-    config: Config,
-) -> AsyncGenerator[MongoKafkaDaoPublisherFactory, None]:
-    """Get a MongoDB DAO publisher factory."""
-    async with MongoKafkaDaoPublisherFactory.construct(config=config) as factory:
-        yield factory
-
-
-@asynccontextmanager
-async def get_nonstaged_file_requested_dao(
-    *, config: Config
-) -> AsyncGenerator[NonStagedFileRequestedDao, None]:
-    """Get a NonStagedFileRequested dao."""
-    async with get_mongo_kafka_dao_factory(config=config) as dao_publisher_factory:
-        outbox_dao_factory = OutboxDaoPublisherFactory(
-            config=config, dao_publisher_factory=dao_publisher_factory
-        )
-        outbox_dao = await outbox_dao_factory.get_nonstaged_file_requested_dao()
-        yield outbox_dao
+async def get_persistent_publisher(
+    config: Config, dao_factory: MongoDbDaoFactory | None = None
+) -> AsyncGenerator[PersistentKafkaPublisher, None]:
+    """Construct and return a PersistentKafkaPublisher."""
+    dao_factory = dao_factory or MongoDbDaoFactory(config=config)
+    async with PersistentKafkaPublisher.construct(
+        config=config,
+        dao_factory=dao_factory,
+        compacted_topics={
+            config.file_deleted_topic,
+            config.download_served_topic,
+            config.file_registered_for_download_topic,
+        },
+        topics_not_stored={config.files_to_stage_topic},
+        collection_name="dcsPersistedEvents",
+    ) as persistent_publisher:
+        yield persistent_publisher
 
 
 @asynccontextmanager
@@ -76,17 +65,17 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort, 
     drs_object_dao = await get_drs_dao(dao_factory=dao_factory)
     object_storages = S3ObjectStorages(config=config)
 
-    async with (
-        KafkaEventPublisher.construct(config=config) as event_pub_provider,
-        get_nonstaged_file_requested_dao(config=config) as nonstaged_file_requested_dao,
-    ):
-        event_publisher = EventPubTranslator(config=config, provider=event_pub_provider)
+    async with get_persistent_publisher(
+        config=config, dao_factory=dao_factory
+    ) as persistent_pub_provider:
+        event_publisher = EventPubTranslator(
+            config=config, provider=persistent_pub_provider
+        )
 
         yield DataRepository(
             drs_object_dao=drs_object_dao,
             object_storages=object_storages,
             event_publisher=event_publisher,
-            nonstaged_file_requested_dao=nonstaged_file_requested_dao,
             config=config,
         )
 
@@ -147,19 +136,12 @@ async def prepare_event_subscriber(
             data_repository=data_repository,
             config=config,
         )
-        outbox_sub_translator = FileDeletionRequestedListener(
-            config=config, data_repository=data_repository
-        )
-
-        combo_translator = ComboTranslator(
-            translators=[event_sub_translator, outbox_sub_translator]
-        )
 
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,
             KafkaEventSubscriber.construct(
                 config=config,
-                translator=combo_translator,
+                translator=event_sub_translator,
                 dlq_publisher=dlq_publisher,
             ) as event_subscriber,
         ):

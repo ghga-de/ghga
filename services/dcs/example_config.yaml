@@ -19,7 +19,6 @@ cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
 db_name: dev
-db_version_collection: dcsDbVersions
 docs_url: /docs
 download_served_topic: file-downloads
 download_served_type: download_served
@@ -27,12 +26,14 @@ drs_server_uri: drs://localhost:8080/
 ekss_base_url: http://ekss:8080/
 file_deleted_topic: file-downloads
 file_deleted_type: file_deleted
-file_deletion_request_topic: file-deletions
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
 file_internally_registered_topic: internal-file-registry
 file_internally_registered_type: file_registered
 file_registered_for_download_topic: file-downloads
 file_registered_for_download_type: file_registered
-files_to_stage_topic: file-downloads
+files_to_stage_topic: staging-requests
+files_to_stage_type: file_staging_requested
 generate_correlation_id: true
 host: 127.0.0.1
 http_call_timeout: 3
@@ -51,7 +52,6 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
-migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 object_storages:
@@ -72,5 +72,4 @@ retry_after_min: 5
 service_instance_id: '001'
 service_name: dcs
 staging_speed: 100
-unstaged_download_collection: unstagedDownloadRequested
 workers: 1

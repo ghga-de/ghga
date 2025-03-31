@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,7 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
     # Publish an event with a bogus payload to a topic/type this service expects
     await kafka.publish_event(
         payload={"some_key": "some_value"},
-        type_="upserted",
+        type_=config.file_deletion_request_type,
         topic=config.file_deletion_request_topic,
         key="test",
     )
@@ -79,7 +79,7 @@ async def test_consume_from_retry(joint_fixture: JointFixture):
     # Publish the outbox event
     await joint_fixture.kafka.publish_event(
         payload=outbox_payload.model_dump(),
-        type_="upserted",
+        type_=config.file_deletion_request_type,
         topic=config.service_name + "-retry",
         key="test",
         headers={"original_topic": config.file_deletion_request_topic},

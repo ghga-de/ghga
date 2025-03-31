@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,17 +22,13 @@ from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
-from dcs.adapters.inbound.event_sub import (
-    EventSubTranslatorConfig,
-    OutboxSubTranslatorConfig,
-)
+from dcs.adapters.inbound.event_sub import EventSubTranslatorConfig
 from dcs.adapters.inbound.fastapi_.configure import DrsApiConfig
-from dcs.adapters.outbound.daopub import OutboxDaoConfig
 from dcs.adapters.outbound.event_pub import EventPubTranslatorConfig
 from dcs.core.data_repository import DataRepositoryConfig
-from dcs.migration_logic import MigrationConfig
 
 
 class WorkOrderTokenConfig(AuthConfig):
@@ -40,7 +36,7 @@ class WorkOrderTokenConfig(AuthConfig):
 
     auth_check_claims: dict[str, Any] = Field(
         default=dict.fromkeys(
-            "type file_id user_id user_public_crypt4gh_key full_user_name email iat exp".split()
+            "type file_id user_id user_public_crypt4gh_key full_user_name email iat exp".split()  # noqa: SIM905
         ),
         description="A dict of all GHGA internal claims that shall be verified.",
     )
@@ -54,14 +50,12 @@ class Config(
     DrsApiConfig,
     WorkOrderTokenConfig,
     DataRepositoryConfig,
-    MigrationConfig,
+    MongoDbConfig,
     KafkaConfig,
     EventPubTranslatorConfig,
     EventSubTranslatorConfig,
     S3ObjectStoragesConfig,
     LoggingConfig,
-    OutboxSubTranslatorConfig,
-    OutboxDaoConfig,
 ):
     """Config parameters and their defaults."""
 
