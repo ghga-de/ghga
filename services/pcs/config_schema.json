@@ -10,13 +10,12 @@
       "title": "File Deletion Request Topic",
       "type": "string"
     },
-    "file_deletions_collection": {
-      "default": "fileDeletions",
-      "description": "The name of the collection used to store file deletion requests.",
+    "file_deletion_request_type": {
+      "description": "The type used for events indicating that a request to delete a file has been received.",
       "examples": [
-        "fileDeletions"
+        "file_deletion_requested"
       ],
-      "title": "File Deletions Collection",
+      "title": "File Deletion Request Type",
       "type": "string"
     },
     "log_level": {
@@ -357,6 +356,7 @@
   },
   "required": [
     "file_deletion_request_topic",
+    "file_deletion_request_type",
     "service_instance_id",
     "token_hashes",
     "kafka_servers",

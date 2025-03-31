@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,23 +16,18 @@
 """Interface for broadcasting events to other services."""
 
 from abc import ABC, abstractmethod
-from typing import TypeAlias
 
 from ghga_event_schemas.pydantic_ import FileDeletionRequested
-from hexkit.protocols.daopub import DaoPublisher
 
-__all__ = ["FileDeletionDao", "OutboxPublisherFactoryPort"]
-
-FileDeletionDao: TypeAlias = DaoPublisher[FileDeletionRequested]
+__all__ = ["EventPubTranslatorPort"]
 
 
-class OutboxPublisherFactoryPort(ABC):
-    """Port that provides a factory for user related data access objects.
-
-    These objects will also publish changes according to the outbox pattern.
-    """
+class EventPubTranslatorPort(ABC):
+    """A port that translates domain objects into events for publishing."""
 
     @abstractmethod
-    async def get_file_deletion_dao(self) -> FileDeletionDao:
-        """Construct a DAO for interacting with file deletion requests in the database."""
+    async def translate_file_deletion(
+        self, *, file_deletion_request: FileDeletionRequested
+    ):
+        """Translate a file deletion request into an event."""
         ...

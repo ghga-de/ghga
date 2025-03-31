@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,44 +20,43 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from ghga_service_commons.utils.context import asyncnullcontext
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
 from pcs.adapters.inbound.fastapi_ import dummies
 from pcs.adapters.inbound.fastapi_.configure import get_configured_app
-from pcs.adapters.outbound.daopub import OutboxDaoPublisherFactory
+from pcs.adapters.outbound.event_pub import EventPubTranslator
 from pcs.config import Config
 from pcs.core.file_deletion import FileDeletion
 from pcs.ports.inbound.file_deletion import FileDeletionPort
-from pcs.ports.outbound.daopub import FileDeletionDao
 
 
 @asynccontextmanager
-async def get_mongo_kafka_dao_factory(
-    config: Config,
-) -> AsyncGenerator[MongoKafkaDaoPublisherFactory, None]:
-    """Get a MongoDB DAO publisher factory."""
-    async with MongoKafkaDaoPublisherFactory.construct(config=config) as factory:
-        yield factory
-
-
-@asynccontextmanager
-async def get_file_deletion_dao(
-    *, config: Config
-) -> AsyncGenerator[FileDeletionDao, None]:
-    """Get a FileDeletionRequest dao."""
-    async with get_mongo_kafka_dao_factory(config=config) as dao_publisher_factory:
-        outbox_dao_factory = OutboxDaoPublisherFactory(
-            config=config, dao_publisher_factory=dao_publisher_factory
-        )
-        file_deletion_dao = await outbox_dao_factory.get_file_deletion_dao()
-        yield file_deletion_dao
+async def get_persistent_publisher(
+    config: Config, dao_factory: MongoDbDaoFactory | None = None
+) -> AsyncGenerator[PersistentKafkaPublisher, None]:
+    """Construct and return a PersistentKafkaPublisher."""
+    dao_factory = dao_factory or MongoDbDaoFactory(config=config)
+    async with PersistentKafkaPublisher.construct(
+        config=config,
+        dao_factory=dao_factory,
+        compacted_topics={config.file_deletion_request_topic},
+        collection_name="pcsPersistedEvents",
+    ) as persistent_publisher:
+        yield persistent_publisher
 
 
 @asynccontextmanager
 async def prepare_core(*, config: Config) -> AsyncGenerator[FileDeletionPort, None]:
     """Construct and initialize the core component and its outbound dependencies."""
-    async with get_file_deletion_dao(config=config) as file_deletion_dao:
-        file_deletion = FileDeletion(file_deletion_dao=file_deletion_dao)
+    dao_factory = MongoDbDaoFactory(config=config)
+    async with get_persistent_publisher(
+        config=config, dao_factory=dao_factory
+    ) as persistent_publisher:
+        event_pub_translator = EventPubTranslator(
+            config=config, provider=persistent_publisher
+        )
+        file_deletion = FileDeletion(event_publisher=event_pub_translator)
         yield file_deletion
 
 

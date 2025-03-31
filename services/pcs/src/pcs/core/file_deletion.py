@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,15 +18,15 @@
 from ghga_event_schemas.pydantic_ import FileDeletionRequested
 
 from pcs.ports.inbound.file_deletion import FileDeletionPort
-from pcs.ports.outbound.daopub import FileDeletionDao
+from pcs.ports.outbound.event_pub import EventPubTranslatorPort
 
 
 class FileDeletion(FileDeletionPort):
     """A service that commissions file deletions."""
 
-    def __init__(self, *, file_deletion_dao: FileDeletionDao):
+    def __init__(self, *, event_publisher: EventPubTranslatorPort):
         """Initialize with outbound adapters."""
-        self._file_deletion_dao = file_deletion_dao
+        self._event_publisher = event_publisher
 
     async def delete_file(self, *, file_id: str) -> None:
         """Sends out an event to delete all occurrences of a certain file.
@@ -35,4 +35,6 @@ class FileDeletion(FileDeletionPort):
             file_id: id for the file to delete.
         """
         file_deletion = FileDeletionRequested(file_id=file_id)
-        await self._file_deletion_dao.upsert(file_deletion)
+        await self._event_publisher.translate_file_deletion(
+            file_deletion_request=file_deletion
+        )
