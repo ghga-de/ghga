@@ -3,7 +3,8 @@ private_key_path: ./test_placeholder.sec
 private_key_passphrase: test
 token_hashes: [abcdef, ghijkl]
 
-file_interrogations_topic: file-upload-validation-success
+file_interrogations_topic: file-interrogations
+interrogation_success_type: file_interrogation_success
 
 service_instance_id: '1'
 kafka_servers: ["kafka:9092"]
@@ -17,3 +18,5 @@ vault_secrets_mount_point: secret
 vault_kube_role: dummy-role
 mongo_dsn: "mongodb://mongodb:27017"
 db_name: "dev"
+migration_wait_sec: 10
+db_version_collection: fisDbVersions

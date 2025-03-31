@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,9 +19,7 @@ import logging
 from pathlib import Path
 
 from crypt4gh.keys import get_private_key
-from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
 from ghga_service_commons.utils.crypt import decrypt
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 from nacl.exceptions import CryptoError
 from pydantic import Field, SecretStr, ValidationError
@@ -35,7 +33,8 @@ from fis.ports.inbound.ingest import (
     VaultCommunicationError,
     WrongDecryptedFormatError,
 )
-from fis.ports.outbound.daopub import FileUploadValidationSuccessDao
+from fis.ports.outbound.dao import FileDao
+from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.vault.client import VaultAdapterPort
 
 log = logging.getLogger(__name__)
@@ -46,8 +45,8 @@ class ServiceConfig(BaseSettings):
 
     private_key_path: Path = Field(
         default=...,
-        description="Path to the Crypt4GH private key file of the keypair whose public key is used "
-        + "to encrypt the payload.",
+        description="Path to the Crypt4GH private key file of the keypair whose public"
+        + " key is used to encrypt the payload.",
     )
     private_key_passphrase: str | None = Field(
         default=None,
@@ -61,31 +60,6 @@ class ServiceConfig(BaseSettings):
     )
 
 
-async def _send_file_metadata(
-    *,
-    dao: FileUploadValidationSuccessDao,
-    upload_metadata: models.UploadMetadataBase,
-    secret_id: str,
-):
-    """Send FileUploadValidationSuccess event to downstream services"""
-    payload = FileUploadValidationSuccess(
-        upload_date=now_as_utc().isoformat(),
-        file_id=upload_metadata.file_id,
-        object_id=upload_metadata.object_id,
-        bucket_id=upload_metadata.bucket_id,
-        s3_endpoint_alias=upload_metadata.storage_alias,
-        decrypted_size=upload_metadata.unencrypted_size,
-        decryption_secret_id=secret_id,
-        content_offset=0,
-        encrypted_part_size=upload_metadata.part_size,
-        encrypted_parts_md5=upload_metadata.encrypted_md5_checksums,
-        encrypted_parts_sha256=upload_metadata.encrypted_sha256_checksums,
-        decrypted_sha256=upload_metadata.unencrypted_checksum,
-    )
-
-    await dao.upsert(payload)
-
-
 class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
     """Handler for S3 upload metadata processing"""
 
@@ -93,12 +67,14 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
         self,
         *,
         config: ServiceConfig,
-        file_validation_success_dao: FileUploadValidationSuccessDao,
         vault_adapter: VaultAdapterPort,
+        event_publisher: EventPubTranslatorPort,
+        file_dao: FileDao,
     ):
         self._config = config
-        self._file_validation_success_dao = file_validation_success_dao
         self._vault_adapter = vault_adapter
+        self._event_publisher = event_publisher
+        self._file_dao = file_dao
 
     async def decrypt_payload(
         self, *, encrypted: models.EncryptedPayload
@@ -127,7 +103,7 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
     async def has_already_been_processed(self, *, file_id: str):
         """Check if file metadata has already been seen and successfully processed."""
         try:
-            await self._file_validation_success_dao.get_by_id(id_=file_id)
+            await self._file_dao.get_by_id(file_id)
         except ResourceNotFoundError:
             return False
         return True
@@ -135,9 +111,10 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
     async def populate_by_event(
         self, *, upload_metadata: models.LegacyUploadMetadata, secret_id: str
     ):
-        """Send FileUploadValidationSuccess event to be processed by downstream services"""
-        await _send_file_metadata(
-            dao=self._file_validation_success_dao,
+        """Insert File ID into database and publish FileUploadValidationSuccess event."""
+        # ID should always be new here because of the has_already_been_processed check.
+        await self._file_dao.insert(models.FileIdModel(file_id=upload_metadata.file_id))
+        await self._event_publisher.publish_file_interrogation_success(
             secret_id=secret_id,
             upload_metadata=upload_metadata,
         )
@@ -159,12 +136,14 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
         self,
         *,
         config: ServiceConfig,
-        file_validation_success_dao: FileUploadValidationSuccessDao,
+        event_publisher: EventPubTranslatorPort,
         vault_adapter: VaultAdapterPort,
+        file_dao: FileDao,
     ):
         self._config = config
-        self._file_validation_success_dao = file_validation_success_dao
+        self._event_publisher = event_publisher
         self._vault_adapter = vault_adapter
+        self._file_dao = file_dao
 
     async def decrypt_secret(self, *, encrypted: models.EncryptedPayload) -> SecretStr:
         """Decrypt file secret payload"""
@@ -183,7 +162,7 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
     async def has_already_been_processed(self, *, file_id: str):
         """Check if file metadata has already been seen and successfully processed."""
         try:
-            await self._file_validation_success_dao.get_by_id(id_=file_id)
+            await self._file_dao.get_by_id(file_id)
         except ResourceNotFoundError:
             return False
         return True
@@ -191,9 +170,10 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
     async def populate_by_event(
         self, *, upload_metadata: models.UploadMetadata, secret_id: str
     ):
-        """Send FileUploadValidationSuccess event to be processed by downstream services"""
-        await _send_file_metadata(
-            dao=self._file_validation_success_dao,
+        """Insert File ID into database and publish FileUploadValidationSuccess event."""
+        # ID should always be new here because of the has_already_been_processed check.
+        await self._file_dao.insert(models.FileIdModel(file_id=upload_metadata.file_id))
+        await self._event_publisher.publish_file_interrogation_success(
             secret_id=secret_id,
             upload_metadata=upload_metadata,
         )

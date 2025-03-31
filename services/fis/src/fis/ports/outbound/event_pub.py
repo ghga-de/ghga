@@ -12,15 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Session-scoped fixtures"""
 
-from hexkit.providers.akafka.testutils import (  # noqa: F401
-    kafka_container_fixture,
-    kafka_fixture,
-)
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    mongodb_container_fixture,
-    mongodb_fixture,
-)
+"""Abstract definition of an event publisher class"""
 
-from tests_fis.fixtures.joint import joint_fixture  # noqa: F401
+from abc import ABC, abstractmethod
+
+from fis.core import models
+
+
+class EventPubTranslatorPort(ABC):
+    """Abstract definition of an event publisher class"""
+
+    @abstractmethod
+    async def publish_file_interrogation_success(
+        self, *, upload_metadata: models.UploadMetadataBase, secret_id: str
+    ):
+        """Publish a file interrogation success event"""
+        ...

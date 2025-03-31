@@ -5,11 +5,13 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 db_name: dev
+db_version_collection: fisDbVersions
 docs_url: /docs
-file_interrogations_topic: file-upload-validation-success
+file_interrogations_topic: file-interrogations
 file_validations_collection: fileValidations
 generate_correlation_id: true
 host: 127.0.0.1
+interrogation_success_type: file_interrogation_success
 kafka_dlq_topic: dlq
 kafka_enable_dlq: false
 kafka_max_message_size: 1048576
@@ -25,6 +27,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json

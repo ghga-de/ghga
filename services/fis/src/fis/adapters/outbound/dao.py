@@ -12,15 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Session-scoped fixtures"""
+"""DAO translators for accessing the database."""
 
-from hexkit.providers.akafka.testutils import (  # noqa: F401
-    kafka_container_fixture,
-    kafka_fixture,
-)
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    mongodb_container_fixture,
-    mongodb_fixture,
-)
+from hexkit.protocols.dao import DaoFactoryProtocol
 
-from tests_fis.fixtures.joint import joint_fixture  # noqa: F401
+from fis.core.models import FileIdModel
+from fis.ports.outbound.dao import FileDao
+
+
+async def get_file_dao(*, dao_factory: DaoFactoryProtocol) -> FileDao:
+    """Setup the DAOs using the specified provider of the DaoFactoryProtocol."""
+    return await dao_factory.get_dao(
+        name="ingestedFiles",
+        dto_model=FileIdModel,
+        id_field="file_id",
+    )

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -129,7 +129,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     expected_event = ExpectedEvent(
         payload=expected_payload.model_dump(),
-        type_="upserted",
+        type_=joint_fixture.config.interrogation_success_type,
         key=TEST_PAYLOAD.file_id,
     )
 
@@ -232,7 +232,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     expected_event = ExpectedEvent(
         payload=expected_payload.model_dump(),
-        type_="upserted",
+        type_=joint_fixture.config.interrogation_success_type,
         key=TEST_PAYLOAD.file_id,
     )
 

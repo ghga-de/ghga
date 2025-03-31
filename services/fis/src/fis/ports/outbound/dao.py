@@ -12,15 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Session-scoped fixtures"""
+"""Define a DAO port for a DAO that stores/queries file IDs"""
 
-from hexkit.providers.akafka.testutils import (  # noqa: F401
-    kafka_container_fixture,
-    kafka_fixture,
-)
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    mongodb_container_fixture,
-    mongodb_fixture,
+from hexkit.protocols.dao import (  # noqa: F401
+    Dao,
+    ResourceAlreadyExistsError,
+    ResourceNotFoundError,
 )
 
-from tests_fis.fixtures.joint import joint_fixture  # noqa: F401
+from fis.core.models import FileIdModel
+
+# port described by a type alias:
+FileDao = Dao[FileIdModel]

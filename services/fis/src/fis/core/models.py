@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,12 +26,17 @@ class EncryptedPayload(BaseModel):
     payload: str
 
 
-class UploadMetadataBase(BaseModel):
+class FileIdModel(BaseModel):
+    """Model for a file ID"""
+
+    file_id: str
+
+
+class UploadMetadataBase(FileIdModel):
     """BaseModel for common parts of different variants of the decrypted payload model
     representing the S3 upload script output
     """
 
-    file_id: str
     object_id: str
     bucket_id: str
     part_size: int

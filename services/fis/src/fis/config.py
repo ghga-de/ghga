@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,11 @@
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
+from pydantic import Field
 
-from fis.adapters.outbound.daopub import OutboxDaoConfig
+from fis.adapters.outbound.event_pub import EventPubTranslatorConfig
 from fis.adapters.outbound.vault import VaultConfig
 from fis.core.ingest import ServiceConfig
 
@@ -29,8 +31,9 @@ SERVICE_NAME = "fis"
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     MongoKafkaConfig,
+    MigrationConfig,
     ApiConfigBase,
-    OutboxDaoConfig,
+    EventPubTranslatorConfig,
     ServiceConfig,
     VaultConfig,
     LoggingConfig,
@@ -38,6 +41,15 @@ class Config(
     """Config parameters and their defaults."""
 
     service_name: str = SERVICE_NAME
+
+    # Remove this parameter once the v2 migration has been run in production
+    file_validations_collection: str = Field(
+        default="fileValidations",
+        description=(
+            "The name of the collection used to store FileUploadValidationSuccess events."
+        ),
+        examples=["fileValidations"],
+    )
 
 
 CONFIG = Config()  # type: ignore [call-arg]

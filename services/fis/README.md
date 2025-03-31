@@ -46,11 +46,11 @@ fis --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
-- **`service_name`** *(string)*: Default: `"fis"`.
+- <a id="properties/service_name"></a>**`service_name`** *(string)*: Default: `"fis"`.
 
-- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
+- <a id="properties/service_instance_id"></a>**`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.
 
 
   Examples:
@@ -60,13 +60,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
+- <a id="properties/log_format"></a>**`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/log_format/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/log_format/anyOf/1"></a>*null*
 
 
   Examples:
@@ -81,9 +81,9 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+- <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`vault_url`** *(string, required)*: URL of the vault instance to connect to.
+- <a id="properties/vault_url"></a>**`vault_url`** *(string, required)*: URL of the vault instance to connect to.
 
 
   Examples:
@@ -93,13 +93,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_role_id`**: Vault role ID to access a specific prefix. Default: `null`.
+- <a id="properties/vault_role_id"></a>**`vault_role_id`**: Vault role ID to access a specific prefix. Default: `null`.
 
   - **Any of**
 
-    - *string, format: password*
+    - <a id="properties/vault_role_id/anyOf/0"></a>*string, format: password*
 
-    - *null*
+    - <a id="properties/vault_role_id/anyOf/1"></a>*null*
 
 
   Examples:
@@ -109,13 +109,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_secret_id`**: Vault secret ID to access a specific prefix. Default: `null`.
+- <a id="properties/vault_secret_id"></a>**`vault_secret_id`**: Vault secret ID to access a specific prefix. Default: `null`.
 
   - **Any of**
 
-    - *string, format: password*
+    - <a id="properties/vault_secret_id/anyOf/0"></a>*string, format: password*
 
-    - *null*
+    - <a id="properties/vault_secret_id/anyOf/1"></a>*null*
 
 
   Examples:
@@ -125,13 +125,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_verify`**: SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification. Default: `true`.
+- <a id="properties/vault_verify"></a>**`vault_verify`**: SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification. Default: `true`.
 
   - **Any of**
 
-    - *boolean*
+    - <a id="properties/vault_verify/anyOf/0"></a>*boolean*
 
-    - *string*
+    - <a id="properties/vault_verify/anyOf/1"></a>*string*
 
 
   Examples:
@@ -141,9 +141,9 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
+- <a id="properties/vault_path"></a>**`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
 
-- **`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
+- <a id="properties/vault_secrets_mount_point"></a>**`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
 
 
   Examples:
@@ -153,13 +153,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_kube_role`**: Vault role name used for Kubernetes authentication. Default: `null`.
+- <a id="properties/vault_kube_role"></a>**`vault_kube_role`**: Vault role name used for Kubernetes authentication. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/vault_kube_role/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/vault_kube_role/anyOf/1"></a>*null*
 
 
   Examples:
@@ -169,13 +169,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_auth_mount_point`**: Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. Default: `null`.
+- <a id="properties/vault_auth_mount_point"></a>**`vault_auth_mount_point`**: Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/vault_auth_mount_point/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/vault_auth_mount_point/anyOf/1"></a>*null*
 
 
   Examples:
@@ -195,23 +195,23 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
+- <a id="properties/service_account_token_path"></a>**`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
 
-- **`private_key_path`** *(string, format: path, required)*: Path to the Crypt4GH private key file of the keypair whose public key is used to encrypt the payload.
+- <a id="properties/private_key_path"></a>**`private_key_path`** *(string, format: path, required)*: Path to the Crypt4GH private key file of the keypair whose public key is used to encrypt the payload.
 
-- **`private_key_passphrase`**: Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. Default: `null`.
+- <a id="properties/private_key_passphrase"></a>**`private_key_passphrase`**: Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/private_key_passphrase/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/private_key_passphrase/anyOf/1"></a>*null*
 
-- **`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.
+- <a id="properties/token_hashes"></a>**`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.
 
-  - **Items** *(string)*
+  - <a id="properties/token_hashes/items"></a>**Items** *(string)*
 
-- **`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
+- <a id="properties/file_interrogations_topic"></a>**`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
 
 
   Examples:
@@ -221,58 +221,39 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`file_validations_collection`** *(string)*: The name of the collection used to store FileUploadValidationSuccess events. Default: `"fileValidations"`.
+- <a id="properties/interrogation_success_type"></a>**`interrogation_success_type`** *(string, required)*: The type used for events informing about successful file validations.
 
 
   Examples:
 
   ```json
-  "fileValidations"
+  "file_interrogation_success"
   ```
 
 
-- **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
+- <a id="properties/host"></a>**`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
-- **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
+- <a id="properties/port"></a>**`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 
-- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
+- <a id="properties/auto_reload"></a>**`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
-- **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+- <a id="properties/workers"></a>**`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
 
-- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
+- <a id="properties/api_root_path"></a>**`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
 
-- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
+- <a id="properties/openapi_url"></a>**`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
 
-- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
+- <a id="properties/docs_url"></a>**`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
-- **`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
-
-  - **Any of**
-
-    - *array*
-
-      - **Items** *(string)*
-
-    - *null*
-
-
-  Examples:
-
-  ```json
-  [
-      "https://example.org",
-      "https://www.example.org"
-  ]
-  ```
-
-
-- **`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
+- <a id="properties/cors_allowed_origins"></a>**`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
 
   - **Any of**
 
-    - *boolean*
+    - <a id="properties/cors_allowed_origins/anyOf/0"></a>*array*
 
-    - *null*
+      - <a id="properties/cors_allowed_origins/anyOf/0/items"></a>**Items** *(string)*
+
+    - <a id="properties/cors_allowed_origins/anyOf/1"></a>*null*
 
 
   Examples:
@@ -285,15 +266,34 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
+- <a id="properties/cors_allow_credentials"></a>**`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allow_credentials/anyOf/0"></a>*boolean*
 
-      - **Items** *(string)*
+    - <a id="properties/cors_allow_credentials/anyOf/1"></a>*null*
 
-    - *null*
+
+  Examples:
+
+  ```json
+  [
+      "https://example.org",
+      "https://www.example.org"
+  ]
+  ```
+
+
+- <a id="properties/cors_allowed_methods"></a>**`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/cors_allowed_methods/anyOf/0"></a>*array*
+
+      - <a id="properties/cors_allowed_methods/anyOf/0/items"></a>**Items** *(string)*
+
+    - <a id="properties/cors_allowed_methods/anyOf/1"></a>*null*
 
 
   Examples:
@@ -305,15 +305,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_headers/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_headers/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_headers/anyOf/1"></a>*null*
 
 
   Examples:
@@ -323,7 +323,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, the a newly correlation ID will be generated and used in the event header. Default: `true`.
+- <a id="properties/generate_correlation_id"></a>**`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, the a newly correlation ID will be generated and used in the event header. Default: `true`.
 
 
   Examples:
@@ -338,9 +338,9 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
+- <a id="properties/kafka_servers"></a>**`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
-  - **Items** *(string)*
+  - <a id="properties/kafka_servers/items"></a>**Items** *(string)*
 
 
   Examples:
@@ -352,17 +352,17 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
+- <a id="properties/kafka_security_protocol"></a>**`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
 
-- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+- <a id="properties/kafka_ssl_cafile"></a>**`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
 
-- **`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
+- <a id="properties/kafka_ssl_certfile"></a>**`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
 
-- **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
+- <a id="properties/kafka_ssl_keyfile"></a>**`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
+- <a id="properties/kafka_ssl_password"></a>**`kafka_ssl_password`** *(string, format: password, write-only)*: Optional password to be used for the client private key. Default: `""`.
 
-- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+- <a id="properties/kafka_max_message_size"></a>**`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
 
 
   Examples:
@@ -377,7 +377,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
+- <a id="properties/kafka_max_retries"></a>**`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
 
 
   Examples:
@@ -407,7 +407,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
+- <a id="properties/kafka_enable_dlq"></a>**`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
 
 
   Examples:
@@ -422,7 +422,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
+- <a id="properties/kafka_dlq_topic"></a>**`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
 
 
   Examples:
@@ -432,7 +432,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
+- <a id="properties/kafka_retry_backoff"></a>**`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
 
 
   Examples:
@@ -462,7 +462,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- <a id="properties/mongo_dsn"></a>**`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/. Length must be at least 1.
 
 
   Examples:
@@ -472,7 +472,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
+- <a id="properties/db_name"></a>**`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
 
 
   Examples:
@@ -482,13 +482,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`mongo_timeout`**: Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). Default: `null`.
+- <a id="properties/mongo_timeout"></a>**`mongo_timeout`**: Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). Default: `null`.
 
   - **Any of**
 
-    - *integer*: Exclusive minimum: `0`.
+    - <a id="properties/mongo_timeout/anyOf/0"></a>*integer*: Exclusive minimum: `0`.
 
-    - *null*
+    - <a id="properties/mongo_timeout/anyOf/1"></a>*null*
 
 
   Examples:
@@ -505,6 +505,77 @@ The service requires the following configuration parameters:
 
   ```json
   null
+  ```
+
+
+- <a id="properties/db_version_collection"></a>**`db_version_collection`** *(string, required)*: The name of the collection containing DB version information for this service.
+
+
+  Examples:
+
+  ```json
+  "ifrsDbVersions"
+  ```
+
+
+- <a id="properties/migration_wait_sec"></a>**`migration_wait_sec`** *(integer, required)*: The number of seconds to wait before checking the DB version again.
+
+
+  Examples:
+
+  ```json
+  5
+  ```
+
+
+  ```json
+  30
+  ```
+
+
+  ```json
+  180
+  ```
+
+
+- <a id="properties/migration_max_wait_sec"></a>**`migration_max_wait_sec`**: The maximum number of seconds to wait for migrations to complete before raising an error. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/migration_max_wait_sec/anyOf/0"></a>*integer*
+
+    - <a id="properties/migration_max_wait_sec/anyOf/1"></a>*null*
+
+
+  Examples:
+
+  ```json
+  null
+  ```
+
+
+  ```json
+  300
+  ```
+
+
+  ```json
+  600
+  ```
+
+
+  ```json
+  3600
+  ```
+
+
+- <a id="properties/file_validations_collection"></a>**`file_validations_collection`** *(string)*: The name of the collection used to store FileUploadValidationSuccess events. Default: `"fileValidations"`.
+
+
+  Examples:
+
+  ```json
+  "fileValidations"
   ```
 
 

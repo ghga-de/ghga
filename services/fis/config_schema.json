@@ -202,13 +202,12 @@
       "title": "File Interrogations Topic",
       "type": "string"
     },
-    "file_validations_collection": {
-      "default": "fileValidations",
-      "description": "The name of the collection used to store FileUploadValidationSuccess events.",
+    "interrogation_success_type": {
+      "description": "The type used for events informing about successful file validations.",
       "examples": [
-        "fileValidations"
+        "file_interrogation_success"
       ],
-      "title": "File Validations Collection",
+      "title": "Interrogation Success Type",
       "type": "string"
     },
     "host": {
@@ -487,6 +486,52 @@
         null
       ],
       "title": "Mongo Timeout"
+    },
+    "db_version_collection": {
+      "description": "The name of the collection containing DB version information for this service",
+      "examples": [
+        "ifrsDbVersions"
+      ],
+      "title": "Db Version Collection",
+      "type": "string"
+    },
+    "migration_wait_sec": {
+      "description": "The number of seconds to wait before checking the DB version again",
+      "examples": [
+        5,
+        30,
+        180
+      ],
+      "title": "Migration Wait Sec",
+      "type": "integer"
+    },
+    "migration_max_wait_sec": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+      "examples": [
+        null,
+        300,
+        600,
+        3600
+      ],
+      "title": "Migration Max Wait Sec"
+    },
+    "file_validations_collection": {
+      "default": "fileValidations",
+      "description": "The name of the collection used to store FileUploadValidationSuccess events.",
+      "examples": [
+        "fileValidations"
+      ],
+      "title": "File Validations Collection",
+      "type": "string"
     }
   },
   "required": [
@@ -496,9 +541,12 @@
     "private_key_path",
     "token_hashes",
     "file_interrogations_topic",
+    "interrogation_success_type",
     "kafka_servers",
     "mongo_dsn",
-    "db_name"
+    "db_name",
+    "db_version_collection",
+    "migration_wait_sec"
   ],
   "title": "ModSettings",
   "type": "object"
