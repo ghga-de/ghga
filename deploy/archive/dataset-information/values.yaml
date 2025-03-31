@@ -23,7 +23,7 @@ serviceInstanceIdConsumer: dins-consumer-1
 parameters:
   default:
     host: 0.0.0.0
-    db_connection_str: null
+    mongo_dsn: null
 
 containers:
 - name: rest
@@ -43,27 +43,34 @@ containers:
 topics:
 
   fileRegisteredEvent:
+    # as consumer
     topic:
-      name: file_registered_event_topic
+      name: file_internally_registered_topic
       value: internal-registrations
     types:
-      - name: file_registered_event_type
+      - name: file_internally_registered_type
         value: internal_file_registered
   filesToDelete:
+    # as consumer
     topic:
-      name: files_to_delete_topic
+      name: file_deletion_request_topic
       value: purges
+    types:
+      name: file_deletion_request_type
+      value: file_deletion_requested
   datasetUpsertionEvent:
+    # as consumer
     topic:
-      name: dataset_event_topic
+      name: dataset_change_topic
       value: metadata-datasets
     types:
-      - name: dataset_upsertion_event_type
+      - name: dataset_upsertion_type
         value: dataset_created
   datasetDeletionEvent:
+    # as consumer
     topic:
-      name: dataset_event_topic
+      name: dataset_change_topic
       value: metadata-datasets
     types:
-      - name: dataset_deletion_event_type
+      - name: dataset_deletion_type
         value: dataset_deleted

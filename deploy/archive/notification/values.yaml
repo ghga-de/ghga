@@ -19,7 +19,7 @@ serviceInstanceIdConsumer: ns-consumer-1
 
 parameters:
   default:
-    db_connection_str: null
+    mongo_dsn: null
     from_address: test@test.com
     html_email_template: >-
       <!DOCTYPE html>
@@ -57,8 +57,8 @@ containers:
 topics:
   notificationEvent:
     topic:
-      name: notification_event_topic
+      name: notification_topic
       value: notifications
     types:
-      - name: notification_event_type
+      - name: notification_type
         value: notification

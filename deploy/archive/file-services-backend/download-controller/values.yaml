@@ -22,15 +22,12 @@ serviceInstanceIdConsumer: dcs-consumer-1
 parameters:
   default:
     auth_key: '{}'
-    db_connection_str: null
+    mongo_dsn: null
     drs_server_uri: drs://localhost:8080/
     ekss_base_url: http://encryption-key-store:8080
     host: "0.0.0.0"
     presigned_url_expires_after: 10
     object_storages: {}
-    unstaged_download_collection: unstaged-download-requested
-    db_version_collection: dcsDbVersions
-    migration_wait_sec: 10
 
 containers:
 - name: rest
@@ -49,38 +46,50 @@ containers:
 
 topics:
   fileRegisteredEvent:
+    # as producer
     topic:
-      name: file_registered_event_topic
+      name: file_registered_for_download_topic
       value: downloads
     types:
-      - name: file_registered_event_type
+      - name: file_registered_for_download_type
         value: drs_object_registered
   fileDeletedEvent:
+    # as producer
     topic:
-      name: file_deleted_event_topic
+      name: file_deleted_topic
       value: downloads
     types:
-      - name: file_deleted_event_type
+      - name: file_deleted_type
         value: drs_object_deleted
   filesToRegister:
+    # as consumer
     topic:
-      name: files_to_register_topic
+      name: file_internally_registered_topic
       value: internal-registrations
     types:
-      - name: files_to_register_type
+      - name: file_internally_registered_type
         value: internal_file_registered
   filesToDelete:
+    # as consumer
     topic:
-      name: files_to_delete_topic
+      name: file_deletion_request_topic
       value: purges
+    type:
+      name: file_deletion_request_type
+      value: file_deletion_requested
   downloadServed:
+    # as producer
     topic:
-      name: download_served_event_topic
+      name: download_served_topic
       value: downloads
     types:
-      - name: download_served_event_type
+      - name: download_served_type
         value: drs_object_served
   unstagedDownload:
+    # as producer
     topic:
-      name: unstaged_download_event_topic
-      value: downloads
+      name: files_to_stage_topic
+      value: staging-requests  # must differ from 'downloads' topic vals
+    type:
+      name: files_to_stage_type
+      value: file_staging_requested

@@ -21,7 +21,7 @@ parameters:
     private_key_path: <Please fill>
     vault_url: http://vault:8200
     vault_path: ekss
-    db_connection_str: null
+    mongo_dsn: null
     token_hashes: []
 
 containers:
@@ -34,8 +34,11 @@ containers:
 
 
 topics:
-
   fileUploadValidationSuccess:
+    # as producer
     topic:
-      name: file_upload_validation_success_topic
+      name: file_interrogations_topic
       value: interrogations
+    type:
+      name: interrogation_success_type
+      value: file_interrogation_success
