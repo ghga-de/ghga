@@ -96,7 +96,7 @@ ekss --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`server_private_key_path`** *(string, format: path, required)*: Path to the Crypt4GH private key file.
+- <a id="properties/server_private_key_path"></a>**`server_private_key_path`** *(string, format: path, required)*: Path to the Crypt4GH private key file.
 
 
   Examples:
@@ -106,7 +106,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`server_public_key_path`** *(string, format: path, required)*: Path to the Crypt4GH public key file.
+- <a id="properties/server_public_key_path"></a>**`server_public_key_path`** *(string, format: path, required)*: Path to the Crypt4GH public key file.
 
 
   Examples:
@@ -116,19 +116,19 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`private_key_passphrase`**: Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. Default: `null`.
+- <a id="properties/private_key_passphrase"></a>**`private_key_passphrase`**: Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/private_key_passphrase/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/private_key_passphrase/anyOf/1"></a>*null*
 
-- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
-- **`service_name`** *(string)*: Default: `"encryption_key_store"`.
+- <a id="properties/service_name"></a>**`service_name`** *(string)*: Default: `"encryption_key_store"`.
 
-- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
+- <a id="properties/service_instance_id"></a>**`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
 
   Examples:
@@ -138,13 +138,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
+- <a id="properties/log_format"></a>**`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/log_format/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/log_format/anyOf/1"></a>*null*
 
 
   Examples:
@@ -159,9 +159,9 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+- <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`vault_url`** *(string, required)*: URL of the vault instance to connect to.
+- <a id="properties/vault_url"></a>**`vault_url`** *(string, required)*: URL of the vault instance to connect to.
 
 
   Examples:
@@ -171,13 +171,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_role_id`**: Vault role ID to access a specific prefix. Default: `null`.
+- <a id="properties/vault_role_id"></a>**`vault_role_id`**: Vault role ID to access a specific prefix. Default: `null`.
 
   - **Any of**
 
-    - *string, format: password*
+    - <a id="properties/vault_role_id/anyOf/0"></a>*string, format: password*
 
-    - *null*
+    - <a id="properties/vault_role_id/anyOf/1"></a>*null*
 
 
   Examples:
@@ -187,13 +187,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_secret_id`**: Vault secret ID to access a specific prefix. Default: `null`.
+- <a id="properties/vault_secret_id"></a>**`vault_secret_id`**: Vault secret ID to access a specific prefix. Default: `null`.
 
   - **Any of**
 
-    - *string, format: password*
+    - <a id="properties/vault_secret_id/anyOf/0"></a>*string, format: password*
 
-    - *null*
+    - <a id="properties/vault_secret_id/anyOf/1"></a>*null*
 
 
   Examples:
@@ -203,13 +203,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_verify`**: SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification. Default: `true`.
+- <a id="properties/vault_verify"></a>**`vault_verify`**: SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification. Default: `true`.
 
   - **Any of**
 
-    - *boolean*
+    - <a id="properties/vault_verify/anyOf/0"></a>*boolean*
 
-    - *string*
+    - <a id="properties/vault_verify/anyOf/1"></a>*string*
 
 
   Examples:
@@ -219,9 +219,9 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
+- <a id="properties/vault_path"></a>**`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
 
-- **`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
+- <a id="properties/vault_secrets_mount_point"></a>**`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
 
 
   Examples:
@@ -231,13 +231,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_kube_role`**: Vault role name used for Kubernetes authentication. Default: `null`.
+- <a id="properties/vault_kube_role"></a>**`vault_kube_role`**: Vault role name used for Kubernetes authentication. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/vault_kube_role/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/vault_kube_role/anyOf/1"></a>*null*
 
 
   Examples:
@@ -247,13 +247,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_auth_mount_point`**: Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. Default: `null`.
+- <a id="properties/vault_auth_mount_point"></a>**`vault_auth_mount_point`**: Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/vault_auth_mount_point/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/vault_auth_mount_point/anyOf/1"></a>*null*
 
 
   Examples:
@@ -273,31 +273,31 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
+- <a id="properties/service_account_token_path"></a>**`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
 
-- **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
+- <a id="properties/host"></a>**`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
-- **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
+- <a id="properties/port"></a>**`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 
-- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
+- <a id="properties/auto_reload"></a>**`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
-- **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+- <a id="properties/workers"></a>**`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
 
-- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
+- <a id="properties/api_root_path"></a>**`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
 
-- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
+- <a id="properties/openapi_url"></a>**`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
 
-- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
+- <a id="properties/docs_url"></a>**`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
-- **`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
+- <a id="properties/cors_allowed_origins"></a>**`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_origins/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_origins/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_origins/anyOf/1"></a>*null*
 
 
   Examples:
@@ -310,13 +310,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
+- <a id="properties/cors_allow_credentials"></a>**`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
 
   - **Any of**
 
-    - *boolean*
+    - <a id="properties/cors_allow_credentials/anyOf/0"></a>*boolean*
 
-    - *null*
+    - <a id="properties/cors_allow_credentials/anyOf/1"></a>*null*
 
 
   Examples:
@@ -329,15 +329,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
+- <a id="properties/cors_allowed_methods"></a>**`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_methods/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_methods/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_methods/anyOf/1"></a>*null*
 
 
   Examples:
@@ -349,15 +349,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_headers/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_headers/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_headers/anyOf/1"></a>*null*
 
 
   Examples:
@@ -367,7 +367,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+- <a id="properties/generate_correlation_id"></a>**`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
 
   Examples:
