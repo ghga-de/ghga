@@ -46,4 +46,4 @@ USER appuser
 ENV PYTHONUNBUFFERED=1
 
 # run auth service
-ENTRYPOINT ["auth-service"]
+ENTRYPOINT ["opentelemetry-instrument", "auth-service"]

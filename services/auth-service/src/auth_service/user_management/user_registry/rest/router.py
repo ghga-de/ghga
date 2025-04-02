@@ -22,6 +22,7 @@ from typing import Annotated
 from fastapi import APIRouter, Path, Query, Response
 from fastapi.exceptions import HTTPException
 from hexkit.protocols.dao import ResourceNotFoundError
+from opentelemetry import trace
 
 from auth_service.auth_adapter.deps import UserTokenDaoDependency
 from auth_service.user_management.claims_repository.deps import ClaimDaoDependency
@@ -51,6 +52,7 @@ from ..models.users import (
 __all__ = ["router"]
 
 router = APIRouter()
+tracer = trace.get_tracer("auth_service.user_management.user_registry")
 
 INITIAL_USER_STATUS = UserStatus.ACTIVE
 
@@ -72,6 +74,7 @@ INITIAL_USER_STATUS = UserStatus.ACTIVE
     },
     status_code=201,
 )
+@tracer.start_as_current_span("router.post_user")
 async def post_user(
     user_data: UserRegisteredData,
     user_registry: UserRegistryDependency,
@@ -118,6 +121,7 @@ async def post_user(
     },
     status_code=204,
 )
+@tracer.start_as_current_span("router.put_user")
 async def put_user(
     user_data: UserBasicData,
     id_: Annotated[
@@ -167,6 +171,7 @@ async def put_user(
     },
     status_code=200,
 )
+@tracer.start_as_current_span("router.get_user")
 async def get_user(
     id_: Annotated[
         str,
@@ -215,6 +220,7 @@ async def get_user(
     },
     status_code=201,
 )
+@tracer.start_as_current_span("router.patch_user")
 async def patch_user(
     user_data: UserModifiableData,
     id_: Annotated[
@@ -274,6 +280,7 @@ async def patch_user(
     },
     status_code=201,
 )
+@tracer.start_as_current_span("router.delete_user")
 async def delete_user(
     id_: Annotated[
         str,
@@ -332,6 +339,7 @@ async def delete_user(
     },
     status_code=200,
 )
+@tracer.start_as_current_span("router.get_user_ivas")
 async def get_user_ivas(
     user_id: Annotated[
         str,
@@ -371,6 +379,7 @@ async def get_user_ivas(
     },
     status_code=201,
 )
+@tracer.start_as_current_span("router.post_user_iva")
 async def post_user_iva(
     user_id: Annotated[
         str,
@@ -417,6 +426,7 @@ async def post_user_iva(
     },
     status_code=204,
 )
+@tracer.start_as_current_span("router.delete_user_iva")
 async def delete_user_iva(
     user_id: Annotated[
         str,
@@ -466,6 +476,7 @@ async def delete_user_iva(
     },
     status_code=204,
 )
+@tracer.start_as_current_span("router.unverify_iva")
 async def unverify_iva(
     iva_id: Annotated[
         str,
@@ -504,6 +515,7 @@ async def unverify_iva(
     },
     status_code=204,
 )
+@tracer.start_as_current_span("router.request_code_for_iva")
 async def request_code_for_iva(
     iva_id: Annotated[
         str,
@@ -549,6 +561,7 @@ async def request_code_for_iva(
     },
     status_code=201,
 )
+@tracer.start_as_current_span("router.create_code_for_iva")
 async def create_code_for_iva(
     iva_id: Annotated[
         str,
@@ -599,6 +612,7 @@ async def create_code_for_iva(
     },
     status_code=204,
 )
+@tracer.start_as_current_span("router.confirm_code_for_iva_transmitted")
 async def confirm_code_for_iva_transmitted(
     iva_id: Annotated[
         str,
@@ -645,6 +659,7 @@ async def confirm_code_for_iva_transmitted(
     },
     status_code=204,
 )
+@tracer.start_as_current_span("router.validate_code_for_iva")
 async def validate_code_for_iva(
     iva_id: Annotated[
         str,
@@ -702,6 +717,7 @@ async def validate_code_for_iva(
     },
     status_code=200,
 )
+@tracer.start_as_current_span("router.get_all_ivas")
 async def get_all_ivas(
     user_registry: UserRegistryDependency,
     _auth_context: StewardAuthContext,

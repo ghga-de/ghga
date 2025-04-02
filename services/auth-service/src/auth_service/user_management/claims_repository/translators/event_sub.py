@@ -21,8 +21,11 @@ from ghga_event_schemas.pydantic_ import MetadataDatasetID
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from opentelemetry import trace
 
 from ..ports.deletion import DatasetDeletionPort
+
+tracer = trace.get_tracer("auth_service.user_management.claims_repository")
 
 
 class EventSubTranslatorConfig(DatasetEventsConfig):
@@ -45,6 +48,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         self._config = config
         self._handler = handler
 
+    @tracer.start_as_current_span("EventSubTranslator._consume_validated")
     async def _consume_validated(
         self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
     ) -> None:

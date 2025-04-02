@@ -19,6 +19,7 @@
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
+from opentelemetry import trace
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -26,6 +27,8 @@ from ..models.ivas import Iva
 from ..ports.event_pub import EventPublisherPort
 
 __all__ = ["EventPubTranslator", "EventPubTranslatorConfig"]
+
+tracer = trace.get_tracer("auth_service.user_management.user_registry")
 
 
 class EventPubTranslatorConfig(BaseSettings):
@@ -62,6 +65,7 @@ class EventPubTranslator(EventPublisherPort):
         self._config = config
         self._event_publisher = event_publisher
 
+    @tracer.start_as_current_span("EventPubTranslator.publish_2fa_recreated")
     async def publish_2fa_recreated(self, *, user_id: str) -> None:
         """Publish an event relaying that the 2nd factor of a user was recreated."""
         payload = event_schemas.UserID(
@@ -74,6 +78,7 @@ class EventPubTranslator(EventPublisherPort):
             topic=self._config.auth_events_topic,
         )
 
+    @tracer.start_as_current_span("EventPubTranslator.publish_iva_state_changed")
     async def publish_iva_state_changed(self, *, iva: Iva) -> None:
         """Publish an event relaying that the state of a user IVA has been changed."""
         payload: JsonObject = event_schemas.UserIvaState(
@@ -89,6 +94,7 @@ class EventPubTranslator(EventPublisherPort):
             topic=self._config.iva_state_changed_topic,
         )
 
+    @tracer.start_as_current_span("EventPubTranslator.publish_ivas_reset")
     async def publish_ivas_reset(self, *, user_id: str) -> None:
         """Publish an event relaying that all IVAs of the user have been reset."""
         payload = event_schemas.UserIvaState(

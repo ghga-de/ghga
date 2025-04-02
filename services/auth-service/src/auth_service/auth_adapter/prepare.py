@@ -23,6 +23,11 @@ from ghga_service_commons.api import configure_app
 from hexkit.providers.akafka import KafkaEventPublisher
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from auth_service.user_management.claims_repository.deps import get_claim_dao
 from auth_service.user_management.claims_repository.translators.dao import (
@@ -56,6 +61,7 @@ __all__ = ["prepare_rest_app"]
 @asynccontextmanager
 async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize the REST API app along with all its dependencies."""
+    prepare_opentelemetry()
     app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
     configure_app(app, config=config)
     add_basic_auth_exception_handler(app, config)
@@ -103,3 +109,12 @@ async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
         app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
         yield app
+
+
+def prepare_opentelemetry():
+    """Initialize OpenTelemetry tracing."""
+    resource = Resource(attributes={SERVICE_NAME: "Auth Service - Auth Adapter"})
+    trace_provider = TracerProvider(resource=resource)
+    processor = BatchSpanProcessor(OTLPSpanExporter())
+    trace_provider.add_span_processor(processor)
+    trace.set_tracer_provider(trace_provider)
