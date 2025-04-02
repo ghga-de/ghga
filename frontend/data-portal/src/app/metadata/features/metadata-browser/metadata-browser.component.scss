@@ -9,3 +9,12 @@ mat-chip-set.filter-chips mat-chip {
     )
   );
 }
+
+button.toggle-filters {
+  @include mat.button-overrides(
+    (
+      outlined-outline-color: var(--mat-sys-primary),
+      outlined-label-text-color: var(--mat-sys-primary),
+    )
+  );
+}

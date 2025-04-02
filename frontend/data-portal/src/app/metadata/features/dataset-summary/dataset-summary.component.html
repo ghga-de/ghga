@@ -1,5 +1,5 @@
 <div class="pt-4 text-sm">
-  <div class="float-right ms-6 flex w-52 flex-col gap-y-2">
+  <div class="mb-4 flex flex-col gap-y-2 sm:float-right sm:w-52 md:ms-6 md:mb-0">
     @if (hitContent().alias !== '') {
       <a
         mat-stroked-button
@@ -33,8 +33,8 @@
       }
     </p>
   }
-  <div class="mt-8 mb-4 flex pe-[15%]">
-    <div class="flex grow flex-col gap-y-8">
+  <div class="mt-8 mb-4 sm:flex lg:pe-[15%]">
+    <div class="mb-8 flex grow flex-col gap-y-8 sm:mb-0">
       <div class="flex">
         <div class="me-3 pt-4 text-5xl text-neutral-700">
           <mat-icon inline>book_2</mat-icon>
@@ -54,6 +54,7 @@
           </p>
         </div>
       </div>
+
       <div class="flex">
         <div class="me-3 pt-4 text-5xl text-neutral-700">
           <mat-icon inline>genetics</mat-icon>

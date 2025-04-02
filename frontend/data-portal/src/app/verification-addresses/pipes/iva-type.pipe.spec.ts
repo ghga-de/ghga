@@ -27,7 +27,7 @@ describe('IvaTypePipe', () => {
     expect(result).toStrictEqual({ name: 'Unknown type', icon: 'warning' });
   });
 
-  it('should properly transform the SMS type', () => {
+  it('should properly transform the Phone type', () => {
     const pipe = new IvaTypePipe();
     const result = pipe.transform(IvaType['Phone']);
     expect(result).toStrictEqual({

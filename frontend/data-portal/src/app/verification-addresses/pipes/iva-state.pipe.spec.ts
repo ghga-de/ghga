@@ -33,7 +33,7 @@ describe('IvaStatePipe', () => {
     expect(result).toStrictEqual({ name: 'Code Requested', class: 'text-warning' });
   });
 
-  it('should work properly for the CodeRequested state', () => {
+  it('should work properly for the Verified state', () => {
     const pipe = new IvaStatePipe();
     const result = pipe.transform(IvaState.Verified);
     expect(result).toStrictEqual({ name: 'Verified', class: 'text-success' });

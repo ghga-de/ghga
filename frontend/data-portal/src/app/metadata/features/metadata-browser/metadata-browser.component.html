@@ -1,5 +1,5 @@
 <div class="grid grid-cols-12 grid-rows-none gap-x-5">
-  <div class="col-span-9 col-start-4">
+  <div class="col-span-12 lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
     <div class="flex w-full justify-between pb-4">
       <mat-chip-set aria-label="search and filters" class="filter-chips">
         @if (lastSearchQuery() !== '') {
@@ -50,7 +50,24 @@
       </mat-chip-set>
     </div>
   </div>
-  <aside class="col-span-3">
+  <div class="toggle-filters col-span-12 mb-3 lg:hidden">
+    <button
+      mat-stroked-button
+      class="toggle-filters w-full font-bold"
+      (click)="displayFilters = !displayFilters"
+    >
+      <mat-icon>search</mat-icon><mat-icon>filter_alt</mat-icon>
+      @if (displayFilters) {
+        Close search and filters
+      } @else {
+        Search and filter results
+      }
+    </button>
+  </div>
+  <aside
+    [class.hidden]="!displayFilters"
+    class="col-span-12 mb-4 lg:col-span-4 lg:mb-0 lg:block xl:col-span-3"
+  >
     <mat-card appearance="outlined" class="p-3">
       <form [formGroup]="searchFormGroup" (keydown.enter)="$event.preventDefault()">
         <mat-form-field class="w-full">
@@ -116,9 +133,18 @@
           </button>
         </div>
       </form>
+      <div class="mt-6 lg:hidden">
+        <button
+          mat-stroked-button
+          class="toggle-filters w-full"
+          (click)="displayFilters = !displayFilters"
+        >
+          Close filters
+        </button>
+      </div>
     </mat-card>
   </aside>
-  <div class="col-span-9 col-start-4">
+  <div class="col-span-12 lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
     <app-search-result-list (paginate)="paginate($event)"></app-search-result-list>
   </div>
 </div>

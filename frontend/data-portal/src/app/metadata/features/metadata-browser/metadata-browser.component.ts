@@ -71,6 +71,8 @@ export class MetadataBrowserComponent implements OnInit {
   numResults = computed(() => this.searchResults().count);
   loading = computed(() => this.#searchResults.isLoading());
 
+  displayFilters = false;
+
   /**
    * On init, define the default values of the search variables
    */

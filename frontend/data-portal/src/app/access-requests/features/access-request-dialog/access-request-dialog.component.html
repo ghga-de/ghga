@@ -1,4 +1,4 @@
-<div class="w-full p-8">
+<div class="w-full sm:p-8">
   <h2 mat-dialog-title>
     <span class="fa-file-download"></span>Request access for dataset
     {{ data.datasetID }}
@@ -75,10 +75,10 @@
       }
     </mat-form-field>
   </mat-dialog-content>
-  <mat-dialog-actions>
+  <mat-dialog-actions class="gap-y-2">
     <button
       mat-stroked-button
-      class="mr-2"
+      class="sm:mr-2"
       (click)="cancel()"
       data-umami-event="Create Access Request Cancel Clicked"
     >

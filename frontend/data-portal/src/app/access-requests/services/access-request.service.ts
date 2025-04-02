@@ -47,7 +47,7 @@ export class AccessRequestService {
         next: () => {
           this.userAccessRequests.reload();
           this.#notification.showSuccess(
-            'Your request has been submitted successfully.',
+            'Your access request has been submitted successfully.',
           );
         },
         error: (err) => {
