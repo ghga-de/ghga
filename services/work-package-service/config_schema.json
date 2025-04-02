@@ -283,6 +283,7 @@
       "type": "array"
     },
     "auth_check_claims": {
+      "additionalProperties": true,
       "default": {
         "id": null,
         "name": null,

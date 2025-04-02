@@ -45,5 +45,5 @@ USER appuser
 # set environment
 ENV PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["wps"]
+ENTRYPOINT ["opentelemetry-instrument", "wps"]
 CMD ["run-rest"]

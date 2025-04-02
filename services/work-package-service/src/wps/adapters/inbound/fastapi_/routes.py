@@ -20,6 +20,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
+from opentelemetry import trace
 
 from wps.adapters.inbound.fastapi_.auth import UserAuthContext, WorkPackageAccessToken
 from wps.adapters.inbound.fastapi_.dummies import WorkPackageRepositoryDummy
@@ -34,6 +35,7 @@ from wps.core.models import (
 __all__ = ["router"]
 
 log = logging.getLogger(__name__)
+tracer = trace.get_tracer("wps")
 
 router = APIRouter()
 
@@ -44,6 +46,7 @@ router = APIRouter()
     tags=["WorkPackages"],
     status_code=status.HTTP_200_OK,
 )
+@tracer.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}
@@ -65,6 +68,7 @@ async def health():
     },
     status_code=201,
 )
+@tracer.start_as_current_span("routes.create_work_package")
 async def create_work_package(
     creation_data: WorkPackageCreationData,
     repository: WorkPackageRepositoryDummy,
@@ -95,6 +99,7 @@ async def create_work_package(
     },
     status_code=200,
 )
+@tracer.start_as_current_span("routes.get_work_package")
 async def get_work_package(
     work_package_id: str,
     repository: WorkPackageRepositoryDummy,
@@ -134,6 +139,7 @@ async def get_work_package(
     },
     status_code=201,
 )
+@tracer.start_as_current_span("routes.create_work_order_token")
 async def create_work_order_token(
     work_package_id: str,
     file_id: str,
@@ -177,6 +183,7 @@ async def create_work_order_token(
     },
     status_code=200,
 )
+@tracer.start_as_current_span("routes.get_datasets")
 async def get_datasets(
     user_id: str,
     repository: WorkPackageRepositoryDummy,
