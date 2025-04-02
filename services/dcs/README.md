@@ -41,7 +41,7 @@ further details.
 
 We recommend using the provided Docker container.
 
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/download-controller-service):
+A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/download-controller-service):
 ```bash
 docker pull ghga/download-controller-service:5.0.0
 ```
@@ -754,9 +754,9 @@ to talk to an S3 service in the backend.<br>  Args:
 
 A template YAML for configuring the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
-Please adapt it, rename it to `.dcs.yaml`, and place it into one of the following locations:
-- in the current working directory were you are execute the service (on unix: `./.dcs.yaml`)
-- in your home directory (on unix: `~/.dcs.yaml`)
+Please adapt it, rename it to `.dcs.yaml`, and place it in one of the following locations:
+- in the current working directory where you execute the service (on Linux: `./.dcs.yaml`)
+- in your home directory (on Linux: `~/.dcs.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -770,7 +770,7 @@ e.g. for the `host` set an environment variable named `dcs_host`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 
-To using file secrets please refer to the
+To use file secrets, please refer to the
 [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support)
 of the pydantic documentation.
 
@@ -805,8 +805,8 @@ This will give you a full-fledged, pre-configured development environment includ
 - a pre-configured debugger
 - automatic license-header insertion
 
-Moreover, inside the devcontainer, a convenience commands `dev_install` is available.
-It installs the service with all development dependencies, installs pre-commit.
+Moreover, inside the devcontainer, a command `dev_install` is available for convenience.
+It installs the service with all development dependencies, and it installs pre-commit.
 
 The installation is performed automatically when you build the devcontainer. However,
 if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the

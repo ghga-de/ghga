@@ -25,11 +25,13 @@ from ghga_event_schemas.configs import (
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from opentelemetry import trace
 
 from dcs.core import models
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 
 log = logging.getLogger(__name__)
+tracer = trace.get_tracer("dcs")
 
 __all__ = [
     "EventSubTranslator",
@@ -66,6 +68,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         self._data_repository = data_repository
         self._config = config
 
+    @tracer.start_as_current_span("EventSubTranslator._consume_files_to_register")
     async def _consume_files_to_register(self, *, payload: JsonObject) -> None:
         """Consume file registration events."""
         validated_payload = get_validated_payload(
@@ -84,6 +87,7 @@ class EventSubTranslator(EventSubscriberProtocol):
 
         await self._data_repository.register_new_file(file=file)
 
+    @tracer.start_as_current_span("EventSubTranslator._consume_file_deletion_request")
     async def _consume_file_deletion_request(self, *, payload: JsonObject) -> None:
         """Consume file deletion request events."""
         validated_payload = get_validated_payload(

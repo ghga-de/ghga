@@ -17,6 +17,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
+from opentelemetry import trace
 
 from dcs.adapters.inbound.fastapi_ import (
     dummies,
@@ -28,6 +29,8 @@ from dcs.adapters.inbound.fastapi_ import (
 from dcs.core.auth_policies import WorkOrderContext
 from dcs.core.models import DrsObjectResponseModel
 from dcs.ports.inbound.data_repository import DataRepositoryPort
+
+tracer = trace.get_tracer("dcs")
 
 router = APIRouter()
 
@@ -71,6 +74,7 @@ RESPONSES = {
     tags=["DownloadControllerService"],
     status_code=status.HTTP_200_OK,
 )
+@tracer.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}
@@ -92,6 +96,7 @@ async def health():
         status.HTTP_500_INTERNAL_SERVER_ERROR: RESPONSES["internalServerError"],
     },
 )
+@tracer.start_as_current_span("routes.get_drs_object")
 async def get_drs_object(
     object_id: str,
     data_repository: Annotated[DataRepositoryPort, Depends(dummies.data_repo_port)],
@@ -145,6 +150,7 @@ async def get_drs_object(
         status.HTTP_500_INTERNAL_SERVER_ERROR: RESPONSES["internalServerError"],
     },
 )
+@tracer.start_as_current_span("routes.get_envelope")
 async def get_envelope(
     object_id: str,
     work_order_context: Annotated[
