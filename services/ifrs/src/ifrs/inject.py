@@ -23,6 +23,11 @@ from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import PersistentKafkaPublisher
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from ifrs.adapters.inbound.event_sub import EventSubTranslator
 from ifrs.adapters.outbound import dao
@@ -54,6 +59,12 @@ async def get_persistent_publisher(
 @asynccontextmanager
 async def prepare_core(*, config: Config) -> AsyncGenerator[FileRegistryPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
+    resource = Resource(attributes={SERVICE_NAME: "Internal File Registry Service"})
+    trace_provider = TracerProvider(resource=resource)
+    processor = BatchSpanProcessor(OTLPSpanExporter())
+    trace_provider.add_span_processor(processor)
+    trace.set_tracer_provider(trace_provider)
+
     dao_factory = MongoDbDaoFactory(config=config)
     object_storages = S3ObjectStorages(config=config)
     file_metadata_dao = await dao.get_file_metadata_dao(dao_factory=dao_factory)
