@@ -312,7 +312,12 @@ export default [
         {
           type: 'tooling',
           mode: 'file',
-          pattern: ['jest.config.ts', 'setup-jest.ts', 'playwright.config.ts'],
+          pattern: [
+            'jest.config.ts',
+            'setup-jest.ts',
+            'playwright.config.ts',
+            'playwright.setup.ts',
+          ],
         },
       ],
     },

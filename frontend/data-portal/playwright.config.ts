@@ -82,5 +82,8 @@ export default defineConfig({
     command: './run.js --dev',
     url: 'http://127.0.0.1:8080',
     reuseExistingServer: !process.env.CI,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    timeout: 60_000, // wait at most 60 seconds for the server to start
   },
 });

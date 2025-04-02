@@ -18,6 +18,10 @@ public/config.js
 # Environment files
 **/*.env
 
+# Override files
+
+**/*.local.yml
+
 # Test certificates
 *.pem
 

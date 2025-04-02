@@ -170,11 +170,11 @@ Like for unit testing, you can also [use the VS Code extension for Playwright](h
 
 #### Issues relating to headed execution
 
-In order for the headed execution to work in the dev container, an X-Server must be running on the host.
+In order for the headed execution to work in the dev container, an X11 server must be running on the host.
 
-On macOs, you can use [XQuartz](https://www.xquartz.org/). On Windows with WSL 2, you can use the built-in WSLg as X-Server. See [here](https://github.com/microsoft/wslg/wiki/Diagnosing-%22cannot-open-display%22-type-issues-with-WSLg) if that is not working properly.
+On macOs, you can use [XQuartz](https://www.xquartz.org/). On Windows with WSL 2, you can use the built-in WSLg as X11 server. See [here](https://github.com/microsoft/wslg/wiki/Diagnosing-%22cannot-open-display%22-type-issues-with-WSLg) if that is not working properly.
 
-The directory `/tmp/.X11-unix` should exist and should be mounted on the corresponding host directory, which is `/mnt/wslg/.X11-unix` for WSLg. If you run `ls /tmp/.X11-unix`, it should show `X0`. If that is not the case, you may need to add a volume mount manually in a `docker-compose.override.yml` file.
+The directory `/tmp/.X11-unix` should exist and should be mounted on the corresponding host directory, which is `/mnt/wslg/.X11-unix` for WSLg. If you run `ls /tmp/.X11-unix`, it should show `X0`. If that is not the case, you may need to add or modify volume mounts manually in the `docker-compose.local.yml` file, of which a suitable version is created for you on startup.
 
 ## The Architecture Matrix
 
