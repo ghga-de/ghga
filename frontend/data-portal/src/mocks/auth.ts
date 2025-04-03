@@ -20,6 +20,8 @@ const INITIAL_LOGIN_STATE = 'Authenticated' as LoginState;
 const VALID_TOTP_CODE = '123456';
 
 const CONFIG = window.config;
+CONFIG.oidc_authorization_url = null;
+CONFIG.oidc_use_discovery = true;
 const AUTH_URL = '/api/auth';
 const LOGIN_URL = `${AUTH_URL}/rpc/login`;
 const LOGOUT_URL = `${AUTH_URL}/rpc/logout`;
@@ -121,6 +123,18 @@ export function getLoginHeaders(): Record<string, string> | null {
     'Set-Cookie': 'session=test-session; SameSite=lax',
   };
 }
+
+/**
+ * A short time after loading, check if this is an OIDC callback
+ */
+window.setTimeout(() => {
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+  if (params.get('client_id') === OIDC_CLIENT_ID && params.has('redirect_uri')) {
+    console.info('Mock login completed with callback, removing query params.');
+    window.history.replaceState(null, '', `${url.origin}${url.pathname}`);
+  }
+}, 1000);
 
 /**
  * MSW handlers for auth endpoints

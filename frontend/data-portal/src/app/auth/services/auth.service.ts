@@ -172,10 +172,16 @@ export class AuthService {
 
     const metadata: Partial<OidcMetadata> = {
       issuer: config.oidcAuthorityUrl,
-      authorization_endpoint: config.oidcAuthorizationUrl,
-      token_endpoint: config.oidcTokenUrl,
-      userinfo_endpoint: config.oidcUserInfoUrl,
     };
+    if (config.oidcAuthorizationUrl) {
+      metadata.authorization_endpoint = config.oidcAuthorizationUrl;
+    }
+    if (config.oidcTokenUrl) {
+      metadata.token_endpoint = config.oidcTokenUrl;
+    }
+    if (config.oidcUserInfoUrl) {
+      metadata.userinfo_endpoint = config.oidcUserInfoUrl;
+    }
 
     /**
      * If the "use_discovery" is true, we use the OIDC discovery mechanism

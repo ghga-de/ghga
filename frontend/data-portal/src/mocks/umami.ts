@@ -9,14 +9,16 @@ import { http, RequestHandler } from 'msw';
 const CONFIG = window.config;
 let umamiUrl = CONFIG.umami_url;
 
-umamiUrl = umamiUrl.slice(0, umamiUrl.indexOf('/', 8)) || 'http://umami.dev';
-umamiUrl += '/*';
+export const umamiHandlers: RequestHandler[] = [];
 
-export const umamiHandler: RequestHandler = http.post(
-  umamiUrl,
-  async ({ request }: { request: Request }) => {
-    const body = await request.json();
-    const payload = body.payload;
-    console.debug('Umami tracker called with this payload:', payload);
-  },
-);
+if (umamiUrl) {
+  umamiUrl = umamiUrl.slice(0, umamiUrl.indexOf('/', 8)) + '/*';
+
+  umamiHandlers.push(
+    http.post(umamiUrl, async ({ request }: { request: Request }) => {
+      const body = await request.json();
+      const payload = body.payload;
+      console.debug('Umami tracker called with this payload:', payload);
+    }),
+  );
+}

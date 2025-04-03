@@ -18,9 +18,9 @@ interface Config {
   oidc_redirect_url: string;
   oidc_scope: string;
   oidc_authority_url: string;
-  oidc_authorization_url: string;
-  oidc_token_url: string;
-  oidc_userinfo_url: string;
+  oidc_authorization_url: string | null;
+  oidc_token_url: string | null;
+  oidc_userinfo_url: string | null;
   oidc_use_discovery: boolean;
   oidc_account_url: string;
   mock_api: boolean;
@@ -30,8 +30,8 @@ interface Config {
   access_grant_min_days: number;
   access_grant_max_days: number;
   default_access_duration_days: number;
-  umami_url: string;
-  umami_website_id: string;
+  umami_url: string | null;
+  umami_website_id: string | null;
 }
 
 declare global {
@@ -161,31 +161,29 @@ export class ConfigService {
 
   /**
    * Gets the OIDC authorization URL from the config object
-   * @returns the OIDC authorization URL
+   * @returns the OIDC authorization URL or null (use oidcUseDiscovery)
    */
-  get oidcAuthorizationUrl(): string {
-    return new URL(
-      this.#config.oidc_authorization_url,
-      withEndSlash(this.oidcAuthorityUrl),
-    ).href;
+  get oidcAuthorizationUrl(): string | null {
+    const url = this.#config.oidc_authorization_url;
+    return url ? new URL(url, withEndSlash(this.oidcAuthorityUrl)).href : null;
   }
 
   /**
    * Gets the OIDC token URL from the config object
-   * @returns the OIDC token URL
+   * @returns the OIDC token URL or null (use oidcUseDiscovery)
    */
-  get oidcTokenUrl(): string {
-    return new URL(this.#config.oidc_token_url, withEndSlash(this.oidcAuthorityUrl))
-      .href;
+  get oidcTokenUrl(): string | null {
+    const url = this.#config.oidc_token_url;
+    return url ? new URL(url, withEndSlash(this.oidcAuthorityUrl)).href : null;
   }
 
   /**
    * Gets the OIDC userinfo URL from the config object
    * @returns the OIDC userinfo URL
    */
-  get oidcUserInfoUrl(): string {
-    return new URL(this.#config.oidc_userinfo_url, withEndSlash(this.oidcAuthorityUrl))
-      .href;
+  get oidcUserInfoUrl(): string | null {
+    const url = this.#config.oidc_userinfo_url;
+    return url ? new URL(url, withEndSlash(this.oidcAuthorityUrl)).href : null;
   }
 
   /**
@@ -238,18 +236,18 @@ export class ConfigService {
 
   /**
    * Gets the URL of the Umami backend that the analytics data will be reported to
-   * @returns the URL of the Umami backend
+   * @returns the URL of the Umami backend or null if not configured
    */
-  get umami_url(): string {
-    return this.#config.umami_url;
+  get umami_url(): string | null {
+    return this.#config.umami_url || null;
   }
 
   /**
    * Gets the key used to identify the website in the Umami backend
-   * @returns the website ID
+   * @returns the website ID or null if not configured
    */
-  get umami_website_id(): string {
-    return this.#config.umami_website_id;
+  get umami_website_id(): string | null {
+    return this.#config.umami_website_id || null;
   }
 
   /**

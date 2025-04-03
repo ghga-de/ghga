@@ -7,7 +7,7 @@
 import { http, HttpResponse, RequestHandler } from 'msw';
 import { handlers as authHandlers } from './auth';
 import { responses as apiResponses, ResponseValue } from './responses';
-import { umamiHandler } from './umami';
+import { umamiHandlers } from './umami';
 
 const DELAY = 0; // delay in seconds for testing
 
@@ -180,7 +180,7 @@ if (config.mock_api) {
   handlers.push(...noMockHandler('/@ng/*')); // hot module replacement
   handlers.push(...noMockHandler('/@fs/*')); // static files
   handlers.push(...noMockHandler('/chunk-*')); // code chunks
-  handlers.push(umamiHandler); // umami tracker
+  handlers.push(...umamiHandlers); // umami tracker
 } else {
   handlers.push(...noMockHandler('/*'));
 }
