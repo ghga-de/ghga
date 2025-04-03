@@ -61,7 +61,7 @@
           @if (study().ega_accession) {
             <a
               mat-stroked-button
-              class="float-right"
+              class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
               [href]="'https://ega-archive.org/datasets/' + study().ega_accession"
               target="_blank"
               rel="noopener noreferrer"
@@ -116,7 +116,7 @@
                 @if (pub.doi && pub.doi !== '') {
                   <a
                     mat-stroked-button
-                    class="float-right"
+                    class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
                     [href]="'https://www.doi.org/' + pub.doi"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -170,7 +170,7 @@
           @if (dap().policy_url !== '') {
             <a
               mat-stroked-button
-              class="float-right"
+              class="mb-4 w-full md:float-right md:mb-0 md:w-auto"
               [href]="dap().policy_url"
               target="_blank"
               rel="noopener noreferrer"
@@ -178,11 +178,11 @@
               ><mat-icon>open_in_new</mat-icon>Data Access Info Form</a
             >
           }
-          <h4 class="inline-flex items-center">
+          <h4 class="lg:max-w-auto inline-flex items-center md:max-w-[26rem]">
             <span
               class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
               ><mat-icon inline>data_loss_prevention</mat-icon></span
-            >&nbsp;Policy and Data Access Committee
+            >&nbsp;<span>Policy and Data Access Committee</span>
           </h4>
           <p class="text-base">
             <strong>Data Access Committee:</strong> {{ dac().alias }}
@@ -274,8 +274,8 @@
                 [pageSize]="defaultTablePageSize"
                 [pageSizeOptions]="tablePageSizeOptions"
                 showFirstLastButtons
-                itemsPerPageLabel="Experiments per page"
                 aria-label="Select page of experiments"
+                class="sticky left-0"
                 #experimentsPaginator
               >
               </mat-paginator>
@@ -373,6 +373,7 @@
                 [pageSizeOptions]="tablePageSizeOptions"
                 showFirstLastButtons
                 aria-label="Select page of samples"
+                class="sticky left-0"
                 #samplesPaginator
               >
               </mat-paginator>
@@ -472,6 +473,7 @@
                 [pageSizeOptions]="tablePageSizeOptions"
                 showFirstLastButtons
                 aria-label="Select page of files"
+                class="sticky left-0"
                 #filesPaginator
               >
               </mat-paginator>

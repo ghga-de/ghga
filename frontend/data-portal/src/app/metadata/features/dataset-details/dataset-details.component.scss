@@ -32,6 +32,8 @@ div {
 }
 
 table.mat-mdc-table {
+  min-width: 1280px;
+  width: 100%;
   @include mat.table-overrides(
     (
       header-headline-weight: var(--mat-sys-label-large-weight-prominent),
