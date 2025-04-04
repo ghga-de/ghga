@@ -14,6 +14,7 @@ import {
   AccessRequest,
   AccessRequestDialogData,
   AccessRequestFilter,
+  AccessRequestStatus,
   GrantedAccessRequest,
 } from '../models/access-requests';
 
@@ -136,7 +137,7 @@ export class AccessRequestService {
         name: '',
         fromDate: undefined,
         toDate: undefined,
-        status: undefined,
+        status: AccessRequestStatus.pending,
       },
   );
 
