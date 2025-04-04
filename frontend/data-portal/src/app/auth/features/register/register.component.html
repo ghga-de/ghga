@@ -27,19 +27,19 @@
       }
     </p>
     <p>
-      <span class="inline-block min-w-44 font-bold">Name:</span>
+      <span class="me-2 inline-block font-bold md:min-w-44">Name:</span>
       <span>{{ u.name }}</span>
     </p>
     <p>
-      <span class="inline-block min-w-44 font-bold">E-Mail:</span>
+      <span class="me-2 inline-block font-bold md:min-w-44">E-Mail:</span>
       <span>{{ u.email }}</span>
     </p>
     <p>
-      <span class="inline-block min-w-44 font-bold">Life Science ID:</span>
-      <span>{{ u.ext_id }}</span>
+      <span class="me-2 inline-block font-bold md:min-w-44">Life Science ID:</span>
+      <span class="break-all">{{ u.ext_id }}</span>
     </p>
     <p class="mb-0">
-      <span class="inline-block min-w-44 font-bold">Academic title:</span>
+      <span class="me-2 inline-block font-bold md:min-w-44">Academic title:</span>
       <mat-form-field>
         <mat-select [formControl]="titleControl">
           @for (title of allTitles; track title) {
@@ -71,21 +71,28 @@
         >.
       </mat-checkbox>
     </p>
-    <button
-      mat-stroked-button
-      class="mr-2"
-      (click)="cancel()"
-      data-umami-event="Registration Cancel Clicked"
-    >
-      Cancel and log out
-    </button>
-    <button
-      mat-raised-button
-      (click)="register()"
-      [disabled]="!accepted"
-      data-umami-event="Registration Submit Clicked"
-    >
-      {{ u?.id ? 'Confirm' : 'Register' }}
-    </button>
+    <div class="flex flex-wrap gap-2">
+      <div class="basis-full sm:basis-auto">
+        <button
+          mat-stroked-button
+          class="w-full sm:w-auto"
+          (click)="cancel()"
+          data-umami-event="Registration Cancel Clicked"
+        >
+          Cancel and log out
+        </button>
+      </div>
+      <div class="basis-full sm:basis-auto">
+        <button
+          mat-raised-button
+          class="w-full sm:w-auto"
+          (click)="register()"
+          [disabled]="!accepted"
+          data-umami-event="Registration Submit Clicked"
+        >
+          {{ u?.id ? 'Confirm' : 'Register' }}
+        </button>
+      </div>
+    </div>
   }
 }

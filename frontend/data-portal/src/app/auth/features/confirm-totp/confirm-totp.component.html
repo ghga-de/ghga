@@ -6,22 +6,24 @@
 
 <form
   defaultButton="submit-auth"
-  class="mb-3 flex items-center"
+  class="mb-3 flex flex-wrap items-center gap-2"
   (ngSubmit)="onSubmit()"
 >
-  <mat-form-field class="mr-2">
+  <mat-form-field class="grow sm:grow-0">
     <mat-label>Authentication code</mat-label>
     <input
       type="text"
+      class="text-center sm:text-left"
       matInput
       [formControl]="codeControl"
       (input)="onInput()"
       maxlength="6"
     />
   </mat-form-field>
-  <div class="mb-4">
+  <div class="mb-4 w-full sm:w-auto">
     <button
       id="submit-auth"
+      class="w-full sm:w-auto"
       mat-raised-button
       (click)="onSubmit()"
       data-umami-event="Confirm TOTP Submit Clicked"
@@ -30,11 +32,11 @@
     </button>
   </div>
 </form>
-<p class="flex items-center text-sm">
+<p class="flex flex-wrap items-center gap-2 text-sm">
   Difficulty signing in?
   <button
-    class="ms-2"
     mat-stroked-button
+    class="w-full sm:w-auto"
     (click)="onLostToken()"
     data-umami-event="Confirm TOTP Lost Token Clicked"
   >

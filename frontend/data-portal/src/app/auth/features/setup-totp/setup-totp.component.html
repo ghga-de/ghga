@@ -27,21 +27,28 @@
       verified again.
     </strong>
   </p>
-  <button
-    mat-stroked-button
-    (click)="cancelLostToken()"
-    class="mr-2"
-    data-umami-event="Setup TOTP Lost Token Cancel Clicked"
-  >
-    Cancel
-  </button>
-  <button
-    mat-raised-button
-    (click)="lostTokenConfirmed.set(true)"
-    data-umami-event="Setup TOTP Lost Token Continue Clicked"
-  >
-    Continue
-  </button>
+  <div class="flex flex-wrap gap-2">
+    <div class="basis-full sm:basis-auto">
+      <button
+        mat-stroked-button
+        class="w-full sm:w-auto"
+        (click)="cancelLostToken()"
+        data-umami-event="Setup TOTP Lost Token Cancel Clicked"
+      >
+        Cancel
+      </button>
+    </div>
+    <div class="basis-full sm:basis-auto">
+      <button
+        mat-raised-button
+        class="w-full sm:w-auto"
+        (click)="lostTokenConfirmed.set(true)"
+        data-umami-event="Setup TOTP Lost Token Continue Clicked"
+      >
+        Continue
+      </button>
+    </div>
+  </div>
 } @else {
   @let uri = setupUri() | async;
   @if (uri) {
@@ -55,17 +62,19 @@
       In order to set up the authenticator app to produce the authentication codes for
       the GHGA data portal, please scan this QR code with your authenticator app:
     </p>
-    <qrcode [qrdata]="uri" [width]="256"></qrcode>
+    <div class="mt-4 mb-6">
+      <qrcode [qrdata]="uri" [width]="256" [margin]="0"></qrcode>
+    </div>
 
     @if (showManualSetup) {
       <p>
         If you have trouble scanning the QR Code, please manually input the following
         setup key in your authenticator app:
       </p>
-      <p class="flex content-center">
+      <p class="flex w-full content-center">
         <input
           type="text"
-          size="33"
+          size="16"
           readonly
           [value]="getSecret(uri)"
           class="mr-2 mb-2 h-10 text-center font-mono"
@@ -83,26 +92,33 @@
         </button>
       </p>
     }
-    <button
-      mat-stroked-button
-      class="manual-setup-button mr-2"
-      (click)="showManualSetup = !showManualSetup"
-      data-umami-event="Setup TOTP Manual Setup Toggle Clicked"
-    >
-      @if (showManualSetup) {
-        Hide
-      } @else {
-        Show
-      }
-      manual setup instructions
-    </button>
-    <button
-      mat-raised-button
-      (click)="completeSetup()"
-      data-umami-event="Setup TOTP Continue Clicked"
-    >
-      Continue
-    </button>
+    <div class="flex flex-wrap gap-2">
+      <div class="basis-full sm:basis-auto">
+        <button
+          mat-stroked-button
+          class="manual-setup-button w-full sm:w-auto"
+          (click)="showManualSetup = !showManualSetup"
+          data-umami-event="Setup TOTP Manual Setup Toggle Clicked"
+        >
+          @if (showManualSetup) {
+            Hide
+          } @else {
+            Show
+          }
+          manual setup instructions
+        </button>
+      </div>
+      <div class="basis-full sm:basis-auto">
+        <button
+          mat-raised-button
+          class="w-full sm:w-auto"
+          (click)="completeSetup()"
+          data-umami-event="Setup TOTP Continue Clicked"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
   } @else if (uri === undefined) {
     <p>Generating the TOTP setup...</p>
   } @else {
