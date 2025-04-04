@@ -5,11 +5,12 @@
     Please enter it here:
   </p>
   <form defaultButton="submit-code" (ngSubmit)="onSubmit()">
-    <mat-form-field>
+    <mat-form-field class="w-full sm:w-auto">
       <mat-label>Verification code</mat-label>
       <input
         type="text"
         cdkFocusInitial
+        class="text-center sm:text-left"
         matInput
         [formControl]="codeControl"
         (input)="onInput()"

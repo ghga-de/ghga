@@ -11,7 +11,7 @@
       download research data.
     </p>
   }
-  <p class="text-base">
+  <p class="pb-4 text-base">
     Adding new contact addresses is done via the button at the end of this section.
     After a new address is added, you must request verification of the address using the
     button next to the address. Removing a contact address is done through the deletion
@@ -19,71 +19,73 @@
     linked to that address.
   </p>
   @if (ivas().length) {
-    <table mat-table [dataSource]="ivaSource" class="mat-elevation-z8">
-      <ng-container matColumnDef="value">
-        <td mat-cell class="max-w-72 text-base" *matCellDef="let iva">
-          {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="state">
-        <td mat-cell class="w-72" *matCellDef="let iva">
-          <div class="text-center">
-            @switch (iva.state) {
-              @case ('Verified') {
-                <div class="text-bold text-success text-base">
-                  Address has been verified
-                  <mat-icon class="align-bottom">done</mat-icon>
-                </div>
-              }
-              @case ('Unverified') {
-                <button
-                  (click)="requestVerification(iva)"
-                  class="w-64"
-                  mat-stroked-button
-                  data-umami-event="User IVA list Request Verification Clicked"
-                >
-                  <mat-icon>pin</mat-icon>
-                  Request verification
-                </button>
-              }
-              @case ('CodeTransmitted') {
-                <button
-                  (click)="enterVerificationCode(iva)"
-                  class="w-64"
-                  mat-stroked-button
-                  data-umami-event="User IVA list Enter Verification Code Clicked"
-                >
-                  <mat-icon>dialpad</mat-icon>
-                  Enter verification code
-                </button>
-              }
-              @default {
-                <div class="text-bold text-warning text-base">
-                  Verification requested
-                  <mat-icon class="align-bottom">pending</mat-icon>
-                </div>
-              }
-            }
-          </div>
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="del">
-        <td mat-cell *matCellDef="let iva">
-          <button
-            (click)="deleteWhenConfirmed(iva)"
-            mat-icon-button
-            aria-label="Delete"
-            data-umami-event="User IVA list Delete Clicked"
+    <div class="border-outline-material mb-4 grid grid-cols-1 border-t">
+      @for (iva of ivas(); track iva.id) {
+        <div
+          class="border-outline-material grid grid-cols-12 items-center gap-y-2 border-b py-2 text-black"
+        >
+          <div
+            class="col-span-11 flex min-h-12 items-center md:col-span-5 lg:col-span-4 xl:col-span-3"
           >
-            <mat-icon>delete</mat-icon>
-          </button>
-        </td>
-      </ng-container>
+            <div>{{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}</div>
+          </div>
+          <div
+            mat-cell
+            class="order-3 col-span-12 min-w-72 md:order-0 md:col-span-6 lg:col-span-4 xl:col-span-3"
+          >
+            <div class="md:text-center">
+              @switch (iva.state) {
+                @case ('Verified') {
+                  <div class="text-bold text-success text-base">
+                    Address has been verified
+                    <mat-icon class="align-bottom">done</mat-icon>
+                  </div>
+                }
+                @case ('Unverified') {
+                  <button
+                    (click)="requestVerification(iva)"
+                    class="w-64"
+                    mat-stroked-button
+                    data-umami-event="User IVA list Request Verification Clicked"
+                  >
+                    <mat-icon>pin</mat-icon>
+                    Request verification
+                  </button>
+                }
+                @case ('CodeTransmitted') {
+                  <button
+                    (click)="enterVerificationCode(iva)"
+                    class="w-64"
+                    mat-stroked-button
+                    data-umami-event="User IVA list Enter Verification Code Clicked"
+                  >
+                    <mat-icon>dialpad</mat-icon>
+                    Enter verification code
+                  </button>
+                }
+                @default {
+                  <div class="text-bold text-warning text-base">
+                    Verification requested
+                    <mat-icon class="align-bottom">pending</mat-icon>
+                  </div>
+                }
+              }
+            </div>
+          </div>
 
-      <tr mat-row *matRowDef="let row; columns: ['value', 'state', 'del']"></tr>
-    </table>
+          <div class="order-2 md:order-0">
+            <button
+              (click)="deleteWhenConfirmed(iva)"
+              mat-icon-button
+              aria-label="Delete"
+              data-umami-event="User IVA list Delete Clicked"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
   }
   <button
     (click)="enterNew()"

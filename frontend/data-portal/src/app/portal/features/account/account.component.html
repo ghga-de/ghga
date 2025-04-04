@@ -2,10 +2,10 @@
   <span class="text-3xl">User Account</span>
 </h1>
 <h2>
-  <span class="flex text-2xl"
-    >{{ fullName() }}
+  <span class="flex flex-wrap gap-2 text-2xl"
+    ><span>{{ fullName() }}</span>
     @for (roleName of roleNames(); track roleName) {
-      <mat-chip class="ms-2">{{ roleName }}</mat-chip>
+      <mat-chip>{{ roleName }}</mat-chip>
     }
   </span>
 </h2>

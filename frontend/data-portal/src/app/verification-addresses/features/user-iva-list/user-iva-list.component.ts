@@ -4,11 +4,11 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTableModule } from '@angular/material/table';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { Iva, IvaType } from '@app/verification-addresses/models/iva';
@@ -43,10 +43,6 @@ export class UserIvaListComponent implements OnInit {
   ivasAreLoading = this.#ivas.isLoading;
   ivasError = this.#ivas.error;
 
-  ivaSource = new MatTableDataSource<Iva>([]);
-
-  #updateIvaSourceEffect = effect(() => (this.ivaSource.data = this.ivas()));
-
   #ivaTypePipe = inject(IvaTypePipe);
 
   /**
@@ -56,7 +52,7 @@ export class UserIvaListComponent implements OnInit {
    */
   #ivaAddress(iva: Iva): string {
     const ivaType = this.#ivaTypePipe.transform(iva.type).name;
-    return `${ivaType}: ${iva.value}`;
+    return `${ivaType}: ${iva.value}`;
   }
 
   /**
@@ -106,7 +102,7 @@ export class UserIvaListComponent implements OnInit {
       callback: (confirmed) => {
         if (confirmed) this.#requestVerification(iva);
       },
-      panelClass: 'text-justify',
+      panelClass: 'sm:text-justify',
     });
   }
 

@@ -10,7 +10,7 @@
         (change)="onTypeChange()"
       >
         @for (type of types; track type) {
-          <mat-button-toggle [value]="type.value" class="px-3.5">{{
+          <mat-button-toggle [value]="type.value" class="px-0 sm:px-3.5">{{
             type.text
           }}</mat-button-toggle>
         }
