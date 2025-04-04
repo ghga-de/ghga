@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=69",
+    "setuptools>=78.1",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dlqs"
-version = "1.0.0"
+version = "1.0.1"
 description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
 dependencies = [
     "typer >= 0.12",
     "ghga-service-commons[api] >= 3.3",
-    "hexkit[akafka,mongodb] >= 4",
+    "hexkit[akafka,mongodb] >= 4.3.1",
 ]
 
 [project.license]
@@ -145,8 +145,9 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "8.3"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [
