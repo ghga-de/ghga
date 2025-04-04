@@ -39,11 +39,21 @@
       <p>Loading verification addresses...</p>
     } @else if (ivasError() || !ivas().length) {
       <p>No corresponding verification addresses found, cannot process request.</p>
-    } @else if (data.status === 'denied') {
-      <p>This status cannot be reverted.</p>
+    } @else if (!changeable()) {
+      @let iva = associatedIva();
+      @if (iva) {
+        <p>
+          The corresponding verification address is
+          {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }} (<span
+            [class]="(iva.state | IvaStatePipe).class"
+            >{{ (iva.state | IvaStatePipe).name }}</span
+          >).
+        </p>
+      }
+      <p>The status or address of this request cannot be changed any more.</p>
     } @else {
       <label for="iva-selection-group" class="text-lg">
-        @if (allowedAccessRequestIvaId()) {
+        @if (selectedIvaIdRadioButton()) {
           If you wish to change the verification address used for this access request,
           please select it below:
         } @else {
@@ -71,9 +81,7 @@
     <br />
   </mat-dialog-content>
   <mat-dialog-actions class="flex gap-x-2 gap-y-4">
-    @if (
-      ivasAreLoading() || ivasError() || !ivas().length || data.status === 'denied'
-    ) {
+    @if (ivasAreLoading() || ivasError() || !ivas().length || !changeable()) {
       <button
         mat-stroked-button
         (click)="cancel()"
@@ -100,8 +108,9 @@
             class="error w-full sm:w-auto"
             (click)="safeDeny()"
             data-umami-event="Access Request Manager Deny Clicked"
+            [disabled]="data.status === 'denied'"
           >
-            @if (allowedAccessRequestIvaId()) {
+            @if (data.status === 'allowed') {
               Revoke access
             } @else {
               Deny
@@ -115,12 +124,12 @@
             (click)="safeAllow()"
             data-umami-event="Access Request Manager Allow Clicked"
             [disabled]="
-              !selectedIvaIdRadioButton() ||
-              (data.status === 'allowed' &&
-                selectedIvaIdRadioButton() === allowedAccessRequestIvaId())
+              this.data.status === 'allowed' &&
+              (!selectedIvaIdRadioButton() ||
+                data.iva_id === selectedIvaIdRadioButton())
             "
           >
-            @if (allowedAccessRequestIvaId()) {
+            @if (data.status === 'allowed') {
               Change address
             } @else {
               Allow

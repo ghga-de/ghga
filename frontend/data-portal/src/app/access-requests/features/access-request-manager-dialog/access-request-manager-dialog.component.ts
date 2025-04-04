@@ -5,7 +5,15 @@
  */
 
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, model, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  model,
+  OnInit,
+  Signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -62,7 +70,22 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   #ivaTypePipe = inject(IvaTypePipe);
 
   selectedIvaIdRadioButton = model<string | undefined>(undefined);
-  allowedAccessRequestIvaId = signal<string | undefined>(undefined);
+
+  /**
+   * Get the IVA associated with the access request.
+   */
+  associatedIva: Signal<Iva | undefined> = computed(() =>
+    this.data.iva_id
+      ? this.ivas().find((iva) => iva.id === this.data.iva_id)
+      : undefined,
+  );
+  /**
+   * Check whether the access request is changeable.
+   * Currently the backend only allows to changed pending requests.
+   */
+  changeable: Signal<boolean> = computed(
+    () => this.data.status === AccessRequestStatus.pending,
+  );
 
   #ivasErrorEffect = effect(() => {
     if (this.ivasError()) {
@@ -161,25 +184,20 @@ export class AccessRequestManagerDialogComponent implements OnInit {
 
   /**
    * Pre-select the radio button for the IVA that best matches
-   * (the IVA used for an allowed access request or the best option for a pending or denied one)
+   * (the IVA that is already selected or the best option otherwise)
    */
   #preSelectIvaRadioButton(): void {
-    if (this.data.iva_id) {
-      this.allowedAccessRequestIvaId.set(this.data.iva_id);
-      this.selectedIvaIdRadioButton.set(this.data.iva_id);
-    } else {
-      this.#bestIvaForPendingOrDeniedAR();
-    }
+    this.selectedIvaIdRadioButton.set(this.data.iva_id || this.#findBestIvaId());
   }
 
   /**
-   * Pre-select the "best" IVA for a pending or denied access request.
-   * The best IVA is the one which is closest to being verified and latest.
+   * Get the "best" IVA for a changeable access request.
+   * @returns The ID of the IVA closest to being verified and latest.
    */
-  #bestIvaForPendingOrDeniedAR(): void {
+  #findBestIvaId(): string | undefined {
     let bestRank: number | undefined = undefined;
     let lastChanged: string | undefined = undefined;
-    let ivaId: string | undefined = undefined;
+    let ivaId: string | undefined;
     for (const iva of this.ivas()) {
       const rank = {
         [IvaState.Verified]: 1,
@@ -198,6 +216,6 @@ export class AccessRequestManagerDialogComponent implements OnInit {
         ivaId = iva.id;
       }
     }
-    this.selectedIvaIdRadioButton.set(ivaId);
+    return ivaId;
   }
 }

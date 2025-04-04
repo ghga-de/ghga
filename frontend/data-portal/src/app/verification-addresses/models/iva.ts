@@ -24,7 +24,7 @@ export const IvaStateClass: { [K in keyof typeof IvaState]: string } = {
   Unverified: 'text-error',
   CodeRequested: 'text-warning',
   CodeCreated: 'text-quaternary',
-  CodeTransmitted: '',
+  CodeTransmitted: 'text-secondary',
   Verified: 'text-success',
 };
 
