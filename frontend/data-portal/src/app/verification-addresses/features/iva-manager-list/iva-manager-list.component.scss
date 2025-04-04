@@ -20,6 +20,7 @@ button.create-code-button {
 }
 
 table {
+  width: 100%;
   @include mat.table-overrides(
     (
       header-headline-size: var(--mat-sys-title-medium-size),

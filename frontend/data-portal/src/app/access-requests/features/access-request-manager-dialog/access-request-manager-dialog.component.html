@@ -54,8 +54,8 @@
       <mat-radio-group [(ngModel)]="selectedIvaIdRadioButton" id="iva-selection-group">
         <table class="ivas mt-2">
           @for (iva of ivas(); track iva.id) {
-            <tr>
-              <td>
+            <tr class="border-outline border-t-1 border-b-1">
+              <td class="py-1">
                 <mat-radio-button [value]="iva.id">
                   {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}
                 </mat-radio-button>
@@ -70,7 +70,7 @@
     }
     <br />
   </mat-dialog-content>
-  <mat-dialog-actions>
+  <mat-dialog-actions class="flex gap-x-2 gap-y-4">
     @if (
       ivasAreLoading() || ivasError() || !ivas().length || data.status === 'denied'
     ) {
@@ -82,9 +82,10 @@
         Close
       </button>
     } @else {
-      <div class="mr-2">
+      <div class="w-full sm:w-auto">
         <button
           mat-stroked-button
+          class="w-full sm:w-auto"
           (click)="cancel()"
           data-umami-event="Access Request Manager Cancel Clicked"
         >
@@ -92,36 +93,40 @@
         </button>
       </div>
       <div class="flex-grow"></div>
-      <div class="ml-2">
-        <button
-          mat-raised-button
-          class="error mr-1"
-          (click)="safeDeny()"
-          data-umami-event="Access Request Manager Deny Clicked"
-        >
-          @if (allowedAccessRequestIvaId()) {
-            Revoke access
-          } @else {
-            Deny
-          }
-        </button>
-        <button
-          mat-raised-button
-          class="success"
-          (click)="safeAllow()"
-          data-umami-event="Access Request Manager Allow Clicked"
-          [disabled]="
-            !selectedIvaIdRadioButton() ||
-            (data.status === 'allowed' &&
-              selectedIvaIdRadioButton() === allowedAccessRequestIvaId())
-          "
-        >
-          @if (allowedAccessRequestIvaId()) {
-            Change address
-          } @else {
-            Allow
-          }
-        </button>
+      <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
+        <div class="w-full sm:w-auto">
+          <button
+            mat-raised-button
+            class="error w-full sm:w-auto"
+            (click)="safeDeny()"
+            data-umami-event="Access Request Manager Deny Clicked"
+          >
+            @if (allowedAccessRequestIvaId()) {
+              Revoke access
+            } @else {
+              Deny
+            }
+          </button>
+        </div>
+        <div class="w-full sm:w-auto">
+          <button
+            mat-raised-button
+            class="success w-full sm:w-auto"
+            (click)="safeAllow()"
+            data-umami-event="Access Request Manager Allow Clicked"
+            [disabled]="
+              !selectedIvaIdRadioButton() ||
+              (data.status === 'allowed' &&
+                selectedIvaIdRadioButton() === allowedAccessRequestIvaId())
+            "
+          >
+            @if (allowedAccessRequestIvaId()) {
+              Change address
+            } @else {
+              Allow
+            }
+          </button>
+        </div>
       </div>
     }
   </mat-dialog-actions>

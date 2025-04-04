@@ -2,76 +2,86 @@
   <p class="text-base">Loading access requests...</p>
 } @else {
   @let columns = ['dataset', 'user', 'starts', 'ends', 'requested', 'status'];
-  <table
-    mat-table
-    [dataSource]="source"
-    class="mat-elevation-z8"
-    matSort
-    #sort="matSort"
-  >
-    <ng-container matColumnDef="dataset">
-      <th mat-header-cell *matHeaderCellDef class="w-32" mat-sort-header>Dataset ID</th>
-      <td mat-cell *matCellDef="let ar">
-        {{ ar.dataset_id }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="user">
-      <th mat-header-cell *matHeaderCellDef class="min-w-40" mat-sort-header>User</th>
-      <td mat-cell *matCellDef="let ar">
-        {{ ar.full_user_name }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="starts">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Access start</th>
-      <td mat-cell *matCellDef="let ar">
-        {{ ar.access_starts | date }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="ends">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Access end</th>
-      <td mat-cell *matCellDef="let ar">
-        {{ ar.access_ends | date }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="requested">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Creation date</th>
-      <td mat-cell *matCellDef="let ar">
-        {{ ar.request_created | date }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="status">
-      <th mat-header-cell *matHeaderCellDef class="min-w-40 capitalize" mat-sort-header>
-        Status
-      </th>
-      <td
-        mat-cell
-        class="{{ ar.status | AccessRequestStatusClassPipe }} capitalize"
-        *matCellDef="let ar"
-      >
-        {{ ar.status }}
-      </td>
-    </ng-container>
+  <div class="overflow-auto">
+    <table
+      mat-table
+      [dataSource]="source"
+      class="mat-elevation-z8"
+      matSort
+      #sort="matSort"
+    >
+      <ng-container matColumnDef="dataset">
+        <th mat-header-cell *matHeaderCellDef class="w-32" mat-sort-header>
+          Dataset ID
+        </th>
+        <td mat-cell *matCellDef="let ar">
+          {{ ar.dataset_id }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="user">
+        <th mat-header-cell *matHeaderCellDef class="min-w-40" mat-sort-header>User</th>
+        <td mat-cell *matCellDef="let ar">
+          {{ ar.full_user_name }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="starts">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Access start</th>
+        <td mat-cell *matCellDef="let ar">
+          {{ ar.access_starts | date }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="ends">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Access end</th>
+        <td mat-cell *matCellDef="let ar">
+          {{ ar.access_ends | date }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="requested">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Creation date</th>
+        <td mat-cell *matCellDef="let ar">
+          {{ ar.request_created | date }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th
+          mat-header-cell
+          *matHeaderCellDef
+          class="min-w-40 capitalize"
+          mat-sort-header
+        >
+          Status
+        </th>
+        <td
+          mat-cell
+          class="{{ ar.status | AccessRequestStatusClassPipe }} capitalize"
+          *matCellDef="let ar"
+        >
+          {{ ar.status }}
+        </td>
+      </ng-container>
 
-    <tr mat-header-row *matHeaderRowDef="columns"></tr>
-    <tr
-      mat-row
-      *matRowDef="let row; columns: columns"
-      class="duration-200 hover:cursor-pointer hover:bg-black/[0.05] hover:transition"
-      (click)="openDetails(row)"
-    ></tr>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr
+        mat-row
+        *matRowDef="let row; columns: columns"
+        class="duration-200 hover:cursor-pointer hover:bg-black/[0.05] hover:transition"
+        (click)="openDetails(row)"
+      ></tr>
 
-    <tr class="mat-row" *matNoDataRow>
-      <td class="mat-cell p-4 text-base" colspan="6">
-        No access requests found. Try removing some filter conditions.
-      </td>
-    </tr>
-  </table>
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell p-4 text-base" colspan="6">
+          No access requests found. Try removing some filter conditions.
+        </td>
+      </tr>
+    </table>
+  </div>
 
   @if (accessRequests().length > 10) {
     <mat-paginator
       [pageSize]="defaultTablePageSize"
       [pageSizeOptions]="tablePageSizeOptions"
       showFirstLastButtons
+      class="sticky left-0"
       itemsPerPageLabel="Access requests per page"
       aria-label="Select page of access requests"
       #paginator

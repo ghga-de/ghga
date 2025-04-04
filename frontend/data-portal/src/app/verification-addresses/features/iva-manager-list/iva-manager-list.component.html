@@ -2,96 +2,104 @@
   <p>Loading contact addresses..</p>
 } @else {
   @let columns = ['user', 'type', 'value', 'changed', 'state', 'actions'];
-  <table mat-table [dataSource]="source" class="text-base" matSort #sort="matSort">
-    <ng-container matColumnDef="user">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>User</th>
-      <td mat-cell *matCellDef="let iva">
-        {{ iva.user_name }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="type">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
-      <td mat-cell *matCellDef="let iva">
-        <mat-icon class="mr-3">{{ (iva.type | IvaTypePipe).icon }}</mat-icon
-        ><span class="align-super">{{ (iva.type | IvaTypePipe).name }}</span>
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="value">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Address</th>
-      <td mat-cell *matCellDef="let iva" class="w-1/4">
-        {{ iva.value }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="changed">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Last modified</th>
-      <td mat-cell *matCellDef="let iva">
-        {{ iva.changed | date }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="state">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-      <td mat-cell [class]="(iva.state | IvaStatePipe).class" *matCellDef="let iva">
-        {{ (iva.state | IvaStatePipe).name }}
-      </td>
-    </ng-container>
-    <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef class="w-[600px]">Actions</th>
-      <td mat-cell class="space-x-3 py-2" *matCellDef="let iva">
-        @if (iva.state === 'CodeRequested' || iva.state === 'CodeCreated') {
-          <button
-            (click)="createCode(iva)"
-            class="create-code-button w-44"
-            mat-flat-button
-            data-umami-event="IVA Manager List Create Code Clicked"
-          >
-            <mat-icon>pin</mat-icon>
-            @if (iva.state === 'CodeCreated') {
-              Recreate
-            } @else {
-              Create
-            }
-            code
-          </button>
-        }
-        @if (iva.state === 'CodeCreated') {
-          <button
-            (click)="markAsTransmittedWhenConfirmed(iva)"
-            class="w-56"
-            mat-flat-button
-            data-umami-event="IVA Manager List Confirm Transmission Clicked"
-          >
-            <mat-icon>mark_email_read</mat-icon>
-            Confirm transmission
-          </button>
-        }
-        @if (iva.state !== 'Unverified') {
-          <button
-            (click)="invalidateWhenConfirmed(iva)"
-            class="w-36"
-            mat-stroked-button
-            data-umami-event="IVA Manager List Invalidate Clicked"
-          >
-            <mat-icon>cancel_presentation</mat-icon>
-            Invalidate
-          </button>
-        }
-      </td>
-    </ng-container>
-    <tr mat-header-row *matHeaderRowDef="columns"></tr>
-    <tr mat-row *matRowDef="let row; columns: columns"></tr>
+  <div class="overflow-auto">
+    <table mat-table [dataSource]="source" class="text-base" matSort #sort="matSort">
+      <ng-container matColumnDef="user">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>User</th>
+        <td mat-cell *matCellDef="let iva" class="min-w-48">
+          {{ iva.user_name }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+        <td mat-cell *matCellDef="let iva" class="min-w-48">
+          <mat-icon class="mr-2">{{ (iva.type | IvaTypePipe).icon }}</mat-icon
+          ><span class="align-super">{{ (iva.type | IvaTypePipe).name }}</span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="value">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Address</th>
+        <td mat-cell *matCellDef="let iva" class="w-1/4 min-w-64">
+          {{ iva.value }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="changed">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Last modified</th>
+        <td mat-cell *matCellDef="let iva">
+          {{ iva.changed | date }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="state">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+        <td
+          mat-cell
+          [class]="(iva.state | IvaStatePipe).class"
+          *matCellDef="let iva"
+          class="min-w-44"
+        >
+          {{ (iva.state | IvaStatePipe).name }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="w-[600px]">Actions</th>
+        <td mat-cell class="min-w-2xl space-x-4 py-2" *matCellDef="let iva">
+          @if (iva.state === 'CodeRequested' || iva.state === 'CodeCreated') {
+            <button
+              (click)="createCode(iva)"
+              class="create-code-button w-44"
+              mat-flat-button
+              data-umami-event="IVA Manager List Create Code Clicked"
+            >
+              <mat-icon>pin</mat-icon>
+              @if (iva.state === 'CodeCreated') {
+                Recreate
+              } @else {
+                Create
+              }
+              code
+            </button>
+          }
+          @if (iva.state === 'CodeCreated') {
+            <button
+              (click)="markAsTransmittedWhenConfirmed(iva)"
+              class="w-56"
+              mat-flat-button
+              data-umami-event="IVA Manager List Confirm Transmission Clicked"
+            >
+              <mat-icon>mark_email_read</mat-icon>
+              Confirm transmission
+            </button>
+          }
+          @if (iva.state !== 'Unverified') {
+            <button
+              (click)="invalidateWhenConfirmed(iva)"
+              class="w-36"
+              mat-stroked-button
+              data-umami-event="IVA Manager List Invalidate Clicked"
+            >
+              <mat-icon>cancel_presentation</mat-icon>
+              Invalidate
+            </button>
+          }
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
 
-    <tr class="mat-row" *matNoDataRow>
-      <td class="mat-cell p-4 text-base" colspan="6">
-        No contact addresses found. Try removing some filter conditions.
-      </td>
-    </tr>
-  </table>
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell p-4 text-base" colspan="6">
+          No contact addresses found. Try removing some filter conditions.
+        </td>
+      </tr>
+    </table>
+  </div>
 
   @if (ivas().length > 10) {
     <mat-paginator
       [pageSize]="defaultTablePageSize"
       [pageSizeOptions]="tablePageSizeOptions"
       showFirstLastButtons
+      class="sticky left-0"
       itemsPerPageLabel="IVAs per page"
       aria-label="Select page of IVAs"
       #paginator

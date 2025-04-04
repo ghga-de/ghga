@@ -46,20 +46,26 @@
       </tr>
     </table>
   </div>
-  <div mat-dialog-actions cdkTrapFocus>
-    <button
-      mat-button
-      (click)="onClose()"
-      data-umami-event="Verification Code Creation Dialog Close Clicked"
-    >
-      Close and send later
-    </button>
-    <button
-      mat-raised-button
-      (click)="onConfirmTransmission()"
-      data-umami-event="Verification Code Creation Dialog Confirm Clicked"
-    >
-      Confirm transmission
-    </button>
+  <div mat-dialog-actions cdkTrapFocus class="flex gap-2">
+    <div class="w-full sm:w-auto">
+      <button
+        mat-button
+        class="w-full sm:w-auto"
+        (click)="onClose()"
+        data-umami-event="Verification Code Creation Dialog Close Clicked"
+      >
+        Close and send later
+      </button>
+    </div>
+    <div class="w-full sm:w-auto">
+      <button
+        mat-raised-button
+        class="w-full sm:w-auto"
+        (click)="onConfirmTransmission()"
+        data-umami-event="Verification Code Creation Dialog Confirm Clicked"
+      >
+        Confirm transmission
+      </button>
+    </div>
   </div>
 </div>

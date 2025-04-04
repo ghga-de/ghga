@@ -108,7 +108,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
       title: 'Confirm approval of the access request',
       message:
         'Please confirm that the access request shall be allowed' +
-        ` and coupled to ${ivaType}: ${iva.value}.`,
+        ` and coupled to ${ivaType}: ${iva.value}.`,
       cancelText: 'Cancel',
       confirmText: 'Confirm approval',
       confirmClass: 'success',
