@@ -30,14 +30,17 @@ test('can view a dataset summary', async ({ page }) => {
   await expect(main).toContainText('GHGAD588887989');
   await expect(main).toContainText('Test dataset for details');
 
-  // description is not yet visible
+  // description and dataset summary are not yet visible
   await expect(main).not.toContainText('This is the test dataset description');
+  await expect(main).not.toContainText('14 Experiments');
 
-  const openSummaryLink = page.getByText('GHGAD588887989');
-  await expect(openSummaryLink).toBeVisible();
-  await openSummaryLink.click();
+  const openSummary = page.getByRole('button', { name: 'GHGAD588887989' });
+  await expect(openSummary).toBeVisible();
+  await openSummary.click();
 
+  // now the description and summary should be visible
   await expect(main).toContainText('This is the test dataset description');
+  await expect(main).toContainText('14 Experiments');
 });
 
 test('can navigate to dataset details', async ({ page }) => {
@@ -57,6 +60,36 @@ test('can navigate to dataset details', async ({ page }) => {
   await expect(page).toHaveTitle('Dataset GHGAD588887989 | GHGA Data Portal');
 
   await expect(main).toContainText('Dataset ID | GHGAD588887989');
-
   await expect(main).toContainText('Test dataset with some details for testing.');
+
+  await expect(main).toContainText('Test study description.');
+  await expect(main).toContainText('Files Summary (12 files, 6.16 GB in total)');
+
+  // files table should not yet be visible
+  await expect(main).not.toContainText('File ID');
+  await expect(main).not.toContainText('GHGAF956121333');
+  await expect(main).not.toContainText('Research data file 3');
+  await expect(main).not.toContainText('Tübingen 3');
+
+  const openFile = main.getByRole('button', { name: 'Files Summary' });
+  await expect(openFile).toBeVisible();
+  await openFile.click();
+
+  // files table should now be visible
+  await expect(main).toContainText('File ID');
+  await expect(main).toContainText('GHGAF956121333');
+  await expect(main).toContainText('Research data file 3');
+  await expect(main).toContainText('Tübingen 3');
+
+  // last file should bot yet be visible
+  await expect(main).not.toContainText('EGAF956121335');
+  await expect(main).not.toContainText('Research data file 5');
+
+  const nextPageButton = main.getByRole('button', { name: 'Next page' });
+  await expect(nextPageButton).toBeVisible();
+  await nextPageButton.click();
+
+  // last file should now be visible
+  await expect(main).toContainText('EGAF956121335');
+  await expect(main).toContainText('Research data file 5');
 });

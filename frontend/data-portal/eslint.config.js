@@ -271,7 +271,7 @@ export default [
         },
         {
           type: 'spec',
-          pattern: 'src/app/**/*.spec.ts|tests/**/*.spec.ts',
+          pattern: 'src/app/**/*.spec.ts|tests/**/*.ts',
           mode: 'full',
         },
         {

@@ -15,7 +15,7 @@ test('has proper title', async ({ page }) => {
 test('has proper heading', async ({ page }) => {
   await page.goto('/');
 
-  const heading = page.locator('h1');
+  const heading = page.getByRole('heading', { level: 1 });
   await expect(heading).toContainText('The German Human Genome‑Phenome Archive');
   await expect(heading).toContainText('Data Portal');
 });
