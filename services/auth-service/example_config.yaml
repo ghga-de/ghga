@@ -13,13 +13,13 @@ auth_check_claims:
   iat: null
   id: null
   name: null
-auth_events_topic: auth
 auth_ext_algs:
 - RS256
 - ES256
 auth_ext_keys: null
 auth_key: null
 auth_map_claims: {}
+auth_topic: auth
 auto_reload: true
 basic_auth_credentials: null
 basic_auth_realm: GHGA Data Portal
@@ -67,7 +67,7 @@ port: 8080
 provide_apis:
 - users
 run_consumer: false
-second_factor_recreated_event_type: second_factor_recreated
+second_factor_recreated_type: second_factor_recreated
 service_instance_id: '1'
 service_name: auth_service
 session_id_bytes: 24

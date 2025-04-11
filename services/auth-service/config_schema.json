@@ -64,16 +64,20 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
-    "auth_events_topic": {
-      "default": "auth",
-      "description": "The name of the topic for authentication related events",
-      "title": "Auth Events Topic",
+    "auth_topic": {
+      "description": "The name of the topic containing auth-related events.",
+      "examples": [
+        "auth-events"
+      ],
+      "title": "Auth Topic",
       "type": "string"
     },
-    "second_factor_recreated_event_type": {
-      "default": "second_factor_recreated",
+    "second_factor_recreated_type": {
       "description": "The event type for recreation of the second factor for authentication",
-      "title": "Second Factor Recreated Event Type",
+      "examples": [
+        "second_factor_recreated"
+      ],
+      "title": "Second Factor Recreated Type",
       "type": "string"
     },
     "iva_state_changed_topic": {
@@ -797,6 +801,8 @@
     }
   },
   "required": [
+    "auth_topic",
+    "second_factor_recreated_type",
     "iva_state_changed_topic",
     "iva_state_changed_type",
     "dataset_upsertion_type",

@@ -34,12 +34,17 @@ from auth_service.user_management.user_registry.translators.event_pub import (
     EventPubTranslatorConfig,
 )
 
-default_config = EventPubTranslatorConfig()
+default_config = EventPubTranslatorConfig(
+    auth_topic="auth",
+    second_factor_recreated_type="second_factor_recreated",
+    iva_state_changed_topic="ivas",
+    iva_state_changed_type="iva_state_changed",
+)
 
 custom_config = default_config.model_copy(
     update={
-        "auth_events_topic": "custom_auth",
-        "second_factor_recreated_event_type": "custom_second_factor_recreated",
+        "auth_topic": "custom_auth",
+        "second_factor_recreated_type": "custom_second_factor_recreated",
         "iva_state_changed_topic": "custom_ivas",
         "iva_state_changed_type": "custom_iva_state_changed",
     }
@@ -88,9 +93,7 @@ class AuthEventPublisher(DummyEventPublisher):
     """A event publisher for testing auth related notifications."""
 
     def __init__(self, config: EventPubTranslatorConfig):
-        super().__init__(
-            config.auth_events_topic, config.second_factor_recreated_event_type
-        )
+        super().__init__(config.auth_topic, config.second_factor_recreated_type)
 
 
 async def test_publish_2fa_recreated(config: EventPubTranslatorConfig):

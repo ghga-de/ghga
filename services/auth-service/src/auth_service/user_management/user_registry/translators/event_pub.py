@@ -17,11 +17,13 @@
 """Translators for publishing notification events."""
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    IvaChangeEventsConfig,
+    SecondFactorRecreatedEventsConfig,
+)
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
 from opentelemetry import trace
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from ..models.ivas import Iva
 from ..ports.event_pub import EventPublisherPort
@@ -31,25 +33,11 @@ __all__ = ["EventPubTranslator", "EventPubTranslatorConfig"]
 tracer = trace.get_tracer("auth_service.user_management.user_registry")
 
 
-class EventPubTranslatorConfig(BaseSettings):
+class EventPubTranslatorConfig(
+    IvaChangeEventsConfig,
+    SecondFactorRecreatedEventsConfig,
+):
     """Config for the event pub translator"""
-
-    auth_events_topic: str = Field(
-        default="auth",
-        description="The name of the topic for authentication related events",
-    )
-    second_factor_recreated_event_type: str = Field(
-        default="second_factor_recreated",
-        description="The event type for recreation of the second factor for authentication",
-    )
-    iva_state_changed_topic: str = Field(
-        default="ivas",
-        description="The name of the topic for IVA related events",
-    )
-    iva_state_changed_type: str = Field(
-        default="iva_state_changed",
-        description="The event type for IVA state changes",
-    )
 
 
 class EventPubTranslator(EventPublisherPort):
@@ -73,9 +61,9 @@ class EventPubTranslator(EventPublisherPort):
         ).model_dump()
         await self._event_publisher.publish(
             payload=payload,
-            type_=self._config.second_factor_recreated_event_type,
+            type_=self._config.second_factor_recreated_type,
             key=user_id,
-            topic=self._config.auth_events_topic,
+            topic=self._config.auth_topic,
         )
 
     @tracer.start_as_current_span("EventPubTranslator.publish_iva_state_changed")
