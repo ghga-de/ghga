@@ -73,6 +73,7 @@
       "type": "string"
     },
     "storage_aliases": {
+      "additionalProperties": true,
       "description": "Mapping of storage alias to endpoint URL for all available S3 object storages",
       "title": "Storage Aliases",
       "type": "object"
