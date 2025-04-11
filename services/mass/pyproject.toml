@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=69",
+    "setuptools>=78.1",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -24,10 +24,10 @@ name = "mass"
 version = "4.0.0"
 description = "Metadata Artifact Search Service - A service for searching metadata artifacts and filtering results."
 dependencies = [
-    "typer>=0.12",
-    "ghga-service-commons[api]>=3.3.0",
-    "ghga-event-schemas>=4.1",
-    "hexkit[mongodb,akafka]>=4.0.0",
+    "typer>=0.15.2",
+    "ghga-service-commons[api]>=4.0.0",
+    "ghga-event-schemas>=5.0.0",
+    "hexkit[mongodb,akafka]>=4.3.1",
 ]
 
 [project.license]
@@ -146,8 +146,9 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "8.3"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [
