@@ -83,6 +83,7 @@
           "description": "The anchor point for this metadata class."
         },
         "json_schema": {
+          "additionalProperties": true,
           "description": "The JSON schema for this metadata class.",
           "title": "Json Schema",
           "type": "object"
