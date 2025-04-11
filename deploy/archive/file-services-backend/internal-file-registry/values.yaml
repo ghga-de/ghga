@@ -21,7 +21,7 @@ parameters:
 containers:
 - name: consumer
   type: "consumer"
-  cmd: ifrs
+  cmd: ifrs consume-events
   config:
     name: parameters
     key: parameters

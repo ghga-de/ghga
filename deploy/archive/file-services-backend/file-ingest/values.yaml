@@ -23,6 +23,8 @@ parameters:
     vault_path: ekss
     mongo_dsn: null
     token_hashes: []
+    db_version_collection: "fisDbVersions"
+    migration_wait_sec: 10
 
 containers:
 - name: rest
