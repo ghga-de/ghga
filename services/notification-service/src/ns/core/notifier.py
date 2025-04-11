@@ -171,8 +171,10 @@ class Notifier(NotifierPort):
         """Constructs an EmailMessage object from the contents of an email notification event"""
         message = EmailMessage()
         message["To"] = notification.recipient_email
-        message["Cc"] = notification.email_cc
-        message["Bcc"] = notification.email_bcc
+        if notification.email_cc:
+            message["Cc"] = notification.email_cc
+        if notification.email_bcc:
+            message["Bcc"] = notification.email_bcc
         message["Subject"] = notification.subject
         message["From"] = self._config.from_address
 
