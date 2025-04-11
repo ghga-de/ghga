@@ -161,7 +161,7 @@
     "smtp_timeout": {
       "anyOf": [
         {
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "type": "number"
         },
         {
