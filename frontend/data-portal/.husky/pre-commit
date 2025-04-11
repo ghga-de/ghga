@@ -1,1 +1,11 @@
+#!/bin/sh
+
+# Prevent commits to the main branch
+if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ]; then
+  echo "Direct commits to the main branch are not allowed."
+  echo "Please create a feature branch and commit your changes there."
+  exit 1
+fi
+
+# Run linting
 ng lint
