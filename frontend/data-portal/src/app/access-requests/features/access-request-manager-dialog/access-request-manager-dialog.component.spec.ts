@@ -59,7 +59,7 @@ describe('AccessRequestManagerDialogComponent', () => {
   });
 
   it('should show the dataset ID in a table row', () => {
-    const row = screen.getByRole('row', { name: 'Dataset ID: GHGAD588887987' });
+    const row = screen.getByRole('row', { name: 'Dataset ID: GHGAD12345678901234' });
     expect(row).toBeVisible();
   });
 
@@ -70,7 +70,7 @@ describe('AccessRequestManagerDialogComponent', () => {
 
   it('should show the requester details in a table row', () => {
     const row = screen.getByRole('row', {
-      name: 'Request details: This is a test request for dataset GHGAD588887987. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
+      name: 'Request details: This is a test request for dataset GHGAD12345678901234. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
     });
     expect(row).toBeVisible();
   });

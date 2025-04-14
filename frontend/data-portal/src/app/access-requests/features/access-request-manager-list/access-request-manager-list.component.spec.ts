@@ -47,6 +47,6 @@ describe('AccessRequestManagerListComponent', () => {
   it('should show access request dataset IDs', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const text = compiled.textContent;
-    expect(text).toContain('GHGAD588887988');
+    expect(text).toContain('GHGAD12345678901234');
   });
 });

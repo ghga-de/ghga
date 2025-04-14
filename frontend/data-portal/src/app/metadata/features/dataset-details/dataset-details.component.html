@@ -430,14 +430,14 @@
               <ng-container matColumnDef="size">
                 <th mat-header-cell *matHeaderCellDef mat-sort-header>File size</th>
                 <td mat-cell *matCellDef="let file">
-                  {{ file.file_information?.size | parseBytes }}
+                  {{ (file.file_information?.size | parseBytes) || 'N/A' }}
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="location">
                 <th mat-header-cell *matHeaderCellDef mat-sort-header>File location</th>
                 <td mat-cell *matCellDef="let file">
-                  {{ file.file_information?.storage_alias | storageAlias }}
+                  {{ (file.file_information?.storage_alias | storageAlias) || 'N/A' }}
                 </td>
               </ng-container>
 
@@ -459,6 +459,8 @@
                     >
                       <mat-icon class="text-[20px]/[24px]">content_copy</mat-icon>
                     </button>
+                  } @else {
+                    N/A
                   }
                 </td>
               </ng-container>

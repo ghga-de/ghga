@@ -79,7 +79,7 @@ describe(SearchResultComponent, () => {
   it('should show accession and title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const text = compiled.textContent;
-    expect(text).toContain('GHGAD588887987');
+    expect(text).toContain('GHGAD12345678901234');
     expect(text).toContain('Test dataset for details');
   });
 });

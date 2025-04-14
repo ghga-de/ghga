@@ -256,9 +256,9 @@ export class MockAccessRequestService {
   grantedUserAccessRequests = signal([
     {
       request: {
-        id: 'GHGAD15111403130971',
+        id: 'GHGAR12345678901234',
         user_id: '',
-        dataset_id: 'GHGAD588887987',
+        dataset_id: 'GHGAD12345678901234',
         full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
         email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
         request_text: 'unit test request',
@@ -275,9 +275,9 @@ export class MockAccessRequestService {
     },
     {
       request: {
-        id: 'GHGAD15111403130451',
+        id: 'GHGAR12345678901235',
         user_id: '',
-        dataset_id: 'GHGAD588887987',
+        dataset_id: 'GHGAD12345678901234',
         full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
         email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
         request_text: 'unit test request 2',
@@ -295,9 +295,9 @@ export class MockAccessRequestService {
   ]);
   pendingUserAccessRequests = signal([
     {
-      id: 'GHGAD15111403130971',
+      id: 'GHGAR12345678901236',
       user_id: '',
-      dataset_id: 'GHGAD588887987',
+      dataset_id: 'GHGAD12345678901234',
       full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
       email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
       request_text: 'unit test request',

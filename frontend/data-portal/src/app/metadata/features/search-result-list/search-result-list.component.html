@@ -1,10 +1,10 @@
 @if (error()) {
   <p class="text-red-500">Cannot browse datasets. Please try again later.</p>
 } @else {
-  <div class="bg-primary mb-2 grid w-full grid-cols-[10rem_1fr] px-6 py-2 text-white">
+  <div class="bg-primary mb-2 grid w-full grid-cols-[14rem_1fr] px-6 py-2 text-white">
     <span>Dataset ID</span><span>Title</span>
   </div>
-  <div [class.invisible]="!loading()" class="-mb-3">
+  <div [class.invisible]="!loading()" class="mb-3">
     <mat-progress-bar mode="indeterminate" class="mb-6"></mat-progress-bar>
   </div>
 

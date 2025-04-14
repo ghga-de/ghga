@@ -52,7 +52,7 @@ describe('WorkPackageComponent', () => {
     expect(select).toBeTruthy();
     select.click();
     await fixture.whenStable();
-    const option = screen.getByText('GHGAD588887987: Some dataset to upload');
+    const option = screen.getByText('GHGAD12345678901234: Some dataset to upload');
     expect(option).toBeTruthy();
   });
 });

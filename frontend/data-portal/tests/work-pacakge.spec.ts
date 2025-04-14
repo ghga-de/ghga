@@ -27,7 +27,7 @@ test('allow the creation of a download token', async ({ loggedInPage }) => {
   const datasetSelector = main.getByRole('combobox', { name: 'Available datasets' });
   await datasetSelector.click();
   const datasetOption = page.getByRole('option', {
-    name: 'GHGAD588887988: Some dataset to download',
+    name: 'GHGAD12345678901235: Some dataset to download',
   });
   await datasetOption.click();
 
