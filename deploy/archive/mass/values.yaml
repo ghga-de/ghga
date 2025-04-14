@@ -21,7 +21,7 @@ serviceInstanceIdConsumer: mass-consumer-1
 
 parameters:
   default:
-    db_connection_str: null
+    mongo_dsn: null
     db_name: metadata-store
     host: "0.0.0.0"
     searchable_classes:
@@ -59,11 +59,12 @@ containers:
 
 topics:
   resourceChangeEvent:
+    # as consumer
     topic:
-      name: resource_change_event_topic
+      name: resource_change_topic
       value: searchable-resources
     types:
-    - name: resource_deletion_event_type
+    - name: resource_deletion_type
       value: searchable_resource_deleted
-    - name: resource_upsertion_event_type
+    - name: resource_upsertion_type
       value: searchable_resource_upserted

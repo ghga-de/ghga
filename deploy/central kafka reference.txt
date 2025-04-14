@@ -1,0 +1,48 @@
+dataset_change_topic: metadata-datasets
+dataset_upsertion_type: dataset_created
+dataset_deletion_type: dataset_deleted
+
+resource_change_topic: searchable-resources
+resource_deletion_type: searchable_resource_deleted
+resource_upsertion_type: searchable_resource_upserted
+
+user_topic: users # this is an outbox event
+
+iva_state_changed_topic: ivas
+iva_state_changed_type: iva_state_changed
+
+auth_topic: auth
+second_factor_recreated_type: second_factor_recreated
+
+notification_topic: notifications
+notification_type: notification
+
+access_request_topic: access-requests
+access_request_created_type: access_request_created
+access_request_allowed_type: access_request_allowed
+access_request_denied_type: access_request_denied
+
+file_deletion_request_topic: purges
+file_deletion_request_type: file_deletion_requested
+
+file_internally_registered_topic: internal-registrations
+file_internally_registered_type: internal_file_registered
+
+file_registered_for_download_topic: downloads
+file_registered_for_download_type: drs_object_registered
+
+# this one (file deleted) is different for each service. The one below is for the DCS
+file_deleted_topic: downloads
+file_deleted_type: drs_object_deleted
+
+download_served_topic: downloads
+download_served_type: drs_object_served
+
+files_to_stage_topic: staging-requests
+files_to_stage_type: file_staging_requested
+
+file_staged_topic: staged-files
+file_staged_type: internal_file_staged
+
+file_interrogations_topic: interrogations
+interrogation_success_type: file_interrogation_success

@@ -15,50 +15,63 @@ serviceInstanceId: ifrs-1
 
 parameters:
   default:
-    db_connection_str: null
+    mongo_dsn: null
     object_storages: {}
-    db_version_collection: ifrsDbVersions
-    migration_wait_sec: 10
 
 containers:
 - name: consumer
   type: "consumer"
-  cmd: ifrs
+  cmd: ifrs consume-events
   config:
     name: parameters
     key: parameters
 
 topics:
   fileDeletedEvent:
+    # as producer
     topic:
-      name: file_deleted_event_topic
+      name: file_deleted_topic
       value: internal-registrations
     types:
-      - name: file_deleted_event_type
+      - name: file_deleted_type
         value: internal_file_deleted
   fileRegisteredEvent:
+    # as producer
     topic:
-      name: file_registered_event_topic
+      name: file_internally_registered_topic
       value: internal-registrations
     types:
-      - name: file_registered_event_type
+      - name: file_internally_registered_type
         value: internal_file_registered
   fileStagedEvent:
+    # as producer
     topic:
-      name: file_staged_event_topic
-      value: internal-registrations
+      name: file_staged_topic
+      value: staged-files
     types:
-      - name: file_staged_event_type
+      - name: file_staged_type
         value: internal_file_staged
   filesToDelete:
+    # as consumer
     topic:
-      name: files_to_delete_topic
+      name: file_deletion_request_topic
       value: purges
+    type:
+      name: file_deletion_request_type
+      value: file_deletion_requested
   filesToRegister:
+    # as consumer
     topic:
-      name: files_to_register_topic
+      name: file_interrogations_topic
       value: interrogations
+    type:
+      name: interrogation_success_type
+      value: file_interrogation_success
   filesToStage:
+    # as consumer
     topic:
       name: files_to_stage_topic
-      value: downloads
+      value: staging-requests
+    type:
+      name: files_to_stage_type
+      value: file_staging_requested

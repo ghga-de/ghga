@@ -13,7 +13,7 @@ serviceInstanceId: sms-rest-1
 parameters:
   default:
     host: 0.0.0.0
-    db_connection_str: null
+    mongo_dsn: null
     db_permissions:
     - "*.*:*"
     allow_empty_prefix: true

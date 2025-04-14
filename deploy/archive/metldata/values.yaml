@@ -21,7 +21,7 @@ mapping:
 parameters:
   default:
     artifact_infos: []
-    db_connection_str: null
+    mongo_dsn: null
     db_name: metadata_artifacts
     host: 0.0.0.0
     loader_token_hashes: null  # <Please fill - The tokens must be the loader token generated using the data steward kit.>
@@ -39,21 +39,22 @@ containers:
 
 topics:
   datasetChangeEvent:
+    # as producer
     topic:
-      name: dataset_change_event_topic
+      name: dataset_change_topic
       value: metadata-datasets
     types:
     - name: dataset_deletion_type
       value: dataset_deleted
     - name: dataset_upsertion_type
       value: dataset_created
-
   resourceChangeEvent:
+    # as producer
     topic:
-      name: resource_change_event_topic
+      name: resource_change_topic
       value: searchable-resources
     types:
-    - name: resource_deletion_event_type
+    - name: resource_deletion_type
       value: searchable_resource_deleted
     - name: resource_upsertion_type
       value: searchable_resource_upserted

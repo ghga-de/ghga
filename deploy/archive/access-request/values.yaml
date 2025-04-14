@@ -19,7 +19,7 @@ serviceInstanceId: ars-rest-1
 parameters:
   default:
     auth_key: '{}'
-    db_connection_str: null
+    mongo_dsn: null
     download_access_url: http://claims-repository:8080/download-access
     host: "0.0.0.0"
 

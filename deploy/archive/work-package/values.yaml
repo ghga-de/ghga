@@ -22,7 +22,7 @@ serviceInstanceIdConsumer: wps-consumer-1
 parameters:
   default:
     auth_key: '{}'
-    db_connection_str: null
+    mongo_dsn: null
     db_name: wps
     download_access_url: http://claims-repository:8080/download-access
     host: "0.0.0.0"

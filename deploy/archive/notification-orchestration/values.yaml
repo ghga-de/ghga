@@ -33,38 +33,43 @@ containers:
 
 topics:
   accessRequestEvents:
+    # as consumer
     topic:
-      name: access_request_events_topic
+      name: access_request_topic
       value: access-requests
     types:
-    - name: access_request_created_event_type
+    - name: access_request_created_type
       value: access_request_created
-    - name: access_request_allowed_event_type
+    - name: access_request_allowed_type
       value: access_request_allowed
-    - name: access_request_denied_event_type
+    - name: access_request_denied_type
       value: access_request_denied
   ivaStateChangeEvent:
+    # as consumer
     topic:
-      name: iva_state_changed_event_topic
+      name: iva_state_changed_topic
       value: ivas
     types:
-    - name: iva_state_changed_event_type
+    - name: iva_state_changed_type
       value: iva_state_changed
   notificationEvent:
+    # as producer
     topic:
-      name: notification_event_topic
+      name: notification_topic
       value: notifications
     types:
-    - name: notification_event_type
+    - name: notification_type
       value: notification
   secondFactorRecreatedEvent:
+    # as consumer
     topic:
-      name: second_factor_recreated_event_topic
+      name: auth_topic
       value: auth
     types:
-    - name: second_factor_recreated_event_type
+    - name: second_factor_recreated_type
       value: second_factor_recreated
   userEvents:
+    # as consumer
     topic:
-      name: user_events_topic
+      name: user_topic
       value: users
