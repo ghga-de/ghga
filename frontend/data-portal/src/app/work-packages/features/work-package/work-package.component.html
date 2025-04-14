@@ -31,9 +31,9 @@
         <mat-icon>content_copy</mat-icon>
       </button>
       <p>Please use the following token to {{ tokenAction() }} the selected dataset:</p>
-      <pre class="mb-3 overflow-auto text-base whitespace-pre-wrap text-green-900">{{
-        tokenWithId()
-      }}</pre>
+      <pre
+        class="mb-3 overflow-auto"
+      ><span class="text-sm break-normal text-green-900">{{ token() }}</span></pre>
       <p>Make sure to copy the token now as you will not be able to see this again!</p>
     </mat-card-content>
   </mat-card>

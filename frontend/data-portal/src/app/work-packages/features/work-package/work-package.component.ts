@@ -67,12 +67,6 @@ export class WorkPackageComponent {
   tokenIsLoading = signal<boolean>(false);
   tokenError = signal<string>('');
 
-  tokenWithId = computed(() => {
-    const id = this.selectedDataset()?.id;
-    const token = this.token();
-    return id && token ? `${id}:${token}` : '';
-  });
-
   /**
    * Select a dataset
    * @param id The ID of the dataset to select
@@ -206,8 +200,8 @@ export class WorkPackageComponent {
     this.tokenIsLoading.set(true);
     this.tokenError.set('');
     this.#wpService.createWorkPackage(workPackage).subscribe({
-      next: ({ token }) => {
-        this.token.set(token);
+      next: ({ id, token }) => {
+        this.token.set(`${id}:${token}`);
         this.tokenIsLoading.set(false);
       },
       error: (err) => this.#handleCreationError(err),
@@ -231,7 +225,7 @@ export class WorkPackageComponent {
    * Copy the token to the clipboard
    */
   copyToken(): void {
-    const token = this.tokenWithId();
+    const token = this.token();
     if (token) {
       this.#clipboard.copy(token);
       this.#notify.showSuccess('The token has been copied to the clipboard.');
