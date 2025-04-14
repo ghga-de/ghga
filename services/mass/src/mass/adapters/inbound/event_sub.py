@@ -71,22 +71,27 @@ class EventSubTranslator(EventSubscriberProtocol):
             validated_payload = get_validated_payload(
                 payload=payload, schema=event_schemas.SearchableResourceInfo
             )
-            await self._query_handler.delete_resource(
-                resource_id=validated_payload.accession,
-                class_name=validated_payload.class_name,
-            )
         except EventSchemaValidationError:
+            # If validation fails, send the event to the DLQ (if enabled) or raise.
             log.error(
                 SCHEMA_VALIDATION_ERROR_LOG_MSG,
                 event_schemas.SearchableResourceInfo.__name__,
             )
             raise
+
+        try:
+            await self._query_handler.delete_resource(
+                resource_id=validated_payload.accession,
+                class_name=validated_payload.class_name,
+            )
         except self._query_handler.ResourceNotFoundError:
+            # In file services, deletion ops that don't find the resource are unimportant
+            #  however, here it might indicate an inconsistency between metldata and mass
             log.warning(DELETION_FAILED_LOG_MSG, validated_payload.accession)
-            raise
         except self._query_handler.ClassNotConfiguredError:
-            log.error(CLASS_NOT_CONFIGURED_LOG_MSG, validated_payload.class_name)
-            raise
+            # only log a DEBUG message if consuming a deletion event for a resource that
+            #  doesn't concern mass
+            log.debug(CLASS_NOT_CONFIGURED_LOG_MSG, validated_payload.class_name)
 
     async def _handle_upsertion(self, *, payload: JsonObject):
         """Load the specified resource.
@@ -98,6 +103,14 @@ class EventSubTranslator(EventSubscriberProtocol):
             validated_payload = get_validated_payload(
                 payload=payload, schema=event_schemas.SearchableResource
             )
+        except EventSchemaValidationError:
+            log.error(
+                SCHEMA_VALIDATION_ERROR_LOG_MSG,
+                event_schemas.SearchableResource.__name__,
+            )
+            raise
+
+        try:
             resource = Resource(
                 id_=validated_payload.accession,
                 content=validated_payload.content,
@@ -106,15 +119,9 @@ class EventSubTranslator(EventSubscriberProtocol):
                 resource=resource,
                 class_name=validated_payload.class_name,
             )
-        except EventSchemaValidationError:
-            log.error(
-                SCHEMA_VALIDATION_ERROR_LOG_MSG,
-                event_schemas.SearchableResource.__name__,
-            )
-            raise
         except self._query_handler.ClassNotConfiguredError:
-            log.error(CLASS_NOT_CONFIGURED_LOG_MSG, validated_payload.class_name)
-            raise
+            # This can be a common occurrence, so only log as DEBUG
+            log.debug(CLASS_NOT_CONFIGURED_LOG_MSG, validated_payload.class_name)
 
     async def _consume_validated(
         self,

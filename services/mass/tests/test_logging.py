@@ -16,6 +16,8 @@
 
 """Collection of tests that verify log output"""
 
+import logging
+
 import pytest
 from ghga_event_schemas.pydantic_ import (
     MetadataDatasetID,  # used for intentionally failing validation
@@ -45,6 +47,7 @@ UPSERT_EVENT = "upsert"
 DELETE_EVENT = "delete"
 WARNING_LEVEL = "WARNING"
 ERROR_LEVEL = "ERROR"
+DEBUG_LEVEL = "DEBUG"
 
 
 @pytest.mark.parametrize(
@@ -53,13 +56,13 @@ ERROR_LEVEL = "ERROR"
         (
             BAD_CLASS_NAME_DELETE,
             DELETE_EVENT,
-            ERROR_LEVEL,
+            DEBUG_LEVEL,
             CLASS_NOT_CONFIGURED_LOG_MSG % (BAD_CLASS_NAME,),
         ),
         (
             BAD_CLASS_NAME_UPSERT,
             UPSERT_EVENT,
-            ERROR_LEVEL,
+            DEBUG_LEVEL,
             CLASS_NOT_CONFIGURED_LOG_MSG % (BAD_CLASS_NAME,),
         ),
         (
@@ -83,7 +86,7 @@ ERROR_LEVEL = "ERROR"
     ],
     ids=[
         "Non-configured class name during deletion event",
-        "Non-configured class name during upsertion evenet",
+        "Non-configured class name during upsertion event",
         "Schema validation failure during deletion event",
         "Schema validation failure during upsertion event",
         "Deletion failure due to non-existent accession",
@@ -129,6 +132,7 @@ async def test_event_sub_logging(
 
     # flush any logs that might have accumulated
     caplog.clear()
+    caplog.set_level(logging.DEBUG)
 
     # consume the event
     await joint_fixture.consume_event()
@@ -139,7 +143,11 @@ async def test_event_sub_logging(
         for record in caplog.records
         if record.name == "mass.adapters.inbound.event_sub"
     ]
-    assert len(logs_of_interest) == 1
-    record = logs_of_interest[0]
-    assert record.levelname == expected_log_level
-    assert record.message == expected_log_message
+
+    assert len(logs_of_interest) > 0
+    for record in logs_of_interest:
+        if record.message == expected_log_message:
+            assert record.levelname == expected_log_level
+            break
+    else:
+        assert False, "Did not find expected log"
