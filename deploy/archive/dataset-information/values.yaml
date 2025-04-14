@@ -56,7 +56,7 @@ topics:
       name: file_deletion_request_topic
       value: purges
     types:
-      name: file_deletion_request_type
+    - name: file_deletion_request_type
       value: file_deletion_requested
   datasetUpsertionEvent:
     # as consumer
