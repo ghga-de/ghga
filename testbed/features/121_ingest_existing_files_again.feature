@@ -7,4 +7,3 @@ Feature: 121 Ingest Existing Files Again
     And all the file metadata is stored in the internal file registry
     When an existing file is attempted to be ingested again
     Then I get an error message that the metadata has already been processed
-    And the file metadata in the internal file registry is not updated

@@ -172,7 +172,7 @@ class Config(BaseSettings):
     fis_url: str = "http://fis"
     fis_pubkey: str
     fis_db_name: str = "fis"
-    fis_file_validations_collection: str = "file-validations"
+    fis_ingested_files_collection: str = "ingestedFiles"
 
     # metldata
     metldata_db_name: str = "metldata"
@@ -201,7 +201,7 @@ class Config(BaseSettings):
 
     # pcs
     pcs_db_name: str = "pcs"
-    pcs_file_deletions_collection: str = "file_deletions"
+    pcs_file_deletion_event_collection: str = "pcsPersistedEvents"
     pcs_url: str = "http://pcs"
 
     # mass
@@ -226,7 +226,7 @@ class Config(BaseSettings):
     dcs_objects_collection: str = "drs_objects"
 
     # data portal ui
-    data_portal_ui_url: str = "http://data-portal-ui"
+    data_portal_url: str = "http://data-portal"
 
     # vault
     vault_path: str = "ekss"

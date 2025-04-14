@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-"""Step definitions for Data Portal UI"""
+"""Step definitions for Data Portal"""
+
+import hashlib
 
 from .conftest import (
     JointFixture,
@@ -27,23 +29,30 @@ from .conftest import (
 scenarios("../features/500_data_portal.feature")
 
 
-@when("the data portal ui is accessed", target_fixture="response")
+@when("the data portal is accessed", target_fixture="response")
 def check_data_portal_is_healthy(fixtures: JointFixture):
-    data_portal_ui_url = fixtures.config.data_portal_ui_url
-    response = fixtures.http.get(data_portal_ui_url)
+    data_portal_url = fixtures.config.data_portal_url
+    response = fixtures.http.get(data_portal_url)
     return response
 
 
-@when("the service logo is loaded", target_fixture="response")
+@when("the favicon is loaded", target_fixture="response")
 def load_content(fixtures: JointFixture):
-    data_portal_ui_url = fixtures.config.data_portal_ui_url
-    service_logo_url = data_portal_ui_url.lstrip("/") + "/service-logo.png"
-    response = fixtures.http.get(service_logo_url)
+    data_portal_url = fixtures.config.data_portal_url
+    favicon_url = data_portal_url.lstrip("/") + "/favicon.png"
+    response = fixtures.http.get(favicon_url)
     return response
 
 
-@then("the content is verified")
-def verify_content(response: Response):
+@then("the favicon is verified")
+def verify_favicon(response: Response):
+    expected_content_hash = (
+        "222882c2bb5d6bb58f8fa2171641a24e36c0e2c8265217065316c28f0ebf054c"
+    )
     headers = response.headers
     assert headers["content-type"] == "image/png"
-    assert headers["content-disposition"] == 'inline; filename="service-logo.png"'
+    assert headers["content-length"] == "16760"
+    favicon_hash = hashlib.sha256(response.content).hexdigest()
+    assert favicon_hash == expected_content_hash, (
+        "Favicon hash does not match the known hash"
+    )

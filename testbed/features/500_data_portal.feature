@@ -1,13 +1,13 @@
 
 @dataportal @frontend
-Feature: 50 Data Portal UI
+Feature: 500 Data Portal
   As a user, I can load GHGA Data Portal user interface
 
-  Scenario: Check health of Data Portal UI
-    When the data portal ui is accessed
+  Scenario: Check health of Data Portal
+    When the data portal is accessed
     Then the response status code is "200"
 
-  Scenario: Check content of Data Portal UI
-    When the service logo is loaded
+  Scenario: Check favicon of Data Portal
+    When the favicon is loaded
     Then the response status code is "200"
-    And the content is verified
+    And the favicon is verified

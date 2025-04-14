@@ -53,8 +53,8 @@ def delete_files_of_complete_datasets(http: HttpClient, fixtures: JointFixture):
         # Wait for the file deletion request to be stored
         document = fixtures.mongo.wait_for_document(
             fixtures.config.pcs_db_name,
-            fixtures.config.pcs_file_deletions_collection,
-            query={"_id": file_id},
+            fixtures.config.pcs_file_deletion_event_collection,
+            query={"key": file_id},
             timeout=TIMEOUT,
         )
         assert document

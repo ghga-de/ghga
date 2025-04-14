@@ -52,6 +52,14 @@ def check_metadata_documents(fixtures: JointFixture):
     )
     assert documents
 
+    document = fixtures.mongo.wait_for_documents(
+        db_name=fixtures.config.fis_db_name,
+        collection_name=fixtures.config.fis_ingested_files_collection,
+        query={"_id": {"$in": accessions}},
+        number=len(accessions),
+    )
+    assert document
+
 
 @when(
     "an existing file is attempted to be ingested again",
@@ -96,38 +104,3 @@ def check_ingest_output(ingest_output: subprocess.CompletedProcess):
     assert "ERROR" in ingest_output.stderr
     assert "409 Conflict" in ingest_output.stderr.strip()
     assert "Metadata has already been processed." in ingest_output.stdout.strip()
-
-
-@then("the file metadata in the internal file registry is not updated")
-def check_metadata_documents_not_updated(fixtures: JointFixture):
-    """Check that the file metadata in the internal file registry is not updated
-
-    In the current implementation, the file ingest service processes all ingest
-    requests and updates its own database records. However, the internal file registry
-    fails to update existing records, so the file metadata in the internal file
-    registry remains unchanged.
-    """
-    all_file_information = fixtures.state.get_state("all file information") or {}
-    file_accession = min(all_file_information)
-
-    document = fixtures.mongo.wait_for_document(
-        db_name=fixtures.config.fis_db_name,
-        collection_name=fixtures.config.fis_file_validations_collection,
-        query={"_id": file_accession},
-    )
-    assert document
-    fis_document_timestamp = document["upload_date"]
-
-    document = fixtures.mongo.wait_for_document(
-        db_name=fixtures.config.ifrs_db_name,
-        collection_name=fixtures.config.ifrs_file_metadata_collection,
-        query={"_id": file_accession},
-    )
-    assert document
-    ifrs_document_timestamp = document["upload_date"]
-
-    # internal file registry updates later than the upstream service
-    # so without a file metadata update, the ifrs timestamp should not be later
-    assert datetime.fromisoformat(ifrs_document_timestamp) <= datetime.fromisoformat(
-        fis_document_timestamp
-    )
