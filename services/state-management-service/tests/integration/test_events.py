@@ -16,12 +16,15 @@
 
 from contextlib import suppress
 from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 from aiokafka import AIOKafkaConsumer
+from aiokafka.admin import NewTopic
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka.testutils import KafkaFixture
 
+from sms.core.events_handler import EventsHandler
 from sms.inject import prepare_rest_app
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import VALID_BEARER_TOKEN
@@ -52,8 +55,79 @@ TEST_EVENTS = [TEST_EVENT1, TEST_EVENT2, TEST_EVENT3]
 TEST_TOPICS = [TEST_TOPIC1, TEST_TOPIC2]
 
 
+async def test_get_policy(kafka: KafkaFixture):
+    """Verify that `_get_cleanup_policy()` returns the current value"""
+    config = get_config(sources=[kafka.config])
+    events_handler = EventsHandler(config=config, event_publisher=AsyncMock())
+    async with events_handler.get_admin_client() as admin_client:
+        # Create a Kafka topic with the cleanup policy set to 'delete'
+        topic_policies = [
+            ["deletion_topic", "delete"],
+            ["both_topic", "compact,delete"],
+            ["compact_topic", "compact"],
+        ]
+        new_topics = [
+            NewTopic(
+                name=topic,
+                num_partitions=1,
+                replication_factor=1,
+                topic_configs={"cleanup.policy": policy},
+            )
+            for topic, policy in topic_policies
+        ]
+        await admin_client.create_topics(new_topics)
+
+        # Check the policy for a topic that hasn't been created
+        assert await events_handler._get_cleanup_policy(topic="doesnotexist") is None
+
+        # Retrieve the cleanup policy for each of the topics we just made
+        for topic, policy in topic_policies:
+            assigned_policy = await events_handler._get_cleanup_policy(topic=topic)
+
+            # Verify that the returned value is correct
+            assert assigned_policy == policy
+
+
+async def test_set_policy(kafka: KafkaFixture):
+    """Verify that `_set_cleanup_policy()` updates the current value"""
+    config = get_config(sources=[kafka.config])
+    events_handler = EventsHandler(config=config, event_publisher=AsyncMock())
+    async with events_handler.get_admin_client() as admin_client:
+        # Create a Kafka topic with the cleanup policy set to 'compact'
+        if not await events_handler._get_cleanup_policy(topic=TEST_TOPIC1):
+            await admin_client.create_topics(
+                [
+                    NewTopic(
+                        name=TEST_TOPIC1,
+                        num_partitions=1,
+                        replication_factor=1,
+                        topic_configs={"cleanup.policy": "compact"},
+                    )
+                ]
+            )
+
+        # Assert that the cleanup policy is set to 'compact'
+        policy_before = await events_handler._get_cleanup_policy(topic=TEST_TOPIC1)
+        assert policy_before == "compact"
+
+        # Assign the new policy
+        await events_handler._set_cleanup_policy(topic=TEST_TOPIC1, policy="delete")
+
+        # Verify that the policy was updated
+        policy_after = await events_handler._get_cleanup_policy(topic=TEST_TOPIC1)
+        assert policy_after == "delete"
+
+
 @pytest.mark.parametrize(
-    "events_to_publish", [TEST_EVENTS, []], ids=["EventsPublished", "NoEventsPublished"]
+    "events_to_publish",
+    [
+        TEST_EVENTS,
+        [],
+    ],
+    ids=[
+        "EventsPublished",
+        "NoEventsPublished",
+    ],
 )
 @pytest.mark.parametrize(
     "topics_to_clear",
@@ -80,13 +154,39 @@ async def test_clear_topics_happy(
     """Test that topics can be cleared."""
     config = get_config(sources=[kafka.config])
 
-    # Publish events if applicable
-    published_topics: set[str] = set()
-    for event in events_to_publish:
-        published_topics.add(event["topic"])
-        await kafka.publish_event(**event)
+    # Make sure to set policy to "compact" for the topics
+    events_handler = EventsHandler(config=config, event_publisher=AsyncMock())
+    async with events_handler.get_admin_client() as admin_client:
+        existing_topics = await admin_client.list_topics()
+        for topic in topics_to_clear:
+            # Create the topic if it doesn't exist already
+            if topic not in existing_topics:
+                await admin_client.create_topics(
+                    [
+                        NewTopic(
+                            name=topic,
+                            num_partitions=1,
+                            replication_factor=1,
+                            topic_configs={"cleanup.policy": "compact"},
+                        )
+                    ]
+                )
+            else:
+                # If topic does exist, check the cleanup policy
+                policy = await events_handler._get_cleanup_policy(topic=topic)
+                assert policy
+                if "compact" not in policy.split(","):
+                    await events_handler._set_cleanup_policy(
+                        topic=topic, policy="compact"
+                    )
 
-    # Call the endpoint to delete the topics in topics_to_clear
+        # Publish events if applicable
+        published_topics: set[str] = set()
+        for event in events_to_publish:
+            published_topics.add(event["topic"])
+            await kafka.publish_event(**event)
+
+    # Call the endpoint to CLEAR THE TOPICS specified in topics_to_clear
     async with (
         prepare_rest_app(config=config) as app,
         AsyncTestClient(app=app) as client,
@@ -110,25 +210,48 @@ async def test_clear_topics_happy(
         )
         await consumer.start()
 
-        # Get a list of the topics cleared -- an empty topics_to_clear means all topics
-        # (ignore internal topics for the test)
-        cleared_topics = topics_to_clear if topics_to_clear else published_topics
+        try:
+            # Get a list of the topics cleared -- an empty topics_to_clear means all topics
+            # (ignore internal topics for the test)
+            cleared_topics = topics_to_clear if topics_to_clear else published_topics
 
-        # Calculate how many events should have been deleted
-        affected_event_count = len(
-            [event for event in events_to_publish if event["topic"] in cleared_topics]
+            # Calculate how many events should have been deleted
+            deleted_event_count = sum(
+                1 for event in events_to_publish if event["topic"] in cleared_topics
+            )
+
+            # Calculate how many events should remain
+            num_events_remaining = len(events_to_publish) - deleted_event_count
+
+            # Verify that the topics have been cleared
+            prefetched = await consumer.getmany(timeout_ms=500)
+            with suppress(StopIteration):
+                records = next(iter(prefetched.values()))
+                assert len(records) == num_events_remaining
+                for record in records:
+                    assert record.topic not in cleared_topics
+        finally:
+            await consumer.stop()
+
+
+async def test_clear_topics_error(kafka: KafkaFixture):
+    """Make sure the original cleanup policies are restored if there's an error in
+    `delete_topics`.
+    """
+    config = get_config(sources=[kafka.config])
+    events_handler = EventsHandler(config=config, event_publisher=AsyncMock())
+    topic = "badthings"
+    async with events_handler.get_admin_client():
+        await kafka.publish_event(
+            payload={"some": "cool payload"},
+            type_="erroring_type",
+            topic=topic,
+            key="mykey",
         )
+        await events_handler._set_cleanup_policy(topic=topic, policy="compact,delete")
 
-        # Calculate how many events should remain
-        num_records_remaining = len(events_to_publish) - affected_event_count
-
-        # Verify that the topics have been cleared
-        prefetched = await consumer.getmany(timeout_ms=500)
-        with suppress(StopIteration):
-            records = next(iter(prefetched.values()))
-            assert len(records) == num_records_remaining
-            for record in records:
-                assert record.topic not in cleared_topics
+        await events_handler.clear_topics(topics=[topic])
+        assert await events_handler._get_cleanup_policy(topic=topic) == "compact,delete"
 
 
 # Test event publishing

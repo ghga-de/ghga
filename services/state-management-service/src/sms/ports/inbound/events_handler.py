@@ -39,6 +39,10 @@ class EventsHandlerPort(ABC):
 
         If no topics are specified, all topics will be cleared, except internal topics
         unless otherwise specified.
+
+        To enable topic clearing for compacted topics, the cleanup policy is temporarily
+        set to 'delete' while the action is performed. Afterward, the policy is set to
+        its original value (either 'compact' or 'compact,delete').
         """
         ...
 

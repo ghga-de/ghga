@@ -58,35 +58,63 @@ def get_expected_records_to_delete(
 
 
 @pytest.mark.parametrize(
-    "topics", [["topic1", "topic2"], []], ids=["BasicTopics", "EmptyTopicsList"]
+    "topics_to_delete",
+    [["topic1", "topic2"], []],
+    ids=["BasicTopics", "EmptyTopicsList"],
 )
 @pytest.mark.parametrize(
     "exclude_internal", [True, False], ids=["DontClearInternal", "ClearInternal"]
 )
-async def test_topics_parameter_behavior(topics: list[str], exclude_internal: bool):
+async def test_topics_parameter_behavior(
+    topics_to_delete: list[str], exclude_internal: bool
+):
     """Test how clear_topics behaves based on the parameters."""
-    # Set up a mock to replace the admin client
+    # Set up a mock to replace the admin client and _get_cleanup_policy() method
     mock = AsyncMock(spec=AIOKafkaAdminClient)
-    mock_topics_info = mock_describe_topics(topics)
+    mock_topics_info = mock_describe_topics(topics_to_delete)
     mock.describe_topics.return_value = mock_topics_info
-    mock.list_topics.return_value = INTERNAL_TOPICS + topics
+    mock.list_topics.return_value = INTERNAL_TOPICS + topics_to_delete
+    policy_mock = AsyncMock()
+    policy_mock.return_value = "delete"
 
-    # Create an instance of the EventsHandler and patch with the mock
+    # Create an instance of the EventsHandler and patch with the mocks
     handler = EventsHandler(config=DEFAULT_TEST_CONFIG, event_publisher=AsyncMock())
+    handler._get_cleanup_policy = policy_mock  # type: ignore [method-assign]
     handler.get_admin_client = lambda: asyncnullcontext(mock)  # type: ignore [method-assign]
 
     # Call the clear_topics method
-    await handler.clear_topics(topics=topics, exclude_internal=exclude_internal)
-
-    # If topics is empty, the list_topics method should have been called to get all topics
-    if not topics:
-        mock.list_topics.assert_awaited_once()
-    else:
-        # ... otherwise, it should not have been called
-        mock.list_topics.assert_not_called()
+    await handler.clear_topics(
+        topics=topics_to_delete, exclude_internal=exclude_internal
+    )
 
     # Assert that the delete records function is called with the expected args
-    expected_args = get_expected_records_to_delete(mock_topics_info, exclude_internal)
-    mock.delete_records.assert_awaited_once()
-    actual_args = mock.delete_records.await_args[0][0]
-    assert actual_args.keys() == expected_args.keys()
+    assert mock.delete_records.await_count == len(topics_to_delete)
+    if topics_to_delete:
+        await_args_list = mock.delete_records.await_args_list
+        expected_deleted_topics = []
+        if not (topics_to_delete or exclude_internal):
+            expected_deleted_topics.extend(INTERNAL_TOPICS)
+        elif topics_to_delete:
+            expected_deleted_topics = topics_to_delete
+
+        # Assert that we made one delete_records call for each desired topic
+        assert len(await_args_list) == len(expected_deleted_topics)
+        actually_deleted_topics = []
+
+        for call in await_args_list:
+            # Extract the call arg we actually care about: the records_to_delete arg
+            records_to_delete_dict = call[0][0]
+
+            # Only one topic should have been cleared at a time
+            items = [_ for _ in records_to_delete_dict.items()]
+            assert len(items) == 1
+
+            # Verify the supplied key was a TopicPartition, the value a RecordsToDelete
+            key, value = items[0]
+            assert isinstance(key, TopicPartition)
+            assert isinstance(value, RecordsToDelete)
+            # Get the topic from the TopicPartition (key) and track it
+            actually_deleted_topics.append(key[0])
+
+        # Verify the topics submitted for deletion were the expected topics
+        assert actually_deleted_topics == expected_deleted_topics
