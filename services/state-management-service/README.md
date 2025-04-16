@@ -22,7 +22,7 @@ can be accessed with this service through configuration, and a simple API key
 
 We recommend using the provided Docker container.
 
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/state-management-service):
+A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/state-management-service):
 ```bash
 docker pull ghga/state-management-service:4.0.0
 ```
@@ -55,9 +55,9 @@ sms --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`service_name`** *(string)*: Short name of this service. Default: `"sms"`.
+- <a id="properties/service_name"></a>**`service_name`** *(string)*: Short name of this service. Default: `"sms"`.
 
-- **`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
+- <a id="properties/service_instance_id"></a>**`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
 
   Examples:
@@ -67,9 +67,9 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
+- <a id="properties/kafka_servers"></a>**`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
-  - **Items** *(string)*
+  - <a id="properties/kafka_servers/items"></a>**Items** *(string)*
 
 
   Examples:
@@ -81,17 +81,17 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
+- <a id="properties/kafka_security_protocol"></a>**`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
 
-- **`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+- <a id="properties/kafka_ssl_cafile"></a>**`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
 
-- **`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
+- <a id="properties/kafka_ssl_certfile"></a>**`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
 
-- **`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
+- <a id="properties/kafka_ssl_keyfile"></a>**`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
 
-- **`kafka_ssl_password`** *(string, format: password)*: Optional password to be used for the client private key. Default: `""`.
+- <a id="properties/kafka_ssl_password"></a>**`kafka_ssl_password`** *(string, format: password, write-only)*: Optional password to be used for the client private key. Default: `""`.
 
-- **`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+- <a id="properties/generate_correlation_id"></a>**`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
 
 
   Examples:
@@ -106,7 +106,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+- <a id="properties/kafka_max_message_size"></a>**`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
 
 
   Examples:
@@ -121,7 +121,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
+- <a id="properties/kafka_max_retries"></a>**`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
 
 
   Examples:
@@ -151,7 +151,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
+- <a id="properties/kafka_enable_dlq"></a>**`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
 
 
   Examples:
@@ -166,7 +166,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
+- <a id="properties/kafka_dlq_topic"></a>**`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
 
 
   Examples:
@@ -176,7 +176,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
+- <a id="properties/kafka_retry_backoff"></a>**`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
 
 
   Examples:
@@ -206,11 +206,11 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`object_storages`** *(object, required)*: Can contain additional properties.
+- <a id="properties/object_storages"></a>**`object_storages`** *(object, required)*: Can contain additional properties.
 
-  - **Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
+  - <a id="properties/object_storages/additionalProperties"></a>**Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
 
-- **`vault_url`** *(string, required)*: URL for the Vault.
+- <a id="properties/vault_url"></a>**`vault_url`** *(string, required)*: URL for the Vault.
 
 
   Examples:
@@ -220,7 +220,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
+- <a id="properties/vault_secrets_mount_point"></a>**`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
 
 
   Examples:
@@ -230,13 +230,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_role_id`**: Vault role ID to access a specific prefix. Default: `null`.
+- <a id="properties/vault_role_id"></a>**`vault_role_id`**: Vault role ID to access a specific prefix. Default: `null`.
 
   - **Any of**
 
-    - *string, format: password*
+    - <a id="properties/vault_role_id/anyOf/0"></a>*string, format: password*
 
-    - *null*
+    - <a id="properties/vault_role_id/anyOf/1"></a>*null*
 
 
   Examples:
@@ -246,13 +246,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_secret_id`**: Vault secret ID to access a specific prefix. Default: `null`.
+- <a id="properties/vault_secret_id"></a>**`vault_secret_id`**: Vault secret ID to access a specific prefix. Default: `null`.
 
   - **Any of**
 
-    - *string, format: password*
+    - <a id="properties/vault_secret_id/anyOf/0"></a>*string, format: password*
 
-    - *null*
+    - <a id="properties/vault_secret_id/anyOf/1"></a>*null*
 
 
   Examples:
@@ -262,13 +262,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_verify`**: SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification. Default: `true`.
+- <a id="properties/vault_verify"></a>**`vault_verify`**: SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification. Default: `true`.
 
   - **Any of**
 
-    - *boolean*
+    - <a id="properties/vault_verify/anyOf/0"></a>*boolean*
 
-    - *string*
+    - <a id="properties/vault_verify/anyOf/1"></a>*string*
 
 
   Examples:
@@ -278,15 +278,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
+- <a id="properties/vault_path"></a>**`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
 
-- **`vault_kube_role`**: Vault role name used for Kubernetes authentication. Default: `null`.
+- <a id="properties/vault_kube_role"></a>**`vault_kube_role`**: Vault role name used for Kubernetes authentication. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/vault_kube_role/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/vault_kube_role/anyOf/1"></a>*null*
 
 
   Examples:
@@ -296,13 +296,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`vault_auth_mount_point`**: Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. Default: `null`.
+- <a id="properties/vault_auth_mount_point"></a>**`vault_auth_mount_point`**: Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/vault_auth_mount_point/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/vault_auth_mount_point/anyOf/1"></a>*null*
 
 
   Examples:
@@ -322,11 +322,11 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
+- <a id="properties/service_account_token_path"></a>**`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
 
-- **`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.
+- <a id="properties/token_hashes"></a>**`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256.
 
-  - **Items** *(string)*
+  - <a id="properties/token_hashes/items"></a>**Items** *(string)*
 
 
   Examples:
@@ -336,7 +336,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_prefix`** *(string, required)*: Prefix to add to all database names used in the SMS.
+- <a id="properties/db_prefix"></a>**`db_prefix`** *(string, required)*: Prefix to add to all database names used in the SMS.
 
 
   Examples:
@@ -346,7 +346,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`allow_empty_prefix`** *(boolean)*: Only set to True for local testing. If False, `db_prefix` cannot be empty. This is to prevent accidental deletion of others' data in shared environments, i.e. staging. Default: `false`.
+- <a id="properties/allow_empty_prefix"></a>**`allow_empty_prefix`** *(boolean)*: Only set to True for local testing. If False, `db_prefix` cannot be empty. This is to prevent accidental deletion of others' data in shared environments, i.e. staging. Default: `false`.
 
 
   Examples:
@@ -361,9 +361,9 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`db_permissions`** *(array)*: List of permissions that can be granted on a collection. Use * to signify 'all'. The format is '<db_name>.<collection_name>:<permissions>', e.g. 'db1.collection1.crud'. The permissions are 'r' for read and 'w' for write. '*' can be used to mean both read and write (or 'rw'). Deletion is a write operation. If db_permissions are not set, no operations are allowed on any database or collection. Default: `[]`.
+- <a id="properties/db_permissions"></a>**`db_permissions`** *(array)*: List of permissions that can be granted on a collection. Use * to signify 'all'. The format is '<db_name>.<collection_name>:<permissions>', e.g. 'db1.collection1.crud'. The permissions are 'r' for read and 'w' for write. '*' can be used to mean both read and write (or 'rw'). Deletion is a write operation. If db_permissions are not set, no operations are allowed on any database or collection. Default: `[]`.
 
-  - **Items** *(string)*
+  - <a id="properties/db_permissions/items"></a>**Items** *(string)*
 
 
   Examples:
@@ -408,7 +408,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/.
+- <a id="properties/mongo_dsn"></a>**`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/. Length must be at least 1.
 
 
   Examples:
@@ -418,15 +418,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
 
-- **`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
+- <a id="properties/log_format"></a>**`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
 
   - **Any of**
 
-    - *string*
+    - <a id="properties/log_format/anyOf/0"></a>*string*
 
-    - *null*
+    - <a id="properties/log_format/anyOf/1"></a>*null*
 
 
   Examples:
@@ -441,31 +441,31 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+- <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- **`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
+- <a id="properties/host"></a>**`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
-- **`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
+- <a id="properties/port"></a>**`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 
-- **`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
+- <a id="properties/auto_reload"></a>**`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
-- **`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+- <a id="properties/workers"></a>**`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
 
-- **`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
+- <a id="properties/api_root_path"></a>**`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
 
-- **`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
+- <a id="properties/openapi_url"></a>**`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
 
-- **`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
+- <a id="properties/docs_url"></a>**`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.
 
-- **`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
+- <a id="properties/cors_allowed_origins"></a>**`cors_allowed_origins`**: A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_origins/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_origins/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_origins/anyOf/1"></a>*null*
 
 
   Examples:
@@ -478,13 +478,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
+- <a id="properties/cors_allow_credentials"></a>**`cors_allow_credentials`**: Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. Default: `null`.
 
   - **Any of**
 
-    - *boolean*
+    - <a id="properties/cors_allow_credentials/anyOf/0"></a>*boolean*
 
-    - *null*
+    - <a id="properties/cors_allow_credentials/anyOf/1"></a>*null*
 
 
   Examples:
@@ -497,15 +497,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
+- <a id="properties/cors_allowed_methods"></a>**`cors_allowed_methods`**: A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_methods/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_methods/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_methods/anyOf/1"></a>*null*
 
 
   Examples:
@@ -517,15 +517,15 @@ The service requires the following configuration parameters:
   ```
 
 
-- **`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
 
   - **Any of**
 
-    - *array*
+    - <a id="properties/cors_allowed_headers/anyOf/0"></a>*array*
 
-      - **Items** *(string)*
+      - <a id="properties/cors_allowed_headers/anyOf/0/items"></a>**Items** *(string)*
 
-    - *null*
+    - <a id="properties/cors_allowed_headers/anyOf/1"></a>*null*
 
 
   Examples:
@@ -557,7 +557,7 @@ to talk to an S3 service in the backend.<br>  Args:
         https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file
         Defaults to None. Cannot contain additional properties.
 
-  - **`s3_endpoint_url`** *(string, required)*: URL to the S3 API.
+  - <a id="%24defs/S3Config/properties/s3_endpoint_url"></a>**`s3_endpoint_url`** *(string, required)*: URL to the S3 API.
 
 
     Examples:
@@ -567,7 +567,7 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - **`s3_access_key_id`** *(string, required)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
+  - <a id="%24defs/S3Config/properties/s3_access_key_id"></a>**`s3_access_key_id`** *(string, required)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
 
 
     Examples:
@@ -577,7 +577,7 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - **`s3_secret_access_key`** *(string, format: password, required)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
+  - <a id="%24defs/S3Config/properties/s3_secret_access_key"></a>**`s3_secret_access_key`** *(string, format: password, required, write-only)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
 
 
     Examples:
@@ -587,13 +587,13 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - **`s3_session_token`**: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html. Default: `null`.
+  - <a id="%24defs/S3Config/properties/s3_session_token"></a>**`s3_session_token`**: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html. Default: `null`.
 
     - **Any of**
 
-      - *string, format: password*
+      - <a id="%24defs/S3Config/properties/s3_session_token/anyOf/0"></a>*string, format: password*
 
-      - *null*
+      - <a id="%24defs/S3Config/properties/s3_session_token/anyOf/1"></a>*null*
 
 
     Examples:
@@ -603,13 +603,13 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - **`aws_config_ini`**: Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file. Default: `null`.
+  - <a id="%24defs/S3Config/properties/aws_config_ini"></a>**`aws_config_ini`**: Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file. Default: `null`.
 
     - **Any of**
 
-      - *string, format: path*
+      - <a id="%24defs/S3Config/properties/aws_config_ini/anyOf/0"></a>*string, format: path*
 
-      - *null*
+      - <a id="%24defs/S3Config/properties/aws_config_ini/anyOf/1"></a>*null*
 
 
     Examples:
@@ -621,18 +621,18 @@ to talk to an S3 service in the backend.<br>  Args:
 
 - <a id="%24defs/S3ObjectStorageNodeConfig"></a>**`S3ObjectStorageNodeConfig`** *(object)*: Configuration for one specific object storage node and one bucket in it.<br>  The bucket is the main bucket that the service is responsible for. Cannot contain additional properties.
 
-  - **`bucket`** *(string, required)*
+  - <a id="%24defs/S3ObjectStorageNodeConfig/properties/bucket"></a>**`bucket`** *(string, required)*
 
-  - **`credentials`**: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
+  - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`**: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
 
 
 ### Usage:
 
-A template YAML for configurating the service can be found at
+A template YAML for configuring the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
-Please adapt it, rename it to `.sms.yaml`, and place it into one of the following locations:
-- in the current working directory were you are execute the service (on unix: `./.sms.yaml`)
-- in your home directory (on unix: `~/.sms.yaml`)
+Please adapt it, rename it to `.sms.yaml`, and place it in one of the following locations:
+- in the current working directory where you execute the service (on Linux: `./.sms.yaml`)
+- in your home directory (on Linux: `~/.sms.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -646,7 +646,7 @@ e.g. for the `host` set an environment variable named `sms_host`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 
-To using file secrets please refer to the
+To use file secrets, please refer to the
 [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support)
 of the pydantic documentation.
 
@@ -690,8 +690,8 @@ This will give you a full-fledged, pre-configured development environment includ
 - a pre-configured debugger
 - automatic license-header insertion
 
-Moreover, inside the devcontainer, a convenience commands `dev_install` is available.
-It installs the service with all development dependencies, installs pre-commit.
+Moreover, inside the devcontainer, a command `dev_install` is available for convenience.
+It installs the service with all development dependencies, and it installs pre-commit.
 
 The installation is performed automatically when you build the devcontainer. However,
 if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the

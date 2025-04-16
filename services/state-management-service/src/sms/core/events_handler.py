@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,17 +19,20 @@ from contextlib import asynccontextmanager
 
 from aiokafka import TopicPartition
 from aiokafka.admin import AIOKafkaAdminClient, RecordsToDelete
+from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.providers.akafka.provider.utils import generate_ssl_context
 
 from sms.config import Config
+from sms.models import EventDetails
 from sms.ports.inbound.events_handler import EventsHandlerPort
 
 
 class EventsHandler(EventsHandlerPort):
     """A class to manage the state of kafka events."""
 
-    def __init__(self, *, config: Config):
+    def __init__(self, *, config: Config, event_publisher: EventPublisherProtocol):
         self._config = config
+        self._event_publisher = event_publisher
 
     @asynccontextmanager
     async def get_admin_client(self) -> AsyncGenerator[AIOKafkaAdminClient, None]:
@@ -65,3 +68,19 @@ class EventsHandler(EventsHandlerPort):
                 for partition_info in topic_info["partitions"]
             }
             await admin_client.delete_records(records_to_delete, timeout_ms=10000)
+
+    async def publish_event(self, *, event_details: EventDetails):
+        """Publish a single event to the given topic.
+
+        Raises a `PublishError` if there's an problem with the publishing operation.
+        """
+        try:
+            await self._event_publisher.publish(
+                payload=event_details.payload,
+                type_=event_details.type_,
+                topic=event_details.topic,
+                key=event_details.key,
+                headers=event_details.headers,
+            )
+        except Exception as exc:
+            raise self.PublishError(event_details=event_details) from exc

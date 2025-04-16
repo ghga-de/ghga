@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -129,3 +129,36 @@ async def test_clear_topics_happy(
             assert len(records) == num_records_remaining
             for record in records:
                 assert record.topic not in cleared_topics
+
+
+# Test event publishing
+@pytest.mark.parametrize(
+    "event_to_publish",
+    [TEST_EVENT1, TEST_EVENT2, TEST_EVENT3],
+    ids=["Event1", "Event2", "Event3"],
+)
+async def test_publish_event_happy(
+    kafka: KafkaFixture,
+    event_to_publish: dict[str, Any],
+):
+    """Test that events can be published."""
+    config = get_config(sources=[kafka.config])
+
+    # Call the endpoint to publish the event
+    async with (
+        prepare_rest_app(config=config) as app,
+        AsyncTestClient(app=app) as client,
+        kafka.record_events(in_topic=event_to_publish["topic"]) as recorder,
+    ):
+        response = await client.post(
+            "/events/",
+            json=event_to_publish,
+            headers={"Authorization": VALID_BEARER_TOKEN},
+        )
+        assert response.status_code == 204
+    assert recorder.recorded_events
+    assert len(recorder.recorded_events) == 1
+    event = recorder.recorded_events[0]
+    assert event.payload == event_to_publish["payload"]
+    assert event.type_ == event_to_publish["type_"]
+    assert event.key == event_to_publish["key"]

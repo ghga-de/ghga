@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 """Integration tests for the database"""
 
 from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -63,7 +64,7 @@ async def test_get_docs(
     config = get_config(sources=[mongodb.config])
 
     async with (
-        prepare_rest_app(config=config) as app,
+        prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
         AsyncTestClient(app=app) as client,
     ):
         await client.put(
@@ -102,7 +103,7 @@ async def test_invalid_criteria(http_method: str, criteria: str, error_text: str
     """Test the handling of invalid criteria."""
     config = get_config()
     async with (
-        prepare_rest_app(config=config) as app,
+        prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
         AsyncTestClient(app=app) as client,
     ):
         method_to_call = getattr(client, http_method)
@@ -126,7 +127,7 @@ async def test_get_docs_permission_error(http_method: str):
         + f" collection 'unlisted'. No rule found that matches '{rule}'"
     )
     async with (
-        prepare_rest_app(config=config) as app,
+        prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
         AsyncTestClient(app=app) as client,
     ):
         method_to_call = getattr(client, http_method)
@@ -153,7 +154,7 @@ async def test_deletion_on_nonexistent_resources(mongodb: MongoDbFixture):
     config = get_config(sources=[new_config])
 
     async with (
-        prepare_rest_app(config=config) as app,
+        prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
         AsyncTestClient(app=app) as client,
     ):
         # Insert documents into testdb.allops

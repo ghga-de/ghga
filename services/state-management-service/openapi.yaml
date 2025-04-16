@@ -1,5 +1,41 @@
 components:
   schemas:
+    EventDetails:
+      description: Details for publishing events.
+      properties:
+        headers:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          description: The headers for the event.
+          title: Headers
+        key:
+          description: The key of the event.
+          title: Key
+          type: string
+        payload:
+          additionalProperties:
+            type: string
+          description: The value of the event.
+          title: Payload
+          type: object
+        topic:
+          description: The topic to publish the event to.
+          title: Topic
+          type: string
+        type_:
+          description: The type of the event.
+          title: Type
+          type: string
+      required:
+      - payload
+      - topic
+      - type_
+      - key
+      title: EventDetails
+      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -14,8 +50,10 @@ components:
       properties:
         documents:
           anyOf:
-          - type: object
+          - additionalProperties: true
+            type: object
           - items:
+              additionalProperties: true
               type: object
             type: array
           description: The document(s) to upsert.
@@ -160,6 +198,7 @@ paths:
             application/json:
               schema:
                 items:
+                  additionalProperties: true
                   type: object
                 title: Response Get Documents
                 type: array
@@ -252,6 +291,40 @@ paths:
       security:
       - HTTPBearer: []
       summary: Clear events from the given topic(s).
+      tags:
+      - StateManagementService
+      - sms-kafka
+    post:
+      description: 'Publish the event provided in the request body to the given topic.
+
+
+        Args:
+
+        - `events_handler`: The events handler to use.
+
+
+        Raises:
+
+        - `HTTPException`: If an error occurs.'
+      operationId: publish_event
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventDetails'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Publish the event provided in the request body to the given topic.
       tags:
       - StateManagementService
       - sms-kafka

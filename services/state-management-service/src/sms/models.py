@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,4 +31,18 @@ class UpsertionDetails(BaseModel):
     )
     documents: DocumentType | list[DocumentType] = Field(
         default=..., description="The document(s) to upsert."
+    )
+
+
+class EventDetails(BaseModel):
+    """Details for publishing events."""
+
+    payload: Mapping[str, str] = Field(
+        default=..., description="The value of the event."
+    )
+    topic: str = Field(default=..., description="The topic to publish the event to.")
+    type_: str = Field(default=..., description="The type of the event.")
+    key: str = Field(default=..., description="The key of the event.")
+    headers: Mapping[str, str] | None = Field(
+        None, description="The headers for the event."
     )

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 """Integration tests for the /secrets endpoints."""
 
 from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -48,7 +49,7 @@ async def test_happy_get(vault: VaultFixture, stored_secrets: list[str]):
         vault.store_secret(key=secret)
 
     async with (
-        prepare_rest_app(config=config) as app,
+        prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
         AsyncTestClient(app=app) as client,
     ):
         response = await client.get(TEST_URL, headers=HEADERS)
@@ -71,7 +72,7 @@ async def test_happy_delete(vault: VaultFixture, stored_secrets: list[str]):
         vault.store_secret(key=secret)
 
     async with (
-        prepare_rest_app(config=config) as app,
+        prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
         AsyncTestClient(app=app) as client,
     ):
         # Make a DELETE request to delete the secrets
@@ -90,7 +91,7 @@ async def test_nonexistent_vault_path(vault: VaultFixture):
     config = get_config(sources=[vault_fixture_config])
 
     async with (
-        prepare_rest_app(config=config) as app,
+        prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
         AsyncTestClient(app=app) as client,
     ):
         response = await client.get("/secrets/doesnotexist", headers=HEADERS)

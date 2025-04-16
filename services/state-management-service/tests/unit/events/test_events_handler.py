@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,7 +72,7 @@ async def test_topics_parameter_behavior(topics: list[str], exclude_internal: bo
     mock.list_topics.return_value = INTERNAL_TOPICS + topics
 
     # Create an instance of the EventsHandler and patch with the mock
-    handler = EventsHandler(config=DEFAULT_TEST_CONFIG)
+    handler = EventsHandler(config=DEFAULT_TEST_CONFIG, event_publisher=AsyncMock())
     handler.get_admin_client = lambda: asyncnullcontext(mock)  # type: ignore [method-assign]
 
     # Call the clear_topics method
