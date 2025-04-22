@@ -76,7 +76,13 @@ topics:
     type:
       name: files_to_stage_type
       value: file_staging_requested
+  # as producer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry

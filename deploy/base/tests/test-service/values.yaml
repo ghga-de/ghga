@@ -70,10 +70,12 @@ topics:
       value: searchable_resource_deleted
     - name: resource_upsertion_event_type
       value: searchable_resource_upserted
+  # as producer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+  # as consumer
   deadLetterQueueRetry:
     topic:
       name: null

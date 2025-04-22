@@ -74,7 +74,13 @@ topics:
     topic:
       name: user_topic
       value: users
+  # as producer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
