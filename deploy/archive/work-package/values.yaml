@@ -29,6 +29,7 @@ parameters:
     service_instance_id: 'wps_1'
     service_name: wps
     work_package_signing_key: '{}'
+    kafka_enable_dlq: true
   rest:
     service_instance_id: 'rest.1'
   consumer:
@@ -59,3 +60,7 @@ topics:
       value: dataset_created
     - name: dataset_deletion_type
       value: dataset_deleted
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq

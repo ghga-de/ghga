@@ -24,6 +24,7 @@ parameters:
   default:
     host: 0.0.0.0
     mongo_dsn: null
+    kafka_enable_dlq: true
 
 containers:
 - name: rest
@@ -74,3 +75,7 @@ topics:
     types:
       - name: dataset_deletion_type
         value: dataset_deleted
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq

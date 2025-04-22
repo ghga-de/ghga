@@ -17,6 +17,7 @@ parameters:
   default:
     mongo_dsn: null
     object_storages: {}
+    kafka_enable_dlq: true
 
 containers:
 - name: consumer
@@ -75,3 +76,7 @@ topics:
     type:
       name: files_to_stage_type
       value: file_staging_requested
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq

@@ -45,6 +45,7 @@ parameters:
     smtp_host: 127.0.0.1
     smtp_port: 587
     use_starttls: false
+    kafka_enable_dlq: true
 
 containers:
 - name: consumer
@@ -62,3 +63,7 @@ topics:
     types:
       - name: notification_type
         value: notification
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
