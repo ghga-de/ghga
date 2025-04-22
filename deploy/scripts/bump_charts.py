@@ -192,8 +192,8 @@ if __name__ == "__main__":
         
         latest = get_latest_published_version(helm_index, chart["name"])
         if latest:
-            latest_app_version = VersionInfo.parse(latest["appVersion"])
-            latest_version = VersionInfo.parse(latest["version"])
+            latest_app_version = latest["appVersion"]
+            latest_version = latest["version"]
         # Chart doen't exist yet in the index.yaml
         else:
             latest_app_version = VersionInfo.parse("0.0.0")
