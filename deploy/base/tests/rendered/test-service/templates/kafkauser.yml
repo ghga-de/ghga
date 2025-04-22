@@ -15,6 +15,16 @@ spec:
     
     - operation: All
       resource:
+        name: 'dlq'
+        patternType: literal
+        type: topic
+    - operation: All
+      resource:
+        name: 'retry'
+        patternType: literal
+        type: topic
+    - operation: All
+      resource:
         name: 'my-topic'
         patternType: literal
         type: topic

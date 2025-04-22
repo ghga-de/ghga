@@ -70,3 +70,11 @@ topics:
       value: searchable_resource_deleted
     - name: resource_upsertion_event_type
       value: searchable_resource_upserted
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry

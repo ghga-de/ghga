@@ -4,6 +4,9 @@
 {{- $topics := merge (.Values.global.topics | default dict) .Values.topics -}}
 {{- range $key, $value := $topics -}}
 {{- if $value.topic }}
+  {{- if not $value.topic.name }}
+  {{- continue }}
+  {{- end }}
   {{ $value.topic.name }}: {{ $.Values.topicPrefix | empty | ternary $value.topic.value (cat $.Values.topicPrefix "-" $value.topic.value ) | nospace }}
 {{- end -}}
 {{- if $value.type }}

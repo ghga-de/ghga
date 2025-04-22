@@ -9,6 +9,7 @@ data:
     foo: bar
     service_instance_id: rest.1
   
+    kafka_dlq_topic: dlq
     test_event_topic: my-topic
     test_event_type: searchable_resource_deleted
     resource_upsertion_event_type: searchable_resource_upserted
@@ -24,6 +25,7 @@ data:
   parameters: |
     foo: bar
   
+    kafka_dlq_topic: dlq
     test_event_topic: my-topic
     test_event_type: searchable_resource_deleted
     resource_upsertion_event_type: searchable_resource_upserted
