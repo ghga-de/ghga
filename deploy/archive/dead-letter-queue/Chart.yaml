@@ -1,4 +1,4 @@
-name: dlq-service
+name: dead-letter-queue
 description: DLQ service
 type: application
 
