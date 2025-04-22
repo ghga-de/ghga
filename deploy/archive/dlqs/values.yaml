@@ -27,7 +27,7 @@ parameters:
     host: "0.0.0.0"
     service_instance_id: 'dlqs_1'
     service_name: dlqs
-    kafka_enable_dlq: true
+    kafka_enable_dlq: false
   rest:
     service_instance_id: 'dlqs.1'
   consumer:
