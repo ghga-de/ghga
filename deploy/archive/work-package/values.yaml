@@ -60,7 +60,13 @@ topics:
       value: dataset_created
     - name: dataset_deletion_type
       value: dataset_deleted
+  # as producer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
