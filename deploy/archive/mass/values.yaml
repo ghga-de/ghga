@@ -37,6 +37,8 @@ parameters:
           name: Dataset alias
         - key: title
           name: Dataset title
+    kafka_enable_dlq: true
+
   rest:
     service_instance_id: 'rest.1'
   consumer:
@@ -68,3 +70,7 @@ topics:
       value: searchable_resource_deleted
     - name: resource_upsertion_type
       value: searchable_resource_upserted
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq

@@ -28,6 +28,7 @@ parameters:
     host: "0.0.0.0"
     presigned_url_expires_after: 10
     object_storages: {}
+    kafka_enable_dlq: true
 
 containers:
 - name: rest
@@ -93,3 +94,7 @@ topics:
     type:
       name: files_to_stage_type
       value: file_staging_requested
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
