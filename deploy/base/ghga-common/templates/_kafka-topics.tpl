@@ -4,7 +4,7 @@
 {{- $topics := merge (.Values.global.topics | default dict) .Values.topics -}}
 {{- range $key, $value := $topics -}}
 {{- if $value.topic }}
-  {{- if not $value.topic.name }}
+  {{- if or (not $value.topic.name) (eq $value.topic.name "wildcard") }}
   {{- continue }}
   {{- end }}
   {{ $value.topic.name }}: {{ $.Values.topicPrefix | empty | ternary $value.topic.value (cat $.Values.topicPrefix "-" $value.topic.value ) | nospace }}

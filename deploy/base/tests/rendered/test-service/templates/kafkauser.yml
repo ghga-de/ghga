@@ -32,6 +32,11 @@ spec:
       resource:
         name: '*'
         patternType: literal
+        type: topic
+    - operation: All
+      resource:
+        name: '*'
+        patternType: literal
         type: group
     type: simple
   template:

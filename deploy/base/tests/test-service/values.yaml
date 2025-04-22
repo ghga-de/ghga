@@ -80,3 +80,7 @@ topics:
     topic:
       name: null
       value: retry
+  wildcard:
+    topic:
+      name: wildcard
+      value: '*'
