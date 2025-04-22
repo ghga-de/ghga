@@ -16,8 +16,9 @@
 
 """Fixture for testing code that uses the Kafka-based provider."""
 
-from typing import Union
+import json
 
+from pydantic import BaseModel
 from pytest import fixture
 
 from fixtures.config import Config
@@ -25,6 +26,16 @@ from fixtures.http_client import HttpClient
 from fixtures.state_manager import StateManager
 
 __all__ = ["KafkaFixture", "kafka_fixture"]
+
+
+class EventDetails(BaseModel):
+    """Details for publishing events."""
+
+    payload: dict[str, str]
+    topic: str
+    type_: str
+    key: str
+    dlq_id: str | None = None
 
 
 class KafkaFixture(StateManager):
@@ -58,6 +69,17 @@ class KafkaFixture(StateManager):
 
         response = self.http.delete(url, headers=self.auth_headers, params=params)
         assert response.status_code == 204, f"Failed to clear topics: {response.text}"
+
+    def publish_event(
+        self,
+        event_details: EventDetails,
+    ) -> None:
+        """Publish an event to the given topic."""
+        url = f"{self.config.sms_url}/events/"
+        response = self.http.post(
+            url, json=event_details.model_dump(), headers=self.auth_headers
+        )
+        assert response.status_code == 204, f"Failed to publish event: {response.text}"
 
 
 @fixture(name="kafka", scope="session")

@@ -89,6 +89,7 @@ class Config(BaseSettings):
         "fis",
         "dins",
         "pcs",
+        "dlq",
     ]
 
     object_storages: ObjectStoragesConfig = ObjectStoragesConfig(
@@ -142,6 +143,7 @@ class Config(BaseSettings):
         "sms",
         "dins",
         "pcs",
+        "dlq",
     ]
 
     # internal APIs
@@ -154,6 +156,7 @@ class Config(BaseSettings):
     upload_token: str = ""  # simple token for uploading metadata
     state_management_token: str = ""  # simple token for state management service
     purge_controller_token: str = ""  # simple token for purge controller service
+    dlq_token: str = ""  # simple token for dlq service
     totp_digits: int = 6
     totp_algorithm: str = "sha1"
     totp_interval: int = 30
@@ -241,6 +244,33 @@ class Config(BaseSettings):
 
     # event topics
     file_interrogations_topic: str = "interrogations"
+
+    # dlq
+    dlq_url: str = "http://dlq"
+    dlq_topic: str = "dlq"
+    dlq_db_name: str = "dlqs"
+    dlq_events_collection: str = "dlqEvents"
+
+    dataset_change_topic: str = "metadata-datasets"
+    dataset_created_type: str = "dataset_created"
+    file_deletion_request_topic: str = "purges"
+    file_deletion_request_type: str = "file_deletion_requested"
+    access_request_topic: str = "access-requests"
+    access_request_created_type: str = "access_request_created"
+    resource_change_topic: str = "searchable-resources"
+    resource_change_type: str = "searchable_resource_upserted"
+    notification_topic: str = "notifications"
+    notification_type: str = "notification"
+
+    service_short_names: dict[str, str] = {
+        "work package service": "wps",
+        "dataset information service": "dins",
+        "download controller service": "dcs",
+        "internal file registry service": "internal_file_registry",
+        "notification orchestration service": "nos",
+        "notification service": "ns",
+        "metadata artifact search service": "mass",
+    }
 
     @model_validator(mode="after")
     def check_operation_modes(self):
