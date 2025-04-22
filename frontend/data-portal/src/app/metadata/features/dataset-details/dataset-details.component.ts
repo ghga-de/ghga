@@ -33,6 +33,7 @@ import { Title } from '@angular/platform-browser';
 import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button.component';
 import { Experiment, File, Sample } from '@app/metadata/models/dataset-details';
 import { StorageAlias } from '@app/metadata/pipes/storage-alias.pipe';
+import { ValidateDOI } from '@app/metadata/pipes/validate-doi.pipe';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { AddPluralS } from '@app/shared/pipes/add-plural-s.pipe';
@@ -69,6 +70,7 @@ const COLUMNS = {
     ClipboardModule,
     DynamicAccessRequestButtonComponent,
     MatTooltipModule,
+    ValidateDOI,
   ],
   providers: [MetadataService],
   templateUrl: './dataset-details.component.html',

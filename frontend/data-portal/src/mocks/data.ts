@@ -225,6 +225,9 @@ export const datasetDetails: DatasetDetails = {
         journal: 'Test journal',
         year: 2023,
       },
+      {
+        doi: '10.1109/5.771074',
+      },
     ],
   },
   process_data_files: [
@@ -401,7 +404,7 @@ export const searchResults: SearchResults = {
       ],
     },
   ],
-  count: 25, // just to test the paginator
+  count: 26, // just to test the paginator
   hits: [
     {
       id_: 'GHGAD12345678901234',

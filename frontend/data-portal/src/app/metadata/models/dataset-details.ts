@@ -43,11 +43,11 @@ interface Study {
 }
 
 interface Publication {
-  title: string;
-  abstract: string;
-  author: string;
-  year: number;
-  journal: string;
+  title?: string;
+  abstract?: string;
+  author?: string;
+  year?: number;
+  journal?: string;
   doi: string;
 }
 

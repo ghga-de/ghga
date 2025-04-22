@@ -16,21 +16,17 @@ import { FacetFilterSetting } from '../models/facet-filter';
 export class FacetActivityPipe implements PipeTransform {
   /**
    * The transform method checks if the facetInQuestion is selected or not in the current facet state.
-   * @param facetInQuestion the facet we want to check for being selected or not
+   * @param facetInQuestion the facet we want to check
    * @param currentFacetStates the state of all facets in the current ui
-   * @returns the year as a string
+   * @returns whether the facetInQuestion is selected or not
    */
   transform(facetInQuestion: string, currentFacetStates: FacetFilterSetting): boolean {
     const facetDetails = facetInQuestion.split('#');
     if (facetDetails.length != 2) {
       return false;
     }
-    const facetName = facetDetails[0];
-    const facetOption = facetDetails[1];
-
-    if (currentFacetStates[facetName] && currentFacetStates[facetName].length > 0) {
-      return currentFacetStates[facetName].indexOf(facetOption) != -1;
-    }
-    return false;
+    const [facetName, facetOption] = facetDetails;
+    const currentOptions = currentFacetStates[facetName] || [];
+    return currentOptions.includes(facetOption);
   }
 }

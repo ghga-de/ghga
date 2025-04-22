@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, effect, inject, OnInit } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -57,7 +57,7 @@ export class MetadataBrowserComponent implements OnInit {
   #skip = DEFAULT_SKIP_VALUE;
   #pageSize = DEFAULT_PAGE_SIZE;
 
-  facetData: FacetFilterSetting = {};
+  facetData = signal<FacetFilterSetting>({});
   searchFormControl = new FormControl('');
   searchFormGroup = new FormGroup({
     searchTerm: this.searchFormControl,
@@ -90,7 +90,7 @@ export class MetadataBrowserComponent implements OnInit {
     if (f) {
       const paramVals = this.#facetDataFromString(decodeURIComponent(f));
       if (paramVals) {
-        this.facetData = paramVals;
+        this.facetData.set(paramVals);
       }
     }
     this.#skip = parseInt(s) || DEFAULT_SKIP_VALUE;
@@ -99,8 +99,9 @@ export class MetadataBrowserComponent implements OnInit {
       this.#pageSize,
       this.#skip,
       this.searchTerm,
-      this.facetData,
+      this.facetData(),
     );
+    this.searchFormControl.setValue(this.searchTerm);
   }
 
   /**
@@ -120,8 +121,8 @@ export class MetadataBrowserComponent implements OnInit {
         s: this.#skip !== DEFAULT_SKIP_VALUE ? this.#skip : undefined,
         q: this.searchTerm !== '' ? this.searchTerm : undefined,
         f:
-          Object.keys(this.facetData).length !== 0
-            ? encodeURIComponent(this.#facetDataToString(this.facetData))
+          Object.keys(this.facetData()).length !== 0
+            ? encodeURIComponent(this.#facetDataToString(this.facetData()))
             : undefined,
         p: this.#pageSize !== DEFAULT_PAGE_SIZE ? this.#pageSize : undefined,
       },
@@ -135,8 +136,12 @@ export class MetadataBrowserComponent implements OnInit {
    */
   submit(event: MouseEvent | SubmitEvent | Event): void {
     event.preventDefault();
-    this.searchTerm = this.searchFormControl.value ? this.searchFormControl.value : '';
-    this.#performSearch();
+    const searchTerm = this.searchFormControl.value || '';
+    if (searchTerm !== this.searchTerm || this.#facetDataChanged()) {
+      this.searchTerm = searchTerm;
+      this.#skip = DEFAULT_SKIP_VALUE;
+      this.#performSearch();
+    }
   }
 
   /**
@@ -147,6 +152,7 @@ export class MetadataBrowserComponent implements OnInit {
     const facetToRemoveSplit = facetToRemove.split('#');
     if (facetToRemoveSplit.length !== 2) return;
     this.#updateFacets(facetToRemoveSplit[0], facetToRemoveSplit[1], false);
+    this.#skip = DEFAULT_SKIP_VALUE;
     this.#performSearch();
   }
 
@@ -154,9 +160,16 @@ export class MetadataBrowserComponent implements OnInit {
    * Resets the search query and triggers a reload of the results.
    */
   clearSearchQuery(): void {
-    this.searchTerm = '';
-    this.searchFormControl.setValue('');
-    this.#performSearch();
+    if (
+      this.searchTerm !== '' ||
+      this.searchFormControl.value ||
+      this.#facetDataChanged()
+    ) {
+      this.searchTerm = '';
+      this.searchFormControl.setValue('');
+      this.#skip = DEFAULT_SKIP_VALUE;
+      this.#performSearch();
+    }
   }
 
   /**
@@ -165,7 +178,7 @@ export class MetadataBrowserComponent implements OnInit {
    */
   clear(event: MouseEvent): void {
     event.preventDefault();
-    this.facetData = {};
+    this.facetData.set({});
     this.clearSearchQuery();
   }
 
@@ -219,6 +232,17 @@ export class MetadataBrowserComponent implements OnInit {
   }
 
   /**
+   * Check whether the facet data is different from the last search
+   * @returns true if the facet data has changed
+   */
+  #facetDataChanged(): boolean {
+    return (
+      this.#facetDataToString(this.facetData()) !==
+      this.#facetDataToString(this.#metadataSearch.facets())
+    );
+  }
+
+  /**
    * This function takes a string (as used in the f argument of the url) and turns it into a FacetFilterSetting dictionary.
    * This is the inverse operation of #facetDataToString.
    * @param input the string to parse
@@ -251,23 +275,25 @@ export class MetadataBrowserComponent implements OnInit {
    * @param newValue The new value of the option of the facet
    */
   #updateFacets(key: string, option: string, newValue: boolean) {
+    const facetData = this.facetData();
     if (newValue) {
       // The value has been checked so we need to add it
-      if (!this.facetData[key]) {
-        this.facetData[key] = [option];
+      if (!facetData[key]) {
+        facetData[key] = [option];
       } else {
-        if (this.facetData[key].indexOf(option) == -1) {
-          this.facetData[key].push(option);
+        if (facetData[key].indexOf(option) == -1) {
+          facetData[key].push(option);
         }
       }
     } else {
       // The box has been deselected so we need to remove it
-      if (this.facetData[key]) {
-        this.facetData[key] = this.facetData[key].filter((item) => item != option);
-        if (this.facetData[key].length == 0) {
-          delete this.facetData[key];
+      if (facetData[key]) {
+        facetData[key] = facetData[key].filter((item) => item != option);
+        if (facetData[key].length == 0) {
+          delete facetData[key];
         }
       }
     }
+    this.facetData.set({ ...facetData });
   }
 }

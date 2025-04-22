@@ -1,5 +1,5 @@
 /**
- * This pipe takes the storage alias
+ * This pipe takes the storage alias and converts it to a human-readable string
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */

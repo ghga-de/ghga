@@ -117,7 +117,7 @@
                   <a
                     mat-stroked-button
                     class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
-                    [href]="'https://www.doi.org/' + pub.doi"
+                    [href]="'https://www.doi.org/' + pub.doi | validateDOI"
                     target="_blank"
                     rel="noopener noreferrer"
                     data-umami-event="Dataset Details Publication DOI Clicked"
@@ -128,20 +128,31 @@
                   <span
                     class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
                     ><mat-icon inline>article</mat-icon></span
-                  >&nbsp;{{ pub.title }}
+                  >&nbsp;{{ pub.title ?? 'Unknown publication title' }}
                 </h4>
-                <p class="text-base"><strong>Author(s):</strong> {{ pub.author }}</p>
-                <p class="text-base"><strong>Journal:</strong> {{ pub.journal }}</p>
-                <p class="text-base"><strong>Year:</strong> {{ pub.year }}</p>
-                @for (
-                  par of pub.abstract.split('\\n');
-                  track $index;
-                  let first = $first
-                ) {
-                  <p class="text-base">
-                    <strong>{{ first ? 'Abstract: ' : '' }}</strong
-                    >{{ par }}
-                  </p>
+                <p class="text-base">
+                  <strong>Author(s):</strong> {{ pub.author ?? 'Unknown authors' }}
+                </p>
+                @if (pub.journal) {
+                  <p class="text-base"><strong>Journal:</strong> {{ pub.journal }}</p>
+                }
+                @if (pub.year) {
+                  <p class="text-base"><strong>Year:</strong> {{ pub.year }}</p>
+                }
+                <p class="text-base">
+                  <strong>DOI:</strong> {{ pub.doi | validateDOI }}
+                </p>
+                @if (pub.abstract) {
+                  @for (
+                    par of pub.abstract.split('\\n');
+                    track $index;
+                    let first = $first
+                  ) {
+                    <p class="text-base">
+                      <strong>{{ first ? 'Abstract: ' : '' }}</strong
+                      >{{ par }}
+                    </p>
+                  }
                 }
                 @if (!last) {
                   <hr class="mx-14 my-6" />

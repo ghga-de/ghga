@@ -105,7 +105,7 @@
                       name="{{ facet.key }}#{{ option.value }}"
                       (change)="onFacetFilterChanged($event)"
                       [checked]="
-                        facet.key + '#' + option.value | facetActivity: facetData
+                        facet.key + '#' + option.value | facetActivity: facetData()
                       "
                       >{{ option.value }} ({{ option.count }})</mat-checkbox
                     >

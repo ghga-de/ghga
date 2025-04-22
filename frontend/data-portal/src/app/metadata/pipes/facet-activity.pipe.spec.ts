@@ -12,13 +12,13 @@ describe('FacetActivityPipe', () => {
     expect(pipe).toBeTruthy();
   });
 
-  it('can find an active facet', () => {
+  it('returns true for an active facet', () => {
     const pipe = new FacetActivityPipe();
     const facetState = { name: ['value'] };
     expect(pipe.transform('name#value', facetState)).toBe(true);
   });
 
-  it('can find an active facet', () => {
+  it('returns false for an inactive facet', () => {
     const pipe = new FacetActivityPipe();
     const facetState = { name1: ['value1'], name2: ['value2', 'value3'] };
     expect(pipe.transform('name3#value4', facetState)).toBe(false);
