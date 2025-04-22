@@ -16,7 +16,7 @@ serviceName: test-service-name
 # This parameter specifies the client id in Kafka
 serviceInstanceId: test-service-instance-id
 # This parameter is used as Kafka's group id
-serviceNameConsumer: test-service-name-consumer
+# serviceNameConsumer: test-service-name-consumer
 # This parameter specifies the client id in Kafka
 serviceInstanceIdConsumer: test-service-instance-id-consumer
 

@@ -50,10 +50,16 @@ spec:
         name: '{{ $value.topic.value }}'
         patternType: literal
         type: topic
-    {{- else if eq $key "deadLetterQueueRetry" }}
+    {{- else if and (eq $key "deadLetterQueueRetry") $.Values.serviceNameConsumer }}
     - operation: All
       resource:
         name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceNameConsumer "-" $value.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceNameConsumer "-" $value.topic.value ) | nospace }}'
+        patternType: literal
+        type: topic
+    {{- else if and (eq $key "deadLetterQueueRetry") $.Values.serviceName }}
+    - operation: All
+      resource:
+        name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceName "-" $value.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceName "-" $value.topic.value ) | nospace }}'
         patternType: literal
         type: topic
     {{- else }}
