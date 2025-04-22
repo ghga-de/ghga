@@ -54,7 +54,13 @@ topics:
       name: kafka_dlq_topic
       value: dlq
   # as producer
-  deadLetterQueueRetry:
+  #  deadLetterQueueRetry:
+  # topic:
+  #    name: null
+  #    value: retry
+  # Needs to be fixed, DLQS produces dynamically to topics with pattern `<service_name>-retry`
+  # But Strimzi handles only prefix and not suffix patterns
+  wildcard:
     topic:
-      name: null
-      value: retry
+      name: wildcard
+      value: '*'
