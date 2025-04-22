@@ -20,7 +20,7 @@ spec:
         type: topic
     - operation: All
       resource:
-        name: 'retry'
+        name: 'test-service-name-consumer-retry'
         patternType: literal
         type: topic
     - operation: All

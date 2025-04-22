@@ -50,6 +50,12 @@ spec:
         name: '{{ $value.topic.value }}'
         patternType: literal
         type: topic
+    {{- else if eq $key "deadLetterQueueRetry" }}
+    - operation: All
+      resource:
+        name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceNameConsumer "-" $value.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceNameConsumer "-" $value.topic.value ) | nospace }}'
+        patternType: literal
+        type: topic
     {{- else }}
     - operation: All
       resource:
