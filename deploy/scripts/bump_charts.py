@@ -189,9 +189,16 @@ if __name__ == "__main__":
     for chart_file, chart in charts:
         current_app_version = VersionInfo.parse(chart.get("appVersion"))
         current_version = VersionInfo.parse(chart.get("version"))
+        
         latest = get_latest_published_version(helm_index, chart["name"])
-        latest_app_version = latest["appVersion"]
-        latest_version = latest["version"]
+        if latest:
+            latest_app_version = VersionInfo.parse(latest["appVersion"])
+            latest_version = VersionInfo.parse(latest["version"])
+        # Chart doen't exist yet in the index.yaml
+        else:
+            latest_app_version = VersionInfo.parse("0.0.0")
+            latest_version = VersionInfo.parse("0.0.0")
+        
         latest_versions.append(latest_version)
         print(f"Latest published version for {chart['name']}: {latest_version}")
 
