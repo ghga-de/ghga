@@ -44,10 +44,10 @@ describe('GlobalStatsComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show platforms', () => {
+  it('should show methods', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const text = compiled.textContent;
-    expect(text).toContain('1400');
+    expect(text).toContain('700');
     expect(text).toContain('Ilumina test');
   });
 });

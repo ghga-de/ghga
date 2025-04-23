@@ -45,7 +45,7 @@ export class GlobalSummaryComponent {
   isLoading = computed(() => this.#stats.isLoading());
 
   datasets = computed(() => this.stats().Dataset);
-  platforms = computed(() => this.stats().ExperimentMethod);
+  methods = computed(() => this.stats().ExperimentMethod);
   individuals = computed(() => this.stats().Individual);
   files = computed(() => this.stats().ProcessDataFile);
 }

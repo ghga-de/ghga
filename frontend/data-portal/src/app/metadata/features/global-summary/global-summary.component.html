@@ -29,11 +29,11 @@
           ><mat-icon inline class="border-tertiary rounded-full border-4 px-1"
             >genetics</mat-icon
           ></span
-        ><br />Platforms:
+        ><br />Experiments:
         @if (isLoading()) {
           <app-stencil class="inline-flex w-10" />
         } @else {
-          {{ platforms().count }}
+          {{ methods().count }}
         }</mat-card-title
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
@@ -51,7 +51,7 @@
               }
             } @else {
               @for (
-                platform of platforms().stats?.instrument_model ?? [];
+                platform of methods().stats?.instrument_model ?? [];
                 track platform.value
               ) {
                 <tr>

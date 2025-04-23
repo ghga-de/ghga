@@ -69,7 +69,9 @@ export class MetadataBrowserComponent implements OnInit {
   #searchResults = this.#metadataSearch.searchResults;
   searchResults = this.#searchResults.value;
   facets = computed(() =>
-    this.searchResults().facets.filter((f) => f.options.length <= MAX_FACET_OPTIONS),
+    this.searchResults().facets.filter(
+      (f) => f.options.length > 0 && f.options.length <= MAX_FACET_OPTIONS,
+    ),
   );
   numResults = computed(() => this.searchResults().count);
   loading = computed(() => this.#searchResults.isLoading());
