@@ -117,7 +117,7 @@
                   <a
                     mat-stroked-button
                     class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
-                    [href]="'https://www.doi.org/' + pub.doi | validateDOI"
+                    [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
                     target="_blank"
                     rel="noopener noreferrer"
                     data-umami-event="Dataset Details Publication DOI Clicked"
