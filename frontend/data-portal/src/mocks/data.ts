@@ -393,6 +393,8 @@ export const searchResults: SearchResults = {
       options: [
         { value: 'Option 1', count: 62 },
         { value: 'Option 2', count: 37 },
+        { value: 'Option 3', count: 42 },
+        { value: 'Option 4', count: 21 },
       ],
     },
     {

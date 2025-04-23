@@ -100,13 +100,12 @@
               {{ facet.name }}
               <ul class="mt-1 mb-5 rounded-lg border">
                 @for (option of facet.options; track option.value) {
+                  @let name = `${facet.key}#${option.value}`;
                   <li>
                     <mat-checkbox
-                      name="{{ facet.key }}#{{ option.value }}"
+                      [name]="name"
                       (change)="onFacetFilterChanged($event)"
-                      [checked]="
-                        facet.key + '#' + option.value | facetActivity: facetData()
-                      "
+                      [checked]="name | facetActivity: facetData()"
                       >{{ option.value }} ({{ option.count }})</mat-checkbox
                     >
                   </li>

@@ -25,6 +25,7 @@ import { SearchResultListComponent } from '../search-result-list/search-result-l
 
 const DEFAULT_PAGE_SIZE = 10;
 const DEFAULT_SKIP_VALUE = 0;
+const MAX_FACET_OPTIONS = 5;
 
 /**
  * This is the metadata browser component
@@ -67,7 +68,9 @@ export class MetadataBrowserComponent implements OnInit {
   lastSearchFilterFacets = this.#metadataSearch.facets;
   #searchResults = this.#metadataSearch.searchResults;
   searchResults = this.#searchResults.value;
-  facets = computed(() => this.searchResults().facets);
+  facets = computed(() =>
+    this.searchResults().facets.filter((f) => f.options.length <= MAX_FACET_OPTIONS),
+  );
   numResults = computed(() => this.searchResults().count);
   loading = computed(() => this.#searchResults.isLoading());
 
