@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,6 +83,7 @@ class MetadataDatasetOverview(MetadataDatasetID):
         ..., description="The current stage of this dataset."
     )
     description: str | None = Field(..., description="The description of the dataset.")
+    dac_alias: str = Field(..., description="The alias of the Data Access Committee.")
     files: list[MetadataDatasetFile] = Field(
         ..., description="Files contained in the dataset."
     )

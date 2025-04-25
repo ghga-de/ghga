@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=69",
+    "setuptools>=78.1",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,10 +21,10 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_event_schemas"
-version = "5.0.0"
+version = "6.0.0"
 description = "GHGA Event Schemas: A package that collects schemas used for events exchanged between GHGA service."
 dependencies = [
-    "jsonschema>=4.21.1,<5.0.0",
+    "jsonschema>=4.23.0,<5.0.0",
     "pydantic[email]>=2,<3",
     "pydantic_settings >=2, <3",
 ]
@@ -142,8 +142,9 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "8.3"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [
