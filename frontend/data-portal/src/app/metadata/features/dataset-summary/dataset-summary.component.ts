@@ -15,6 +15,7 @@ import { DynamicAccessRequestButtonComponent } from '@app/access-requests/featur
 import { DatasetSummary } from '@app/metadata/models/dataset-summary';
 import { Hit } from '@app/metadata/models/search-results';
 import { AddPluralS } from '@app/shared/pipes/add-plural-s.pipe';
+import { ParagraphsComponent } from '../../../shared/ui/paragraphs/paragraphs.component';
 import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summary-badges.component';
 
 /**
@@ -31,6 +32,7 @@ import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summar
     RouterLink,
     DynamicAccessRequestButtonComponent,
     SummaryBadgesComponent,
+    ParagraphsComponent,
   ],
   templateUrl: './dataset-summary.component.html',
   styleUrl: './dataset-summary.component.scss',

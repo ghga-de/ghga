@@ -44,9 +44,7 @@
         <mat-icon>description</mat-icon><strong>&nbsp;Description</strong>
       </p>
       <div class="border-primary border-y pt-2">
-        @for (par of datasetDetails().description.split('\\n'); track $index) {
-          <p class="text-sm">{{ par }}</p>
-        }
+        <app-paragraphs [text]="datasetDetails().description" pClasses="text-sm" />
       </div>
     </div>
     <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="center" dynamicHeight>
@@ -143,16 +141,11 @@
                   <strong>DOI:</strong> {{ pub.doi | validateDOI }}
                 </p>
                 @if (pub.abstract) {
-                  @for (
-                    par of pub.abstract.split('\\n');
-                    track $index;
-                    let first = $first
-                  ) {
-                    <p class="text-base">
-                      <strong>{{ first ? 'Abstract: ' : '' }}</strong
-                      >{{ par }}
-                    </p>
-                  }
+                  <app-paragraphs
+                    [text]="pub.abstract"
+                    pClasses="text-base"
+                    label="Abstract"
+                  />
                 }
                 @if (!last) {
                   <hr class="mx-14 my-6" />
@@ -200,18 +193,12 @@
           </p>
           <p class="text-base"><strong>e-Mail:</strong> {{ dac().email }}</p>
           <p class="text-base"><strong>Data Access Policy:</strong> {{ dap().name }}</p>
-          @for (
-            par of dap().policy_text.split('\\n');
-            track $index;
-            let first = $first
-          ) {
-            <p class="text-base">
-              <strong>{{ first ? 'Policy: ' : '' }}</strong
-              >{{ par }}
-            </p>
-          }
-        </div></mat-tab
-      >
+          <app-paragraphs
+            [text]="dap().policy_text"
+            pClasses="text-base"
+            label="Policy"
+          /></div
+      ></mat-tab>
     </mat-tab-group>
 
     <hr class="mb-6" />

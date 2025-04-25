@@ -24,7 +24,11 @@
     <p><strong>EGA ID:</strong> {{ hitContent().alias }}</p>
   }
   <p><strong>Full title:</strong> {{ summary().title }}</p>
-  <p><strong>Description:</strong> {{ summary().description }}</p>
+  <app-paragraphs
+    [text]="summary().description"
+    label="Description"
+    pClasses="text-sm"
+  />
   @if (summary().types.length) {
     <p>
       <strong>Types: </strong>
