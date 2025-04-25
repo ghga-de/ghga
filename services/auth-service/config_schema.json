@@ -109,10 +109,8 @@
       "type": "string"
     },
     "dataset_upsertion_type": {
-      "description": "Type used for events announcing a new dataset overview.",
-      "examples": [
-        "dataset_created"
-      ],
+      "default": "dataset_created",
+      "description": "the type of the event announcing dataset upsertions",
       "title": "Dataset Upsertion Type",
       "type": "string"
     },
@@ -485,7 +483,7 @@
         }
       ],
       "default": null,
-      "description": "internal public key for user management (key pair for auth adapter)",
+      "description": "internal public key for the auth service (key pair for auth adapter)",
       "title": "Auth Key"
     },
     "auth_algs": {
@@ -805,7 +803,6 @@
     "second_factor_recreated_type",
     "iva_state_changed_topic",
     "iva_state_changed_type",
-    "dataset_upsertion_type",
     "service_instance_id",
     "kafka_servers",
     "mongo_dsn"

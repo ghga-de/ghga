@@ -37,9 +37,9 @@ from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.auth_adapter.deps import SESSION_COOKIE, get_user_token_dao
 from auth_service.auth_adapter.prepare import prepare_rest_app
 from auth_service.auth_adapter.rest import router as auth_adapter_router_module
+from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.config import CONFIG, Config
-from auth_service.user_management.claims_repository.deps import get_claim_dao
-from auth_service.user_management.user_registry.deps import (
+from auth_service.user_registry.deps import (
     get_iva_dao,
     get_user_dao,
     get_user_registry,

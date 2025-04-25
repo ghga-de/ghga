@@ -28,7 +28,7 @@ from auth_service.auth_adapter.core.session_store import (
     SessionState,
     SessionStore,
 )
-from auth_service.user_management.user_registry.models.users import (
+from auth_service.user_registry.models.users import (
     AcademicTitle,
     User,
     UserStatus,

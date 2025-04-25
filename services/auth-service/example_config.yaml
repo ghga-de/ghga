@@ -31,7 +31,7 @@ cors_allowed_origins: null
 csrf_token_bytes: 24
 dataset_change_topic: metadata_datasets
 dataset_deletion_type: dataset_deleted
-dataset_upsertion_type: dataset_upserted
+dataset_upsertion_type: dataset_created
 db_name: dev-db
 docs_url: /docs
 generate_correlation_id: true

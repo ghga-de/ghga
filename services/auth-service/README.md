@@ -36,11 +36,9 @@ Emissary-ingress does not forward all authorization headers by default, therefor
 
 The `x-authorization` header is only needed when an additional HTTP Basic Auth is used on top of the OIDC based authentication. Only the default `authorization` header actually needs to be modified by the Auth Adapter. However, for security purposes the Auth Adapter also empties the authorization headers that it consumes and evaluates itself and which are therefore not needed by the backend. Therefore, these are also specified as response headers.
 
-### User Management
+### User Registry and Claims Repository
 
-The `user_management` sub-package contains the user data management service which is run when `provide_apis` does not contain `ext_auth`.
-
-The user management services can provide two APIs, the (public) `users` API for the user registry, and the (internal) `claims` API for the claims repository. The setting `provide_apis` can be used to specify which of the two APIs should be provided. For testing purposes, both APIs can be provided at the same time, but this is not recommended in production. If no API is specified, then only an health endpoint is provided.
+The Auth Service provides two APIs, the (public) `users` API for the user registry, and the (internal) `claims` API for the claims repository. The setting `provide_apis` can be used to specify which of the two APIs should be provided. For testing purposes, both APIs can be provided at the same time, but this is not recommended in production. If no API is specified, then only a health endpoint is provided.
 
 
 ## Installation
@@ -49,13 +47,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:4.0.0
+docker pull ghga/auth-service:4.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:4.0.0 .
+docker build -t ghga/auth-service:4.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -63,7 +61,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:4.0.0 --help
+docker run -p 8080:8080 ghga/auth-service:4.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -124,15 +122,7 @@ The service requires the following configuration parameters:
 
 - <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string)*: the type of the event announcing dataset deletions. Default: `"dataset_deleted"`.
 
-- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
-
-
-  Examples:
-
-  ```json
-  "dataset_created"
-  ```
-
+- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string)*: the type of the event announcing dataset upsertions. Default: `"dataset_created"`.
 
 - <a id="properties/claims_collection"></a>**`claims_collection`** *(string)*: Name of the collection for user claims. Default: `"claims"`.
 
@@ -426,7 +416,7 @@ The service requires the following configuration parameters:
 
 - <a id="properties/session_max_lifetime_seconds"></a>**`session_max_lifetime_seconds`** *(integer)*: Maximum lifetime of a session in seconds. Default: `43200`.
 
-- <a id="properties/auth_key"></a>**`auth_key`**: internal public key for user management (key pair for auth adapter). Default: `null`.
+- <a id="properties/auth_key"></a>**`auth_key`**: internal public key for the auth service (key pair for auth adapter). Default: `null`.
 
   - **Any of**
 

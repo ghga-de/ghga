@@ -18,7 +18,7 @@
 
 from hexkit.protocols.dao import DaoFactoryProtocol
 
-from auth_service.user_management.user_registry.translators.dao import UserDaoConfig
+from auth_service.user_registry.translators.dao import UserDaoConfig
 
 from ..ports.dao import UserToken, UserTokenDao, UserTokenDaoFactoryPort
 

@@ -29,8 +29,8 @@ from pytest_httpx import HTTPXMock
 from auth_service.auth_adapter.core.session_store import Session, SessionState
 from auth_service.auth_adapter.deps import get_session_store
 from auth_service.auth_adapter.ports.session_store import SessionStorePort
-from auth_service.user_management.user_registry.models.ivas import IvaState
-from auth_service.user_management.user_registry.models.users import UserStatus
+from auth_service.user_registry.models.ivas import IvaState
+from auth_service.user_registry.models.users import UserStatus
 
 from ...fixtures.utils import (
     RE_USER_INFO_URL,

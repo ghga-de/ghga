@@ -24,36 +24,42 @@ from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from hexkit.log import configure_logging
 
 from .config import CONFIG, Config
+from .prepare import prepare_opentelemetry
 
 log = logging.getLogger(__name__)
 
 
-def import_prepare_module(service: str):
-    """Import the prepare module for the given service."""
-    return importlib.import_module(f"auth_service.{service}.prepare")
+def import_prepare_module(auth_adapter: bool):
+    """Import the prepare module."""
+    package = "auth_service"
+    if auth_adapter:
+        package += ".auth_adapter"
+    return importlib.import_module(f"{package}.prepare")
 
 
-async def consume_events(service: str, config: Config = CONFIG):
+async def consume_events(auth_adapter: bool, config: Config = CONFIG):
     """Run an event consumer listening to the configured topic."""
-    prepare_event_subscriber = import_prepare_module(service).prepare_event_subscriber
+    prepare_event_subscriber = import_prepare_module(
+        auth_adapter
+    ).prepare_event_subscriber
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run()
 
 
 async def run_parallel(
-    service: str, run_consumer: bool = False, config: Config = CONFIG
+    auth_adapter: bool, run_consumer: bool = False, config: Config = CONFIG
 ):
     """Run REST API(s) and consumer in parallel.
 
     When no API is specified, only the health endpoint will be available.
     """
-    prepare_rest_app = import_prepare_module(service).prepare_rest_app
+    prepare_rest_app = import_prepare_module(auth_adapter).prepare_rest_app
 
     async with prepare_rest_app(config=config) as app:
         service_runner = run_server(app=app, config=config)
         if run_consumer:
-            event_consumer = consume_events(service=service, config=config)
+            event_consumer = consume_events(auth_adapter=auth_adapter, config=config)
             await asyncio.gather(service_runner, event_consumer)
         else:
             await service_runner
@@ -65,17 +71,19 @@ def run(config: Config = CONFIG):
     assert_tz_is_utc()
     apis = config.provide_apis
     run_consumer = config.run_consumer
-    ext_auth = "ext_auth" in apis
-    if ext_auth and len(apis) > 1:
+    auth_adapter = "ext_auth" in apis
+    if auth_adapter and len(apis) > 1:
         raise ValueError("ext_auth cannot be combined with other APIs")
-    service = "auth_adapter" if ext_auth else "user_management"
+    service_name = "Auth Adapter" if auth_adapter else "Auth Service"
     components = [f"{api} API" for api in apis]
     if run_consumer:
         components.append("event consumer")
     if not components:
         raise ValueError("must specify an API or run as event consumer")
-    log.info(f"Starting {service} service with {' and '.join(components)}")
-    asyncio.run(run_parallel(service, run_consumer, config=config))
+    service_name_and_components = f"{service_name} with {' and '.join(components)}"
+    prepare_opentelemetry(service_name_and_components)
+    log.info(f"Starting {service_name_and_components}")
+    asyncio.run(run_parallel(auth_adapter, run_consumer, config=config))
 
 
 if __name__ == "__main__":

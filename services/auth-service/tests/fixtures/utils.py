@@ -31,26 +31,26 @@ from jwcrypto import jwk, jwt
 
 from auth_service.auth_adapter.core.session_store import Session
 from auth_service.auth_adapter.ports.dao import UserToken
-from auth_service.config import CONFIG
-from auth_service.user_management.claims_repository.models.claims import (
+from auth_service.claims_repository.models.claims import (
     AuthorityLevel,
     Claim,
     VisaType,
 )
-from auth_service.user_management.user_registry.core.registry import (
+from auth_service.config import CONFIG
+from auth_service.user_registry.core.registry import (
     DaoPublisher,
     IvaDto,
     UserDto,
     UserRegistry,
     UserRegistryConfig,
 )
-from auth_service.user_management.user_registry.models.ivas import (
+from auth_service.user_registry.models.ivas import (
     Iva,
     IvaState,
     IvaType,
 )
-from auth_service.user_management.user_registry.models.users import User
-from auth_service.user_management.user_registry.ports.event_pub import (
+from auth_service.user_registry.models.users import User
+from auth_service.user_registry.ports.event_pub import (
     EventPublisherPort,
 )
 
@@ -72,7 +72,7 @@ class AdditionalConfig(ApiConfigBase):
     Should be set as additional environment variables when running the test.
     """
 
-    # full internal key for user management and auth adapter
+    # full internal key for auth service and auth adapter
     auth_key: str
     # full external key set for auth adapter
     auth_ext_keys: str | None = None

@@ -35,15 +35,15 @@ from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from opentelemetry import trace
 from pydantic import SecretStr
 
+from auth_service.claims_repository.core.utils import get_active_roles
+from auth_service.claims_repository.deps import ClaimDaoDependency
 from auth_service.config import CONFIG
-from auth_service.user_management.claims_repository.core.utils import get_active_roles
-from auth_service.user_management.claims_repository.deps import ClaimDaoDependency
-from auth_service.user_management.user_registry.deps import (
+from auth_service.user_registry.deps import (
     IvaDaoDependency,
     UserDaoDependency,
     UserRegistryDependency,
 )
-from auth_service.user_management.user_registry.models.users import (
+from auth_service.user_registry.models.users import (
     User,
     UserStatus,
 )

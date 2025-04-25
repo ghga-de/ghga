@@ -30,8 +30,8 @@ from pytest_httpx import HTTPXMock
 from auth_service.auth_adapter.core.session_store import SessionState
 from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.auth_adapter.rest.headers import get_bearer_token
-from auth_service.user_management.claims_repository.deps import get_claim_dao
-from auth_service.user_management.user_registry.deps import get_user_dao
+from auth_service.claims_repository.deps import get_claim_dao
+from auth_service.user_registry.deps import get_user_dao
 
 from ...fixtures.utils import (
     DummyClaimDao,
