@@ -6,7 +6,7 @@
 
 import { ValidateDOI } from './validate-doi.pipe';
 
-describe('ValidateDOI', () => {
+describe('validateDOI', () => {
   it('can create an instance', () => {
     const pipe = new ValidateDOI();
     expect(pipe).toBeTruthy();

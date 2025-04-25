@@ -1,149 +1,157 @@
-<div class="grid grid-cols-12 grid-rows-none gap-x-5">
-  <div class="col-span-12 lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
-    <div class="flex w-full justify-between pb-4">
-      <mat-chip-set aria-label="search and filters" class="filter-chips">
-        @if (lastSearchQuery() !== '') {
-          <mat-chip (removed)="clearSearchQuery()">
-            Keyword: {{ lastSearchQuery() }}
-            <button
-              matChipRemove
-              data-umami-event="Metadata Browser Search Query Clear Clicked"
+@if (!errorMessage()) {
+  <div class="grid grid-cols-12 grid-rows-none gap-x-5">
+    <div class="col-span-12 lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
+      <div class="flex w-full justify-between pb-4">
+        <mat-chip-set aria-label="search and filters" class="filter-chips">
+          @if (lastSearchQuery() !== '') {
+            <mat-chip (removed)="clearSearchQuery()">
+              Keyword: {{ lastSearchQuery() }}
+              <button
+                matChipRemove
+                data-umami-event="Metadata Browser Search Query Clear Clicked"
+              >
+                <mat-icon>cancel</mat-icon>
+              </button></mat-chip
             >
-              <mat-icon>cancel</mat-icon>
-            </button></mat-chip
-          >
-        }
-        @for (facet of facets(); track facet.key) {
-          @if (lastSearchFilterFacets()[facet.key]) {
-            @for (option of facet.options; track option.value) {
-              @if (lastSearchFilterFacets()[facet.key].indexOf(option.value) !== -1) {
-                <mat-chip (removed)="removeFacet(facet.key + '#' + option.value)">
-                  {{ facet.name }}: {{ option.value }}
-                  <button
-                    matChipRemove
-                    data-umami-event="Metadata Browser Facet Clear Clicked"
-                  >
-                    <mat-icon>cancel</mat-icon>
-                  </button>
-                </mat-chip>
-              }
-            }
           }
-        }
-      </mat-chip-set>
-      <mat-chip-set>
-        <mat-chip>
-          <div class="flex content-around">
-            <span class="mr-1">Total Datasets:</span>
-
-            @if (loading()) {
-              <mat-spinner
-                class="inline-block"
-                class="mt-0.5"
-                [diameter]="15"
-              ></mat-spinner>
-            } @else {
-              <span>{{ numResults() }}</span>
-            }
-          </div>
-        </mat-chip>
-      </mat-chip-set>
-    </div>
-  </div>
-  <div class="toggle-filters col-span-12 mb-3 lg:hidden">
-    <button
-      mat-stroked-button
-      class="toggle-filters w-full font-bold"
-      (click)="displayFilters = !displayFilters"
-    >
-      <mat-icon>search</mat-icon><mat-icon>filter_alt</mat-icon>
-      @if (displayFilters) {
-        Close search and filters
-      } @else {
-        Search and filter results
-      }
-    </button>
-  </div>
-  <aside
-    [class.hidden]="!displayFilters"
-    class="col-span-12 mb-4 lg:col-span-4 lg:mb-0 lg:block xl:col-span-3"
-  >
-    <mat-card appearance="outlined" class="p-3">
-      <form [formGroup]="searchFormGroup" (keydown.enter)="$event.preventDefault()">
-        <mat-form-field class="w-full">
-          <input
-            type="search"
-            matInput
-            placeholder="Search"
-            name="searchTerm"
-            [formControl]="searchFormControl"
-            (keyup.enter)="submit($event)"
-          />
-          <mat-icon matSuffix>search</mat-icon>
-        </mat-form-field>
-        @if (loading()) {
-          @for (i of [1, 2]; track i) {
-            <div class="w-1/2">
-              <app-stencil></app-stencil>
-            </div>
-            <ul class="mt-1 mb-5 rounded-lg border">
-              @for (j of [1, 2]; track j) {
-                <li>
-                  <app-stencil></app-stencil>
-                </li>
-              }
-            </ul>
-          }
-        } @else {
           @for (facet of facets(); track facet.key) {
-            <div>
-              {{ facet.name }}
-              <ul class="mt-1 mb-5 rounded-lg border">
-                @for (option of facet.options; track option.value) {
-                  @let name = `${facet.key}#${option.value}`;
-                  <li>
-                    <mat-checkbox
-                      [name]="name"
-                      (change)="onFacetFilterChanged($event)"
-                      [checked]="name | facetActivity: facetData()"
-                      >{{ option.value }} ({{ option.count }})</mat-checkbox
+            @if (lastSearchFilterFacets()[facet.key]) {
+              @for (option of facet.options; track option.value) {
+                @if (lastSearchFilterFacets()[facet.key].indexOf(option.value) !== -1) {
+                  <mat-chip (removed)="removeFacet(facet.key + '#' + option.value)">
+                    {{ facet.name }}: {{ option.value }}
+                    <button
+                      matChipRemove
+                      data-umami-event="Metadata Browser Facet Clear Clicked"
                     >
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  </mat-chip>
+                }
+              }
+            }
+          }
+        </mat-chip-set>
+        <mat-chip-set>
+          <mat-chip>
+            <div class="flex content-around">
+              <span class="mr-1">Total Datasets:</span>
+
+              @if (loading()) {
+                <mat-spinner
+                  class="inline-block"
+                  class="mt-0.5"
+                  [diameter]="15"
+                ></mat-spinner>
+              } @else {
+                <span>{{ numResults() }}</span>
+              }
+            </div>
+          </mat-chip>
+        </mat-chip-set>
+      </div>
+    </div>
+    <div class="toggle-filters col-span-12 mb-3 lg:hidden">
+      <button
+        mat-stroked-button
+        class="toggle-filters w-full font-bold"
+        (click)="displayFilters = !displayFilters"
+      >
+        <mat-icon>search</mat-icon><mat-icon>filter_alt</mat-icon>
+        @if (displayFilters) {
+          Close search and filters
+        } @else {
+          Search and filter results
+        }
+      </button>
+    </div>
+    <aside
+      [class.hidden]="!displayFilters"
+      class="col-span-12 mb-4 lg:col-span-4 lg:mb-0 lg:block xl:col-span-3"
+    >
+      <mat-card appearance="outlined" class="p-3">
+        <form [formGroup]="searchFormGroup" (keydown.enter)="$event.preventDefault()">
+          <mat-form-field class="w-full">
+            <input
+              type="search"
+              matInput
+              placeholder="Search"
+              name="searchTerm"
+              [formControl]="searchFormControl"
+              (keyup.enter)="submit($event)"
+            />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+          @if (loading()) {
+            @for (i of [1, 2]; track i) {
+              <div class="w-1/2">
+                <app-stencil></app-stencil>
+              </div>
+              <ul class="mt-1 mb-5 rounded-lg border">
+                @for (j of [1, 2]; track j) {
+                  <li>
+                    <app-stencil></app-stencil>
                   </li>
                 }
               </ul>
-            </div>
+            }
+          } @else {
+            @for (facet of facets(); track facet.key) {
+              <div>
+                {{ facet.name }}
+                <ul class="mt-1 mb-5 rounded-lg border">
+                  @for (option of facet.options; track option.value) {
+                    @let name = `${facet.key}#${option.value}`;
+                    <li>
+                      <mat-checkbox
+                        [name]="name"
+                        (change)="onFacetFilterChanged($event)"
+                        [checked]="name | facetActivity: facetData()"
+                        >{{ option.value }} ({{ option.count }})</mat-checkbox
+                      >
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
           }
-        }
-        <div class="mt-8 grid grid-cols-2 gap-5">
+          <div class="mt-8 grid grid-cols-2 gap-5">
+            <button
+              mat-stroked-button
+              (click)="clear($event)"
+              data-umami-event="Metadata Browser Clear Clicked"
+            >
+              Clear
+            </button>
+            <button
+              mat-flat-button
+              (click)="submit($event)"
+              type="submit"
+              data-umami-event="Metadata Browser Submit Clicked"
+            >
+              Filter
+            </button>
+          </div>
+        </form>
+        <div class="mt-6 lg:hidden">
           <button
             mat-stroked-button
-            (click)="clear($event)"
-            data-umami-event="Metadata Browser Clear Clicked"
+            class="toggle-filters w-full"
+            (click)="displayFilters = !displayFilters"
           >
-            Clear
-          </button>
-          <button
-            mat-flat-button
-            (click)="submit($event)"
-            type="submit"
-            data-umami-event="Metadata Browser Submit Clicked"
-          >
-            Filter
+            Close filters
           </button>
         </div>
-      </form>
-      <div class="mt-6 lg:hidden">
-        <button
-          mat-stroked-button
-          class="toggle-filters w-full"
-          (click)="displayFilters = !displayFilters"
-        >
-          Close filters
-        </button>
-      </div>
-    </mat-card>
-  </aside>
-  <div class="col-span-12 lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
-    <app-search-result-list (paginate)="paginate($event)"></app-search-result-list>
+      </mat-card>
+    </aside>
+    <div class="col-span-12 lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
+      <app-search-result-list (paginate)="paginate($event)"></app-search-result-list>
+    </div>
   </div>
-</div>
+} @else {
+  <div>
+    <p class="text-error text-2xl">
+      {{ errorMessage() }}
+    </p>
+  </div>
+}

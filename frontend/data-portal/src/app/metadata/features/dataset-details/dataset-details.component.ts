@@ -87,8 +87,22 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   #dins = inject(DatasetInformationService);
 
   #datasetDetails = this.#metadata.datasetDetails;
+  #datasetDetailsError = this.#datasetDetails.error;
   datasetDetails = this.#datasetDetails.value;
   datasetInformation = this.#dins.datasetInformation.value;
+
+  errorMessage = computed(() => {
+    if (this.#datasetDetailsError()) {
+      switch ((this.#datasetDetailsError() as { status: number | undefined }).status) {
+        case 404:
+          return 'The specified dataset could not be found.';
+        case undefined:
+          return undefined;
+        default:
+          return 'There was an error loading the dataset details. Please try again later.';
+      }
+    } else return undefined;
+  });
 
   dap = computed(() => this.datasetDetails().data_access_policy);
   dac = computed(() => this.dap().data_access_committee);

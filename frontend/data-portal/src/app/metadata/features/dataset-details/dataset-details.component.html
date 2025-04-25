@@ -1,484 +1,498 @@
-<div>
-  @if (datasetDetails().accession !== '') {
-    <div class="mb-2 flex items-center justify-between">
-      <button
-        mat-icon-button
-        (click)="goBack()"
-        data-umami-event="Dataset Details Back Clicked"
-      >
-        <mat-icon>keyboard_return</mat-icon>
-      </button>
-      <app-dynamic-access-request-button datasetID="{{ datasetDetails().accession }}" />
-    </div>
-    <div>
-      <h3>{{ datasetDetails().title }}</h3>
-      <p class="mb-0 text-base">Dataset ID | {{ id() }}</p>
-      @if (datasetDetails().ega_accession !== '') {
-        <p class="text-base">EGA ID | {{ datasetDetails().ega_accession }}</p>
-      }
-      <p class="mt-4 text-sm">
-        Study Type |
-        @if (study().types.length > 0) {
-          @for (type of study().types; track $index) {
-            <mat-chip class="small-chips">{{ type | underscoreToSpace }}</mat-chip
-            >{{ ' ' }}
-          }
-        } @else {
-          <mat-chip class="small-chips">None</mat-chip>
-        }
-      </p>
-      <p class="text-sm">
-        Dataset Type |
-        @if (datasetDetails().types.length > 0) {
-          @for (type of datasetDetails().types; track $index) {
-            <mat-chip class="small-chips">{{ type }}</mat-chip
-            >{{ ' ' }}
-          }
-        } @else {
-          <mat-chip class="small-chips">None</mat-chip>
-        }
-      </p>
-    </div>
-    <div class="my-4">
-      <p class="text-primary flex items-center text-sm">
-        <mat-icon>description</mat-icon><strong>&nbsp;Description</strong>
-      </p>
-      <div class="border-primary border-y pt-2">
-        <app-paragraphs [text]="datasetDetails().description" pClasses="text-sm" />
+@if (!errorMessage()) {
+  <div>
+    @if (datasetDetails().accession !== '') {
+      <div class="mb-2 flex items-center justify-between">
+        <button
+          mat-icon-button
+          (click)="goBack()"
+          data-umami-event="Dataset Details Back Clicked"
+        >
+          <mat-icon>keyboard_return</mat-icon>
+        </button>
+        <app-dynamic-access-request-button
+          datasetID="{{ datasetDetails().accession }}"
+        />
       </div>
-    </div>
-    <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="center" dynamicHeight>
-      <mat-tab
-        ><ng-template mat-tab-label
-          ><span class="text-primary flex items-center">
-            <mat-icon>book_2</mat-icon>
-            &nbsp;Study
-          </span>
-        </ng-template>
-        <div class="p-4">
-          @if (study().ega_accession) {
-            <a
-              mat-stroked-button
-              class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
-              [href]="'https://ega-archive.org/datasets/' + study().ega_accession"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-umami-event="Dataset Details Visit EGA Study Page Clicked"
-              ><mat-icon>open_in_new</mat-icon>Visit EGA Study Page</a
-            >
-          }
-          <h4 class="inline-flex items-center">
-            <span
-              class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-              ><mat-icon inline>book_2</mat-icon></span
-            >&nbsp;Study
-          </h4>
-          <p class="text-base"><strong>ID:</strong> {{ study().accession }}</p>
-          @if (study().ega_accession) {
-            <p class="text-base">
-              <strong>EGA ID:</strong> {{ study().ega_accession }}
-            </p>
-          }
-          <p class="text-base"><strong>Title:</strong> {{ study().title }}</p>
-          <p class="text-base">
-            <strong>Description:</strong> {{ study().description }}
-          </p>
-          <p class="text-base">
-            <strong>Study type: </strong>
-            @if (datasetDetails().types.length > 0) {
-              @for (type of datasetDetails().types; track $index; let last = $last) {
-                {{ type }}{{ last ? '' : ', ' }}
-              }
-            } @else {
-              <mat-chip class="small-chips">None</mat-chip>
-            }
-          </p>
-        </div></mat-tab
-      >
-      <mat-tab
-        ><ng-template mat-tab-label
-          ><span class="text-primary flex items-center">
-            <mat-icon>article</mat-icon>
-            &nbsp;Publications
-          </span>
-        </ng-template>
-        <div class="p-4">
-          @if (publications().length > 0) {
-            @for (
-              pub of publications();
-              track pub.title;
-              let idx = $index;
-              let last = $last
-            ) {
-              <div>
-                @if (pub.doi && pub.doi !== '') {
-                  <a
-                    mat-stroked-button
-                    class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
-                    [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    data-umami-event="Dataset Details Publication DOI Clicked"
-                    ><mat-icon>open_in_new</mat-icon>View Publication</a
-                  >
-                }
-                <h4 class="inline-flex items-center">
-                  <span
-                    class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                    ><mat-icon inline>article</mat-icon></span
-                  >&nbsp;{{ pub.title ?? 'Unknown publication title' }}
-                </h4>
-                <p class="text-base">
-                  <strong>Author(s):</strong> {{ pub.author ?? 'Unknown authors' }}
-                </p>
-                @if (pub.journal) {
-                  <p class="text-base"><strong>Journal:</strong> {{ pub.journal }}</p>
-                }
-                @if (pub.year) {
-                  <p class="text-base"><strong>Year:</strong> {{ pub.year }}</p>
-                }
-                <p class="text-base">
-                  <strong>DOI:</strong> {{ pub.doi | validateDOI }}
-                </p>
-                @if (pub.abstract) {
-                  <app-paragraphs
-                    [text]="pub.abstract"
-                    pClasses="text-base"
-                    label="Abstract"
-                  />
-                }
-                @if (!last) {
-                  <hr class="mx-14 my-6" />
-                }
-              </div>
+      <div>
+        <h3>{{ datasetDetails().title }}</h3>
+        <p class="mb-0 text-base">Dataset ID | {{ id() }}</p>
+        @if (datasetDetails().ega_accession !== '') {
+          <p class="text-base">EGA ID | {{ datasetDetails().ega_accession }}</p>
+        }
+        <p class="mt-4 text-sm">
+          Study Type |
+          @if (study().types.length > 0) {
+            @for (type of study().types; track $index) {
+              <mat-chip class="small-chips">{{ type | underscoreToSpace }}</mat-chip
+              >{{ ' ' }}
             }
           } @else {
+            <mat-chip class="small-chips">None</mat-chip>
+          }
+        </p>
+        <p class="text-sm">
+          Dataset Type |
+          @if (datasetDetails().types.length > 0) {
+            @for (type of datasetDetails().types; track $index) {
+              <mat-chip class="small-chips">{{ type }}</mat-chip
+              >{{ ' ' }}
+            }
+          } @else {
+            <mat-chip class="small-chips">None</mat-chip>
+          }
+        </p>
+      </div>
+      <div class="my-4">
+        <p class="text-primary flex items-center text-sm">
+          <mat-icon>description</mat-icon><strong>&nbsp;Description</strong>
+        </p>
+        <div class="border-primary border-y pt-2">
+          <app-paragraphs [text]="datasetDetails().description" pClasses="text-sm" />
+        </div>
+      </div>
+      <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="center" dynamicHeight>
+        <mat-tab
+          ><ng-template mat-tab-label
+            ><span class="text-primary flex items-center">
+              <mat-icon>book_2</mat-icon>
+              &nbsp;Study
+            </span>
+          </ng-template>
+          <div class="p-4">
+            @if (study().ega_accession) {
+              <a
+                mat-stroked-button
+                class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
+                [href]="'https://ega-archive.org/datasets/' + study().ega_accession"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-umami-event="Dataset Details Visit EGA Study Page Clicked"
+                ><mat-icon>open_in_new</mat-icon>Visit EGA Study Page</a
+              >
+            }
             <h4 class="inline-flex items-center">
               <span
                 class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                ><mat-icon inline>article</mat-icon></span
-              >&nbsp;Publications
+                ><mat-icon inline>book_2</mat-icon></span
+              >&nbsp;Study
             </h4>
-            <p>No publications available.</p>
-          }
-        </div></mat-tab
-      >
-      <mat-tab
-        ><ng-template mat-tab-label
-          ><span class="text-primary flex items-center">
-            <mat-icon>data_loss_prevention</mat-icon>
-            &nbsp;DAP/DAC
-          </span>
-        </ng-template>
-        <div class="p-4">
-          @if (dap().policy_url !== '') {
-            <a
-              mat-stroked-button
-              class="mb-4 w-full md:float-right md:mb-0 md:w-auto"
-              [href]="dap().policy_url"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-umami-event="Dataset Details Visit DAP Policy Clicked"
-              ><mat-icon>open_in_new</mat-icon>Data Access Info Form</a
-            >
-          }
-          <h4 class="lg:max-w-auto inline-flex items-center md:max-w-[26rem]">
-            <span
-              class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-              ><mat-icon inline>data_loss_prevention</mat-icon></span
-            >&nbsp;<span>Policy and Data Access Committee</span>
-          </h4>
-          <p class="text-base">
-            <strong>Data Access Committee:</strong> {{ dac().alias }}
-          </p>
-          <p class="text-base"><strong>e-Mail:</strong> {{ dac().email }}</p>
-          <p class="text-base"><strong>Data Access Policy:</strong> {{ dap().name }}</p>
-          <app-paragraphs
-            [text]="dap().policy_text"
-            pClasses="text-base"
-            label="Policy"
-          /></div
-      ></mat-tab>
-    </mat-tab-group>
-
-    <hr class="mb-6" />
-
-    <div class="grid grid-cols-1 gap-2">
-      <mat-expansion-panel>
-        <mat-expansion-panel-header>
-          Experiments Summary ({{ numExperiments() }} experiment{{
-            numExperiments() | addPluralS
-          }})</mat-expansion-panel-header
-        ><ng-template matExpansionPanelContent
-          ><div class="overflow-auto">
-            <table
-              mat-table
-              [dataSource]="experimentsDataSource"
-              matSort
-              #sortExperiments="matSort"
-            >
-              <ng-container matColumnDef="accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
-                  Experiment ID
-                </th>
-                <td mat-cell *matCellDef="let experiment">
-                  {{ experiment.accession }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="ega_accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
-                  EGA ID
-                </th>
-                <td mat-cell *matCellDef="let experiment">
-                  {{ experiment.ega_accession }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="title">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
-                <td mat-cell *matCellDef="let experiment">{{ experiment.title }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="description">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-2/5">
-                  Description
-                </th>
-                <td mat-cell *matCellDef="let experiment">
-                  {{ experiment.description }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="method">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Method</th>
-                <td mat-cell *matCellDef="let experiment">
-                  {{ experiment.experiment_method.name }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="platform">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Platform</th>
-                <td mat-cell *matCellDef="let experiment">
-                  {{ experiment.experiment_method.instrument_model }}
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="experimentsColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: experimentsColumns"></tr>
-            </table>
-
-            @if (numExperiments() > 10) {
-              <mat-paginator
-                [pageSize]="defaultTablePageSize"
-                [pageSizeOptions]="tablePageSizeOptions"
-                showFirstLastButtons
-                aria-label="Select page of experiments"
-                class="sticky left-0"
-                #experimentsPaginator
-              >
-              </mat-paginator>
-            }</div></ng-template
-      ></mat-expansion-panel>
-
-      <mat-expansion-panel>
-        <mat-expansion-panel-header>
-          Samples Summary ({{ numSamples() }} sample{{
-            numSamples() | addPluralS
-          }})</mat-expansion-panel-header
-        ><ng-template matExpansionPanelContent
-          ><div class="overflow-auto">
-            <table
-              mat-table
-              [dataSource]="samplesDataSource"
-              matSort
-              #sortSamples="matSort"
-            >
-              <ng-container matColumnDef="accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
-                  Sample ID
-                </th>
-                <td mat-cell *matCellDef="let sample">{{ sample.accession }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="ega_accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
-                  EGA ID
-                </th>
-                <td mat-cell *matCellDef="let sample">
-                  {{ sample.ega_accession }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="description">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-2/5">
-                  Description
-                </th>
-                <td mat-cell *matCellDef="let sample">
-                  {{ sample.description }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-                <td mat-cell *matCellDef="let sample">
-                  {{ sample.case_control_status }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="sex">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Sex</th>
-                <td mat-cell *matCellDef="let sample">
-                  {{ sample.individual.sex }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="phenotype">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Phenotype</th>
-                <td mat-cell *matCellDef="let sample">
-                  @for (
-                    phenotype of sample.individual.phenotypic_features_terms;
-                    track $index;
-                    let last = $last
-                  ) {
-                    {{ phenotype }}{{ last ? '' : ', ' }}
+            <p class="text-base"><strong>ID:</strong> {{ study().accession }}</p>
+            @if (study().ega_accession) {
+              <p class="text-base">
+                <strong>EGA ID:</strong> {{ study().ega_accession }}
+              </p>
+            }
+            <p class="text-base"><strong>Title:</strong> {{ study().title }}</p>
+            <p class="text-base">
+              <strong>Description:</strong> {{ study().description }}
+            </p>
+            <p class="text-base">
+              <strong>Study type: </strong>
+              @if (datasetDetails().types.length > 0) {
+                @for (type of datasetDetails().types; track $index; let last = $last) {
+                  {{ type }}{{ last ? '' : ', ' }}
+                }
+              } @else {
+                <mat-chip class="small-chips">None</mat-chip>
+              }
+            </p>
+          </div></mat-tab
+        >
+        <mat-tab
+          ><ng-template mat-tab-label
+            ><span class="text-primary flex items-center">
+              <mat-icon>article</mat-icon>
+              &nbsp;Publications
+            </span>
+          </ng-template>
+          <div class="p-4">
+            @if (publications().length > 0) {
+              @for (
+                pub of publications();
+                track pub.title;
+                let idx = $index;
+                let last = $last
+              ) {
+                <div>
+                  @if (pub.doi && pub.doi !== '') {
+                    <a
+                      mat-stroked-button
+                      class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
+                      [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-umami-event="Dataset Details Publication DOI Clicked"
+                      ><mat-icon>open_in_new</mat-icon>View Publication</a
+                    >
                   }
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="biospecimen_type">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>
-                  Biospeciment type
-                </th>
-                <td mat-cell *matCellDef="let sample">
-                  {{ sample.biospecimen_type }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="tissue">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Tissue</th>
-                <td mat-cell *matCellDef="let sample">
-                  {{ sample.biospecimen_tissue_term }}
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="samplesColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: samplesColumns"></tr>
-            </table>
-
-            @if (numSamples() > 10) {
-              <mat-paginator
-                [pageSize]="defaultTablePageSize"
-                [pageSizeOptions]="tablePageSizeOptions"
-                showFirstLastButtons
-                aria-label="Select page of samples"
-                class="sticky left-0"
-                #samplesPaginator
-              >
-              </mat-paginator>
-            }</div></ng-template
-      ></mat-expansion-panel>
-
-      <mat-expansion-panel>
-        <mat-expansion-panel-header>
-          Files Summary ({{ numFiles() }} file{{ numFiles() | addPluralS }},
-          {{ numBytes() | parseBytes }} in total)</mat-expansion-panel-header
-        ><ng-template matExpansionPanelContent
-          ><div class="overflow-auto">
-            <table
-              mat-table
-              [dataSource]="filesDataSource"
-              matSort
-              #sortFiles="matSort"
-            >
-              <ng-container matColumnDef="accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
-                  File ID
-                </th>
-                <td mat-cell *matCellDef="let file">{{ file.accession }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="ega_accession">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
-                  EGA ID
-                </th>
-                <td mat-cell *matCellDef="let file">
-                  {{ file.ega_accession }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="name">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>File name</th>
-                <td mat-cell *matCellDef="let file">{{ file.name }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="type">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>File type</th>
-                <td mat-cell *matCellDef="let file">
-                  {{ file.format }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="origin">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>File origin</th>
-                <td mat-cell *matCellDef="let file" class="capitalize">
-                  {{ file.file_category | underscoreToSpace }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="size">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>File size</th>
-                <td mat-cell *matCellDef="let file">
-                  {{ (file.file_information?.size | parseBytes) || 'N/A' }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="location">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>File location</th>
-                <td mat-cell *matCellDef="let file">
-                  {{ (file.file_information?.storage_alias | storageAlias) || 'N/A' }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="hash">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>File hash</th>
-                <td mat-cell *matCellDef="let file">
-                  @if (file.file_information?.sha256_hash) {
+                  <h4 class="inline-flex items-center">
                     <span
-                      class="inline-block max-w-[10ex] overflow-hidden font-mono text-ellipsis whitespace-nowrap"
-                      title="{{ file.file_information?.sha256_hash }}"
-                      >{{ file.file_information?.sha256_hash }}</span
-                    >
-                    <button
-                      mat-icon-button
-                      matTooltip="Copy full hash to clipboard"
-                      [cdkCopyToClipboard]="file.file_information?.sha256_hash"
-                      (click)="notifyCopied()"
-                      data-umami-event="Dataset Details File Hash Copied"
-                    >
-                      <mat-icon class="text-[20px]/[24px]">content_copy</mat-icon>
-                    </button>
-                  } @else {
-                    N/A
+                      class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                      ><mat-icon inline>article</mat-icon></span
+                    >&nbsp;{{ pub.title ?? 'Unknown publication title' }}
+                  </h4>
+                  <p class="text-base">
+                    <strong>Author(s):</strong> {{ pub.author ?? 'Unknown authors' }}
+                  </p>
+                  @if (pub.journal) {
+                    <p class="text-base"><strong>Journal:</strong> {{ pub.journal }}</p>
                   }
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="filesColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: filesColumns"></tr>
-            </table>
-
-            @if (numFiles() > 10) {
-              <mat-paginator
-                [pageSize]="defaultTablePageSize"
-                [pageSizeOptions]="tablePageSizeOptions"
-                showFirstLastButtons
-                aria-label="Select page of files"
-                class="sticky left-0"
-                #filesPaginator
+                  @if (pub.year) {
+                    <p class="text-base"><strong>Year:</strong> {{ pub.year }}</p>
+                  }
+                  <p class="text-base">
+                    <strong>DOI:</strong> {{ pub.doi | validateDOI }}
+                  </p>
+                  @if (pub.abstract) {
+                    <app-paragraphs
+                      [text]="pub.abstract"
+                      pClasses="text-base"
+                      label="Abstract"
+                    />
+                  }
+                  @if (!last) {
+                    <hr class="mx-14 my-6" />
+                  }
+                </div>
+              }
+            } @else {
+              <h4 class="inline-flex items-center">
+                <span
+                  class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                  ><mat-icon inline>article</mat-icon></span
+                >&nbsp;Publications
+              </h4>
+              <p>No publications available.</p>
+            }
+          </div></mat-tab
+        >
+        <mat-tab
+          ><ng-template mat-tab-label
+            ><span class="text-primary flex items-center">
+              <mat-icon>data_loss_prevention</mat-icon>
+              &nbsp;DAP/DAC
+            </span>
+          </ng-template>
+          <div class="p-4">
+            @if (dap().policy_url !== '') {
+              <a
+                mat-stroked-button
+                class="mb-4 w-full md:float-right md:mb-0 md:w-auto"
+                [href]="dap().policy_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-umami-event="Dataset Details Visit DAP Policy Clicked"
+                ><mat-icon>open_in_new</mat-icon>Data Access Info Form</a
               >
-              </mat-paginator>
-            }</div></ng-template
-      ></mat-expansion-panel>
-    </div>
-  }
-</div>
+            }
+            <h4 class="lg:max-w-auto inline-flex items-center md:max-w-[26rem]">
+              <span
+                class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                ><mat-icon inline>data_loss_prevention</mat-icon></span
+              >&nbsp;<span>Policy and Data Access Committee</span>
+            </h4>
+            <p class="text-base">
+              <strong>Data Access Committee:</strong> {{ dac().alias }}
+            </p>
+            <p class="text-base"><strong>e-Mail:</strong> {{ dac().email }}</p>
+            <p class="text-base">
+              <strong>Data Access Policy:</strong> {{ dap().name }}
+            </p>
+            <app-paragraphs
+              [text]="dap().policy_text"
+              pClasses="text-base"
+              label="Policy"
+            /></div
+        ></mat-tab>
+      </mat-tab-group>
+
+      <hr class="mb-6" />
+
+      <div class="grid grid-cols-1 gap-2">
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            Experiments Summary ({{ numExperiments() }} experiment{{
+              numExperiments() | addPluralS
+            }})</mat-expansion-panel-header
+          ><ng-template matExpansionPanelContent
+            ><div class="overflow-auto">
+              <table
+                mat-table
+                [dataSource]="experimentsDataSource"
+                matSort
+                #sortExperiments="matSort"
+              >
+                <ng-container matColumnDef="accession">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                    Experiment ID
+                  </th>
+                  <td mat-cell *matCellDef="let experiment">
+                    {{ experiment.accession }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="ega_accession">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                    EGA ID
+                  </th>
+                  <td mat-cell *matCellDef="let experiment">
+                    {{ experiment.ega_accession }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="title">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
+                  <td mat-cell *matCellDef="let experiment">{{ experiment.title }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="description">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-2/5">
+                    Description
+                  </th>
+                  <td mat-cell *matCellDef="let experiment">
+                    {{ experiment.description }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="method">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Method</th>
+                  <td mat-cell *matCellDef="let experiment">
+                    {{ experiment.experiment_method.name }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="platform">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Platform</th>
+                  <td mat-cell *matCellDef="let experiment">
+                    {{ experiment.experiment_method.instrument_model }}
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="experimentsColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: experimentsColumns"></tr>
+              </table>
+
+              @if (numExperiments() > 10) {
+                <mat-paginator
+                  [pageSize]="defaultTablePageSize"
+                  [pageSizeOptions]="tablePageSizeOptions"
+                  showFirstLastButtons
+                  aria-label="Select page of experiments"
+                  class="sticky left-0"
+                  #experimentsPaginator
+                >
+                </mat-paginator>
+              }</div></ng-template
+        ></mat-expansion-panel>
+
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            Samples Summary ({{ numSamples() }} sample{{
+              numSamples() | addPluralS
+            }})</mat-expansion-panel-header
+          ><ng-template matExpansionPanelContent
+            ><div class="overflow-auto">
+              <table
+                mat-table
+                [dataSource]="samplesDataSource"
+                matSort
+                #sortSamples="matSort"
+              >
+                <ng-container matColumnDef="accession">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                    Sample ID
+                  </th>
+                  <td mat-cell *matCellDef="let sample">{{ sample.accession }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="ega_accession">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                    EGA ID
+                  </th>
+                  <td mat-cell *matCellDef="let sample">
+                    {{ sample.ega_accession }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="description">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-2/5">
+                    Description
+                  </th>
+                  <td mat-cell *matCellDef="let sample">
+                    {{ sample.description }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+                  <td mat-cell *matCellDef="let sample">
+                    {{ sample.case_control_status }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="sex">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Sex</th>
+                  <td mat-cell *matCellDef="let sample">
+                    {{ sample.individual.sex }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="phenotype">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Phenotype</th>
+                  <td mat-cell *matCellDef="let sample">
+                    @for (
+                      phenotype of sample.individual.phenotypic_features_terms;
+                      track $index;
+                      let last = $last
+                    ) {
+                      {{ phenotype }}{{ last ? '' : ', ' }}
+                    }
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="biospecimen_type">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                    Biospeciment type
+                  </th>
+                  <td mat-cell *matCellDef="let sample">
+                    {{ sample.biospecimen_type }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="tissue">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Tissue</th>
+                  <td mat-cell *matCellDef="let sample">
+                    {{ sample.biospecimen_tissue_term }}
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="samplesColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: samplesColumns"></tr>
+              </table>
+
+              @if (numSamples() > 10) {
+                <mat-paginator
+                  [pageSize]="defaultTablePageSize"
+                  [pageSizeOptions]="tablePageSizeOptions"
+                  showFirstLastButtons
+                  aria-label="Select page of samples"
+                  class="sticky left-0"
+                  #samplesPaginator
+                >
+                </mat-paginator>
+              }</div></ng-template
+        ></mat-expansion-panel>
+
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            Files Summary ({{ numFiles() }} file{{ numFiles() | addPluralS }},
+            {{ numBytes() | parseBytes }} in total)</mat-expansion-panel-header
+          ><ng-template matExpansionPanelContent
+            ><div class="overflow-auto">
+              <table
+                mat-table
+                [dataSource]="filesDataSource"
+                matSort
+                #sortFiles="matSort"
+              >
+                <ng-container matColumnDef="accession">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                    File ID
+                  </th>
+                  <td mat-cell *matCellDef="let file">{{ file.accession }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="ega_accession">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-40">
+                    EGA ID
+                  </th>
+                  <td mat-cell *matCellDef="let file">
+                    {{ file.ega_accession }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="name">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>File name</th>
+                  <td mat-cell *matCellDef="let file">{{ file.name }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="type">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>File type</th>
+                  <td mat-cell *matCellDef="let file">
+                    {{ file.format }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="origin">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>File origin</th>
+                  <td mat-cell *matCellDef="let file" class="capitalize">
+                    {{ file.file_category | underscoreToSpace }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="size">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>File size</th>
+                  <td mat-cell *matCellDef="let file">
+                    {{ (file.file_information?.size | parseBytes) || 'N/A' }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="location">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                    File location
+                  </th>
+                  <td mat-cell *matCellDef="let file">
+                    {{ (file.file_information?.storage_alias | storageAlias) || 'N/A' }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="hash">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>File hash</th>
+                  <td mat-cell *matCellDef="let file">
+                    @if (file.file_information?.sha256_hash) {
+                      <span
+                        class="inline-block max-w-[10ex] overflow-hidden font-mono text-ellipsis whitespace-nowrap"
+                        title="{{ file.file_information?.sha256_hash }}"
+                        >{{ file.file_information?.sha256_hash }}</span
+                      >
+                      <button
+                        mat-icon-button
+                        matTooltip="Copy full hash to clipboard"
+                        [cdkCopyToClipboard]="file.file_information?.sha256_hash"
+                        (click)="notifyCopied()"
+                        data-umami-event="Dataset Details File Hash Copied"
+                      >
+                        <mat-icon class="text-[20px]/[24px]">content_copy</mat-icon>
+                      </button>
+                    } @else {
+                      N/A
+                    }
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="filesColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: filesColumns"></tr>
+              </table>
+
+              @if (numFiles() > 10) {
+                <mat-paginator
+                  [pageSize]="defaultTablePageSize"
+                  [pageSizeOptions]="tablePageSizeOptions"
+                  showFirstLastButtons
+                  aria-label="Select page of files"
+                  class="sticky left-0"
+                  #filesPaginator
+                >
+                </mat-paginator>
+              }</div></ng-template
+        ></mat-expansion-panel>
+      </div>
+    }
+  </div>
+} @else {
+  <div>
+    <p class="text-error text-2xl">
+      {{ errorMessage() }}
+    </p>
+  </div>
+}
