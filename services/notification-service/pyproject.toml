@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ns"
-version = "3.0.2"
+version = "3.0.3"
 description = "The Notification Service (NS) handles notification kafka events."
 dependencies = [
     "typer>=0.12",
