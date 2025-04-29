@@ -17,13 +17,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/well-known-value-service):
 ```bash
-docker pull ghga/well-known-value-service:1.1.3
+docker pull ghga/well-known-value-service:1.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/well-known-value-service:1.1.3 .
+docker build -t ghga/well-known-value-service:1.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -31,7 +31,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/well-known-value-service:1.1.3 --help
+docker run -p 8080:8080 ghga/well-known-value-service:1.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -94,6 +94,23 @@ The service requires the following configuration parameters:
 - <a id="properties/wps_api_url"></a>**`wps_api_url`** *(string, required)*: URL to the root of the WPS API.
 
 - <a id="properties/storage_aliases"></a>**`storage_aliases`** *(object, required)*: Mapping of storage alias to endpoint URL for all available S3 object storages. Can contain additional properties.
+
+  - <a id="properties/storage_aliases/additionalProperties"></a>**Additional properties** *(string, format: uri)*: Length must be between 1 and 2083 (inclusive).
+
+- <a id="properties/storage_labels"></a>**`storage_labels`** *(object, required)*: Mapping of storage alias to its human-readable format. Can contain additional properties.
+
+  - <a id="properties/storage_labels/additionalProperties"></a>**Additional properties** *(string)*
+
+
+  Examples:
+
+  ```json
+  {
+      "HD01": "Heidelberg",
+      "TUE01": "T\u00fcbingen"
+  }
+  ```
+
 
 - <a id="properties/host"></a>**`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 

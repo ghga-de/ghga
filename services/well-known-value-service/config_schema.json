@@ -73,9 +73,28 @@
       "type": "string"
     },
     "storage_aliases": {
-      "additionalProperties": true,
+      "additionalProperties": {
+        "format": "uri",
+        "maxLength": 2083,
+        "minLength": 1,
+        "type": "string"
+      },
       "description": "Mapping of storage alias to endpoint URL for all available S3 object storages",
       "title": "Storage Aliases",
+      "type": "object"
+    },
+    "storage_labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Mapping of storage alias to its human-readable format",
+      "examples": [
+        {
+          "HD01": "Heidelberg",
+          "TUE01": "T\u00fcbingen"
+        }
+      ],
+      "title": "Storage Labels",
       "type": "object"
     },
     "host": {
@@ -218,7 +237,8 @@
     "dcs_api_url",
     "ucs_api_url",
     "wps_api_url",
-    "storage_aliases"
+    "storage_aliases",
+    "storage_labels"
   ],
   "title": "ModSettings",
   "type": "object"

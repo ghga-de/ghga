@@ -5,4 +5,7 @@ ucs_api_url: http://127.0.0.1/upload
 storage_aliases:
   storage1: http://127.0.0.1/object_storage_1
   storage2: http://127.0.0.1/object_storage_2
+storage_labels:
+  storage1: Heidelberg
+  storage2: Tübingen
 service_instance_id: "001"

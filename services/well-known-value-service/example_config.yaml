@@ -19,6 +19,9 @@ service_name: wkvs
 storage_aliases:
   storage1: http://127.0.0.1/object_storage_1
   storage2: http://127.0.0.1/object_storage_2
+storage_labels:
+  storage1: Heidelberg
+  storage2: "T\xFCbingen"
 ucs_api_url: http://127.0.0.1/upload
 workers: 1
 wps_api_url: http://127.0.0.1

@@ -20,8 +20,9 @@ from fastapi import status
 
 from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
 
+pytestmark = pytest.mark.asyncio()
 
-@pytest.mark.asyncio
+
 async def test_health_check(joint_fixture: JointFixture):  # noqa: F811
     """Test that the health check endpoint works."""
     response = await joint_fixture.rest_client.get("/health")
@@ -30,7 +31,6 @@ async def test_health_check(joint_fixture: JointFixture):  # noqa: F811
     assert response.json() == {"status": "OK"}
 
 
-@pytest.mark.asyncio
 async def test_happy_retrieval(joint_fixture: JointFixture):  # noqa: F811
     """Test that configured values can be retrieved"""
     url = "/values/crypt4gh_public_key"
@@ -48,7 +48,6 @@ async def test_happy_retrieval(joint_fixture: JointFixture):  # noqa: F811
         "service_name",  # existing config value that shouldn't be retrievable
     ],
 )
-@pytest.mark.asyncio
 async def test_non_configured_value(
     joint_fixture: JointFixture,  # noqa: F811
     value_name: str,
@@ -60,7 +59,6 @@ async def test_non_configured_value(
     assert response.json()["detail"] == f"The value {value_name} is not configured"
 
 
-@pytest.mark.asyncio
 async def test_retrieve_all_values(joint_fixture: JointFixture):  # noqa: F811
     """Test that the all-values endpoint works"""
     response = await joint_fixture.rest_client.get("/values")
@@ -74,4 +72,5 @@ async def test_retrieve_all_values(joint_fixture: JointFixture):  # noqa: F811
             "storage1": "http://127.0.0.1/object_storage_1",
             "storage2": "http://127.0.0.1/object_storage_2",
         },
+        "storage_labels": {"storage1": "Heidelberg", "storage2": "Tübingen"},
     }
