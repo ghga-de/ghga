@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -97,8 +97,9 @@ def reshape_settings_meta(settings_meta: list, name_column: str) -> dict[str, di
             ) from err
         if sheet_name in worksheet_settings:
             raise MetaColumnNotUnique(
-                f"Duplicate sheet name {
-                    sheet_name} in settings meta column {name_column}"
+                f"Duplicate sheet name {sheet_name} in settings meta column {
+                    name_column
+                }"
             )
         worksheet_settings[sheet_name] = item
     return worksheet_settings

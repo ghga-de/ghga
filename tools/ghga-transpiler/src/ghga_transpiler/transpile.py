@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,10 @@ def parse_workbook(workbook: Workbook, config: WorkbookConfig) -> GHGAWorkbook:
 def transpile_to_datapack(workbook: GHGAWorkbook) -> DataPack:
     """Convert GHAWorkbook into a Datapack instance."""
     return DataPack(
-        datapack="0.3.0", resources=FrozenDict(workbook.model_dump()), rootResource=None
+        datapack="0.3.0",
+        resources=FrozenDict(workbook.model_dump()),
+        rootResource=None,
+        rootClass=None,
     )
 
 

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,8 +52,8 @@ BOOKS_COLUMN_META = (
         column="isbn",
         multivalued=False,
         type="string",
-        ref_class=None,
-        ref_class_id_property=None,
+        ref_class="publisher",
+        ref_class_id_property="isbn",
         enum=False,
         required=True,
     ),
@@ -93,8 +93,8 @@ PUBLISHER_COLUMN_META = (
         column="isbn",
         multivalued=False,
         type="string",
-        ref_class="books",
-        ref_class_id_property="isbn",
+        ref_class=None,
+        ref_class_id_property=None,
         enum=False,
         required=True,
     ),

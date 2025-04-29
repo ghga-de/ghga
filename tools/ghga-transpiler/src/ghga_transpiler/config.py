@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 
 from collections import Counter
 from collections.abc import Callable
+from typing import NamedTuple
 
 from pydantic import (
     BaseModel,
@@ -28,6 +29,13 @@ from pydantic import (
 
 from .exceptions import DuplicatedName
 from .transformations import to_attributes, to_list, to_snake_case, to_snake_case_list
+
+
+class RelationMeta(NamedTuple):
+    """A data model for relation properties of a column"""
+
+    name: str
+    target_class: str | None
 
 
 class ColumnMeta(BaseModel):
@@ -86,11 +94,15 @@ class WorksheetSettings(BaseModel):
             if column.transformation() is not None
         }
 
-    def get_relations(self) -> list:
-        """Returns relations of a worksheet where column name is considered as the
-        relation name
+    def get_relations(self) -> list[RelationMeta]:
+        """Returns relations of a worksheet where column_name is considered as the
+        relation name and the ref_class as the relation's target class
         """
-        return [column.column_name for column in self.columns if column.is_relation()]
+        return [
+            RelationMeta(column.column_name, column.ref_class)
+            for column in self.columns
+            if column.is_relation()
+        ]
 
 
 class WorkbookConfig(BaseModel):

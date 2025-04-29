@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 """Data that is expected as output in unit tests"""
 
 from arcticfreeze import FrozenDict
+from schemapack._internals.spec.datapack import ResourceRelation
 from schemapack.spec.datapack import DataPack, Resource
 
 EXPECTED_CONVERSION_DATAPACK = DataPack(
@@ -30,23 +31,35 @@ EXPECTED_CONVERSION_DATAPACK = DataPack(
                         content=FrozenDict(
                             {
                                 "book_name": "The Plague",
-                                "isbn": "9780679720218",
                                 "genre": ("PHILOSOPHICAL_NOVEL", "ABSURDIST_NOVEL"),
                                 "set_in": "FRENCH_ALGERIA",
                             }
                         ),
-                        relations=FrozenDict({}),
+                        relations=FrozenDict(
+                            {
+                                "isbn": ResourceRelation(
+                                    targetClass="publisher",
+                                    targetResources="9780679720218",
+                                )
+                            }
+                        ),
                     ),
                     "George Orwell": Resource(
                         content=FrozenDict(
                             {
                                 "book_name": "1984",
-                                "isbn": "9783548234106",
                                 "genre": ("DYSTOPIAN_NOVEL", "CAUTIONARY_TALE"),
                                 "set_in": "UNITED_KINGDOM",
                             }
                         ),
-                        relations=FrozenDict({}),
+                        relations=FrozenDict(
+                            {
+                                "isbn": ResourceRelation(
+                                    targetClass="publisher",
+                                    targetResources="9783548234106",
+                                )
+                            }
+                        ),
                     ),
                 }
             ),
@@ -62,19 +75,20 @@ EXPECTED_CONVERSION_DATAPACK = DataPack(
                                 ),
                             }
                         ),
-                        relations=FrozenDict({"isbn": "9780679720218"}),
+                        relations=FrozenDict({}),
                     ),
                     "9783548234106": Resource(
                         content=FrozenDict(
                             {"publisher_names": ("Secker and Warburg",)}
                         ),
-                        relations=FrozenDict({"isbn": "9783548234106"}),
+                        relations=FrozenDict({}),
                     ),
                 }
             ),
         }
     ),
     rootResource=None,
+    rootClass=None,
 )
 
 EXPECTED_CONVERSION_JSON = {
@@ -88,9 +102,14 @@ EXPECTED_CONVERSION_JSON = {
                         "PHILOSOPHICAL_NOVEL",
                         "ABSURDIST_NOVEL",
                     ],
-                    "isbn": "9780679720218",
                     "set_in": "FRENCH_ALGERIA",
-                }
+                },
+                "relations": {
+                    "isbn": {
+                        "targetClass": "publisher",
+                        "targetResources": "9780679720218",
+                    },
+                },
             },
             "George Orwell": {
                 "content": {
@@ -99,9 +118,14 @@ EXPECTED_CONVERSION_JSON = {
                         "DYSTOPIAN_NOVEL",
                         "CAUTIONARY_TALE",
                     ],
-                    "isbn": "9783548234106",
                     "set_in": "UNITED_KINGDOM",
-                }
+                },
+                "relations": {
+                    "isbn": {
+                        "targetClass": "publisher",
+                        "targetResources": "9783548234106",
+                    },
+                },
             },
         },
         "publisher": {
@@ -121,19 +145,13 @@ EXPECTED_CONVERSION_JSON = {
                         "Hamish Hamilton",
                         "Stephen King",
                     ],
-                },
-                "relations": {
-                    "isbn": "9780679720218",
-                },
+                }
             },
             "9783548234106": {
                 "content": {
                     "publisher_names": [
                         "Secker and Warburg",
                     ],
-                },
-                "relations": {
-                    "isbn": "9783548234106",
                 },
             },
         },

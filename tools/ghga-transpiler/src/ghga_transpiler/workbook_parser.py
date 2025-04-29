@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -112,7 +112,14 @@ class GHGAWorksheetParser(WorksheetParser):
         resource that is in the relation as the value
         """
         relations = self.config.get_relations()
-        return {relation: row[relation] for relation in relations if relation in row}
+        return {
+            relation.name: {
+                "targetClass": relation.target_class,
+                "targetResources": row[relation.name],
+            }
+            for relation in relations
+            if relation.name in row
+        }
 
     def _relation_free_content(self, row: dict) -> dict:
         """Clean up the content data from the relation, i.e., remove the key value pairs
