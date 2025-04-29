@@ -68,11 +68,14 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (58) [Poodle Moth](./58-poodle-moth/technical_specification.md): Storing Data as strings vs BSON in MongoDB
 - (59) [Bottlenose Dolphin](./59-bottlenose-dolphin/technical_specification.md): Angular implementation plan and migration strategy
 - (60) [Hippopotamus](./60-hippopotamus/technical_specification.md): Create baseline for Angular implementation
+- (61) [Matamata Turtle](./61-matamata-turtle/technical_specification.md): DLQ Service
 - (62) [California Condor](./62-california-condor/technical_specification.md): DB Versioning
 - (63) [Thorny Devil](./63-thorny-devil/technical_specification.md): Download Path Service Response Caching
 - (64) [Blue Whale](./64-blue-whale/technical_specification.md): Reimplement frontend features in Angular
 - (65) [Striped Skunk](./65-striped-skunk/technical_specification.md): Hexkit v4 Rollout
 - (66) [Irukandji](./66-irukandji/technical_specification.md): Schemapack
 - (67) [Oryx](./67-oryx/technical_specification.md): Kafka Event Config Standardization
-- (68) [Gemsbok](./68-gemsbok/technical_specification.md): Persistent Event Publisher
-- (69) [Common Kingslayer](./69-common-kingslayer/technical_specification.md): OpenTelemetry in file services
+- (68) [Gemsbok](./68-gemsbok/technical_specification.md): Persistent Kafka Publisher
+- (69) [Common Kingslayer](./69-common-kingslayer/technical_specification.md): Distributed tracing with OpenTelemetry and Jaeger
+- (70) [Common Furniture Beetle](./70-common-furniture-beetle/technical_specification.md): Metldata Transformation Finalzation
+- (71) [Carpenter Bee](./71-carpenter-bee/technical_specification.md): Metldata Configurable Workflows
