@@ -16,6 +16,7 @@
 
 """A repository for access requests."""
 
+import logging
 from datetime import timedelta
 from operator import attrgetter
 from typing import Any, cast
@@ -29,14 +30,21 @@ from ars.core.models import (
     AccessRequest,
     AccessRequestCreationData,
     AccessRequestStatus,
+    Dataset,
 )
 from ars.core.roles import DATA_STEWARD_ROLE
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
 from ars.ports.outbound.access_grants import AccessGrantsPort
-from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
+from ars.ports.outbound.daos import (
+    AccessRequestDaoPort,
+    DatasetDaoPort,
+    ResourceNotFoundError,
+)
 from ars.ports.outbound.event_pub import EventPublisherPort
 
 __all__ = ["AccessRequestConfig", "AccessRequestRepository"]
+
+log = logging.getLogger(__name__)
 
 
 class AccessRequestConfig(BaseSettings):
@@ -57,13 +65,14 @@ class AccessRequestConfig(BaseSettings):
 
 
 class AccessRequestRepository(AccessRequestRepositoryPort):
-    """A repository for work packages."""
+    """A repository for access requests."""
 
     def __init__(
         self,
         *,
         config: AccessRequestConfig,
         access_request_dao: AccessRequestDaoPort,
+        dataset_dao: DatasetDaoPort,
         event_publisher: EventPublisherPort,
         access_grants: AccessGrantsPort,
     ):
@@ -71,7 +80,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self._max_lead_time = timedelta(days=config.access_upfront_max_days)
         self._min_duration = timedelta(days=config.access_grant_min_days)
         self._max_duration = timedelta(days=config.access_grant_max_days)
-        self._dao = access_request_dao
+        self._request_dao = access_request_dao
+        self._dataset_dao = dataset_dao
         self._event_publisher = event_publisher
         self._access_grants = access_grants
 
@@ -90,7 +100,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         """
         user_id = auth_context.id
         if not user_id or creation_data.user_id != user_id:
-            raise self.AccessRequestAuthorizationError("Not authorized")
+            authorization_error = self.AccessRequestAuthorizationError("Not authorized")
+            log.error(authorization_error)
+            raise authorization_error
 
         request_created = now_as_utc()
 
@@ -102,10 +114,18 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 update={"access_starts": access_starts}
             )
         if access_starts > request_created + self._max_lead_time:
-            raise self.AccessRequestInvalidDuration("Access start date is invalid")
+            invalid_duration_error = self.AccessRequestInvalidDuration(
+                "Access start date is invalid"
+            )
+            log.error(invalid_duration_error)
+            raise invalid_duration_error
         access_ends = creation_data.access_ends
         if not self._min_duration <= access_ends - access_starts <= self._max_duration:
-            raise self.AccessRequestInvalidDuration("Access end date is invalid")
+            invalid_duration_error = self.AccessRequestInvalidDuration(
+                "Access end date is invalid"
+            )
+            log.error(invalid_duration_error)
+            raise invalid_duration_error
 
         full_user_name = auth_context.name
         if auth_context.title:
@@ -117,7 +137,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             request_created=request_created,
         )
 
-        await self._dao.insert(access_request)
+        await self._request_dao.insert(access_request)
 
         await self._event_publisher.publish_request_created(request=access_request)
 
@@ -138,13 +158,19 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         Raises an `AccessRequestAuthorizationError` if the user is not authorized.
         """
         if not auth_context.id:
-            raise self.AccessRequestAuthorizationError("Not authorized")
+            authorization_error = self.AccessRequestAuthorizationError("Not authorized")
+            log.error(authorization_error)
+            raise authorization_error
         is_data_steward = has_role(auth_context, DATA_STEWARD_ROLE)
         if not is_data_steward:
             if user_id is None:
                 user_id = auth_context.id
             elif user_id != auth_context.id:
-                raise self.AccessRequestAuthorizationError("Not authorized")
+                authorization_error = self.AccessRequestAuthorizationError(
+                    "Not authorized"
+                )
+                log.error(authorization_error)
+                raise authorization_error
 
         mapping: dict[str, Any] = {}
         if user_id is not None:
@@ -154,7 +180,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if status is not None:
             mapping["status"] = status
 
-        requests = [request async for request in self._dao.find_all(mapping=mapping)]
+        requests = [
+            request async for request in self._request_dao.find_all(mapping=mapping)
+        ]
 
         # latests requests should be served first
         requests.sort(key=attrgetter("request_created"), reverse=True)
@@ -187,20 +215,38 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         """
         user_id = auth_context.id
         if not user_id or not has_role(auth_context, DATA_STEWARD_ROLE):
-            raise self.AccessRequestAuthorizationError("Not authorized")
+            authorization_error = self.AccessRequestAuthorizationError("Not authorized")
+            log.error(authorization_error)
+            raise authorization_error
 
         try:
-            request = await self._dao.get_by_id(access_request_id)
+            request = await self._request_dao.get_by_id(access_request_id)
         except ResourceNotFoundError as error:
-            raise self.AccessRequestNotFoundError("Access request not found") from error
+            not_found_error = self.AccessRequestNotFoundError(
+                "Access request not found"
+            )
+            log.error(not_found_error, extra={"access_request_id": access_request_id})
+            raise not_found_error from error
         if request.status == status:
-            raise self.AccessRequestInvalidState("Same status is already set")
+            invalid_state_error = self.AccessRequestInvalidState(
+                "Same status is already set"
+            )
+            log.error(invalid_state_error)
+            raise invalid_state_error
         if request.status != AccessRequestStatus.PENDING:
-            raise self.AccessRequestInvalidState("Status cannot be reverted")
+            invalid_state_error = self.AccessRequestInvalidState(
+                "Status cannot be reverted"
+            )
+            log.error(invalid_state_error)
+            raise invalid_state_error
         if not iva_id:
             iva_id = request.iva_id
         if status == AccessRequestStatus.ALLOWED and not iva_id:
-            raise self.AccessRequestMissingIva("An IVA ID must be specified")
+            missing_iva_error = self.AccessRequestMissingIva(
+                "An IVA ID must be specified"
+            )
+            log.error(missing_iva_error)
+            raise missing_iva_error
 
         modified_request = request.model_copy(
             update={
@@ -211,7 +257,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             }
         )
 
-        await self._dao.update(modified_request)
+        await self._request_dao.update(modified_request)
 
         if status == AccessRequestStatus.ALLOWED:
             # Try to register as download access grant
@@ -225,10 +271,12 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 )
             except self._access_grants.AccessGrantsError as error:
                 # roll back the status update
-                await self._dao.update(request)
-                raise self.AccessRequestServerError(
+                await self._request_dao.update(request)
+                server_error = self.AccessRequestServerError(
                     f"Could not register the download access grant: {error}"
-                ) from error
+                )
+                log.error(server_error)
+                raise server_error from error
 
         # Emit events that communicate the fate of the access request
         if status == AccessRequestStatus.DENIED:
@@ -240,3 +288,31 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     def _hide_internals(request: AccessRequest) -> AccessRequest:
         """Blank out internal information in the request"""
         return request.model_copy(update={"changed_by": None})
+
+    async def register_dataset(self, dataset: Dataset) -> None:
+        """Register a dataset in the repository."""
+        await self._dataset_dao.upsert(dataset)
+
+    async def delete_dataset(self, dataset_id: str) -> None:
+        """Remove the dataset with the given ID.
+
+        Raises a `DatasetNotFoundError` if the dataset was not found.
+        """
+        try:
+            return await self._dataset_dao.delete(id_=dataset_id)
+        except ResourceNotFoundError as error:
+            dataset_not_found_error = self.DatasetNotFoundError("Dataset not found")
+            log.error(dataset_not_found_error, extra={"dataset_id": dataset_id})
+            raise dataset_not_found_error from error
+
+    async def get_dataset(self, dataset_id: str) -> Dataset:
+        """Get the dataset with the given ID.
+
+        Raises a `DatasetNotFoundError` if the dataset was not found.
+        """
+        try:
+            return await self._dataset_dao.get_by_id(dataset_id)
+        except ResourceNotFoundError as error:
+            dataset_not_found_error = self.DatasetNotFoundError("Dataset not found")
+            log.error(dataset_not_found_error, extra={"dataset_id": dataset_id})
+            raise dataset_not_found_error from error

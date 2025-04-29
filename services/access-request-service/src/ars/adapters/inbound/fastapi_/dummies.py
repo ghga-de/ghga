@@ -27,7 +27,7 @@ from ghga_service_commons.auth.ghga import AuthContext
 
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
 
-access_request_repo_port = DependencyDummy("data_repo_port")
+access_request_repo_port = DependencyDummy("access_request_repo_port")
 auth_provider = DependencyDummy("auth_provider")
 
 AccessRequestRepoDummy = Annotated[

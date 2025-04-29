@@ -19,24 +19,26 @@
 from hexkit.protocols.dao import DaoFactoryProtocol
 
 from ars.core import models
-from ars.ports.outbound.dao import AccessRequestDaoPort
+from ars.ports.outbound.daos import AccessRequestDaoPort, DatasetDaoPort
 
-__all__ = ["AccessRequestDaoConstructor"]
+__all__ = ["get_access_request_dao", "get_dataset_dao"]
 
 
-class AccessRequestDaoConstructor:
-    """Constructor compatible with the hexkit.inject.AsyncConstructable type.
+async def get_access_request_dao(
+    *, dao_factory: DaoFactoryProtocol
+) -> AccessRequestDaoPort:
+    """Get an Access Request DAO."""
+    return await dao_factory.get_dao(
+        name="accessRequests",
+        dto_model=models.AccessRequest,
+        id_field="id",
+    )
 
-    Used to construct a DAO for work packages.
-    """
 
-    @staticmethod
-    async def construct(*, dao_factory: DaoFactoryProtocol) -> AccessRequestDaoPort:
-        """Setup the DAOs using the specified provider of the
-        DaoFactoryProtocol.
-        """
-        return await dao_factory.get_dao(
-            name="accessRequests",
-            dto_model=models.AccessRequest,
-            id_field="id",
-        )
+async def get_dataset_dao(*, dao_factory: DaoFactoryProtocol) -> DatasetDaoPort:
+    """Get a Dataset DAO."""
+    return await dao_factory.get_dao(
+        name="datasets",
+        dto_model=models.Dataset,
+        id_field="id",
+    )

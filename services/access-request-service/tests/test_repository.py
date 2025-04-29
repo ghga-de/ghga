@@ -24,16 +24,24 @@ from typing import Any, NamedTuple
 import pytest
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_datetime
+from hexkit.custom_types import ID
 
 from ars.core.models import (
     AccessRequest,
     AccessRequestCreationData,
     AccessRequestStatus,
+    Dataset,
 )
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.access_grants import AccessGrantsPort
-from ars.ports.outbound.dao import AccessRequestDaoPort, ResourceNotFoundError
+from ars.ports.outbound.daos import (
+    AccessRequestDaoPort,
+    DatasetDaoPort,
+    ResourceNotFoundError,
+)
 from ars.ports.outbound.event_pub import EventPublisherPort
+
+from .fixtures.datasets import DATASET
 
 pytestmark = pytest.mark.asyncio()
 
@@ -183,7 +191,7 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
 
         return async_iterator()
 
-    async def get_by_id(self, id_: str) -> AccessRequest:  # type: ignore[override]
+    async def get_by_id(self, id_: ID) -> AccessRequest:
         """Get a resource by providing its ID."""
         async for request in self.find_all(mapping={"id": id_}):
             return request
@@ -196,6 +204,32 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
     async def update(self, dto: AccessRequest) -> None:
         """Update an existing resource."""
         self.last_upsert = dto
+
+
+class DatasetDaoDummy(DatasetDaoPort):  # pyright: ignore
+    """Dummy Dataset DAO for testing."""
+
+    last_upsert: Dataset | None
+
+    def reset(self):
+        """Reset the last recorded upsert."""
+        self.last_upsert = None
+
+    async def upsert(self, dto: Dataset) -> None:
+        """Update the dataset if it already exists, create it otherwise."""
+        self.last_upsert = dto
+
+    async def get_by_id(self, id_: ID) -> Dataset:
+        """Get a dataset by providing its ID.."""
+        if not self.last_upsert or self.last_upsert.id != id_:
+            raise ResourceNotFoundError(id_=id_)
+        return self.last_upsert
+
+    async def delete(self, id_: ID) -> None:
+        """Delete a dataset by providing its ID."""
+        if not self.last_upsert or self.last_upsert.id != id_:
+            raise ResourceNotFoundError(id_=id_)
+        self.last_upsert = None
 
 
 class MockAccessRequestEvent(NamedTuple):
@@ -269,21 +303,25 @@ class AccessGrantsDummy(AccessGrantsPort):
         )
 
 
-dao = AccessRequestDaoDummy()  # type: ignore
+access_request_dao = AccessRequestDaoDummy()  # type: ignore
+dataset_dao = DatasetDaoDummy()  # type: ignore
 event_publisher = EventPublisherDummy()
 access_grants = AccessGrantsDummy()
 
 
+@pytest.fixture(autouse=True)
 def reset():
-    """Reset dummy adapters."""
-    dao.reset()
+    """Reset dummy components before each test."""
+    access_request_dao.reset()
+    dataset_dao.reset()
     event_publisher.reset()
     access_grants.reset()
 
 
 repository = AccessRequestRepository(
     config=config,
-    access_request_dao=dao,
+    access_request_dao=access_request_dao,
+    dataset_dao=dataset_dao,
     event_publisher=event_publisher,
     access_grants=access_grants,
 )
@@ -301,7 +339,6 @@ async def test_can_create_request():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    reset()
     creation_date = now_as_utc()
 
     request = await repository.create(creation_data, auth_context=auth_context_doe)
@@ -319,7 +356,7 @@ async def test_can_create_request():
     assert request.status_changed is None
     assert request.changed_by is None
 
-    assert dao.last_upsert == request
+    assert access_request_dao.last_upsert == request
 
     # the 'publish_request_created' method should have been called, get events for request
     expected_event = MockAccessRequestEvent(
@@ -350,7 +387,7 @@ async def test_can_create_request_with_an_iva():
     assert request.iva_id == "some-iva_id"
     assert request.dataset_id == "DS001"
 
-    assert dao.last_upsert == request
+    assert access_request_dao.last_upsert == request
 
 
 async def test_cannot_create_request_for_somebody_else():
@@ -382,7 +419,6 @@ async def test_silently_correct_request_that_is_too_early():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    reset()
 
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
@@ -390,7 +426,7 @@ async def test_silently_correct_request_that_is_too_early():
     assert request.access_starts != creation_data.access_starts
     assert request.access_starts == request.request_created
     assert request.access_ends == creation_data.access_ends
-    assert dao.last_upsert == request
+    assert access_request_dao.last_upsert == request
 
     # There should be one event published which communicates the state of the request
     assert len(event_publisher.events) == 1
@@ -408,14 +444,13 @@ async def test_cannot_create_request_too_much_in_advance():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    reset()
 
     with pytest.raises(
         repository.AccessRequestInvalidDuration, match="Access start date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
 
-    assert dao.last_upsert is None
+    assert access_request_dao.last_upsert is None
     assert event_publisher.num_events == 0
 
 
@@ -431,14 +466,13 @@ async def test_cannot_create_request_too_short():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    reset()
 
     with pytest.raises(
         repository.AccessRequestInvalidDuration, match="Access end date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
 
-    assert dao.last_upsert is None
+    assert access_request_dao.last_upsert is None
     assert event_publisher.num_events == 0
 
 
@@ -454,14 +488,13 @@ async def test_cannot_create_request_too_long():
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    reset()
 
     with pytest.raises(
         repository.AccessRequestInvalidDuration, match="Access end date is invalid"
     ):
         await repository.create(creation_data, auth_context=auth_context_doe)
 
-    assert dao.last_upsert is None
+    assert access_request_dao.last_upsert is None
     assert event_publisher.num_events == 0
 
 
@@ -553,13 +586,12 @@ async def test_filtering_using_multiple_criteria():
 
 async def test_set_status_to_allowed():
     """Test setting the status of a request from pending to allowed."""
-    original_request = await dao.get_by_id("request-id-4")
+    original_request = await access_request_dao.get_by_id("request-id-4")
     original_dict = original_request.model_dump()
     assert original_dict.pop("iva_id") is None
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
-    reset()
 
     await repository.update(
         "request-id-4",
@@ -568,7 +600,7 @@ async def test_set_status_to_allowed():
         auth_context=auth_context_steward,
     )
 
-    changed_request = dao.last_upsert
+    changed_request = access_request_dao.last_upsert
     assert changed_request is not None
     changed_dict = changed_request.model_dump()
     assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
@@ -592,13 +624,12 @@ async def test_set_status_to_allowed():
 
 async def test_set_status_to_allowed_reusing_iva():
     """Test setting the status of a request to allowed reusing the IVA."""
-    original_request = await dao.get_by_id("request-id-6")
+    original_request = await access_request_dao.get_by_id("request-id-6")
     original_dict = original_request.model_dump()
     assert original_dict["iva_id"] == "iva-of-john"
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
-    reset()
 
     await repository.update(
         "request-id-6",
@@ -606,7 +637,7 @@ async def test_set_status_to_allowed_reusing_iva():
         auth_context=auth_context_steward,
     )
 
-    changed_request = dao.last_upsert
+    changed_request = access_request_dao.last_upsert
     assert changed_request is not None
     changed_dict = changed_request.model_dump()
     assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
@@ -629,13 +660,12 @@ async def test_set_status_to_allowed_reusing_iva():
 
 async def test_set_status_to_allowed_overriding_iva():
     """Test setting the status of a request to allowed overriding the IVA."""
-    original_request = await dao.get_by_id("request-id-6")
+    original_request = await access_request_dao.get_by_id("request-id-6")
     original_dict = original_request.model_dump()
     assert original_dict.pop("iva_id") == "iva-of-john"
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
-    reset()
 
     await repository.update(
         "request-id-6",
@@ -644,7 +674,7 @@ async def test_set_status_to_allowed_overriding_iva():
         auth_context=auth_context_steward,
     )
 
-    changed_request = dao.last_upsert
+    changed_request = access_request_dao.last_upsert
     assert changed_request is not None
     changed_dict = changed_request.model_dump()
     assert changed_dict.pop("iva_id") == "some-other-iva-of-john"
@@ -668,13 +698,12 @@ async def test_set_status_to_allowed_overriding_iva():
 
 async def test_set_status_to_allowed_without_iva():
     """Test setting the status of a request from pending to allowed without any IVA."""
-    original_request = await dao.get_by_id("request-id-4")
+    original_request = await access_request_dao.get_by_id("request-id-4")
     original_dict = original_request.model_dump()
     assert original_dict.pop("iva_id") is None
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
-    reset()
 
     with pytest.raises(
         repository.AccessRequestMissingIva, match="An IVA ID must be specified"
@@ -688,8 +717,7 @@ async def test_set_status_to_allowed_without_iva():
 
 async def test_set_status_to_allowed_with_error_when_granting_access():
     """Test setting the status of a request when granting fails."""
-    original_request = await dao.get_by_id("request-id-4")
-    reset()
+    original_request = await access_request_dao.get_by_id("request-id-4")
     access_grants.simulate_error = True
 
     with pytest.raises(
@@ -706,7 +734,7 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
     assert access_grants.last_grant == "to id-of-john-doe@ghga.de for DS007 failed"
 
     # make sure the status is not changed in this case, and no mails are sent out
-    changed_request = dao.last_upsert
+    changed_request = access_request_dao.last_upsert
     assert changed_request is not None
     assert changed_request == original_request
     assert event_publisher.num_events == 0
@@ -714,10 +742,8 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():
     """Test setting the status of a request to the same state."""
-    request = await dao.get_by_id("request-id-1")
+    request = await access_request_dao.get_by_id("request-id-1")
     assert request.status == AccessRequestStatus.ALLOWED
-
-    reset()
 
     with pytest.raises(
         repository.AccessRequestError, match="Same status is already set"
@@ -729,7 +755,7 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
             auth_context=auth_context_steward,
         )
 
-    assert dao.last_upsert is None
+    assert access_request_dao.last_upsert is None
     assert event_publisher.num_events == 0
 
     assert access_grants.last_grant == "nothing granted so far"
@@ -737,10 +763,8 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
 
 async def test_set_status_to_allowed_when_it_is_already_denied():
     """Test setting the status of a request to allowed that has already been denied."""
-    request = await dao.get_by_id("request-id-3")
+    request = await access_request_dao.get_by_id("request-id-3")
     assert request.status == AccessRequestStatus.DENIED
-
-    reset()
 
     with pytest.raises(
         repository.AccessRequestError, match="Status cannot be reverted"
@@ -756,8 +780,6 @@ async def test_set_status_to_allowed_when_it_is_already_denied():
 
 async def test_set_status_of_non_existing_request():
     """Test setting the status of a request that does not exist."""
-    reset()
-
     with pytest.raises(
         repository.AccessRequestNotFoundError, match="Access request not found"
     ):
@@ -767,15 +789,13 @@ async def test_set_status_of_non_existing_request():
             auth_context=auth_context_steward,
         )
 
-    assert dao.last_upsert is None
+    assert access_request_dao.last_upsert is None
     assert event_publisher.num_events == 0
     assert access_grants.last_grant == "nothing granted so far"
 
 
 async def test_set_status_when_not_a_data_steward():
     """Test setting the status of a request when not being a data steward."""
-    reset()
-
     with pytest.raises(repository.AccessRequestError, match="Not authorized"):
         await repository.update(
             "request-id-4",
@@ -783,6 +803,57 @@ async def test_set_status_when_not_a_data_steward():
             auth_context=auth_context_doe,
         )
 
-    assert dao.last_upsert is None
+    assert access_request_dao.last_upsert is None
     assert event_publisher.num_events == 0
     assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_can_register_a_dataset():
+    """Test that a dataset can be registered."""
+    with pytest.raises(ResourceNotFoundError):
+        await dataset_dao.get_by_id("some-dataset-id")
+    await repository.register_dataset(DATASET)
+    assert await dataset_dao.get_by_id("some-dataset-id") is DATASET
+
+
+async def test_can_get_an_existing_dataset():
+    """Test that an existing dataset can be fetched."""
+    with pytest.raises(ResourceNotFoundError):
+        await dataset_dao.get_by_id("some-dataset-id")
+    await dataset_dao.upsert(DATASET)
+    assert await repository.get_dataset("some-dataset-id") is DATASET
+
+
+async def test_raises_error_when_getting_non_existing_dataset():
+    """Test that getting a non-existing dataset raises an error."""
+    with pytest.raises(repository.DatasetNotFoundError):
+        await repository.get_dataset("some-dataset-id")
+    await dataset_dao.upsert(DATASET)
+    with pytest.raises(repository.DatasetNotFoundError):
+        await repository.get_dataset("another-dataset-id")
+
+
+async def test_can_update_dataset():
+    """Test that an existing dataset can be updated."""
+    original_dataset = DATASET.model_copy()
+    await repository.register_dataset(original_dataset)
+    dataset = await dataset_dao.get_by_id("some-dataset-id")
+    assert dataset.title == "Some dataset"
+    changed_dataset = original_dataset.model_copy(update={"title": "New title"})
+    await repository.register_dataset(changed_dataset)
+    dataset = await dataset_dao.get_by_id("some-dataset-id")
+    assert dataset.title == "New title"
+
+
+async def test_can_delete_an_existing_dataset():
+    """Test that an existing dataset can be deleted."""
+    await dataset_dao.upsert(DATASET)
+    await repository.delete_dataset(dataset_id="some-dataset-id")
+    with pytest.raises(ResourceNotFoundError):
+        await dataset_dao.get_by_id("some-dataset-id")
+
+
+async def test_raises_an_error_when_deleting_a_non_existing_dataset():
+    """Test that deleting a non-existing dataset raises an error."""
+    with pytest.raises(repository.DatasetNotFoundError):
+        await repository.delete_dataset("some-dataset-id")

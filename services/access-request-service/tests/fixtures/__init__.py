@@ -18,28 +18,32 @@
 from collections.abc import AsyncGenerator
 from typing import NamedTuple
 
+import pytest
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
     sign_and_serialize_token,
 )
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest import fixture
 
 from ars.config import Config
-from ars.inject import prepare_core, prepare_rest_app
+from ars.ports.inbound.repository import AccessRequestRepositoryPort
+from ars.prepare import prepare_consumer, prepare_core, prepare_rest_app
 
 __all__ = [
     "AUTH_CLAIMS_DOE",
     "AUTH_CLAIMS_STEWARD",
     "AUTH_KEY_PAIR",
-    "JointFixture",
-    "fixture_auth_headers_doe",
-    "fixture_auth_headers_steward",
+    "RestFixture",
+    "auth_headers_doe_fixture",
+    "auth_headers_steward_fixture",
+    "consumer_fixture",
     "headers_for_token",
-    "joint_fixture",
+    "rest_fixture",
 ]
 
 
@@ -66,21 +70,33 @@ def headers_for_token(token: str) -> dict[str, str]:
 
 
 @fixture(name="auth_headers_doe")
-def fixture_auth_headers_doe() -> dict[str, str]:
+def auth_headers_doe_fixture() -> dict[str, str]:
     """Get auth headers for a user requesting access"""
     token = sign_and_serialize_token(AUTH_CLAIMS_DOE, AUTH_KEY_PAIR)
     return headers_for_token(token)
 
 
 @fixture(name="auth_headers_steward")
-def fixture_auth_headers_steward() -> dict[str, str]:
+def auth_headers_steward_fixture() -> dict[str, str]:
     """Get auth headers for a data steward granting access"""
     token = sign_and_serialize_token(AUTH_CLAIMS_STEWARD, AUTH_KEY_PAIR)
     return headers_for_token(token)
 
 
-class JointFixture(NamedTuple):
-    """Joint fixture object."""
+@pytest.fixture(name="config")
+def config_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> Config:
+    """Fixture for creating a test configuration."""
+    return Config(
+        auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
+        download_access_url="http://access",
+        **kafka.config.model_dump(exclude={"kafka_enable_dlq"}),
+        kafka_enable_dlq=True,
+        **mongodb.config.model_dump(),
+    )
+
+
+class RestFixture(NamedTuple):
+    """Joint fixture object for the REST app."""
 
     config: Config
     kafka: KafkaFixture
@@ -88,25 +104,44 @@ class JointFixture(NamedTuple):
     rest_client: AsyncTestClient
 
 
-@pytest_asyncio.fixture()
-async def joint_fixture(
-    mongodb: MongoDbFixture, kafka: KafkaFixture
-) -> AsyncGenerator[JointFixture, None]:
+@pytest_asyncio.fixture(name="rest")
+async def rest_fixture(
+    config: Config, mongodb: MongoDbFixture, kafka: KafkaFixture
+) -> AsyncGenerator[RestFixture, None]:
     """A fixture that embeds all other fixtures for API-level integration testing."""
-    config = Config(
-        auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
-        download_access_url="http://access",
-        **kafka.config.model_dump(),
-        **mongodb.config.model_dump(),
-    )
-    async with prepare_core(config=config) as core:
+    async with prepare_core(config=config) as repository:
         async with (
-            prepare_rest_app(config=config, core_override=core) as app,
+            prepare_rest_app(config=config, repository_override=repository) as app,
         ):
             async with AsyncTestClient(app=app) as rest_client:
-                yield JointFixture(
+                yield RestFixture(
                     config=config,
                     kafka=kafka,
                     mongodb=mongodb,
                     rest_client=rest_client,
                 )
+
+
+class ConsumerFixture(NamedTuple):
+    """Joint fixture object for the REST app."""
+
+    config: Config
+    kafka: KafkaFixture
+    mongodb: MongoDbFixture
+    repository: AccessRequestRepositoryPort
+    subscriber: KafkaEventSubscriber
+
+
+@pytest_asyncio.fixture(name="consumer")
+async def consumer_fixture(
+    config: Config, mongodb: MongoDbFixture, kafka: KafkaFixture
+) -> AsyncGenerator[ConsumerFixture, None]:
+    """A fixture that embeds all other fixtures for consumer integration testing."""
+    async with prepare_consumer(config=config) as consumer:
+        yield ConsumerFixture(
+            config=config,
+            kafka=kafka,
+            mongodb=mongodb,
+            repository=consumer.repository,
+            subscriber=consumer.event_subscriber,
+        )

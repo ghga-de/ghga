@@ -18,16 +18,18 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import NamedTuple
 
 from fastapi import FastAPI
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from ghga_service_commons.utils.context import asyncnullcontext
-from hexkit.providers.akafka import KafkaEventPublisher
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
+from ars.adapters.inbound.event_sub import EventSubTranslator
 from ars.adapters.inbound.fastapi_ import dummies
 from ars.adapters.inbound.fastapi_.configure import get_configured_app
-from ars.adapters.outbound.dao import AccessRequestDaoConstructor
+from ars.adapters.outbound.daos import get_access_request_dao, get_dataset_dao
 from ars.adapters.outbound.event_pub import EventPubTranslator
 from ars.adapters.outbound.http import AccessGrantsAdapter
 from ars.config import Config
@@ -42,9 +44,8 @@ async def prepare_core(
 ) -> AsyncGenerator[AccessRequestRepositoryPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     dao_factory = MongoDbDaoFactory(config=config)
-    access_request_dao = await AccessRequestDaoConstructor.construct(
-        dao_factory=dao_factory
-    )
+    access_request_dao = await get_access_request_dao(dao_factory=dao_factory)
+    dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
     async with (
         KafkaEventPublisher.construct(config=config) as event_publisher,
         AccessGrantsAdapter.construct(config=config) as access_grants,
@@ -54,21 +55,22 @@ async def prepare_core(
         )
         yield AccessRequestRepository(
             access_request_dao=access_request_dao,
+            dataset_dao=dataset_dao,
             event_publisher=event_publisher,
             access_grants=access_grants,
             config=config,
         )
 
 
-def prepare_core_with_override(
+def _prepare_core_with_override(
     *,
     config: Config,
-    core_override: AccessRequestRepositoryPort | None = None,
+    repository_override: AccessRequestRepositoryPort | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return (
-        asyncnullcontext(core_override)
-        if core_override
+        asyncnullcontext(repository_override)
+        if repository_override
         else prepare_core(config=config)
     )
 
@@ -77,18 +79,18 @@ def prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    core_override: AccessRequestRepositoryPort | None = None,
+    repository_override: AccessRequestRepositoryPort | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize a REST API app along with all its dependencies.
 
     By default, the core dependencies are automatically prepared, but you can also
-    provide them using the core_override parameter.
+    provide them using the repository_override parameter.
     """
     app = get_configured_app(config=config)
 
     async with (
-        prepare_core_with_override(
-            config=config, core_override=core_override
+        _prepare_core_with_override(
+            config=config, repository_override=repository_override
         ) as access_request_repository,
         GHGAAuthContextProvider.construct(
             config=config, context_class=AuthContext
@@ -99,3 +101,37 @@ async def prepare_rest_app(
             lambda: access_request_repository
         )
         yield app
+
+
+class Consumer(NamedTuple):
+    """Container for an event subscriber and the repository that is used."""
+
+    repository: AccessRequestRepositoryPort
+    event_subscriber: KafkaEventSubscriber
+
+
+@asynccontextmanager
+async def prepare_consumer(
+    *,
+    config: Config,
+    repository_override: AccessRequestRepositoryPort | None = None,
+) -> AsyncGenerator[Consumer, None]:
+    """Construct and initialize an event subscriber with all its dependencies.
+
+    By default, the core dependencies are automatically prepared, but you can also
+    provide them using the repository_override parameter.
+    """
+    async with _prepare_core_with_override(
+        config=config, repository_override=repository_override
+    ) as repository:
+        event_sub_translator = EventSubTranslator(repository=repository, config=config)
+
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config,
+                translator=event_sub_translator,
+                dlq_publisher=dlq_publisher,
+            ) as event_subscriber,
+        ):
+            yield Consumer(repository, event_subscriber)

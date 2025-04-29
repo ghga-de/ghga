@@ -20,7 +20,8 @@ from hexkit.protocols.dao import Dao, ResourceNotFoundError
 
 from ars.core import models
 
-__all__ = ["AccessRequestDaoPort", "ResourceNotFoundError"]
+__all__ = ["AccessRequestDaoPort", "DatasetDaoPort", "ResourceNotFoundError"]
 
 # ports described by type aliases:
 AccessRequestDaoPort = Dao[models.AccessRequest]
+DatasetDaoPort = Dao[models.Dataset]

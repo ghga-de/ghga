@@ -23,11 +23,7 @@ import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_httpx import HTTPXMock
 
-from tests.fixtures import (  # noqa: F401
-    JointFixture,
-    fixture_auth_headers_doe,
-    fixture_auth_headers_steward,
-)
+from tests.fixtures import RestFixture
 
 pytestmark = pytest.mark.asyncio()
 
@@ -69,22 +65,22 @@ def assert_same_datetime(date1: str, date2: str, max_diff_seconds=5) -> None:
     )
 
 
-async def test_health_check(joint_fixture: JointFixture):
+async def test_health_check(rest: RestFixture):
     """Test that the health check endpoint works."""
-    response = await joint_fixture.rest_client.get("/health")
+    response = await rest.rest_client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "OK"}
 
 
 async def test_create_access_request(
-    joint_fixture: JointFixture, auth_headers_doe: dict[str, str]
+    rest: RestFixture, auth_headers_doe: dict[str, str]
 ):
     """Test that an active user can create an access request."""
-    kafka = joint_fixture.kafka
-    topic = joint_fixture.config.access_request_topic
+    kafka = rest.kafka
+    topic = rest.config.access_request_topic
     async with kafka.record_events(in_topic=topic) as recorder:
-        response = await joint_fixture.rest_client.post(
+        response = await rest.rest_client.post(
             "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
         )
 
@@ -101,14 +97,14 @@ async def test_create_access_request(
         "user_id": CREATION_DATA["user_id"],
         "dataset_id": CREATION_DATA["dataset_id"],
     }
-    assert recorded_event.type_ == joint_fixture.config.access_request_created_type
+    assert recorded_event.type_ == rest.config.access_request_created_type
 
 
 async def test_create_access_request_unauthorized(
-    joint_fixture: JointFixture, auth_headers_doe: dict[str, str]
+    rest: RestFixture, auth_headers_doe: dict[str, str]
 ):
     """Test that creating an access request needs authorization."""
-    client = joint_fixture.rest_client
+    client = rest.rest_client
     # test without authentication
     response = await client.post("/access-requests", json=CREATION_DATA)
     assert response.status_code == 403
@@ -123,10 +119,10 @@ async def test_create_access_request_unauthorized(
 
 
 async def test_create_access_request_that_is_too_long(
-    joint_fixture: JointFixture, auth_headers_doe: dict[str, str]
+    rest: RestFixture, auth_headers_doe: dict[str, str]
 ):
     """Test that an access request that is too long cannot be created."""
-    response = await joint_fixture.rest_client.post(
+    response = await rest.rest_client.post(
         "/access-requests",
         json={
             **CREATION_DATA,
@@ -139,10 +135,10 @@ async def test_create_access_request_that_is_too_long(
 
 
 async def test_create_access_request_with_invalid_dataset_id(
-    joint_fixture: JointFixture, auth_headers_doe: dict[str, str]
+    rest: RestFixture, auth_headers_doe: dict[str, str]
 ):
     """Test that an access request must have a valid dataset ID."""
-    response = await joint_fixture.rest_client.post(
+    response = await rest.rest_client.post(
         "/access-requests",
         json={
             **CREATION_DATA,
@@ -157,12 +153,12 @@ async def test_create_access_request_with_invalid_dataset_id(
 
 
 async def test_get_access_requests(
-    joint_fixture: JointFixture,
+    rest: RestFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
 ):
     """Test that users can get their access requests."""
-    client = joint_fixture.rest_client
+    client = rest.rest_client
     # create two access requests for different users
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -216,21 +212,21 @@ async def test_get_access_requests(
     assert request["status"] == "pending"
 
 
-async def test_get_access_requests_unauthorized(joint_fixture: JointFixture):
+async def test_get_access_requests_unauthorized(rest: RestFixture):
     """Test that getting access requests needs authorization."""
-    client = joint_fixture.rest_client
+    client = rest.rest_client
     # test unauthenticated
     response = await client.get("/access-requests")
     assert response.status_code == 403
 
 
 async def test_filter_access_requests(
-    joint_fixture: JointFixture,
+    rest: RestFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
 ):
     """Test that when getting access requests these can be filtered."""
-    client = joint_fixture.rest_client
+    client = rest.rest_client
     # create an access request
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -295,7 +291,7 @@ async def test_filter_access_requests(
 
 
 async def test_patch_access_request(
-    joint_fixture: JointFixture,
+    rest: RestFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
     httpx_mock: HTTPXMock,
@@ -308,7 +304,7 @@ async def test_patch_access_request(
         status_code=204,
     )
 
-    client = joint_fixture.rest_client
+    client = rest.rest_client
     # create access request as user
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -318,10 +314,10 @@ async def test_patch_access_request(
     assert_is_uuid(access_request_id)
 
     # set status to allowed as data steward
-    kafka = joint_fixture.kafka
-    topic = joint_fixture.config.access_request_topic
+    kafka = rest.kafka
+    topic = rest.config.access_request_topic
     async with kafka.record_events(in_topic=topic) as recorder:
-        response = await joint_fixture.rest_client.patch(
+        response = await rest.rest_client.patch(
             f"/access-requests/{access_request_id}",
             json={"status": "allowed"},
             headers=auth_headers_steward,
@@ -346,7 +342,7 @@ async def test_patch_access_request(
         "user_id": CREATION_DATA["user_id"],
         "dataset_id": CREATION_DATA["dataset_id"],
     }
-    assert recorded_event.type_ == joint_fixture.config.access_request_allowed_type
+    assert recorded_event.type_ == rest.config.access_request_allowed_type
 
     # get request as user
     response = await client.get("/access-requests", headers=auth_headers_doe)
@@ -384,7 +380,7 @@ async def test_patch_access_request(
 
 
 async def test_patch_access_request_with_another_iva(
-    joint_fixture: JointFixture,
+    rest: RestFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
     httpx_mock: HTTPXMock,
@@ -398,7 +394,7 @@ async def test_patch_access_request_with_another_iva(
         status_code=204,
     )
 
-    client = joint_fixture.rest_client
+    client = rest.rest_client
     # create access request as user
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -408,7 +404,7 @@ async def test_patch_access_request_with_another_iva(
     assert_is_uuid(access_request_id)
 
     # set status to allowed as data steward
-    response = await joint_fixture.rest_client.patch(
+    response = await rest.rest_client.patch(
         f"/access-requests/{access_request_id}",
         json={"iva_id": "another-iva", "status": "allowed"},
         headers=auth_headers_steward,
@@ -435,11 +431,11 @@ async def test_patch_access_request_with_another_iva(
 
 
 async def test_must_be_data_steward_to_patch_access_request(
-    joint_fixture: JointFixture,
+    rest: RestFixture,
     auth_headers_doe: dict[str, str],
 ):
     """Test that only data stewards can change the status of access requests."""
-    client = joint_fixture.rest_client
+    client = rest.rest_client
     # create access request as user
     response = await client.post(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
@@ -464,11 +460,11 @@ async def test_must_be_data_steward_to_patch_access_request(
 
 
 async def test_patch_non_existing_access_request(
-    joint_fixture: JointFixture,
+    rest: RestFixture,
     auth_headers_steward: dict[str, str],
 ):
     """Test that data stewards get an error when patching non-existing requests."""
-    response = await joint_fixture.rest_client.patch(
+    response = await rest.rest_client.patch(
         "/access-requests/some-non-existing-request",
         json={"status": "allowed"},
         headers=auth_headers_steward,

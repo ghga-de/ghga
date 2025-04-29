@@ -16,13 +16,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/access-request-service):
 ```bash
-docker pull ghga/access-request-service:3.0.0
+docker pull ghga/access-request-service:3.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/access-request-service:3.0.0 .
+docker build -t ghga/access-request-service:3.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -30,7 +30,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/access-request-service:3.0.0 --help
+docker run -p 8080:8080 ghga/access-request-service:3.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -60,6 +60,36 @@ The service requires the following configuration parameters:
 
   ```json
   "http://127.0.0.1/download-access"
+  ```
+
+
+- <a id="properties/dataset_change_topic"></a>**`dataset_change_topic`** *(string, required)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
+
+
+  Examples:
+
+  ```json
+  "metadata_datasets"
+  ```
+
+
+- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+
+
+  Examples:
+
+  ```json
+  "dataset_deleted"
+  ```
+
+
+- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+
+
+  Examples:
+
+  ```json
+  "dataset_created"
   ```
 
 
@@ -339,7 +369,7 @@ The service requires the following configuration parameters:
 
   - <a id="properties/auth_algs/items"></a>**Items** *(string)*
 
-- <a id="properties/auth_check_claims"></a>**`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Default: `{"id": null, "name": null, "email": null, "iat": null, "exp": null}`.
+- <a id="properties/auth_check_claims"></a>**`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Can contain additional properties. Default: `{"id": null, "name": null, "email": null, "iat": null, "exp": null}`.
 
 - <a id="properties/auth_map_claims"></a>**`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
 

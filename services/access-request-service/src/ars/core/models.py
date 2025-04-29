@@ -29,6 +29,7 @@ __all__ = [
     "AccessRequestCreationData",
     "AccessRequestPatchData",
     "AccessRequestStatus",
+    "Dataset",
 ]
 
 
@@ -36,6 +37,19 @@ class BaseDto(BaseModel):
     """Base model pre-configured for use as Dto."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class Dataset(BaseDto):
+    """Basic information about a dataset."""
+
+    id: str = Field(default=..., description="ID of the dataset")
+    title: str = Field(default=..., description="Title of the dataset")
+    description: str | None = Field(
+        default=None, description="Description of the dataset"
+    )
+    dac_alias: str = Field(
+        default=..., description="The alias of the Data Access Committee."
+    )
 
 
 class AccessRequestStatus(str, Enum):

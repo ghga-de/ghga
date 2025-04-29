@@ -25,4 +25,10 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_fixture,
 )
 
-from .fixtures import joint_fixture  # noqa: F401
+from .fixtures import (  # noqa: F401
+    auth_headers_doe_fixture,
+    auth_headers_steward_fixture,
+    config_fixture,
+    consumer_fixture,
+    rest_fixture,
+)

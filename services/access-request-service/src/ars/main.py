@@ -19,7 +19,7 @@ from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 
 from ars.config import Config
-from ars.inject import prepare_rest_app
+from ars.prepare import prepare_consumer, prepare_rest_app
 
 
 async def run_rest_app():
@@ -29,3 +29,12 @@ async def run_rest_app():
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
+
+
+async def consume_events(run_forever: bool = True) -> None:
+    """Run an event consumer listening to the configured topic."""
+    config = Config()  # type: ignore
+    configure_logging(config=config)
+
+    async with prepare_consumer(config=config) as consumer:
+        await consumer.event_subscriber.run(forever=run_forever)

@@ -21,13 +21,16 @@ cors_allow_credentials: false
 cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
+dataset_change_topic: metadata_datasets
+dataset_deletion_type: dataset_deleted
+dataset_upsertion_type: dataset_created
 db_name: access-requests
 docs_url: /docs
 download_access_url: http://127.0.0.1:8080/download-access
 generate_correlation_id: true
 host: 127.0.0.1
 kafka_dlq_topic: dlq
-kafka_enable_dlq: false
+kafka_enable_dlq: true
 kafka_max_message_size: 1048576
 kafka_max_retries: 0
 kafka_retry_backoff: 0
