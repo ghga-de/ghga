@@ -24,13 +24,16 @@ from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from hexkit.log import configure_logging
 
 from .config import CONFIG, Config
-from .prepare import prepare_opentelemetry
+from .otel import prepare_opentelemetry
 
 log = logging.getLogger(__name__)
 
 
 def import_prepare_module(auth_adapter: bool):
-    """Import the prepare module."""
+    """Import the prepare module.
+
+    This should only be imported once we know which service should be run.
+    """
     package = "auth_service"
     if auth_adapter:
         package += ".auth_adapter"

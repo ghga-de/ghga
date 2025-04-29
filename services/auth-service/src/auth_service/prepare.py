@@ -24,11 +24,6 @@ from hexkit.providers.akafka import KafkaEventPublisher
 from hexkit.providers.akafka.provider import KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.auth_adapter.translators.dao import UserTokenDaoFactory
@@ -159,12 +154,3 @@ async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
             )
 
         yield app
-
-
-def prepare_opentelemetry(service_name: str) -> None:
-    """Initialize OpenTelemetry tracing."""
-    resource = Resource(attributes={SERVICE_NAME: service_name})
-    trace_provider = TracerProvider(resource=resource)
-    processor = BatchSpanProcessor(OTLPSpanExporter())
-    trace_provider.add_span_processor(processor)
-    trace.set_tracer_provider(trace_provider)

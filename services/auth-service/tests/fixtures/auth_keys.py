@@ -24,6 +24,7 @@ from typing import Any
 
 from jwcrypto import jwk
 
+from auth_service.auth_adapter.core.totp import TOTPHandler
 from auth_service.config import CONFIG
 
 auth_adapter = "auth_adapter" in CONFIG.provide_apis
@@ -71,6 +72,7 @@ def generate_keys() -> dict[str, Any]:
                 "TEST_AUTH_SERVICE_AUTH_EXT_KEYS": ext_keys(private_keys=True),
             }
         )
+        env["AUTH_SERVICE_TOTP_ENCRYPTION_KEY"] = TOTPHandler.random_encryption_key()
     else:
         env.update(
             {
