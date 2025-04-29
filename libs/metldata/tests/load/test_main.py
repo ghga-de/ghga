@@ -43,6 +43,7 @@ pytestmark = pytest.mark.asyncio()
 
 async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # noqa: F811
     """Test the happy path of using the load artifacts endpoint."""
+    resources = joint_fixture.artifact_resources
     async with joint_fixture.kafka.record_events(
         in_topic=joint_fixture.config.dataset_change_topic
     ) as dataset_recorder:
@@ -51,17 +52,26 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
         ) as resource_recorder:
             response = await joint_fixture.client.post(
                 "/rpc/load-artifacts",
-                json=joint_fixture.artifact_resources,
+                json=resources,
                 headers={"Authorization": f"Bearer {joint_fixture.token}"},
             )
             assert response.status_code == 204
 
-    assert len(resource_recorder.recorded_events) == 2
+    # check that the recorded events match what we expect from the resources:
+    datasets = resources["embedded_public"][0]["embedded_dataset"]
+    assert len(resource_recorder.recorded_events) == len(datasets)
     for event in resource_recorder.recorded_events:
         assert event.type_ == joint_fixture.config.resource_upsertion_type
-    assert len(dataset_recorder.recorded_events) == 2
-    for event in dataset_recorder.recorded_events:
+    assert len(dataset_recorder.recorded_events) == len(datasets)
+    for event, dataset in zip(dataset_recorder.recorded_events, datasets, strict=True):
         assert event.type_ == joint_fixture.config.dataset_upsertion_type
+        payload = event.payload
+        assert payload["title"] == dataset["title"]
+        assert payload["description"] == dataset["description"]
+        assert (
+            payload["dac_alias"]
+            == dataset["data_access_policy"]["data_access_committee"]["alias"]
+        )
 
     # check that the artifact resources were loaded based on an example:
     expected_artifact_name = "embedded_public"

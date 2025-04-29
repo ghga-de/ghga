@@ -206,12 +206,22 @@ async def process_resource_upsert(
         str,
         lookup_slot_in_resource(resource=resource.content, slot_name="title"),
     )
-
+    dap = cast(
+        Json,
+        lookup_slot_in_resource(
+            resource=resource.content, slot_name="data_access_policy"
+        ),
+    )
+    dac = cast(
+        Json, lookup_slot_in_resource(resource=dap, slot_name="data_access_committee")
+    )
+    dac_alias = cast(str, lookup_slot_in_resource(resource=dac, slot_name="alias"))
     dataset_overview = MetadataDatasetOverview(
         accession=resource.id_,
         title=dataset_title,
         stage=MetadataDatasetStage.DOWNLOAD,
         description=dataset_description,
+        dac_alias=dac_alias,
         files=metadata_dataset_files,
     )
     await event_publisher.process_dataset_upsert(dataset_overview=dataset_overview)
