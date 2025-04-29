@@ -32,10 +32,10 @@ import { Title } from '@angular/platform-browser';
 // eslint-disable-next-line boundaries/element-types
 import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button.component';
 import { Experiment, File, Sample } from '@app/metadata/models/dataset-details';
-import { StorageAlias } from '@app/metadata/pipes/storage-alias.pipe';
 import { ValidateDOI } from '@app/metadata/pipes/validate-doi.pipe';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
+import { WellKnownValueService } from '@app/metadata/services/well-known-value.service';
 import { AddPluralS } from '@app/shared/pipes/add-plural-s.pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes.pipe';
 import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
@@ -64,7 +64,6 @@ const COLUMNS = {
     MatPaginatorModule,
     MatSortModule,
     AddPluralS,
-    StorageAlias,
     ParseBytes,
     UnderscoreToSpace,
     MatIconModule,
@@ -85,11 +84,14 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   #notify = inject(NotificationService);
   #metadata = inject(MetadataService);
   #dins = inject(DatasetInformationService);
+  #wkvs = inject(WellKnownValueService);
 
   #datasetDetails = this.#metadata.datasetDetails;
   #datasetDetailsError = this.#datasetDetails.error;
   datasetDetails = this.#datasetDetails.value;
   datasetInformation = this.#dins.datasetInformation.value;
+  #storageLabels = this.#wkvs.storageLabels;
+  storageLabels = this.#storageLabels.value;
 
   errorMessage = computed(() => {
     if (this.#datasetDetailsError()) {
@@ -174,6 +176,12 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   #datasetInformationErrorEffect = effect(() => {
     if (this.#dins.datasetInformation.error()) {
       this.#notify.showError('Error fetching dataset file information.');
+    }
+  });
+
+  #storageLabelsErrorEffect = effect(() => {
+    if (this.#wkvs.storageLabels.error()) {
+      this.#notify.showError('Error fetching storage aliases.');
     }
   });
 

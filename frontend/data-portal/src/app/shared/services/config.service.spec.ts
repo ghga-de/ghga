@@ -34,6 +34,7 @@ const mockConfig = {
   default_access_duration_days: 365,
   umami_url: null,
   umami_website_id: null,
+  wkvs_url: null,
 };
 
 describe('ConfigService', () => {
@@ -95,5 +96,9 @@ describe('ConfigService', () => {
 
   it('should provide the OIDC account URL', () => {
     expect(service.oidcAccountUrl).toBe('https://account.test');
+  });
+
+  it('should provide the default Well-Known Value Service URL', () => {
+    expect(service.wkvsUrl).toBe('/.well-known');
   });
 });

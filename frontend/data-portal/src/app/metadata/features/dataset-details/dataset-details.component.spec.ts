@@ -31,6 +31,7 @@ import {
   MockAccessRequestService,
 } from '@app/access-requests/services/access-request.service';
 import { AuthService } from '@app/auth/services/auth.service';
+import { WellKnownValueService } from '@app/metadata/services/well-known-value.service';
 import { screen } from '@testing-library/angular';
 
 /**
@@ -41,6 +42,17 @@ export class MockAuthService {
   email = () => 'doe@home.org';
   roles = () => ['data_steward'];
   roleNames = () => ['Data Steward'];
+}
+
+/**
+ * Mock a basic version of the well-known value service
+ */
+export class MockWellKnownValueService {
+  storageLabels = {
+    value: () => ({ storage_labels: { TUE01: 'Tübingen', TUE02: 'Tübingen' } }),
+    isLoading: () => false,
+    error: () => undefined,
+  };
 }
 
 /**
@@ -64,6 +76,7 @@ describe('DatasetDetailsComponent', () => {
       imports: [DatasetDetailsComponent],
       providers: [
         { provide: DatasetInformationService, useClass: MockDatasetInformationService },
+        { provide: WellKnownValueService, useClass: MockWellKnownValueService },
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },

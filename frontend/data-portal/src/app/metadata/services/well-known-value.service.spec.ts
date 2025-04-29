@@ -1,5 +1,5 @@
 /**
- * Test the global metadata stats service
+ * Test the well known value service
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
@@ -12,20 +12,20 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { ConfigService } from '@app/shared/services/config.service';
-import { emptyGlobalSummary } from '../models/global-summary';
-import { MetadataStatsService } from './metadata-stats.service';
+import { emptyStorageLabels } from '../models/well-known-values';
+import { WellKnownValueService } from './well-known-value.service';
 
-import { metadataGlobalSummary } from '@app/../mocks/data';
+import { storageLabels } from '@app/../mocks/data';
 
 /**
  * Mock the config service as needed by the metadata service
  */
 class MockConfigService {
-  metldataUrl = 'http://mock.dev/metldata';
+  wkvsUrl = 'http://mock.dev/.well-known';
 }
 
-describe('MetadataStatsService', () => {
-  let service: MetadataStatsService;
+describe('WellKnownValueService', () => {
+  let service: WellKnownValueService;
   let httpMock: HttpTestingController;
   let testBed: TestBed;
 
@@ -35,10 +35,10 @@ describe('MetadataStatsService', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ConfigService, useClass: MockConfigService },
-        { provide: MetadataStatsService },
+        { provide: WellKnownValueService },
       ],
     });
-    service = TestBed.inject(MetadataStatsService);
+    service = TestBed.inject(WellKnownValueService);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
@@ -50,18 +50,18 @@ describe('MetadataStatsService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should load the stats', async () => {
-    const stats = service.globalSummary;
-    expect(stats.isLoading()).toBeTruthy();
-    expect(stats.error()).toBeUndefined();
-    expect(stats.value()).toEqual(emptyGlobalSummary);
+  it('should load the storage labels', async () => {
+    const labels = service.storageLabels;
+    expect(labels.isLoading()).toBeTruthy();
+    expect(labels.error()).toBeUndefined();
+    expect(labels.value()).toEqual(emptyStorageLabels);
     testBed.flushEffects();
-    const req = httpMock.expectOne('http://mock.dev/metldata/stats');
+    const req = httpMock.expectOne('http://mock.dev/.well-known/values/storage_labels');
     expect(req.request.method).toBe('GET');
-    req.flush(metadataGlobalSummary);
+    req.flush(storageLabels);
     await Promise.resolve(); // wait for loader to return
-    expect(stats.isLoading()).toBe(false);
-    expect(stats.error()).toBeUndefined();
-    expect(stats.value()).toEqual(metadataGlobalSummary.resource_stats);
+    expect(labels.isLoading()).toBe(false);
+    expect(labels.error()).toBeUndefined();
+    expect(labels.value()).toEqual(storageLabels.storage_labels);
   });
 });

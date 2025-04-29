@@ -9,6 +9,7 @@ import { DatasetInformation } from '@app/metadata/models/dataset-information';
 import { DatasetSummary } from '@app/metadata/models/dataset-summary';
 import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
+import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { IvaState, IvaType, UserWithIva } from '@app/verification-addresses/models/iva';
 import { Dataset } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
@@ -645,4 +646,19 @@ export const workPackageResponse: WorkPackageResponse = {
   // the encrypted work package token (which can be pretty long)
   token:
     'gumRa5XE1Rm3tOJr3ocfA1F63rRUI2g6eCI0KY2Mv3epb28cZeylvaYsxRmgQRDboE2yOhtE4qxPhZgYz/Y7zR+hssBzq7Hg',
+};
+
+export const storageLabels: BaseStorageLabels = {
+  storage_labels: {
+    TUE01: 'Tübingen 1',
+    TUE02: 'Tübingen 2',
+    TUE03: 'Tübingen 3',
+    TUE04: 'Tübingen 4',
+    TUE05: 'Tübingen 5',
+    HD01: 'Heidelberg 1',
+    HD02: 'Heidelberg 2',
+    HD03: 'Heidelberg 3',
+    HD04: 'Heidelberg 4',
+    HD05: 'Heidelberg 5',
+  },
 };

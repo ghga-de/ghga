@@ -15,6 +15,7 @@ import {
   getDatasetSummary,
   metadataGlobalSummary,
   searchResults,
+  storageLabels,
   workPackageResponse,
 } from './data';
 
@@ -143,6 +144,12 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Patch an access request
   'PATCH /api/ars/access-requests/*': 204,
+
+  /**
+   * WKVS API
+   */
+  // Get human-readable storage aliases
+  'GET /.well-known/values/storage_labels': storageLabels,
 
   /**
    * Static assets

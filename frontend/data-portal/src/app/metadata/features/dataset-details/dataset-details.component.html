@@ -442,7 +442,12 @@
                     File location
                   </th>
                   <td mat-cell *matCellDef="let file">
-                    {{ (file.file_information?.storage_alias | storageAlias) || 'N/A' }}
+                    @let storageAlias = file.file_information?.storage_alias;
+                    @if (storageAlias) {
+                      {{ storageLabels()[storageAlias] || storageAlias }}
+                    } @else {
+                      N/A
+                    }
                   </td>
                 </ng-container>
 

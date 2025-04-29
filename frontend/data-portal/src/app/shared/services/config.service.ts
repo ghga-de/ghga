@@ -32,6 +32,7 @@ interface Config {
   default_access_duration_days: number;
   umami_url: string | null;
   umami_website_id: string | null;
+  wkvs_url: string | null;
 }
 
 declare global {
@@ -125,6 +126,14 @@ export class ConfigService {
    */
   get wpsUrl(): string {
     return sansEndSlash(this.#config.wps_url);
+  }
+
+  /**
+   * Gets the URL of the well-known value service
+   * @returns the URL of the well-known value service or the default '/.well-known if not configured
+   */
+  get wkvsUrl(): string {
+    return this.#config.wkvs_url || '/.well-known';
   }
 
   /**

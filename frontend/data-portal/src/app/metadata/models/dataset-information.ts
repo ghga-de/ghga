@@ -1,5 +1,5 @@
 /**
- * Short module description
+ * Interfaces for the Dataset Information Service.
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */

@@ -1,5 +1,5 @@
 /**
- * Short module description
+ * Interfaces for the dataset details data.
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
