@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ifrs"
-version = "4.0.0"
+version = "4.0.1"
 description = "Internal File Registry Service - This service acts as a registry for the internal location and representation of files."
 readme = "README.md"
 authors = [
