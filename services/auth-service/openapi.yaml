@@ -738,13 +738,14 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 4.1.0
+  version: 5.0.0
 openapi: 3.1.0
 paths:
   /download-access/users/{user_id}/datasets:
     get:
-      description: Endpoint to get a list of the IDs of all datasets that can be downloaded
-        by the given user. For internal use only.
+      description: Endpoint to get the IDs of all datasets that can be downloaded
+        by the given user mapped to until when the dataset can be requested. For internal
+        use only.
       operationId: get_download_access_list
       parameters:
       - description: Internal ID of the user
@@ -760,10 +761,11 @@ paths:
           content:
             application/json:
               schema:
-                items:
+                additionalProperties:
+                  format: date-time
                   type: string
                 title: Response Get Download Access List
-                type: array
+                type: object
           description: Dataset IDs with download access have been retrieved.
         '404':
           description: The user was not found or is inactive.
@@ -800,8 +802,11 @@ paths:
           content:
             application/json:
               schema:
+                anyOf:
+                - format: date-time
+                  type: string
+                - type: 'null'
                 title: Response Check Download Access
-                type: boolean
           description: Download access has been checked.
         '404':
           description: The user was not found or is inactive.

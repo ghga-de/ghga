@@ -21,7 +21,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Response, status
 from fastapi.exceptions import HTTPException
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 from opentelemetry import trace
 
@@ -377,8 +377,11 @@ async def check_download_access(
     iva_dao: IvaDaoDependency,
     claim_dao: ClaimDaoDependency,
     # internal service, authorization without token via service mesh
-) -> bool:
+) -> UTCDatetime | None:
     """Check download access permission for a given dataset by a given user.
+
+    Returns the date until which the user has access to the dataset or null if
+    the user currently does not have access to the dataset.
 
     Note that at this point we also check whether the corresponding IVA is verified
     and whether the user is currently active.
@@ -388,6 +391,7 @@ async def check_download_access(
     if not await user_is_active(user_id, user_dao=user_dao):
         raise user_not_found_error
 
+    valid_until: UTCDatetime | None = None
     # run through all controlled access grants for the user
     async for claim in claim_dao.find_all(
         mapping={
@@ -396,15 +400,20 @@ async def check_download_access(
         }
     ):
         # check whether the claim is valid and for the right source
-        if (
+        if not (
             is_valid_claim(claim)
             and claim.iva_id
             and has_download_access_for_dataset(claim, dataset_id)
             and await iva_is_verified(user_id, claim.iva_id, iva_dao=iva_dao)
         ):
-            return True
+            continue
+        if valid_until and valid_until >= claim.valid_until:
+            # we already found a claim with longer validity
+            continue
+        # memorize the date until which the user has access
+        valid_until = claim.valid_until
 
-    return False
+    return valid_until
 
 
 @router.get(
@@ -412,8 +421,9 @@ async def check_download_access(
     operation_id="get_download_access_list",
     tags=["datasets"],
     summary="Get list of all dataset IDs with download access permission",
-    description="Endpoint to get a list of the IDs of all datasets that"
-    " can be downloaded by the given user. For internal use only.",
+    description="Endpoint to get the IDs of all datasets that can be downloaded"
+    " by the given user mapped to until when the dataset can be requested."
+    " For internal use only.",
     responses={
         200: {
             "description": "Dataset IDs with download access have been retrieved.",
@@ -437,8 +447,10 @@ async def get_datasets_with_download_access(
     iva_dao: IvaDaoDependency,
     claim_dao: ClaimDaoDependency,
     # internal service, authorization without token via service mesh
-) -> list[str]:
-    """Get list of all dataset IDs with download access permission for a given user.
+) -> dict[str, UTCDatetime]:
+    """Get all dataset IDs with download access permission for a given user.
+
+    Returns a mapping of dataset IDs to the date until which the user has access.
 
     Note that at this point we also check whether the corresponding IVA is verified
     and whether the user is currently active.
@@ -447,18 +459,31 @@ async def get_datasets_with_download_access(
     if not await user_is_active(user_id, user_dao=user_dao):
         raise user_not_found_error
 
-    # fetch all valid controlled access grants for the user
-    dataset_ids = [
-        dataset_id_for_download_access(claim)
-        async for claim in claim_dao.find_all(
-            mapping={
-                "user_id": user_id,
-                "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS,
-            }
-        )
-        if is_valid_claim(claim)
-        and claim.iva_id
-        and await iva_is_verified(user_id, claim.iva_id, iva_dao=iva_dao)
-    ]
-    # filter out datasets from different sources and sort for reproducible output
-    return sorted(dataset_id for dataset_id in dataset_ids if dataset_id)
+    dataset_id_to_end_date: dict[str, UTCDatetime] = {}
+    # run through all controlled access grants for the user
+    async for claim in claim_dao.find_all(
+        mapping={
+            "user_id": user_id,
+            "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS,
+        }
+    ):
+        # consider only valid controlled access grants for the user
+        if not (
+            is_valid_claim(claim)
+            and claim.iva_id
+            and await iva_is_verified(user_id, claim.iva_id, iva_dao=iva_dao)
+        ):
+            continue
+        # consider only those for the right source
+        dataset_id = dataset_id_for_download_access(claim)
+        if not dataset_id:
+            continue
+        valid_until = dataset_id_to_end_date.get(dataset_id)
+        if valid_until and valid_until >= claim.valid_until:
+            # we already found a claim with longer validity
+            continue
+        # map the dataset ID to the date until which the user has access
+        dataset_id_to_end_date[dataset_id] = claim.valid_until
+
+    # sort the output by dataset ID to make it reproducible
+    return dict(sorted(dataset_id_to_end_date.items()))

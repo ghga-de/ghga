@@ -349,9 +349,15 @@ async def test_grant_download_access(full_client: FullClient):
         "visa_value": DATASET_CLAIM_DATA["visa_value"],
     }
 
+    response = await full_client.get(
+        "/download-access/users/john@ghga.de/datasets/DS0815"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == validity["valid_until"]
+
     response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == ["DS0815"]
+    assert response.json() == {"DS0815": validity["valid_until"]}
 
 
 async def test_grant_download_access_with_unverified_iva(full_client: FullClient):
@@ -390,9 +396,15 @@ async def test_grant_download_access_with_unverified_iva(full_client: FullClient
     assert claim_data["user_id"] == "john@ghga.de"
     assert claim_data["iva_id"] == "some-iva-id"
 
+    response = await full_client.get(
+        "/download-access/users/john@ghga.de/datasets/DS0815"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() is None
+
     response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == []
+    assert response.json() == {}
 
 
 async def test_grant_download_access_without_iva(full_client: FullClient):
@@ -419,9 +431,15 @@ async def test_grant_download_access_without_iva(full_client: FullClient):
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
 
+    response = await full_client.get(
+        "/download-access/users/john@ghga.de/datasets/DS0815"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() is None
+
     response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == []
+    assert response.json() == {}
 
 
 async def test_check_download_access(full_client: FullClient):
@@ -448,7 +466,23 @@ async def test_check_download_access(full_client: FullClient):
         **DATASET_CLAIM_DATA,
         "iva_id": "some-iva-id",
         "valid_from": current_timestamp,
-        "valid_until": current_timestamp + 60,
+        "valid_until": current_timestamp + 60,  # 60 seconds
+    }
+
+    response = await full_client.post("/users/john@ghga.de/claims", json=claim_data)
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/DS0815"
+    assert claim["user_id"] == "john@ghga.de"
+
+    # post another one with longer validity
+
+    claim_data = {
+        **claim_data,
+        "valid_until": current_timestamp + 60 * 5,  # 5 minutes
     }
 
     response = await full_client.post("/users/john@ghga.de/claims", json=claim_data)
@@ -489,7 +523,15 @@ async def test_check_download_access(full_client: FullClient):
         "/download-access/users/john@ghga.de/datasets/DS0815"
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() is True
+    valid_until = response.json()
+    assert isinstance(valid_until, str)
+
+    # check that we get the longer validity period
+    assert (
+        int(datetime.fromisoformat(valid_until.replace("Z", "+00:00")).timestamp())
+        - current_timestamp
+        == 5 * 60
+    )
 
     # check access for invalid dataset accession
 
@@ -504,7 +546,7 @@ async def test_check_download_access(full_client: FullClient):
         "/download-access/users/john@ghga.de/datasets/DS0814"
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() is False
+    assert response.json() is None
 
     # check access when dataset and permission does not exist
 
@@ -512,7 +554,7 @@ async def test_check_download_access(full_client: FullClient):
         "/download-access/users/john@ghga.de/datasets/DS0816"
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() is False
+    assert response.json() is None
 
     # check that access is denied when user is not active
 
@@ -567,7 +609,7 @@ async def test_check_download_access_with_unverified_iva(full_client: FullClient
         "/download-access/users/john@ghga.de/datasets/DS0815"
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() is False
+    assert response.json() is None
 
 
 async def test_get_datasets_with_download_access(full_client: FullClient):
@@ -593,7 +635,7 @@ async def test_get_datasets_with_download_access(full_client: FullClient):
 
     response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == []
+    assert response.json() == {}
 
     # post valid access permission for DS0815
 
@@ -602,7 +644,26 @@ async def test_get_datasets_with_download_access(full_client: FullClient):
         **DATASET_CLAIM_DATA,
         "iva_id": "verified-iva-id",
         "valid_from": current_timestamp,
-        "valid_until": current_timestamp + 60,
+        "valid_until": current_timestamp + 60,  # 60 seconds
+    }
+
+    response = await full_client.post(
+        "/users/john@ghga.de/claims", json=some_claim_data
+    )
+
+    claim = response.json()
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert claim["user_id"] == "john@ghga.de"
+    assert claim["iva_id"] == "verified-iva-id"
+    assert claim["visa_type"] == "ControlledAccessGrants"
+    assert claim["visa_value"] == "https://ghga.de/datasets/DS0815"
+
+    # post another one with longer validity
+
+    some_claim_data = {
+        **some_claim_data,
+        "valid_until": current_timestamp + 60 * 5,  # 5 minutes
     }
 
     response = await full_client.post(
@@ -705,11 +766,11 @@ async def test_get_datasets_with_download_access(full_client: FullClient):
     response = await full_client.get("/users/john@ghga.de/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
-    assert len(claims) == 4
+    assert len(claims) == 5
     dataset_ids = {claim["visa_value"].rsplit("/", 1)[-1] for claim in response.json()}
     assert dataset_ids == {
         "DS0814",
-        "DS0815",
+        "DS0815",  # has two claims with shorter and longer validity
         "DS0816",
         "DS0817",
     }
@@ -722,10 +783,19 @@ async def test_get_datasets_with_download_access(full_client: FullClient):
     # check access for right user
     response = await full_client.get("/download-access/users/john@ghga.de/datasets")
     assert response.status_code == status.HTTP_200_OK
-    dataset_ids = response.json()
+    dataset_id_to_end_date = response.json()
 
-    assert isinstance(dataset_ids, list)
-    assert sorted(dataset_ids) == ["DS0815", "DS0816"]
+    assert isinstance(dataset_id_to_end_date, dict)
+    assert sorted(dataset_id_to_end_date) == ["DS0815", "DS0816"]
+
+    valid_until = dataset_id_to_end_date["DS0815"]
+    assert isinstance(valid_until, str)
+    # check that we get the longer validity period
+    assert (
+        int(datetime.fromisoformat(valid_until.replace("Z", "+00:00")).timestamp())
+        - current_timestamp
+        == 5 * 60
+    )  # 5 minutes
 
     # check that access is denied when user is not active
     user_dao.users[0] = user_dao.users[0].model_copy(
