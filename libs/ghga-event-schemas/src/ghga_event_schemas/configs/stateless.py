@@ -19,9 +19,6 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 __all__ = [
-    "AccessRequestAllowedEventsConfig",
-    "AccessRequestCreatedEventsConfig",
-    "AccessRequestDeniedEventsConfig",
     "DownloadServedEventsConfig",
     "FileDeletedEventsConfig",
     "FileDeletionRequestEventsConfig",
@@ -252,44 +249,6 @@ class FileRegisteredForDownloadEventsConfig(BaseSettings):
             + " by the DCS for download."
         ),
         examples=["file_registered_for_download"],
-    )
-
-
-class _AccessRequestConfig(BaseSettings):
-    access_request_topic: str = Field(
-        default=...,
-        description="Name of the event topic used to consume access request events",
-        examples=["access-requests"],
-    )
-
-
-class AccessRequestCreatedEventsConfig(_AccessRequestConfig):
-    """For events conveying an access request was created"""
-
-    access_request_created_type: str = Field(
-        default=...,
-        description="The type to use for access request created events",
-        examples=["access_request_created"],
-    )
-
-
-class AccessRequestAllowedEventsConfig(_AccessRequestConfig):
-    """For events conveying an access request was allowed/approved"""
-
-    access_request_allowed_type: str = Field(
-        default=...,
-        description="The type to use for access request allowed events",
-        examples=["access_request_allowed"],
-    )
-
-
-class AccessRequestDeniedEventsConfig(_AccessRequestConfig):
-    """For events conveying an access request was denied"""
-
-    access_request_denied_type: str = Field(
-        default=...,
-        description="The type to use for access request denied events",
-        examples=["access_request_denied"],
     )
 
 

@@ -22,6 +22,7 @@ schema representations such as json-schema.
 from enum import Enum
 from typing import Any
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from ghga_event_schemas.validation import validated_upload_date
@@ -428,9 +429,23 @@ class User(UserID):
 
 
 class AccessRequestDetails(UserID):
-    """Event used to convey the user ID and dataset ID of an access request."""
+    """Event used to convey the details an access request."""
 
     dataset_id: str = Field(..., description="The dataset ID")
+    dataset_title: str = Field(..., description="The dataset title")
+    dataset_description: str = Field(..., description="A description of the dataset")
+    dac_alias: str = Field(
+        ...,
+        description="The alias of the Data Access Committee responsible for the dataset",
+    )
+    access_starts: UTCDatetime = Field(
+        ...,
+        description="The beginning of the access request's validity period as a UTC datetime",
+    )
+    access_ends: UTCDatetime = Field(
+        ...,
+        description="The end of the access request's validity period as a UTC datetime",
+    )
 
 
 class IvaType(str, Enum):

@@ -16,13 +16,12 @@
 """Standardized topic/type configurations for Kafka events"""
 
 from .stateful import (  # noqa: F401
+    AccessRequestEventsConfig,
     DatasetEventsConfig,
     ResourceEventsConfig,
     UserEventsConfig,
 )
 from .stateless import (  # noqa: F401
-    AccessRequestCreatedEventsConfig,
-    AccessRequestDeniedEventsConfig,
     DownloadServedEventsConfig,
     FileDeletedEventsConfig,
     FileDeletionRequestEventsConfig,
