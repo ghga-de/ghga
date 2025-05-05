@@ -438,6 +438,17 @@ class AccessRequestDetails(UserID):
         ...,
         description="The alias of the Data Access Committee responsible for the dataset",
     )
+    ticket_id: str = Field(
+        ..., description="The ID of the ticket associated with the access request"
+    )
+    internal_note: str | None = Field(
+        default=None,
+        description="A note about the access request only visible to Data Stewards",
+    )
+    note_to_requester: str | None = Field(
+        default=None,
+        description="A note about the access request that is visible to the requester",
+    )
     access_starts: UTCDatetime = Field(
         ...,
         description="The beginning of the access request's validity period as a UTC datetime",
