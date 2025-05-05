@@ -438,8 +438,9 @@ class AccessRequestDetails(UserID):
         ...,
         description="The alias of the Data Access Committee responsible for the dataset",
     )
-    ticket_id: str = Field(
-        ..., description="The ID of the ticket associated with the access request"
+    ticket_id: str | None = Field(
+        default=None,
+        description="The ID of the ticket associated with the access request",
     )
     internal_note: str | None = Field(
         default=None,
