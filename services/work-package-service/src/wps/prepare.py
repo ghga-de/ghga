@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module hosting the dependency injection container."""
+"""Module hosting the code to prepare the application by providing dependencies."""
 
 from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
@@ -33,7 +33,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from wps.adapters.inbound.event_sub import EventSubTranslator
 from wps.adapters.inbound.fastapi_ import dummies
 from wps.adapters.inbound.fastapi_.configure import get_configured_app
-from wps.adapters.outbound.dao import DatasetDaoConstructor, WorkPackageDaoConstructor
+from wps.adapters.outbound.dao import get_dataset_dao, get_work_package_dao
 from wps.adapters.outbound.http import AccessCheckAdapter
 from wps.config import Config
 from wps.core.repository import WorkPackageRepository
@@ -55,14 +55,10 @@ async def prepare_core(
     trace.set_tracer_provider(trace_provider)
 
     dao_factory = MongoDbDaoFactory(config=config)
-    work_package_dao = await WorkPackageDaoConstructor.construct(
-        config=config,
-        dao_factory=dao_factory,
+    work_package_dao = await get_work_package_dao(
+        config=config, dao_factory=dao_factory
     )
-    dataset_dao = await DatasetDaoConstructor.construct(
-        config=config,
-        dao_factory=dao_factory,
-    )
+    dataset_dao = await get_dataset_dao(config=config, dao_factory=dao_factory)
     async with AccessCheckAdapter.construct(config=config) as download_access_checks:
         yield WorkPackageRepository(
             config=config,

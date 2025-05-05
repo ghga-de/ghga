@@ -27,6 +27,7 @@ from wps.adapters.inbound.fastapi_.dummies import WorkPackageRepositoryDummy
 from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
 from wps.core.models import (
     Dataset,
+    DatasetWithExpiration,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
     WorkPackageDetails,
@@ -172,7 +173,7 @@ async def create_work_order_token(
     tags=["Datasets"],
     summary="Get all datasets of the given user",
     description="Endpoint used to get details for all datasets"
-    " that are accessible to the given user",
+    " that are accessible to the given user including their expiration dates.",
     responses={
         200: {
             "model": list[Dataset],
@@ -188,7 +189,7 @@ async def get_datasets(
     user_id: str,
     repository: WorkPackageRepositoryDummy,
     auth_context: UserAuthContext,
-) -> list[Dataset]:
+) -> list[DatasetWithExpiration]:
     """Get datasets using an internal auth token with a user context."""
     try:
         if user_id != auth_context.id:

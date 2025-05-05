@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""In this module object construction and dependency injection is carried out."""
+"""Entrypoints to prepare and run the application."""
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 
 from wps.config import Config
-from wps.inject import prepare_consumer, prepare_rest_app
+from wps.prepare import prepare_consumer, prepare_rest_app
 
 
 async def run_rest_app() -> None:

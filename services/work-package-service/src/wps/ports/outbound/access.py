@@ -18,6 +18,8 @@
 
 from abc import ABC, abstractmethod
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+
 __all__ = ["AccessCheckPort"]
 
 
@@ -28,9 +30,16 @@ class AccessCheckPort(ABC):
         """Raised when the access check failed without result."""
 
     @abstractmethod
-    async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
-        """Check whether the given user has download access for the given dataset."""
+    async def check_download_access(
+        self, user_id: str, dataset_id: str
+    ) -> UTCDatetime | None:
+        """Check until when the given user has download access for the given dataset."""
 
     @abstractmethod
-    async def get_datasets_with_download_access(self, user_id: str) -> list[str]:
-        """Get all datasets that the given user is allowed to download."""
+    async def get_accessible_datasets_with_expiration(
+        self, user_id: str
+    ) -> dict[str, UTCDatetime]:
+        """Get all datasets that the given user is allowed to download.
+
+        This method returns a mapping from dataset IDs to access expiration dates.
+        """

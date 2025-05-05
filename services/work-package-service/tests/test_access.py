@@ -17,9 +17,11 @@
 """Test the access check adapter."""
 
 from collections.abc import AsyncGenerator
+from datetime import timedelta
 
 import pytest
 import pytest_asyncio
+from ghga_service_commons.utils.utc_dates import utc_datetime
 from pytest_httpx import HTTPXMock
 
 from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
@@ -42,40 +44,49 @@ async def test_check_download_access(
 ):
     """Test checking the download access"""
     check_access = access_check.check_download_access
+    valid_until = utc_datetime(2025, 12, 31, 23, 59, 59)
     httpx_mock.add_response(
         method="GET",
         url=f"{DOWNLOAD_ACCESS_URL}/users/some-user-id/datasets/some-data-id",
-        text="true",
+        json=valid_until.isoformat(),
     )
-    assert await check_access("some-user-id", "some-data-id") is True
+    assert await check_access("some-user-id", "some-data-id") == valid_until
     httpx_mock.add_response(
         method="GET",
         url=f"{DOWNLOAD_ACCESS_URL}/users/some-user-id/datasets/other-data-id",
-        text="false",
+        text="null",
     )
-    assert await check_access("some-user-id", "other-data-id") is False
+    assert await check_access("some-user-id", "other-data-id") is None
     httpx_mock.add_response(
         method="GET",
         url=f"{DOWNLOAD_ACCESS_URL}/users/some-user-id/datasets/no-data-id",
         status_code=404,
     )
-    assert await check_access("some-user-id", "no-data-id") is False
+    assert await check_access("some-user-id", "no-data-id") is None
 
 
 async def test_get_download_datasets(
     access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
 ):
     """Test getting the datasets for download access"""
-    get_datasets = access_check.get_datasets_with_download_access
+    get_datasets = access_check.get_accessible_datasets_with_expiration
+    valid_until_1 = utc_datetime(2025, 12, 31, 23, 59, 59)
+    valid_until_2 = valid_until_1 + timedelta(days=180)
     httpx_mock.add_response(
         method="GET",
         url=f"{DOWNLOAD_ACCESS_URL}/users/some-user-id/datasets",
-        json=["some-data-id", "another-data-id"],
+        json={
+            "data-id-1": valid_until_1.isoformat(),
+            "data-id-2": valid_until_2.isoformat(),
+        },
     )
-    assert await get_datasets("some-user-id") == ["some-data-id", "another-data-id"]
+    assert await get_datasets("some-user-id") == {
+        "data-id-1": valid_until_1,
+        "data-id-2": valid_until_2,
+    }
     httpx_mock.add_response(
         method="GET",
         url=f"{DOWNLOAD_ACCESS_URL}/users/no-user-id/datasets",
         status_code=404,
     )
-    assert await get_datasets("no-user-id") == []
+    assert await get_datasets("no-user-id") == {}

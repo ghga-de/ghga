@@ -16,14 +16,19 @@
 
 """Test the API of the work package service."""
 
+from datetime import datetime, timedelta
+
 import pytest
 from fastapi import status
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest_httpx import HTTPXMock
 
+from wps.config import Config
 from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
+from wps.core.models import DatasetWithExpiration
 
 from .fixtures import (  # noqa: F401
     SIGNING_KEY_PAIR,
@@ -83,14 +88,16 @@ async def test_create_work_order_token(
     auth_headers: dict[str, str],
     httpx_mock: HTTPXMock,
     mongodb_populated: MongoDbFixture,
+    config: Config,
 ):
     """Test that work order tokens can be properly created."""
     # mock the access check for the test dataset to grant access
 
+    valid_until = (now_as_utc() + timedelta(days=365)).isoformat()
     httpx_mock.add_response(
         method="GET",
         url="http://access/users/john-doe@ghga.de/datasets/some-dataset-id",
-        text="true",
+        json=valid_until,
     )
 
     # create a work package
@@ -102,8 +109,12 @@ async def test_create_work_order_token(
 
     response_data = response.json()
     assert isinstance(response_data, dict)
-    assert sorted(response_data) == ["id", "token"]
+    assert sorted(response_data) == ["expires", "id", "token"]
 
+    valid_timedelta = datetime.fromisoformat(response_data["expires"]) - now_as_utc()
+    valid_days = round((valid_timedelta).total_seconds() / (24 * 60 * 60))
+
+    assert valid_days == config.work_package_valid_days
     work_package_id = response_data["id"]
     assert (
         work_package_id
@@ -265,10 +276,11 @@ async def test_get_datasets_when_none_authorized(
     """Test that no datasets are fetched when none are accessible."""
     # mock the access check for the test dataset
 
+    expires = (now_as_utc() + timedelta(days=365)).isoformat()
     httpx_mock.add_response(
         method="GET",
         url="http://access/users/john-doe@ghga.de/datasets",
-        json=["some-other-dataset-id"],
+        json={"some-other-dataset-id": expires},
     )
 
     # get the list of datasets
@@ -292,10 +304,14 @@ async def test_get_datasets(
     """Test that the list of accessible datasets can be fetched."""
     # mock the access check for the test dataset
 
+    expires = (now_as_utc() + timedelta(days=365)).isoformat()
     httpx_mock.add_response(
         method="GET",
         url="http://access/users/john-doe@ghga.de/datasets",
-        json=["some-dataset-id", "some-non-existing-dataset-id"],
+        json={
+            "some-dataset-id": expires,
+            "some-non-existing-dataset-id": expires,
+        },
     )
 
     # get the list of datasets
@@ -307,4 +323,7 @@ async def test_get_datasets(
 
     response_data = response.json()
     assert isinstance(response_data, list)
-    assert response_data == [DATASET.model_dump()]
+    assert len(response_data) == 1
+    returned = response_data[0]
+    expected = {**DATASET.model_dump(), "expires": expires}
+    assert DatasetWithExpiration(**returned) == DatasetWithExpiration(**expected)

@@ -16,6 +16,10 @@
 
 """Mock implementation of the access check adapter."""
 
+from datetime import timedelta
+
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+
 from wps.ports.outbound.access import AccessCheckPort
 
 USERS_WITH_DOWNLOAD_ACCESS = ["john-doe@ghga.de"]
@@ -27,17 +31,28 @@ __all__ = ["AccessCheckMock"]
 class AccessCheckMock(AccessCheckPort):
     """Mock checking dataset access permissions."""
 
-    async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
-        """Check whether the given user has download access for the given dataset."""
-        return (
-            user_id in USERS_WITH_DOWNLOAD_ACCESS
-            and dataset_id in DATASETS_WITH_DOWNLOAD_ACCESS
-        )
+    validity_period = timedelta(days=365)
 
-    async def get_datasets_with_download_access(self, user_id: str) -> list[str]:
+    async def check_download_access(
+        self, user_id: str, dataset_id: str
+    ) -> UTCDatetime | None:
+        """Check whether the given user has download access for the given dataset."""
+        if (
+            user_id not in USERS_WITH_DOWNLOAD_ACCESS
+            or dataset_id not in DATASETS_WITH_DOWNLOAD_ACCESS
+        ):
+            return None
+        return now_as_utc() + self.validity_period
+
+    async def get_accessible_datasets_with_expiration(
+        self, user_id: str
+    ) -> dict[str, UTCDatetime]:
         """Get all datasets that the given user is allowed to download."""
-        return (
-            list(DATASETS_WITH_DOWNLOAD_ACCESS)
-            if user_id in USERS_WITH_DOWNLOAD_ACCESS
-            else []
-        )
+        if user_id not in USERS_WITH_DOWNLOAD_ACCESS:
+            return {}
+        expires = now_as_utc() + self.validity_period
+        return {
+            dataset_id: expires
+            for dataset_id in DATASETS_WITH_DOWNLOAD_ACCESS
+            if dataset_id in DATASETS_WITH_DOWNLOAD_ACCESS
+        }

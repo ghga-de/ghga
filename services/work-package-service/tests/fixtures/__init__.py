@@ -30,10 +30,10 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
-from wps.adapters.outbound.dao import DatasetDaoConstructor, WorkPackageDaoConstructor
+from wps.adapters.outbound.dao import get_dataset_dao, get_work_package_dao
 from wps.config import Config
 from wps.core.repository import WorkPackageRepository
-from wps.inject import Consumer, prepare_rest_app
+from wps.prepare import Consumer, prepare_rest_app
 
 from .access import AccessCheckMock
 
@@ -110,14 +110,10 @@ async def fixture_repository(
 ) -> WorkPackageRepository:
     """Fixture for creating a configured repository"""
     dao_factory = mongodb.dao_factory
-    work_package_dao = await WorkPackageDaoConstructor.construct(
-        config=config,
-        dao_factory=dao_factory,
+    work_package_dao = await get_work_package_dao(
+        config=config, dao_factory=dao_factory
     )
-    dataset_dao = await DatasetDaoConstructor.construct(
-        config=config,
-        dao_factory=dao_factory,
-    )
+    dataset_dao = await get_dataset_dao(config=config, dao_factory=dao_factory)
     return WorkPackageRepository(
         config=config,
         access_check=AccessCheckMock(),

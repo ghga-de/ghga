@@ -64,6 +64,14 @@ class Dataset(BaseDto):
     files: list[DatasetFile] = Field(..., description="Files contained in the dataset.")
 
 
+class DatasetWithExpiration(Dataset):
+    """A model describing a dataset with an expiration date."""
+
+    expires: UTCDatetime = Field(
+        default=..., description="The expiration date of access to the dataset."
+    )
+
+
 class WorkOrderToken(BaseDto):
     """A model describing the payload of a work order token."""
 
@@ -105,6 +113,9 @@ class WorkPackageCreationResponse(BaseModel):
         default=...,
         description="The work package access token,"
         " encrypted with the user's public Crypt4GH key",
+    )
+    expires: UTCDatetime = Field(
+        default=..., description="The expiration date of the work package access token"
     )
 
 

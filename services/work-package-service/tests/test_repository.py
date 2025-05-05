@@ -19,9 +19,12 @@
 import pytest
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from wps.config import Config
 from wps.core.models import (
+    Dataset,
     WorkPackage,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
@@ -46,8 +49,11 @@ async def test_work_package_and_token_creation(
     repository: WorkPackageRepository,
     auth_context: AuthContext,
     mongodb: MongoDbFixture,
+    config: Config,
 ):
     """Test creating a work package and a work order token"""
+    valid_days = config.work_package_valid_days
+
     # announce dataset
     await repository.register_dataset(DATASET)
 
@@ -65,6 +71,12 @@ async def test_work_package_and_token_creation(
     )
 
     assert isinstance(creation_response, WorkPackageCreationResponse)
+
+    expires = creation_response.expires
+    assert (
+        round((expires - now_as_utc()).total_seconds() / (24 * 60 * 60)) == valid_days
+    )
+
     work_package_id = creation_response.id
     encrypted_wpat = creation_response.token
     wpat = decrypt(encrypted_wpat)
@@ -100,7 +112,7 @@ async def test_work_package_and_token_creation(
     assert package.full_user_name == full_user_name
     assert package.email == auth_context.email
     assert package.token_hash == hash_token(wpat)
-    assert (package.expires - package.created).days == 30
+    assert (package.expires - package.created).days == valid_days
 
     # crate work order token
 
@@ -136,7 +148,7 @@ async def test_work_package_and_token_creation(
 
     wot = decrypt(wot)
     wot_claims = decode_and_validate_token(wot, SIGNING_KEY_PAIR.public())
-    assert wot_claims.pop("exp") - wot_claims.pop("iat") == 30
+    assert wot_claims.pop("exp") - wot_claims.pop("iat") == valid_days
     assert wot_claims == {
         "type": package.type.value,
         "file_id": "file-id-3",
@@ -191,7 +203,7 @@ async def test_work_package_and_token_creation(
 
     wot = decrypt(wot)
     wot_claims = decode_and_validate_token(wot, SIGNING_KEY_PAIR.public())
-    assert wot_claims.pop("exp") - wot_claims.pop("iat") == 30
+    assert wot_claims.pop("exp") - wot_claims.pop("iat") == valid_days
     assert wot_claims == {
         "type": package.type.value,
         "file_id": "file-id-1",
@@ -202,10 +214,12 @@ async def test_work_package_and_token_creation(
     }
 
     # revoke access and check that work order token cannot be created any more
-    async def check_download_access_patched(user_id: str, dataset_id: str) -> bool:
+    async def check_download_access_patched(
+        user_id: str, dataset_id: str
+    ) -> UTCDatetime | None:
         assert user_id == package.user_id
         assert dataset_id == package.dataset_id
-        return False
+        return None
 
     access = repository._access
     _check_download_access_original = access.check_download_access
@@ -237,7 +251,15 @@ async def test_checking_accessible_datasets(
 
     assert await repository.get_dataset("some-dataset-id") == DATASET
 
-    assert await repository.get_datasets(auth_context=auth_context) == [DATASET]
+    datasets_with_expiration = await repository.get_datasets(auth_context=auth_context)
+    assert len(datasets_with_expiration) == 1
+    dataset_with_expiration = datasets_with_expiration[0]
+
+    expires = dataset_with_expiration.expires
+    assert round((expires - now_as_utc()).total_seconds() / (24 * 60 * 60)) == 365
+
+    dataset = Dataset(**dataset_with_expiration.model_dump(exclude={"expires"}))
+    assert dataset == DATASET
 
 
 async def test_deletion_of_datasets(

@@ -22,6 +22,7 @@ from ghga_service_commons.auth.ghga import AuthContext
 
 from wps.core.models import (
     Dataset,
+    DatasetWithExpiration,
     WorkPackage,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
@@ -98,9 +99,13 @@ class WorkPackageRepositoryPort(ABC):
     @abstractmethod
     async def get_datasets(
         self, *, auth_context: AuthContext, work_type: WorkType | None = None
-    ) -> list[Dataset]:
+    ) -> list[DatasetWithExpiration]:
         """Get the list of all datasets accessible to the authenticated user.
 
-        A work type can be specified for filtering the datasets, but currently
-        only downloadable datasets are supported.
+        The returned datasets also have an expiration date until when access is granted.
+
+        A work type can be specified for filtering the datasets. If no work type is
+        specified, the datasets for all work types (upload and download) are returned.
+
+        Note that currently only downloadable datasets are supported.
         """

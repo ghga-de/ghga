@@ -18,8 +18,10 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 import httpx
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from opentelemetry import trace
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -60,25 +62,45 @@ class AccessCheckAdapter(AccessCheckPort):
             yield cls(config=config, client=client)
 
     @tracer.start_as_current_span("AccessCheckAdapter.check_download_access")
-    async def check_download_access(self, user_id: str, dataset_id: str) -> bool:
-        """Check whether the given user has download access for the given dataset."""
+    async def check_download_access(
+        self, user_id: str, dataset_id: str
+    ) -> UTCDatetime | None:
+        """Check until when the given user has download access for the given dataset."""
         url = f"{self._url}/users/{user_id}/datasets/{dataset_id}"
         response = await self._client.get(url)
         if response.status_code == httpx.codes.OK:
-            return response.json() is True
+            valid_until = response.json()
+            if not valid_until:
+                return None
+            try:
+                return datetime.fromisoformat(valid_until)
+            except (ValueError, TypeError) as error:
+                raise self.AccessCheckError from error
         if response.status_code == httpx.codes.NOT_FOUND:
-            return False
+            return None
         raise self.AccessCheckError
 
     @tracer.start_as_current_span(
-        "AccessCheckAdapter.get_datasets_with_download_access"
+        "AccessCheckAdapter.get_accessible_datasets_with_expiration"
     )
-    async def get_datasets_with_download_access(self, user_id: str) -> list[str]:
-        """Get all datasets that the given user is allowed to download."""
+    async def get_accessible_datasets_with_expiration(
+        self, user_id: str
+    ) -> dict[str, UTCDatetime]:
+        """Get all datasets that the given user is allowed to download.
+
+        This method returns a mapping from dataset IDs to access expiration dates.
+        """
         url = f"{self._url}/users/{user_id}/datasets"
         response = await self._client.get(url)
         if response.status_code == httpx.codes.OK:
-            return response.json()
+            dataset_ids = response.json()
+            try:
+                return {
+                    dataset_id: datetime.fromisoformat(valid_until)
+                    for dataset_id, valid_until in dataset_ids.items()
+                }
+            except (ValueError, TypeError) as error:
+                raise self.AccessCheckError from error
         if response.status_code == httpx.codes.NOT_FOUND:
-            return []
+            return {}
         raise self.AccessCheckError

@@ -25,7 +25,7 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from wps.config import Config
-from wps.inject import Consumer, prepare_consumer
+from wps.prepare import Consumer, prepare_consumer
 
 from .fixtures import (  # noqa: F401
     fixture_config,

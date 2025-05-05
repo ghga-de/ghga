@@ -28,6 +28,7 @@ from pydantic_settings import BaseSettings
 
 from wps.core.models import (
     Dataset,
+    DatasetWithExpiration,
     WorkOrderToken,
     WorkPackage,
     WorkPackageCreationData,
@@ -123,15 +124,16 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             "work_type": work_type,
         }
 
-        if work_type == WorkType.DOWNLOAD:
-            if not await self._access.check_download_access(user_id, dataset_id):
-                access_error = self.WorkPackageAccessError(
-                    "Missing dataset access permission"
-                )
-                log.error(access_error, extra=extra)
-                raise access_error
-        else:
+        if work_type != WorkType.DOWNLOAD:
             access_error = self.WorkPackageAccessError("Unsupported work type")
+            log.error(access_error, extra=extra)
+            raise access_error
+
+        expires = await self._access.check_download_access(user_id, dataset_id)
+        if not expires:
+            access_error = self.WorkPackageAccessError(
+                "Missing dataset access permission"
+            )
             log.error(access_error, extra=extra)
             raise access_error
 
@@ -164,7 +166,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             full_user_name = auth_context.title + " " + full_user_name
 
         created = now_as_utc()
-        expires = created + self._valid_timedelta
+        expires = min(created + self._valid_timedelta, expires)
 
         token = generate_work_package_access_token()
         user_public_crypt4gh_key = creation_data.user_public_crypt4gh_key
@@ -184,7 +186,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         await self._dao.insert(work_package)
         encrypted_token = encrypt(token, user_public_crypt4gh_key)
         return WorkPackageCreationResponse(
-            id=str(work_package.id), token=encrypted_token
+            id=str(work_package.id), token=encrypted_token, expires=expires
         )
 
     async def get(
@@ -226,17 +228,15 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
                 log.error(access_error, extra=extra)
                 raise access_error
 
-            if work_package.type == WorkType.DOWNLOAD:
-                if not await self._access.check_download_access(
-                    work_package.user_id, work_package.dataset_id
-                ):
-                    access_error = self.WorkPackageAccessError(
-                        "Access has been revoked"
-                    )
-                    log.error(access_error, extra=extra)
-                    raise access_error
-            else:
+            if work_package.type != WorkType.DOWNLOAD:
                 access_error = self.WorkPackageAccessError("Unsupported work type")
+                log.error(access_error, extra=extra)
+                raise access_error
+
+            if not await self._access.check_download_access(
+                work_package.user_id, work_package.dataset_id
+            ):
+                access_error = self.WorkPackageAccessError("Access has been revoked")
                 log.error(access_error, extra=extra)
                 raise access_error
 
@@ -321,8 +321,10 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
     async def get_datasets(
         self, *, auth_context: AuthContext, work_type: WorkType | None = None
-    ) -> list[Dataset]:
+    ) -> list[DatasetWithExpiration]:
         """Get the list of all datasets accessible to the authenticated user.
+
+        The returned datasets also have an expiration date until when access is granted.
 
         A work type can be specified for filtering the datasets. If no work type is
         specified, the datasets for all work types (upload and download) are returned.
@@ -340,13 +342,18 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             log.error(access_error, extra={"work_type": work_type})
             raise access_error
 
-        dataset_ids = await self._access.get_datasets_with_download_access(user_id)
-        datasets: list[Dataset] = []
-        for dataset_id in dataset_ids:
+        dataset_id_to_expiration = (
+            await self._access.get_accessible_datasets_with_expiration(user_id)
+        )
+        datasets_with_expiration: list[DatasetWithExpiration] = []
+        for dataset_id in dataset_id_to_expiration:
             try:
                 dataset = await self.get_dataset(dataset_id)
             except self.DatasetNotFoundError:
                 log.debug("Dataset '%s' not found, continuing...", dataset_id)
                 continue
-            datasets.append(dataset)
-        return datasets
+            dataset_with_expiration = DatasetWithExpiration(
+                **dataset.model_dump(), expires=dataset_id_to_expiration[dataset_id]
+            )
+            datasets_with_expiration.append(dataset_with_expiration)
+        return datasets_with_expiration

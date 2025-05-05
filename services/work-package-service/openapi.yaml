@@ -52,6 +52,47 @@ components:
       - extension
       title: DatasetFile
       type: object
+    DatasetWithExpiration:
+      additionalProperties: false
+      description: A model describing a dataset with an expiration date.
+      properties:
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The description of the dataset.
+          title: Description
+        expires:
+          description: The expiration date of access to the dataset.
+          format: date-time
+          title: Expires
+          type: string
+        files:
+          description: Files contained in the dataset.
+          items:
+            $ref: '#/components/schemas/DatasetFile'
+          title: Files
+          type: array
+        id:
+          description: ID of the dataset
+          title: Id
+          type: string
+        stage:
+          $ref: '#/components/schemas/WorkType'
+          description: Current stage of this dataset.
+        title:
+          description: The title of the dataset.
+          title: Title
+          type: string
+      required:
+      - id
+      - stage
+      - title
+      - description
+      - files
+      - expires
+      title: DatasetWithExpiration
+      type: object
     WorkPackageCreationData:
       additionalProperties: false
       description: All data necessary to create a work package.
@@ -83,6 +124,11 @@ components:
     WorkPackageCreationResponse:
       description: Response when a work package has been created.
       properties:
+        expires:
+          description: The expiration date of the work package access token
+          format: date-time
+          title: Expires
+          type: string
         id:
           description: ID of the work package
           title: Id
@@ -95,6 +141,7 @@ components:
       required:
       - id
       - token
+      - expires
       title: WorkPackageCreationResponse
       type: object
     WorkPackageDetails:
@@ -141,7 +188,7 @@ components:
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
-  version: 3.1.1
+  version: 4.0.0
 openapi: 3.1.0
 paths:
   /health:
@@ -160,7 +207,7 @@ paths:
   /users/{user_id}/datasets:
     get:
       description: Endpoint used to get details for all datasets that are accessible
-        to the given user
+        to the given user including their expiration dates.
       operationId: get_datasets
       parameters:
       - in: path
