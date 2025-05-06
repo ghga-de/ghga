@@ -129,7 +129,13 @@ class AccessRequestPatchData(BaseDto):
         default=None,
         description="ID of the IVA to be used for this request",
     )
-    status: AccessRequestStatus = Field(
-        default=...,
+    status: AccessRequestStatus | None = Field(
+        default=None,
         description="The new status of this access request",
+    )
+    access_starts: UTCDatetime | None = Field(
+        default=None, description="Modified start date of access"
+    )
+    access_ends: UTCDatetime | None = Field(
+        default=None, description="Modified end date of access"
     )

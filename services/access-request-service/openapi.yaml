@@ -130,6 +130,20 @@ components:
       additionalProperties: false
       description: All data that describes an access request patch.
       properties:
+        access_ends:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Modified end date of access
+          title: Access Ends
+        access_starts:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Modified start date of access
+          title: Access Starts
         iva_id:
           anyOf:
           - type: string
@@ -137,10 +151,10 @@ components:
           description: ID of the IVA to be used for this request
           title: Iva Id
         status:
-          $ref: '#/components/schemas/AccessRequestStatus'
+          anyOf:
+          - $ref: '#/components/schemas/AccessRequestStatus'
+          - type: 'null'
           description: The new status of this access request
-      required:
-      - status
       title: AccessRequestPatchData
       type: object
     AccessRequestStatus:
@@ -237,7 +251,8 @@ paths:
       - AccessRequests
   /access-requests/{access_request_id}:
     patch:
-      description: Endpoint used to set the status of an access request
+      description: Endpoint used to set the status or modify other fields of an access
+        request
       operationId: patch_access_request
       parameters:
       - in: path
@@ -254,16 +269,16 @@ paths:
         required: true
       responses:
         '204':
-          description: Status was successfully changed
+          description: Access request was successfully changed
         '403':
-          description: Not authorized to create an access request.
+          description: Not authorized to change access request.
         '404':
           description: Access request does not exist.
         '422':
           description: Validation error in submitted data.
       security:
       - HTTPBearer: []
-      summary: Set status of an access request
+      summary: Set status or modify other fields of an access request
       tags:
       - AccessRequests
   /health:

@@ -35,4 +35,3 @@ class EventPublisherPort(ABC):
     @abstractmethod
     async def publish_request_denied(self, *, request: models.AccessRequest) -> None:
         """Publish an event relaying that an access request was denied."""
-        ...

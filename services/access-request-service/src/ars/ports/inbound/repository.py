@@ -23,6 +23,7 @@ from ghga_service_commons.auth.ghga import AuthContext
 from ars.core.models import (
     AccessRequest,
     AccessRequestCreationData,
+    AccessRequestPatchData,
     AccessRequestStatus,
     Dataset,
 )
@@ -40,8 +41,8 @@ class AccessRequestRepositoryPort(ABC):
     class AccessRequestMissingIva(AccessRequestError):
         """Error raised when an IVA is needed, but not provided."""
 
-    class AccessRequestInvalidState(AccessRequestError):
-        """Error raised when the status for access is invalid."""
+    class AccessRequestClosed(AccessRequestError):
+        """Error raised when the access request was already processed."""
 
     class AccessRequestInvalidDuration(AccessRequestError):
         """Error raised when the time frame for access is invalid."""
@@ -93,22 +94,22 @@ class AccessRequestRepositoryPort(ABC):
         self,
         access_request_id: str,
         *,
-        status: AccessRequestStatus,
+        patch_data: AccessRequestPatchData,
         auth_context: AuthContext,
-        iva_id: str | None = None,
     ) -> None:
-        """Update the status of the access request.
+        """Update the status or other fields of the access request.
 
         If the status is set to allowed, an IVA ID must be provided or already exist.
 
         Only data stewards may use this method.
 
         Raises:
-        - `AccessRequestAuthorizationError` if the user is not authorized.
-        - `AccessRequestNotFoundError` if the specified request was not found.
-        - `AccessRequestMissingIva` if an IVA is needed but not provided.
-        - `AccessRequestInvalidState` error if the specified state is invalid.
-        - `AccessRequestServerError` if the grant could not be registered.
+        - `AccessRequestNotFoundError` if the specified request was not found
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        - `AccessRequestClosed` if the access request was already processed
+        - `AccessRequestMissingIva` if an IVA is needed but not provided
+        - `AccessRequestInvalidDuration` if the end date isn't later than the start date
+        - `AccessRequestServerError` if the access grant could not be registered
         """
         ...
 

@@ -29,6 +29,7 @@ from pydantic_settings import BaseSettings
 from ars.core.models import (
     AccessRequest,
     AccessRequestCreationData,
+    AccessRequestPatchData,
     AccessRequestStatus,
     Dataset,
 )
@@ -196,29 +197,23 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self,
         access_request_id: str,
         *,
-        status: AccessRequestStatus,
+        patch_data: AccessRequestPatchData,
         auth_context: AuthContext,
-        iva_id: str | None = None,
     ) -> None:
-        """Update the status of the access request.
+        """Update the status or other fields of the access request.
 
         If the status is set to allowed, an IVA ID must be provided or already exist.
 
         Only data stewards may use this method.
 
         Raises:
-        - `AccessRequestAuthorizationError` if the user is not authorized.
-        - `AccessRequestNotFoundError` if the specified request was not found.
-        - `AccessRequestMissingIva` if an IVA is needed but not provided.
-        - `AccessRequestInvalidState` error if the specified state is invalid.
-        - `AccessRequestServerError` if the grant could not be registered.
+        - `AccessRequestNotFoundError` if the specified request was not found
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        - `AccessRequestClosed` if the access request was already processed
+        - `AccessRequestMissingIva` if an IVA is needed but not provided
+        - `AccessRequestInvalidDuration` if the end date isn't later than the start date
+        - `AccessRequestServerError` if the access grant could not be registered
         """
-        user_id = auth_context.id
-        if not user_id or not has_role(auth_context, DATA_STEWARD_ROLE):
-            authorization_error = self.AccessRequestAuthorizationError("Not authorized")
-            log.error(authorization_error)
-            raise authorization_error
-
         try:
             request = await self._request_dao.get_by_id(access_request_id)
         except ResourceNotFoundError as error:
@@ -227,20 +222,22 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             )
             log.error(not_found_error, extra={"access_request_id": access_request_id})
             raise not_found_error from error
-        if request.status == status:
-            invalid_state_error = self.AccessRequestInvalidState(
-                "Same status is already set"
-            )
-            log.error(invalid_state_error)
-            raise invalid_state_error
+
+        user_id = auth_context.id
+        if not (user_id and has_role(auth_context, DATA_STEWARD_ROLE)):
+            authorization_error = self.AccessRequestAuthorizationError("Not authorized")
+            log.error(authorization_error)
+            raise authorization_error
+
         if request.status != AccessRequestStatus.PENDING:
-            invalid_state_error = self.AccessRequestInvalidState(
-                "Status cannot be reverted"
+            invalid_state_error = self.AccessRequestClosed(
+                "Access request has already been processed"
             )
             log.error(invalid_state_error)
             raise invalid_state_error
-        if not iva_id:
-            iva_id = request.iva_id
+
+        status = patch_data.status or request.status
+        iva_id = patch_data.iva_id or request.iva_id
         if status == AccessRequestStatus.ALLOWED and not iva_id:
             missing_iva_error = self.AccessRequestMissingIva(
                 "An IVA ID must be specified"
@@ -248,15 +245,27 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(missing_iva_error)
             raise missing_iva_error
 
-        modified_request = request.model_copy(
-            update={
-                "iva_id": iva_id,
-                "status": status,
-                "status_changed": now_as_utc(),
-                "changed_by": user_id,
-            }
-        )
+        access_starts = patch_data.access_starts or request.access_starts
+        access_ends = patch_data.access_ends or request.access_ends
 
+        if access_starts >= access_ends:
+            invalid_duration_error = self.AccessRequestInvalidDuration(
+                "Access end date must be later than access start date"
+            )
+            raise invalid_duration_error
+
+        update: dict[str, Any] = {
+            "iva_id": iva_id,
+            "access_starts": access_starts,
+            "access_ends": access_ends,
+        }
+
+        if status != AccessRequestStatus.PENDING:
+            update["status"] = status
+            update["status_changed"] = now_as_utc()
+            update["changed_by"] = user_id
+
+        modified_request = request.model_copy(update=update)
         await self._request_dao.update(modified_request)
 
         if status == AccessRequestStatus.ALLOWED:
@@ -266,8 +275,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                     user_id=request.user_id,
                     iva_id=cast(str, iva_id),  # has already been checked above
                     dataset_id=request.dataset_id,
-                    valid_from=request.access_starts,
-                    valid_until=request.access_ends,
+                    valid_from=access_starts,
+                    valid_until=access_ends,
                 )
             except self._access_grants.AccessGrantsError as error:
                 # roll back the status update
@@ -279,6 +288,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 raise server_error from error
 
         # Emit events that communicate the fate of the access request
+        # (this can be removed when we switch to an outbox DAO)
         if status == AccessRequestStatus.DENIED:
             await self._event_publisher.publish_request_denied(request=request)
         elif status == AccessRequestStatus.ALLOWED:
