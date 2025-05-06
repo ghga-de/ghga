@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=69",
+    "setuptools>=80.3",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -11,7 +11,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -21,12 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "top"
-version = "1.2.1"
+version = "2.0.0"
 description = "Test OpenID Connect provider"
 dependencies = [
-    "typer >= 0.12",
-    "ghga-service-commons[api,auth] >= 3.1.5, < 4",
-    "hexkit >= 3.2.2, < 4",
+    "typer >= 0.15",
+    "ghga-service-commons[api,auth] >= 4, < 5",
+    "hexkit >= 4.5, < 5",
+    "python-multipart >= 0.0.20",
 ]
 
 [project.license]
@@ -65,6 +66,7 @@ fixable = [
     "UP",
     "I",
     "D",
+    "RUF022",
 ]
 ignore = [
     "E111",
@@ -84,6 +86,7 @@ ignore = [
     "D206",
     "D300",
     "UP040",
+    "PLC0206",
 ]
 select = [
     "C90",
@@ -143,8 +146,9 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "8.3"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [

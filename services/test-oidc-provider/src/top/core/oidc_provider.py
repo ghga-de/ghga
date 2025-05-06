@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,11 @@
 """Test OpenID Connect provider"""
 
 import asyncio
+import string
 from contextlib import suppress
+from secrets import choice
 from typing import Any
+from urllib.parse import urlencode
 
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
@@ -30,9 +33,17 @@ from pydantic import AnyHttpUrl, Field, PositiveInt
 from pydantic_settings import BaseSettings
 from typing_extensions import TypedDict
 
-from .models import LoginInfo, UserInfo
+from .models import LoginInfo, TokenResponse, UserInfo
 
-__all__ = ["Jwks", "OidcProviderConfig", "OidcProvider"]
+__all__ = ["Jwks", "OidcProvider", "OidcProviderConfig"]
+
+
+type Code2Token = dict[str, str]  # maps authorization codes to access tokens
+type Token2User = dict[str, UserInfo]  # maps access tokens to user info
+
+CODE_CHARS = string.ascii_letters + string.digits  # alphabet for authorization codes
+CODE_LEN = 32  # length of the authorization code
+SCOPE = "openid profile email"  # default scope for the authorization code flow
 
 
 class Jwks(TypedDict):
@@ -52,6 +63,10 @@ class OidcProviderConfig(BaseSettings):
         description="domain name of the home organization of the test users",
     )
     client_id: str = Field(default="test-client", description="test client ID")
+    redirect_url: AnyHttpUrl = Field(
+        default=AnyHttpUrl("https://client.test/oauth/callback"),
+        description="test redirect URL",
+    )
     valid_seconds: PositiveInt = Field(
         default=60 * 60,
         description="default expiration time of access tokens in seconds",
@@ -61,7 +76,8 @@ class OidcProviderConfig(BaseSettings):
 class OidcProvider:
     """A test OpenID Connect provider."""
 
-    users: dict[str, UserInfo]
+    tokens: Code2Token
+    users: Token2User
     key_set: jwk.JWKSet
     issuer: str
     op_domain: str
@@ -85,7 +101,9 @@ class OidcProvider:
         self.valid_seconds = config.valid_seconds
         self.user_domain = str(user_domain)
         self.client_id = config.client_id
+        self.redirect_url = str(config.redirect_url)
         self._generate_keys()
+        self.tokens = {}
         self.users = {}
         self.serial_id = 1
         self.tasks = set()
@@ -103,6 +121,7 @@ class OidcProvider:
     async def reset(self):
         """Reset the OP, clear all data."""
         await self._cancel_tasks()
+        self.tokens.clear()
         self.users.clear()
         self.serial_id = 1
 
@@ -171,14 +190,12 @@ class OidcProvider:
         user = UserInfo(sub=sub, email=email, name=name)
         jti = f"test-{self.serial_id}"
         claims = {
-            "jti": jti,
-            "sid": jti,
-            "iss": self.issuer,
-            "sub": sub,
-            "client_id": self.client_id,
-            "token_class": "access_token",
-            "scope": "openid profile email",
             "aud": [self.client_id],
+            "sub": sub,
+            "scope": SCOPE,
+            "iss": self.issuer,
+            "client_id": self.client_id,
+            "jti": jti,
         }
         token = sign_and_serialize_token(
             claims,
@@ -188,6 +205,84 @@ class OidcProvider:
         self._add_user(token, user)
         self._add_cleanup_task(token, valid_seconds)
         return token
+
+    @staticmethod
+    def _create_code() -> str:
+        """Create a random code for the authorization code flow."""
+        return "".join(choice(CODE_CHARS) for _ in range(CODE_LEN))
+
+    def authorize(
+        self,
+        response_type: str,
+        client_id: str,
+        redirect_uri: str,
+        scope: str,
+        state: str,
+    ) -> str:
+        """Generate a callback URL with authorization code.
+
+        The code will authorize the client as the last logged in user.
+        """
+        error = msg = token = None
+        if redirect_uri != self.redirect_url:
+            msg = f"Invalid redirect URI: {redirect_uri!r}, expected {self.redirect_url!r}"
+            raise ValueError(msg)
+        if response_type != "code":
+            error = "invalid_response_type"
+            msg = f"Invalid response type: {response_type!r}, expected 'code'"
+        elif "openid" not in scope.split():
+            error = "invalid_scope"
+            msg = f"Invalid scope: {scope!r}, expected 'openid'"
+        elif not state:
+            error = "missing_state"
+            msg = "Missing state"
+        elif client_id != self.client_id:
+            error = "unauthorized_client"
+            msg = f"Invalid client ID: {client_id!r}, expected {self.client_id!r}"
+        else:
+            with suppress(StopIteration):
+                token = next(reversed(self.users))
+        if not token:
+            error = "login_required"
+            msg = "User did not log in"
+        if error or not token:
+            params = {"error": error, "error_description": msg}
+        else:
+            code = self._create_code()
+            self.tokens[code] = token
+            params = {"code": code}
+        params["state"] = state
+        return f"{redirect_uri}?{urlencode(params)}"
+
+    def token(
+        self,
+        grant_type: str,
+        code: str,
+        redirect_uri: str,
+        client_id: str,
+    ) -> TokenResponse:
+        """Exchange an authorization code for an access token.
+
+        This does not return an ID token on purpose,
+        so that the client needs to request the user info separately.
+        """
+        msg = None
+        if grant_type != "authorization_code":
+            msg = f"Invalid grant type: {grant_type!r}, expected 'authorization_code'"
+        elif client_id != self.client_id:
+            msg = f"Invalid client ID: {client_id!r}, expected {self.client_id!r}"
+        elif redirect_uri != self.redirect_url:
+            msg = f"Invalid redirect URI: {redirect_uri!r}, expected {self.redirect_url!r}"
+        if code not in self.tokens:
+            msg = "Authorization code is invalid or expired"
+        if msg:
+            raise ValueError(msg)
+        access_token = self.tokens.pop(code)
+        return TokenResponse(
+            access_token=access_token,
+            expires_in=int(self.valid_seconds),
+            scope=SCOPE,
+        )
 
     def user_info(self, token: str) -> UserInfo:
         """Return the user info associated with the given access token.

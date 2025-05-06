@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,12 @@
 """Unit tests for the core functionality."""
 
 import asyncio
+from urllib.parse import parse_qs, urlparse
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import mark, raises
 
-from top.core.models import LoginInfo, UserInfo
+from top.core.models import LoginInfo, TokenResponse, UserInfo
 from top.core.oidc_provider import OidcProvider, OidcProviderConfig
 
 
@@ -198,15 +199,13 @@ async def test_validate_default_tokens():
     claims = provider.decode_and_validate_token(token)
     assert isinstance(claims, dict)
     keys = " ".join(sorted(claims))
-    assert keys == "aud client_id exp iat iss jti scope sid sub token_class"
+    assert keys == "aud client_id exp iat iss jti scope sub"
     assert claims["client_id"] == "test-client"
     assert claims["aud"] == [claims["client_id"]]
     assert claims["iss"] == "https://op.test"
     assert claims["jti"] == "test-1"
-    assert claims["sid"] == claims["jti"]
     assert claims["scope"] == "openid profile email"
     assert claims["sub"] == "id-of-john-doe@op.test"
-    assert claims["token_class"] == "access_token"
     iat = claims["iat"]
     assert isinstance(iat, int)
     exp = claims["exp"]
@@ -225,15 +224,13 @@ async def test_validate_default_tokens():
     claims = provider.decode_and_validate_token(token)
     assert isinstance(claims, dict)
     keys = " ".join(sorted(claims))
-    assert keys == "aud client_id exp iat iss jti scope sid sub token_class"
+    assert keys == "aud client_id exp iat iss jti scope sub"
     assert claims["client_id"] == "test-client"
     assert claims["aud"] == [claims["client_id"]]
     assert claims["iss"] == "https://op.test"
     assert claims["jti"] == "test-2"
-    assert claims["sid"] == claims["jti"]
     assert claims["scope"] == "openid profile email"
     assert claims["sub"] == "sub-of-jane"
-    assert claims["token_class"] == "access_token"
     iat = claims["iat"]
     assert isinstance(iat, int)
     exp = claims["exp"]
@@ -319,3 +316,90 @@ async def test_more_expiring_tasks():
             assert provider.user_info(long_token)
         with raises(KeyError):
             provider.user_info(short_tokens)
+
+
+@mark.asyncio
+async def test_authorization_code_flow():
+    """Test getting a dummy user via the full authorization code flow."""
+    config = OidcProviderConfig()
+    provider = OidcProvider(config)
+
+    authorize_kwargs = {
+        "response_type": "code",
+        "client_id": "test-client",
+        "redirect_uri": "https://client.test/oauth/callback",
+        "scope": "openid profile email",
+        "state": "some-state",
+    }
+
+    # try authorization without logging in
+
+    url = provider.authorize(**authorize_kwargs)
+
+    assert url.startswith("https://client.test/oauth/callback?")
+    params = parse_qs(urlparse(url).query)
+    assert sorted(params) == ["error", "error_description", "state"]
+    assert params["error"] == ["login_required"]
+    assert params["error_description"] == ["User did not log in"]
+    assert params["state"] == ["some-state"]
+
+    # log in and try to authorize again
+
+    login = LoginInfo(name="John Doe")
+    token = provider.login(login)
+    assert isinstance(token, str)
+    assert len(provider.users) == 1
+
+    url = provider.authorize(**authorize_kwargs)
+
+    assert url.startswith("https://client.test/oauth/callback?")
+    params = parse_qs(urlparse(url).query)
+    assert sorted(params) == ["code", "state"]
+    assert len(params["code"]) == 1
+    code = params["code"][0]
+    assert len(code) == 32
+    assert params["state"] == ["some-state"]
+
+    # exchange authorization code for access token
+
+    token_kwargs = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": "https://client.test/oauth/callback",
+        "client_id": "test-client",
+    }
+
+    # first try with a bad code
+
+    bad_token_kwargs = token_kwargs | {"code": "bad-code"}
+    with raises(ValueError, match="Authorization code is invalid or expired"):
+        provider.token(**bad_token_kwargs)
+
+    # now try again with the correct code
+
+    response = provider.token(**token_kwargs)
+    assert isinstance(response, TokenResponse)
+    assert response.token_type == "Bearer"
+    assert response.scope == "openid profile email"
+    assert response.access_token == token
+    expires_in = response.expires_in
+    assert isinstance(expires_in, int)
+    assert expires_in == 60 * 60
+
+    # fetch user info with token
+
+    user = provider.user_info(token)
+    assert isinstance(user, UserInfo)
+    assert user.name == "John Doe"
+    assert user.email == "john.doe@home.org"
+    assert user.sub == "id-of-john-doe@op.test"
+
+    # clean up
+
+    assert len(provider.tasks) == 1
+    await provider.reset()
+    assert not provider.users
+    assert not provider.tasks
+
+    with raises(KeyError):
+        provider.user_info(token)

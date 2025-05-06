@@ -1,5 +1,25 @@
 components:
   schemas:
+    Body_token_token_post:
+      properties:
+        client_id:
+          default: ''
+          title: Client Id
+          type: string
+        code:
+          default: ''
+          title: Code
+          type: string
+        grant_type:
+          default: ''
+          title: Grant Type
+          type: string
+        redirect_uri:
+          default: ''
+          title: Redirect Uri
+          type: string
+      title: Body_token_token_post
+      type: object
     Jwks:
       description: A JSON Web Key Set as a dictionary.
       properties:
@@ -50,6 +70,13 @@ components:
     OidcConfiguration:
       description: Data that is returned as OpenID Connect configuration.
       properties:
+        authorization_endpoint:
+          default: http://localhost:8080/authorize
+          description: URL of the OP's Authorization Endpoint
+          format: uri
+          minLength: 1
+          title: Authorization Endpoint
+          type: string
         claims_supported:
           default:
           - sub
@@ -98,6 +125,13 @@ components:
           minLength: 1
           title: Service Documentation
           type: string
+        token_endpoint:
+          default: http://localhost:8080/token
+          description: URL of the OP's Token Endpoint
+          format: uri
+          minLength: 1
+          title: Token Endpoint
+          type: string
         userinfo_endpoint:
           default: http://localhost:8080/userinfo
           description: URL of the OP's UserInfo Endpoint
@@ -115,11 +149,37 @@ components:
           title: Userinfo Signing Alg Values Supported
           type: array
         version:
-          default: 1.2.1
+          default: 2.0.0
           description: Version of the test OpenID Connect Provider
           title: Version
           type: string
       title: OidcConfiguration
+      type: object
+    TokenResponse:
+      description: The data that is returned by the token endpoint.
+      properties:
+        access_token:
+          description: The issued access token
+          title: Access Token
+          type: string
+        expires_in:
+          description: Lifetime of the access token in seconds
+          title: Expires In
+          type: integer
+        scope:
+          description: The scopes granted
+          title: Scope
+          type: string
+        token_type:
+          default: Bearer
+          description: Type of the token
+          title: Token Type
+          type: string
+      required:
+      - access_token
+      - expires_in
+      - scope
+      title: TokenResponse
       type: object
     UserInfo:
       description: Data that is returned by the UserInfo endpoint.
@@ -164,6 +224,55 @@ paths:
                 $ref: '#/components/schemas/OidcConfiguration'
           description: Successful Response
       summary: Get the OpenID connect configuration
+      tags:
+      - TestOP
+  /authorize:
+    get:
+      description: 'The authorization endpoint of the test OP.
+
+
+        This authorizes the last logged in test user without checking credentials.'
+      operationId: authorize_authorize_get
+      parameters:
+      - in: query
+        name: response_type
+        required: true
+        schema:
+          title: Response Type
+          type: string
+      - in: query
+        name: client_id
+        required: true
+        schema:
+          title: Client Id
+          type: string
+      - in: query
+        name: redirect_uri
+        required: true
+        schema:
+          title: Redirect Uri
+          type: string
+      - in: query
+        name: scope
+        required: true
+        schema:
+          title: Scope
+          type: string
+      - in: query
+        name: state
+        required: true
+        schema:
+          title: State
+          type: string
+      responses:
+        '302':
+          content:
+            application/json:
+              schema: {}
+          description: Redirected back to client.
+        '422':
+          description: Validation error in submitted data.
+      summary: OIDC Authorization Endpoint
       tags:
       - TestOP
   /health:
@@ -214,6 +323,29 @@ paths:
         '422':
           description: Validation error in submitted data.
       summary: Log in as a test user
+      tags:
+      - TestOP
+  /token:
+    post:
+      description: The token endpoint of the test OP.
+      operationId: token_token_post
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Body_token_token_post'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+          description: Access token has been granted.
+        '400':
+          description: Error in submitted data.
+        '422':
+          description: Validation error in submitted data.
+      summary: OIDC Token Endpoint
       tags:
       - TestOP
   /userinfo:

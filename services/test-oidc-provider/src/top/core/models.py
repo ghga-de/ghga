@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ from pydantic import (
 
 from .. import __version__
 
-__all__ = ["LoginInfo", "UserInfo", "OidcConfiguration"]
+__all__ = ["LoginInfo", "OidcConfiguration", "UserInfo"]
 
 
 class LoginInfo(BaseModel):
@@ -84,6 +84,14 @@ class OidcConfiguration(BaseModel):
         description="List of JWS signing algorithms"
         " supported by the OP for the UserInfo endpoint",
     )
+    authorization_endpoint: AnyHttpUrl = Field(
+        default=AnyHttpUrl("http://localhost:8080/authorize"),
+        description="URL of the OP's Authorization Endpoint",
+    )
+    token_endpoint: AnyHttpUrl = Field(
+        default=AnyHttpUrl("http://localhost:8080/token"),
+        description="URL of the OP's Token Endpoint",
+    )
     userinfo_endpoint: AnyHttpUrl = Field(
         default=AnyHttpUrl("http://localhost:8080/userinfo"),
         description="URL of the OP's UserInfo Endpoint",
@@ -98,3 +106,12 @@ class OidcConfiguration(BaseModel):
     def serialize_system(self, system: AnyHttpUrl) -> str:
         """Remove trailing slash from issuer."""
         return str(system).rstrip("/")
+
+
+class TokenResponse(BaseModel):
+    """The data that is returned by the token endpoint."""
+
+    access_token: str = Field(..., description="The issued access token")
+    token_type: str = Field(default="Bearer", description="Type of the token")
+    expires_in: int = Field(..., description="Lifetime of the access token in seconds")
+    scope: str = Field(..., description="The scopes granted")

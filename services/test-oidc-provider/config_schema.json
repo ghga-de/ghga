@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Modifies the orginal Settings class provided by the user",
+  "description": "Modifies the original Settings class provided by the user",
   "properties": {
     "log_level": {
       "default": "INFO",
@@ -45,6 +45,12 @@
       ],
       "title": "Log Format"
     },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
     "issuer": {
       "default": "https://op.test/",
       "description": "test issuer URL",
@@ -63,6 +69,14 @@
       "default": "test-client",
       "description": "test client ID",
       "title": "Client Id",
+      "type": "string"
+    },
+    "redirect_url": {
+      "default": "https://client.test/oauth/callback",
+      "description": "test redirect URL",
+      "format": "uri",
+      "minLength": 1,
+      "title": "Redirect Url",
       "type": "string"
     },
     "valid_seconds": {

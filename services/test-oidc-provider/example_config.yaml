@@ -11,8 +11,10 @@ host: 0.0.0.0
 issuer: https://op.test/
 log_format: null
 log_level: INFO
+log_traceback: true
 openapi_url: /openapi.json
 port: 8080
+redirect_url: https://client.test/oauth/callback
 service_instance_id: '1'
 service_name: top
 user_domain: home.org
