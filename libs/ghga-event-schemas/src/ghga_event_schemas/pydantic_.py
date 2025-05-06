@@ -19,7 +19,7 @@ Please note, these pydantic-based schemas are the source of truth for all other
 schema representations such as json-schema.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -28,7 +28,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from ghga_event_schemas.validation import validated_upload_date
 
 
-class MetadataDatasetStage(str, Enum):
+class MetadataDatasetStage(StrEnum):
     """The current stage that a metadata dataset is in."""
 
     DOWNLOAD = "download"
@@ -403,7 +403,7 @@ class UserID(BaseModel):
     user_id: str = Field(..., description="The user ID")
 
 
-class AcademicTitle(str, Enum):
+class AcademicTitle(StrEnum):
     """Academic title"""
 
     DR = "Dr."
@@ -428,12 +428,30 @@ class User(UserID):
     )
 
 
+class AccessRequestStatus(StrEnum):
+    """The status of an access request."""
+
+    ALLOWED = "allowed"
+    DENIED = "denied"
+    PENDING = "pending"
+
+
 class AccessRequestDetails(UserID):
     """Event used to convey the details an access request."""
 
+    id: str = Field(..., description="The access request ID")
     dataset_id: str = Field(..., description="The dataset ID")
     dataset_title: str = Field(..., description="The dataset title")
-    dataset_description: str = Field(..., description="A description of the dataset")
+    dataset_description: str | None = Field(
+        default=None, description="A description of the dataset"
+    )
+    status: AccessRequestStatus = Field(
+        default=...,
+        description="The status of the access request",
+    )
+    request_text: str = Field(
+        default=..., description="Text note submitted with the request"
+    )
     dac_alias: str = Field(
         ...,
         description="The alias of the Data Access Committee responsible for the dataset",
@@ -460,7 +478,7 @@ class AccessRequestDetails(UserID):
     )
 
 
-class IvaType(str, Enum):
+class IvaType(StrEnum):
     """The type of IVA"""
 
     PHONE = "Phone"
@@ -469,7 +487,7 @@ class IvaType(str, Enum):
     IN_PERSON = "InPerson"
 
 
-class IvaState(str, Enum):
+class IvaState(StrEnum):
     """The state of an IVA"""
 
     UNVERIFIED = "Unverified"
