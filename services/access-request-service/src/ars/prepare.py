@@ -25,12 +25,12 @@ from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from ars.adapters.inbound.event_sub import EventSubTranslator
 from ars.adapters.inbound.fastapi_ import dummies
 from ars.adapters.inbound.fastapi_.configure import get_configured_app
 from ars.adapters.outbound.daos import get_access_request_dao, get_dataset_dao
-from ars.adapters.outbound.event_pub import EventPubTranslator
 from ars.adapters.outbound.http import AccessGrantsAdapter
 from ars.config import Config
 from ars.core.repository import AccessRequestRepository
@@ -44,19 +44,17 @@ async def prepare_core(
 ) -> AsyncGenerator[AccessRequestRepositoryPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     dao_factory = MongoDbDaoFactory(config=config)
-    access_request_dao = await get_access_request_dao(dao_factory=dao_factory)
     dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
     async with (
-        KafkaEventPublisher.construct(config=config) as event_publisher,
+        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
         AccessGrantsAdapter.construct(config=config) as access_grants,
     ):
-        event_publisher = EventPubTranslator(
-            config=config, event_publisher=event_publisher
+        access_request_dao = await get_access_request_dao(
+            config=config, dao_publisher_factory=dao_publisher_factory
         )
         yield AccessRequestRepository(
             access_request_dao=access_request_dao,
             dataset_dao=dataset_dao,
-            event_publisher=event_publisher,
             access_grants=access_grants,
             config=config,
         )

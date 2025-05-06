@@ -41,7 +41,6 @@ from ars.ports.outbound.daos import (
     DatasetDaoPort,
     ResourceNotFoundError,
 )
-from ars.ports.outbound.event_pub import EventPublisherPort
 
 __all__ = ["AccessRequestConfig", "AccessRequestRepository"]
 
@@ -74,7 +73,6 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         config: AccessRequestConfig,
         access_request_dao: AccessRequestDaoPort,
         dataset_dao: DatasetDaoPort,
-        event_publisher: EventPublisherPort,
         access_grants: AccessGrantsPort,
     ):
         """Initialize with specific configuration and outbound adapter."""
@@ -83,7 +81,6 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self._max_duration = timedelta(days=config.access_grant_max_days)
         self._request_dao = access_request_dao
         self._dataset_dao = dataset_dao
-        self._event_publisher = event_publisher
         self._access_grants = access_grants
 
     async def create(
@@ -140,8 +137,6 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         await self._request_dao.insert(access_request)
 
-        await self._event_publisher.publish_request_created(request=access_request)
-
         return access_request
 
     async def get(
@@ -193,7 +188,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         return requests
 
-    async def update(  # noqa: C901
+    async def update(
         self,
         access_request_id: str,
         *,
@@ -287,17 +282,10 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 log.error(server_error)
                 raise server_error from error
 
-        # Emit events that communicate the fate of the access request
-        # (this can be removed when we switch to an outbox DAO)
-        if status == AccessRequestStatus.DENIED:
-            await self._event_publisher.publish_request_denied(request=request)
-        elif status == AccessRequestStatus.ALLOWED:
-            await self._event_publisher.publish_request_allowed(request=request)
-
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:
         """Blank out internal information in the request"""
-        return request.model_copy(update={"changed_by": None})
+        return request.model_copy(update={"changed_by": None, "internal_note": None})
 
     async def register_dataset(self, dataset: Dataset) -> None:
         """Register a dataset in the repository."""

@@ -17,10 +17,10 @@
 in the API.
 """
 
-from enum import Enum
 from typing import Annotated
 from uuid import uuid4
 
+from ghga_event_schemas.pydantic_ import AccessRequestStatus
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -52,14 +52,6 @@ class Dataset(BaseDto):
     )
 
 
-class AccessRequestStatus(str, Enum):
-    """The status of an access request."""
-
-    ALLOWED = "allowed"
-    DENIED = "denied"
-    PENDING = "pending"
-
-
 # Accession format should be moved to the commons module
 Accession = Annotated[
     str, StringConstraints(strip_whitespace=True, pattern="^[A-Z]{1,6}[0-9]{3,18}$")
@@ -77,6 +69,13 @@ class AccessRequestCreationData(BaseDto):
     )
     dataset_id: Accession = Field(
         default=..., description="ID of the dataset for which access is requested"
+    )
+    dataset_title: str = Field(default=..., description="Title of the dataset")
+    dataset_description: str | None = Field(
+        default=None, description="Description of the dataset"
+    )
+    dac_alias: str = Field(
+        default=..., description="The alias of the Data Access Committee."
     )
     email: str = Field(
         default=..., description="Contact e-mail address of the requester"

@@ -28,6 +28,14 @@
       "title": "Download Access Url",
       "type": "string"
     },
+    "access_request_topic": {
+      "description": "Name of the event topic containing access request events",
+      "examples": [
+        "access-requests"
+      ],
+      "title": "Access Request Topic",
+      "type": "string"
+    },
     "dataset_change_topic": {
       "description": "Name of the topic announcing, among other things, the list of files included in a new dataset.",
       "examples": [
@@ -37,7 +45,7 @@
       "type": "string"
     },
     "dataset_deletion_type": {
-      "description": "Type used for events announcing a new dataset overview.",
+      "description": "Event type used for communicating dataset deletions",
       "examples": [
         "dataset_deleted"
       ],
@@ -45,43 +53,11 @@
       "type": "string"
     },
     "dataset_upsertion_type": {
-      "description": "Type used for events announcing a new dataset overview.",
+      "description": "Event type used for communicating dataset upsertions",
       "examples": [
-        "dataset_created"
+        "dataset_upserted"
       ],
       "title": "Dataset Upsertion Type",
-      "type": "string"
-    },
-    "access_request_topic": {
-      "description": "Name of the event topic used to consume access request events",
-      "examples": [
-        "access-requests"
-      ],
-      "title": "Access Request Topic",
-      "type": "string"
-    },
-    "access_request_denied_type": {
-      "description": "The type to use for access request denied events",
-      "examples": [
-        "access_request_denied"
-      ],
-      "title": "Access Request Denied Type",
-      "type": "string"
-    },
-    "access_request_created_type": {
-      "description": "The type to use for access request created events",
-      "examples": [
-        "access_request_created"
-      ],
-      "title": "Access Request Created Type",
-      "type": "string"
-    },
-    "access_request_allowed_type": {
-      "description": "The type to use for access request allowed events",
-      "examples": [
-        "access_request_allowed"
-      ],
-      "title": "Access Request Allowed Type",
       "type": "string"
     },
     "service_name": {
@@ -456,13 +432,10 @@
   },
   "required": [
     "download_access_url",
+    "access_request_topic",
     "dataset_change_topic",
     "dataset_deletion_type",
     "dataset_upsertion_type",
-    "access_request_topic",
-    "access_request_denied_type",
-    "access_request_created_type",
-    "access_request_allowed_type",
     "service_instance_id",
     "kafka_servers",
     "mongo_dsn",

@@ -19,7 +19,7 @@
 from collections.abc import AsyncIterator, Mapping
 from datetime import timedelta
 from operator import attrgetter
-from typing import Any, NamedTuple
+from typing import Any
 
 import pytest
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
@@ -27,7 +27,6 @@ from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_da
 from hexkit.custom_types import ID
 
 from ars.core.models import (
-    Accession,
     AccessRequest,
     AccessRequestCreationData,
     AccessRequestPatchData,
@@ -41,7 +40,6 @@ from ars.ports.outbound.daos import (
     DatasetDaoPort,
     ResourceNotFoundError,
 )
-from ars.ports.outbound.event_pub import EventPublisherPort
 
 from .fixtures.datasets import DATASET
 
@@ -87,6 +85,8 @@ ACCESS_REQUESTS = [
         id="request-id-1",
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -101,6 +101,8 @@ ACCESS_REQUESTS = [
         id="request-id-2",
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS002",
+        dataset_title="Dataset2",
+        dac_alias="Some DAC2",
         email="me@john-doe.name",
         request_text="Can I access another dataset?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -115,6 +117,8 @@ ACCESS_REQUESTS = [
         id="request-id-3",
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS003",
+        dataset_title="Dataset3",
+        dac_alias="Some DAC3",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -129,6 +133,8 @@ ACCESS_REQUESTS = [
         id="request-id-4",
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS007",
+        dataset_title="Dataset7",
+        dac_alias="Some DAC7",
         email="me@john-doe.name",
         request_text="Can I access a new dataset?",
         access_starts=utc_datetime(2021, 1, 1, 0, 0),
@@ -143,6 +149,8 @@ ACCESS_REQUESTS = [
         id="request-id-5",
         user_id="id-of-jane-roe@ghga.de",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@jane-roe.name",
         request_text="Can I access the same dataset as Joe?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -158,6 +166,8 @@ ACCESS_REQUESTS = [
         user_id="id-of-john-doe@ghga.de",
         iva_id="iva-of-john",
         dataset_id="DS003",
+        dataset_title="Dataset3",
+        dac_alias="Some DAC3",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset using this IVA?",
         access_starts=utc_datetime(2021, 6, 1, 0, 0),
@@ -234,48 +244,6 @@ class DatasetDaoDummy(DatasetDaoPort):  # pyright: ignore
         self.last_upsert = None
 
 
-class MockAccessRequestEvent(NamedTuple):
-    """Mock of AccessRequestDetails plus status field to represent event type"""
-
-    user_id: str
-    dataset_id: Accession
-    status: str
-
-
-class EventPublisherDummy(EventPublisherPort):
-    """Dummy event publisher for testing."""
-
-    events: list[MockAccessRequestEvent]
-
-    def reset(self) -> None:
-        """Reset the recorded events."""
-        self.events = []
-
-    @property
-    def num_events(self):
-        """Get total number of recorded events."""
-        return len(self.events)
-
-    def _record_request(self, *, request: AccessRequest, request_state: str):
-        """Record a request as either created, allowed, or denied for a user and dataset."""
-        mock_event = MockAccessRequestEvent(
-            request.user_id, request.dataset_id, request_state
-        )
-        self.events.append(mock_event)
-
-    async def publish_request_allowed(self, *, request: AccessRequest) -> None:
-        """Mark an access request as allowed via event publish."""
-        self._record_request(request=request, request_state="allowed")
-
-    async def publish_request_created(self, *, request: AccessRequest) -> None:
-        """Mark an access request as created via event publish."""
-        self._record_request(request=request, request_state="created")
-
-    async def publish_request_denied(self, *, request: AccessRequest) -> None:
-        """Mark an access request as denied via event publish."""
-        self._record_request(request=request, request_state="denied")
-
-
 class AccessGrantsDummy(AccessGrantsPort):
     """Dummy adapter for granting download access."""
 
@@ -307,7 +275,6 @@ class AccessGrantsDummy(AccessGrantsPort):
 
 access_request_dao = AccessRequestDaoDummy()  # type: ignore
 dataset_dao = DatasetDaoDummy()  # type: ignore
-event_publisher = EventPublisherDummy()
 access_grants = AccessGrantsDummy()
 
 
@@ -316,7 +283,6 @@ def reset():
     """Reset dummy components before each test."""
     access_request_dao.reset()
     dataset_dao.reset()
-    event_publisher.reset()
     access_grants.reset()
 
 
@@ -324,7 +290,6 @@ repository = AccessRequestRepository(
     config=config,
     access_request_dao=access_request_dao,
     dataset_dao=dataset_dao,
-    event_publisher=event_publisher,
     access_grants=access_grants,
 )
 
@@ -336,6 +301,8 @@ async def test_can_create_request():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -359,13 +326,6 @@ async def test_can_create_request():
     assert request.changed_by is None
 
     assert access_request_dao.last_upsert == request
-
-    # the 'publish_request_created' method should have been called, get events for request
-    expected_event = MockAccessRequestEvent(
-        request.user_id, request.dataset_id, "created"
-    )
-    assert event_publisher.events == [expected_event]
-
     assert access_grants.last_grant == "nothing granted so far"
 
 
@@ -377,6 +337,8 @@ async def test_can_create_request_with_an_iva():
         user_id="id-of-john-doe@ghga.de",
         iva_id="some-iva_id",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -399,6 +361,8 @@ async def test_cannot_create_request_for_somebody_else():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-foo@ghga.de",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -416,6 +380,8 @@ async def test_silently_correct_request_that_is_too_early():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -430,9 +396,6 @@ async def test_silently_correct_request_that_is_too_early():
     assert request.access_ends == creation_data.access_ends
     assert access_request_dao.last_upsert == request
 
-    # There should be one event published which communicates the state of the request
-    assert len(event_publisher.events) == 1
-
 
 async def test_cannot_create_request_too_much_in_advance():
     """Test that users cannot create an access request too much in advance"""
@@ -441,6 +404,8 @@ async def test_cannot_create_request_too_much_in_advance():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -453,7 +418,6 @@ async def test_cannot_create_request_too_much_in_advance():
         await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert access_request_dao.last_upsert is None
-    assert event_publisher.num_events == 0
 
 
 async def test_cannot_create_request_too_short():
@@ -463,6 +427,8 @@ async def test_cannot_create_request_too_short():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -475,7 +441,6 @@ async def test_cannot_create_request_too_short():
         await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert access_request_dao.last_upsert is None
-    assert event_publisher.num_events == 0
 
 
 async def test_cannot_create_request_too_long():
@@ -485,6 +450,8 @@ async def test_cannot_create_request_too_long():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
+        dataset_title="Dataset1",
+        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -497,7 +464,6 @@ async def test_cannot_create_request_too_long():
         await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert access_request_dao.last_upsert is None
-    assert event_publisher.num_events == 0
 
 
 async def test_can_get_all_requests_as_data_steward():
@@ -614,11 +580,6 @@ async def test_set_status_to_allowed():
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
 
-    expected_event = MockAccessRequestEvent(
-        changed_request.user_id, changed_request.dataset_id, "allowed"
-    )
-    assert event_publisher.events == [expected_event]
-
     assert access_grants.last_grant == (
         "to id-of-john-doe@ghga.de with some-iva for DS007"
         " from 2021-01-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
@@ -660,11 +621,6 @@ async def test_set_status_to_allowed_and_modify_duration():
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
 
-    expected_event = MockAccessRequestEvent(
-        changed_request.user_id, changed_request.dataset_id, "allowed"
-    )
-    assert event_publisher.events == [expected_event]
-
     assert access_grants.last_grant == (
         "to id-of-john-doe@ghga.de with some-iva for DS007"
         " from 2022-01-01 00:00:00+00:00 until 2022-12-31 23:59:00+00:00"
@@ -695,11 +651,6 @@ async def test_set_status_to_allowed_reusing_iva():
     assert 0 <= (now_as_utc() - status_changed).seconds < 5
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
-
-    expected_event = MockAccessRequestEvent(
-        changed_request.user_id, changed_request.dataset_id, "allowed"
-    )
-    assert event_publisher.events == [expected_event]
 
     assert access_grants.last_grant == (
         "to id-of-john-doe@ghga.de with iva-of-john for DS003"
@@ -734,11 +685,6 @@ async def test_set_status_to_allowed_overriding_iva():
     assert 0 <= (now_as_utc() - status_changed).seconds < 5
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
-
-    expected_event = MockAccessRequestEvent(
-        changed_request.user_id, changed_request.dataset_id, "allowed"
-    )
-    assert event_publisher.events == [expected_event]
 
     assert access_grants.last_grant == (
         "to id-of-john-doe@ghga.de with some-other-iva-of-john for DS003"
@@ -788,7 +734,6 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
     changed_request = access_request_dao.last_upsert
     assert changed_request is not None
     assert changed_request == original_request
-    assert event_publisher.num_events == 0
 
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():
@@ -808,7 +753,6 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
         )
 
     assert access_request_dao.last_upsert is None
-    assert event_publisher.num_events == 0
 
     assert access_grants.last_grant == "nothing granted so far"
 
@@ -842,7 +786,6 @@ async def test_set_status_of_non_existing_request():
         )
 
     assert access_request_dao.last_upsert is None
-    assert event_publisher.num_events == 0
     assert access_grants.last_grant == "nothing granted so far"
 
 
@@ -856,7 +799,6 @@ async def test_set_status_when_not_a_data_steward():
         )
 
     assert access_request_dao.last_upsert is None
-    assert event_publisher.num_events == 0
     assert access_grants.last_grant == "nothing granted so far"
 
 

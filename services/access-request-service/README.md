@@ -16,13 +16,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/access-request-service):
 ```bash
-docker pull ghga/access-request-service:3.1.0
+docker pull ghga/access-request-service:4.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/access-request-service:3.1.0 .
+docker build -t ghga/access-request-service:4.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -30,7 +30,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/access-request-service:3.1.0 --help
+docker run -p 8080:8080 ghga/access-request-service:4.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -63,6 +63,16 @@ The service requires the following configuration parameters:
   ```
 
 
+- <a id="properties/access_request_topic"></a>**`access_request_topic`** *(string, required)*: Name of the event topic containing access request events.
+
+
+  Examples:
+
+  ```json
+  "access-requests"
+  ```
+
+
 - <a id="properties/dataset_change_topic"></a>**`dataset_change_topic`** *(string, required)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
 
 
@@ -73,7 +83,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string, required)*: Event type used for communicating dataset deletions.
 
 
   Examples:
@@ -83,53 +93,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Event type used for communicating dataset upsertions.
 
 
   Examples:
 
   ```json
-  "dataset_created"
-  ```
-
-
-- <a id="properties/access_request_topic"></a>**`access_request_topic`** *(string, required)*: Name of the event topic used to consume access request events.
-
-
-  Examples:
-
-  ```json
-  "access-requests"
-  ```
-
-
-- <a id="properties/access_request_denied_type"></a>**`access_request_denied_type`** *(string, required)*: The type to use for access request denied events.
-
-
-  Examples:
-
-  ```json
-  "access_request_denied"
-  ```
-
-
-- <a id="properties/access_request_created_type"></a>**`access_request_created_type`** *(string, required)*: The type to use for access request created events.
-
-
-  Examples:
-
-  ```json
-  "access_request_created"
-  ```
-
-
-- <a id="properties/access_request_allowed_type"></a>**`access_request_allowed_type`** *(string, required)*: The type to use for access request allowed events.
-
-
-  Examples:
-
-  ```json
-  "access_request_allowed"
+  "dataset_upserted"
   ```
 
 

@@ -19,12 +19,11 @@ from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 from pydantic import Field
 
 from ars.adapters.inbound.event_sub import EventSubTranslatorConfig
-from ars.adapters.outbound.event_pub import EventPubTranslatorConfig
+from ars.adapters.outbound.daos import AccessRequestDaoConfig
 from ars.adapters.outbound.http import AccessGrantsConfig
 from ars.core.repository import AccessRequestConfig
 
@@ -36,10 +35,9 @@ class Config(
     ApiConfigBase,
     AuthConfig,
     LoggingConfig,
-    MongoDbConfig,
-    KafkaConfig,
-    EventPubTranslatorConfig,
+    MongoKafkaConfig,
     EventSubTranslatorConfig,
+    AccessRequestDaoConfig,
     AccessGrantsConfig,
     AccessRequestConfig,
 ):

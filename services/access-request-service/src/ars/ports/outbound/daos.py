@@ -17,11 +17,12 @@
 """DAO interface for accessing the database."""
 
 from hexkit.protocols.dao import Dao, ResourceNotFoundError
+from hexkit.protocols.daopub import DaoPublisher
 
 from ars.core import models
 
 __all__ = ["AccessRequestDaoPort", "DatasetDaoPort", "ResourceNotFoundError"]
 
 # ports described by type aliases:
-AccessRequestDaoPort = Dao[models.AccessRequest]
+AccessRequestDaoPort = DaoPublisher[models.AccessRequest]
 DatasetDaoPort = Dao[models.Dataset]

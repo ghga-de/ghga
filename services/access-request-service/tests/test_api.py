@@ -33,6 +33,9 @@ ONE_YEAR = timedelta(days=365)
 CREATION_DATA = {
     "user_id": "id-of-john-doe@ghga.de",
     "dataset_id": "DS001",
+    "dataset_title": "Dataset1",
+    "dataset_description": "Some Description",
+    "dac_alias": "Some DAC",
     "iva_id": "some-iva",
     "email": "me@john-doe.name",
     "request_text": "Can I access some dataset?",
@@ -87,19 +90,26 @@ async def test_create_access_request(
         )
 
     assert response.status_code == 201
-
     access_request_id = response.json()
     assert_is_uuid(access_request_id)
 
     # check that an event was published for 'access request created'
     assert len(recorder.recorded_events) == 1
     recorded_event = recorder.recorded_events[0]
-    assert recorded_event.key == CREATION_DATA["user_id"]
-    assert recorded_event.payload == {
-        "user_id": CREATION_DATA["user_id"],
-        "dataset_id": CREATION_DATA["dataset_id"],
-    }
-    assert recorded_event.type_ == rest.config.access_request_created_type
+    assert recorded_event.key == access_request_id
+
+    for key in [
+        "user_id",
+        "dataset_id",
+        "dataset_title",
+        "dataset_description",
+        "dac_alias",
+        "request_text",
+        "access_ends",
+    ]:
+        assert recorded_event.payload[key] == CREATION_DATA[key]
+    assert recorded_event.payload["status"] == "pending"
+    assert recorded_event.type_ == "upserted"
 
 
 async def test_create_access_request_unauthorized(
@@ -337,12 +347,19 @@ async def test_patch_access_request(
     # check that an event was published for 'access request allowed'
     assert len(recorder.recorded_events) == 1
     recorded_event = recorder.recorded_events[0]
-    assert recorded_event.key == CREATION_DATA["user_id"]
-    assert recorded_event.payload == {
-        "user_id": CREATION_DATA["user_id"],
-        "dataset_id": CREATION_DATA["dataset_id"],
-    }
-    assert recorded_event.type_ == rest.config.access_request_allowed_type
+    assert recorded_event.key == access_request_id
+    for key in [
+        "user_id",
+        "dataset_id",
+        "dataset_title",
+        "dataset_description",
+        "dac_alias",
+        "request_text",
+        "access_ends",
+    ]:
+        assert recorded_event.payload[key] == CREATION_DATA[key]
+    assert recorded_event.payload["status"] == "allowed"
+    assert recorded_event.type_ == "upserted"
 
     # get request as user
     response = await client.get("/access-requests", headers=auth_headers_doe)

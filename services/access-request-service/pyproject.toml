@@ -21,10 +21,10 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ars"
-version = "3.1.0"
+version = "4.0.0"
 description = "Access Request Service"
 dependencies = [
-    "ghga-event-schemas~=6.0.0",
+    "ghga-event-schemas~=8.0.0",
     "ghga-service-commons[api,auth]>=4.0",
     "hexkit[mongodb,akafka]>=4.3",
     "httpx>=0.28",
