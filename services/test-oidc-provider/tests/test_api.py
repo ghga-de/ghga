@@ -46,7 +46,12 @@ async def test_health_check(client: AsyncTestClient):
     response = await client.get("/health")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"status": "OK"}
+    result = response.json()
+    assert isinstance(result, dict)
+    assert sorted(result) == ["num_users", "status"]
+    assert result["status"] == "OK"
+    assert isinstance(result["num_users"], int)
+    assert result["num_users"] >= 0
 
 
 @mark.parametrize("origin_header", [None, "x-forwarded", "x-envoy-original"])
@@ -120,6 +125,9 @@ async def test_get_user_info_without_login(client: AsyncTestClient):
 @mark.asyncio
 async def test_login_and_get_user_info(client: AsyncTestClient):
     """Test logging in as a user and getting the user info back."""
+    response = await client.post("/reset")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
     response = await client.post("/login", json={"name": "John Doe"})
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -154,8 +162,32 @@ async def test_login_and_get_user_info(client: AsyncTestClient):
 
 
 @mark.asyncio
+async def test_num_users_and_reset(client: AsyncTestClient):
+    """Test getting the number of users and resetting everything."""
+    response = await client.post("/reset")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    response = await client.post("/login", json={"name": "John Doe"})
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await client.get("/health")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"status": "OK", "num_users": 1}
+
+    response = await client.post("/reset")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    response = await client.get("/health")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"status": "OK", "num_users": 0}
+
+
+@mark.asyncio
 async def test_authorization_code_flow(client: AsyncTestClient):
     """Test the complete authorization code flow."""
+    response = await client.post("/reset")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
     response = await client.post("/login", json={"name": "John Doe"})
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -221,3 +253,150 @@ async def test_authorization_code_flow(client: AsyncTestClient):
         "name": "John Doe",
         "sub": "id-of-john-doe@op.test",
     }
+
+
+@mark.asyncio
+async def test_authorization_errors(client: AsyncTestClient):
+    """Test various authorization errors in the authorization code flow."""
+    response = await client.post("/reset")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    authorize_params = {
+        "response_type": "code",
+        "client_id": "test-client",
+        "redirect_uri": "https://client.test/oauth/callback",
+        "scope": "openid profile email",
+        "state": "some-state",
+    }
+
+    response = await client.get(
+        "/authorize",
+        params={**authorize_params, "redirect_uri": "http://localhost/somewhere"},
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    result = response.json()
+    assert result == {
+        "detail": "Invalid redirect URI: 'http://localhost/somewhere',"
+        " expected 'https://client.test/oauth/callback'",
+    }
+
+    response = await client.get(
+        "/authorize",
+        params={**authorize_params, "response_type": "nocode"},
+    )
+    assert response.status_code == status.HTTP_302_FOUND
+    result = parse_qs(urlparse(response.headers["Location"]).query)
+    assert result == {
+        "error": ["invalid_response_type"],
+        "error_description": ["Invalid response type: 'nocode', expected 'code'"],
+        "state": ["some-state"],
+    }
+
+    response = await client.get(
+        "/authorize",
+        params={**authorize_params, "client_id": "another-client"},
+    )
+    assert response.status_code == status.HTTP_302_FOUND
+    result = parse_qs(urlparse(response.headers["Location"]).query)
+    assert result == {
+        "error": ["unauthorized_client"],
+        "error_description": [
+            "Invalid client ID: 'another-client', expected 'test-client'"
+        ],
+        "state": ["some-state"],
+    }
+
+    response = await client.get(
+        "/authorize",
+        params={**authorize_params, "scope": "profile email"},
+    )
+    assert response.status_code == status.HTTP_302_FOUND
+    result = parse_qs(urlparse(response.headers["Location"]).query)
+    assert result == {
+        "error": ["invalid_scope"],
+        "error_description": ["Invalid scope: 'profile email', expected 'openid'"],
+        "state": ["some-state"],
+    }
+
+    response = await client.get(
+        "/authorize",
+        params={**authorize_params, "state": None},
+    )
+    assert response.status_code == status.HTTP_302_FOUND
+    result = parse_qs(urlparse(response.headers["Location"]).query)
+    assert result == {
+        "error": ["missing_state"],
+        "error_description": ["Missing state"],
+    }
+
+    response = await client.get("/authorize", params=authorize_params)
+    assert response.status_code == status.HTTP_302_FOUND
+    result = parse_qs(urlparse(response.headers["Location"]).query)
+    assert result == {
+        "error": ["login_required"],
+        "error_description": ["User did not log in"],
+        "state": ["some-state"],
+    }
+
+    response = await client.post("/login", json={"name": "John Doe"})
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await client.get("/authorize", params=authorize_params)
+    assert response.status_code == status.HTTP_302_FOUND
+    result = parse_qs(urlparse(response.headers["Location"]).query)
+    assert result["code"]
+    code = result["code"][0]
+
+    token_data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": "https://client.test/oauth/callback",
+        "client_id": "test-client",
+    }
+
+    response = await client.post(
+        "/token",
+        data={**token_data, "grant_type": "device_code"},
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    result = response.json()
+    assert result == {
+        "detail": "Invalid grant type: 'device_code', expected 'authorization_code'",
+    }
+
+    response = await client.post(
+        "/token",
+        data={**token_data, "client_id": "another-client"},
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    result = response.json()
+    assert result == {
+        "detail": "Invalid client ID: 'another-client', expected 'test-client'",
+    }
+
+    response = await client.post(
+        "/token",
+        data={**token_data, "redirect_uri": "http://localhost/somewhere"},
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    result = response.json()
+    assert result == {
+        "detail": "Invalid redirect URI: 'http://localhost/somewhere',"
+        " expected 'https://client.test/oauth/callback'"
+    }
+
+    response = await client.post(
+        "/token",
+        data={**token_data, "code": "invalid-code"},
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    result = response.json()
+    assert result == {
+        "detail": "Authorization code is invalid or expired",
+    }
+
+    response = await client.post("/token", data=token_data)
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert isinstance(result, dict)
+    assert result.get("access_token")

@@ -114,9 +114,11 @@ class OidcProvider:
         while tasks:
             task = tasks.pop()
             if not task.done():
-                task.cancel()
-                with suppress(asyncio.CancelledError):
+                try:
+                    task.cancel()
                     await task
+                except (RuntimeError, asyncio.CancelledError):
+                    pass
 
     async def reset(self):
         """Reset the OP, clear all data."""
@@ -242,9 +244,9 @@ class OidcProvider:
         else:
             with suppress(StopIteration):
                 token = next(reversed(self.users))
-        if not token:
-            error = "login_required"
-            msg = "User did not log in"
+            if not token:
+                error = "login_required"
+                msg = "User did not log in"
         if error or not token:
             params = {"error": error, "error_description": msg}
         else:

@@ -56,7 +56,8 @@ tags: list[str | Enum] = ["TestOP"]
 )
 async def health():
     """Used to test if this service is alive"""
-    return {"status": "OK"}
+    num_users = len(oidc_provider.users)
+    return {"status": "OK", "num_users": num_users}
 
 
 @app.get(
@@ -119,11 +120,30 @@ async def login(login_info: LoginInfo) -> Response:
         log.info("Invalid login info: %s", error)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
         ) from error
     log.debug("Created login token: %s", token)
     return Response(
         content=token, media_type="application/jwt", status_code=status.HTTP_201_CREATED
     )
+
+
+@app.post(
+    "/reset",
+    summary="Reset the test OP",
+    tags=tags,
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": "Test OP was successfully reset.",
+        },
+    },
+)
+async def reset() -> Response:
+    """Endpoint for resetting the test OP."""
+    await oidc_provider.reset()
+    log.info("The test OP has been reset.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get(
@@ -158,8 +178,10 @@ async def authorize(
             state=state,
         )
     except ValueError as error:
+        log.error("Error in authorization: %s", error)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
         ) from error
     # Redirect back with code and state or error message
     return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
@@ -196,8 +218,10 @@ async def token(
             client_id=client_id,
         )
     except ValueError as error:
+        log.warning("Error when getting token: %s", error)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
         ) from error
 
 
@@ -229,4 +253,5 @@ async def get_userinfo(
         log.info("User not found in cache.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(error),
         ) from error
