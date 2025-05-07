@@ -1,6 +1,3 @@
-access_request_allowed_type: access_request_allowed
-access_request_created_type: access_request_created
-access_request_denied_type: access_request_denied
 access_request_topic: access_request_events
 auth_topic: auth
 central_data_stewardship_email: test@test.abc

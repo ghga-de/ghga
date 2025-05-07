@@ -20,13 +20,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-orchestration-service):
 ```bash
-docker pull ghga/notification-orchestration-service:4.0.2
+docker pull ghga/notification-orchestration-service:5.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-orchestration-service:4.0.2 .
+docker build -t ghga/notification-orchestration-service:5.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -34,7 +34,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-orchestration-service:4.0.2 --help
+docker run -p 8080:8080 ghga/notification-orchestration-service:5.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -117,6 +117,16 @@ The service requires the following configuration parameters:
   ```
 
 
+- <a id="properties/access_request_topic"></a>**`access_request_topic`** *(string, required)*: Name of the event topic containing access request events.
+
+
+  Examples:
+
+  ```json
+  "access-requests"
+  ```
+
+
 - <a id="properties/user_topic"></a>**`user_topic`** *(string)*: The name of the topic containing user events. Default: `"users"`.
 
 - <a id="properties/auth_topic"></a>**`auth_topic`** *(string, required)*: The name of the topic containing auth-related events.
@@ -156,46 +166,6 @@ The service requires the following configuration parameters:
 
   ```json
   "iva_state_changed"
-  ```
-
-
-- <a id="properties/access_request_topic"></a>**`access_request_topic`** *(string, required)*: Name of the event topic used to consume access request events.
-
-
-  Examples:
-
-  ```json
-  "access-requests"
-  ```
-
-
-- <a id="properties/access_request_denied_type"></a>**`access_request_denied_type`** *(string, required)*: The type to use for access request denied events.
-
-
-  Examples:
-
-  ```json
-  "access_request_denied"
-  ```
-
-
-- <a id="properties/access_request_created_type"></a>**`access_request_created_type`** *(string, required)*: The type to use for access request created events.
-
-
-  Examples:
-
-  ```json
-  "access_request_created"
-  ```
-
-
-- <a id="properties/access_request_allowed_type"></a>**`access_request_allowed_type`** *(string, required)*: The type to use for access request allowed events.
-
-
-  Examples:
-
-  ```json
-  "access_request_allowed"
   ```
 
 

@@ -29,10 +29,11 @@ from nos.config import Config
 from nos.core.orchestrator import Orchestrator
 from nos.ports.inbound.orchestrator import OrchestratorPort
 from nos.translators.inbound.event_sub import (
+    AccessRequestOutboxTranslator,
     EventSubTranslator,
-    OutboxSubTranslator,
+    UserOutboxTranslator,
 )
-from nos.translators.outbound.dao import user_dao_factory
+from nos.translators.outbound.dao import get_access_request_dao, get_user_dao
 from nos.translators.outbound.event_pub import NotificationEmitter
 
 
@@ -43,7 +44,8 @@ async def prepare_core(
 ) -> AsyncGenerator[OrchestratorPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     dao_factory = MongoDbDaoFactory(config=config)
-    user_dao = await user_dao_factory(dao_factory=dao_factory)
+    user_dao = await get_user_dao(dao_factory=dao_factory)
+    access_request_dao = await get_access_request_dao(dao_factory=dao_factory)
 
     async with KafkaEventPublisher.construct(config=config) as event_publisher:
         notification_emitter = NotificationEmitter(
@@ -51,6 +53,7 @@ async def prepare_core(
         )
         yield Orchestrator(
             notification_emitter=notification_emitter,
+            access_request_dao=access_request_dao,
             user_dao=user_dao,
             config=config,
         )
@@ -82,12 +85,20 @@ async def prepare_event_subscriber(
             orchestrator=orchestrator,
             config=config,
         )
-        outbox_sub_translator = OutboxSubTranslator(
+        access_request_outbox_translator = AccessRequestOutboxTranslator(
+            config=config,
+            orchestrator=orchestrator,
+        )
+        user_outbox_translator = UserOutboxTranslator(
             orchestrator=orchestrator,
             config=config,
         )
         combo_translator = ComboTranslator(
-            translators=[event_sub_translator, outbox_sub_translator]
+            translators=[
+                event_sub_translator,
+                access_request_outbox_translator,
+                user_outbox_translator,
+            ]
         )
 
         async with (

@@ -28,7 +28,7 @@ from nos.config import Config
 from nos.inject import prepare_core, prepare_event_subscriber
 from nos.ports.inbound.orchestrator import OrchestratorPort
 from nos.ports.outbound.dao import UserDaoPort
-from nos.translators.outbound.dao import user_dao_factory
+from nos.translators.outbound.dao import get_user_dao
 from tests.fixtures.config import get_config
 
 
@@ -68,5 +68,5 @@ async def joint_fixture(
             event_subscriber=event_subscriber,
             kafka=kafka,
             mongodb=mongodb,
-            user_dao=await user_dao_factory(dao_factory=mongodb.dao_factory),
+            user_dao=await get_user_dao(dao_factory=mongodb.dao_factory),
         )

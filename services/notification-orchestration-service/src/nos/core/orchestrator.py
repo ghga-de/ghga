@@ -26,7 +26,11 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from nos.config import Config
 from nos.core import notifications
 from nos.ports.inbound.orchestrator import OrchestratorPort
-from nos.ports.outbound.dao import ResourceNotFoundError, UserDaoPort
+from nos.ports.outbound.dao import (
+    AccessRequestDaoPort,
+    ResourceNotFoundError,
+    UserDaoPort,
+)
 from nos.ports.outbound.notification_emitter import NotificationEmitterPort
 
 log = logging.getLogger(__name__)
@@ -41,15 +45,17 @@ class Orchestrator(OrchestratorPort):
         self,
         *,
         config: Config,
+        access_request_dao: AccessRequestDaoPort,
         user_dao: UserDaoPort,
         notification_emitter: NotificationEmitterPort,
     ):
         self._config = config
         self._user_dao = user_dao
+        self._access_request_dao = access_request_dao
         self._notification_emitter = notification_emitter
 
-    async def process_access_request_notification(
-        self, *, event_type: str, user_id: str, dataset_id: str
+    async def _process_access_request_notification(
+        self, *, access_request: event_schemas.AccessRequestDetails
     ):
         """Handle notifications for access requests.
 
@@ -57,21 +63,24 @@ class Orchestrator(OrchestratorPort):
             - MissingUserError:
                 When the provided user ID does not exist in the DB.
         """
+        user_id = access_request.user_id
+        dataset_id = access_request.dataset_id
+        status = access_request.status
         event_type_assets: dict[str, tuple[str, Callable]] = {
-            self._config.access_request_created_type: (
+            event_schemas.AccessRequestStatus.PENDING.value: (
                 "Access Request Created",
                 self._access_request_created,
             ),
-            self._config.access_request_allowed_type: (
+            event_schemas.AccessRequestStatus.ALLOWED.value: (
                 "Access Request Allowed",
                 self._access_request_allowed,
             ),
-            self._config.access_request_denied_type: (
+            event_schemas.AccessRequestStatus.DENIED.value: (
                 "Access Request Denied",
                 self._access_request_denied,
             ),
         }
-        notification_name, handler = event_type_assets[event_type]
+        notification_name, handler = event_type_assets[status]
         extra = {  # for error logging
             "user_id": user_id,
             "dataset_id": dataset_id,
@@ -87,10 +96,13 @@ class Orchestrator(OrchestratorPort):
             log.error(error, extra=extra)
             raise error from err
 
-        await handler(user=user, dataset_id=dataset_id)
+        await handler(user=user, access_request=access_request)
 
     async def _access_request_created(
-        self, *, user: event_schemas.User, dataset_id: str
+        self,
+        *,
+        user: event_schemas.User,
+        access_request: event_schemas.AccessRequestDetails,
     ):
         """Processes an Access Request Created event.
 
@@ -109,7 +121,7 @@ class Orchestrator(OrchestratorPort):
             email=user.email,
             full_name=user.name,
             notification=notifications.ACCESS_REQUEST_CREATED_TO_USER.formatted(
-                dataset_id=dataset_id
+                dataset_id=access_request.dataset_id
             ),
         )
         log.info("Sent Access Request Created notification to data requester")
@@ -119,13 +131,21 @@ class Orchestrator(OrchestratorPort):
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,
             notification=notifications.ACCESS_REQUEST_CREATED_TO_DS.formatted(
-                full_user_name=user.name, email=user.email, dataset_id=dataset_id
+                full_user_name=user.name,
+                email=user.email,
+                dataset_id=access_request.dataset_id,
+                dataset_title=access_request.dataset_title,
+                dac_alias=access_request.dac_alias,
+                request_text=access_request.request_text,
             ),
         )
         log.info("Sent Access Request Created notification to data steward")
 
     async def _access_request_allowed(
-        self, *, user: event_schemas.User, dataset_id: str
+        self,
+        *,
+        user: event_schemas.User,
+        access_request: event_schemas.AccessRequestDetails,
     ):
         """Process an Access Request Allowed event.
 
@@ -141,11 +161,21 @@ class Orchestrator(OrchestratorPort):
                 text interpolation.
         """
         # Send a notification to the data requester
+        note_to_requester = (
+            (
+                "\nThe Data Steward has also included the following note:\n"
+                + access_request.note_to_requester
+            )
+            if access_request.note_to_requester
+            else ""
+        )
+
         await self._notification_emitter.notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.ACCESS_REQUEST_ALLOWED_TO_USER.formatted(
-                dataset_id=dataset_id
+                dataset_id=access_request.dataset_id,
+                note_to_requester=note_to_requester,
             ),
         )
         log.info("Sent Access Request Allowed notification to data requester")
@@ -155,13 +185,16 @@ class Orchestrator(OrchestratorPort):
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,
             notification=notifications.ACCESS_REQUEST_ALLOWED_TO_DS.formatted(
-                full_user_name=user.name, dataset_id=dataset_id
+                full_user_name=user.name, dataset_id=access_request.dataset_id
             ),
         )
         log.info("Sent Access Request Allowed notification to data steward")
 
     async def _access_request_denied(
-        self, *, user: event_schemas.User, dataset_id: str
+        self,
+        *,
+        user: event_schemas.User,
+        access_request: event_schemas.AccessRequestDetails,
     ):
         """Process an Access Request Denied event.
 
@@ -176,11 +209,21 @@ class Orchestrator(OrchestratorPort):
                 text interpolation.
         """
         # Send a notification to the data requester
+        note_to_requester = (
+            (
+                "\nThe Data Steward has also included the following note:\n"
+                + access_request.note_to_requester
+            )
+            if access_request.note_to_requester
+            else ""
+        )
+
         await self._notification_emitter.notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.ACCESS_REQUEST_DENIED_TO_USER.formatted(
-                dataset_id=dataset_id
+                dataset_id=access_request.dataset_id,
+                note_to_requester=note_to_requester,
             ),
         )
         log.info("Sent Access Request Denied notification to data requester")
@@ -190,7 +233,7 @@ class Orchestrator(OrchestratorPort):
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,
             notification=notifications.ACCESS_REQUEST_DENIED_TO_DS.formatted(
-                full_user_name=user.name, dataset_id=dataset_id
+                full_user_name=user.name, dataset_id=access_request.dataset_id
             ),
         )
         log.info("Sent Access Request Denied notification to data steward")
@@ -350,6 +393,32 @@ class Orchestrator(OrchestratorPort):
             if getattr(existing_user, field) != getattr(new_user, field):
                 changed.append(field)
         return " and ".join(changed)
+
+    async def upsert_access_request(
+        self, *, access_request: event_schemas.AccessRequestDetails
+    ) -> None:
+        """Upsert an access request object and send out the appropriate notification."""
+        # Publish a notification under two circumstances:
+        # 1. We're seeing the notification for the first time
+        # 2. We have a record of the request, but the inbound event's status differs
+        should_notify = True
+        with suppress(ResourceNotFoundError):
+            existing_request = await self._access_request_dao.get_by_id(
+                access_request.id
+            )
+            should_notify = existing_request.status != access_request.status
+
+        if should_notify:
+            await self._process_access_request_notification(
+                access_request=access_request
+            )
+
+        await self._access_request_dao.upsert(access_request)
+
+    async def delete_access_request(self, *, resource_id: str) -> None:
+        """Delete an access request object."""
+        with suppress(ResourceNotFoundError):
+            await self._access_request_dao.delete(resource_id)
 
     async def upsert_user_data(
         self, resource_id: str, update: event_schemas.User

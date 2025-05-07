@@ -45,8 +45,8 @@ class OrchestratorPort(ABC):
             super().__init__(message)
 
     @abstractmethod
-    async def process_access_request_notification(
-        self, *, event_type: str, user_id: str, dataset_id: str
+    async def _process_access_request_notification(
+        self, *, access_request: event_schemas.AccessRequestDetails
     ):
         """Handle notifications for access requests.
 
@@ -62,6 +62,16 @@ class OrchestratorPort(ABC):
     @abstractmethod
     async def process_iva_state_change(self, *, user_iva: event_schemas.UserIvaState):
         """Handle notifications for IVA state changes."""
+
+    @abstractmethod
+    async def upsert_access_request(
+        self, *, access_request: event_schemas.AccessRequestDetails
+    ) -> None:
+        """Upsert an access request object and send out the appropriate notification."""
+
+    @abstractmethod
+    async def delete_access_request(self, *, resource_id: str) -> None:
+        """Delete an access request object."""
 
     @abstractmethod
     async def upsert_user_data(

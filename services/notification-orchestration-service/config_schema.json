@@ -55,6 +55,14 @@
       "title": "Notification Type",
       "type": "string"
     },
+    "access_request_topic": {
+      "description": "Name of the event topic containing access request events",
+      "examples": [
+        "access-requests"
+      ],
+      "title": "Access Request Topic",
+      "type": "string"
+    },
     "user_topic": {
       "default": "users",
       "description": "The name of the topic containing user events.",
@@ -91,38 +99,6 @@
         "iva_state_changed"
       ],
       "title": "Iva State Changed Type",
-      "type": "string"
-    },
-    "access_request_topic": {
-      "description": "Name of the event topic used to consume access request events",
-      "examples": [
-        "access-requests"
-      ],
-      "title": "Access Request Topic",
-      "type": "string"
-    },
-    "access_request_denied_type": {
-      "description": "The type to use for access request denied events",
-      "examples": [
-        "access_request_denied"
-      ],
-      "title": "Access Request Denied Type",
-      "type": "string"
-    },
-    "access_request_created_type": {
-      "description": "The type to use for access request created events",
-      "examples": [
-        "access_request_created"
-      ],
-      "title": "Access Request Created Type",
-      "type": "string"
-    },
-    "access_request_allowed_type": {
-      "description": "The type to use for access request allowed events",
-      "examples": [
-        "access_request_allowed"
-      ],
-      "title": "Access Request Allowed Type",
       "type": "string"
     },
     "service_name": {
@@ -309,14 +285,11 @@
     "db_name",
     "notification_topic",
     "notification_type",
+    "access_request_topic",
     "auth_topic",
     "second_factor_recreated_type",
     "iva_state_changed_topic",
     "iva_state_changed_type",
-    "access_request_topic",
-    "access_request_denied_type",
-    "access_request_created_type",
-    "access_request_allowed_type",
     "service_instance_id",
     "kafka_servers",
     "central_data_stewardship_email",

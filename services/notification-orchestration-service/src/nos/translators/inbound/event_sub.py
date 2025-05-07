@@ -17,10 +17,8 @@
 
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import UserEventsConfig
+from ghga_event_schemas.configs.stateful import AccessRequestEventsConfig
 from ghga_event_schemas.configs.stateless import (
-    AccessRequestAllowedEventsConfig,
-    AccessRequestCreatedEventsConfig,
-    AccessRequestDeniedEventsConfig,
     IvaChangeEventsConfig,
     SecondFactorRecreatedEventsConfig,
 )
@@ -33,11 +31,7 @@ from nos.ports.inbound.orchestrator import OrchestratorPort
 
 
 class EventSubTranslatorConfig(
-    AccessRequestAllowedEventsConfig,
-    AccessRequestCreatedEventsConfig,
-    AccessRequestDeniedEventsConfig,
-    IvaChangeEventsConfig,
-    SecondFactorRecreatedEventsConfig,
+    IvaChangeEventsConfig, SecondFactorRecreatedEventsConfig
 ):
     """Config for the event subscriber"""
 
@@ -48,31 +42,13 @@ class EventSubTranslator(EventSubscriberProtocol):
     def __init__(
         self, *, config: EventSubTranslatorConfig, orchestrator: OrchestratorPort
     ):
-        self.topics_of_interest = [
-            config.access_request_topic,
-            config.iva_state_changed_topic,
-            config.auth_topic,
-        ]
+        self.topics_of_interest = [config.iva_state_changed_topic, config.auth_topic]
         self.types_of_interest = [
-            config.access_request_created_type,
-            config.access_request_allowed_type,
-            config.access_request_denied_type,
             config.iva_state_changed_type,
             config.second_factor_recreated_type,
         ]
         self._config = config
         self._orchestrator = orchestrator
-
-    async def _handle_access_request(self, type_: str, payload: JsonObject) -> None:
-        """Send notifications for an access request-related event."""
-        validated_payload = get_validated_payload(
-            payload, event_schemas.AccessRequestDetails
-        )
-        await self._orchestrator.process_access_request_notification(
-            event_type=type_,
-            user_id=validated_payload.user_id,
-            dataset_id=validated_payload.dataset_id,
-        )
 
     async def _handle_iva_state_change(self, payload: JsonObject) -> None:
         """Send notifications for IVA state changes."""
@@ -98,12 +74,6 @@ class EventSubTranslator(EventSubscriberProtocol):
     ) -> None:
         """Consumes an event"""
         match type_:
-            case _ if type_ in (
-                self._config.access_request_created_type,
-                self._config.access_request_allowed_type,
-                self._config.access_request_denied_type,
-            ):
-                await self._handle_access_request(type_, payload)
             case self._config.iva_state_changed_type:
                 if key.startswith("all-"):
                     await self._handle_all_ivas_reset(payload=payload)
@@ -113,12 +83,12 @@ class EventSubTranslator(EventSubscriberProtocol):
                 await self._handle_second_factor_recreated(payload=payload)
 
 
-class OutboxSubTranslatorConfig(UserEventsConfig):
+class OutboxSubTranslatorConfig(UserEventsConfig, AccessRequestEventsConfig):
     """Config for the outbox subscriber"""
 
 
-class OutboxSubTranslator(DaoSubscriberProtocol[event_schemas.User]):
-    """A class that consumes events conveying changes in DB resources."""
+class UserOutboxTranslator(DaoSubscriberProtocol[event_schemas.User]):
+    """A class that consumes User events conveying changes in DB resources."""
 
     event_topic: str
     dto_model = event_schemas.User
@@ -142,3 +112,32 @@ class OutboxSubTranslator(DaoSubscriberProtocol[event_schemas.User]):
     async def deleted(self, resource_id: str) -> None:
         """Consume event indicating the deletion of a user."""
         await self._orchestrator.delete_user_data(resource_id=resource_id)
+
+
+class AccessRequestOutboxTranslator(
+    DaoSubscriberProtocol[event_schemas.AccessRequestDetails]
+):
+    """A class that consumes User events conveying changes in DB resources."""
+
+    event_topic: str
+    dto_model = event_schemas.AccessRequestDetails
+
+    def __init__(
+        self,
+        *,
+        config: OutboxSubTranslatorConfig,
+        orchestrator: OrchestratorPort,
+    ):
+        self._config = config
+        self._orchestrator = orchestrator
+        self.event_topic = config.access_request_topic
+
+    async def changed(
+        self, resource_id: str, update: event_schemas.AccessRequestDetails
+    ) -> None:
+        """Consume change event (created or updated) for access_request data."""
+        await self._orchestrator.upsert_access_request(access_request=update)
+
+    async def deleted(self, resource_id: str) -> None:
+        """Consume event indicating the deletion of a user."""
+        await self._orchestrator.delete_access_request(resource_id=resource_id)

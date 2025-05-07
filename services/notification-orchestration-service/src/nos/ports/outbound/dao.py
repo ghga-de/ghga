@@ -19,7 +19,8 @@
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import Dao, ResourceNotFoundError
 
-__all__ = ["ResourceNotFoundError", "UserDaoPort"]
+__all__ = ["AccessRequestDaoPort", "ResourceNotFoundError", "UserDaoPort"]
 
 # ports described by type aliases:
+AccessRequestDaoPort = Dao[event_schemas.AccessRequestDetails]
 UserDaoPort = Dao[event_schemas.User]

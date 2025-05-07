@@ -32,7 +32,7 @@ async def test_event_subscriber_dlq(joint_fixture: JointFixture):
     # Publish an event with a bogus payload to a topic/type this service expects
     await joint_fixture.kafka.publish_event(
         payload={"some_key": "some_value"},
-        type_=config.access_request_allowed_type,
+        type_="upserted",
         topic=config.access_request_topic,
         key="test",
     )
@@ -52,20 +52,17 @@ async def test_combined_subscriber_types(joint_fixture: JointFixture):
     config = joint_fixture.config
     assert config.kafka_enable_dlq
 
-    payload = event_schemas.AccessRequestDetails(
-        user_id="test_id", dataset_id="dataset_id"
-    ).model_dump()
-
     # Publish a normal event with a valid payload to the retry topic
+    payload = event_schemas.UserID(user_id="test_id").model_dump()
     await joint_fixture.kafka.publish_event(
         payload=payload,
-        type_=config.access_request_allowed_type,
+        type_=config.second_factor_recreated_type,
         topic=f"{config.service_name}-retry",
         key="test",
         headers={"original_topic": config.access_request_topic},
     )
 
-    # # Publish an outbox event with a valid payload to the retry topic
+    # Publish an outbox event with a valid payload to the retry topic
     await joint_fixture.kafka.publish_event(
         payload=TEST_USER.model_dump(),
         type_="upserted",

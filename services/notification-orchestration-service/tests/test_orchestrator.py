@@ -15,10 +15,12 @@
 #
 """Tests for event sub/pub"""
 
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from logot import Logot, logged
 
@@ -30,10 +32,22 @@ DATASET_ID = "dataset1"
 pytestmark = pytest.mark.asyncio()
 
 
-def access_request_payload(user_id: str) -> dict[str, Any]:
+def access_request_payload(user_id: str, status: str = "pending") -> dict[str, Any]:
     """Succinctly create the payload for an access request event."""
+    start = now_as_utc()
+    end = start + timedelta(days=180)
     return event_schemas.AccessRequestDetails(
-        user_id=user_id, dataset_id=DATASET_ID
+        id="access-request-id1",
+        user_id=user_id,
+        dataset_id=DATASET_ID,
+        dataset_title="A Great Dataset",
+        dataset_description="Some Dataset",
+        dac_alias="Some DAC",
+        status=status,
+        request_text="Please grant me access to this data.",
+        note_to_requester="Thank you",
+        access_starts=start,
+        access_ends=end,
     ).model_dump()
 
 
@@ -48,7 +62,7 @@ def iva_state_payload(user_id: str, state: event_schemas.IvaState) -> dict[str, 
 
 
 @pytest.mark.parametrize(
-    "user_notification_content, user_kwargs, ds_notification_content, ds_kwargs, event_type",
+    "user_notification_content, user_kwargs, ds_notification_content, ds_kwargs, status",
     [
         (  # Test access request created
             notifications.ACCESS_REQUEST_CREATED_TO_USER,
@@ -58,12 +72,18 @@ def iva_state_payload(user_id: str, state: event_schemas.IvaState) -> dict[str, 
                 "full_user_name": TEST_USER.name,
                 "email": TEST_USER.email,
                 "dataset_id": DATASET_ID,
+                "dataset_title": "A Great Dataset",
+                "dac_alias": "Some DAC",
+                "request_text": "Please grant me access to this data.",
             },
-            "created",
+            "pending",
         ),
         (  # Test access request allowed
             notifications.ACCESS_REQUEST_ALLOWED_TO_USER,
-            {"dataset_id": DATASET_ID},
+            {
+                "dataset_id": DATASET_ID,
+                "note_to_requester": "\nThe Data Steward has also included the following note:\nThank you",
+            },
             notifications.ACCESS_REQUEST_ALLOWED_TO_DS,
             {
                 "full_user_name": TEST_USER.name,
@@ -73,7 +93,10 @@ def iva_state_payload(user_id: str, state: event_schemas.IvaState) -> dict[str, 
         ),
         (  # Test access request denied
             notifications.ACCESS_REQUEST_DENIED_TO_USER,
-            {"dataset_id": DATASET_ID},
+            {
+                "dataset_id": DATASET_ID,
+                "note_to_requester": "\nThe Data Steward has also included the following note:\nThank you",
+            },
             notifications.ACCESS_REQUEST_DENIED_TO_DS,
             {
                 "full_user_name": TEST_USER.name,
@@ -82,6 +105,7 @@ def iva_state_payload(user_id: str, state: event_schemas.IvaState) -> dict[str, 
             "denied",
         ),
     ],
+    ids=["created", "allowed", "denied"],
 )
 async def test_access_request(
     joint_fixture: JointFixture,
@@ -89,19 +113,13 @@ async def test_access_request(
     user_kwargs: dict[str, Any],
     ds_notification_content: notifications.Notification,
     ds_kwargs: dict[str, Any],
-    event_type: str,
+    status: str,
 ):
     """Test that the access request created event is processed correctly.
 
     Test will also check idempotence.
     """
     test_user = await joint_fixture.user_dao.get_by_id(TEST_USER.user_id)
-
-    event_type_to_use = getattr(
-        joint_fixture.config, f"access_request_{event_type}_type"
-    )
-
-    assert event_type_to_use
 
     user_notification = event_schemas.Notification(
         recipient_email=test_user.email,
@@ -131,9 +149,10 @@ async def test_access_request(
     ]
 
     # Create the kafka event that would be published by the access request service
+    payload = access_request_payload(test_user.user_id, status)
     await joint_fixture.kafka.publish_event(
-        payload=access_request_payload(test_user.user_id),
-        type_=event_type_to_use,
+        payload=payload,
+        type_="upserted",
         topic=joint_fixture.config.access_request_topic,
     )
 
@@ -146,16 +165,16 @@ async def test_access_request(
 
     # Publish and consume event again to check idempotence
     await joint_fixture.kafka.publish_event(
-        payload=access_request_payload(test_user.user_id),
-        type_=event_type_to_use,
+        payload=payload,
+        type_="upserted",
         topic=joint_fixture.config.access_request_topic,
     )
 
-    async with joint_fixture.kafka.expect_events(
-        events=expected,
-        in_topic=joint_fixture.config.notification_topic,
-    ):
+    async with joint_fixture.kafka.record_events(
+        in_topic=joint_fixture.config.notification_topic
+    ) as recorder:
         await joint_fixture.event_subscriber.run(forever=False)
+    assert not recorder.recorded_events
 
 
 async def test_missing_user_id_access_requests(
@@ -165,43 +184,27 @@ async def test_missing_user_id_access_requests(
     request events.
     """
     payload = access_request_payload("bogus_user_id")
-
-    event_types = (
-        joint_fixture.config.access_request_created_type,
-        joint_fixture.config.access_request_allowed_type,
-        joint_fixture.config.access_request_denied_type,
-    )
-    notification_names = (
-        "Access Request Created",
-        "Access Request Allowed",
-        "Access Request Denied",
+    await joint_fixture.kafka.publish_event(
+        payload=payload,
+        type_="upserted",
+        topic=joint_fixture.config.access_request_topic,
     )
 
-    for event_type, notification_name in zip(
-        event_types, notification_names, strict=True
-    ):
-        await joint_fixture.kafka.publish_event(
-            payload=payload,
-            type_=event_type,
-            topic=joint_fixture.config.access_request_topic,
+    async with joint_fixture.kafka.record_events(
+        in_topic=joint_fixture.config.kafka_dlq_topic, capture_headers=True
+    ) as recorder:
+        await joint_fixture.event_subscriber.run(forever=False)
+    assert recorder.recorded_events
+    assert recorder.recorded_events[0].headers is not None
+    assert (
+        recorder.recorded_events[0].headers.get("exc_class", "") == "MissingUserError"
+    )
+    logot.assert_logged(
+        logged.error(
+            "Unable to publish 'Access Request Created' notification as"
+            + f" user ID '{payload['user_id']}' was not found in the database."
         )
-
-        async with joint_fixture.kafka.record_events(
-            in_topic=joint_fixture.config.kafka_dlq_topic, capture_headers=True
-        ) as recorder:
-            await joint_fixture.event_subscriber.run(forever=False)
-        assert recorder.recorded_events
-        assert recorder.recorded_events[0].headers is not None
-        assert (
-            recorder.recorded_events[0].headers.get("exc_class", "")
-            == "MissingUserError"
-        )
-        logot.assert_logged(
-            logged.error(
-                f"Unable to publish '{notification_name}' notification as"
-                + f" user ID '{payload['user_id']}' was not found in the database."
-            )
-        )
+    )
 
 
 async def test_missing_user_id_iva_state_changes(
@@ -235,7 +238,7 @@ async def test_missing_user_id_iva_state_changes(
         await joint_fixture.kafka.publish_event(
             payload=payload,
             type_=event_type,
-            topic=joint_fixture.config.access_request_topic,
+            topic=joint_fixture.config.iva_state_changed_topic,
         )
 
         async with joint_fixture.kafka.record_events(
