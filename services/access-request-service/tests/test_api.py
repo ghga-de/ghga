@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest_httpx import HTTPXMock
 
 from tests.fixtures import RestFixture
@@ -29,13 +30,13 @@ pytestmark = pytest.mark.asyncio()
 
 DATE_NOW = now_as_utc()
 ONE_YEAR = timedelta(days=365)
+DATASET_TITLE = "A Great Dataset"
+DATASET_DESCRIPTION = "This is a description of A Great Dataset"
+DAC_ALIAS = "Some DAC"
 
 CREATION_DATA = {
     "user_id": "id-of-john-doe@ghga.de",
     "dataset_id": "DS001",
-    "dataset_title": "Dataset1",
-    "dataset_description": "Some Description",
-    "dac_alias": "Some DAC",
     "iva_id": "some-iva",
     "email": "me@john-doe.name",
     "request_text": "Can I access some dataset?",
@@ -70,6 +71,19 @@ def assert_same_datetime(date1: str, date2: str, max_diff_seconds=5) -> None:
     )
 
 
+@pytest.fixture(name="use_test_dataset", autouse=True)
+def test_dataset_fixture(config, mongodb: MongoDbFixture):
+    """Populate the DB with a test dataset"""
+    mongodb.client[config.db_name]["datasets"].insert_one(
+        {
+            "_id": "DS001",
+            "title": DATASET_TITLE,
+            "description": DATASET_DESCRIPTION,
+            "dac_alias": DAC_ALIAS,
+        }
+    )
+
+
 async def test_health_check(rest: RestFixture):
     """Test that the health check endpoint works."""
     response = await rest.rest_client.get("/health")
@@ -98,17 +112,13 @@ async def test_create_access_request(
     recorded_event = recorder.recorded_events[0]
     assert recorded_event.key == access_request_id
 
-    for key in [
-        "user_id",
-        "dataset_id",
-        "dataset_title",
-        "dataset_description",
-        "dac_alias",
-        "request_text",
-        "access_ends",
-    ]:
+    for key in ["user_id", "dataset_id", "request_text", "access_ends"]:
         assert recorded_event.payload[key] == CREATION_DATA[key]
+
     assert recorded_event.payload["status"] == "pending"
+    assert recorded_event.payload["dataset_title"] == DATASET_TITLE
+    assert recorded_event.payload["dataset_description"] == DATASET_DESCRIPTION
+    assert recorded_event.payload["dac_alias"] == DAC_ALIAS
     assert recorded_event.type_ == "upserted"
 
 
@@ -162,6 +172,23 @@ async def test_create_access_request_with_invalid_dataset_id(
     msg = str(response.json()["detail"])
     assert "dataset_id" in msg
     assert "String should match pattern" in msg
+
+
+async def test_create_access_request_with_nonexistent_dataset_id(
+    rest: RestFixture, auth_headers_doe: dict[str, str]
+):
+    """Test that an access request must have a dataset ID which exists in the database."""
+    response = await rest.rest_client.post(
+        "/access-requests",
+        json={
+            **CREATION_DATA,
+            "dataset_id": "DS404",
+        },
+        headers=auth_headers_doe,
+    )
+    assert response.status_code == 404
+    msg = str(response.json()["detail"])
+    assert msg == "Dataset not found"
 
 
 async def test_get_access_requests(
@@ -348,17 +375,13 @@ async def test_patch_access_request(
     assert len(recorder.recorded_events) == 1
     recorded_event = recorder.recorded_events[0]
     assert recorded_event.key == access_request_id
-    for key in [
-        "user_id",
-        "dataset_id",
-        "dataset_title",
-        "dataset_description",
-        "dac_alias",
-        "request_text",
-        "access_ends",
-    ]:
+    for key in ["user_id", "dataset_id", "request_text", "access_ends"]:
         assert recorded_event.payload[key] == CREATION_DATA[key]
+
     assert recorded_event.payload["status"] == "allowed"
+    assert recorded_event.payload["dataset_title"] == DATASET_TITLE
+    assert recorded_event.payload["dataset_description"] == DATASET_DESCRIPTION
+    assert recorded_event.payload["dac_alias"] == DAC_ALIAS
     assert recorded_event.type_ == "upserted"
 
     # get request as user

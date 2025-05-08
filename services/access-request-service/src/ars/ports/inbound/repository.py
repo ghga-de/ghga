@@ -69,6 +69,7 @@ class AccessRequestRepositoryPort(ABC):
         Raises:
         - `AccessRequestAuthorizationError` if the user is not authorized.
         - `AccessRequestInvalidDuration` error if the dates are invalid.
+        - `DatasetNotFoundError` if no dataset with given ID is found.
         """
         ...
 

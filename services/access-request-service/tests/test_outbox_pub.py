@@ -34,9 +34,6 @@ CREATION_DATA = AccessRequestCreationData(
     user_id="id-of-john-doe@ghga.de",
     iva_id="some-iva",
     dataset_id="DS001",
-    dataset_title="Dataset1",
-    dataset_description="Some Description",
-    dac_alias="Some DAC",
     email="me@john-doe.name",
     request_text="Can I access some dataset?",
     access_starts=datetime(2025, 5, 6, 6, 45, 29, tzinfo=UTC),
@@ -46,6 +43,9 @@ CREATION_DATA = AccessRequestCreationData(
 access_request = AccessRequest(
     **CREATION_DATA.model_dump(),
     full_user_name="John Doe",
+    dataset_title="Dataset1",
+    dataset_description="Some Description",
+    dac_alias="Some DAC",
     request_created=now_as_utc(),
 )
 

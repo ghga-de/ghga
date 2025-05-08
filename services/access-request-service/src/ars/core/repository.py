@@ -95,6 +95,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         Raises:
         - `AccessRequestAuthorizationError` if the user is not authorized.
         - `AccessRequestInvalidDuration` error if the dates are invalid.
+        - `DatasetNotFoundError` if no dataset with given ID is found.
         """
         user_id = auth_context.id
         if not user_id or creation_data.user_id != user_id:
@@ -129,10 +130,16 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if auth_context.title:
             full_user_name = auth_context.title + " " + full_user_name
 
+        # Retrieve the dataset by ID to populate title, description, and DAC alias
+        dataset = await self.get_dataset(creation_data.dataset_id)
+
         access_request = AccessRequest(
             **creation_data.model_dump(),
             full_user_name=full_user_name,
             request_created=request_created,
+            dataset_title=dataset.title,
+            dataset_description=dataset.description,
+            dac_alias=dataset.dac_alias,
         )
 
         await self._request_dao.insert(access_request)

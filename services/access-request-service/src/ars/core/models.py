@@ -70,13 +70,6 @@ class AccessRequestCreationData(BaseDto):
     dataset_id: Accession = Field(
         default=..., description="ID of the dataset for which access is requested"
     )
-    dataset_title: str = Field(default=..., description="Title of the dataset")
-    dataset_description: str | None = Field(
-        default=None, description="Description of the dataset"
-    )
-    dac_alias: str = Field(
-        default=..., description="The alias of the Data Access Committee."
-    )
     email: str = Field(
         default=..., description="Contact e-mail address of the requester"
     )
@@ -100,7 +93,13 @@ class AccessRequest(AccessRequestCreationData):
     """All data that describes an access request."""
 
     id: str = Field(default_factory=new_uuid4, description="ID of the access request")
-
+    dataset_title: str = Field(default=..., description="Title of the dataset")
+    dataset_description: str | None = Field(
+        default=None, description="Description of the dataset"
+    )
+    dac_alias: str = Field(
+        default=..., description="The alias of the Data Access Committee."
+    )
     full_user_name: str = Field(
         default=...,
         description="The requester's full name including academic title",

@@ -85,12 +85,12 @@ components:
       required:
       - user_id
       - dataset_id
-      - dataset_title
-      - dac_alias
       - email
       - request_text
       - access_starts
       - access_ends
+      - dataset_title
+      - dac_alias
       - full_user_name
       - request_created
       title: AccessRequest
@@ -109,24 +109,10 @@ components:
           format: date-time
           title: Access Starts
           type: string
-        dac_alias:
-          description: The alias of the Data Access Committee.
-          title: Dac Alias
-          type: string
-        dataset_description:
-          anyOf:
-          - type: string
-          - type: 'null'
-          description: Description of the dataset
-          title: Dataset Description
         dataset_id:
           description: ID of the dataset for which access is requested
           pattern: ^[A-Z]{1,6}[0-9]{3,18}$
           title: Dataset Id
-          type: string
-        dataset_title:
-          description: Title of the dataset
-          title: Dataset Title
           type: string
         email:
           description: Contact e-mail address of the requester
@@ -150,8 +136,6 @@ components:
       required:
       - user_id
       - dataset_id
-      - dataset_title
-      - dac_alias
       - email
       - request_text
       - access_starts
@@ -274,6 +258,8 @@ paths:
           description: Access request was successfully created
         '403':
           description: Not authorized to create an access request.
+        '404':
+          description: Dataset not found
         '422':
           description: Validation error in submitted data.
       security:

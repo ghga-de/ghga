@@ -60,6 +60,7 @@ async def health():
             "description": "Access request was successfully created",
         },
         403: {"description": "Not authorized to create an access request."},
+        404: {"description": "Dataset not found"},
         422: {"description": "Validation error in submitted data."},
     },
     status_code=201,
@@ -76,6 +77,8 @@ async def create_access_request(
         )
     except repository.AccessRequestAuthorizationError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except repository.DatasetNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except repository.AccessRequestInvalidDuration as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:

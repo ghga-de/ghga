@@ -301,8 +301,6 @@ async def test_can_create_request():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
-        dataset_title="Dataset1",
-        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -310,6 +308,15 @@ async def test_can_create_request():
     )
     creation_date = now_as_utc()
 
+    # Seed dataset so `repository.create` doesn't fail when it retrieves the dataset
+    await repository.register_dataset(
+        Dataset(
+            id="DS001",
+            title="A Great Dataset",
+            description="This is a good dataset",
+            dac_alias="Some DAC",
+        )
+    )
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert request.user_id == "id-of-john-doe@ghga.de"
@@ -337,14 +344,21 @@ async def test_can_create_request_with_an_iva():
         user_id="id-of-john-doe@ghga.de",
         iva_id="some-iva_id",
         dataset_id="DS001",
-        dataset_title="Dataset1",
-        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
     )
 
+    # Seed dataset so `repository.create` doesn't fail when it retrieves the dataset
+    await repository.register_dataset(
+        Dataset(
+            id="DS001",
+            title="A Great Dataset",
+            description="This is a good dataset",
+            dac_alias="Some DAC",
+        )
+    )
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert request.user_id == "id-of-john-doe@ghga.de"
@@ -361,8 +375,6 @@ async def test_cannot_create_request_for_somebody_else():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-foo@ghga.de",
         dataset_id="DS001",
-        dataset_title="Dataset1",
-        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -380,14 +392,21 @@ async def test_silently_correct_request_that_is_too_early():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
-        dataset_title="Dataset1",
-        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
     )
 
+    # Seed dataset so `repository.create` doesn't fail when it retrieves the dataset
+    await repository.register_dataset(
+        Dataset(
+            id="DS001",
+            title="A Great Dataset",
+            description="This is a good dataset",
+            dac_alias="Some DAC",
+        )
+    )
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert 0 <= (request.request_created - creation_date).seconds < 5
@@ -404,8 +423,6 @@ async def test_cannot_create_request_too_much_in_advance():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
-        dataset_title="Dataset1",
-        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -427,8 +444,6 @@ async def test_cannot_create_request_too_short():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
-        dataset_title="Dataset1",
-        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -450,8 +465,6 @@ async def test_cannot_create_request_too_long():
     creation_data = AccessRequestCreationData(
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
-        dataset_title="Dataset1",
-        dac_alias="Some DAC",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
@@ -464,6 +477,23 @@ async def test_cannot_create_request_too_long():
         await repository.create(creation_data, auth_context=auth_context_doe)
 
     assert access_request_dao.last_upsert is None
+
+
+async def test_cannot_create_request_nonexistent_dataset():
+    """Make sure we get a DatasetNotFoundError when the requested dataset ID doesn't exist."""
+    access_starts = now_as_utc()
+    access_ends = access_starts + ONE_YEAR
+    creation_data = AccessRequestCreationData(
+        user_id="id-of-john-doe@ghga.de",
+        dataset_id="DS404",
+        email="me@john-doe.name",
+        request_text="Can I access some dataset?",
+        access_starts=access_starts,
+        access_ends=access_ends,
+    )
+
+    with pytest.raises(repository.DatasetNotFoundError):
+        _ = await repository.create(creation_data, auth_context=auth_context_doe)
 
 
 async def test_can_get_all_requests_as_data_steward():
