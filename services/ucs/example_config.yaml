@@ -7,6 +7,7 @@ cors_allowed_origins: null
 db_name: dev
 db_version_collection: ucsDbVersions
 docs_url: /docs
+enable_opentelemetry: false
 file_deleted_topic: file-downloads
 file_deleted_type: file_deleted
 file_deletion_request_topic: file-deletion-requests
@@ -50,6 +51,8 @@ object_storages:
       s3_secret_access_key: '**********'
       s3_session_token: null
 openapi_url: /openapi.json
+otel_exporter_protocol: http/protobuf
+otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '001'
 service_name: ucs
