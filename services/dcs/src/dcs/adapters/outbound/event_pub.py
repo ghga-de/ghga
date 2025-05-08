@@ -24,13 +24,11 @@ from ghga_event_schemas.configs import (
     FileRegisteredForDownloadEventsConfig,
     FileStagingRequestedEventsConfig,
 )
+from hexkit.opentelemetry_setup import start_span
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from opentelemetry import trace
 
 from dcs.core import models
 from dcs.ports.outbound.event_pub import EventPublisherPort
-
-tracer = trace.get_tracer("dcs")
 
 
 class EventPubTranslatorConfig(
@@ -54,7 +52,7 @@ class EventPubTranslator(EventPublisherPort):
         self._config = config
         self._provider = provider
 
-    @tracer.start_as_current_span("EventPubTranslator.nonstaged_file_requested")
+    @start_span()
     async def nonstaged_file_requested(
         self, *, drs_object: models.DrsObject, bucket_id: str
     ):
@@ -75,7 +73,7 @@ class EventPubTranslator(EventPublisherPort):
             key=drs_object.file_id,
         )
 
-    @tracer.start_as_current_span("EventPubTranslator.download_served")
+    @start_span()
     async def download_served(
         self,
         *,
@@ -102,7 +100,7 @@ class EventPubTranslator(EventPublisherPort):
             key=drs_object.file_id,
         )
 
-    @tracer.start_as_current_span("EventPubTranslator.file_registered")
+    @start_span()
     async def file_registered(self, *, drs_object: models.DrsObjectWithUri) -> None:
         """Communicates the event that a file has been registered."""
         payload = event_schemas.FileRegisteredForDownload(
@@ -120,7 +118,7 @@ class EventPubTranslator(EventPublisherPort):
             key=drs_object.file_id,
         )
 
-    @tracer.start_as_current_span("EventPubTranslator.file_deleted")
+    @start_span()
     async def file_deleted(self, *, file_id: str) -> None:
         """Communicates the event that a file has been successfully deleted."""
         payload = event_schemas.FileDeletionSuccess(file_id=file_id)

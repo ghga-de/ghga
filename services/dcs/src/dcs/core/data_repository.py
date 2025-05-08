@@ -27,8 +27,8 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorages,
     S3ObjectStoragesConfig,
 )
+from hexkit.opentelemetry_setup import start_span
 from hexkit.protocols.objstorage import ObjectStorageProtocol
-from opentelemetry import trace
 from pydantic import Field, PositiveInt, field_validator
 from pydantic_settings import BaseSettings
 
@@ -43,7 +43,6 @@ from dcs.ports.outbound.dao import DrsObjectDaoPort, ResourceNotFoundError
 from dcs.ports.outbound.event_pub import EventPublisherPort
 
 log = logging.getLogger(__name__)
-tracer = trace.get_tracer("dcs")
 
 
 class DataRepositoryConfig(BaseSettings):
@@ -147,6 +146,7 @@ class DataRepository(DataRepositoryPort):
             self_uri=self._get_drs_uri(drs_id=drs_object.file_id),
         )
 
+    @start_span()
     async def _get_access_model(
         self,
         *,
@@ -156,12 +156,11 @@ class DataRepository(DataRepositoryPort):
     ) -> models.DrsObjectWithAccess:
         """Get a DRS Object model with access information."""
         # custom non-matching span name, describes the important part of the action better
-        with tracer.start_as_current_span("DataRepository.get_presigned_url"):
-            access_url = await object_storage.get_object_download_url(
-                bucket_id=bucket_id,
-                object_id=drs_object.object_id,
-                expires_after=self._config.presigned_url_expires_after,
-            )
+        access_url = await object_storage.get_object_download_url(
+            bucket_id=bucket_id,
+            object_id=drs_object.object_id,
+            expires_after=self._config.presigned_url_expires_after,
+        )
 
         return models.DrsObjectWithAccess(
             **drs_object.model_dump(),

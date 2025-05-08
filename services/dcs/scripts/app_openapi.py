@@ -29,13 +29,12 @@ from dcs.adapters.inbound.fastapi_.routes import router
 app = FastAPI()
 app.include_router(router)
 
-CONFIG = DrsApiConfig()
-
 
 def custom_openapi() -> dict[str, Any]:  # noqa: D103
     if app.openapi_schema:
         return app.openapi_schema
-    openapi_schema = get_openapi_schema(app, config=CONFIG)
+    config = DrsApiConfig()
+    openapi_schema = get_openapi_schema(app, config=config)
     app.openapi_schema = openapi_schema
     return openapi_schema
 

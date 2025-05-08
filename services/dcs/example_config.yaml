@@ -24,6 +24,7 @@ download_served_topic: file-downloads
 download_served_type: download_served
 drs_server_uri: drs://localhost:8080/
 ekss_base_url: http://ekss:8080/
+enable_opentelemetry: false
 file_deleted_topic: file-downloads
 file_deleted_type: file_deleted
 file_deletion_request_topic: file-deletion-requests
@@ -64,6 +65,8 @@ object_storages:
       s3_secret_access_key: '**********'
       s3_session_token: null
 openapi_url: /openapi.json
+otel_exporter_protocol: http/protobuf
+otel_trace_sampling_rate: 1.0
 outbox_cache_timeout: 7
 port: 8080
 presigned_url_expires_after: 30
