@@ -39,6 +39,3 @@ def get_config(
             sources_dict.update(**source.model_dump())
 
     return Config(config_yaml=default_config_yaml, **sources_dict)
-
-
-DEFAULT_TEST_CONFIG = get_config()

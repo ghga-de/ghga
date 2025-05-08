@@ -6,6 +6,7 @@ cors_allowed_methods: null
 cors_allowed_origins: null
 db_name: dev
 docs_url: /docs
+enable_opentelemetry: false
 file_deletion_request_topic: file-deletion-requests
 file_deletion_request_type: file_deletion_requested
 generate_correlation_id: true
@@ -28,6 +29,8 @@ log_traceback: true
 mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json
+otel_exporter_protocol: http/protobuf
+otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '1'
 service_name: pcs
