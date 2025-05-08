@@ -41,6 +41,3 @@ def get_config(
     sources_dict.update(**kwargs)
 
     return Config(config_yaml=default_config_yaml, **sources_dict)
-
-
-DEFAULT_CONFIG = get_config()

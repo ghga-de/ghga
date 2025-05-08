@@ -20,7 +20,7 @@ import uuid
 from contextlib import suppress
 
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
-from opentelemetry import trace
+from hexkit.opentelemetry_setup import start_span
 
 from ifrs.config import Config
 from ifrs.core import models
@@ -29,7 +29,6 @@ from ifrs.ports.outbound.dao import FileMetadataDaoPort, ResourceNotFoundError
 from ifrs.ports.outbound.event_pub import EventPublisherPort
 
 log = logging.getLogger(__name__)
-tracer = trace.get_tracer("ifrs")
 
 
 class FileRegistry(FileRegistryPort):
@@ -76,7 +75,7 @@ class FileRegistry(FileRegistryPort):
 
         raise self.FileUpdateError(file_id=file_without_object_id.file_id)
 
-    @tracer.start_as_current_span("FileRegistry.register_file")
+    @start_span()
     async def register_file(
         self,
         *,
@@ -193,7 +192,7 @@ class FileRegistry(FileRegistryPort):
             file=file, bucket_id=permanent_bucket_id
         )
 
-    @tracer.start_as_current_span("FileRegistry.stage_file")
+    @start_span()
     async def stage_registered_file(
         self,
         *,
@@ -296,7 +295,7 @@ class FileRegistry(FileRegistryPort):
             storage_alias=file.storage_alias,
         )
 
-    @tracer.start_as_current_span("FileRegistry.delete_file")
+    @start_span()
     async def delete_file(self, *, file_id: str) -> None:
         """Deletes a file from the permanent storage and the internal database.
         If no file with that id exists, do nothing.

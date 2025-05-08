@@ -1,4 +1,5 @@
 db_name: dev
+enable_opentelemetry: false
 file_deleted_topic: file-deletions
 file_deleted_type: file_deleted
 file_deletion_request_topic: file-deletion-requests
@@ -38,5 +39,7 @@ object_storages:
       s3_endpoint_url: http://ifrs:4566
       s3_secret_access_key: '**********'
       s3_session_token: null
+otel_exporter_protocol: http/protobuf
+otel_trace_sampling_rate: 1.0
 service_instance_id: '001'
-service_name: internal_file_registry
+service_name: ifrs
