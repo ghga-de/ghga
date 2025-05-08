@@ -16,6 +16,7 @@
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
+from hexkit.opentelemetry_setup import configure_opentelemetry
 
 from fis.config import Config
 from fis.inject import get_persistent_publisher, prepare_rest_app
@@ -28,6 +29,7 @@ async def run_rest():
     """Run the HTTP REST API."""
     config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     await run_db_migrations(config=config, target_version=DB_VERSION)
 
@@ -39,6 +41,7 @@ async def publish_events(*, all: bool = False):
     """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
     config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     await run_db_migrations(config=config, target_version=DB_VERSION)
 

@@ -2,6 +2,30 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "enable_opentelemetry": {
+      "default": false,
+      "description": "If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation.",
+      "title": "Enable Opentelemetry",
+      "type": "boolean"
+    },
+    "otel_trace_sampling_rate": {
+      "default": 1.0,
+      "description": "Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False.",
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Otel Trace Sampling Rate",
+      "type": "number"
+    },
+    "otel_exporter_protocol": {
+      "default": "http/protobuf",
+      "description": "Specifies which protocol should be used by exporters.",
+      "enum": [
+        "grpc",
+        "http/protobuf"
+      ],
+      "title": "Otel Exporter Protocol",
+      "type": "string"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",

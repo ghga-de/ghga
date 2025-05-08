@@ -7,6 +7,7 @@ cors_allowed_origins: null
 db_name: dev
 db_version_collection: fisDbVersions
 docs_url: /docs
+enable_opentelemetry: false
 file_interrogations_topic: file-interrogations
 file_validations_collection: fileValidations
 generate_correlation_id: true
@@ -32,6 +33,8 @@ migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json
+otel_exporter_protocol: http/protobuf
+otel_trace_sampling_rate: 1.0
 port: 8080
 private_key_passphrase: null
 private_key_path: placeholder.sec

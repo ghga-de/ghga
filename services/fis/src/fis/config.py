@@ -17,6 +17,7 @@
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry_setup import OpenTelemetryConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 from pydantic import Field
@@ -37,6 +38,7 @@ class Config(
     ServiceConfig,
     VaultConfig,
     LoggingConfig,
+    OpenTelemetryConfig,
 ):
     """Config parameters and their defaults."""
 
@@ -50,6 +52,3 @@ class Config(
         ),
         examples=["fileValidations"],
     )
-
-
-CONFIG = Config()  # type: ignore [call-arg]

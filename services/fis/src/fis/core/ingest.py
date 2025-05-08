@@ -20,9 +20,9 @@ from pathlib import Path
 
 from crypt4gh.keys import get_private_key
 from ghga_service_commons.utils.crypt import decrypt
+from hexkit.opentelemetry_setup import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
 from nacl.exceptions import CryptoError
-from opentelemetry import trace
 from pydantic import Field, SecretStr, ValidationError
 from pydantic_settings import BaseSettings
 
@@ -39,7 +39,6 @@ from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.vault.client import VaultAdapterPort
 
 log = logging.getLogger(__name__)
-tracer = trace.get_tracer("fis")
 
 
 class ServiceConfig(BaseSettings):
@@ -78,7 +77,7 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
         self._event_publisher = event_publisher
         self._file_dao = file_dao
 
-    @tracer.start_as_current_span("LegacyUploadMetadataProcessor.decrypt_payload")
+    @start_span()
     async def decrypt_payload(
         self, *, encrypted: models.EncryptedPayload
     ) -> models.LegacyUploadMetadata:
@@ -148,7 +147,7 @@ class UploadMetadataProcessor(UploadMetadataProcessorPort):
         self._vault_adapter = vault_adapter
         self._file_dao = file_dao
 
-    @tracer.start_as_current_span("UploadMetadataProcessor.decrypt_secret")
+    @start_span()
     async def decrypt_secret(self, *, encrypted: models.EncryptedPayload) -> SecretStr:
         """Decrypt file secret payload"""
         try:
