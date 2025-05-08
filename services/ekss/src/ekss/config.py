@@ -20,8 +20,11 @@ from pathlib import Path
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry_setup import OpenTelemetryConfig
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
+
+SERVICE_NAME = "ekss"
 
 
 class VaultConfig(BaseSettings):
@@ -114,11 +117,13 @@ class Crypt4GHConfig(BaseSettings):
     )
 
 
-@config_from_yaml(prefix="ekss")
-class Config(ApiConfigBase, VaultConfig, LoggingConfig, Crypt4GHConfig):
+@config_from_yaml(prefix=SERVICE_NAME)
+class Config(
+    ApiConfigBase, VaultConfig, LoggingConfig, Crypt4GHConfig, OpenTelemetryConfig
+):
     """Config parameters and their defaults."""
 
-    service_name: str = "encryption_key_store"
+    service_name: str = SERVICE_NAME
 
 
 CONFIG = Config()  # type: ignore
