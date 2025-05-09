@@ -49,7 +49,7 @@ class JWTAuthConfig(BaseSettings):
         description="A list of all algorithms that can be used for signing tokens.",
     )
     auth_check_claims: dict[str, Any] = Field(
-        default=dict.fromkeys("name email iat exp".split()),
+        default=dict.fromkeys(["name", "email", "iat", "exp"]),
         description="A dict of all claims that shall be verified by the provider."
         + " A value of None means that the claim can have any value.",
     )

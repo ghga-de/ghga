@@ -318,7 +318,7 @@ class RequestLoggingMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         finally:
-            duration = int(round((time.perf_counter() - start_time) * 1000))
+            duration = int(round((time.perf_counter() - start_time) * 1000))  # noqa: RUF046
             try:
                 status_phrase = http.HTTPStatus(status_code).phrase
             except ValueError:

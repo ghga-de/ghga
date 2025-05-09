@@ -97,7 +97,7 @@ class AuthConfig(JWTAuthConfig):
         description="A list of all algorithms used for signing GHGA internal tokens.",
     )
     auth_check_claims: dict[str, Any] = Field(
-        default=dict.fromkeys("id name email iat exp".split()),
+        default=dict.fromkeys(["id", "name", "email", "iat", "exp"]),
         description="A dict of all GHGA internal claims that shall be verified.",
     )
     auth_map_claims: dict[str, str] = Field(
