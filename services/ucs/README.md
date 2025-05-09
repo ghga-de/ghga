@@ -15,13 +15,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/upload-controller-service):
 ```bash
-docker pull ghga/upload-controller-service:5.1.0
+docker pull ghga/upload-controller-service:6.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/upload-controller-service:5.1.0 .
+docker build -t ghga/upload-controller-service:6.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -29,7 +29,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/upload-controller-service:5.1.0 --help
+docker run -p 8080:8080 ghga/upload-controller-service:6.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -51,6 +51,16 @@ The service requires the following configuration parameters:
 - <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. Minimum: `0`. Maximum: `1`. Default: `1.0`.
 
 - <a id="properties/otel_exporter_protocol"></a>**`otel_exporter_protocol`** *(string)*: Specifies which protocol should be used by exporters. Must be one of: `["grpc", "http/protobuf"]`. Default: `"http/protobuf"`.
+
+- <a id="properties/otel_exporter_endpoint"></a>**`otel_exporter_endpoint`** *(string, format: uri, required)*: Base endpoint URL for the collector that receives content from the exporter. Length must be at least 1.
+
+
+  Examples:
+
+  ```json
+  "http://localhost:4318"
+  ```
+
 
 - <a id="properties/file_upload_received_topic"></a>**`file_upload_received_topic`** *(string, required)*: The name of the topic used for FileUploadReceived events.
 

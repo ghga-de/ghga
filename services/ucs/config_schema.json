@@ -121,6 +121,16 @@
       "title": "Otel Exporter Protocol",
       "type": "string"
     },
+    "otel_exporter_endpoint": {
+      "description": "Base endpoint URL for the collector that receives content from the exporter.",
+      "examples": [
+        "http://localhost:4318"
+      ],
+      "format": "uri",
+      "minLength": 1,
+      "title": "Otel Exporter Endpoint",
+      "type": "string"
+    },
     "file_upload_received_topic": {
       "description": "The name of the topic used for FileUploadReceived events.",
       "examples": [
@@ -591,6 +601,7 @@
     }
   },
   "required": [
+    "otel_exporter_endpoint",
     "file_upload_received_topic",
     "file_upload_received_type",
     "file_deleted_topic",
