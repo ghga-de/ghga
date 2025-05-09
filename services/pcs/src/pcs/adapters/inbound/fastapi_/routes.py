@@ -17,7 +17,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, status
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 
 from pcs.adapters.inbound.fastapi_ import dummies
 from pcs.adapters.inbound.fastapi_.http_authorization import (
