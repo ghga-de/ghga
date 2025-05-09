@@ -20,7 +20,7 @@ from pathlib import Path
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from hexkit.opentelemetry_setup import OpenTelemetryConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 

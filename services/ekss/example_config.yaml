@@ -12,6 +12,7 @@ log_format: null
 log_level: INFO
 log_traceback: true
 openapi_url: /openapi.json
+otel_exporter_endpoint: http://localhost:4318/
 otel_exporter_protocol: http/protobuf
 otel_trace_sampling_rate: 1.0
 port: 8080

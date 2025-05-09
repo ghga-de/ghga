@@ -18,7 +18,7 @@ import base64
 import os
 
 from fastapi import APIRouter, Depends, status
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 from requests.exceptions import RequestException
 
 from ekss.adapters.inbound.fastapi_ import exceptions, models

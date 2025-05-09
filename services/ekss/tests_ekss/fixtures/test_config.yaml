@@ -10,3 +10,4 @@ service_instance_id: "1"
 server_private_key_path: test_placeholder.sec
 server_public_key_path: test_placeholder.pub
 private_key_passphrase: test
+otel_exporter_endpoint: http://localhost:4318

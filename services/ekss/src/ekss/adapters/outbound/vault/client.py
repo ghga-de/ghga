@@ -20,7 +20,7 @@ from uuid import uuid4
 
 import hvac
 import hvac.exceptions
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 from hvac.api.auth_methods import Kubernetes
 
 from ekss.adapters.outbound.vault import exceptions

@@ -19,7 +19,7 @@ import asyncio
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
-from hexkit.opentelemetry_setup import configure_opentelemetry
+from hexkit.opentelemetry import configure_opentelemetry
 
 from ekss.adapters.inbound.fastapi_.main import (
     setup_app,
