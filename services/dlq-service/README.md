@@ -12,9 +12,12 @@ DLQ Service - a service to manage the dead letter queue for Kafka events
 The DLQ Service provides a way to manage Kafka topics designated as dead letter queues
 via a RESTful API interface.
 
-The DLQ Service requires configuration to define the topics and microservices for each
-individual DLQ. It will automatically derive the DLQ topic names based on the
-configuration and create a dedicated Kafka consumer for each DLQ topic.
+The DLQ Service subscribes to the configured DLQ topic and saves all inbound events
+to the database. Using the REST API to interact with a given service + topic,
+events can be previewed, discarded, modified, and requeued for the original service
+to re-consume them. When requeuing an event, the DLQ service publishes the event to
+a Kafka "retry" topic, whose name is automatically derived from the service name
+included in the event's DLQ information.
 
 
 ## Installation
@@ -23,13 +26,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/dlq-service):
 ```bash
-docker pull ghga/dlq-service:1.0.2
+docker pull ghga/dlq-service:2.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/dlq-service:1.0.2 .
+docker build -t ghga/dlq-service:2.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -37,7 +40,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/dlq-service:1.0.2 --help
+docker run -p 8080:8080 ghga/dlq-service:2.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:

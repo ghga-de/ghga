@@ -117,9 +117,9 @@ class DLQManager(DLQManagerPort):
 
         Raises a `ValueError` if any of the above conditions are not met.
         """
-        # Published event can't have DLQ or '-retry' in the topic
+        # Original topic for inbound event shouldn't be DLQ topic or a retry topic
         if (
-            event.topic.endswith("-retry")
+            event.topic.startswith("retry-")
             or event.topic == self._config.kafka_dlq_topic
         ):
             raise ValueError(f"Resolved event topic can't be set to '{event.topic}'")
@@ -230,7 +230,7 @@ class DLQManager(DLQManagerPort):
             **core_publish_data.model_dump(),
             headers={HeaderNames.ORIGINAL_TOPIC: core_publish_data.topic},
         )
-        publish_data.topic = f"{service}-retry"
+        publish_data.topic = f"retry-{service}"
 
         # If this isn't a dry-run, actually publish the event to the retry topic
         if not dry_run:

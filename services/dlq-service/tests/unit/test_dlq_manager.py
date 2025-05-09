@@ -130,7 +130,7 @@ async def test_process_override_different_dlq_id():
 
 
 @pytest.mark.parametrize(
-    "topic", [DEFAULT_CONFIG.kafka_dlq_topic, "fss-retry", "-retry"]
+    "topic", [DEFAULT_CONFIG.kafka_dlq_topic, "retry-fss", "retry-"]
 )
 @pytest.mark.asyncio
 async def test_process_override_forbidden_topic(topic: str):
@@ -212,7 +212,7 @@ async def test_process_override_success():
         key=stored_dlq_event.key,
     )
     published = PublishableEventData(
-        topic=f"{utils.FSS}-retry",
+        topic=f"retry-{utils.FSS}",
         type_=override_event.type_,
         payload=override_event.payload,
         key=override_event.key,
@@ -248,7 +248,7 @@ async def test_process_override_success():
         assert result.payload == override_event.payload
         assert result.type_ == override_event.type_
         assert result.key == override_event.key
-        assert result.topic == f"{utils.FSS}-retry"
+        assert result.topic == f"retry-{utils.FSS}"
 
 
 @pytest.mark.parametrize(
