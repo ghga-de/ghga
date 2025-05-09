@@ -18,7 +18,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import JSONResponse
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.http_authorization import (

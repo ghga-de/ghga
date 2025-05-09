@@ -16,7 +16,7 @@
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
-from hexkit.opentelemetry_setup import configure_opentelemetry
+from hexkit.opentelemetry import configure_opentelemetry
 
 from fis.config import Config
 from fis.inject import get_persistent_publisher, prepare_rest_app

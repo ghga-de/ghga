@@ -20,7 +20,7 @@ from pathlib import Path
 
 from crypt4gh.keys import get_private_key
 from ghga_service_commons.utils.crypt import decrypt
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
 from nacl.exceptions import CryptoError
 from pydantic import Field, SecretStr, ValidationError
