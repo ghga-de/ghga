@@ -18,7 +18,7 @@
 import base64
 
 import httpx
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 
 from dcs.adapters.outbound.http import exceptions
 from dcs.adapters.outbound.http.exception_translation import ResponseExceptionTranslator

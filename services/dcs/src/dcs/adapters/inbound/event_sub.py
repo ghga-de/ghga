@@ -24,7 +24,7 @@ from ghga_event_schemas.configs import (
 )
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 
 from dcs.core import models

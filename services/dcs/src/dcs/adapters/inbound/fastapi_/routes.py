@@ -17,7 +17,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 
 from dcs.adapters.inbound.fastapi_ import (
     dummies,

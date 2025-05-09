@@ -21,7 +21,7 @@ from ghga_service_commons.auth.ghga import AuthConfig
 from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from hexkit.opentelemetry_setup import OpenTelemetryConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field

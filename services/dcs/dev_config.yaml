@@ -43,3 +43,5 @@ file_deleted_topic: file-downloads
 file_deleted_type: file_deleted
 auth_key: "{}"
 log_level: INFO
+
+otel_exporter_endpoint: http://localhost:4318

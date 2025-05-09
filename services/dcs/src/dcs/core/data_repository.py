@@ -27,7 +27,7 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorages,
     S3ObjectStoragesConfig,
 )
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from pydantic import Field, PositiveInt, field_validator
 from pydantic_settings import BaseSettings

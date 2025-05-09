@@ -24,7 +24,7 @@ from ghga_event_schemas.configs import (
     FileRegisteredForDownloadEventsConfig,
     FileStagingRequestedEventsConfig,
 )
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventpub import EventPublisherProtocol
 
 from dcs.core import models
