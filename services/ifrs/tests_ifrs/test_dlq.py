@@ -59,7 +59,7 @@ async def test_consume_from_retry(kafka: KafkaFixture):
     await kafka.publish_event(
         payload=payload.model_dump(),
         type_=config.file_deletion_request_type,
-        topic=config.service_name + "-retry",
+        topic="retry-" + config.service_name,
         key="test",
         headers={"original_topic": config.file_deletion_request_topic},
     )

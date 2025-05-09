@@ -23,7 +23,7 @@ from ghga_event_schemas.configs import (
     FileInternallyRegisteredEventsConfig,
     FileStagedEventsConfig,
 )
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventpub import EventPublisherProtocol
 
 from ifrs.core import models

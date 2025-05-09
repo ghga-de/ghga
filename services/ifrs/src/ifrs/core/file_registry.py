@@ -20,7 +20,7 @@ import uuid
 from contextlib import suppress
 
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
-from hexkit.opentelemetry_setup import start_span
+from hexkit.opentelemetry import start_span
 
 from ifrs.config import Config
 from ifrs.core import models

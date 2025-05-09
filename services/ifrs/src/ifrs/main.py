@@ -16,7 +16,7 @@
 """Entrypoint functions for the service."""
 
 from hexkit.log import configure_logging
-from hexkit.opentelemetry_setup import configure_opentelemetry
+from hexkit.opentelemetry import configure_opentelemetry
 
 from ifrs.config import Config
 from ifrs.inject import get_persistent_publisher, prepare_event_subscriber
