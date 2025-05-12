@@ -25,7 +25,11 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from ars.adapters.outbound.daos import get_access_request_dao
-from ars.core.models import AccessRequest, AccessRequestCreationData
+from ars.core.models import (
+    AccessRequest,
+    AccessRequestCreationData,
+    AccessRequestStatus,
+)
 
 pytestmark = pytest.mark.asyncio()
 
@@ -75,7 +79,9 @@ async def test_upsert(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert event.payload["status"] == "pending"
 
         # Perform an update to the request
-        access_request_update = access_request.model_copy(update={"status": "allowed"})
+        access_request_update = access_request.model_copy(
+            update={"status": AccessRequestStatus.ALLOWED}
+        )
         async with kafka.record_events(
             in_topic=config.access_request_topic
         ) as recorder:

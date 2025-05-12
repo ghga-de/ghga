@@ -51,6 +51,12 @@ components:
           description: ID of the access request
           title: Id
           type: string
+        internal_note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: A note about the access request only visible to Data Stewards
+          title: Internal Note
         iva_id:
           anyOf:
           - type: string
@@ -58,6 +64,12 @@ components:
           description: ID of the IVA to be used for this request, but this can also
             be specified later
           title: Iva Id
+        note_to_requester:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: A note about the access request that is visible to the requester
+          title: Note To Requester
         request_created:
           description: Creation date of the access request
           format: date-time
@@ -78,6 +90,12 @@ components:
           - type: 'null'
           description: Last change date of the status of this request
           title: Status Changed
+        ticket_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The ID of the ticket associated with the access request
+          title: Ticket Id
         user_id:
           description: ID of the user who requests access
           title: User Id
@@ -160,17 +178,35 @@ components:
           - type: 'null'
           description: Modified start date of access
           title: Access Starts
+        internal_note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: A note about the access request only visible to Data Stewards
+          title: Internal Note
         iva_id:
           anyOf:
           - type: string
           - type: 'null'
           description: ID of the IVA to be used for this request
           title: Iva Id
+        note_to_requester:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: A note about the access request that is visible to the requester
+          title: Note To Requester
         status:
           anyOf:
           - $ref: '#/components/schemas/AccessRequestStatus'
           - type: 'null'
           description: The new status of this access request
+        ticket_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The ID of the ticket associated with the access request
+          title: Ticket Id
       title: AccessRequestPatchData
       type: object
     AccessRequestStatus:

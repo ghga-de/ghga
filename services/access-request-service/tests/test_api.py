@@ -329,7 +329,7 @@ async def test_filter_access_requests(
     assert len(response.json()) == 1
 
 
-async def test_patch_access_request(
+async def test_patch_access_request_status(
     rest: RestFixture,
     auth_headers_doe: dict[str, str],
     auth_headers_steward: dict[str, str],
@@ -769,6 +769,9 @@ async def test_patch_everything_when_allowing_request(
             "iva_id": "new-iva",
             "access_starts": access_starts,
             "access_ends": access_ends,
+            "ticket_id": "some-ticket-id",
+            "internal_note": "Some internal note",
+            "note_to_requester": "Some note to requester",
         },
         headers=auth_headers_steward,
     )
@@ -793,3 +796,106 @@ async def test_patch_everything_when_allowing_request(
     assert request["changed_by"] == "id-of-rod-steward@ghga.de"
     assert norm_utc(request["access_starts"]) == access_starts
     assert norm_utc(request["access_ends"]) == access_ends
+    assert request["ticket_id"] == "some-ticket-id"
+    assert request["internal_note"] == "Some internal note"
+    assert request["note_to_requester"] == "Some note to requester"
+
+
+async def test_patch_ticket_id_and_notes(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+):
+    """Test setting the ticket ID and notes of a pending request."""
+    client = rest.rest_client
+    # create access request as user
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+    assert_is_uuid(access_request_id)
+
+    # set ticket ID as data steward
+    response = await rest.rest_client.patch(
+        f"/access-requests/{access_request_id}",
+        json={
+            "ticket_id": "some-ticket-id",
+        },
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 204
+
+    # get request as data steward
+    response = await client.get("/access-requests", headers=auth_headers_steward)
+
+    assert response.status_code == 200
+    requests = response.json()
+    assert isinstance(requests, list)
+    assert len(requests) == 1
+    request = requests[0]
+
+    # make sure that the ticket ID has been set
+    assert request["id"] == access_request_id
+    assert request["ticket_id"] == "some-ticket-id"
+    assert request["internal_note"] is None
+    assert request["note_to_requester"] is None
+    assert request["status"] == "pending"
+    assert not request["status_changed"]
+
+    # set notes as data steward
+    response = await rest.rest_client.patch(
+        f"/access-requests/{access_request_id}",
+        json={
+            "internal_note": "Some internal note",
+            "note_to_requester": "Some note to requester",
+        },
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 204
+
+    # get request as data steward
+    response = await client.get("/access-requests", headers=auth_headers_steward)
+
+    assert response.status_code == 200
+    requests = response.json()
+    assert isinstance(requests, list)
+    assert len(requests) == 1
+    request = requests[0]
+
+    # make sure that notes have been set
+    assert request["id"] == access_request_id
+    assert request["ticket_id"] == "some-ticket-id"
+    assert request["internal_note"] == "Some internal note"
+    assert request["note_to_requester"] == "Some note to requester"
+    assert request["status"] == "pending"
+    assert not request["status_changed"]
+
+    # reset ticket ID and notes as data steward
+    response = await rest.rest_client.patch(
+        f"/access-requests/{access_request_id}",
+        json={
+            "ticket_id": "",
+            "internal_note": "",
+            "note_to_requester": "",
+        },
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 204
+
+    # get request as data steward
+    response = await client.get("/access-requests", headers=auth_headers_steward)
+
+    assert response.status_code == 200
+    requests = response.json()
+    assert isinstance(requests, list)
+    assert len(requests) == 1
+    request = requests[0]
+
+    # make sure that everything has been changed
+    assert request["id"] == access_request_id
+    assert request["ticket_id"] is None
+    assert request["internal_note"] is None
+    assert request["note_to_requester"] is None
+    assert request["status"] == "pending"
+    assert not request["status_changed"]

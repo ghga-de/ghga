@@ -195,7 +195,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         return requests
 
-    async def update(
+    async def update(  # noqa: C901
         self,
         access_request_id: str,
         *,
@@ -267,6 +267,12 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             update["status_changed"] = now_as_utc()
             update["changed_by"] = user_id
 
+        if patch_data.ticket_id is not None:
+            update["ticket_id"] = patch_data.ticket_id or None
+        if patch_data.internal_note is not None:
+            update["internal_note"] = patch_data.internal_note or None
+        if patch_data.note_to_requester is not None:
+            update["note_to_requester"] = patch_data.note_to_requester or None
         modified_request = request.model_copy(update=update)
         await self._request_dao.update(modified_request)
 

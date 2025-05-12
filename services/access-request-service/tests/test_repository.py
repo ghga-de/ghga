@@ -25,6 +25,7 @@ import pytest
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_datetime
 from hexkit.custom_types import ID
+from hexkit.protocols.dao import ResourceAlreadyExistsError
 
 from ars.core.models import (
     AccessRequest,
@@ -184,17 +185,18 @@ ACCESS_REQUESTS = [
 class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
     """Dummy AccessRequest DAO for testing."""
 
-    last_upsert: AccessRequest | None
+    _requests: dict[ID, AccessRequest]
 
     def reset(self):
         """Reset the last recorded upsert."""
+        self._requests = {request.id: request for request in ACCESS_REQUESTS}
         self.last_upsert = None
 
     def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[AccessRequest]:
         """Find all records using a mapping."""
 
         async def async_iterator():
-            for request in ACCESS_REQUESTS:
+            for request in self._requests.values():
                 if all(
                     value is None or value == getattr(request, key)
                     for key, value in mapping.items()
@@ -205,43 +207,48 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
 
     async def get_by_id(self, id_: ID) -> AccessRequest:
         """Get a resource by providing its ID."""
-        async for request in self.find_all(mapping={"id": id_}):
-            return request
-        raise ResourceNotFoundError(id_=id_)
+        try:
+            return self._requests[id_]
+        except KeyError as error:
+            raise ResourceNotFoundError(id_=id_) from error
 
     async def insert(self, dto: AccessRequest) -> None:
         """Create a new record."""
-        self.last_upsert = dto
+        if dto.id in self._requests:
+            raise ResourceAlreadyExistsError(id_=dto.id)
+        self.last_upsert = self._requests[dto.id] = dto
 
     async def update(self, dto: AccessRequest) -> None:
         """Update an existing resource."""
-        self.last_upsert = dto
+        self.last_upsert = self._requests[dto.id] = dto
 
 
 class DatasetDaoDummy(DatasetDaoPort):  # pyright: ignore
     """Dummy Dataset DAO for testing."""
 
+    _datasets: dict[ID, Dataset]
     last_upsert: Dataset | None
 
     def reset(self):
         """Reset the last recorded upsert."""
-        self.last_upsert = None
+        self._datasets = {}
 
     async def upsert(self, dto: Dataset) -> None:
         """Update the dataset if it already exists, create it otherwise."""
-        self.last_upsert = dto
+        self.last_upsert = self._datasets[dto.id] = dto
 
     async def get_by_id(self, id_: ID) -> Dataset:
         """Get a dataset by providing its ID.."""
-        if not self.last_upsert or self.last_upsert.id != id_:
-            raise ResourceNotFoundError(id_=id_)
-        return self.last_upsert
+        try:
+            return self._datasets[id_]
+        except KeyError as error:
+            raise ResourceNotFoundError(id_=id_) from error
 
     async def delete(self, id_: ID) -> None:
         """Delete a dataset by providing its ID."""
-        if not self.last_upsert or self.last_upsert.id != id_:
+        if id_ not in self._datasets:
             raise ResourceNotFoundError(id_=id_)
-        self.last_upsert = None
+        del self._datasets[id_]
 
 
 class AccessGrantsDummy(AccessGrantsPort):
@@ -912,6 +919,50 @@ async def test_set_invalid_access_end_date():
         )
 
     assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_set_ticket_id_and_notes():
+    """Test setting the ticket ID and notes of a request."""
+    request = await access_request_dao.get_by_id("request-id-4")
+    assert request.status == AccessRequestStatus.PENDING
+
+    # set ticket ID and internal note
+
+    await repository.update(
+        "request-id-4",
+        patch_data=AccessRequestPatchData(
+            ticket_id="ticket-id-4", internal_note="some internal note"
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    changed_request = access_request_dao.last_upsert
+    assert changed_request is not None
+    changed_dict = changed_request.model_dump()
+    assert changed_dict["ticket_id"] == "ticket-id-4"
+    assert changed_dict["internal_note"] == "some internal note"
+    assert changed_dict["note_to_requester"] is None
+
+    # remove internal note and set note to requester
+
+    await repository.update(
+        "request-id-4",
+        patch_data=AccessRequestPatchData(
+            internal_note="", note_to_requester="some note to requester"
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    changed_request = access_request_dao.last_upsert
+    assert changed_request is not None
+    changed_dict = changed_request.model_dump()
+    assert changed_dict["ticket_id"] == "ticket-id-4"
+    assert changed_dict["internal_note"] is None
+    assert changed_dict["note_to_requester"] == "some note to requester"
+
+    # status should not have changed
+
+    assert changed_dict["status"] == AccessRequestStatus.PENDING.value
 
 
 async def test_can_register_a_dataset():

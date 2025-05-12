@@ -118,6 +118,18 @@ class AccessRequest(AccessRequestCreationData):
         default=None,
         description="The ID of the data steward who made the status change",
     )
+    ticket_id: str | None = Field(
+        default=None,
+        description="The ID of the ticket associated with the access request",
+    )
+    internal_note: str | None = Field(
+        default=None,
+        description="A note about the access request only visible to Data Stewards",
+    )
+    note_to_requester: str | None = Field(
+        default=None,
+        description="A note about the access request that is visible to the requester",
+    )
 
 
 class AccessRequestPatchData(BaseDto):
@@ -136,4 +148,16 @@ class AccessRequestPatchData(BaseDto):
     )
     access_ends: UTCDatetime | None = Field(
         default=None, description="Modified end date of access"
+    )
+    ticket_id: str | None = Field(
+        default=None,
+        description="The ID of the ticket associated with the access request",
+    )
+    internal_note: str | None = Field(
+        default=None,
+        description="A note about the access request only visible to Data Stewards",
+    )
+    note_to_requester: str | None = Field(
+        default=None,
+        description="A note about the access request that is visible to the requester",
     )
