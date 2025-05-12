@@ -205,7 +205,7 @@ async def test_consume_from_retry(
     await kafka.publish_event(
         payload=DATASET_UPSERTION_EVENT.model_dump(),
         type_=config.dataset_upsertion_type,
-        topic=config.service_name + "-retry",
+        topic="retry-" + config.service_name,
         key="test-key",
         headers={"original_topic": config.dataset_change_topic},
     )

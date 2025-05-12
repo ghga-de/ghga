@@ -24,11 +24,6 @@ from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from wps.adapters.inbound.event_sub import EventSubTranslator
 from wps.adapters.inbound.fastapi_ import dummies
@@ -48,12 +43,6 @@ async def prepare_core(
     config: Config,
 ) -> AsyncGenerator[WorkPackageRepositoryPort, None]:
     """Constructs and initializes all core components with outbound dependencies."""
-    resource = Resource(attributes={SERVICE_NAME: "Work Package Service"})
-    trace_provider = TracerProvider(resource=resource)
-    processor = BatchSpanProcessor(OTLPSpanExporter())
-    trace_provider.add_span_processor(processor)
-    trace.set_tracer_provider(trace_provider)
-
     dao_factory = MongoDbDaoFactory(config=config)
     work_package_dao = await get_work_package_dao(
         config=config, dao_factory=dao_factory

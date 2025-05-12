@@ -22,7 +22,7 @@ from datetime import datetime
 
 import httpx
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from opentelemetry import trace
+from hexkit.opentelemetry import start_span
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -30,7 +30,6 @@ from wps.ports.outbound.access import AccessCheckPort
 
 __all__ = ["AccessCheckAdapter", "AccessCheckConfig"]
 
-tracer = trace.get_tracer("wps")
 TIMEOUT = 60
 
 
@@ -61,7 +60,7 @@ class AccessCheckAdapter(AccessCheckPort):
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             yield cls(config=config, client=client)
 
-    @tracer.start_as_current_span("AccessCheckAdapter.check_download_access")
+    @start_span()
     async def check_download_access(
         self, user_id: str, dataset_id: str
     ) -> UTCDatetime | None:
@@ -80,9 +79,7 @@ class AccessCheckAdapter(AccessCheckPort):
             return None
         raise self.AccessCheckError
 
-    @tracer.start_as_current_span(
-        "AccessCheckAdapter.get_accessible_datasets_with_expiration"
-    )
+    @start_span()
     async def get_accessible_datasets_with_expiration(
         self, user_id: str
     ) -> dict[str, UTCDatetime]:
