@@ -132,7 +132,6 @@ function createHandlersForResponses(responses: {
       }
       return HttpResponse.json(response || undefined, { status });
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handler = (http as any)[method];
     if (!handler) {
       console.error('Unsupported method:', method);

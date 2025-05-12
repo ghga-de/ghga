@@ -3,14 +3,11 @@ import { default as angular, default as pkg } from '@angular-eslint/eslint-plugi
 import angularTemplate from '@angular-eslint/eslint-plugin-template';
 import { default as angularTemplateParser } from '@angular-eslint/template-parser';
 import markdown from '@eslint/markdown';
-import typescriptPlugin, {
-  configs as tsConfigs,
-} from '@typescript-eslint/eslint-plugin';
-import * as typescriptParser from '@typescript-eslint/parser';
 import boundaries from 'eslint-plugin-boundaries';
 import header from 'eslint-plugin-header';
 import jsdoc from 'eslint-plugin-jsdoc';
 import prettier from 'eslint-plugin-prettier';
+import tseslint from 'typescript-eslint';
 const { configs: angularConfigs } = pkg;
 
 header.rules.header.meta.schema = false;
@@ -21,7 +18,7 @@ export default [
   {
     files: ['**/*.ts'],
     languageOptions: {
-      parser: typescriptParser,
+      parser: tseslint.parser,
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: 'module',
@@ -30,14 +27,14 @@ export default [
     },
     plugins: {
       '@angular-eslint': angular,
-      '@typescript-eslint': typescriptPlugin,
+      tseslint,
       jsdoc,
       prettier,
       boundaries,
       header,
     },
     rules: {
-      ...tsConfigs.recommended.rules,
+      ...tseslint.configs.recommended.rules,
       ...angularConfigs.recommended.rules,
       ...jsdoc.configs['recommended-typescript'].rules,
       'prettier/prettier': 'warn',
