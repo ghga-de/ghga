@@ -22,8 +22,8 @@ from typing import Annotated
 from fastapi import APIRouter, Path, Response, status
 from fastapi.exceptions import HTTPException
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
-from opentelemetry import trace
 
 from auth_service.user_registry.deps import (
     IvaDaoDependency,
@@ -55,7 +55,6 @@ from ..models.claims import (
 __all__ = ["router"]
 
 log = logging.getLogger(__name__)
-tracer = trace.get_tracer("auth_service.claims_repository")
 
 router = APIRouter()
 
@@ -86,7 +85,7 @@ claim_not_found_error = HTTPException(
     },
     status_code=201,
 )
-@tracer.start_as_current_span("router.post_claim")
+@start_span()
 async def post_claim(
     claim_creation: ClaimCreation,
     user_id: Annotated[
@@ -136,7 +135,7 @@ async def post_claim(
     },
     status_code=200,
 )
-@tracer.start_as_current_span("router.get_claims")
+@start_span()
 async def get_claims(
     user_id: Annotated[
         str,
@@ -169,7 +168,7 @@ async def get_claims(
     },
     status_code=201,
 )
-@tracer.start_as_current_span("router.patch_user")
+@start_span()
 async def patch_user(
     claim_update: ClaimUpdate,
     user_id: Annotated[
@@ -229,7 +228,7 @@ async def patch_user(
     },
     status_code=201,
 )
-@tracer.start_as_current_span("router.delete_claim")
+@start_span()
 async def delete_claim(
     user_id: Annotated[
         str,
@@ -285,7 +284,7 @@ async def delete_claim(
     },
     status_code=204,
 )
-@tracer.start_as_current_span("router.grant_download_access")
+@start_span()
 async def grant_download_access(  # noqa: PLR0913
     validity: ClaimValidity,
     user_id: Annotated[
@@ -355,7 +354,7 @@ async def grant_download_access(  # noqa: PLR0913
     },
     status_code=200,
 )
-@tracer.start_as_current_span("router.check_download_access")
+@start_span()
 async def check_download_access(
     user_id: Annotated[
         str,
@@ -433,7 +432,7 @@ async def check_download_access(
     },
     status_code=200,
 )
-@tracer.start_as_current_span("router.get_datasets_with_download_access")
+@start_span()
 async def get_datasets_with_download_access(
     user_id: Annotated[
         str,

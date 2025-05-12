@@ -34,6 +34,7 @@ dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
 db_name: dev-db
 docs_url: /docs
+enable_opentelemetry: false
 generate_correlation_id: true
 host: 0.0.0.0
 iva_state_changed_topic: ivas
@@ -63,6 +64,9 @@ oidc_issuer: https://login.aai.lifescience-ri.eu/oidc/
 oidc_userinfo_endpoint: https://login.aai.lifescience-ri.eu/oidc/userinfo
 openapi_url: /openapi.json
 organization_url: https://ghga.de/
+otel_exporter_endpoint: http://localhost:4318/
+otel_exporter_protocol: http/protobuf
+otel_trace_sampling_rate: 1.0
 port: 8080
 provide_apis:
 - users

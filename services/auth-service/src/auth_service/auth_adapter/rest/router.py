@@ -31,8 +31,8 @@ from fastapi import (
     Response,
     status,
 )
+from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
-from opentelemetry import trace
 from pydantic import SecretStr
 
 from auth_service.claims_repository.core.utils import get_active_roles
@@ -68,7 +68,6 @@ from .dto import TOTPTokenResponse
 from .headers import get_bearer_token, pass_auth_response, session_to_header
 
 router = APIRouter()
-tracer = trace.get_tracer("auth_service.auth_adapter")
 
 basic_auth_dependency = get_basic_auth_dependency(CONFIG)
 basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else None
@@ -120,7 +119,7 @@ add_allowed_routes()
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@tracer.start_as_current_span("router.login")
+@start_span()
 async def login(  # noqa: C901, PLR0913
     request: Request,
     session_store: SessionStoreDependency,
@@ -219,7 +218,7 @@ async def login(  # noqa: C901, PLR0913
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@tracer.start_as_current_span("router.logout")
+@start_span()
 async def logout(
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -247,7 +246,7 @@ async def logout(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
-@tracer.start_as_current_span("router.post_logout")
+@start_span()
 async def post_user(
     request: Request,
     session_store: SessionStoreDependency,
@@ -273,7 +272,7 @@ async def post_user(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
-@tracer.start_as_current_span("router.put_user")
+@start_span()
 async def put_user(
     id_: Annotated[
         str,
@@ -311,7 +310,7 @@ async def put_user(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_201_CREATED,
 )
-@tracer.start_as_current_span("router.create_new_totp_token")
+@start_span()
 async def create_new_totp_token(
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -360,7 +359,7 @@ async def create_new_totp_token(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@tracer.start_as_current_span("router.rpc_verify_totp")
+@start_span()
 async def rpc_verify_totp(  # noqa: PLR0913
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -410,7 +409,7 @@ async def rpc_verify_totp(  # noqa: PLR0913
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
-@tracer.start_as_current_span("router.ext_auth")
+@start_span()
 async def ext_auth(
     request: Request,
     session_store: SessionStoreDependency,
