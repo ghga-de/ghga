@@ -265,8 +265,7 @@ class OidcProvider:
     ) -> TokenResponse:
         """Exchange an authorization code for an access token.
 
-        This does not return an ID token on purpose,
-        so that the client needs to request the user info separately.
+        The ID token will just be a copy of the access token.
         """
         msg = None
         if grant_type != "authorization_code":
@@ -282,6 +281,7 @@ class OidcProvider:
         access_token = self.tokens.pop(code)
         return TokenResponse(
             access_token=access_token,
+            id_token=access_token,
             expires_in=int(self.valid_seconds),
             scope=SCOPE,
         )

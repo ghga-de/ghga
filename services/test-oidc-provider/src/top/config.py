@@ -18,7 +18,7 @@
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from pydantic import Field
+from pydantic import Field, ValidationInfo, field_validator
 
 from top.core.oidc_provider import OidcProviderConfig
 
@@ -38,6 +38,28 @@ class Config(ApiConfigBase, OidcProviderConfig, LoggingConfig):
             "String that uniquely identifies this service instance in log messages"
         ),
     )
+
+    @field_validator("cors_allowed_origins", mode="after")
+    @classmethod
+    def set_cors_allowed_origins(cls, value, info: ValidationInfo):
+        """If no allowed origins are set, use appropriate defaults."""
+        if value:
+            return value
+        url = info.data["redirect_url"]
+        if url:
+            origin = f"{url.scheme}://{url.host}"
+            if (url.scheme, url.port) not in (("http", 80), ("https", 443)):
+                origin += f":{url.port}"
+            return [origin]
+        return ["*"]
+
+    @field_validator("cors_allowed_methods", mode="after")
+    @classmethod
+    def set_cors_allowed_methods(cls, value, info: ValidationInfo):
+        """If no allowed methods are set, use appropriate defaults."""
+        if value:
+            return value
+        return ["GET", "POST"]
 
 
 CONFIG = Config()

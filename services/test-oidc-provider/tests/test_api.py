@@ -232,10 +232,12 @@ async def test_authorization_code_flow(client: AsyncTestClient):
     assert sorted(token_response) == [
         "access_token",
         "expires_in",
+        "id_token",
         "scope",
         "token_type",
     ]
-    access_token = token_response.pop("access_token", None)
+    access_token = token_response.pop("access_token")
+    assert token_response.pop("id_token") == access_token
     assert token_response == {
         "expires_in": 60 * 60,
         "scope": "openid profile email",
@@ -400,3 +402,4 @@ async def test_authorization_errors(client: AsyncTestClient):
     result = response.json()
     assert isinstance(result, dict)
     assert result.get("access_token")
+    assert result.get("id_token")

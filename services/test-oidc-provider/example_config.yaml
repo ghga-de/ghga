@@ -3,8 +3,11 @@ auto_reload: false
 client_id: test-client
 cors_allow_credentials: null
 cors_allowed_headers: null
-cors_allowed_methods: null
-cors_allowed_origins: null
+cors_allowed_methods:
+- GET
+- POST
+cors_allowed_origins:
+- https://client.test
 docs_url: /docs
 generate_correlation_id: true
 host: 0.0.0.0

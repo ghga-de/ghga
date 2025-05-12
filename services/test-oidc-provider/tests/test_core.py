@@ -382,6 +382,7 @@ async def test_authorization_code_flow():
     assert response.token_type == "Bearer"
     assert response.scope == "openid profile email"
     assert response.access_token == token
+    assert response.id_token == token
     expires_in = response.expires_in
     assert isinstance(expires_in, int)
     assert expires_in == 60 * 60

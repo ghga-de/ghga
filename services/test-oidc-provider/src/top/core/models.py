@@ -113,5 +113,6 @@ class TokenResponse(BaseModel):
 
     access_token: str = Field(..., description="The issued access token")
     token_type: str = Field(default="Bearer", description="Type of the token")
+    id_token: str = Field(..., description="The issued ID token")
     expires_in: int = Field(..., description="Lifetime of the access token in seconds")
     scope: str = Field(..., description="The scopes granted")
