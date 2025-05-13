@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=78.1",
+    "setuptools>=80.3",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -11,7 +11,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ns"
-version = "3.0.3"
+version = "4.0.0"
 description = "The Notification Service (NS) handles notification kafka events."
 dependencies = [
     "typer>=0.12",
     "ghga-event-schemas>=4.1, < 5",
     "ghga-service-commons>=3.3",
-    "hexkit[akafka,mongodb]>=4",
+    "hexkit[akafka,mongodb]>=5.0",
 ]
 
 [project.license]
