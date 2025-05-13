@@ -169,7 +169,7 @@ async def test_consume_from_retry(kafka: KafkaFixture):
     await kafka.publish_event(
         payload=payload,
         type_=config.resource_upsertion_type,
-        topic=config.service_name + "-retry",
+        topic="retry-" + config.service_name,
         key="test",
         headers={"original_topic": config.resource_change_topic},
     )
