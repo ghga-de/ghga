@@ -21,15 +21,19 @@ import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.correlation import set_new_correlation_id
 from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
-from ars.adapters.outbound.daos import get_access_request_dao
+from ars.adapters.outbound.daos import get_access_request_dao, get_dataset_dao
 from ars.core.models import (
     AccessRequest,
     AccessRequestCreationData,
     AccessRequestStatus,
+    Dataset,
 )
+from ars.core.repository import AccessRequestRepository
+from tests.test_repository import AccessGrantsDummy
 
 pytestmark = pytest.mark.asyncio()
 
@@ -51,6 +55,13 @@ access_request = AccessRequest(
     dataset_description="Some Description",
     dac_alias="Some DAC",
     request_created=now_as_utc(),
+)
+
+DATASET = Dataset(
+    id="DS001",
+    title="Dataset1",
+    description="Some Description",
+    dac_alias="Some DAC",
 )
 
 
@@ -91,3 +102,51 @@ async def test_upsert(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert event.type_ == "upserted"
         assert event.key == event.payload["id"] == access_request.id
         assert event.payload["status"] == "allowed"
+
+
+async def test_delete(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
+    """Verify the event published as a result of upserting an access request.
+
+    We trust the deletion to work because it is tested via hexkit -- only the upsert
+    contains logic specific to the ARS.
+    """
+    async with (
+        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
+        set_new_correlation_id(),
+    ):
+        # Insert an access request
+        request_dao = await get_access_request_dao(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
+        async with kafka.record_events(
+            in_topic=config.access_request_topic
+        ) as recorder:
+            await request_dao.insert(access_request)
+
+        assert len(recorder.recorded_events) == 1
+        event = recorder.recorded_events[0]
+        assert event.type_ == "upserted"
+        assert event.key == event.payload["id"] == access_request.id
+        assert event.payload["status"] == "pending"
+
+        dao_factory = MongoDbDaoFactory(config=config)
+        dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
+        await dataset_dao.insert(DATASET)
+
+        # Test effect on access request if dataset is deleted
+        repository = AccessRequestRepository(
+            config=config,
+            access_request_dao=request_dao,
+            dataset_dao=dataset_dao,
+            access_grants=AccessGrantsDummy(),
+        )
+        async with kafka.record_events(
+            in_topic=config.access_request_topic
+        ) as recorder:
+            await repository.delete_dataset(DATASET.id)
+
+        assert len(recorder.recorded_events) == 1
+        event = recorder.recorded_events[0]
+        assert event.type_ == "upserted"
+        assert event.key == event.payload["id"] == access_request.id
+        assert event.payload["status"] == "denied"

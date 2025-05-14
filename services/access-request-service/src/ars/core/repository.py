@@ -307,14 +307,37 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     async def delete_dataset(self, dataset_id: str) -> None:
         """Remove the dataset with the given ID.
 
+        All pending access requests pertaining to the dataset ID are set to denied.
         Raises a `DatasetNotFoundError` if the dataset was not found.
         """
         try:
-            return await self._dataset_dao.delete(id_=dataset_id)
+            await self._dataset_dao.delete(id_=dataset_id)
         except ResourceNotFoundError as error:
             dataset_not_found_error = self.DatasetNotFoundError("Dataset not found")
             log.error(dataset_not_found_error, extra={"dataset_id": dataset_id})
             raise dataset_not_found_error from error
+
+        async for request in self._request_dao.find_all(
+            mapping={"dataset_id": dataset_id}
+        ):
+            if request.status == AccessRequestStatus.PENDING:
+                update = {
+                    "status": AccessRequestStatus.DENIED,
+                    "status_changed": now_as_utc(),
+                    "note_to_requester": "This dataset has been deleted",
+                    "changed_by": None,
+                }
+                updated_request = request.model_copy(update=update)
+                await self._request_dao.update(updated_request)
+            elif (
+                request.status == AccessRequestStatus.ALLOWED
+                and request.access_ends > now_as_utc()
+            ):
+                log.warning(
+                    "A valid access request with ID %s still exists for the deleted dataset with ID %s.",
+                    request.id,
+                    dataset_id,
+                )
 
     async def get_dataset(self, dataset_id: str) -> Dataset:
         """Get the dataset with the given ID.

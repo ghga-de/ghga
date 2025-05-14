@@ -113,7 +113,6 @@ async def test_dataset_deletion(consumer: ConsumerFixture):
     await repository.register_dataset(DATASET)
 
     # delete the dataset again
-
     deleted_dataset = DATASET_DELETION_EVENT
     await kafka.publish_event(
         payload=deleted_dataset.model_dump(),
@@ -175,7 +174,7 @@ async def test_consume_from_retry(consumer: ConsumerFixture):
     await kafka.publish_event(
         payload=DATASET_UPSERTION_EVENT.model_dump(),
         type_=config.dataset_upsertion_type,
-        topic=config.service_name + "-retry",
+        topic="retry-" + config.service_name,
         key="test-key",
         headers={"original_topic": config.dataset_change_topic},
     )
