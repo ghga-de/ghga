@@ -22,7 +22,6 @@
     <mat-card-content>
       <button
         mat-fab
-        color="primary"
         class="float-right ml-4"
         (click)="copyToken()"
         title="Copy token to clipboard"
@@ -35,6 +34,10 @@
         class="mb-3 overflow-auto"
       ><span class="text-sm break-normal text-green-900">{{ token() }}</span></pre>
       <p>Make sure to copy the token now as you will not be able to see this again!</p>
+      <p class="mt-8">
+        Your token expires on
+        {{ tokenExpiration() | date: friendlyDateFormat }}.
+      </p>
     </mat-card-content>
   </mat-card>
   <button

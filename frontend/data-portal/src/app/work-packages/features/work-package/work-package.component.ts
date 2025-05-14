@@ -5,6 +5,7 @@
  */
 
 import { Clipboard } from '@angular/cdk/clipboard';
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +19,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 import { NotificationService } from '@app/shared/services/notification.service';
+import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { getBackendErrorMessage, MaybeBackendError } from '@app/shared/utils/errors';
 import { Dataset } from '@app/work-packages/models/dataset';
 import { WorkPackage } from '@app/work-packages/models/work-package';
@@ -37,6 +39,7 @@ import { WorkPackageService } from '@app/work-packages/services/work-package.ser
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    DatePipe,
   ],
   providers: [
     {
@@ -47,6 +50,8 @@ import { WorkPackageService } from '@app/work-packages/services/work-package.ser
   templateUrl: './work-package.component.html',
 })
 export class WorkPackageComponent {
+  readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+
   #clipboard = inject(Clipboard);
   #notify = inject(NotificationService);
   #wpService = inject(WorkPackageService);
@@ -66,6 +71,8 @@ export class WorkPackageComponent {
   token = signal<string>('');
   tokenIsLoading = signal<boolean>(false);
   tokenError = signal<string>('');
+
+  tokenExpiration = signal<string>('');
 
   /**
    * Select a dataset
@@ -200,9 +207,10 @@ export class WorkPackageComponent {
     this.tokenIsLoading.set(true);
     this.tokenError.set('');
     this.#wpService.createWorkPackage(workPackage).subscribe({
-      next: ({ id, token }) => {
+      next: ({ id, token, expires }) => {
         this.token.set(`${id}:${token}`);
         this.tokenIsLoading.set(false);
+        this.tokenExpiration.set(expires);
       },
       error: (err) => this.#handleCreationError(err),
     });
