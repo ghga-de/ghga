@@ -26,6 +26,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import {
   AccessRequest,
   AccessRequestStatus,
+  NotesTypeSelection,
 } from '@app/access-requests/models/access-requests';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
@@ -35,6 +36,7 @@ import { Iva, IvaState } from '@app/verification-addresses/models/iva';
 import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
 import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
+import { AccessRequestNoteComponent } from '../access-request-note/access-request-note.component';
 
 /**
  * The dialog component used for managing access requests in the access request manager.
@@ -53,6 +55,7 @@ import { IvaService } from '@app/verification-addresses/services/iva.service';
     AccessRequestStatusClassPipe,
     IvaTypePipe,
     IvaStatePipe,
+    AccessRequestNoteComponent,
   ],
   providers: [IvaTypePipe],
   templateUrl: './access-request-manager-dialog.component.html',
@@ -109,6 +112,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
       this.#preSelectIvaRadioButton();
     }
   });
+  notes_types: NotesTypeSelection = NotesTypeSelection.both;
 
   /**
    * Get the display name for the IVA type

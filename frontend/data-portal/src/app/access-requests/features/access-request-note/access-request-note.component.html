@@ -1,0 +1,21 @@
+@if (showAsTable) {
+  @if (showNoteToRequester()) {
+    <tr>
+      <th class="pe-1 text-start">Note:</th>
+      <td>{{ request.note_to_requester }}</td>
+    </tr>
+  }
+  @if (showInternalNote()) {
+    <tr>
+      <th class="pe-1 text-start">Internal Note:</th>
+      <td>{{ request.internal_note }}</td>
+    </tr>
+  }
+} @else {
+  @if (showNoteToRequester()) {
+    <p><span class="font-bold">Note: </span>{{ request.note_to_requester }}</p>
+  }
+  @if (showInternalNote()) {
+    <p><span class="font-bold">Internal Note: </span>{{ request.internal_note }}</p>
+  }
+}

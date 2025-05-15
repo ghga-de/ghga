@@ -24,6 +24,15 @@
         <td>{{ data.dataset_id }}</td>
       </tr>
       <tr>
+        <th class="pe-1 text-start">Status:</th>
+        <td>
+          <strong class="{{ data.status | AccessRequestStatusClassPipe }}">{{
+            data.status
+          }}</strong>
+        </td>
+      </tr>
+
+      <tr>
         <th class="pe-1 text-start">Requester:</th>
         <td>{{ data.full_user_name }}</td>
       </tr>
@@ -35,6 +44,12 @@
         <th class="pe-1 text-start align-top">Request details:</th>
         <td>{{ data.request_text }}</td>
       </tr>
+      <app-access-request-note
+        [request]="data"
+        [noteTypes]="notes_types"
+        [showAsTable]="true"
+        class="table-row-group"
+      ></app-access-request-note>
     </table>
     <p>
       The request has been made on
@@ -44,13 +59,6 @@
       Access has been requested from
       {{ data.access_starts | date: friendlyDateFormat }} until
       {{ data.access_ends | date: friendlyDateFormat }}.
-    </p>
-    <p class="mb-5">
-      Access request is currently
-      <strong class="{{ data.status | AccessRequestStatusClassPipe }}">{{
-        data.status
-      }}</strong
-      >.
     </p>
     @if (ivasAreLoading()) {
       <p>Loading verification addresses...</p>
@@ -95,7 +103,6 @@
         </table>
       </mat-radio-group>
     }
-    <br />
   </mat-dialog-content>
   <mat-dialog-actions class="flex gap-x-2 gap-y-4">
     @if (ivasAreLoading() || ivasError() || !ivas().length || !changeable()) {

@@ -21,6 +21,7 @@
             >
             from {{ request.access_starts | date: friendlyDateFormat }} to
             {{ request.access_ends | date: friendlyDateFormat }}.
+            <app-access-request-note [request]="request" [noteTypes]="types_of_notes" />
           </li>
         }
       </ul>
