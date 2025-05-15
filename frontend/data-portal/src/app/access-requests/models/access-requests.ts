@@ -32,6 +32,7 @@ export interface AccessRequest {
   status_changed: null | string;
   changed_by: null | string;
   iva_id: null | string;
+  ticket_id: null | string;
 }
 
 export interface GrantedAccessRequest {
