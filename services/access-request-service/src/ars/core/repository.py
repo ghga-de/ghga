@@ -52,15 +52,24 @@ class AccessRequestConfig(BaseSettings):
 
     access_upfront_max_days: int = Field(
         default=6 * 30,
+        ge=0,
         description="The maximum lead time in days to request access grants",
     )
     access_grant_min_days: int = Field(
         default=7,
+        ge=1,
         description="The minimum number of days that the access will be granted",
     )
     access_grant_max_days: int = Field(
         default=2 * 365,
+        ge=1,
         description="The maximum number of days that the access can be granted",
+    )
+    access_grant_max_extend: float = Field(
+        default=5,
+        ge=1,
+        description="This is a factor that the maximum number of days is multiplied"
+        " with for data stewards. Set this to 1 to disable extension.",
     )
 
 
@@ -79,6 +88,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self._max_lead_time = timedelta(days=config.access_upfront_max_days)
         self._min_duration = timedelta(days=config.access_grant_min_days)
         self._max_duration = timedelta(days=config.access_grant_max_days)
+        self._max_extend_duration = timedelta(
+            days=config.access_grant_max_days * config.access_grant_max_extend
+        )
         self._request_dao = access_request_dao
         self._dataset_dao = dataset_dao
         self._access_grants = access_grants
@@ -195,7 +207,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         return requests
 
-    async def update(  # noqa: C901
+    async def update(  # noqa: C901, PLR0915
         self,
         access_request_id: str,
         *,
@@ -248,12 +260,20 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             raise missing_iva_error
 
         access_starts = patch_data.access_starts or request.access_starts
+        # force start to be not earlier than the current date
+        access_starts = max(now_as_utc(), access_starts)
         access_ends = patch_data.access_ends or request.access_ends
-
         if access_starts >= access_ends:
             invalid_duration_error = self.AccessRequestInvalidDuration(
                 "Access end date must be later than access start date"
             )
+            raise invalid_duration_error
+        # even the data steward may not extend the access grant ad infinitum
+        if access_ends > access_starts + self._max_extend_duration:
+            invalid_duration_error = self.AccessRequestInvalidDuration(
+                "Access duration is too long"
+            )
+            log.error(invalid_duration_error)
             raise invalid_duration_error
 
         update: dict[str, Any] = {

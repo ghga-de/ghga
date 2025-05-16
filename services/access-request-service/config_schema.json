@@ -5,20 +5,30 @@
     "access_upfront_max_days": {
       "default": 180,
       "description": "The maximum lead time in days to request access grants",
+      "minimum": 0,
       "title": "Access Upfront Max Days",
       "type": "integer"
     },
     "access_grant_min_days": {
       "default": 7,
       "description": "The minimum number of days that the access will be granted",
+      "minimum": 1,
       "title": "Access Grant Min Days",
       "type": "integer"
     },
     "access_grant_max_days": {
       "default": 730,
       "description": "The maximum number of days that the access can be granted",
+      "minimum": 1,
       "title": "Access Grant Max Days",
       "type": "integer"
+    },
+    "access_grant_max_extend": {
+      "default": 5,
+      "description": "This is a factor that the maximum number of days is multiplied with for data stewards. Set this to 1 to disable extension.",
+      "minimum": 1,
+      "title": "Access Grant Max Extend",
+      "type": "number"
     },
     "download_access_url": {
       "description": "URL pointing to the internal download access API.",

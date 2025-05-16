@@ -1,4 +1,5 @@
 access_grant_max_days: 730
+access_grant_max_extend: 5.0
 access_grant_min_days: 7
 access_request_topic: access_request_events
 access_upfront_max_days: 180

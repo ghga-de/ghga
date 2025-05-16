@@ -90,12 +90,12 @@ ACCESS_REQUESTS = [
         dac_alias="Some DAC1",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
-        access_starts=utc_datetime(2020, 1, 1, 0, 0),
-        access_ends=utc_datetime(2020, 12, 31, 23, 59),
+        access_starts=IAT + timedelta(days=30),
+        access_ends=IAT + timedelta(days=180),
         full_user_name="Dr. John Doe",
-        request_created=utc_datetime(2019, 12, 9, 12, 0),
+        request_created=IAT,
         status=AccessRequestStatus.ALLOWED,
-        status_changed=utc_datetime(2019, 12, 16, 12, 0),
+        status_changed=IAT + timedelta(days=1),
         changed_by="id-of-rod-steward@ghga.de",
     ),
     AccessRequest(
@@ -106,12 +106,12 @@ ACCESS_REQUESTS = [
         dac_alias="Some DAC2",
         email="me@john-doe.name",
         request_text="Can I access another dataset?",
-        access_starts=utc_datetime(2020, 1, 1, 0, 0),
-        access_ends=utc_datetime(2020, 12, 31, 23, 59),
+        access_starts=IAT + timedelta(days=42),
+        access_ends=IAT + timedelta(days=420),
         full_user_name="Dr. John Doe",
-        request_created=utc_datetime(2019, 12, 9, 12, 0),
+        request_created=IAT,
         status=AccessRequestStatus.ALLOWED,
-        status_changed=utc_datetime(2019, 12, 16, 12, 0),
+        status_changed=IAT + timedelta(days=2),
         changed_by="id-of-rod-steward@ghga.de",
     ),
     AccessRequest(
@@ -122,12 +122,12 @@ ACCESS_REQUESTS = [
         dac_alias="Some DAC3",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset?",
-        access_starts=utc_datetime(2020, 1, 1, 0, 0),
-        access_ends=utc_datetime(2020, 12, 31, 23, 59),
+        access_starts=IAT + timedelta(days=1),
+        access_ends=IAT + timedelta(days=90),
         full_user_name="Dr. John Doe",
-        request_created=utc_datetime(2019, 12, 9, 12, 0),
+        request_created=IAT,
         status=AccessRequestStatus.DENIED,
-        status_changed=utc_datetime(2019, 12, 16, 12, 0),
+        status_changed=IAT + timedelta(days=3),
         changed_by="id-of-rod-steward@ghga.de",
     ),
     AccessRequest(
@@ -138,10 +138,10 @@ ACCESS_REQUESTS = [
         dac_alias="Some DAC7",
         email="me@john-doe.name",
         request_text="Can I access a new dataset?",
-        access_starts=utc_datetime(2021, 1, 1, 0, 0),
-        access_ends=utc_datetime(2021, 12, 31, 23, 59),
+        access_starts=IAT + timedelta(days=50),
+        access_ends=IAT + timedelta(days=500),
         full_user_name="Dr. John Doe",
-        request_created=utc_datetime(2020, 12, 7, 12, 0),
+        request_created=IAT,
         status=AccessRequestStatus.PENDING,
         status_changed=None,
         changed_by=None,
@@ -154,12 +154,12 @@ ACCESS_REQUESTS = [
         dac_alias="Some DAC",
         email="me@jane-roe.name",
         request_text="Can I access the same dataset as Joe?",
-        access_starts=utc_datetime(2020, 1, 1, 0, 0),
-        access_ends=utc_datetime(2020, 12, 31, 23, 59),
+        access_starts=IAT + timedelta(days=5),
+        access_ends=IAT + timedelta(days=200),
         full_user_name="Dr. Jane Roe",
-        request_created=utc_datetime(2019, 12, 9, 12, 0),
+        request_created=IAT,
         status=AccessRequestStatus.ALLOWED,
-        status_changed=utc_datetime(2019, 12, 16, 12, 0),
+        status_changed=IAT + timedelta(days=4),
         changed_by="id-of-rod-steward@ghga.de",
     ),
     AccessRequest(
@@ -171,10 +171,10 @@ ACCESS_REQUESTS = [
         dac_alias="Some DAC3",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset using this IVA?",
-        access_starts=utc_datetime(2021, 6, 1, 0, 0),
-        access_ends=utc_datetime(2021, 12, 31, 23, 59),
+        access_starts=IAT + timedelta(days=5),
+        access_ends=IAT + timedelta(days=250),
         full_user_name="Dr. John Doe",
-        request_created=utc_datetime(2021, 5, 9, 12, 0),
+        request_created=IAT,
         status=AccessRequestStatus.PENDING,
         status_changed=None,
         changed_by=None,
@@ -617,9 +617,11 @@ async def test_set_status_to_allowed():
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
 
+    from_date = changed_dict["access_starts"]
+    to_date = changed_dict["access_ends"]
     assert access_grants.last_grant == (
         "to id-of-john-doe@ghga.de with some-iva for DS007"
-        " from 2021-01-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
+        f" from {from_date} until {to_date}"
     )
 
 
@@ -631,16 +633,16 @@ async def test_set_status_to_allowed_and_modify_duration():
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
-    assert original_dict.pop("access_starts") == utc_datetime(2021, 1, 1, 0, 0)
-    assert original_dict.pop("access_ends") == utc_datetime(2021, 12, 31, 23, 59)
+    assert original_dict.pop("access_starts") == IAT + timedelta(days=50)
+    assert original_dict.pop("access_ends") == IAT + timedelta(days=500)
 
     await repository.update(
         "request-id-4",
         patch_data=AccessRequestPatchData(
             iva_id="some-iva",
             status=AccessRequestStatus.ALLOWED,
-            access_starts=utc_datetime(2022, 1, 1, 0, 0),
-            access_ends=utc_datetime(2022, 12, 31, 23, 59),
+            access_starts=IAT + timedelta(days=60),
+            access_ends=IAT + timedelta(days=360),
         ),
         auth_context=auth_context_steward,
     )
@@ -650,8 +652,10 @@ async def test_set_status_to_allowed_and_modify_duration():
     changed_dict = changed_request.model_dump()
     assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
     assert changed_dict.pop("iva_id") == "some-iva"
-    assert changed_dict.pop("access_starts") == utc_datetime(2022, 1, 1, 0, 0)
-    assert changed_dict.pop("access_ends") == utc_datetime(2022, 12, 31, 23, 59)
+    access_starts = changed_dict.pop("access_starts")
+    assert access_starts == IAT + timedelta(days=60)
+    access_ends = changed_dict.pop("access_ends")
+    assert access_ends == IAT + timedelta(days=360)
     status_changed = changed_dict.pop("status_changed")
     assert status_changed is not None
     assert 0 <= (now_as_utc() - status_changed).seconds < 5
@@ -660,7 +664,7 @@ async def test_set_status_to_allowed_and_modify_duration():
 
     assert access_grants.last_grant == (
         "to id-of-john-doe@ghga.de with some-iva for DS007"
-        " from 2022-01-01 00:00:00+00:00 until 2022-12-31 23:59:00+00:00"
+        f" from {access_starts} until {access_ends}"
     )
 
 
@@ -689,9 +693,11 @@ async def test_set_status_to_allowed_reusing_iva():
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
 
+    from_date = changed_dict["access_starts"]
+    to_date = changed_dict["access_ends"]
     assert access_grants.last_grant == (
         "to id-of-john-doe@ghga.de with iva-of-john for DS003"
-        " from 2021-06-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
+        f" from {from_date} until {to_date}"
     )
 
 
@@ -723,9 +729,11 @@ async def test_set_status_to_allowed_overriding_iva():
     assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
     assert changed_dict == original_dict
 
+    from_date = changed_dict["access_starts"]
+    to_date = changed_dict["access_ends"]
     assert access_grants.last_grant == (
         "to id-of-john-doe@ghga.de with some-other-iva-of-john for DS003"
-        " from 2021-06-01 00:00:00+00:00 until 2021-12-31 23:59:00+00:00"
+        f" from {from_date} until {to_date}"
     )
 
 
@@ -851,8 +859,8 @@ async def test_set_access_date_when_request_is_already_allowed():
         await repository.update(
             "request-id-1",
             patch_data=AccessRequestPatchData(
-                access_starts=utc_datetime(2022, 1, 1, 0, 0),
-                access_ends=utc_datetime(2022, 12, 31, 23, 59),
+                access_starts=IAT + timedelta(days=7),
+                access_ends=IAT + timedelta(days=100),
             ),
             auth_context=auth_context_steward,
         )
@@ -866,14 +874,14 @@ async def test_set_invalid_access_duration():
     assert request.status == AccessRequestStatus.PENDING
 
     with pytest.raises(
-        repository.AccessRequestError,
+        repository.AccessRequestInvalidDuration,
         match="Access end date must be later than access start date",
     ):
         await repository.update(
             "request-id-4",
             patch_data=AccessRequestPatchData(
-                access_starts=utc_datetime(2022, 1, 1, 0, 0),
-                access_ends=utc_datetime(2021, 12, 31, 23, 59),
+                access_starts=IAT + timedelta(days=30),
+                access_ends=IAT + timedelta(days=29),
             ),
             auth_context=auth_context_steward,
         )
@@ -887,13 +895,13 @@ async def test_set_invalid_access_start_date():
     assert request.status == AccessRequestStatus.PENDING
 
     with pytest.raises(
-        repository.AccessRequestError,
+        repository.AccessRequestInvalidDuration,
         match="Access end date must be later than access start date",
     ):
         await repository.update(
             "request-id-4",
             patch_data=AccessRequestPatchData(
-                access_starts=utc_datetime(2022, 1, 1, 0, 0),
+                access_starts=IAT + timedelta(days=500),
             ),
             auth_context=auth_context_steward,
         )
@@ -907,7 +915,7 @@ async def test_set_invalid_access_end_date():
     assert request.status == AccessRequestStatus.PENDING
 
     with pytest.raises(
-        repository.AccessRequestError,
+        repository.AccessRequestInvalidDuration,
         match="Access end date must be later than access start date",
     ):
         await repository.update(
@@ -919,6 +927,51 @@ async def test_set_invalid_access_end_date():
         )
 
     assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_set_past_access_start_date():
+    """Test setting an invalid access start date."""
+    request = await access_request_dao.get_by_id("request-id-4")
+    assert request.status == AccessRequestStatus.PENDING
+
+    now = now_as_utc()
+
+    await repository.update(
+        "request-id-4",
+        patch_data=AccessRequestPatchData(
+            access_starts=now - timedelta(days=30),
+            access_ends=now + timedelta(days=180),
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    request = await access_request_dao.get_by_id("request-id-4")
+    assert request.status == AccessRequestStatus.PENDING
+    assert now <= request.access_starts <= now + timedelta(seconds=5)
+    assert request.access_ends == now + timedelta(days=180)
+
+    assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_extend_access_end_too_much():
+    """Test setting an invalid access end date."""
+    request = await access_request_dao.get_by_id("request-id-4")
+    assert request.status == AccessRequestStatus.PENDING
+
+    now = now_as_utc()
+
+    with pytest.raises(
+        repository.AccessRequestInvalidDuration,
+        match="Access duration is too long",
+    ):
+        await repository.update(
+            "request-id-4",
+            patch_data=AccessRequestPatchData(
+                access_starts=now + timedelta(days=30),
+                access_ends=now + timedelta(days=9999),
+            ),
+            auth_context=auth_context_steward,
+        )
 
 
 async def test_set_ticket_id_and_notes():
