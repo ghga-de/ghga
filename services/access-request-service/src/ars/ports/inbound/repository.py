@@ -116,7 +116,10 @@ class AccessRequestRepositoryPort(ABC):
 
     @abstractmethod
     async def register_dataset(self, dataset: Dataset) -> None:
-        """Register a dataset in the repository."""
+        """Register a dataset in the repository.
+
+        If the dataset already exists, it will be updated.
+        """
         ...
 
     @abstractmethod

@@ -87,7 +87,7 @@ ACCESS_REQUESTS = [
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
         dataset_title="Dataset1",
-        dac_alias="Some DAC",
+        dac_alias="Some DAC1",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=utc_datetime(2020, 1, 1, 0, 0),
@@ -1014,3 +1014,99 @@ async def test_raises_an_error_when_deleting_a_non_existing_dataset():
     """Test that deleting a non-existing dataset raises an error."""
     with pytest.raises(repository.DatasetNotFoundError):
         await repository.delete_dataset("some-dataset-id")
+
+
+async def test_updates_pending_request_when_updating_its_dataset():
+    """Test that updating a dataset updates pending access requests for it."""
+    request = ACCESS_REQUESTS[3]
+    assert request.status == AccessRequestStatus.PENDING
+    assert request.status_changed is None
+
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+
+    assert request.dataset_title != dataset.title
+    assert request.dataset_description != dataset.description
+    assert request.dac_alias != dataset.dac_alias
+
+    await repository.register_dataset(dataset)
+
+    request = await access_request_dao.get_by_id(request.id)
+    assert request.dataset_title == dataset.title
+    assert request.dataset_description == dataset.description
+    assert request.dac_alias == dataset.dac_alias
+
+
+@pytest.mark.parametrize(
+    "status", [AccessRequestStatus.ALLOWED, AccessRequestStatus.DENIED]
+)
+async def test_does_not_alter_processed_request_when_updating_its_dataset(
+    status: AccessRequestStatus,
+):
+    """Test that updating a dataset does not update processed access requests for it."""
+    for request in ACCESS_REQUESTS:
+        if request.status == status:
+            break
+    else:
+        pytest.fail(f"No {status} access request found")
+    status_changed = request.status_changed
+    assert status_changed is not None
+
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+
+    dataset_title = request.dataset_title
+    assert dataset_title != dataset.title
+    dataset_description = request.dataset_description
+    assert dataset_description != dataset.description
+    dac_alias = request.dac_alias
+    assert dac_alias != dataset.dac_alias
+
+    await repository.register_dataset(dataset)
+
+    request = await access_request_dao.get_by_id(request.id)
+    assert request.status == status
+    assert request.status_changed == status_changed
+    assert request.dataset_title == dataset_title
+    assert request.dataset_description == dataset_description
+    assert request.dac_alias == dac_alias
+
+
+async def test_denies_pending_request_when_deleting_its_dataset():
+    """Test that deleting a dataset denies pending access requests for it."""
+    request = ACCESS_REQUESTS[3]
+    assert request.status == AccessRequestStatus.PENDING
+    assert request.status_changed is None
+
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+
+    await repository.delete_dataset(dataset_id=dataset.id)
+    request = await access_request_dao.get_by_id(request.id)
+    assert request.status == AccessRequestStatus.DENIED
+    assert request.status_changed is not None
+    assert request.note_to_requester == "This dataset has been deleted"
+    assert request.changed_by is None
+
+
+@pytest.mark.parametrize(
+    "status", [AccessRequestStatus.ALLOWED, AccessRequestStatus.DENIED]
+)
+async def test_keeps_processed_request_when_deleting_its_dataset(
+    status: AccessRequestStatus,
+):
+    """Test that deleting a dataset does not change processed access requests for it."""
+    for request in ACCESS_REQUESTS:
+        if request.status == status:
+            break
+    else:
+        pytest.fail(f"No {status} access request found")
+    status_changed = request.status_changed
+    assert status_changed is not None
+
+    dataset = DATASET.model_copy(update={"id": request.dataset_id})
+    await dataset_dao.upsert(dataset)
+    await repository.delete_dataset(dataset_id=dataset.id)
+    request = await access_request_dao.get_by_id(request.id)
+    assert request.status == status
+    assert request.status_changed == status_changed

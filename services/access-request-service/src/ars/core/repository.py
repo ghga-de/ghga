@@ -301,8 +301,33 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         return request.model_copy(update={"changed_by": None, "internal_note": None})
 
     async def register_dataset(self, dataset: Dataset) -> None:
-        """Register a dataset in the repository."""
+        """Register a dataset in the repository.
+
+        If the dataset already exists, it will be updated.
+        """
         await self._dataset_dao.upsert(dataset)
+        dataset_id = dataset.id
+
+        async for request in self._request_dao.find_all(
+            mapping={"dataset_id": dataset_id}
+        ):
+            if request.status == AccessRequestStatus.PENDING:
+                update = {
+                    "dataset_title": dataset.title,
+                    "dataset_description": dataset.description,
+                    "dac_alias": dataset.dac_alias,
+                }
+                updated_request = request.model_copy(update=update)
+                await self._request_dao.update(updated_request)
+            elif (
+                request.status == AccessRequestStatus.ALLOWED
+                and request.access_ends > now_as_utc()
+            ):
+                log.warning(
+                    "A valid access request with ID %s already exists for the updated dataset with ID %s.",
+                    request.id,
+                    dataset_id,
+                )
 
     async def delete_dataset(self, dataset_id: str) -> None:
         """Remove the dataset with the given ID.
