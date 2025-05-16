@@ -1,0 +1,172 @@
+ghga_metadata_version: 2.1.0
+default_settings:
+  header_row: 1
+  start_row: 7
+  start_column: 1
+  transformations:
+    attributes:
+      !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+    format:
+      !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+worksheets:
+  - settings:
+      end_column: 7
+      name: analyses
+      transformations:
+        research_data_files:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: Analysis
+  - settings:
+      end_column: 12
+      name: analysis_methods
+      transformations:
+        parameters:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+        software_versions:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+        attributes:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+    sheet_name: AnalysisMethod
+  - settings:
+      end_column: 7
+      name: analysis_method_supporting_files
+    sheet_name: AnalysisMethodSupportingFile
+  - settings:
+      end_column: 7
+      name: studies
+      transformations:
+        affiliations:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+        attributes:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+        types:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case_list []
+        attributes:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+    sheet_name: Study
+  - settings:
+      end_column: 10
+      name: individuals
+      transformations:
+        phenotypic_features_terms:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+        phenotypic_features_ids:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+        diagnosis_ids:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+        diagnosis_terms:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+        sex:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        ancestry_terms:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+        ancestry_ids:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: Individual
+  - settings:
+      end_column: 7
+      name: individual_supporting_files
+    sheet_name: IndividualSupportingFile
+  - settings:
+      end_column: 21
+      name: samples
+      transformations:
+        type:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        storage:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        disease_or_healthy:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        case_control_status:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        xref: !!python/object/apply:ghga_transpiler.transformations.to_list []
+        biospecimen_age_at_sampling:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        biospecimen_vital_status_at_sampling:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        biospecimen_isolation:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        biospecimen_storage:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        attributes:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+    sheet_name: Sample
+  - settings:
+      end_column: 23
+      name: experiment_methods
+      transformations:
+        library_type:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        library_selection_methods:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case_list []
+        library_preparation_kit_retail_name:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        primer:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        end_bias:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        target_regions:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+        rnaseq_strandedness:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        instrument_model:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        sequencing_layout:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        flow_cell_type:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        sample_barcode_read:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        sequencing_layout:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        attributes:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+    sheet_name: ExperimentMethod
+  - settings:
+      end_column: 7
+      name: experiment_method_supporting_files
+    sheet_name: ExperimentMethodSupportingFile
+  - settings:
+      end_column: 8
+      name: experiments
+    sheet_name: Experiment
+  - settings:
+      end_column: 9
+      name: research_data_files
+      transformations:
+        experiments:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+        format:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+    sheet_name: ResearchDataFile
+  - settings:
+      end_column: 7
+      name: process_data_files
+    sheet_name: ProcessDataFile
+  - settings:
+      end_column: 7
+      name: datasets
+      transformations:
+        types: !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: Dataset
+  - settings:
+      end_column: 11
+      name: data_access_policies
+      transformations:
+        data_use_modifier_terms:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case_list []
+        data_use_permission_term:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        data_use_modifier_ids:
+          !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: DataAccessPolicy
+  - settings:
+      end_column: 4
+      name: data_access_committees
+    sheet_name: DataAccessCommittee
+  - settings:
+      end_column: 9
+      name: publications
+      transformations:
+        xref: !!python/object/apply:ghga_transpiler.transformations.to_list []
+    sheet_name: Publication
