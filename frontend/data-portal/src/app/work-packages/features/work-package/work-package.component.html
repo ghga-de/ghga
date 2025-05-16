@@ -89,6 +89,9 @@
     <p>
       This dataset has been selected for <strong>{{ dataset.stage }}.</strong>
     </p>
+    @if (dataset.expires) {
+      <p>Access expires on {{ dataset.expires | date: friendlyDateFormat }}.</p>
+    }
     @if (dataset.stage !== 'download') {
       <p class="font-bold text-red-600">Currently we only support download tokens.</p>
     }

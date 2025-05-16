@@ -21,7 +21,7 @@ import { RouterLink } from '@angular/router';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { getBackendErrorMessage, MaybeBackendError } from '@app/shared/utils/errors';
-import { Dataset } from '@app/work-packages/models/dataset';
+import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackage } from '@app/work-packages/models/work-package';
 import { WorkPackageService } from '@app/work-packages/services/work-package.service';
 
@@ -58,7 +58,7 @@ export class WorkPackageComponent {
 
   datasets = this.#wpService.datasets;
 
-  selectedDataset = signal<Dataset | undefined>(undefined);
+  selectedDataset = signal<DatasetWithExpiration | undefined>(undefined);
 
   tokenAction = computed<'upload' | 'download' | 'access'>(
     () => this.selectedDataset()?.stage ?? 'access',

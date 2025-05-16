@@ -16,3 +16,7 @@ export interface Dataset {
   stage: 'download' | 'upload';
   files: DatasetFile[];
 }
+
+export interface DatasetWithExpiration extends Dataset {
+  expires: string;
+}

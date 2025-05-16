@@ -11,7 +11,7 @@ import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
 import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { IvaState, IvaType, UserWithIva } from '@app/verification-addresses/models/iva';
-import { Dataset } from '@app/work-packages/models/dataset';
+import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
 
 /**
@@ -623,7 +623,7 @@ export const datasetInformation: DatasetInformation = {
  * WPS API
  */
 
-export const datasets: Dataset[] = [
+export const datasets: DatasetWithExpiration[] = [
   {
     id: 'GHGAD12345678901234',
     title: 'Some dataset to upload',
@@ -633,6 +633,7 @@ export const datasets: Dataset[] = [
       ' Note that the description can be longer than the title.',
     stage: 'upload',
     files: [],
+    expires: access_ends,
   },
   {
     id: 'GHGAD12345678901235',
@@ -643,6 +644,7 @@ export const datasets: Dataset[] = [
       ' Note that the description can be longer than the title.',
     stage: 'download',
     files: [],
+    expires: access_ends,
   },
   {
     id: 'GHGAD12345678901236',
@@ -653,6 +655,7 @@ export const datasets: Dataset[] = [
       ' Note that the description can be longer than the title.',
     stage: 'download',
     files: [],
+    expires: access_ends,
   },
 ];
 

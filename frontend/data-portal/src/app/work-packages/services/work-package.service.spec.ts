@@ -14,11 +14,11 @@ import {
 import { computed, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
-import { Dataset } from '../models/dataset';
+import { DatasetWithExpiration } from '../models/dataset';
 import { WorkPackage, WorkPackageResponse } from '../models/work-package';
 import { WorkPackageService } from './work-package.service';
 
-const TEST_DATASET: Dataset = {
+const TEST_DATASET: DatasetWithExpiration = {
   id: 'test-dataset-id',
   title: 'dataset-title',
   description: 'dataset-description',

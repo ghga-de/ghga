@@ -9,7 +9,7 @@ import { computed, inject, Injectable } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
 import { Observable, throwError } from 'rxjs';
-import { Dataset } from '../models/dataset';
+import { DatasetWithExpiration } from '../models/dataset';
 import { WorkPackage, WorkPackageResponse } from '../models/work-package';
 
 /**
@@ -30,14 +30,14 @@ export class WorkPackageService {
   /**
    * Resource for loading datasets
    */
-  datasets = httpResource<Dataset[]>(
+  datasets = httpResource<DatasetWithExpiration[]>(
     () => {
       const userId = this.#userId();
       return userId ? `${this.#usersUrl}/${userId}/datasets` : undefined;
     },
     {
       parse: (raw) =>
-        (raw as Dataset[]).filter(
+        (raw as DatasetWithExpiration[]).filter(
           ({ stage }) => stage === 'upload' || stage === 'download',
         ),
       defaultValue: [],
