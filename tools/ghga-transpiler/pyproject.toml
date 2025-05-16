@@ -30,11 +30,7 @@ dependencies = [
     "pydantic >=2.6, <3",
     "PyYAML ~= 6.0",
     "semver == 3.*",
-    "exceptiongroup>=1.0.0; python_version < \"3.11\"",
-    "tomli>= 2.0.0; python_version < \"3.11\"",
-    "eval-type-backport==0.2.0; python_version < \"3.10\"",
     "click==8.1.0",
-    "importlib-metadata>=4.4; python_version < \"3.10\"",
 ]
 
 [project.license]
