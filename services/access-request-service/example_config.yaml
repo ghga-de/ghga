@@ -22,6 +22,7 @@ dataset_change_topic: metadata_datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
 db_name: access-requests
+db_version_collection: arsDbVersions
 docs_url: /docs
 download_access_url: http://127.0.0.1:8080/download-access
 generate_correlation_id: true
@@ -41,6 +42,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json

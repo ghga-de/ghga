@@ -228,6 +228,43 @@
       ],
       "title": "Mongo Timeout"
     },
+    "db_version_collection": {
+      "description": "The name of the collection containing DB version information for this service",
+      "examples": [
+        "ifrsDbVersions"
+      ],
+      "title": "Db Version Collection",
+      "type": "string"
+    },
+    "migration_wait_sec": {
+      "description": "The number of seconds to wait before checking the DB version again",
+      "examples": [
+        5,
+        30,
+        180
+      ],
+      "title": "Migration Wait Sec",
+      "type": "integer"
+    },
+    "migration_max_wait_sec": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+      "examples": [
+        null,
+        300,
+        600,
+        3600
+      ],
+      "title": "Migration Max Wait Sec"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -440,6 +477,8 @@
     "kafka_servers",
     "mongo_dsn",
     "db_name",
+    "db_version_collection",
+    "migration_wait_sec",
     "auth_key"
   ],
   "title": "ModSettings",

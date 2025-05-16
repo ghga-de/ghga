@@ -16,11 +16,12 @@
 """Entrypoint of the package"""
 
 import asyncio
+from typing import Annotated
 
 import typer
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 
-from ars.main import consume_events, run_rest_app
+from ars.main import consume_events, publish_events, run_rest_app
 
 cli = typer.Typer()
 
@@ -36,3 +37,13 @@ def sync_run_api():
 def sync_consume_events(run_forever: bool = True):
     """Run an event consumer listening to the configured topic."""
     asyncio.run(consume_events(run_forever=run_forever))
+
+
+@cli.command(name="publish-events")
+def sync_run_publish_events(
+    all: Annotated[
+        bool, typer.Option(help="Set to (re)publish all events regardless of status")
+    ] = False,
+):
+    """Publish pending events."""
+    asyncio.run(publish_events(all=all))

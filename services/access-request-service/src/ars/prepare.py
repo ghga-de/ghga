@@ -35,6 +35,21 @@ from ars.adapters.outbound.http import AccessGrantsAdapter
 from ars.config import Config
 from ars.core.repository import AccessRequestRepository
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
+from ars.ports.outbound.daos import AccessRequestDaoPort
+
+
+@asynccontextmanager
+async def prepare_access_request_dao(
+    *,
+    config: Config,
+) -> AsyncGenerator[AccessRequestDaoPort, None]:
+    """Prepare an access request DAO as a context manager"""
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=config
+    ) as dao_publisher_factory:
+        yield await get_access_request_dao(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
 
 
 @asynccontextmanager
@@ -46,12 +61,9 @@ async def prepare_core(
     dao_factory = MongoDbDaoFactory(config=config)
     dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
     async with (
-        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
+        prepare_access_request_dao(config=config) as access_request_dao,
         AccessGrantsAdapter.construct(config=config) as access_grants,
     ):
-        access_request_dao = await get_access_request_dao(
-            config=config, dao_publisher_factory=dao_publisher_factory
-        )
         yield AccessRequestRepository(
             access_request_dao=access_request_dao,
             dataset_dao=dataset_dao,
