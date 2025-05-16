@@ -53,6 +53,10 @@ export class AccessRequestManagerFilterComponent {
   fromDate = model<Date | undefined>(this.#filter().fromDate);
   toDate = model<Date | undefined>(this.#filter().toDate);
   status = model<AccessRequestStatus | undefined>(this.#filter().status);
+  requestText = model<string | undefined>(this.#filter().requestText);
+  ticketId = model<string | undefined>(this.#filter().ticketId);
+  noteToRequester = model<string | undefined>(this.#filter().noteToRequester);
+  internalNote = model<string | undefined>(this.#filter().internalNote);
 
   /**
    * Communicate filter changes to the access request service
@@ -64,6 +68,10 @@ export class AccessRequestManagerFilterComponent {
       fromDate: this.fromDate(),
       toDate: this.toDate(),
       status: this.status(),
+      requestText: this.requestText(),
+      ticketId: this.ticketId(),
+      noteToRequester: this.noteToRequester(),
+      internalNote: this.internalNote(),
     });
   });
 

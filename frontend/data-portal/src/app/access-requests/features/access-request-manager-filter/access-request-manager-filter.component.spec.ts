@@ -25,6 +25,9 @@ const mockAccessRequestService = {
     fromDate: undefined,
     toDate: undefined,
     status: undefined,
+    ticketId: undefined,
+    noteToRequester: undefined,
+    internalNote: undefined,
   }),
   setAllAccessRequestsFilter: jest.fn(),
 };
@@ -61,6 +64,9 @@ describe('AccessRequestManagerFilterComponent', () => {
       fromDate: undefined,
       toDate: undefined,
       status: undefined,
+      ticketId: undefined,
+      noteToRequester: undefined,
+      internalNote: undefined,
     });
   });
 
@@ -76,6 +82,27 @@ describe('AccessRequestManagerFilterComponent', () => {
       fromDate: undefined,
       toDate: undefined,
       status: undefined,
+      ticketId: undefined,
+      noteToRequester: undefined,
+      internalNote: undefined,
+    });
+  });
+
+  it('should set the filter after typing a ticket id', async () => {
+    const textbox = screen.getByRole('textbox', { name: 'Internal ticket ID' });
+
+    await userEvent.type(textbox, '1559');
+    await fixture.whenStable();
+
+    expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
+      datasetId: '',
+      name: '',
+      fromDate: undefined,
+      toDate: undefined,
+      status: undefined,
+      ticketId: '1559',
+      noteToRequester: undefined,
+      internalNote: undefined,
     });
   });
 
@@ -95,6 +122,45 @@ describe('AccessRequestManagerFilterComponent', () => {
       fromDate: undefined,
       toDate: undefined,
       status: AccessRequestStatus.allowed,
+      ticketId: undefined,
+      noteToRequester: undefined,
+      internalNote: undefined,
+    });
+  });
+
+  it('should set the filter after typing a note to requester', async () => {
+    const textbox = screen.getByRole('textbox', { name: 'Note to requester' });
+
+    await userEvent.type(textbox, 'Please wait for the approval.');
+    await fixture.whenStable();
+
+    expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
+      datasetId: '',
+      name: '',
+      fromDate: undefined,
+      toDate: undefined,
+      status: undefined,
+      ticketId: undefined,
+      noteToRequester: 'Please wait for the approval.',
+      internalNote: undefined,
+    });
+  });
+
+  it('should set the filter after typing an internal note', async () => {
+    const textbox = screen.getByRole('textbox', { name: 'Internal note' });
+
+    await userEvent.type(textbox, 'We need to ask X');
+    await fixture.whenStable();
+
+    expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
+      datasetId: '',
+      name: '',
+      fromDate: undefined,
+      toDate: undefined,
+      status: undefined,
+      ticketId: undefined,
+      noteToRequester: undefined,
+      internalNote: 'We need to ask X',
     });
   });
 });

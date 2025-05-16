@@ -1,114 +1,184 @@
-<mat-card appearance="outlined" class="max-w-lg">
+<mat-card appearance="outlined" class="max-w-[1400px]">
   <mat-card-content>
     <div class="flex gap-4">
       <div>
         <mat-icon aria-label="Filter" class="large-icon">filter_alt</mat-icon>
       </div>
-      <div class="flex grow flex-col gap-2">
-        <div class="flex gap-2">
-          <mat-form-field class="grow">
-            <mat-label>Dataset ID</mat-label>
-            <input matInput [(ngModel)]="datasetId" />
-          </mat-form-field>
-          <button
-            mat-icon-button
-            aria-label="Remove filter for dataset ID"
-            [class.invisible]="!this.datasetId()"
-            class="pb-2.5"
-            (click)="this.datasetId.set('')"
-            data-umami-event="Access Request Filters Dataset ID Clear Clicked"
-          >
-            <mat-icon>cancel</mat-icon>
-          </button>
+      <div class="grid flex-grow grid-cols-1 gap-2 gap-x-8 lg:grid-cols-3">
+        <div class="flex grow flex-col gap-2">
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Internal ticket ID</mat-label>
+              <input matInput [(ngModel)]="ticketId" />
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for ticket ID"
+              [class.invisible]="!this.ticketId()"
+              class="pb-2.5"
+              (click)="this.ticketId.set('')"
+              data-umami-event="Access Request Filters Ticket ID Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Dataset ID</mat-label>
+              <input matInput [(ngModel)]="datasetId" />
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for dataset ID"
+              [class.invisible]="!this.datasetId()"
+              class="pb-2.5"
+              (click)="this.datasetId.set('')"
+              data-umami-event="Access Request Filters Dataset ID Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Name of user</mat-label>
+              <input matInput [(ngModel)]="name" />
+              <mat-hint>You can also filter with partial names</mat-hint>
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for user name"
+              [class.invisible]="!this.name()"
+              class="pb-2.5"
+              (click)="this.name.set('')"
+              data-umami-event="Access Request Filters User Name Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <mat-form-field class="grow">
-            <mat-label>Name of user</mat-label>
-            <input matInput [(ngModel)]="name" />
-            <mat-hint>You can also filter with partial names</mat-hint>
-          </mat-form-field>
-          <button
-            mat-icon-button
-            aria-label="Remove filter for user name"
-            [class.invisible]="!this.name()"
-            class="pb-2.5"
-            (click)="this.name.set('')"
-            data-umami-event="Access Request Filters User Name Clear Clicked"
-          >
-            <mat-icon>cancel</mat-icon>
-          </button>
+        <div class="flex grow flex-col gap-2">
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Request creation date from</mat-label>
+              <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
+              <mat-hint>{{ dateInputFormatHint }}</mat-hint>
+              <mat-datepicker-toggle
+                matIconSuffix
+                [for]="fromPicker"
+              ></mat-datepicker-toggle>
+              <mat-datepicker #fromPicker></mat-datepicker>
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for dates ranging from"
+              [class.invisible]="!this.fromDate()"
+              class="pb-2.5"
+              (click)="this.fromDate.set(undefined)"
+              data-umami-event="Access Request Filters Request Created From Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Request creation date until</mat-label>
+              <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
+              <mat-hint>{{ dateInputFormatHint }}</mat-hint>
+              <mat-datepicker-toggle
+                matIconSuffix
+                [for]="toPicker"
+              ></mat-datepicker-toggle>
+              <mat-datepicker #toPicker></mat-datepicker>
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for dates ranging from"
+              [class.invisible]="!this.toDate()"
+              class="pb-2.5"
+              (click)="this.toDate.set(undefined)"
+              data-umami-event="Access Request Filters Request Created Until Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>
+                @if (status()) {
+                  Status value
+                } @else {
+                  All status values
+                }
+              </mat-label>
+              <mat-select [(ngModel)]="status">
+                @for (opt of statusOptions; track opt) {
+                  <mat-option [value]="opt.value">{{
+                    opt.text | CapitalisePipe
+                  }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for status"
+              [class.invisible]="!this.status()"
+              class="pb-2.5"
+              (click)="this.status.set(undefined)"
+              data-umami-event="Access Request Filters Status Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <mat-form-field class="grow">
-            <mat-label>Request creation date from</mat-label>
-            <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
-            <mat-hint>{{ dateInputFormatHint }}</mat-hint>
-            <mat-datepicker-toggle
-              matIconSuffix
-              [for]="fromPicker"
-            ></mat-datepicker-toggle>
-            <mat-datepicker #fromPicker></mat-datepicker>
-          </mat-form-field>
-          <button
-            mat-icon-button
-            aria-label="Remove filter for dates ranging from"
-            [class.invisible]="!this.fromDate()"
-            class="pb-2.5"
-            (click)="this.fromDate.set(undefined)"
-            data-umami-event="Access Request Filters Request Created From Clear Clicked"
-          >
-            <mat-icon>cancel</mat-icon>
-          </button>
-        </div>
-        <div class="flex gap-2">
-          <mat-form-field class="grow">
-            <mat-label>Request creation date until</mat-label>
-            <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
-            <mat-hint>{{ dateInputFormatHint }}</mat-hint>
-            <mat-datepicker-toggle
-              matIconSuffix
-              [for]="toPicker"
-            ></mat-datepicker-toggle>
-            <mat-datepicker #toPicker></mat-datepicker>
-          </mat-form-field>
-          <button
-            mat-icon-button
-            aria-label="Remove filter for dates ranging from"
-            [class.invisible]="!this.toDate()"
-            class="pb-2.5"
-            (click)="this.toDate.set(undefined)"
-            data-umami-event="Access Request Filters Request Created Until Clear Clicked"
-          >
-            <mat-icon>cancel</mat-icon>
-          </button>
-        </div>
-        <div class="flex gap-2">
-          <mat-form-field class="grow">
-            <mat-label>
-              @if (status()) {
-                Status value
-              } @else {
-                All status values
-              }
-            </mat-label>
-            <mat-select [(ngModel)]="status">
-              @for (opt of statusOptions; track opt) {
-                <mat-option [value]="opt.value">{{
-                  opt.text | CapitalisePipe
-                }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <button
-            mat-icon-button
-            aria-label="Remove filter for status"
-            [class.invisible]="!this.status()"
-            class="pb-2.5"
-            (click)="this.status.set(undefined)"
-            data-umami-event="Access Request Filters Status Clear Clicked"
-          >
-            <mat-icon>cancel</mat-icon>
-          </button>
+        <div class="flex grow flex-col gap-2">
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Request details</mat-label>
+              <input matInput [(ngModel)]="requestText" />
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for the request details"
+              [class.invisible]="!this.requestText()"
+              class="pb-2.5"
+              (click)="this.requestText.set('')"
+              data-umami-event="Access Request Filters Request Text Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Note to requester</mat-label>
+              <input matInput [(ngModel)]="noteToRequester" />
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for the note to requester"
+              [class.invisible]="!this.noteToRequester()"
+              class="pb-2.5"
+              (click)="this.noteToRequester.set('')"
+              data-umami-event="Access Request Filters Note To Requester Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Internal note</mat-label>
+              <input matInput [(ngModel)]="internalNote" />
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for internal note"
+              [class.invisible]="!this.internalNote()"
+              class="pb-2.5"
+              (click)="this.internalNote.set('')"
+              data-umami-event="Access Request Filters Internal Note Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -138,6 +138,10 @@ export class AccessRequestService {
         fromDate: undefined,
         toDate: undefined,
         status: AccessRequestStatus.pending,
+        requestText: '',
+        ticketId: '',
+        noteToRequester: '',
+        internalNote: '',
       },
   );
 
@@ -151,7 +155,11 @@ export class AccessRequestService {
         filter.name ||
         filter.fromDate ||
         filter.toDate ||
-        filter.status
+        filter.status ||
+        filter.requestText ||
+        filter.ticketId ||
+        filter.noteToRequester ||
+        filter.internalNote
         ? filter
         : undefined,
     );
@@ -198,6 +206,30 @@ export class AccessRequestService {
       }
       if (filter.status) {
         requests = requests.filter((ar) => ar.status === filter.status);
+      }
+      const requestText = filter.requestText?.trim().toLowerCase();
+      if (requestText) {
+        requests = requests.filter((ar) =>
+          ar.request_text.toLowerCase().includes(requestText),
+        );
+      }
+      const ticketId = filter.ticketId?.trim().toLowerCase();
+      if (ticketId) {
+        requests = requests.filter((ar) =>
+          ar.ticket_id?.toLowerCase().includes(ticketId),
+        );
+      }
+      const noteToRequester = filter.noteToRequester?.trim().toLowerCase();
+      if (noteToRequester) {
+        requests = requests.filter((ar) =>
+          ar.note_to_requester?.toLowerCase().includes(noteToRequester),
+        );
+      }
+      const internalNote = filter.internalNote?.trim().toLowerCase();
+      if (internalNote) {
+        requests = requests.filter((ar) =>
+          ar.internal_note?.toLowerCase().includes(internalNote),
+        );
       }
     }
     return requests;
