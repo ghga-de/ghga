@@ -234,7 +234,7 @@ info:
   description: A service managing storage and retrieval of symmetric keys in a HashiCorp
     Vault.
   title: Encryption Key Store Service
-  version: 3.0.0
+  version: 3.0.1
 openapi: 3.1.0
 paths:
   /health:
