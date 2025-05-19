@@ -206,7 +206,7 @@ info:
     \ Object Storage. \n\nThis is an implementation of the DRS standard from the Global\
     \ Alliance for Genomics and Health, please find more information at: https://github.com/ga4gh/data-repository-service-schemas"
   title: Download Controller Service
-  version: 6.0.0
+  version: 6.0.1
 openapi: 3.1.0
 paths:
   /health:
