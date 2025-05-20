@@ -43,29 +43,23 @@ spec:
   authorization:
     acls:
     {{ with .Values._topics }}
+    {{ $topicsACL := list }}
     {{- range $topicKey, $topicValue := . }}
     {{- $kafkaUser := hasKey $topicValue "kafkaUser" | ternary (get $topicValue "kafkaUser") dict -}}
     {{- $kafkaUser := hasKey $kafkaUser "operations" | ternary $kafkaUser (merge $kafkaUser (dict "operations" (list "ALL"))) -}}
-    {{- $kafkaUser := hasKey $kafkaUser "patternType" | ternary $kafkaUser (merge $kafkaUser (dict "patternType" "literal")) -}}
-    {{- $kafkaUser := hasKey $kafkaUser "type" | ternary $kafkaUser (merge $kafkaUser (dict "type" "topic")) -}}
+    {{- $kafkaUser := hasKey $kafkaUser "resource" | ternary $kafkaUser (merge $kafkaUser (dict "resource" (dict "patternType" "literal" "type" "topic"))) -}}
     {{- if eq $topicKey "wildcard" }}
-    - resource:
-        name: '{{ $topicValue.topic.value }}'
-      {{- include "common.tplvalues.render" (dict "value" $kafkaUser "context" $) | nindent 8 }}
+    {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" $topicValue.topic.value))) -}}
     {{- else if and (eq $topicKey "deadLetterQueueRetry") $.Values.serviceNameConsumer }}
-    - resource:
-        name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceNameConsumer "-" $topicValue.topic.value) (cat $.Values.topicPrefix "-" $.Values.serviceNameConsumer "-" $topicValue.topic.value) | nospace }}'
-      {{- include "common.tplvalues.render" (dict "value" $kafkaUser "context" $) | nindent 8 }}
+    {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" ($.Values.topicPrefix | empty | ternary (cat $.Values.serviceNameConsumer "-" $topicValue.topic.value) (cat $.Values.topicPrefix "-" $.Values.serviceNameConsumer "-" $topicValue.topic.value) | nospace)))) -}}
     {{- else if and (eq $topicKey "deadLetterQueueRetry") $.Values.serviceName }}
-      resource:
-        name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceName "-" $topicValue.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceName "-" $topicValue.topic.value) | nospace }}'
-      {{- include "common.tplvalues.render" (dict "value" $kafkaUser "context" $) | nindent 8 }}
+    {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" ($.Values.topicPrefix | empty | ternary (cat $.Values.serviceName "-" $topicValue.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceName "-" $topicValue.topic.value) | nospace)))) -}}
     {{- else }}
-    - resource:
-        name: '{{ $.Values.topicPrefix | empty | ternary $topicValue.topic.value (cat $.Values.topicPrefix "-" $topicValue.topic.value ) | nospace }}'
-      {{- include "common.tplvalues.render" (dict "value" $kafkaUser "context" $) | nindent 8 }}
+      {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" ($.Values.topicPrefix | empty | ternary $topicValue.topic.value (cat $.Values.topicPrefix "-" $topicValue.topic.value) | nospace )))) -}}
     {{- end }}
+    {{- $topicsACL = append $topicsACL $kafkaUser -}}
     {{- end }}
+    {{- include "common.tplvalues.render" (dict "value" $topicsACL "context" $) | nindent 4 }}
     {{- end }}
     - operations:
       - All

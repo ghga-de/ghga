@@ -13,29 +13,30 @@ spec:
   authorization:
     acls:
     
-    - resource:
-        name: 'dlq'
-        operations:
-        - Write
-        patternType: literal
-        type: topic
+    
+    - operations:
+      - Write
       resource:
-        name: 'test-service-name-retry'
-        operations:
-        - Read
+        name: dlq
         patternType: literal
         type: topic
-    - resource:
-        name: 'my-topic'
-        operations:
-        - Write
+    - operations:
+      - Read
+      resource:
+        name: test-service-name-retry
         patternType: literal
         type: topic
-    - resource:
+    - operations:
+      - Write
+      resource:
+        name: my-topic
+        patternType: literal
+        type: topic
+    - operations:
+      - Read
+      - Write
+      resource:
         name: '*'
-        operations:
-        - Read
-        - Write
         patternType: literal
         type: topic
     - operations:
