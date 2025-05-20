@@ -4,7 +4,7 @@ exports:
       imageRegistry: ""
       imagePullSecrets: []
       storageClass: ""
-      topics: {}
+      _topics: {}
 
     deployment:
       enabled: true
@@ -176,7 +176,7 @@ exports:
       timeout_ms: 3000
 
     topicPrefix: ""
-    topics: {}
+    _topics: {}
     kafkaTopicsParameters: true
 
     kafkaUser:

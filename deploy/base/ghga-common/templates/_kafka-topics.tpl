@@ -1,7 +1,7 @@
 {{/* Transforms topic values to serivce config parameters. */}}
 {{- define "ghga-common.kafkaTopicsParameters" -}}
 {{- if .Values.kafkaTopicsParameters }}
-{{- $topics := merge (.Values.global.topics | default dict) .Values.topics -}}
+{{- $topics := merge (.Values.global._topics | default dict) .Values._topics -}}
 {{- range $key, $value := $topics -}}
 {{- if $value.topic }}
   {{- if or (not $value.topic.name) (eq $value.topic.name "wildcard") }}
@@ -36,42 +36,39 @@ metadata:
   labels:
     strimzi.io/cluster: {{ .Values.kafkaUser.clusterName }}
   name: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
-  namespace: {{ .Values.kafkaUser.clusterNamespace }}  
+  namespace: {{ .Values.kafkaUser.clusterNamespace }}
 spec:
   authentication:
     type: tls
   authorization:
     acls:
-    {{ with .Values.topics }}
-    {{- range $key, $value := . }}
-    {{- if eq $key "wildcard" }}
-    - operation: All
+    {{ with .Values._topics }}
+    {{- range $topicKey, $topicValue := . }}
+    {{- $kafkaUser := hasKey $topicValue "kafkaUser" | ternary (get $topicValue "kafkaUser") dict -}}
+    {{- $kafkaUser := hasKey $kafkaUser "operations" | ternary $kafkaUser (merge $kafkaUser (dict "operations" (list "ALL"))) -}}
+    {{- $kafkaUser := hasKey $kafkaUser "patternType" | ternary $kafkaUser (merge $kafkaUser (dict "patternType" "literal")) -}}
+    {{- $kafkaUser := hasKey $kafkaUser "type" | ternary $kafkaUser (merge $kafkaUser (dict "type" "topic")) -}}
+    {{- if eq $topicKey "wildcard" }}
+    - resource:
+        name: '{{ $topicValue.topic.value }}'
+      {{- include "common.tplvalues.render" (dict "value" $kafkaUser "context" $) | nindent 8 }}
+    {{- else if and (eq $topicKey "deadLetterQueueRetry") $.Values.serviceNameConsumer }}
+    - resource:
+        name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceNameConsumer "-" $topicValue.topic.value) (cat $.Values.topicPrefix "-" $.Values.serviceNameConsumer "-" $topicValue.topic.value) | nospace }}'
+      {{- include "common.tplvalues.render" (dict "value" $kafkaUser "context" $) | nindent 8 }}
+    {{- else if and (eq $topicKey "deadLetterQueueRetry") $.Values.serviceName }}
       resource:
-        name: '{{ $value.topic.value }}'
-        patternType: literal
-        type: topic
-    {{- else if and (eq $key "deadLetterQueueRetry") $.Values.serviceNameConsumer }}
-    - operation: All
-      resource:
-        name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceNameConsumer "-" $value.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceNameConsumer "-" $value.topic.value ) | nospace }}'
-        patternType: literal
-        type: topic
-    {{- else if and (eq $key "deadLetterQueueRetry") $.Values.serviceName }}
-    - operation: All
-      resource:
-        name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceName "-" $value.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceName "-" $value.topic.value ) | nospace }}'
-        patternType: literal
-        type: topic
+        name: '{{ $.Values.topicPrefix | empty | ternary (cat $.Values.serviceName "-" $topicValue.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceName "-" $topicValue.topic.value) | nospace }}'
+      {{- include "common.tplvalues.render" (dict "value" $kafkaUser "context" $) | nindent 8 }}
     {{- else }}
-    - operation: All
-      resource:
-        name: '{{ $.Values.topicPrefix | empty | ternary $value.topic.value (cat $.Values.topicPrefix "-" $value.topic.value ) | nospace }}'
-        patternType: literal
-        type: topic
+    - resource:
+        name: '{{ $.Values.topicPrefix | empty | ternary $topicValue.topic.value (cat $.Values.topicPrefix "-" $topicValue.topic.value ) | nospace }}'
+      {{- include "common.tplvalues.render" (dict "value" $kafkaUser "context" $) | nindent 8 }}
     {{- end }}
     {{- end }}
     {{- end }}
-    - operation: All
+    - operations:
+      - All
       resource:
         name: '*'
         patternType: literal

@@ -60,7 +60,7 @@ vaultAgent:
 kafkaUser:
   enabled: true
 
-topics:
+_topics:
   testEvent:
     topic:
       name: test_event_topic
@@ -70,17 +70,30 @@ topics:
       value: searchable_resource_deleted
     - name: resource_upsertion_event_type
       value: searchable_resource_upserted
+    kafkaUser:
+      operations:
+        - Write
   # as producer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+    kafkaUser:
+      operations:
+        - Write
   # as consumer
   deadLetterQueueRetry:
     topic:
       name: null
       value: retry
+    kafkaUser:
+      operations:
+        - Read
   wildcard:
     topic:
       name: wildcard
       value: '*'
+    kafkaUser:
+      operations:
+        - Read
+        - Write

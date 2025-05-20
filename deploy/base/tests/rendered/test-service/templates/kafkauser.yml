@@ -6,34 +6,40 @@ metadata:
   labels:
     strimzi.io/cluster: kafka
   name: test-test-service
-  namespace: strimzi  
+  namespace: strimzi
 spec:
   authentication:
     type: tls
   authorization:
     acls:
     
-    - operation: All
-      resource:
+    - resource:
         name: 'dlq'
+        operations:
+        - Write
         patternType: literal
         type: topic
-    - operation: All
       resource:
         name: 'test-service-name-retry'
+        operations:
+        - Read
         patternType: literal
         type: topic
-    - operation: All
-      resource:
+    - resource:
         name: 'my-topic'
+        operations:
+        - Write
         patternType: literal
         type: topic
-    - operation: All
-      resource:
+    - resource:
         name: '*'
+        operations:
+        - Read
+        - Write
         patternType: literal
         type: topic
-    - operation: All
+    - operations:
+      - All
       resource:
         name: '*'
         patternType: literal
