@@ -35,7 +35,7 @@ containers:
     key: parameters
 
 
-topics:
+_topics:
   fileUploadValidationSuccess:
     # as producer
     topic:
@@ -44,3 +44,6 @@ topics:
     type:
       name: interrogation_success_type
       value: file_interrogation_success
+    kafkaUser:
+      operations:
+        - Write

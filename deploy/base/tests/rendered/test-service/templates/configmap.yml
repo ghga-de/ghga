@@ -9,10 +9,6 @@ data:
     foo: bar
     service_instance_id: rest.1
   
-    kafka_dlq_topic: dlq
-    test_event_topic: my-topic
-    test_event_type: searchable_resource_deleted
-    resource_upsertion_event_type: searchable_resource_upserted
     kafka_ssl_password: ""
     kafka_ssl_cafile: /cluster-ca-cert/ca.crt
     kafka_ssl_certfile: /kafka-secrets/user.crt
@@ -25,10 +21,6 @@ data:
   parameters: |
     foo: bar
   
-    kafka_dlq_topic: dlq
-    test_event_topic: my-topic
-    test_event_type: searchable_resource_deleted
-    resource_upsertion_event_type: searchable_resource_upserted
     kafka_ssl_password: ""
     kafka_ssl_cafile: /cluster-ca-cert/ca.crt
     kafka_ssl_certfile: /kafka-secrets/user.crt

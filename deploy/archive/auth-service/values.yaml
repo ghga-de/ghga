@@ -37,7 +37,7 @@ containers:
     name: parameters
     key: parameters
 
-topics:
+_topics:
   authEvents:
     # as producer
     topic:
@@ -46,6 +46,9 @@ topics:
     types:
     - name: second_factor_recreated_type
       value: second_factor_recreated
+    kafkaUser:
+      operations:
+        - Write
   ivaEvents:
     # as producer
     topic:
@@ -54,6 +57,9 @@ topics:
     types:
     - name: iva_state_changed_type
       value: iva_state_changed
+    kafkaUser:
+      operations:
+        - Write
   datasetChangeEvent:
     # as consumer
     topic:
@@ -64,8 +70,14 @@ topics:
       value: dataset_deleted
     - name: dataset_upsertion_type
       value: dataset_created
+    kafkaUser:
+      operations:
+        - Read
   userEvents:
     # as producer
     topic:
       name: user_topic
       value: users
+    kafkaUser:
+      operations:
+        - Write

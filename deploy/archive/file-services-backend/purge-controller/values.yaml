@@ -32,7 +32,7 @@ containers:
     key: parameters
 
 
-topics:
+_topics:
   filesToDelete:
     # as producer
     topic:
@@ -41,3 +41,6 @@ topics:
     type:
       name: file_deletion_request_type
       value: file_deletion_requested
+    kafkaUser:
+      operations:
+        - Write

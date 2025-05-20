@@ -47,12 +47,15 @@ containers:
     name: parameters-consumer
     key: parameters-consumer
 
-topics:
+_topics:
   # as consumer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+    kafkaUser:
+      operations:
+        - Read
   # as producer
   #  deadLetterQueueRetry:
   # topic:

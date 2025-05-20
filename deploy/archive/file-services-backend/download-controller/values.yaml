@@ -45,7 +45,7 @@ containers:
     key: parameters-consumer
 
 
-topics:
+_topics:
   fileRegisteredEvent:
     # as producer
     topic:
@@ -54,6 +54,9 @@ topics:
     types:
       - name: file_registered_for_download_type
         value: drs_object_registered
+    kafkaUser:
+      operations:
+        - Write
   fileDeletedEvent:
     # as producer
     topic:
@@ -62,6 +65,9 @@ topics:
     types:
       - name: file_deleted_type
         value: drs_object_deleted
+    kafkaUser:
+      operations:
+        - Write
   filesToRegister:
     # as consumer
     topic:
@@ -70,6 +76,9 @@ topics:
     types:
       - name: file_internally_registered_type
         value: internal_file_registered
+    kafkaUser:
+      operations:
+        - Read
   filesToDelete:
     # as consumer
     topic:
@@ -78,6 +87,9 @@ topics:
     type:
       name: file_deletion_request_type
       value: file_deletion_requested
+    kafkaUser:
+      operations:
+        - Read
   downloadServed:
     # as producer
     topic:
@@ -86,6 +98,9 @@ topics:
     types:
       - name: download_served_type
         value: drs_object_served
+    kafkaUser:
+      operations:
+        - Write
   unstagedDownload:
     # as producer
     topic:
@@ -94,13 +109,22 @@ topics:
     type:
       name: files_to_stage_type
       value: file_staging_requested
+    kafkaUser:
+      operations:
+        - Write
   # as producer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+    kafkaUser:
+      operations:
+        - Write
   # as consumer
   deadLetterQueueRetry:
     topic:
       name: null
       value: retry
+    kafkaUser:
+      operations:
+        - Read

@@ -37,7 +37,7 @@ containers:
     name: parameters
     key: parameters
 
-topics:
+_topics:
   datasetChangeEvent:
     # as producer
     topic:
@@ -48,6 +48,9 @@ topics:
       value: dataset_deleted
     - name: dataset_upsertion_type
       value: dataset_created
+    kafkaUser:
+      operations:
+        - Write
   resourceChangeEvent:
     # as producer
     topic:
@@ -58,3 +61,6 @@ topics:
       value: searchable_resource_deleted
     - name: resource_upsertion_type
       value: searchable_resource_upserted
+    kafkaUser:
+      operations:
+        - Write

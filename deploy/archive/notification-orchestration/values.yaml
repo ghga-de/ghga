@@ -32,7 +32,7 @@ containers:
     name: parameters
     key: parameters
 
-topics:
+_topics:
   accessRequestEvents:
     # as consumer
     topic:
@@ -45,6 +45,9 @@ topics:
       value: access_request_allowed
     - name: access_request_denied_type
       value: access_request_denied
+    kafkaUser:
+      operations:
+        - Read
   ivaStateChangeEvent:
     # as consumer
     topic:
@@ -53,6 +56,9 @@ topics:
     types:
     - name: iva_state_changed_type
       value: iva_state_changed
+    kafkaUser:
+      operations:
+        - Read
   notificationEvent:
     # as producer
     topic:
@@ -61,6 +67,9 @@ topics:
     types:
     - name: notification_type
       value: notification
+    kafkaUser:
+      operations:
+        - Write
   secondFactorRecreatedEvent:
     # as consumer
     topic:
@@ -69,18 +78,30 @@ topics:
     types:
     - name: second_factor_recreated_type
       value: second_factor_recreated
+    kafkaUser:
+      operations:
+        - Read
   userEvents:
     # as consumer
     topic:
       name: user_topic
       value: users
+    kafkaUser:
+      operations:
+        - Read
   # as producer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+    kafkaUser:
+      operations:
+        - Write
   # as consumer
   deadLetterQueueRetry:
     topic:
       name: null
       value: retry
+    kafkaUser:
+      operations:
+        - Read

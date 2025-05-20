@@ -49,7 +49,7 @@ containers:
     name: parameters-consumer
     key: parameters-consumer
 
-topics:
+_topics:
   datasetChangeEvent:
     # as consumer
     topic:
@@ -60,13 +60,22 @@ topics:
       value: dataset_created
     - name: dataset_deletion_type
       value: dataset_deleted
+    kafkaUser:
+      operations:
+        - Read
   # as producer
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic
       value: dlq
+    kafkaUser:
+      operations:
+        - Write
   # as consumer
   deadLetterQueueRetry:
     topic:
       name: null
       value: retry
+    kafkaUser:
+      operations:
+        - Read
