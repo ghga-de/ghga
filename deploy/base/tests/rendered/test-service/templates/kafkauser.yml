@@ -12,22 +12,23 @@ spec:
     type: tls
   authorization:
     acls:
-    
-    
     - operations:
       - Write
+      - Describe
       resource:
         name: dlq
         patternType: literal
         type: topic
     - operations:
       - Read
+      - Describe
       resource:
         name: test-service-name-retry
         patternType: literal
         type: topic
     - operations:
       - Write
+      - Describe
       resource:
         name: my-topic
         patternType: literal
@@ -35,6 +36,7 @@ spec:
     - operations:
       - Read
       - Write
+      - Describe
       resource:
         name: '*'
         patternType: literal

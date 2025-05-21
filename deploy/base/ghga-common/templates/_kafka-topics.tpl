@@ -42,12 +42,13 @@ spec:
     type: tls
   authorization:
     acls:
-    {{ with .Values._topics }}
-    {{ $topicsACL := list }}
+    {{- with .Values._topics -}}
+    {{- $topicsACL := list -}}
     {{- range $topicKey, $topicValue := . }}
     {{- $kafkaUser := hasKey $topicValue "kafkaUser" | ternary (get $topicValue "kafkaUser") dict -}}
     {{- $kafkaUser := hasKey $kafkaUser "operations" | ternary $kafkaUser (merge $kafkaUser (dict "operations" (list "ALL"))) -}}
     {{- $kafkaUser := hasKey $kafkaUser "resource" | ternary $kafkaUser (merge $kafkaUser (dict "resource" (dict "patternType" "literal" "type" "topic"))) -}}
+    {{- $kafkaUser := set $kafkaUser "operations" (append $kafkaUser.operations "Describe" | uniq) -}}
     {{- if eq $topicKey "wildcard" }}
     {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" $topicValue.topic.value))) -}}
     {{- else if and (eq $topicKey "deadLetterQueueRetry") $.Values.serviceNameConsumer }}
@@ -55,7 +56,7 @@ spec:
     {{- else if and (eq $topicKey "deadLetterQueueRetry") $.Values.serviceName }}
     {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" ($.Values.topicPrefix | empty | ternary (cat $.Values.serviceName "-" $topicValue.topic.value ) (cat $.Values.topicPrefix "-" $.Values.serviceName "-" $topicValue.topic.value) | nospace)))) -}}
     {{- else }}
-      {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" ($.Values.topicPrefix | empty | ternary $topicValue.topic.value (cat $.Values.topicPrefix "-" $topicValue.topic.value) | nospace )))) -}}
+    {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" ($.Values.topicPrefix | empty | ternary $topicValue.topic.value (cat $.Values.topicPrefix "-" $topicValue.topic.value) | nospace )))) -}}
     {{- end }}
     {{- $topicsACL = append $topicsACL $kafkaUser -}}
     {{- end }}
