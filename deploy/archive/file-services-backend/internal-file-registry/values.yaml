@@ -39,6 +39,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   fileRegisteredEvent:
     # as producer
     topic:
@@ -50,6 +51,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   fileStagedEvent:
     # as producer
     topic:
@@ -61,6 +63,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   filesToDelete:
     # as consumer
     topic:
@@ -102,6 +105,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:

@@ -70,6 +70,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   secondFactorRecreatedEvent:
     # as consumer
     topic:
@@ -97,6 +98,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:
