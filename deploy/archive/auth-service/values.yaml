@@ -49,6 +49,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   ivaEvents:
     # as producer
     topic:
@@ -60,6 +61,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   datasetChangeEvent:
     # as consumer
     topic:
@@ -81,3 +83,4 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create

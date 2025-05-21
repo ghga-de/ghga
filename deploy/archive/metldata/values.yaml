@@ -51,6 +51,7 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
   resourceChangeEvent:
     # as producer
     topic:
@@ -64,3 +65,4 @@ _topics:
     kafkaUser:
       operations:
         - Write
+        - Create
