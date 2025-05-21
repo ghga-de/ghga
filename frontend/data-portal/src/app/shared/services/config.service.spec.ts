@@ -16,6 +16,13 @@ const mockConfig = {
   mass_url: '/test/mass',
   metldata_url: '/test/metldata',
   wps_url: '/test/wps',
+  wkvs_url: null,
+  ribbon_text: 'Test ribbon text',
+  max_facet_options: 12,
+  access_upfront_max_days: 180,
+  access_grant_min_days: 7,
+  access_grant_max_days: 730,
+  default_access_duration_days: 365,
   oidc_client_id: 'test-oidc-client-id',
   oidc_redirect_url: 'test/redirect',
   oidc_scope: 'some scope',
@@ -25,16 +32,10 @@ const mockConfig = {
   oidc_userinfo_url: 'test/userinfo',
   oidc_use_discovery: true,
   oidc_account_url: 'https://account.test',
-  mock_api: true,
-  mock_oidc: true,
-  ribbon_text: 'Test ribbon text',
-  access_upfront_max_days: 180,
-  access_grant_min_days: 7,
-  access_grant_max_days: 730,
-  default_access_duration_days: 365,
   umami_url: null,
   umami_website_id: null,
-  wkvs_url: null,
+  mock_api: true,
+  mock_oidc: true,
 };
 
 describe('ConfigService', () => {
@@ -67,7 +68,11 @@ describe('ConfigService', () => {
     expect(service.metldataUrl).toBe('/test/metldata');
   });
 
-  it('should provide the OID client ID', () => {
+  it('should provide the default Well-Known Value Service URL', () => {
+    expect(service.wkvsUrl).toBe('/.well-known');
+  });
+
+  it('should provide the OIDC client ID', () => {
     expect(service.oidcClientId).toBe('test-oidc-client-id');
   });
 
@@ -86,6 +91,7 @@ describe('ConfigService', () => {
   it('should provide the OIDC authorization URL', () => {
     expect(service.oidcAuthorizationUrl).toBe('https://login.test/test/authorize');
   });
+
   it('should provide the OIDC token URL', () => {
     expect(service.oidcTokenUrl).toBe('https://login.test/test/token');
   });
@@ -96,9 +102,5 @@ describe('ConfigService', () => {
 
   it('should provide the OIDC account URL', () => {
     expect(service.oidcAccountUrl).toBe('https://account.test');
-  });
-
-  it('should provide the default Well-Known Value Service URL', () => {
-    expect(service.wkvsUrl).toBe('/.well-known');
   });
 });

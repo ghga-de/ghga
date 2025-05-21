@@ -27,7 +27,7 @@ export interface Hit {
 }
 
 interface HitContent {
-  alias?: string;
+  ega_accession?: string;
   title: string;
 }
 

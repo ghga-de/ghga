@@ -6,18 +6,33 @@
 
 export interface GlobalSummary {
   Dataset: { count: number };
-  ExperimentMethod: {
-    count: number;
-    stats?: { instrument_model: { value: string; count: number }[] };
-  };
-  Individual: {
-    count: number;
-    stats?: { sex: { value: string; count: number }[] };
-  };
-  ProcessDataFile: {
-    count: number;
-    stats?: { format: { value: string; count: number }[] };
-  };
+  ExperimentMethod: ExperimentMethodStats;
+  Individual: IndividualStats;
+  AnalysisMethodSupportingFile: FileStats;
+  ExperimentMethodSupportingFile: FileStats;
+  IndividualSupportingFile: FileStats;
+  ProcessDataFile: FileStats;
+  ResearchDataFile: FileStats;
+}
+
+interface ExperimentMethodStats {
+  count: number;
+  stats?: { instrument_model: ValueCount[] };
+}
+
+interface IndividualStats {
+  count: number;
+  stats?: { sex: ValueCount[] };
+}
+
+export interface FileStats {
+  count: number;
+  stats?: { format: ValueCount[] };
+}
+
+export interface ValueCount {
+  value: string;
+  count: number;
 }
 
 export interface BaseGlobalSummary {
@@ -28,5 +43,9 @@ export const emptyGlobalSummary: GlobalSummary = {
   Dataset: { count: 0 },
   ExperimentMethod: { count: 0 },
   Individual: { count: 0 },
+  AnalysisMethodSupportingFile: { count: 0 },
+  ExperimentMethodSupportingFile: { count: 0 },
+  IndividualSupportingFile: { count: 0 },
   ProcessDataFile: { count: 0 },
+  ResearchDataFile: { count: 0 },
 };

@@ -213,7 +213,7 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
       case 'phenotype':
         return (sample.individual.phenotypic_features_terms || []).join(', ');
       case 'tissue':
-        return sample.biospecimen_tissue_term;
+        return sample.biospecimen_tissue_term || '';
       default:
         const value = sample[key as keyof Sample];
         if (typeof value === 'string' || typeof value === 'number') {

@@ -19,13 +19,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FacetFilterSetting } from '@app/metadata/models/facet-filter';
 import { FacetActivityPipe } from '@app/metadata/pipes/facet-activity.pipe';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search.service';
+import { ConfigService } from '@app/shared/services/config.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil.component';
 import { SearchResultListComponent } from '../search-result-list/search-result-list.component';
 
 const DEFAULT_PAGE_SIZE = 10;
 const DEFAULT_SKIP_VALUE = 0;
-const MAX_FACET_OPTIONS = 5;
 
 /**
  * This is the metadata browser component
@@ -50,6 +50,7 @@ const MAX_FACET_OPTIONS = 5;
   styleUrl: './metadata-browser.component.scss',
 })
 export class MetadataBrowserComponent implements OnInit {
+  #config = inject(ConfigService);
   #notify = inject(NotificationService);
   #metadataSearch = inject(MetadataSearchService);
   #route = inject(ActivatedRoute);
@@ -57,6 +58,7 @@ export class MetadataBrowserComponent implements OnInit {
   #className = 'EmbeddedDataset';
   #skip = DEFAULT_SKIP_VALUE;
   #pageSize = DEFAULT_PAGE_SIZE;
+  #max_facet_options = this.#config.maxFacetOptions;
 
   facetData = signal<FacetFilterSetting>({});
   searchFormControl = new FormControl('');
@@ -72,7 +74,7 @@ export class MetadataBrowserComponent implements OnInit {
   searchResults = this.#searchResults.value;
   facets = computed(() =>
     this.searchResults().facets.filter(
-      (f) => f.options.length > 0 && f.options.length <= MAX_FACET_OPTIONS,
+      (f) => f.options.length > 0 && f.options.length <= this.#max_facet_options,
     ),
   );
   numResults = computed(() => this.searchResults().count);

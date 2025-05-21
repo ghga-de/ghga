@@ -7,7 +7,13 @@
 import { httpResource } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config.service';
-import { DatasetDetails, emptyDatasetDetails } from '../models/dataset-details';
+import {
+  DatasetDetails,
+  DatasetDetailsRaw,
+  emptyDatasetDetails,
+  ExperimentMethod,
+  Individual,
+} from '../models/dataset-details';
 import { DatasetSummary, emptyDatasetSummary } from '../models/dataset-summary';
 
 /**
@@ -50,14 +56,17 @@ export class MetadataService {
   }
 
   /**
-   * The dataset details (empty while loading) as a resource
+   * The resolved dataset details (empty while loading) as a resource
    */
   datasetDetails = httpResource<DatasetDetails>(
     () => {
       const id = this.#detailsID();
       return id ? `${this.#datasetDetailsUrl}/${id}` : undefined;
     },
-    { defaultValue: emptyDatasetDetails },
+    {
+      parse: (raw) => this.#resolveDatasetDetails(raw as DatasetDetailsRaw),
+      defaultValue: emptyDatasetDetails,
+    },
   ).asReadonly();
 
   /**
@@ -66,5 +75,46 @@ export class MetadataService {
    */
   loadDatasetDetails(id: string): void {
     this.#detailsID.set(id);
+  }
+  /**
+   * Resolve dataset details
+   * @param raw The raw dataset details object
+   * @returns The resolved DatasetDetails object
+   *
+   * This method resolves the references in the dataset details object
+   * to the corresponding objects.
+   * If a referenced object is not found (which should never happen),
+   * it resolves to a default object with empty values.
+   */
+  #resolveDatasetDetails(raw: DatasetDetailsRaw): DatasetDetails {
+    const experimentMethods = new Map<string, ExperimentMethod>(
+      raw.experiment_methods.map((em) => [em.accession, em]),
+    );
+    const getExperimentMethod = (accession: string): ExperimentMethod =>
+      experimentMethods.get(accession) || {
+        accession,
+        name: '',
+        type: '',
+        instrument_model: '',
+      };
+    const individuals = new Map<string, Individual>(
+      raw.individuals.map((i) => [i.accession, i]),
+    );
+    const getIndividual = (accession: string): Individual =>
+      individuals.get(accession) || {
+        accession,
+        sex: '',
+      };
+    return {
+      ...raw,
+      experiments: raw.experiments.map((e) => ({
+        ...e,
+        experiment_method: getExperimentMethod(e.experiment_method),
+      })),
+      samples: raw.samples.map((s) => ({
+        ...s,
+        individual: getIndividual(s.individual),
+      })),
+    };
   }
 }

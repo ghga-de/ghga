@@ -28,5 +28,5 @@ test('has global statistics', async ({ page }) => {
   await expect(main).toContainText('Total datasets: 252');
   await expect(main).toContainText('Experiments: 1400');
   await expect(main).toContainText('Individuals: 5432');
-  await expect(main).toContainText('Files: 532');
+  await expect(main).toContainText('Files: 703');
 });

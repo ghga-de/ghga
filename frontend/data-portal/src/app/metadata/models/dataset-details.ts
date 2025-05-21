@@ -20,6 +20,8 @@ export interface DatasetDetails {
   individual_supporting_files: File[];
   research_data_files: File[];
   experiments: Experiment[];
+  experiment_methods: ExperimentMethod[];
+  individuals: Individual[];
   samples: Sample[];
 }
 
@@ -68,7 +70,7 @@ export interface Experiment {
   ega_accession: string;
 }
 
-interface ExperimentMethod {
+export interface ExperimentMethod {
   accession: string;
   name: string;
   type: string;
@@ -82,13 +84,14 @@ export interface Sample {
   description: string;
   case_control_status: string;
   ega_accession: string;
-  biospecimen_type: string;
-  biospecimen_tissue_term: string;
+  biospecimen_type?: string;
+  biospecimen_tissue_term?: string;
 }
 
-interface Individual {
+export interface Individual {
+  accession: string;
   sex: string;
-  phenotypic_features_terms: string[];
+  phenotypic_features_terms?: string[];
 }
 
 export const emptyDatasetDetails: DatasetDetails = {
@@ -120,5 +123,24 @@ export const emptyDatasetDetails: DatasetDetails = {
   individual_supporting_files: [],
   research_data_files: [],
   experiments: [],
+  experiment_methods: [],
+  individuals: [],
   samples: [],
+};
+
+/**
+ * Unresolved version of the DatasetDetails
+ */
+
+export type DatasetDetailsRaw = Omit<DatasetDetails, 'experiments' | 'samples'> & {
+  experiments: ExperimentRaw[];
+  samples: SampleRaw[];
+};
+
+type ExperimentRaw = Omit<Experiment, 'experiment_method'> & {
+  experiment_method: string;
+};
+
+type SampleRaw = Omit<Sample, 'individual'> & {
+  individual: string;
 };

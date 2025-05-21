@@ -86,10 +86,10 @@ export class AccessRequestDialogComponent {
     this.todayMidnight.setHours(0, 0, 0, 0);
     this.fromDate.set(this.todayMidnight);
     let d = new Date();
-    d.setDate(d.getDate() + this.#config.default_access_duration_days);
+    d.setDate(d.getDate() + this.#config.defaultAccessDurationDays);
     this.untilDate.set(d);
     this.minUntilDate.setDate(
-      this.minUntilDate.getDate() + this.#config.access_grant_min_days,
+      this.minUntilDate.getDate() + this.#config.accessGrantMinDays,
     );
     this.updateUntilRangeForFromValue(new Date());
     this.updateFromRangeForUntilValue(d);
@@ -224,14 +224,14 @@ export class AccessRequestDialogComponent {
     const newFromMinDate = new Date(
       Math.max(
         currentDate.getTime(),
-        date.getTime() - this.#config.access_grant_max_days * MILLISECONDS_PER_DAY,
+        date.getTime() - this.#config.accessGrantMaxDays * MILLISECONDS_PER_DAY,
       ),
     );
     const newFromMaxDate = new Date(
       Math.min(
-        date.getTime() - this.#config.access_grant_min_days * MILLISECONDS_PER_DAY,
+        date.getTime() - this.#config.accessGrantMinDays * MILLISECONDS_PER_DAY,
         currentDate.getTime() +
-          this.#config.access_upfront_max_days * MILLISECONDS_PER_DAY,
+          this.#config.accessUpfrontMaxDays * MILLISECONDS_PER_DAY,
       ),
     );
 
@@ -245,10 +245,10 @@ export class AccessRequestDialogComponent {
    */
   updateUntilRangeForFromValue(date: Date): void {
     const newUntilMinDate = new Date(
-      date.getTime() + this.#config.access_grant_min_days * MILLISECONDS_PER_DAY,
+      date.getTime() + this.#config.accessGrantMinDays * MILLISECONDS_PER_DAY,
     );
     const newUntilMaxDate = new Date(
-      date.getTime() + this.#config.access_grant_max_days * MILLISECONDS_PER_DAY,
+      date.getTime() + this.#config.accessGrantMaxDays * MILLISECONDS_PER_DAY,
     );
 
     this.minUntilDate = newUntilMinDate;

@@ -14,6 +14,13 @@ interface Config {
   mass_url: string;
   metldata_url: string;
   wps_url: string;
+  wkvs_url: string | null;
+  ribbon_text: string;
+  max_facet_options: number;
+  access_upfront_max_days: number;
+  access_grant_min_days: number;
+  access_grant_max_days: number;
+  default_access_duration_days: number;
   oidc_client_id: string;
   oidc_redirect_url: string;
   oidc_scope: string;
@@ -25,14 +32,8 @@ interface Config {
   oidc_account_url: string;
   mock_api: boolean;
   mock_oidc: boolean;
-  ribbon_text: string;
-  access_upfront_max_days: number;
-  access_grant_min_days: number;
-  access_grant_max_days: number;
-  default_access_duration_days: number;
   umami_url: string | null;
   umami_website_id: string | null;
-  wkvs_url: string | null;
 }
 
 declare global {
@@ -137,6 +138,54 @@ export class ConfigService {
   }
 
   /**
+   * Gets the text to be shown in the corner ribbon
+   * @returns the string with the version of the application
+   */
+  get ribbonText(): string {
+    return this.#config.ribbon_text;
+  }
+
+  /**
+   * Get the maximum number of facet options to be shown
+   * @returns the maximum number of options
+   */
+  get maxFacetOptions(): number {
+    return this.#config.max_facet_options;
+  }
+
+  /**
+   * Gets the maximum number of days between now and the start of an access grant.
+   * @returns the number of days
+   */
+  get accessUpfrontMaxDays(): number {
+    return this.#config.access_upfront_max_days;
+  }
+
+  /**
+   * Gets the minimum duration of an access grant
+   * @returns the number of days
+   */
+  get accessGrantMinDays(): number {
+    return this.#config.access_grant_min_days;
+  }
+
+  /**
+   * Gets the maximum duration of an access grant
+   * @returns the number of days
+   */
+  get accessGrantMaxDays(): number {
+    return this.#config.access_grant_max_days;
+  }
+
+  /**
+   * Gets the default number of days for an access grant
+   * @returns the number of days
+   */
+  get defaultAccessDurationDays(): number {
+    return this.#config.default_access_duration_days;
+  }
+
+  /**
    * Gets the OIDC client ID from the config object
    * @returns the OIDC client ID
    */
@@ -212,38 +261,6 @@ export class ConfigService {
   }
 
   /**
-   * Gets the text to be shown in the corner ribbon
-   * @returns the string with the version of the application
-   */
-  get ribbonText(): string {
-    return this.#config.ribbon_text;
-  }
-
-  /**
-   * Gets the maximum number of days between now and the start of an access grant.
-   * @returns the number of days
-   */
-  get access_upfront_max_days(): number {
-    return this.#config.access_upfront_max_days;
-  }
-
-  /**
-   * Gets the minimum duration of an access grant
-   * @returns the number of days
-   */
-  get access_grant_min_days(): number {
-    return this.#config.access_grant_min_days;
-  }
-
-  /**
-   * Gets the maximum duration of an access grant
-   * @returns the number of days
-   */
-  get access_grant_max_days(): number {
-    return this.#config.access_grant_max_days;
-  }
-
-  /**
    * Gets the URL of the Umami backend that the analytics data will be reported to
    * @returns the URL of the Umami backend or null if not configured
    */
@@ -257,13 +274,5 @@ export class ConfigService {
    */
   get umami_website_id(): string | null {
     return this.#config.umami_website_id || null;
-  }
-
-  /**
-   * Gets the default number of days for an access grant
-   * @returns the number of days
-   */
-  get default_access_duration_days(): number {
-    return this.#config.default_access_duration_days;
   }
 }

@@ -19,6 +19,14 @@ dins_url: /api/dins
 mass_url: /api/mass
 metldata_url: /api/metldata
 wps_url: /api/wps
+wkvs_url: null
+
+ribbon_text: 'Staging v$v'
+max_facet_options: 7
+access_upfront_max_days: 180
+access_grant_min_days: 7
+access_grant_max_days: 730
+default_access_duration_days: 365
 
 oidc_client_id: ghga-client
 oidc_redirect_url: oauth/callback
@@ -28,15 +36,7 @@ oidc_authorization_url: authorize
 oidc_token_url: token
 oidc_userinfo_url: userinfo
 oidc_use_discovery: true
-default_access_duration_days: 365
-access_upfront_max_days: 180
-access_grant_min_days: 7
-access_grant_max_days: 730
 oidc_account_url: https://profile.aai.lifescience-ri.eu/profile
-
-ribbon_text: 'Staging v$v'
 
 umami_url: null
 umami_website_id: null
-
-wkvs_url: null

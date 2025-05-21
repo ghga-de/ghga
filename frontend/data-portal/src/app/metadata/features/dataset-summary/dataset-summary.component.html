@@ -1,9 +1,9 @@
 <div class="pt-4 text-sm">
   <div class="mb-4 flex flex-col gap-y-2 sm:float-right sm:w-52 md:ms-6 md:mb-4">
-    @if (hitContent().alias !== '') {
+    @if (hitContent().ega_accession !== '') {
       <a
         mat-stroked-button
-        [href]="'https://ega-archive.org/datasets/' + hitContent().alias"
+        [href]="'https://ega-archive.org/datasets/' + hitContent().ega_accession"
         target="_blank"
         rel="noopener noreferrer"
         data-umami-event="Dataset Summary EGA Dataset Clicked"
@@ -20,8 +20,8 @@
     >
   </div>
   <p><strong>Dataset ID:</strong> {{ summary().accession }}</p>
-  @if (hitContent().alias) {
-    <p><strong>EGA ID:</strong> {{ hitContent().alias }}</p>
+  @if (hitContent().ega_accession) {
+    <p><strong>EGA ID:</strong> {{ hitContent().ega_accession }}</p>
   }
   <p><strong>Full title:</strong> {{ summary().title }}</p>
   <app-paragraphs

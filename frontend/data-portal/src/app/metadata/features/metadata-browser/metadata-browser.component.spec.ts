@@ -10,9 +10,17 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { searchResults } from '@app/../mocks/data';
+import { ConfigService } from '@app/shared/services/config.service';
 import { MetadataSearchService } from '../../services/metadata-search.service';
 import { SearchResultListComponent } from '../search-result-list/search-result-list.component';
 import { MetadataBrowserComponent } from './metadata-browser.component';
+
+/**
+ * Mock the config service as needed for the metadata browser
+ */
+class MockConfigService {
+  maxFacetOptions = 5;
+}
 
 /**
  * Mock the metadata service as needed for the metadata browser
@@ -37,6 +45,7 @@ describe('BrowseComponent', () => {
     await TestBed.configureTestingModule({
       imports: [MetadataBrowserComponent, NoopAnimationsModule],
       providers: [
+        { provide: ConfigService, useClass: MockConfigService },
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
         RouterModule,
         {
