@@ -46,7 +46,7 @@ spec:
     {{- $topicsACL := list -}}
     {{- range $topicKey, $topicValue := . }}
     {{- $kafkaUser := hasKey $topicValue "kafkaUser" | ternary (get $topicValue "kafkaUser") dict -}}
-    {{- $kafkaUser := hasKey $kafkaUser "operations" | ternary $kafkaUser (merge $kafkaUser (dict "operations" (list "ALL"))) -}}
+    {{- $kafkaUser := hasKey $kafkaUser "operations" | ternary $kafkaUser (merge $kafkaUser (dict "operations" (list "All"))) -}}
     {{- $kafkaUser := hasKey $kafkaUser "resource" | ternary $kafkaUser (merge $kafkaUser (dict "resource" (dict "patternType" "literal" "type" "topic"))) -}}
     {{- $kafkaUser := set $kafkaUser "operations" (append $kafkaUser.operations "Describe" | uniq) -}}
     {{- if eq $topicKey "wildcard" }}
