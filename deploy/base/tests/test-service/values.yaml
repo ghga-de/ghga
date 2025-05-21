@@ -56,6 +56,21 @@ vaultAgent:
     crypt4ghExternalPriv:
       enabled: true
 
+httpRoute:
+  enabled: true
+  hostnames:
+    - my.test.com
+  rules:
+    - filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: my-header
+                value: foo
+      backendRefs:
+        - name: my-test-svc1
+          weight: 1
+          port: 80
 
 kafkaUser:
   enabled: true

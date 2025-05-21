@@ -212,6 +212,10 @@ exports:
     environment:
       name: default
 
+    # Set `spec` of HTTPRoute here
+    httpRoute:
+      enabled: false
+
     vaultAgent:
       enabled: false
       annotations:
@@ -255,4 +259,3 @@ exports:
           dataKey: crypt4gh.sec
           renderToFile: true
           parameterName: CRYPT4GH_PRIVATE_KEY
-
