@@ -134,7 +134,8 @@ h6 {
   margin-bottom: 0.7em;
 }
 
-main a {
+main a,
+mat-dialog-content a {
   color: var(--mat-sys-tertiary);
   text-decoration: underline;
   &:hover {

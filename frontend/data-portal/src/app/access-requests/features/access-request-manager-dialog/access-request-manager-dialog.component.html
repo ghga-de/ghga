@@ -4,7 +4,7 @@
     <table class="detail mb-4 w-full">
       @if (data.ticket_id) {
         <tr>
-          <th class="pe-1 text-start">Relevant Issue:</th>
+          <th class="pe-1 text-start">Relevant issue:</th>
           <td>
             <a [href]="ticketUrl()" target="_blank" tabindex="-1"
               >{{ data.ticket_id
@@ -21,7 +21,18 @@
       }
       <tr>
         <th class="pe-1 text-start">Dataset ID:</th>
-        <td>{{ data.dataset_id }}</td>
+        <td>
+          <a [href]="'/dataset/' + data.dataset_id" target="_blank" tabindex="-1"
+            >{{ data.dataset_id
+            }}<mat-icon
+              role="img"
+              aria-hidden="true"
+              class="mat-icon material-symbols-outlined mat-icon-no-color no-translate h-4 w-4"
+              data-mat-icon-type="font"
+              >open_in_new</mat-icon
+            ></a
+          >
+        </td>
       </tr>
       <tr>
         <th class="pe-1 text-start">Status:</th>
@@ -31,14 +42,27 @@
           }}</strong>
         </td>
       </tr>
-
+      <tr>
+        <th class="pe-1 text-start align-top">DAC:</th>
+        <td>{{ data.dac_alias }}</td>
+      </tr>
+      <tr></tr>
+      <tr>
+        <th class="pe-1 text-start align-top">Dataset title:</th>
+        <td>{{ data.dataset_title }}</td>
+      </tr>
+      <tr></tr>
       <tr>
         <th class="pe-1 text-start">Requester:</th>
         <td>{{ data.full_user_name }}</td>
       </tr>
       <tr>
-        <th class="w-32 pe-1 text-start">Contact e-Mail:</th>
-        <td>{{ data.email }}</td>
+        <th class="w-32 pe-1 text-start">Contact e-mail:</th>
+        <td>
+          <a class="underline" [href]="'mailto:' + data.email" tabindex="-1">{{
+            data.email
+          }}</a>
+        </td>
       </tr>
       <tr>
         <th class="pe-1 text-start align-top">Request details:</th>

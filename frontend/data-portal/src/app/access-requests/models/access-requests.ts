@@ -22,6 +22,8 @@ export interface AccessRequest {
   id: string;
   user_id: string;
   dataset_id: string;
+  dataset_title: string;
+  dac_alias: string;
   full_user_name: string;
   email: string;
   request_text: string;

@@ -54,14 +54,14 @@ describe('AccessRequestNoteComponent', () => {
   it('should only show the note to the requester', () => {
     const compiled = fixture_with_one_note.nativeElement as HTMLElement;
     const text = compiled.textContent;
-    expect(text).not.toContain('Internal Note:');
+    expect(text).not.toContain('Internal note:');
     expect(text).toContain('Note:');
   });
 
   it('should show both notes', () => {
     const compiled = fixture_with_two_notes.nativeElement as HTMLElement;
     const text = compiled.textContent;
-    expect(text).toContain('Internal Note:');
+    expect(text).toContain('Internal note:');
     expect(text).toContain('This is a note to the requester.');
   });
 });
