@@ -26,7 +26,7 @@ test('has global statistics', async ({ page }) => {
   const main = page.locator('main');
   await expect(main).toContainText('Statistics');
   await expect(main).toContainText('Total datasets: 252');
-  await expect(main).toContainText('Experiments: 1400');
-  await expect(main).toContainText('Individuals: 5432');
+  await expect(main).toContainText('Experiments: 1,400');
+  await expect(main).toContainText('Individuals: 5,432');
   await expect(main).toContainText('Files: 703');
 });

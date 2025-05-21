@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { DecimalPipe } from '@angular/common';
 import { Component, computed, effect, inject, Signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,6 +26,7 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil.compone
     UnderscoreToSpace,
     MatProgressSpinnerModule,
     StencilComponent,
+    DecimalPipe,
   ],
   templateUrl: './global-summary.component.html',
   styleUrl: './global-summary.component.scss',

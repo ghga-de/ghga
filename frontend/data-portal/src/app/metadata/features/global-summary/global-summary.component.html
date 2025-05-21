@@ -18,7 +18,7 @@
           @if (isLoading()) {
             <app-stencil />
           } @else {
-            {{ datasets().count }}
+            {{ datasets().count | number }}
           }
         </div></mat-card-content
       ></mat-card
@@ -33,7 +33,7 @@
         @if (isLoading()) {
           <app-stencil class="inline-flex w-10" />
         } @else {
-          {{ methods().count }}
+          {{ methods().count | number }}
         }</mat-card-title
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
@@ -55,7 +55,9 @@
                 track platform.value
               ) {
                 <tr>
-                  <td class="pe-2 text-right font-bold">{{ platform.count }}</td>
+                  <td class="pe-2 text-right font-bold">
+                    {{ platform.count | number }}
+                  </td>
                   <td class="text-left uppercase">
                     {{ platform.value | underscoreToSpace }}
                   </td>
@@ -76,7 +78,7 @@
         @if (isLoading()) {
           <app-stencil class="inline-flex w-10" />
         } @else {
-          {{ individuals().count }}
+          {{ individuals().count | number }}
         }</mat-card-title
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
@@ -95,7 +97,9 @@
             } @else {
               @for (sex of individuals().stats?.sex ?? []; track sex.value) {
                 <tr>
-                  <td class="pe-2 text-right font-bold">{{ sex.count }}</td>
+                  <td class="pe-2 text-right font-bold">
+                    {{ sex.count | number }}
+                  </td>
                   <td class="text-left">
                     {{ sex.value }}
                   </td>
@@ -116,7 +120,7 @@
         @if (isLoading()) {
           <app-stencil class="inline-flex w-10" />
         } @else {
-          {{ files().count }}
+          {{ files().count | number }}
         }</mat-card-title
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
@@ -135,7 +139,9 @@
             } @else {
               @for (format of files().stats?.format ?? []; track format.value) {
                 <tr>
-                  <td class="pe-2 text-right font-bold">{{ format.count }}</td>
+                  <td class="pe-2 text-right font-bold">
+                    {{ format.count | number }}
+                  </td>
                   <td class="text-left uppercase">
                     {{ format.value }}
                   </td>

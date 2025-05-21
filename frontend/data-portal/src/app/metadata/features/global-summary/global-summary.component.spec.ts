@@ -40,14 +40,37 @@ describe('GlobalStatsComponent', () => {
     await fixture.whenStable();
   });
 
+  /**
+   * Check the text content of a card
+   * @param index the number of the card
+   * @param expected the text to check for
+   */
+  function expectCardText(index: number, expected: string): void {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const cards = compiled.querySelectorAll('mat-card');
+    expect(cards.length).toBe(4);
+    const card = cards[index];
+    const text = card.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain(expected);
+  }
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show methods', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const text = compiled.textContent;
-    expect(text).toContain('700');
-    expect(text).toContain('Ilumina test');
+  it('should properly show total datasets', () => {
+    expectCardText(0, 'Total datasets: 252');
+  });
+
+  it('should properly show experiments', () => {
+    expectCardText(1, 'Experiments: 1,400 700 Ilumina test 700 HiSeq test');
+  });
+
+  it('should properly show individuals', () => {
+    expectCardText(2, 'Individuals: 5,432 1,935 Female 2,358 Male');
+  });
+
+  it('should properly aggregate file types', () => {
+    expectCardText(3, 'Files: 703 12 txt 462 bam 212 fastq 17 zip');
   });
 });
