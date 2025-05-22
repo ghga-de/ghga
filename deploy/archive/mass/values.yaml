@@ -73,6 +73,7 @@ _topics:
     kafkaUser:
       operations:
         - Read
+        - Create
   # as producer
   deadLetterQueue:
     topic:
@@ -90,3 +91,4 @@ _topics:
     kafkaUser:
       operations:
         - Read
+        - Create

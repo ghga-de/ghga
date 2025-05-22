@@ -81,6 +81,7 @@ _topics:
     kafkaUser:
       operations:
         - Read
+        - Create
   filesToDelete:
     # as consumer
     topic:
@@ -92,6 +93,7 @@ _topics:
     kafkaUser:
       operations:
         - Read
+        - Create
   downloadServed:
     # as producer
     topic:
@@ -133,3 +135,4 @@ _topics:
     kafkaUser:
       operations:
         - Read
+        - Create
