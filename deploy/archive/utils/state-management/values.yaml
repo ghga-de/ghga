@@ -36,7 +36,7 @@ containers:
 # SMS is just used for testing, it requires access to all topics to clear them
 kafkaTopicsParameters: false
 
-topics:
+_topics:
   wildcard:
     topic:
       name: wildcard
