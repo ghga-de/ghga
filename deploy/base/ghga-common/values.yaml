@@ -169,7 +169,8 @@ exports:
     mapping:
       enabled: false
       port: 8080
-      ambassador_id: default
+      ambassador_id: 
+      - default
       rewrite: /
       hostname: ""
       prefix: ""
