@@ -82,7 +82,7 @@ EXPECTED_SUMMARIES = {
         },
         "experiments_summary": {
             "count": 2,
-            "stats": {"experiment_methods": [{"value": "454_GS", "count": 2}]},
+            "stats": {"experiment_methods": [{"value": "454_GS", "count": 3}]},
         },
         "files_summary": {
             "count": 7,

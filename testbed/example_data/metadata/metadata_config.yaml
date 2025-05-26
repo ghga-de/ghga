@@ -1,5 +1,5 @@
-# https://github.com/ghga-de/metadata-config/blob/main/configuration/metadata_config.yaml
-# 2024-07-26T10:42:39Z
+# https://github.com/ghga-de/metadata-config
+# 2025-05-22T15:00:00Z
 
 source_event_topic: source_events
 source_event_type: source_event
@@ -54,7 +54,6 @@ workflow_config:
             input_paths:
               - research_data_files.experiments.sample
               - individual_supporting_files.individual.samples
-              - experiment_method_supporting_files.experiment_method.experiments.sample
               - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.sample
               - process_data_files.analysis.research_data_files.experiments.sample
             function: Count
@@ -63,7 +62,6 @@ workflow_config:
           - output_path: samples_summary.stats.sex
             input_paths:
               - individual_supporting_files.individual.sex
-              - experiment_method_supporting_files.experiment_method.experiments.sample.individual.sex
               - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.sample.individual.sex
               - process_data_files.analysis.research_data_files.experiments.sample.individual.sex
               - research_data_files.experiments.sample.individual.sex
@@ -74,7 +72,6 @@ workflow_config:
             input_paths:
               - research_data_files.experiments.sample.biospecimen_tissue_term
               - individual_supporting_files.individual.samples.biospecimen_tissue_term
-              - experiment_method_supporting_files.experiment_method.experiments.sample.biospecimen_tissue_term
               - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.sample.biospecimen_tissue_term
               - process_data_files.analysis.research_data_files.experiments.sample.biospecimen_tissue_term
             function: StringElementCount
@@ -86,7 +83,6 @@ workflow_config:
               - research_data_files.experiments.sample.individual.phenotypic_features_terms
               - analysis_method_supporting_files.analysis_method.analyses.research_data_files.experiments.sample.individual.phenotypic_features_terms
               - process_data_files.analysis.research_data_files.experiments.sample.individual.phenotypic_features_terms
-              - experiment_method_supporting_files.experiment_method.experiments.sample.phenotypic_features_terms
             function: StringElementCount
             visit_only_once:
               - Individual
@@ -118,7 +114,7 @@ workflow_config:
               - Experiment
           - output_path: experiments_summary.stats.experiment_methods
             input_paths:
-              - experiment_method_supporting_files.experiment_method.experiments.experiment_method.instrument_model
+              - experiment_method_supporting_files.experiment_method.instrument_model
               - individual_supporting_files.individual.samples.experiments.experiment_method.instrument_model
               - research_data_files.experiments.experiment_method.instrument_model
               - process_data_files.analysis.research_data_files.experiments.experiment_method.instrument_model
@@ -185,9 +181,6 @@ workflow_config:
           path: "Individual<(individual)IndividualSupportingFile"
           multivalued: True
       ExperimentMethod:
-        experiments:
-          path: "ExperimentMethod<(experiment_method)Experiment"
-          multivalued: True
         experiment_method_supporting_files:
           path: "ExperimentMethod<(experiment_method)ExperimentMethodSupportingFile"
           multivalued: True
@@ -219,6 +212,7 @@ workflow_config:
         research_data_files:
           path: "Dataset<(dataset)ResearchDataFile"
           multivalued: True
+
         individual_supporting_file_samples:
           path: "Dataset<(dataset)IndividualSupportingFile(individual)>Individual<(individual)Sample"
           multivalued: True
@@ -234,6 +228,22 @@ workflow_config:
         research_data_file_samples:
           path: "Dataset<(dataset)ResearchDataFile(experiments)>Experiment(sample)>Sample"
           multivalued: True
+
+        individual_supporting_file_individuals:
+          path: "Dataset<(dataset)IndividualSupportingFile(individual)>Individual"
+          multivalued: True
+        experiment_method_supporting_file_individuals:
+          path: "Dataset(experiment_method_supporting_file_samples)>Sample(individual)>Individual"
+          multivalued: True
+        processed_data_file_individuals:
+          path: "Dataset(processed_data_file_samples)>Sample(individual)>Individual"
+          multivalued: True
+        analysis_method_supporting_file_individuals:
+          path: "Dataset(analysis_method_supporting_file_samples)>Sample(individual)>Individual"
+          multivalued: True
+        research_data_file_individuals:
+          path: "Dataset(research_data_file_samples)>Sample(individual)>Individual"
+          multivalued: True
         individual_supporting_file_experiments:
           path: "Dataset<(dataset)IndividualSupportingFile(individual)>Individual<(individual)Sample<(sample)Experiment"
           multivalued: True
@@ -248,6 +258,21 @@ workflow_config:
           multivalued: True
         research_data_file_experiments:
           path: "Dataset<(dataset)ResearchDataFile(experiments)>Experiment"
+          multivalued: True
+        individual_supporting_file_experiment_methods:
+          path: "Dataset<(dataset)IndividualSupportingFile(individual)>Individual<(individual)Sample<(sample)Experiment(experiment_method)>ExperimentMethod"
+          multivalued: True
+        experiment_method_supporting_file_experiment_methods:
+          path: "Dataset<(dataset)ExperimentMethodSupportingFile(experiment_method)>ExperimentMethod"
+          multivalued: True
+        processed_data_file_experiment_methods:
+          path: "Dataset<(dataset)ProcessDataFile(analysis)>Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment(experiment_method)>ExperimentMethod"
+          multivalued: True
+        analysis_method_supporting_file_experiment_methods:
+          path: "Dataset<(dataset)AnalysisMethodSupportingFile(analysis_method)>AnalysisMethod<(analysis_method)Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment(experiment_method)>ExperimentMethod"
+          multivalued: True
+        research_data_file_experiment_methods:
+          path: "Dataset<(dataset)ResearchDataFile(experiments)>Experiment(experiment_method)>ExperimentMethod"
           multivalued: True
   merge_dataset_file_lists:
     merge_instructions:
@@ -266,6 +291,16 @@ workflow_config:
         target_slot: samples
         target_description: >-
           All samples associated with the dataset.
+      - class_name: Dataset
+        source_slots: [individual_supporting_file_individuals, experiment_method_supporting_file_individuals, processed_data_file_individuals, analysis_method_supporting_file_individuals, research_data_file_individuals]
+        target_slot: individuals
+        target_description: >-
+          All individuals associated with the dataset.
+      - class_name: Dataset
+        source_slots: [individual_supporting_file_experiment_methods, experiment_method_supporting_file_experiment_methods, processed_data_file_experiment_methods, analysis_method_supporting_file_experiment_methods, research_data_file_experiment_methods]
+        target_slot: experiment_methods
+        target_description: >-
+          All experiment methods associated with the dataset.
   remove_restricted_metadata:
     slots_to_delete:
       Dataset:
@@ -279,6 +314,11 @@ workflow_config:
       - processed_data_file_samples
       - analysis_method_supporting_file_samples
       - research_data_file_samples
+      - individual_supporting_file_individuals
+      - experiment_method_supporting_file_individuals
+      - processed_data_file_individuals
+      - analysis_method_supporting_file_individuals
+      - research_data_file_individuals
   embed_public:
     embedding_profiles:
       - target_class: EmbeddedDataset
@@ -298,18 +338,10 @@ workflow_config:
             description: "Study with Publications embedded"
             embedded_references:
               publications: Publication
-          experiments:
-            target_class: EmbeddedExperiment
-            source_class: Experiment
-            description: "Experiment with ExperimentMethod embedded"
-            embedded_references:
-              experiment_method: ExperimentMethod
-          samples:
-            target_class: EmbeddedSample
-            source_class: Sample
-            description: "Sample with Individual embedded"
-            embedded_references:
-              individual: Individual
+          experiments: Experiment
+          experiment_methods: ExperimentMethod
+          samples: Sample
+          individuals: Individual
           experiment_method_supporting_files: ExperimentMethodSupportingFile
           analysis_method_supporting_files: AnalysisMethodSupportingFile
           individual_supporting_files: IndividualSupportingFile

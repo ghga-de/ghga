@@ -232,7 +232,7 @@ class Config(BaseSettings):
     data_portal_url: str = "http://data-portal"
 
     # vault
-    vault_path: str = "ekss"
+    vault_path: str = "testing"
 
     # sms
     sms_url: str = "http://sms"

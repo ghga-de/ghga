@@ -46,7 +46,7 @@ def filter_datasets_by_study_type(study_type: str, fixtures: JointFixture):
     target_fixture="response",
 )
 def filter_datasets_by_diagnosis(diagnosis: str, fixtures: JointFixture):
-    filters = {"samples.individual.diagnosis_terms": diagnosis}
+    filters = {"individuals.diagnosis_terms": diagnosis}
     return search_dataset(fixtures=fixtures, filters=filters)
 
 
@@ -55,7 +55,7 @@ def filter_datasets_by_diagnosis(diagnosis: str, fixtures: JointFixture):
     target_fixture="response",
 )
 def filter_datasets_by_platform(platform: str, fixtures: JointFixture):
-    filters = {"experiments.experiment_method.instrument_model": platform}
+    filters = {"experiment_methods.instrument_model": platform}
     return search_dataset(fixtures=fixtures, filters=filters)
 
 

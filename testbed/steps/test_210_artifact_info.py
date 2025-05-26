@@ -84,20 +84,24 @@ def check_searchable_classes(response: Response):
             "facetable_fields": [
                 {"key": "study.types", "name": "Study type"},
                 {
-                    "key": "experiments.experiment_method.instrument_model",
+                    "key": "experiment_methods.instrument_model",
                     "name": "Platform",
                 },
-                {"key": "experiments.experiment_method.type", "name": "Experiment"},
+                {"key": "experiment_methods.type", "name": "Experiment"},
                 {
-                    "key": "experiments.experiment_method.library_type",
+                    "key": "experiment_methods.library_type",
                     "name": "Analysis level",
                 },
                 {
-                    "key": "experiments.experiment_method.sequencing_layout",
+                    "key": "experiment_methods.sequencing_layout",
                     "name": "Sequencing mode",
                 },
-                {"key": "samples.individual.diagnosis_terms", "name": "Diagnosis"},
+                {"key": "individuals.diagnosis_terms", "name": "Diagnosis"},
                 {"key": "data_access_policy.alias", "name": "Access policy"},
+                {
+                    "key": "data_access_policy.data_access_committee.institute",
+                    "name": "Controller Institution",
+                },
             ],
             "selected_fields": [
                 {"key": "alias", "name": "Dataset alias"},
