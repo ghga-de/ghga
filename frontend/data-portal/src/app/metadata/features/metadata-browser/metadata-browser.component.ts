@@ -233,9 +233,9 @@ export class MetadataBrowserComponent implements OnInit {
   }
 
   /**
-   * Turns a FacetFilterSetting dictionary into a string for usage in the url f parameter
-   * This is the inverse operation to the #facetDataFromString function
-   * @param facetData the dictionary to turn into a string
+   * Turns a FacetFilterSetting object into a string for usage in the url f parameter.
+   * This is the inverse operation to the #facetDataFromString function.
+   * @param facetData the object to turn into a string
    * @returns the string representation
    */
   #facetDataToString(facetData: FacetFilterSetting): string {
@@ -263,10 +263,10 @@ export class MetadataBrowserComponent implements OnInit {
   }
 
   /**
-   * This function takes a string (as used in the f argument of the url) and turns it into a FacetFilterSetting dictionary.
+   * Turns a string (as used in the f argument of the url) into a FacetFilterSetting.
    * This is the inverse operation of #facetDataToString.
    * @param input the string to parse
-   * @returns The FacetFilterSetting dictionary format
+   * @returns The FacetFilterSetting format object
    */
   #facetDataFromString(input: string): FacetFilterSetting {
     if (input.indexOf(':') == -1) {
@@ -288,8 +288,8 @@ export class MetadataBrowserComponent implements OnInit {
   }
 
   /**
-   * This function handles the state change of facets filter value
-   * The filter status is tracked in the #facetData dictionary
+   * Handle the state change of facets filter values.
+   * The filter status is tracked in the #facetData object.
    * @param key The key of the facet to update.
    * @param option The option of the facet to update
    * @param newValue The new value of the option of the facet

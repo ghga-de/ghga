@@ -1,5 +1,5 @@
 /**
- * A data dictionary type to store facet filters
+ * An object type to store facet filters
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */

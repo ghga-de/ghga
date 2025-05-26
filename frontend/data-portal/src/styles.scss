@@ -70,7 +70,7 @@ hr {
   --mat-sys-quinary: #cfe7cd;
   --mat-sys-success: #16a34a;
   --mat-sys-info: #4f46e5;
-  --may-sys-warning: #d97706;
+  --mat-sys-warning: #d97706;
   --mat-sys-danger: #ea580c;
 }
 
@@ -178,8 +178,16 @@ mat-dialog-content a {
   }
 }
 
-.small-chips span .mat-mdc-chip-action {
+.small-chip span .mat-mdc-chip-action {
   padding: 0 6px;
+}
+
+.smaller-chip span .mat-mdc-chip-action {
+  padding: 0px;
+}
+
+.interactive-chip span .mat-mdc-chip-action-label {
+  cursor: pointer;
 }
 
 .mat-mdc-card.mat-mdc-card-outlined.error {

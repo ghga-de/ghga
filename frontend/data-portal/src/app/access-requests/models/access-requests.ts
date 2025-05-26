@@ -65,9 +65,3 @@ export interface AccessRequestFilter {
   noteToRequester: string | undefined;
   internalNote: string | undefined;
 }
-
-export enum NotesTypeSelection {
-  internalNote = 'internalNote',
-  noteToRequester = 'noteToRequester',
-  both = 'both',
-}

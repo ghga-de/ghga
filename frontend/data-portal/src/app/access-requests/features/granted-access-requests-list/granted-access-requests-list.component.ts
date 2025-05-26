@@ -9,11 +9,9 @@ import { Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink, RouterModule } from '@angular/router';
-import { NotesTypeSelection } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.component';
-import { AccessRequestNoteComponent } from '../access-request-note/access-request-note.component';
 
 /**
  * This component shows a list of access requests that have been granted.
@@ -27,7 +25,6 @@ import { AccessRequestNoteComponent } from '../access-request-note/access-reques
     MatIconModule,
     MatButtonModule,
     RouterModule,
-    AccessRequestNoteComponent,
   ],
   templateUrl: './granted-access-requests-list.component.html',
   styleUrl: './granted-access-requests-list.component.scss',
@@ -41,5 +38,4 @@ export class GrantedAccessRequestsListComponent {
   );
   isLoading = this.#ars.userAccessRequests.isLoading;
   hasError = this.#ars.userAccessRequests.error;
-  types_of_notes = NotesTypeSelection.noteToRequester;
 }

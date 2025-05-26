@@ -2,23 +2,14 @@
   <h2 mat-dialog-title>Access Request Detail</h2>
   <mat-dialog-content>
     <table class="detail mb-4 w-full">
-      @if (data.ticket_id) {
-        <tr>
-          <th class="pe-1 text-start">Relevant issue:</th>
-          <td>
-            <a [href]="ticketUrl()" target="_blank" tabindex="-1"
-              >{{ data.ticket_id
-              }}<mat-icon
-                role="img"
-                aria-hidden="true"
-                class="mat-icon material-symbols-outlined mat-icon-no-color no-translate h-4 w-4"
-                data-mat-icon-type="font"
-                >open_in_new</mat-icon
-              ></a
-            >
-          </td>
-        </tr>
-      }
+      <app-access-request-field-edit
+        [request]="data"
+        name="ticket_id"
+        label="Ticket ID"
+        (saved)="saved($event)"
+        (edited)="edited($event)"
+        class="table-row-group"
+      ></app-access-request-field-edit>
       <tr>
         <th class="pe-1 text-start">Dataset ID:</th>
         <td>
@@ -59,27 +50,35 @@
       <tr>
         <th class="w-32 pe-1 text-start">Contact e-mail:</th>
         <td>
-          <a class="underline" [href]="'mailto:' + data.email" tabindex="-1">{{
-            data.email
-          }}</a>
+          <a [href]="'mailto:' + data.email" tabindex="-1">{{ data.email }}</a>
         </td>
       </tr>
       <tr>
         <th class="pe-1 text-start align-top">Request details:</th>
         <td>{{ data.request_text }}</td>
       </tr>
-      <app-access-request-note
+      <app-access-request-field-edit
         [request]="data"
-        [noteTypes]="notes_types"
-        [showAsTable]="true"
+        name="note_to_requester"
+        label="Note to requester"
+        (saved)="saved($event)"
+        (edited)="edited($event)"
         class="table-row-group"
-      ></app-access-request-note>
+      ></app-access-request-field-edit>
+      <app-access-request-field-edit
+        [request]="data"
+        name="internal_note"
+        label="Internal note"
+        (saved)="saved($event)"
+        (edited)="edited($event)"
+        class="table-row-group"
+      ></app-access-request-field-edit>
     </table>
     <p>
       The request has been made on
       {{ data.request_created | date: friendlyDateFormat }}.
     </p>
-    <p>
+    <p class="pb-2">
       Access has been requested from
       {{ data.access_starts | date: friendlyDateFormat }} until
       {{ data.access_ends | date: friendlyDateFormat }}.
@@ -101,7 +100,7 @@
       }
       <p>The status or address of this request cannot be changed any more.</p>
     } @else {
-      <label for="iva-selection-group" class="text-lg">
+      <label for="iva-selection-group">
         @if (selectedIvaIdRadioButton()) {
           If you wish to change the verification address used for this access request,
           please select it below:
@@ -110,7 +109,11 @@
           access request:
         }
       </label>
-      <mat-radio-group [(ngModel)]="selectedIvaIdRadioButton" id="iva-selection-group">
+      <mat-radio-group
+        [(ngModel)]="selectedIvaIdRadioButton"
+        (ngModelChange)="saveIva()"
+        id="iva-selection-group"
+      >
         <table class="ivas mt-2">
           @for (iva of ivas(); track iva.id) {
             <tr class="border-outline border-t-1 border-b-1">
@@ -155,7 +158,7 @@
           <button
             mat-raised-button
             class="error w-full sm:w-auto"
-            (click)="safeDeny()"
+            (click)="saveBeforeStatusChange('deny')"
             data-umami-event="Access Request Manager Deny Clicked"
             [disabled]="data.status === 'denied'"
           >
@@ -170,10 +173,10 @@
           <button
             mat-raised-button
             class="success w-full sm:w-auto"
-            (click)="safeAllow()"
+            (click)="saveBeforeStatusChange('allow')"
             data-umami-event="Access Request Manager Allow Clicked"
             [disabled]="
-              this.data.status === 'allowed' &&
+              data.status === 'allowed' &&
               (!selectedIvaIdRadioButton() ||
                 data.iva_id === selectedIvaIdRadioButton())
             "

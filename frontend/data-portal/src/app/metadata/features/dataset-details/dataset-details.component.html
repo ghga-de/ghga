@@ -23,22 +23,22 @@
           Study Type |
           @if (study().types.length > 0) {
             @for (type of study().types; track $index) {
-              <mat-chip class="small-chips">{{ type | underscoreToSpace }}</mat-chip
+              <mat-chip class="small-chip">{{ type | underscoreToSpace }}</mat-chip
               >{{ ' ' }}
             }
           } @else {
-            <mat-chip class="small-chips">None</mat-chip>
+            <mat-chip class="small-chip">None</mat-chip>
           }
         </p>
         <p class="text-sm">
           Dataset Type |
           @if (datasetDetails().types.length > 0) {
             @for (type of datasetDetails().types; track $index) {
-              <mat-chip class="small-chips">{{ type }}</mat-chip
+              <mat-chip class="small-chip">{{ type }}</mat-chip
               >{{ ' ' }}
             }
           } @else {
-            <mat-chip class="small-chips">None</mat-chip>
+            <mat-chip class="small-chip">None</mat-chip>
           }
         </p>
       </div>
@@ -93,7 +93,7 @@
                   {{ type }}{{ last ? '' : ', ' }}
                 }
               } @else {
-                <mat-chip class="small-chips">None</mat-chip>
+                <mat-chip class="small-chip">None</mat-chip>
               }
             </p>
           </div></mat-tab

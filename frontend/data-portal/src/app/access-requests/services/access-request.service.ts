@@ -236,34 +236,40 @@ export class AccessRequestService {
   });
 
   /**
-   * Update the lists of access requests locally
-   * @param accessRequest - the access request that has been modified
+   * Update the lists of access requests locally.
+   * @param id - the ID of the updated access request
+   * @param changes - the changes to the access request which may be partial
    */
-  #updateAccessRequestLocally(accessRequest: AccessRequest): void {
-    const update = (accessRequests: AccessRequest[]) =>
-      accessRequests.map((ar) => (ar.id === accessRequest.id ? accessRequest : ar));
+  #updateAccessRequestLocally(id: string, changes: any): void {
+    const oldRequest = this.allAccessRequests.value().find((ar) => ar.id === id);
+    if (!oldRequest) return;
 
-    accessRequest.status_changed = new Date().toISOString();
-    accessRequest.changed_by = this.#auth.user()?.id || null;
+    if (changes.status != oldRequest.status) {
+      changes.status_changed = new Date().toISOString();
+      changes.changed_by = this.#auth.user()?.id || null;
+    }
+
+    const newRequest = { ...oldRequest, ...changes };
+
+    const update = (accessRequests: AccessRequest[]) =>
+      accessRequests.map((ar) => (ar.id === id ? newRequest : ar));
 
     this.userAccessRequests.value.set(update(this.userAccessRequests.value()));
     this.allAccessRequests.value.set(update(this.allAccessRequests.value()));
   }
 
   /**
-   * Process an access request, i.e. approve or disapprove it.
+   * Update one or more properties of an access request.
    * This can only be done by a data steward.
-   * Currently, we can only set the status, and the selected IVA,
-   * other fields like the access dates cannot be modified here.
    * This method also updates the local state if the modification was successful.
-   * @param accessRequest - the access request with the new status
+   * @param id - the access request ID
+   * @param changes - the changes to the access request which may be partial
    * @returns An observable that emits null when the request has been processed
    */
-  processRequest(accessRequest: AccessRequest): Observable<null> {
-    const { id, iva_id, status } = accessRequest;
+  updateRequest(id: string, changes: Partial<AccessRequest>): Observable<null> {
     return this.#http
-      .patch<null>(`${this.#arsEndpointUrl}/${id}`, { iva_id, status })
-      .pipe(tap(() => this.#updateAccessRequestLocally(accessRequest)));
+      .patch<null>(`${this.#arsEndpointUrl}/${id}`, changes)
+      .pipe(tap(() => this.#updateAccessRequestLocally(id, changes)));
   }
 }
 

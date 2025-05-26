@@ -1,7 +1,7 @@
 @if (accessRequestsAreLoading()) {
   <p class="text-base">Loading access requests...</p>
 } @else {
-  @let columns = ['dataset', 'user', 'starts', 'ends', 'requested', 'status'];
+  @let columns = ['ticket', 'dataset', 'user', 'starts', 'ends', 'requested', 'status'];
   <div class="overflow-auto">
     <table
       mat-table
@@ -22,6 +22,14 @@
         <th mat-header-cell *matHeaderCellDef class="min-w-40" mat-sort-header>User</th>
         <td mat-cell *matCellDef="let ar">
           {{ ar.full_user_name }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="ticket">
+        <th mat-header-cell *matHeaderCellDef class="w-32" mat-sort-header>
+          Ticket ID
+        </th>
+        <td mat-cell *matCellDef="let ar">
+          {{ ar.ticket_id }}
         </td>
       </ng-container>
       <ng-container matColumnDef="starts">

@@ -1,0 +1,59 @@
+@if (!locked() || field()) {
+  <tr>
+    <th class="pe-1 text-start">{{ label() }}:</th>
+    <td class="flex items-center">
+      @if (isOpen()) {
+        <mat-form-field class="grow">
+          <mat-label>{{ label() }}</mat-label>
+          @if (rows() > 1) {
+            <textarea
+              matInput
+              [(ngModel)]="field"
+              (ngModelChange)="changed()"
+              class="min-h-20"
+              [rows]="rows()"
+            ></textarea>
+          } @else {
+            <input matInput [(ngModel)]="field" (ngModelChange)="changed()" />
+          }
+        </mat-form-field>
+        <mat-chip
+          class="smaller-chip interactive-chip cancel-edit-button mx-2"
+          (click)="cancel()"
+        >
+          <mat-icon>close</mat-icon>
+        </mat-chip>
+        <mat-chip
+          class="smaller-chip interactive-chip save-edit-button"
+          (click)="save()"
+        >
+          <mat-icon>check</mat-icon>
+        </mat-chip>
+      } @else {
+        <span class="grow">
+          @if (ticketUrl()) {
+            <a [href]="ticketUrl()" target="_blank" tabindex="-1"
+              >{{ field()
+              }}<mat-icon
+                role="img"
+                aria-hidden="true"
+                class="mat-icon material-symbols-outlined mat-icon-no-color no-translate h-4 w-4"
+                data-mat-icon-type="font"
+                >open_in_new</mat-icon
+              ></a
+            >
+          } @else {
+            {{ field() }}
+          }
+        </span>
+        @if (!locked()) {
+          <mat-chip
+            (click)="edit()"
+            class="smaller-chip interactive-chip edit-button ms-2"
+            ><mat-icon class="scale-[0.75]">edit</mat-icon>
+          </mat-chip>
+        }
+      }
+    </td>
+  </tr>
+}

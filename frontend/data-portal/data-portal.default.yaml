@@ -40,3 +40,6 @@ oidc_account_url: https://profile.aai.lifescience-ri.eu/profile
 
 umami_url: null
 umami_website_id: null
+
+helpdesk_url: https://helpdesk.ghga.de/
+helpdesk_ticket_url: '/#ticket/zoom/'

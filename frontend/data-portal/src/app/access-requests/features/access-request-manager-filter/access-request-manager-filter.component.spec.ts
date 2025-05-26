@@ -89,7 +89,7 @@ describe('AccessRequestManagerFilterComponent', () => {
   });
 
   it('should set the filter after typing a ticket id', async () => {
-    const textbox = screen.getByRole('textbox', { name: 'Internal ticket ID' });
+    const textbox = screen.getByRole('textbox', { name: 'Ticket ID' });
 
     await userEvent.type(textbox, '1559');
     await fixture.whenStable();
