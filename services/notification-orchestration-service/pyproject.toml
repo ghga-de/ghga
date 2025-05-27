@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "nos"
-version = "5.0.0"
+version = "6.0.0"
 description = "The Notification Orchestration Service controls the creation of notification events."
 dependencies = [
-    "typer >= 0.9.0",
-    "ghga-event-schemas ~= 8.0",
-    "hexkit[akafka,mongodb] >= 5.0",
+    "typer >= 0.16",
+    "ghga-event-schemas ~= 9.1",
+    "hexkit[akafka,mongodb] >= 5.1",
     "pydantic[email]>=2, <3",
 ]
 

@@ -136,6 +136,7 @@ class Orchestrator(OrchestratorPort):
                 dataset_id=access_request.dataset_id,
                 dataset_title=access_request.dataset_title,
                 dac_alias=access_request.dac_alias,
+                dac_email=access_request.dac_email,
                 request_text=access_request.request_text,
             ),
         )
