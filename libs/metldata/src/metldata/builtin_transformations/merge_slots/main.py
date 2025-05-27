@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""A tranformation for merging multiple slots of a class into a single one."""
+"""A transformation for merging multiple slots of a class into a single one."""
 
 from metldata.builtin_transformations.merge_slots.assumptions import (
     check_model_class_slots,
@@ -37,10 +37,10 @@ def check_model_assumptions(model: MetadataModel, config: SlotMergingConfig):
     """Check that the classes and slots specified in the config exist in the model."""
     check_model_class_slots(model=model, merge_instructions=config.merge_instructions)
 
-    classe_names = {
+    class_names = {
         merge_instruction.class_name for merge_instruction in config.merge_instructions
     }
-    check_anchor_points(model=model, classes=list(classe_names))
+    check_anchor_points(model=model, classes=list(class_names))
 
 
 def transform_model(model: MetadataModel, config: SlotMergingConfig) -> MetadataModel:

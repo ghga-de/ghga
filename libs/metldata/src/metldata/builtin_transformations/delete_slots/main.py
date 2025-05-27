@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""A tranformation for deleting slots from classes in a metadata model."""
+"""A transformation for deleting slots from classes in a metadata model."""
 
 from metldata.builtin_transformations.delete_slots.assumptions import (
     check_model_class_slots,

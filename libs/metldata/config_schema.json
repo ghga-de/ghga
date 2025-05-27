@@ -338,7 +338,7 @@
       "type": "string"
     },
     "dataset_deletion_type": {
-      "description": "Type used for events announcing a new dataset overview.",
+      "description": "Event type used for communicating dataset deletions",
       "examples": [
         "dataset_deleted"
       ],
@@ -346,9 +346,9 @@
       "type": "string"
     },
     "dataset_upsertion_type": {
-      "description": "Type used for events announcing a new dataset overview.",
+      "description": "Event type used for communicating dataset upsertions",
       "examples": [
-        "dataset_created"
+        "dataset_upserted"
       ],
       "title": "Dataset Upsertion Type",
       "type": "string"

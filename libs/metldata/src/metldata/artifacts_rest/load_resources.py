@@ -216,12 +216,15 @@ async def process_resource_upsert(
         Json, lookup_slot_in_resource(resource=dap, slot_name="data_access_committee")
     )
     dac_alias = cast(str, lookup_slot_in_resource(resource=dac, slot_name="alias"))
+    dac_email = cast(str, lookup_slot_in_resource(resource=dac, slot_name="email"))
+    dac_email = dac_email.replace("[dot]", ".").replace("[at]", "@")
     dataset_overview = MetadataDatasetOverview(
         accession=resource.id_,
         title=dataset_title,
         stage=MetadataDatasetStage.DOWNLOAD,
         description=dataset_description,
         dac_alias=dac_alias,
+        dac_email=dac_email,
         files=metadata_dataset_files,
     )
     await event_publisher.process_dataset_upsert(dataset_overview=dataset_overview)

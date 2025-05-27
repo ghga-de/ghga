@@ -9,7 +9,7 @@
         "data_access_committee": {
           "accession": "DAC_1",
           "alias": "DAC_1",
-          "email": "dac@dac.dac",
+          "email": "dac1[at]institute[dot]org",
           "institute": "The DAC institute"
         },
         "data_use_modifiers": [

@@ -68,10 +68,8 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
         payload = event.payload
         assert payload["title"] == dataset["title"]
         assert payload["description"] == dataset["description"]
-        assert (
-            payload["dac_alias"]
-            == dataset["data_access_policy"]["data_access_committee"]["alias"]
-        )
+        assert payload["dac_alias"] == "DAC_1"
+        assert payload["dac_email"] == "dac1@institute.org"
 
     # check that the artifact resources were loaded based on an example:
     expected_artifact_name = "embedded_public"

@@ -3,7 +3,7 @@ dataset_stats:
     types:
       - Another Type
       - A Type
-    dac_email: dac_institute_a@dac.dac
+    dac_email: dac1[at]institute-a[dot]org
     sample_summary:
       count: 1
       stats:
@@ -40,7 +40,7 @@ dataset_stats:
   - title: The B dataset
     types:
       - And another Type
-    dac_email: dac_institute_a@dac.dac
+    dac_email: dac1[at]institute-a[dot]org
     sample_summary:
       count: 1
       stats:

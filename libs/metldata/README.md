@@ -351,7 +351,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string, required)*: Event type used for communicating dataset deletions.
 
 
   Examples:
@@ -361,13 +361,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Event type used for communicating dataset upsertions.
 
 
   Examples:
 
   ```json
-  "dataset_created"
+  "dataset_upserted"
   ```
 
 
