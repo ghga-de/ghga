@@ -15,7 +15,7 @@ data:
     {{- include "ghga-common.serviceNameConsumer" $ | nindent 4 }}
     {{- include "ghga-common.serviceInstanceIdConsumer" $ | nindent 4 }}
     {{- else }}
-    {{- include "ghga-common.serviceName" $ | nindent 4 }}
+    service_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceName" $) "context" $) }}
     {{- include "ghga-common.serviceInstanceId" $ | nindent 4 }}
     {{- end }}
 {{- end }}
@@ -24,6 +24,6 @@ data:
     {{- include "ghga-common.kafkaTopicsParameters" . | nindent 2 }}
     {{- include "ghga-common.apiBasePath" . | nindent 4 }}
     {{- include "ghga-common.dbName" . | nindent 4 }}
-    {{- include "ghga-common.serviceName" . | nindent 4 }}
+    service_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceName" $) "context" $) }}
     {{- include "ghga-common.serviceInstanceId" . | nindent 4 }}
 {{- end -}}
