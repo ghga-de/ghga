@@ -79,17 +79,17 @@ class MetadataDatasetOverview(MetadataDatasetID):
     Only fields relevant to the WPS are included for now. May be extended.
     """
 
-    title: str = Field(..., description="The title of the dataset.")
+    title: str = Field(..., description="The title of the dataset")
     stage: MetadataDatasetStage = Field(
-        ..., description="The current stage of this dataset."
+        ..., description="The current stage of this dataset"
     )
-    description: str | None = Field(..., description="The description of the dataset.")
-    dac_alias: str = Field(..., description="The alias of the Data Access Committee.")
-    dac_email: str = Field(
-        ..., description="The email address of the Data Access Committee."
+    description: str | None = Field(..., description="The description of the dataset")
+    dac_alias: str = Field(..., description="The alias of the Data Access Committee")
+    dac_email: EmailStr = Field(
+        ..., description="The email address of the Data Access Committee"
     )
     files: list[MetadataDatasetFile] = Field(
-        ..., description="Files contained in the dataset."
+        ..., description="Files contained in the dataset"
     )
     model_config = ConfigDict(title="metadata_dataset_overview", extra="allow")
 
@@ -458,6 +458,9 @@ class AccessRequestDetails(UserID):
     dac_alias: str = Field(
         ...,
         description="The alias of the Data Access Committee responsible for the dataset",
+    )
+    dac_email: EmailStr = Field(
+        ..., description="The email address of the Data Access Committee"
     )
     ticket_id: str | None = Field(
         default=None,
