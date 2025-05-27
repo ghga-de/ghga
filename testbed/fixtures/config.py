@@ -266,7 +266,7 @@ class Config(BaseSettings):
         "work package service": "wps",
         "dataset information service": "dins",
         "download controller service": "dcs",
-        "internal file registry service": "internal_file_registry",
+        "internal file registry service": "ifrs",
         "notification orchestration service": "nos",
         "notification service": "ns",
         "metadata artifact search service": "mass",
