@@ -54,6 +54,7 @@ access_request = AccessRequest(
     dataset_title="Dataset1",
     dataset_description="Some Description",
     dac_alias="Some DAC",
+    dac_email="dac@org.dev",
     request_created=now_as_utc(),
 )
 
@@ -62,6 +63,7 @@ DATASET = Dataset(
     title="Dataset1",
     description="Some Description",
     dac_alias="Some DAC",
+    dac_email="dac@org.dev",
 )
 
 

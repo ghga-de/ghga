@@ -70,6 +70,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             title=validated_payload.title,
             description=validated_payload.description,
             dac_alias=validated_payload.dac_alias,
+            dac_email=validated_payload.dac_email,
         )
 
         await self._repository.register_dataset(dataset)

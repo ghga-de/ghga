@@ -32,6 +32,7 @@ DATASET = Dataset(
     title="Some dataset",
     description="This dataset is used for testing",
     dac_alias="Some DAC",
+    dac_email="dac@org.dev",
 )
 
 
@@ -41,6 +42,7 @@ DATASET_UPSERTION_EVENT = MetadataDatasetOverview(
     title="Some dataset",
     description="This dataset is used for testing",
     dac_alias="Some DAC",
+    dac_email="dac@org.dev",
     files=[],
 )
 

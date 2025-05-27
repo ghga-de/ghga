@@ -114,6 +114,7 @@ async def test_v2_migration(mongodb: MongoDbFixture):
         assert UUID(doc["__metadata__"]["correlation_id"])
         assert doc["dataset_title"] == ""
         assert doc["dac_alias"] == ""
+        assert doc["dac_email"] == "helpdesk@ghga.de"
         for field in [
             "dataset_description",
             "ticket_id",

@@ -43,6 +43,7 @@ def _access_request_to_event(access_request: models.AccessRequest) -> JsonObject
         status=access_request.status,
         request_text=access_request.request_text,
         dac_alias=access_request.dac_alias,
+        dac_email=access_request.dac_email,
         access_starts=access_request.access_starts,
         access_ends=access_request.access_ends,
     )

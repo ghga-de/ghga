@@ -88,6 +88,7 @@ ACCESS_REQUESTS = [
         dataset_id="DS001",
         dataset_title="Dataset1",
         dac_alias="Some DAC1",
+        dac_email="dac1@org.dev",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=IAT + timedelta(days=30),
@@ -104,6 +105,7 @@ ACCESS_REQUESTS = [
         dataset_id="DS002",
         dataset_title="Dataset2",
         dac_alias="Some DAC2",
+        dac_email="dac2@org.dev",
         email="me@john-doe.name",
         request_text="Can I access another dataset?",
         access_starts=IAT + timedelta(days=42),
@@ -120,6 +122,7 @@ ACCESS_REQUESTS = [
         dataset_id="DS003",
         dataset_title="Dataset3",
         dac_alias="Some DAC3",
+        dac_email="dac3@org.dev",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset?",
         access_starts=IAT + timedelta(days=1),
@@ -136,6 +139,7 @@ ACCESS_REQUESTS = [
         dataset_id="DS007",
         dataset_title="Dataset7",
         dac_alias="Some DAC7",
+        dac_email="dac7@org.dev",
         email="me@john-doe.name",
         request_text="Can I access a new dataset?",
         access_starts=IAT + timedelta(days=50),
@@ -152,6 +156,7 @@ ACCESS_REQUESTS = [
         dataset_id="DS001",
         dataset_title="Dataset1",
         dac_alias="Some DAC",
+        dac_email="dac@org.dev",
         email="me@jane-roe.name",
         request_text="Can I access the same dataset as Joe?",
         access_starts=IAT + timedelta(days=5),
@@ -169,6 +174,7 @@ ACCESS_REQUESTS = [
         dataset_id="DS003",
         dataset_title="Dataset3",
         dac_alias="Some DAC3",
+        dac_email="dac3@org.dev",
         email="me@john-doe.name",
         request_text="Can I access yet another dataset using this IVA?",
         access_starts=IAT + timedelta(days=5),
@@ -322,6 +328,7 @@ async def test_can_create_request():
             title="A Great Dataset",
             description="This is a good dataset",
             dac_alias="Some DAC",
+            dac_email="dac@org.dev",
         )
     )
     request = await repository.create(creation_data, auth_context=auth_context_doe)
@@ -364,6 +371,7 @@ async def test_can_create_request_with_an_iva():
             title="A Great Dataset",
             description="This is a good dataset",
             dac_alias="Some DAC",
+            dac_email="dac@org.dev",
         )
     )
     request = await repository.create(creation_data, auth_context=auth_context_doe)
@@ -412,6 +420,7 @@ async def test_silently_correct_request_that_is_too_early():
             title="A Great Dataset",
             description="This is a good dataset",
             dac_alias="Some DAC",
+            dac_email="dac@org.dev",
         )
     )
     request = await repository.create(creation_data, auth_context=auth_context_doe)
@@ -1081,6 +1090,7 @@ async def test_updates_pending_request_when_updating_its_dataset():
     assert request.dataset_title != dataset.title
     assert request.dataset_description != dataset.description
     assert request.dac_alias != dataset.dac_alias
+    assert request.dac_email != dataset.dac_email
 
     await repository.register_dataset(dataset)
 
@@ -1088,6 +1098,7 @@ async def test_updates_pending_request_when_updating_its_dataset():
     assert request.dataset_title == dataset.title
     assert request.dataset_description == dataset.description
     assert request.dac_alias == dataset.dac_alias
+    assert request.dac_email == dataset.dac_email
 
 
 @pytest.mark.parametrize(
@@ -1114,6 +1125,8 @@ async def test_does_not_alter_processed_request_when_updating_its_dataset(
     assert dataset_description != dataset.description
     dac_alias = request.dac_alias
     assert dac_alias != dataset.dac_alias
+    dac_email = request.dac_email
+    assert dac_email != dataset.dac_email
 
     await repository.register_dataset(dataset)
 
@@ -1123,6 +1136,7 @@ async def test_does_not_alter_processed_request_when_updating_its_dataset(
     assert request.dataset_title == dataset_title
     assert request.dataset_description == dataset_description
     assert request.dac_alias == dac_alias
+    assert request.dac_email == dac_email
 
 
 async def test_denies_pending_request_when_deleting_its_dataset():

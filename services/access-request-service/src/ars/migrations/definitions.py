@@ -40,6 +40,7 @@ class V2Migration(MigrationDefinition, Reversible):
 
         Changes for existing docs in "accessRequests" collection:
         - Populate the required `dataset_title` and `dac_alias` fields with empty string
+        - Populate the required `dac_email` field with a placeholder email
         - Populate `__metadata__` field for outbox with "published=True" and made-up
           correlation ID (since we don't know what was originally used).
         - Set optional fields to None.
@@ -53,6 +54,7 @@ class V2Migration(MigrationDefinition, Reversible):
                 "deleted": False,
             }
             doc["dataset_title"] = doc["dac_alias"] = ""
+            doc["dac_email"] = "helpdesk@ghga.de"  # cannot be empty, use placeholder
             for field in self._optional_fields:
                 doc[field] = None
             return doc
@@ -78,6 +80,7 @@ class V2Migration(MigrationDefinition, Reversible):
                 "__metadata__",
                 "dataset_title",
                 "dac_alias",
+                "dac_email",
                 *self._optional_fields,
             ]:
                 del doc[field]

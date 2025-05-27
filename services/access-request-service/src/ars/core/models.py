@@ -22,7 +22,7 @@ from uuid import uuid4
 
 from ghga_event_schemas.pydantic_ import AccessRequestStatus
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 __all__ = [
     "AccessRequest",
@@ -48,7 +48,10 @@ class Dataset(BaseDto):
         default=None, description="Description of the dataset"
     )
     dac_alias: str = Field(
-        default=..., description="The alias of the Data Access Committee."
+        default=..., description="The alias of the Data Access Committee"
+    )
+    dac_email: EmailStr = Field(
+        default=..., description="The email address of the Data Access Committee"
     )
 
 
@@ -70,7 +73,7 @@ class AccessRequestCreationData(BaseDto):
     dataset_id: Accession = Field(
         default=..., description="ID of the dataset for which access is requested"
     )
-    email: str = Field(
+    email: EmailStr = Field(
         default=..., description="Contact e-mail address of the requester"
     )
     request_text: str = Field(
@@ -98,7 +101,10 @@ class AccessRequest(AccessRequestCreationData):
         default=None, description="Description of the dataset"
     )
     dac_alias: str = Field(
-        default=..., description="The alias of the Data Access Committee."
+        default=..., description="The alias of the Data Access Committee"
+    )
+    dac_email: EmailStr = Field(
+        default=..., description="The email address of the Data Access Committee"
     )
     full_user_name: str = Field(
         default=...,

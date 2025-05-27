@@ -33,6 +33,7 @@ ONE_YEAR = timedelta(days=365)
 DATASET_TITLE = "A Great Dataset"
 DATASET_DESCRIPTION = "This is a description of A Great Dataset"
 DAC_ALIAS = "Some DAC"
+DAC_EMAIL = "dac@some.org"
 
 CREATION_DATA = {
     "user_id": "id-of-john-doe@ghga.de",
@@ -80,6 +81,7 @@ def test_dataset_fixture(config, mongodb: MongoDbFixture):
             "title": DATASET_TITLE,
             "description": DATASET_DESCRIPTION,
             "dac_alias": DAC_ALIAS,
+            "dac_email": DAC_EMAIL,
         }
     )
 
@@ -119,6 +121,7 @@ async def test_create_access_request(
     assert recorded_event.payload["dataset_title"] == DATASET_TITLE
     assert recorded_event.payload["dataset_description"] == DATASET_DESCRIPTION
     assert recorded_event.payload["dac_alias"] == DAC_ALIAS
+    assert recorded_event.payload["dac_email"] == DAC_EMAIL
     assert recorded_event.type_ == "upserted"
 
 
@@ -382,6 +385,7 @@ async def test_patch_access_request_status(
     assert recorded_event.payload["dataset_title"] == DATASET_TITLE
     assert recorded_event.payload["dataset_description"] == DATASET_DESCRIPTION
     assert recorded_event.payload["dac_alias"] == DAC_ALIAS
+    assert recorded_event.payload["dac_email"] == DAC_EMAIL
     assert recorded_event.type_ == "upserted"
 
     # get request as user

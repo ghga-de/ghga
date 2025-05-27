@@ -152,6 +152,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             dataset_title=dataset.title,
             dataset_description=dataset.description,
             dac_alias=dataset.dac_alias,
+            dac_email=dataset.dac_email,
         )
 
         await self._request_dao.insert(access_request)
@@ -336,6 +337,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                     "dataset_title": dataset.title,
                     "dataset_description": dataset.description,
                     "dac_alias": dataset.dac_alias,
+                    "dac_email": dataset.dac_email,
                 }
                 updated_request = request.model_copy(update=update)
                 await self._request_dao.update(updated_request)
