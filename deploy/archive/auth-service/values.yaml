@@ -23,6 +23,9 @@ parameters:
   default:
     mongo_dsn: null
     host: 0.0.0.0
+    enable_opentelemetry: false
+    otel_exporter_endpoint: "http://localhost:4318/"
+    otel_exporter_protocol: "http/protobuf"
 
 authService:
   emissary:

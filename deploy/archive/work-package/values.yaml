@@ -30,6 +30,10 @@ parameters:
     service_name: wps
     work_package_signing_key: '{}'
     kafka_enable_dlq: true
+    enable_opentelemetry: false
+    otel_exporter_endpoint: "http://localhost:4318/"
+    otel_exporter_protocol: "http/protobuf"
+
   rest:
     service_instance_id: 'rest.1'
   consumer:

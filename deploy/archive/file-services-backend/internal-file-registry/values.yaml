@@ -18,6 +18,9 @@ parameters:
     mongo_dsn: null
     object_storages: {}
     kafka_enable_dlq: true
+    enable_opentelemetry: false
+    otel_exporter_endpoint: "http://localhost:4318/"
+    otel_exporter_protocol: "http/protobuf"
 
 containers:
 - name: consumer
