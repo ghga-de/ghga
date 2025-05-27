@@ -26,7 +26,7 @@
 {{- end -}}
 {{- define "ghga-common.serviceNameConsumer" -}}
 {{- if .Values.serviceNameConsumer -}}
-    service_name: {{ .Values.serviceNamePrefix | empty | ternary .Values.serviceNameConsumer (cat .Values.serviceNamePrefix "-" .Values.serviceNameConsumer ) | nospace }}
+    {{ .Values.serviceNamePrefix | empty | ternary .Values.serviceNameConsumer (cat .Values.serviceNamePrefix "-" .Values.serviceNameConsumer ) | nospace }}
 {{- end -}}
 {{- end -}}
 {{- define "ghga-common.serviceInstanceIdConsumer" -}}

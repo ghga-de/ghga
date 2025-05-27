@@ -12,7 +12,7 @@ data:
     {{- include "ghga-common.apiBasePath" $ | nindent 4 }}
     {{- include "ghga-common.dbName" $ | nindent 4 }}
     {{- if eq $container.type "consumer"}}
-    {{- include "ghga-common.serviceNameConsumer" $ | nindent 4 }}
+    service_name: {{- include "ghga-common.serviceNameConsumer" $ | nindent 4 }}
     {{- include "ghga-common.serviceInstanceIdConsumer" $ | nindent 4 }}
     {{- else }}
     service_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceName" $) "context" $) }}
