@@ -1,6 +1,6 @@
 dependencies:
 - name: ghga-common
   repository: file://../../ghga-common
-  version: 2.2.9
-digest: sha256:adae1a2f4bdfb3bedcca4462830cec920df419ac0f55034c5357d03c1afef50c
-generated: "2025-05-27T14:33:05.011353462+02:00"
+  version: 2.2.10
+digest: sha256:463d034f1e85e5a3c6c2188b31c77ce0ae0402adfa03afa85ac081bca008cccb
+generated: "2025-05-27T14:55:26.409750204+02:00"
