@@ -14,6 +14,7 @@ spec:
     acls:
     - operations:
       - Write
+      - Create
       - Describe
       resource:
         name: dlq
@@ -23,11 +24,12 @@ spec:
       - Read
       - Describe
       resource:
-        name: test-service-name-retry
+        name: retry-test-service-name
         patternType: literal
         type: topic
     - operations:
       - Write
+      - Create
       - Describe
       resource:
         name: my-topic
@@ -36,6 +38,7 @@ spec:
     - operations:
       - Read
       - Write
+      - Create
       - Describe
       resource:
         name: '*'
