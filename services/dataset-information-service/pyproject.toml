@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dins"
-version = "3.0.0"
+version = "3.0.1"
 description = "Dataset Information Service - Providing public metadata about files registered with the Internal File Registry"
 dependencies = [
     "typer >= 0.12",
     "ghga-service-commons[api] >= 3.3",
     "ghga-event-schemas >= 5.0, < 6",
-    "hexkit[akafka,s3,mongodb] >= 5.0",
+    "hexkit[akafka,s3,mongodb] >= 5.1",
 ]
 
 [project.license]
