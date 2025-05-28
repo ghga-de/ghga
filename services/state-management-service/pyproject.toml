@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=78.1",
+    "setuptools>=80.3",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -11,7 +11,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "sms"
-version = "4.0.1"
+version = "4.0.2"
 description = "State Management Service - Provides a REST API for basic infrastructure technology state management."
 dependencies = [
     "typer >= 0.12",
-    "ghga-service-commons[api] >= 3.3",
-    "hexkit[mongodb,s3,akafka] >= 4.5",
+    "ghga-service-commons[api] >= 4.1",
+    "hexkit[mongodb,s3,akafka] >= 5.1",
     "hvac>=2",
 ]
 
