@@ -24,15 +24,15 @@ Additionally, the decrypt command needs the private key to decrypt the downloade
 
 We recommend using the provided Docker container.
 
-A pre-build version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
+A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
 ```bash
-docker pull ghga/ghga-connector:1.7.1
+docker pull ghga/ghga-connector:1.7.2
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-connector:1.7.1 .
+docker build -t ghga/ghga-connector:1.7.2 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -40,7 +40,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/ghga-connector:1.7.1 --help
+docker run -p 8080:8080 ghga/ghga-connector:1.7.2 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -57,30 +57,30 @@ ghga_connector --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- **`max_concurrent_downloads`** *(integer)*: Number of parallel downloader tasks for file parts. Exclusive minimum: `0`. Default: `5`.
+- <a id="properties/max_concurrent_downloads"></a>**`max_concurrent_downloads`** *(integer)*: Number of parallel downloader tasks for file parts. Exclusive minimum: `0`. Default: `5`.
 
-- **`max_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `5`.
+- <a id="properties/max_retries"></a>**`max_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `5`.
 
-- **`max_wait_time`** *(integer)*: Maximum time in seconds to wait before quitting without a download. Exclusive minimum: `0`. Default: `3600`.
+- <a id="properties/max_wait_time"></a>**`max_wait_time`** *(integer)*: Maximum time in seconds to wait before quitting without a download. Exclusive minimum: `0`. Default: `3600`.
 
-- **`part_size`** *(integer)*: The part size to use for download. Exclusive minimum: `0`. Default: `16777216`.
+- <a id="properties/part_size"></a>**`part_size`** *(integer)*: The part size to use for download. Exclusive minimum: `0`. Default: `16777216`.
 
-- **`wkvs_api_url`** *(string)*: URL to the root of the WKVS API. Should start with https://. Default: `"https://data.ghga.de/.well-known"`.
+- <a id="properties/wkvs_api_url"></a>**`wkvs_api_url`** *(string)*: URL to the root of the WKVS API. Should start with https://. Default: `"https://data.ghga.de/.well-known"`.
 
-- **`exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait for when using exponential backoff retry strategies. Minimum: `0`. Default: `60`.
+- <a id="properties/exponential_backoff_max"></a>**`exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait for when using exponential backoff retry strategies. Minimum: `0`. Default: `60`.
 
-- **`retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 500, 502, 503, 504]`.
+- <a id="properties/retry_status_codes"></a>**`retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 500, 502, 503, 504]`.
 
-  - **Items** *(integer)*: Minimum: `0`.
+  - <a id="properties/retry_status_codes/items"></a>**Items** *(integer)*: Minimum: `0`.
 
 
 ### Usage:
 
-A template YAML for configurating the service can be found at
+A template YAML for configuring the service can be found at
 [`./example-config.yaml`](./example-config.yaml).
-Please adapt it, rename it to `.ghga_connector.yaml`, and place it into one of the following locations:
-- in the current working directory were you are execute the service (on unix: `./.ghga_connector.yaml`)
-- in your home directory (on unix: `~/.ghga_connector.yaml`)
+Please adapt it, rename it to `.ghga_connector.yaml`, and place it in one of the following locations:
+- in the current working directory where you execute the service (on Linux: `./.ghga_connector.yaml`)
+- in your home directory (on Linux: `~/.ghga_connector.yaml`)
 
 The config yaml will be automatically parsed by the service.
 
@@ -94,7 +94,7 @@ e.g. for the `host` set an environment variable named `ghga_connector_host`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 
-To using file secrets please refer to the
+To use file secrets, please refer to the
 [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support)
 of the pydantic documentation.
 
@@ -128,8 +128,8 @@ This will give you a full-fledged, pre-configured development environment includ
 - a pre-configured debugger
 - automatic license-header insertion
 
-Moreover, inside the devcontainer, a convenience commands `dev_install` is available.
-It installs the service with all development dependencies, installs pre-commit.
+Moreover, inside the devcontainer, a command `dev_install` is available for convenience.
+It installs the service with all development dependencies, and it installs pre-commit.
 
 The installation is performed automatically when you build the devcontainer. However,
 if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
