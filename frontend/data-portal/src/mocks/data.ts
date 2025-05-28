@@ -502,7 +502,7 @@ export const accessRequests = [
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901234',
     dataset_title: 'Test dataset for details',
-    dac_alias: 'Data Access Committee of Heidelberg Center for Personalized Oncology',
+    dac_alias: 'Data Access Committee of Heidelberg Center for Rare Diseases',
     dac_email: 'info@dac.com',
     full_user_name: 'Dr. John Doe',
     email: 'doe@home.org',

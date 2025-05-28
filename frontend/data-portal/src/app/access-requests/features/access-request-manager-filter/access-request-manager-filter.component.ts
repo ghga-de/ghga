@@ -48,13 +48,15 @@ export class AccessRequestManagerFilterComponent {
   /**
    * The model for the filter properties
    */
-  datasetId = model<string>(this.#filter().datasetId);
-  name = model<string>(this.#filter().name);
+  ticketId = model<string | undefined>(this.#filter().ticketId);
+  datasetId = model<string | undefined>(this.#filter().datasetId);
+  datasetTitle = model<string | undefined>(this.#filter().datasetTitle);
+  name = model<string | undefined>(this.#filter().name);
+  dac = model<string | undefined>(this.#filter().dac);
   fromDate = model<Date | undefined>(this.#filter().fromDate);
   toDate = model<Date | undefined>(this.#filter().toDate);
   status = model<AccessRequestStatus | undefined>(this.#filter().status);
   requestText = model<string | undefined>(this.#filter().requestText);
-  ticketId = model<string | undefined>(this.#filter().ticketId);
   noteToRequester = model<string | undefined>(this.#filter().noteToRequester);
   internalNote = model<string | undefined>(this.#filter().internalNote);
 
@@ -63,13 +65,15 @@ export class AccessRequestManagerFilterComponent {
    */
   #filterEffect = effect(() => {
     this.#ars.setAllAccessRequestsFilter({
+      ticketId: this.ticketId(),
       datasetId: this.datasetId(),
+      datasetTitle: this.datasetTitle(),
       name: this.name(),
+      dac: this.dac(),
       fromDate: this.fromDate(),
       toDate: this.toDate(),
       status: this.status(),
       requestText: this.requestText(),
-      ticketId: this.ticketId(),
       noteToRequester: this.noteToRequester(),
       internalNote: this.internalNote(),
     });

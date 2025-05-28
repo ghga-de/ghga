@@ -56,13 +56,15 @@ export interface AccessRequestDialogData {
 }
 
 export interface AccessRequestFilter {
-  datasetId: string;
-  name: string;
+  ticketId: string | undefined;
+  datasetId: string | undefined;
+  datasetTitle: string | undefined;
+  name: string | undefined;
+  dac: string | undefined;
   fromDate: Date | undefined;
   toDate: Date | undefined;
   status: AccessRequestStatus | undefined;
   requestText: string | undefined;
-  ticketId: string | undefined;
   noteToRequester: string | undefined;
   internalNote: string | undefined;
 }

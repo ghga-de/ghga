@@ -133,13 +133,15 @@ export class AccessRequestService {
   allAccessRequestsFilter = computed(
     () =>
       this.#allAccessRequestsFilter() ?? {
+        ticketId: '',
         datasetId: '',
+        datasetTitle: '',
         name: '',
+        dac: '',
         fromDate: undefined,
         toDate: undefined,
         status: AccessRequestStatus.pending,
         requestText: '',
-        ticketId: '',
         noteToRequester: '',
         internalNote: '',
       },
@@ -151,13 +153,15 @@ export class AccessRequestService {
    */
   setAllAccessRequestsFilter(filter: AccessRequestFilter): void {
     this.#allAccessRequestsFilter.set(
-      filter.datasetId ||
+      filter.ticketId ||
+        filter.datasetId ||
+        filter.datasetTitle ||
         filter.name ||
+        filter.dac ||
         filter.fromDate ||
         filter.toDate ||
         filter.status ||
         filter.requestText ||
-        filter.ticketId ||
         filter.noteToRequester ||
         filter.internalNote
         ? filter
@@ -184,17 +188,33 @@ export class AccessRequestService {
     let requests = this.allAccessRequests.value();
     const filter = this.#allAccessRequestsFilter();
     if (requests.length && filter) {
-      const datasetId = filter.datasetId.trim().toLowerCase();
+      const ticketId = filter.ticketId?.trim().toLowerCase();
+      if (ticketId) {
+        requests = requests.filter((ar) =>
+          ar.ticket_id?.toLowerCase().includes(ticketId),
+        );
+      }
+      const datasetId = filter.datasetId?.trim().toLowerCase();
       if (datasetId) {
         requests = requests.filter((ar) =>
           ar.dataset_id.toLowerCase().includes(datasetId),
         );
       }
-      const name = filter.name.trim().toLowerCase();
+      const datasetTitle = filter.datasetTitle?.trim().toLowerCase();
+      if (datasetTitle) {
+        requests = requests.filter((ar) =>
+          ar.dataset_title.toLowerCase().includes(datasetTitle),
+        );
+      }
+      const name = filter.name?.trim().toLowerCase();
       if (name) {
         requests = requests.filter((ar) =>
           ar.full_user_name.toLowerCase().includes(name),
         );
+      }
+      const dac = filter.dac?.trim().toLowerCase();
+      if (dac) {
+        requests = requests.filter((ar) => ar.dac_alias.toLowerCase().includes(dac));
       }
       if (filter.fromDate) {
         const fromDate = filter.fromDate.toISOString();
@@ -211,12 +231,6 @@ export class AccessRequestService {
       if (requestText) {
         requests = requests.filter((ar) =>
           ar.request_text.toLowerCase().includes(requestText),
-        );
-      }
-      const ticketId = filter.ticketId?.trim().toLowerCase();
-      if (ticketId) {
-        requests = requests.filter((ar) =>
-          ar.ticket_id?.toLowerCase().includes(ticketId),
         );
       }
       const noteToRequester = filter.noteToRequester?.trim().toLowerCase();
