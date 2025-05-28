@@ -34,8 +34,14 @@
         </td>
       </tr>
       <tr>
-        <th class="pe-1 text-start align-top">DAC:</th>
+        <th class="pe-1 text-start align-top">DAC name:</th>
         <td>{{ data.dac_alias }}</td>
+      </tr>
+      <tr>
+        <th class="pe-1 text-start align-top">DAC e-mail:</th>
+        <td>
+          <a [href]="'mailto:' + data.dac_email" tabindex="-1">{{ data.dac_email }}</a>
+        </td>
       </tr>
       <tr></tr>
       <tr>
