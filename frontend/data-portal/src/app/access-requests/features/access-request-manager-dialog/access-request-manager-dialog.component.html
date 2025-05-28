@@ -65,6 +65,24 @@
       </tr>
       <app-access-request-field-edit
         [request]="data"
+        name="access_starts"
+        label="Access starts"
+        [isDate]="true"
+        (saved)="saved($event)"
+        (edited)="edited($event)"
+        class="table-row-group"
+      ></app-access-request-field-edit>
+      <app-access-request-field-edit
+        [request]="data"
+        name="access_ends"
+        label="Access ends"
+        [isDate]="true"
+        (saved)="saved($event)"
+        (edited)="edited($event)"
+        class="table-row-group"
+      ></app-access-request-field-edit>
+      <app-access-request-field-edit
+        [request]="data"
         name="note_to_requester"
         label="Note to requester"
         (saved)="saved($event)"

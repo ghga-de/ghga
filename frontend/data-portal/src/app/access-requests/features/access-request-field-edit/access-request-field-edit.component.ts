@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { DatePipe } from '@angular/common';
 import {
   Component,
   computed,
@@ -16,6 +17,10 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatChipsModule } from '@angular/material/chips';
+import {
+  MatDatepickerInputEvent,
+  MatDatepickerModule,
+} from '@angular/material/datepicker';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
@@ -26,7 +31,14 @@ import { ConfigService } from '@app/shared/services/config.service';
  */
 @Component({
   selector: 'app-access-request-field-edit',
-  imports: [MatChipsModule, MatIconModule, MatInputModule, FormsModule],
+  imports: [
+    MatDatepickerModule,
+    MatChipsModule,
+    MatIconModule,
+    MatInputModule,
+    FormsModule,
+    DatePipe,
+  ],
   templateUrl: './access-request-field-edit.component.html',
   styleUrl:
     '../access-request-manager-dialog/access-request-manager-dialog.component.scss',
@@ -39,6 +51,8 @@ export class AccessRequestFieldEditComponent {
 
   name = input.required<keyof AccessRequest>();
   label = input.required<string>();
+
+  isDate = input<boolean>(false);
 
   rows = computed<number>(() => (this.name().includes('note') ? 5 : 1));
   locked = computed<boolean>(() => this.request().status !== 'pending');
@@ -72,6 +86,25 @@ export class AccessRequestFieldEditComponent {
 
   edit = () => {
     this.isOpen.set(true);
+  };
+
+  onDateSelected = (event: MatDatepickerInputEvent<Date>) => {
+    if (event.value) {
+      const selectedLocalDate = event.value;
+
+      const utcDateMidnight = new Date(
+        Date.UTC(
+          selectedLocalDate.getFullYear(),
+          selectedLocalDate.getMonth(),
+          selectedLocalDate.getDate(),
+        ),
+      );
+      this.field.set(utcDateMidnight.toISOString());
+      this.changed();
+    } else {
+      this.field.set('');
+      this.changed();
+    }
   };
 
   changed = () => {

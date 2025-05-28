@@ -3,20 +3,39 @@
     <th class="pe-1 text-start">{{ label() }}:</th>
     <td class="flex items-center">
       @if (isOpen()) {
-        <mat-form-field class="grow">
-          <mat-label>{{ label() }}</mat-label>
-          @if (rows() > 1) {
-            <textarea
+        @if (isDate()) {
+          <mat-form-field class="grow">
+            <mat-datepicker-toggle
+              matIconSuffix
+              class="float-end"
+              [for]="datepicker"
+            ></mat-datepicker-toggle>
+            <input
               matInput
+              [matDatepicker]="datepicker"
               [(ngModel)]="field"
-              (ngModelChange)="changed()"
-              class="min-h-20"
-              [rows]="rows()"
-            ></textarea>
-          } @else {
-            <input matInput [(ngModel)]="field" (ngModelChange)="changed()" />
-          }
-        </mat-form-field>
+              (dateChange)="onDateSelected($event)"
+              class="pr-8"
+            />
+
+            <mat-datepicker #datepicker></mat-datepicker>
+          </mat-form-field>
+        } @else {
+          <mat-form-field class="grow">
+            <mat-label>{{ label() }}</mat-label>
+            @if (rows() > 1) {
+              <textarea
+                matInput
+                [(ngModel)]="field"
+                (ngModelChange)="changed()"
+                class="min-h-20"
+                [rows]="rows()"
+              ></textarea>
+            } @else {
+              <input matInput [(ngModel)]="field" (ngModelChange)="changed()" />
+            }
+          </mat-form-field>
+        }
         <mat-chip
           class="smaller-chip interactive-chip cancel-edit-button mx-2"
           (click)="cancel()"
@@ -43,7 +62,11 @@
               ></a
             >
           } @else {
-            {{ field() }}
+            @if (isDate()) {
+              {{ field() | date: 'yyyy-MM-dd' }}
+            } @else {
+              {{ field() }}
+            }
           }
         </span>
         @if (!locked()) {
