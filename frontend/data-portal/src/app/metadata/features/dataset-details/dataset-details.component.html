@@ -1,53 +1,63 @@
 @if (!errorMessage()) {
   <div>
     @if (datasetDetails().accession !== '') {
-      <div class="mb-2 flex items-center justify-between">
-        <button
-          mat-icon-button
-          (click)="goBack()"
-          data-umami-event="Dataset Details Back Clicked"
-        >
-          <mat-icon>keyboard_return</mat-icon>
-        </button>
-        <app-dynamic-access-request-button
-          datasetID="{{ datasetDetails().accession }}"
-        />
-      </div>
-      <div>
-        <h3>{{ datasetDetails().title }}</h3>
-        <p class="mb-0 text-base">Dataset ID | {{ id() }}</p>
-        @if (datasetDetails().ega_accession !== '') {
-          <p class="text-base">EGA ID | {{ datasetDetails().ega_accession }}</p>
-        }
-        <p class="mt-4 text-sm">
-          Study Type |
-          @if (study().types.length > 0) {
-            @for (type of study().types; track $index) {
-              <mat-chip class="small-chip">{{ type | underscoreToSpace }}</mat-chip
-              >{{ ' ' }}
+      <div class="overflow-x-auto">
+        <div class="min-w-72">
+          <div class="mb-2 flex items-center justify-between">
+            <button
+              mat-icon-button
+              (click)="goBack()"
+              data-umami-event="Dataset Details Back Clicked"
+            >
+              <mat-icon>keyboard_return</mat-icon>
+            </button>
+            <div class="min-w-48">
+              <app-dynamic-access-request-button
+                datasetID="{{ datasetDetails().accession }}"
+              />
+            </div>
+          </div>
+          <div>
+            <h3>{{ datasetDetails().title }}</h3>
+            <p class="mb-0 text-base">Dataset ID | {{ id() }}</p>
+            @if (datasetDetails().ega_accession !== '') {
+              <p class="text-base">EGA ID | {{ datasetDetails().ega_accession }}</p>
             }
-          } @else {
-            <mat-chip class="small-chip">None</mat-chip>
-          }
-        </p>
-        <p class="text-sm">
-          Dataset Type |
-          @if (datasetDetails().types.length > 0) {
-            @for (type of datasetDetails().types; track $index) {
-              <mat-chip class="small-chip">{{ type }}</mat-chip
-              >{{ ' ' }}
-            }
-          } @else {
-            <mat-chip class="small-chip">None</mat-chip>
-          }
-        </p>
-      </div>
-      <div class="my-4">
-        <p class="text-primary flex items-center text-sm">
-          <mat-icon>description</mat-icon><strong>&nbsp;Description</strong>
-        </p>
-        <div class="border-primary border-y pt-2">
-          <app-paragraphs [text]="datasetDetails().description" pClasses="text-sm" />
+            <div class="mt-4 mb-2 flex flex-wrap items-baseline text-sm">
+              Study Type |&nbsp;
+              @if (study().types.length) {
+                <mat-chip-set>
+                  @for (type of study().types; track $index) {
+                    <mat-chip class="small-chips me-1">{{
+                      type | underscoreToSpace
+                    }}</mat-chip>
+                  }
+                </mat-chip-set>
+              } @else {
+                <mat-chip class="small-chips">None</mat-chip>
+              }
+            </div>
+            <div class="mb-2 flex flex-wrap items-baseline text-sm">
+              Dataset Type |&nbsp;
+              @if (datasetDetails().types.length > 0) {
+                <mat-chip-set>
+                  @for (type of datasetDetails().types; track $index) {
+                    <mat-chip class="small-chips me-1">{{ type }}</mat-chip>
+                  }
+                </mat-chip-set>
+              } @else {
+                <mat-chip class="small-chips">None</mat-chip>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="my-4 min-w-72">
+          <p class="text-primary flex w-full items-center text-sm">
+            <mat-icon>description</mat-icon><strong>&nbsp;Description</strong>
+          </p>
+          <div class="border-primary w-full border-y pt-2">
+            <app-paragraphs [text]="datasetDetails().description" pClasses="text-sm" />
+          </div>
         </div>
       </div>
       <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="center" dynamicHeight>
@@ -58,44 +68,50 @@
               &nbsp;Study
             </span>
           </ng-template>
-          <div class="p-4">
-            @if (study().ega_accession) {
-              <a
-                mat-stroked-button
-                class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
-                [href]="'https://ega-archive.org/datasets/' + study().ega_accession"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-umami-event="Dataset Details Visit EGA Study Page Clicked"
-                ><mat-icon>open_in_new</mat-icon>Visit EGA Study Page</a
-              >
-            }
-            <h4 class="inline-flex items-center">
-              <span
-                class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                ><mat-icon inline>book_2</mat-icon></span
-              >&nbsp;Study
-            </h4>
-            <p class="text-base"><strong>ID:</strong> {{ study().accession }}</p>
-            @if (study().ega_accession) {
-              <p class="text-base">
-                <strong>EGA ID:</strong> {{ study().ega_accession }}
-              </p>
-            }
-            <p class="text-base"><strong>Title:</strong> {{ study().title }}</p>
-            <p class="text-base">
-              <strong>Description:</strong> {{ study().description }}
-            </p>
-            <p class="text-base">
-              <strong>Study type: </strong>
-              @if (datasetDetails().types.length > 0) {
-                @for (type of datasetDetails().types; track $index; let last = $last) {
-                  {{ type }}{{ last ? '' : ', ' }}
-                }
-              } @else {
-                <mat-chip class="small-chip">None</mat-chip>
+          <div class="overflow-x-auto p-4">
+            <div class="min-w-72">
+              @if (study().ega_accession) {
+                <a
+                  mat-stroked-button
+                  class="mb-4 w-64 sm:float-right sm:mb-0"
+                  [href]="'https://ega-archive.org/datasets/' + study().ega_accession"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-umami-event="Dataset Details Visit EGA Study Page Clicked"
+                  ><mat-icon>open_in_new</mat-icon>Visit EGA Study Page</a
+                >
               }
-            </p>
+              <h4 class="flex items-center sm:inline-flex">
+                <span
+                  class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                  ><mat-icon inline>book_2</mat-icon></span
+                >&nbsp;Study
+              </h4>
+              <p class="text-base"><strong>ID:</strong> {{ study().accession }}</p>
+              @if (study().ega_accession) {
+                <p class="text-base">
+                  <strong>EGA ID:</strong> {{ study().ega_accession }}
+                </p>
+              }
+              <p class="text-base"><strong>Title:</strong> {{ study().title }}</p>
+              <p class="text-base">
+                <strong>Description:</strong> {{ study().description }}
+              </p>
+              <p class="text-base">
+                <strong>Study type: </strong>
+                @if (datasetDetails().types.length > 0) {
+                  @for (
+                    type of datasetDetails().types;
+                    track $index;
+                    let last = $last
+                  ) {
+                    {{ type }}{{ last ? '' : ', ' }}
+                  }
+                } @else {
+                  <mat-chip class="small-chips">None</mat-chip>
+                }
+              </p>
+            </div>
           </div></mat-tab
         >
         <mat-tab
@@ -105,65 +121,69 @@
               &nbsp;Publications
             </span>
           </ng-template>
-          <div class="p-4">
-            @if (publications().length > 0) {
-              @for (
-                pub of publications();
-                track pub.title;
-                let idx = $index;
-                let last = $last
-              ) {
-                <div>
-                  @if (pub.doi && pub.doi !== '') {
-                    <a
-                      mat-stroked-button
-                      class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
-                      [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-umami-event="Dataset Details Publication DOI Clicked"
-                      ><mat-icon>open_in_new</mat-icon>View Publication</a
-                    >
-                  }
-                  <h4 class="inline-flex items-center">
-                    <span
-                      class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                      ><mat-icon inline>article</mat-icon></span
-                    >&nbsp;{{ pub.title ?? 'Unknown publication title' }}
-                  </h4>
-                  <p class="text-base">
-                    <strong>Author(s):</strong> {{ pub.author ?? 'Unknown authors' }}
-                  </p>
-                  @if (pub.journal) {
-                    <p class="text-base"><strong>Journal:</strong> {{ pub.journal }}</p>
-                  }
-                  @if (pub.year) {
-                    <p class="text-base"><strong>Year:</strong> {{ pub.year }}</p>
-                  }
-                  <p class="text-base">
-                    <strong>DOI:</strong> {{ pub.doi | validateDOI }}
-                  </p>
-                  @if (pub.abstract) {
-                    <app-paragraphs
-                      [text]="pub.abstract"
-                      pClasses="text-base"
-                      label="Abstract"
-                    />
-                  }
-                  @if (!last) {
-                    <hr class="mx-14 my-6" />
-                  }
-                </div>
+          <div class="overflow-x-auto p-4">
+            <div class="min-w-72">
+              @if (publications().length > 0) {
+                @for (
+                  pub of publications();
+                  track pub.title;
+                  let idx = $index;
+                  let last = $last
+                ) {
+                  <div>
+                    @if (pub.doi && pub.doi !== '') {
+                      <a
+                        mat-stroked-button
+                        class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
+                        [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-umami-event="Dataset Details Publication DOI Clicked"
+                        ><mat-icon>open_in_new</mat-icon>View Publication</a
+                      >
+                    }
+                    <h4 class="flex items-center sm:inline-flex">
+                      <span
+                        class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                        ><mat-icon inline>article</mat-icon></span
+                      >&nbsp;{{ pub.title ?? 'Unknown publication title' }}
+                    </h4>
+                    <p class="text-base">
+                      <strong>Author(s):</strong> {{ pub.author ?? 'Unknown authors' }}
+                    </p>
+                    @if (pub.journal) {
+                      <p class="text-base">
+                        <strong>Journal:</strong> {{ pub.journal }}
+                      </p>
+                    }
+                    @if (pub.year) {
+                      <p class="text-base"><strong>Year:</strong> {{ pub.year }}</p>
+                    }
+                    <p class="text-base">
+                      <strong>DOI:</strong> {{ pub.doi | validateDOI }}
+                    </p>
+                    @if (pub.abstract) {
+                      <app-paragraphs
+                        [text]="pub.abstract"
+                        pClasses="text-base"
+                        label="Abstract"
+                      />
+                    }
+                    @if (!last) {
+                      <hr class="mx-14 my-6" />
+                    }
+                  </div>
+                }
+              } @else {
+                <h4 class="inline-flex items-center">
+                  <span
+                    class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                    ><mat-icon inline>article</mat-icon></span
+                  >&nbsp;Publications
+                </h4>
+                <p>No publications available.</p>
               }
-            } @else {
-              <h4 class="inline-flex items-center">
-                <span
-                  class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                  ><mat-icon inline>article</mat-icon></span
-                >&nbsp;Publications
-              </h4>
-              <p>No publications available.</p>
-            }
+            </div>
           </div></mat-tab
         >
         <mat-tab
@@ -173,43 +193,47 @@
               &nbsp;DAP/DAC
             </span>
           </ng-template>
-          <div class="p-4">
-            @if (dap().policy_url !== '') {
-              <a
-                mat-stroked-button
-                class="mb-4 w-full md:float-right md:mb-0 md:w-auto"
-                [href]="dap().policy_url"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-umami-event="Dataset Details Visit DAP Policy Clicked"
-                ><mat-icon>open_in_new</mat-icon>Data Access Info Form</a
+          <div class="overflow-x-auto p-4">
+            <div class="min-w-72">
+              @if (dap().policy_url !== '') {
+                <a
+                  mat-stroked-button
+                  class="mb-4 w-64 md:float-right md:mb-0 md:w-auto"
+                  [href]="dap().policy_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-umami-event="Dataset Details Visit DAP Policy Clicked"
+                  ><mat-icon>open_in_new</mat-icon>Data Access Info Form</a
+                >
+              }
+              <h4
+                class="lg:max-w-auto flex items-center sm:inline-flex md:max-w-[26rem]"
               >
-            }
-            <h4 class="lg:max-w-auto inline-flex items-center md:max-w-[26rem]">
-              <span
-                class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                ><mat-icon inline>data_loss_prevention</mat-icon></span
-              >&nbsp;<span>Policy and Data Access Committee</span>
-            </h4>
-            <p class="text-base">
-              <strong>Data Access Committee:</strong> {{ dac().alias }}
-            </p>
-            <p class="text-base"><strong>e-Mail:</strong> {{ dac().email }}</p>
-            <p class="text-base">
-              <strong>Data Access Policy:</strong> {{ dap().name }}
-            </p>
-            <app-paragraphs
-              [text]="dap().policy_text"
-              pClasses="text-base"
-              label="Policy"
-            /></div
+                <span
+                  class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                  ><mat-icon inline>data_loss_prevention</mat-icon></span
+                >&nbsp;<span>Policy and Data Access Committee</span>
+              </h4>
+              <p class="text-base">
+                <strong>Data Access Committee:</strong> {{ dac().alias }}
+              </p>
+              <p class="text-base"><strong>e-Mail:</strong> {{ dac().email }}</p>
+              <p class="text-base">
+                <strong>Data Access Policy:</strong> {{ dap().name }}
+              </p>
+              <app-paragraphs
+                [text]="dap().policy_text"
+                pClasses="text-base"
+                label="Policy"
+              />
+            </div></div
         ></mat-tab>
       </mat-tab-group>
 
       <hr class="mb-6" />
 
-      <div class="grid grid-cols-1 gap-2">
-        <mat-expansion-panel>
+      <div class="grid grid-cols-1 gap-2 overflow-x-auto">
+        <mat-expansion-panel class="min-w-128">
           <mat-expansion-panel-header>
             Experiments Summary ({{ numExperiments() }} experiment{{
               numExperiments() | addPluralS
@@ -285,7 +309,7 @@
               }</div></ng-template
         ></mat-expansion-panel>
 
-        <mat-expansion-panel>
+        <mat-expansion-panel class="min-w-128">
           <mat-expansion-panel-header>
             Samples Summary ({{ numSamples() }} sample{{
               numSamples() | addPluralS
@@ -383,7 +407,7 @@
               }</div></ng-template
         ></mat-expansion-panel>
 
-        <mat-expansion-panel>
+        <mat-expansion-panel class="min-w-128">
           <mat-expansion-panel-header>
             Files Summary ({{ numFiles() }} file{{ numFiles() | addPluralS }},
             {{ numBytes() | parseBytes }} in total)</mat-expansion-panel-header

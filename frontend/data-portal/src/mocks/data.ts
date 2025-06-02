@@ -171,7 +171,7 @@ export const datasetSummary: DatasetSummary = {
   accession: 'GHGAD12345678901234',
   description:
     'This is the test dataset description. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\nVel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
-  types: ['Test Type'],
+  types: ['Test Type Lorem ipsum dolor sit amet, consectetur adipiscing elit'],
   title: 'Test dataset for details',
   dac_email: 'test@some.dac.org',
   samples_summary: {
@@ -186,9 +186,21 @@ export const datasetSummary: DatasetSummary = {
         { value: 'tumor', count: 2 },
       ],
       phenotypic_features: [
-        { value: 'Test Phenotype 1', count: 2 },
-        { value: 'Test Phenotype 2', count: 1 },
-        { value: 'Test Phenotype 3', count: 1 },
+        {
+          value:
+            'Test Phenotype 1 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+          count: 2,
+        },
+        {
+          value:
+            'Test Phenotype 2 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+          count: 1,
+        },
+        {
+          value:
+            'Test Phenotype 3 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+          count: 1,
+        },
       ],
     },
   },
@@ -229,7 +241,7 @@ export const datasetDetails: DatasetDetailsRaw = {
   title: 'Test dataset for details',
   description:
     'Test dataset with some details for testing. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vel risus commodo viverra maecenas accumsan lacus vel. Sit amet risus nullam eget felis eget nunc lobortis mattis. Iaculis at erat pellentesque adipiscing commodo. Volutpat consequat mauris nunc congue. At lectus urna duis convallis convallis tellus id interdum velit. Gravida cum sociis natoque penatibus et. Mauris in aliquam sem fringilla ut morbi. Ultrices gravida dictum fusce ut. At consectetur lorem donec massa sapien faucibus et molestie.',
-  types: ['Test Type'],
+  types: ['Test Type Lorem ipsum dolor sit amet, consectetur adipiscing elit'],
   ega_accession: 'EGAD12345678901',
   data_access_policy: {
     name: 'DAP 1',
@@ -246,7 +258,7 @@ export const datasetDetails: DatasetDetailsRaw = {
   study: {
     accession: 'GHGAS12345678901234',
     ega_accession: 'EGAS12345678901',
-    types: ['test_genomics'],
+    types: ['test_genomics_Lorem ipsum dolor sit amet, consectetur adipiscing elit'],
     title: 'Test Study',
     description:
       'Test study description. Pharetra convallis posuere morbi leo urna molestie. Ut faucibus pulvinar elementum integer. Nec nam aliquam sem et tortor. Pretium viverra suspendisse potenti nullam ac. Commodo sed egestas egestas fringilla. Tincidunt dui ut ornare lectus sit. Amet massa vitae tortor condimentum lacinia quis vel eros donec. Feugiat pretium nibh ipsum consequat. Pulvinar etiam non quam lacus suspendisse faucibus interdum. Aliquam sem et tortor consequat id.',
@@ -380,16 +392,22 @@ export const datasetDetails: DatasetDetailsRaw = {
     {
       accession: 'GHGAI12345678901234',
       sex: 'FEMALE',
-      phenotypic_features_terms: ['Test phenotypic feature 1'],
+      phenotypic_features_terms: [
+        'Test phenotypic feature 1 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+      ],
     },
     {
       accession: 'GHGAI12345678901235',
       sex: 'MALE',
-      phenotypic_features_terms: ['Test phenotypic feature 2'],
+      phenotypic_features_terms: [
+        'Test phenotypic feature 2 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+      ],
     },
     {
       accession: 'GHGAI12345678901236',
-      phenotypic_features_terms: ['Test phenotypic feature 3'],
+      phenotypic_features_terms: [
+        'Test phenotypic feature 3 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+      ],
       sex: 'FEMALE',
     },
   ],

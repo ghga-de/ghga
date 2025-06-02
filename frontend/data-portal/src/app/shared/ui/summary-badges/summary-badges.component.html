@@ -14,16 +14,14 @@
     </li>
     @if (count > 3) {
       @if (idx === 2) {
-        <input type="checkbox" id="show_more_tissue" class="show_more hidden" />
-        <label for="show_more_tissue" class="text-secondary underline"
+        <input type="checkbox" id="show_more" class="show_more hidden" />
+        <label for="show_more" class="text-secondary underline"
           >Show {{ count - 3 }} more…</label
         >
       }
       @if (last) {
         <li>
-          <label for="show_more_tissue" class="text-secondary underline"
-            >Show less…</label
-          >
+          <label for="show_more" class="text-secondary underline">Show less…</label>
         </li>
       }
     }

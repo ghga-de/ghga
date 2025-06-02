@@ -1,134 +1,140 @@
-<div class="pt-4 text-sm">
-  <div class="mb-4 flex flex-col gap-y-2 sm:float-right sm:w-52 md:ms-6 md:mb-4">
-    @if (hitContent().ega_accession !== '') {
-      <a
-        mat-stroked-button
-        [href]="'https://ega-archive.org/datasets/' + hitContent().ega_accession"
-        target="_blank"
-        rel="noopener noreferrer"
-        data-umami-event="Dataset Summary EGA Dataset Clicked"
-        ><mat-icon>open_in_new</mat-icon>EGA Dataset</a
-      >
-    }
-    <app-dynamic-access-request-button datasetID="{{ hit().id_ }}" />
-    <a
-      mat-raised-button
-      class="raised-button-quaternary"
-      routerLink="/dataset/{{ hit().id_ }}"
-      data-umami-event="Dataset Summary Dataset Details Clicked"
-      ><mat-icon>database_search</mat-icon>Dataset Details</a
-    >
-  </div>
-  <p><strong>Dataset ID:</strong> {{ summary().accession }}</p>
-  @if (hitContent().ega_accession) {
-    <p><strong>EGA ID:</strong> {{ hitContent().ega_accession }}</p>
-  }
-  <p><strong>Full title:</strong> {{ summary().title }}</p>
-  <app-paragraphs
-    [text]="summary().description"
-    label="Description"
-    pClasses="text-sm"
-  />
-  @if (summary().types.length) {
-    <p>
-      <strong>Types: </strong>
-      @for (type of summary().types; track type) {
-        <mat-chip class="small-chip mr-1 text-sm">{{ type }}</mat-chip>
+<div class="overflow-x-auto">
+  <div class="pt-4 text-sm">
+    <div class="mb-4 flex flex-col gap-y-2 sm:float-right sm:w-52 md:ms-6 md:mb-4">
+      @if (hitContent().ega_accession !== '') {
+        <a
+          mat-stroked-button
+          [href]="'https://ega-archive.org/datasets/' + hitContent().ega_accession"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-umami-event="Dataset Summary EGA Dataset Clicked"
+          ><mat-icon>open_in_new</mat-icon>EGA Dataset</a
+        >
       }
-    </p>
-  }
-  <div class="mt-8 mb-4 sm:flex lg:pe-[15%]">
-    <div class="mb-8 flex grow flex-col gap-y-8 sm:mb-0">
-      <div class="flex">
-        <div class="me-3 pt-4 text-5xl text-neutral-700">
-          <mat-icon inline>book_2</mat-icon>
-        </div>
-        <div>
-          <p>
-            <strong>Part of study: </strong>
-          </p>
-          <p>
-            {{ studiesSummary().count > 0 ? studiesSummaryStats().title : 'None' }}
-          </p>
-          <p>
-            <strong>Accession ID: </strong>
-          </p>
-          <p>
-            {{ studiesSummary().count > 0 ? studiesSummaryStats().accession : 'N/A' }}
-          </p>
-        </div>
-      </div>
-
-      <div class="flex">
-        <div class="me-3 pt-4 text-5xl text-neutral-700">
-          <mat-icon inline>genetics</mat-icon>
-        </div>
-        <div>
-          <p><strong>Sample info:</strong></p>
-          <p>
-            <strong>{{ samplesSummary().count }}</strong> Sample{{
-              samplesSummary().count | addPluralS
-            }}
-            @if (samplesSex().length) {
-              (Sex:
-              @for (sex of samplesSex(); track sex.value; let last = $last) {
-                {{ sex.count }} {{ sex.value }}{{ last ? ')' : ', ' }}
-              }
-            }
-          </p>
-          <p>
-            <strong>{{ samplesTissues().length }}</strong>
-            Tissue{{ samplesTissues().length | addPluralS }}
-          </p>
-          @if (samplesTissues().length > 0) {
-            <app-summary-badges [data]="samplesTissues()" />
-          }
-          <p>
-            <strong>{{ samplesPhenotypes().length }}</strong>
-            Phenotypic Feature{{ samplesPhenotypes().length | addPluralS }}
-          </p>
-          @if (samplesPhenotypes().length > 0) {
-            <app-summary-badges [data]="samplesPhenotypes()" />
-          }
-        </div>
-      </div>
+      <app-dynamic-access-request-button datasetID="{{ hit().id_ }}" />
+      <a
+        mat-raised-button
+        class="raised-button-quaternary"
+        routerLink="/dataset/{{ hit().id_ }}"
+        data-umami-event="Dataset Summary Dataset Details Clicked"
+        ><mat-icon>database_search</mat-icon>Dataset Details</a
+      >
     </div>
-    <div class="flex grow flex-col gap-y-8">
-      <div class="flex">
-        <div class="me-3 pt-4 text-5xl text-neutral-700">
-          <mat-icon inline>description</mat-icon>
-        </div>
-        <div>
-          <p><strong>File Summary:</strong></p>
-          <p>
-            <strong>{{ filesSummary().count }}</strong> File{{
-              filesSummary().count | addPluralS
-            }}
-          </p>
-          @if (filesSummary().count > 0) {
-            <app-summary-badges [data]="filesFormats()" />
+    <p><strong>Dataset ID:</strong> {{ summary().accession }}</p>
+    @if (hitContent().ega_accession) {
+      <p><strong>EGA ID:</strong> {{ hitContent().ega_accession }}</p>
+    }
+    <p><strong>Full title:</strong> {{ summary().title }}</p>
+    <app-paragraphs
+      [text]="summary().description"
+      label="Description"
+      pClasses="text-sm"
+    />
+    @if (summary().types.length) {
+      <div class="flex flex-wrap items-baseline">
+        <strong>Types:&nbsp;</strong>
+        <mat-chip-set>
+          @for (type of summary().types; track type) {
+            <mat-chip class="small-chips mr-1 text-sm">{{ type }}</mat-chip>
           }
+        </mat-chip-set>
+      </div>
+    }
+    <div class="mt-8 mb-4 sm:flex lg:pe-[15%]">
+      <div
+        class="mb-8 flex grow flex-col gap-y-8 sm:mb-0 sm:max-w-[50%] sm:overflow-x-auto"
+      >
+        <div class="flex">
+          <div class="me-3 pt-4 text-5xl text-neutral-700">
+            <mat-icon inline>book_2</mat-icon>
+          </div>
+          <div>
+            <p>
+              <strong>Part of study: </strong>
+            </p>
+            <p>
+              {{ studiesSummary().count > 0 ? studiesSummaryStats().title : 'None' }}
+            </p>
+            <p>
+              <strong>Accession ID: </strong>
+            </p>
+            <p>
+              {{ studiesSummary().count > 0 ? studiesSummaryStats().accession : 'N/A' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex">
+          <div class="me-3 pt-4 text-5xl text-neutral-700">
+            <mat-icon inline>genetics</mat-icon>
+          </div>
+          <div>
+            <p><strong>Sample info:</strong></p>
+            <p>
+              <strong>{{ samplesSummary().count }}</strong> Sample{{
+                samplesSummary().count | addPluralS
+              }}
+              @if (samplesSex().length) {
+                (Sex:
+                @for (sex of samplesSex(); track sex.value; let last = $last) {
+                  {{ sex.count }} {{ sex.value }}{{ last ? ')' : ', ' }}
+                }
+              }
+            </p>
+            <p>
+              <strong>{{ samplesTissues().length }}</strong>
+              Tissue{{ samplesTissues().length | addPluralS }}
+            </p>
+            @if (samplesTissues().length > 0) {
+              <app-summary-badges [data]="samplesTissues()" />
+            }
+            <p>
+              <strong>{{ samplesPhenotypes().length }}</strong>
+              Phenotypic Feature{{ samplesPhenotypes().length | addPluralS }}
+            </p>
+            @if (samplesPhenotypes().length > 0) {
+              <app-summary-badges [data]="samplesPhenotypes()" />
+            }
+          </div>
         </div>
       </div>
-
-      <div class="flex">
-        <div class="me-3 pt-4 text-5xl text-neutral-700">
-          <mat-icon inline>experiment</mat-icon>
+      <div class="flex grow flex-col gap-y-8 sm:max-w-[50%] sm:overflow-x-auto">
+        <div class="flex">
+          <div class="me-3 pt-4 text-5xl text-neutral-700">
+            <mat-icon inline>description</mat-icon>
+          </div>
+          <div>
+            <p><strong>File Summary:</strong></p>
+            <p>
+              <strong>{{ filesSummary().count }}</strong> File{{
+                filesSummary().count | addPluralS
+              }}
+            </p>
+            @if (filesSummary().count > 0) {
+              <app-summary-badges [data]="filesFormats()" />
+            }
+          </div>
         </div>
-        <div>
-          <p><strong>Experiments Summary:</strong></p>
-          <p>
-            <strong>{{ experimentsSummary().count }}</strong> Experiment{{
-              experimentsSummary().count | addPluralS
-            }}
-          </p>
-          <p>
-            <strong>{{ experimentsPlatforms().length }} </strong>
-            Platform{{ experimentsPlatforms().length | addPluralS }}
-          </p>
-          @if (experimentsPlatforms().length > 0) {
-            <app-summary-badges [data]="experimentsPlatforms()" />
-          }
+
+        <div class="flex">
+          <div class="me-3 pt-4 text-5xl text-neutral-700">
+            <mat-icon inline>experiment</mat-icon>
+          </div>
+          <div>
+            <p><strong>Experiments Summary:</strong></p>
+            <p>
+              <strong>{{ experimentsSummary().count }}</strong> Experiment{{
+                experimentsSummary().count | addPluralS
+              }}
+            </p>
+            <p>
+              <strong>{{ experimentsPlatforms().length }} </strong>
+              Platform{{ experimentsPlatforms().length | addPluralS }}
+            </p>
+            @if (experimentsPlatforms().length > 0) {
+              <app-summary-badges [data]="experimentsPlatforms()" />
+            }
+          </div>
         </div>
       </div>
     </div>

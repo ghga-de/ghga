@@ -116,11 +116,19 @@ describe('DatasetDetailsComponent', () => {
   });
 
   it('should show dataset type', () => {
-    expect(screen.queryAllByText('Test Type').length).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText(
+        'Test Type Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+      ).length,
+    ).toBeGreaterThan(0);
   });
 
   it('should show study type', () => {
-    expect(screen.queryAllByText('test genomics').length).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText(
+        'test genomics Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+      ).length,
+    ).toBeGreaterThan(0);
   });
 
   it('should show dataset description', () => {
