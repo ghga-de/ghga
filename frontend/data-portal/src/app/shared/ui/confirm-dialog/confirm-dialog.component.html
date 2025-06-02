@@ -1,7 +1,6 @@
 <h1 mat-dialog-title>{{ title }}</h1>
-<div mat-dialog-content>
-  <p>{{ message }}</p>
-</div>
+<!-- 'Angular recognizes the [innerHTML] value as unsafe and automatically sanitizes it'  -->
+<div mat-dialog-content [innerHTML]="message"></div>
 <div mat-dialog-actions cdkTrapFocus>
   <button
     mat-button

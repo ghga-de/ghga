@@ -147,9 +147,9 @@ export class IvaManagerListComponent implements AfterViewInit {
     this.#confirmationService.confirm({
       title: 'Confirm invalidation of IVA',
       message:
-        `Do you really wish to invalidate the ${ivaType} IVA of` +
+        `<p>Do you really wish to <strong>invalidate</strong> the ${ivaType} IVA of` +
         ` ${iva.user_name} with address "${iva.value}"?` +
-        ' The user will lose access to any dataset linked to this IVA.',
+        '</p><p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
       cancelText: 'Cancel',
       confirmText: 'Confirm invalidation',
       callback: (confirmed) => {

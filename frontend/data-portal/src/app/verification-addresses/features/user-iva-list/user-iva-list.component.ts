@@ -180,9 +180,9 @@ export class UserIvaListComponent implements OnInit {
     this.#confirm.confirm({
       title: 'Confirm deletion of contact address',
       message:
-        `Please confirm deleting the ${address}.` +
-        ' Remember that you will lose access to any datasets' +
-        ' whose access was linked to that address.',
+        `<p>Please confirm deleting the ${address}.` +
+        '</p><p><strong>Remember that you will lose access to any datasets' +
+        ' whose access was linked to that address</strong>.</p>',
       cancelText: 'Cancel',
       confirmText: 'Confirm deletion',
       callback: (confirmed) => {

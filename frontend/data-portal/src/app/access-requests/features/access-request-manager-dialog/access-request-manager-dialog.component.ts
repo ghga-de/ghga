@@ -62,7 +62,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
     MatChipsModule,
     MatInputModule,
   ],
-  providers: [IvaTypePipe],
+  providers: [IvaTypePipe, DatePipe],
   templateUrl: './access-request-manager-dialog.component.html',
 })
 export class AccessRequestManagerDialogComponent implements OnInit {
@@ -82,6 +82,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   ivasError = this.#ivas.error;
 
   #ivaTypePipe = inject(IvaTypePipe);
+  #datePipe = inject(DatePipe);
 
   selectedIvaIdRadioButton = model<string | undefined>(undefined);
 
@@ -192,13 +193,26 @@ export class AccessRequestManagerDialogComponent implements OnInit {
     const iva = this.ivas().find((iva) => iva.id === this.selectedIvaIdRadioButton());
     if (!iva) return;
     const ivaType = this.#ivaTypeName(iva);
+    const startDate = this.#datePipe.transform(
+      this.#request().access_starts,
+      this.friendlyDateFormat,
+    );
+    const startDateInFuture = new Date(this.#request().access_starts) > new Date();
+    const endDate = this.#datePipe.transform(
+      this.#request().access_ends,
+      this.friendlyDateFormat,
+    );
     this.#confirmationService.confirm({
       title: 'Confirm approval of the access request',
       message:
-        'Please confirm that the access request shall be allowed' +
-        ` and coupled to ${ivaType}: ${iva.value}.`,
+        '<p>Please confirm that the access request shall be <strong>allowed</strong>' +
+        (startDateInFuture
+          ? ` for the period between <strong>${startDate}</strong> and`
+          : ` until`) +
+        ` <strong>${endDate}</strong>, and coupled to the address ${ivaType}: ${iva.value}.` +
+        `</p><p><strong>Once allowed, no further changes can be made to the access request!</strong></p>`,
       cancelText: 'Cancel',
-      confirmText: 'Confirm approval',
+      confirmText: 'Confirm allowance',
       confirmClass: 'success',
       callback: (approvalConfirmed) => {
         if (approvalConfirmed) this.#allowAndClose();
@@ -212,7 +226,9 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   safeDeny(): void {
     this.#confirmationService.confirm({
       title: 'Confirm denial of the access request',
-      message: 'Please confirm that the access request shall be denied.',
+      message:
+        '<p>Please confirm that the access request shall be <strong>denied</strong>.' +
+        `</p><p><strong>Once denied, no further changes can be made to the access request!</strong></p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm denial',
       confirmClass: 'error',

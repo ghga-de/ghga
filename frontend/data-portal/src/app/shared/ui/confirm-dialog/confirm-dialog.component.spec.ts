@@ -23,7 +23,13 @@ describe('ConfirmDialogComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ConfirmDialogComponent],
       providers: [
-        { provide: MAT_DIALOG_DATA, useValue: { message: 'Test message' } },
+        {
+          provide: MAT_DIALOG_DATA,
+          useValue: {
+            message:
+              '<strong>Test<script>alert("Security Risk")</script> message</strong>',
+          },
+        },
         { provide: MatDialogRef, useValue: dialogRef },
       ],
     }).compileComponents();
@@ -42,6 +48,14 @@ describe('ConfirmDialogComponent', () => {
     const content = compiled.querySelector('.mat-mdc-dialog-content');
     expect(content).toBeTruthy();
     expect(content.textContent).toBe('Test message');
+  });
+
+  it('should only render text and safe HTML tags', () => {
+    const compiled = fixture.nativeElement;
+    const content = compiled.querySelector('.mat-mdc-dialog-content');
+    expect(content).toBeTruthy();
+    const html = content.innerHTML;
+    expect(html).toBe('<strong>Test message</strong>');
   });
 
   it('should return false when cancelled', () => {
