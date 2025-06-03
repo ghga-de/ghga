@@ -35,6 +35,7 @@ import { NotificationService } from '@app/shared/services/notification.service';
 export class ConfirmTotpComponent {
   #notify = inject(NotificationService);
   #authService = inject(AuthService);
+  #submitted = false;
 
   codeControl = new FormControl<string>('', [
     Validators.required,
@@ -56,9 +57,11 @@ export class ConfirmTotpComponent {
    * Submit authentication code
    */
   async onSubmit(): Promise<void> {
+    if (this.#submitted) return;
     this.verificationError = false;
     const code = this.codeControl.value;
     if (!code) return;
+    this.#submitted = true;
     const verified = await this.#authService.verifyTotpCode(code);
     if (verified) {
       this.#notify.showSuccess('Successfully authenticated.');
@@ -68,6 +71,7 @@ export class ConfirmTotpComponent {
       this.#notify.showError('Failed to authenticate.');
       this.codeControl.reset();
       this.verificationError = true;
+      this.#submitted = false;
     }
   }
 
