@@ -48,7 +48,11 @@ export class DatasetSummaryComponent {
   samplesTissues = computed(() => this.samplesSummary().stats.tissues);
   samplesPhenotypes = computed(() => this.samplesSummary().stats.phenotypic_features);
   filesSummary = computed(() => this.summary().files_summary);
-  filesFormats = computed(() => this.filesSummary().stats.format);
+  filesFormats = computed(() =>
+    this.filesSummary().stats.format.sort(({ value: x }, { value: y }) =>
+      x < y ? -1 : x > y ? 1 : 0,
+    ),
+  );
   experimentsSummary = computed(() => this.summary().experiments_summary);
   experimentsPlatforms = computed(
     () => this.experimentsSummary().stats.experiment_methods,

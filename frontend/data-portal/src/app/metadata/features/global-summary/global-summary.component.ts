@@ -69,9 +69,9 @@ export class GlobalSummaryComponent {
           totalFormats.set(value, (totalFormats.get(value) || 0) + count),
         );
       });
-    const format: ValueCount[] = Array.from(totalFormats.entries()).map(
-      ([value, count]) => ({ value, count }),
-    );
+    const format: ValueCount[] = Array.from(totalFormats.entries())
+      .sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))
+      .map(([value, count]) => ({ value, count }));
     return {
       count: totalCount,
       stats: format ? { format } : undefined,

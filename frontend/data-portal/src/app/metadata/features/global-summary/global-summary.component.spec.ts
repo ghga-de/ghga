@@ -71,6 +71,6 @@ describe('GlobalStatsComponent', () => {
   });
 
   it('should properly aggregate file types', () => {
-    expectCardText(3, 'Files: 703 12 txt 462 bam 212 fastq 17 zip');
+    expectCardText(3, 'Files: 703 462 bam 212 fastq 12 txt 17 zip');
   });
 });
