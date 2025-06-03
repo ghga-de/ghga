@@ -124,10 +124,6 @@
             Please enter your public Crypt4GH key (in Base64 encoded format) above, so
             that we can encrypt your data.
           </p>
-          <p>
-            Otherwise, leave the field above empty in order to download all files
-            belonging to the dataset.
-          </p>
           @if (pubKey() && pubKeyError()) {
             <mat-error class="-mt-4 mb-4"
               ><p>{{ pubKeyError() }}</p></mat-error
