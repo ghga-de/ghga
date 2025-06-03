@@ -35,11 +35,12 @@ USER root
 RUN touch ./dist/config.js && chown appuser ./dist/config.js ./package.json
 USER appuser
 # install run script
-COPY ./run.js ./run.mjs
+COPY run.js ./run.mjs
 # install dependencies for run script
 RUN npm install js-yaml
-# install default configuration file
-COPY ./data-portal.default.yaml .
+# install configuration files
+COPY data-portal.default.yaml .
+COPY sws.toml .
 
 ENTRYPOINT ["node"]
 CMD ["/home/appuser/run.mjs"]

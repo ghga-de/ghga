@@ -235,7 +235,9 @@ function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basic
 function runProdServer(host, port, ssl, sslCert, sslKey, logLevel) {
   console.log('Running the production server...');
 
-  const distDir = getBrowserDir(path.join(__dirname, 'dist'));
+  const runDir = __dirname;
+  const confFile = path.join(runDir, 'sws.toml');
+  const distDir = getBrowserDir(path.join(runDir, 'dist'));
   process.chdir(distDir);
 
   const params = [
@@ -248,11 +250,13 @@ function runProdServer(host, port, ssl, sslCert, sslKey, logLevel) {
     '-d',
     '.',
     '--page-fallback',
+    './index.html',
+    '-w',
+    confFile,
   ];
   if (ssl) {
     params.push('--http2', '--http2-tls-cert', sslCert, '--http2-tls-key', sslKey);
   }
-  params.push('./index.html');
 
   const result = spawnSync('static-web-server', params, {
     stdio: 'inherit',
