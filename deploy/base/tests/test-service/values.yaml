@@ -5,6 +5,7 @@ image:
 configPrefix: test
 
 # Service parameters
+apiBasePathPrefix: /path/v1
 
 # Service base path
 apiBasePath: /test/
@@ -55,6 +56,9 @@ vaultAgent:
       enabled: true
     crypt4ghExternalPriv:
       enabled: true
+
+mapping:
+  enabled: true
 
 httpRoute:
   enabled: true

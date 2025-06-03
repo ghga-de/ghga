@@ -18,7 +18,7 @@ data:
     kafka_ssl_certfile: /kafka-secrets/user.crt
     kafka_ssl_keyfile: /kafka-secrets/user.key
     kafka_security_protocol: SSL
-    api_root_path: /test/
+    api_root_path: /path/v1/test/
     db_name: test
     service_name: test-service-name
     service_instance_id: test-service-instance-id
@@ -34,7 +34,7 @@ data:
     kafka_ssl_certfile: /kafka-secrets/user.crt
     kafka_ssl_keyfile: /kafka-secrets/user.key
     kafka_security_protocol: SSL
-    api_root_path: /test/
+    api_root_path: /path/v1/test/
     db_name: test
     service_name: test-service-name
     service_instance_id: test-service-instance-id
