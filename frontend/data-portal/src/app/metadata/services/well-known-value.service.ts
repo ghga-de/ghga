@@ -30,7 +30,7 @@ export class WellKnownValueService {
   /**
    * The human-readable storage aliases (empty while loading) as a resource
    */
-  storageLabels = httpResource<wellKnownValues>(this.#storageLabelsUrl, {
+  storageLabels = httpResource<wellKnownValues>(() => this.#storageLabelsUrl, {
     parse: (raw) => (raw as BaseStorageLabels).storage_labels,
     defaultValue: emptyStorageLabels,
   }).asReadonly();

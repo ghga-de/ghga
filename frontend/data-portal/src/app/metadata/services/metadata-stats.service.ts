@@ -23,7 +23,7 @@ export class MetadataStatsService {
   /**
    * The global summary (empty while loading)
    */
-  globalSummary = httpResource<GlobalSummary>(this.#globalSummaryUrl, {
+  globalSummary = httpResource<GlobalSummary>(() => this.#globalSummaryUrl, {
     parse: (raw) => (raw as { resource_stats: GlobalSummary }).resource_stats,
     defaultValue: emptyGlobalSummary,
   }).asReadonly();

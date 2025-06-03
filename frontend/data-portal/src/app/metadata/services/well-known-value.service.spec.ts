@@ -55,7 +55,7 @@ describe('WellKnownValueService', () => {
     expect(labels.isLoading()).toBeTruthy();
     expect(labels.error()).toBeUndefined();
     expect(labels.value()).toEqual(emptyStorageLabels);
-    testBed.flushEffects();
+    testBed.tick();
     const req = httpMock.expectOne('http://mock.dev/.well-known/values/storage_labels');
     expect(req.request.method).toBe('GET');
     req.flush(storageLabels);

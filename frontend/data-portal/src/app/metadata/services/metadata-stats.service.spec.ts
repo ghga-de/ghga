@@ -55,7 +55,7 @@ describe('MetadataStatsService', () => {
     expect(stats.isLoading()).toBeTruthy();
     expect(stats.error()).toBeUndefined();
     expect(stats.value()).toEqual(emptyGlobalSummary);
-    testBed.flushEffects();
+    testBed.tick();
     const req = httpMock.expectOne('http://mock.dev/metldata/stats');
     expect(req.request.method).toBe('GET');
     req.flush(metadataGlobalSummary);

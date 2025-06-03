@@ -13,4 +13,7 @@
   --color-info: var(--color-indigo-500);
   --color-outline: var(--color-gray-300);
   --color-outline-material: var(--mat-sys-outline);
+  --font-mono:
+    Illinois, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
 }

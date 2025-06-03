@@ -6,7 +6,7 @@
 
 import { TestBed } from '@angular/core/testing';
 
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
@@ -68,7 +68,7 @@ describe('IvaService', () => {
   it('should not auto-load anything', async () => {
     expect(service.userIvas.isLoading()).toBe(false);
     expect(service.allIvas.isLoading()).toBe(false);
-    testBed.flushEffects();
+    testBed.tick();
     // at this point loaders should have been called
     expect(service.userIvas.isLoading()).toBe(false);
     expect(service.userIvas.value()).toEqual([]);
@@ -79,14 +79,14 @@ describe('IvaService', () => {
 
   it('should get the IVAs of the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     expect(service.userIvas.isLoading()).toBe(false);
     service.loadUserIvas();
     expect(service.userIvas.isLoading()).toBe(true);
     expect(service.userIvas.error()).toBeUndefined();
     expect(service.userIvas.value()).toEqual([]);
     expect(service.allIvas.isLoading()).toBe(false);
-    testBed.flushEffects();
+    testBed.tick();
     const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev/ivas');
     expect(req.request.method).toBe('GET');
     req.flush(allIvasOfDoe);
@@ -98,14 +98,14 @@ describe('IvaService', () => {
 
   it('should not get IVAs of current user if not authenticated', async () => {
     currentUserId.set(null); // mock logout
-    testBed.flushEffects();
+    testBed.tick();
     expect(service.userIvas.isLoading()).toBe(false);
     service.loadUserIvas();
     expect(service.userIvas.isLoading()).toBe(false);
     expect(service.userIvas.error()).toBeUndefined();
     expect(service.userIvas.value()).toEqual([]);
     expect(service.allIvas.isLoading()).toBe(false);
-    testBed.flushEffects();
+    testBed.tick();
     await Promise.resolve();
     expect(service.userIvas.isLoading()).toBe(false);
     expect(service.userIvas.error()).toBeUndefined();
@@ -114,13 +114,13 @@ describe('IvaService', () => {
 
   it('should get the IVAs of another user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.loadUserIvas('roe@test.dev');
     expect(service.userIvas.isLoading()).toBe(true);
     expect(service.userIvas.error()).toBeUndefined();
     expect(service.userIvas.value()).toEqual([]);
     expect(service.allIvas.isLoading()).toBe(false);
-    testBed.flushEffects();
+    testBed.tick();
     const req = httpMock.expectOne('http://mock.dev/auth/users/roe@test.dev/ivas');
     expect(req.request.method).toBe('GET');
     req.flush(allIvasOfRoe);
@@ -136,17 +136,17 @@ describe('IvaService', () => {
     expect(service.userIvas.error()).toBeUndefined();
     expect(service.userIvas.value()).toEqual([]);
     expect(service.allIvas.isLoading()).toBe(false);
-    testBed.flushEffects();
+    testBed.tick();
     const req = httpMock.expectOne('http://mock.dev/auth/users/roe@test.dev/ivas');
     expect(req.request.method).toBe('GET');
     req.flush('Mock Error', { status: 401, statusText: 'Unauthorized' });
     await Promise.resolve(); // wait for loader to return
     expect(service.userIvas.isLoading()).toBe(false);
-    const error = service.userIvas.error() as { status: number; statusText: string };
+    const error = service.userIvas.error() as HttpErrorResponse;
     expect(error).toBeDefined();
     expect(error.status).toBe(401);
     expect(error.statusText).toBe('Unauthorized');
-    expect(service.userIvas.value()).toEqual([]);
+    expect(() => service.userIvas.value()).toThrow();
   });
 
   it('should get all IVAs', async () => {
@@ -155,7 +155,7 @@ describe('IvaService', () => {
     expect(service.allIvas.error()).toBeUndefined();
     expect(service.allIvas.value()).toEqual([]);
     expect(service.userIvas.isLoading()).toBe(false);
-    testBed.flushEffects();
+    testBed.tick();
     const req = httpMock.expectOne('http://mock.dev/auth/ivas');
     expect(req.request.method).toBe('GET');
     req.flush(allIvas);
@@ -171,22 +171,22 @@ describe('IvaService', () => {
     expect(service.allIvas.error()).toBeUndefined();
     expect(service.allIvas.value()).toEqual([]);
     expect(service.userIvas.isLoading()).toBe(false);
-    testBed.flushEffects();
+    testBed.tick();
     const req = httpMock.expectOne('http://mock.dev/auth/ivas');
     expect(req.request.method).toBe('GET');
     req.flush('Mock Error', { status: 401, statusText: 'Server Error' });
     await Promise.resolve(); // wait for loader to return
     expect(service.allIvas.isLoading()).toBe(false);
-    const error = service.allIvas.error() as { status: number; statusText: string };
+    const error = service.allIvas.error() as HttpErrorResponse;
     expect(error).toBeDefined();
     expect(error.status).toBe(401);
     expect(error.statusText).toBe('Server Error');
-    expect(service.allIvas.value()).toEqual([]);
+    expect(() => service.allIvas.value()).toThrow();
   });
 
   it('should create an IVA for the current user', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.createIva({ type: IvaType.Phone, value: '123/456' }).subscribe((id) => {
       expect(id).toEqual('TEST123456');
       done();
@@ -199,7 +199,7 @@ describe('IvaService', () => {
 
   it('should return an error if IVA to be created is missing a value', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.createIva({ type: IvaType.Phone, value: '' }).subscribe({
       error: (error) => {
         expect(error).toBeDefined();
@@ -211,7 +211,7 @@ describe('IvaService', () => {
 
   it('should return an error if IVA is created while not logged in', (done) => {
     currentUserId.set(null); // mock logout
-    testBed.flushEffects();
+    testBed.tick();
     service.createIva({ type: IvaType.Phone, value: '123/456' }).subscribe({
       error: (error) => {
         expect(error).toBeDefined();
@@ -223,7 +223,7 @@ describe('IvaService', () => {
 
   it('should pass a server error when IVA is created', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.createIva({ type: IvaType.Phone, value: '123/456' }).subscribe({
       error: (error) => {
         expect(error).toBeDefined();
@@ -239,7 +239,7 @@ describe('IvaService', () => {
 
   it('should delete an IVA for the current user', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.deleteIva({ ivaId: 'TEST123456' }).subscribe((ret) => {
       expect(ret).toBeNull();
       done();
@@ -254,7 +254,7 @@ describe('IvaService', () => {
 
   it('should return an error if the IVA to be deleted has no ID', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.deleteIva({ ivaId: '' }).subscribe({
       error: (error) => {
         expect(error).toBeDefined();
@@ -266,7 +266,7 @@ describe('IvaService', () => {
 
   it('should return an error if IVA is deleted while not logged in', (done) => {
     currentUserId.set(null); // mock logout
-    testBed.flushEffects();
+    testBed.tick();
     service.deleteIva({ ivaId: 'TEST123456' }).subscribe({
       error: (error) => {
         expect(error).toBeDefined();
@@ -278,7 +278,7 @@ describe('IvaService', () => {
 
   it('should pass a server error when IVA is deleted', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.deleteIva({ ivaId: 'TEST123456' }).subscribe({
       error: (error) => {
         expect(error).toBeDefined();
@@ -296,7 +296,7 @@ describe('IvaService', () => {
 
   it('should unverify an IVA for the current user', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.unverifyIva('TEST123456').subscribe((ret) => {
       expect(ret).toBeNull();
       done();
@@ -309,7 +309,7 @@ describe('IvaService', () => {
 
   it('should request verification of an IVA for the current user', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.requestCodeForIva('TEST123456').subscribe((ret) => {
       expect(ret).toBeNull();
       done();
@@ -324,7 +324,7 @@ describe('IvaService', () => {
 
   it('should create a verification code for an IVA of the current user', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.createCodeForIva('TEST123456').subscribe((code) => {
       expect(code).toBe('CODE789');
       done();
@@ -339,7 +339,7 @@ describe('IvaService', () => {
 
   it('should confirm transmission of IVA verification for the current user', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.confirmTransmissionForIva('TEST123456').subscribe((ret) => {
       expect(ret).toBeNull();
       done();
@@ -354,7 +354,7 @@ describe('IvaService', () => {
 
   it('should validate an IVA verification for the current user', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.validateCodeForIva('TEST123456', 'CODE789').subscribe({
       next: (ret) => {
         expect(ret).toBeNull();
@@ -374,7 +374,7 @@ describe('IvaService', () => {
 
   it('should pass error status for an invalid IVA verification code', (done) => {
     currentUserId.set('doe@test.dev'); // mock login
-    testBed.flushEffects();
+    testBed.tick();
     service.validateCodeForIva('TEST123456', 'CODE789').subscribe({
       next: (ret) => {
         fail(`Unexpected return value: ${ret}`);

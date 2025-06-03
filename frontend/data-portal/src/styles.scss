@@ -44,7 +44,10 @@ hr {
         primary: ghga-colors.$primary-palette,
         tertiary: ghga-colors.$tertiary-palette,
       ),
-      typography: Lexend,
+      typography: (
+        plain-family: Lexend,
+        brand-family: Lexend,
+      ),
     )
   );
   @include mat.button-overrides(

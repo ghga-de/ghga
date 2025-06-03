@@ -83,7 +83,7 @@ describe('WorkPackageService', () => {
 
   it('should return an empty list when not logged in and datasets are fetched', () => {
     userId.set(null);
-    testBed.flushEffects();
+    testBed.tick();
     expect(service.datasets.isLoading()).toBe(false);
     expect(service.datasets.error()).toBeUndefined();
     expect(service.datasets.value()).toEqual([]);
@@ -94,7 +94,7 @@ describe('WorkPackageService', () => {
     expect(service.datasets.error()).toBeUndefined();
     expect(service.datasets.value()).toEqual([]);
     userId.set('test-user-id');
-    testBed.flushEffects();
+    testBed.tick();
     expect(service.datasets.isLoading()).toBe(true);
     expect(service.datasets.error()).toBeUndefined();
     expect(service.datasets.value()).toEqual([]);

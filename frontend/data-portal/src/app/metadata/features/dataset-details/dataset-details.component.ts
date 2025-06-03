@@ -6,6 +6,7 @@
 
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { Location } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   AfterViewInit,
   Component,
@@ -95,7 +96,7 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
 
   errorMessage = computed(() => {
     if (this.#datasetDetailsError()) {
-      switch ((this.#datasetDetailsError() as { status: number | undefined }).status) {
+      switch ((this.#datasetDetailsError() as HttpErrorResponse)?.status) {
         case 404:
           return 'The specified dataset could not be found.';
         case undefined:

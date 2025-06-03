@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -82,7 +83,7 @@ export class MetadataBrowserComponent implements OnInit {
 
   errorMessage = computed(() => {
     if (this.#searchResultsError()) {
-      switch ((this.#searchResultsError() as { status: number | undefined }).status) {
+      switch ((this.#searchResultsError() as HttpErrorResponse)?.status) {
         case undefined:
           return undefined;
         default:
