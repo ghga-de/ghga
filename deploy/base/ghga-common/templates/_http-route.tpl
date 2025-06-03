@@ -1,3 +1,21 @@
+{{- define "ghga-common.default-rule" -}}
+{{- if .Values.httpRoute.enabled -}}
+matches:
+- path:
+    type: PathPrefix
+    value: {{ include "ghga-common.apiFullBasePath" . }}
+filters:
+- type: URLRewrite
+  urlRewrite:
+    path:
+      type: ReplacePrefixMatch
+      replacePrefixMatch: /
+backendRefs:
+- name:  {{ include "common.names.fullname" . }}
+  port: {{ .Values.mapping.port }}
+  weight: 100
+{{- end -}}
+{{- end -}}
 {{- define "ghga-common.http-route" -}}
 {{- if .Values.httpRoute.enabled -}}
 ---
@@ -22,6 +40,7 @@ metadata:
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
     {{- end }}
 spec:
-  {{- include "common.tplvalues.render" ( dict "value" (omit .Values.httpRoute "enabled") "context" $ ) | nindent 2 }}
+  rules: {{- include "common.tplvalues.render" ( dict "value" (append .Values.httpRoute.rules (include "ghga-common.default-rule" $ | fromYaml) | uniq) "context" $ ) | nindent 2 }}
+{{- include "common.tplvalues.render" ( dict "value" (omit .Values.httpRoute "enabled" "rules") "context" $ ) | nindent 2 }}
 {{- end -}}
 {{- end -}}

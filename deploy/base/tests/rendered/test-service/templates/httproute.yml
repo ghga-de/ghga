@@ -14,8 +14,6 @@ metadata:
     app: test-service
   annotations:
 spec:
-  hostnames:
-  - my.test.com
   rules:
   - backendRefs:
     - name: my-test-svc1
@@ -27,3 +25,19 @@ spec:
         - name: my-header
           value: foo
       type: RequestHeaderModifier
+  - backendRefs:
+    - name: test-service
+      port: 8080
+      weight: 100
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          replacePrefixMatch: /
+          type: ReplacePrefixMatch
+    matches:
+    - path:
+        type: PathPrefix
+        value: /path/v1/test/
+  hostnames:
+  - my.test.com
