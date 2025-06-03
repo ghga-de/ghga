@@ -24,14 +24,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Set the version from package.json in the ribbon text.
+ * Inject the version from package.json into the settings.
  */
 function setVersion(settings) {
-  const text = settings.ribbon_text;
-  if (!text || !text.includes('$v')) return;
   const packageJsonPath = path.join(__dirname, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  settings.ribbon_text = text.replace('$v', packageJson.version || '?');
+  const version = packageJson.version;
+  if (!version) {
+    throw new Error(`Version not found in ${packageJsonPath}`);
+  }
+  const ribbonText = settings.ribbon_text;
+  if (ribbonText && ribbonText.includes('$v')) {
+    settings.ribbon_text = ribbonText.replace('$v', version);
+  }
+  settings.version = version;
 }
 
 /**

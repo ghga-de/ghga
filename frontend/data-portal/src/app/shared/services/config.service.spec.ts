@@ -38,6 +38,7 @@ const mockConfig = {
   mock_oidc: true,
   helpdesk_url: 'https://helpdesk.test',
   helpdesk_ticket_url: '/#ticket/',
+  version: '1.2.3',
 };
 
 describe('ConfigService', () => {
@@ -112,5 +113,9 @@ describe('ConfigService', () => {
 
   it('should provide the helpdesk ticket URL', () => {
     expect(service.helpdeskTicketUrl).toBe('https://helpdesk.test/#ticket/');
+  });
+
+  it('should provide the application version', () => {
+    expect(service.version).toBe('1.2.3');
   });
 });

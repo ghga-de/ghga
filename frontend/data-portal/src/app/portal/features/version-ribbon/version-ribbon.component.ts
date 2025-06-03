@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config.service';
 
 /**
@@ -16,9 +16,18 @@ import { ConfigService } from '@app/shared/services/config.service';
   templateUrl: './version-ribbon.component.html',
   styleUrl: './version-ribbon.component.scss',
 })
-export class VersionRibbonComponent {
+export class VersionRibbonComponent implements OnInit {
   #config = inject(ConfigService);
   text = this.#config.ribbonText;
+
+  /**
+   * Always log the Data Portal version when the app is started.
+   * This is useful for debugging when the ribbon is deactivated in production.
+   */
+  ngOnInit(): void {
+    const text = this.text || 'v' + this.#config.version;
+    console.info(`Running Data Portal ${text}...`);
+  }
 
   /**
    * Handle click on the ribbon by removing it.

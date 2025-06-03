@@ -36,6 +36,7 @@ interface Config {
   umami_website_id: string | null;
   helpdesk_url: string;
   helpdesk_ticket_url: string;
+  version: string; // set by the runner
 }
 
 declare global {
@@ -293,5 +294,13 @@ export class ConfigService {
   get helpdeskTicketUrl(): string {
     const url = this.#config.helpdesk_ticket_url;
     return new URL(url, withEndSlash(this.helpdeskUrl)).href;
+  }
+
+  /**
+   * Gets the application version
+   * @returns the version of the application as set by the runner
+   */
+  get version(): string {
+    return this.#config.version;
   }
 }
