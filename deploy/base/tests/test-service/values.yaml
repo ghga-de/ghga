@@ -59,6 +59,7 @@ vaultAgent:
 
 mapping:
   enabled: true
+  hostname: my.test.com
 
 httpRoute:
   enabled: true
