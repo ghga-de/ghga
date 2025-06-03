@@ -234,12 +234,13 @@ if __name__ == "__main__":
         if not all(version == latest_versions[0] for version in latest_versions):
             raise ValueError("Versions are inconsistent")
 
-    if diff_version:
-        max_diff = max(diff_version)
-    elif diffs_app_version:
+    if diffs_app_version:
         max_diff = max(diffs_app_version)
     elif diffs_library_version:
         max_diff = max(diffs_library_version)
+    elif diff_version:
+        print("Diff in Chart version, doing nothing.")
+        exit(0)
     print(f"Max diff: {max_diff}")
 
     latest_versions.sort()
