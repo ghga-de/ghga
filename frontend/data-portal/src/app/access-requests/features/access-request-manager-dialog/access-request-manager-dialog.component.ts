@@ -17,6 +17,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import {
   MAT_DIALOG_DATA,
@@ -39,6 +40,7 @@ import { Iva, IvaState } from '@app/verification-addresses/models/iva';
 import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
 import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
+import { SplitLinesPipe } from '../../../shared/pipes/split-lines.pipe';
 import { AccessRequestFieldEditComponent } from '../access-request-field-edit/access-request-field-edit.component';
 
 /**
@@ -51,6 +53,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
   imports: [
     FormsModule,
     MatDialogModule,
+    MatCardModule,
     MatButtonModule,
     MatRadioModule,
     MatIcon,
@@ -61,6 +64,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
     AccessRequestFieldEditComponent,
     MatChipsModule,
     MatInputModule,
+    SplitLinesPipe,
   ],
   providers: [IvaTypePipe, DatePipe],
   templateUrl: './access-request-manager-dialog.component.html',

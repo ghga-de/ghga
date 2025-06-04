@@ -121,6 +121,8 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
   openDetails(row: AccessRequest): void {
     this.#dialog.open(AccessRequestManagerDialogComponent, {
       data: row,
+      width: '80vw',
+      maxWidth: '1200px',
     });
   }
 }

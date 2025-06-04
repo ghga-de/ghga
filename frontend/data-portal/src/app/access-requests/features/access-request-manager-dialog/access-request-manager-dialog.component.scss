@@ -1,41 +1,42 @@
 @use '@angular/material' as mat;
 
+mat-card {
+  width: 100%;
+  overflow-x: auto;
+
+  mat-card-header {
+    padding-bottom: 8px;
+  }
+  mat-card-title {
+    font-size: 1.1em;
+  }
+  mat-card-content {
+    padding-top: 8px;
+  }
+}
+
+:not(mat-radio-group) > table td {  
+  text-align: left;  
+  vertical-align: top;  
+  min-width: 240px;  
+  padding-bottom: 4px;  
+}  
+
+th {  
+  width: 144px;  
+  min-width: 144px;  
+  text-align: left;
+  vertical-align: top;
+}  
+
+mat-dialog-actions {
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
 a mat-icon {
   scale: 0.6;
   margin: 0 -5px 0 -3px;
   transform: translateY(3px);
   height: 16px;
   font-size: 18px;
-}
-
-mat-chip {
-  @include mat.chips-overrides(
-    (
-      label-text-size: var(--mat-sys-label-small-size),
-      label-text-line-height: 0px,
-      container-height: 50%,
-    )
-  );
-}
-
-.edit-button mat-icon {
-  @include mat.icon-overrides(
-    (
-      color: var(--mat-sys-primary),
-    )
-  );
-}
-.cancel-edit-button mat-icon {
-  @include mat.icon-overrides(
-    (
-      color: var(--mat-sys-danger),
-    )
-  );
-}
-.save-edit-button mat-icon {
-  @include mat.icon-overrides(
-    (
-      color: var(--mat-sys-success),
-    )
-  );
 }

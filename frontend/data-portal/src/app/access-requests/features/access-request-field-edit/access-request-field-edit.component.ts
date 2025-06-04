@@ -40,8 +40,7 @@ import { ConfigService } from '@app/shared/services/config.service';
     DatePipe,
   ],
   templateUrl: './access-request-field-edit.component.html',
-  styleUrl:
-    '../access-request-manager-dialog/access-request-manager-dialog.component.scss',
+  styleUrl: './access-request-field-edit.component.scss',
 })
 export class AccessRequestFieldEditComponent {
   #config = inject(ConfigService);

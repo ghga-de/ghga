@@ -78,7 +78,7 @@ describe('AccessRequestManagerDialogComponent', () => {
   });
 
   it('should show the requester in a table row', () => {
-    const row = screen.getByRole('row', { name: 'Requester: Dr. John Doe' });
+    const row = screen.getByRole('row', { name: /Requester: Dr. John Doe/i });
     expect(row).toBeVisible();
   });
 
