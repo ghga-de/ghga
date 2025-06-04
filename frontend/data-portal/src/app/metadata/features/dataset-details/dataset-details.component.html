@@ -28,13 +28,13 @@
               @if (study().types.length) {
                 <mat-chip-set>
                   @for (type of study().types; track $index) {
-                    <mat-chip class="small-chips me-1">{{
+                    <mat-chip class="small-chip me-1">{{
                       type | underscoreToSpace
                     }}</mat-chip>
                   }
                 </mat-chip-set>
               } @else {
-                <mat-chip class="small-chips">None</mat-chip>
+                <mat-chip class="small-chip">None</mat-chip>
               }
             </div>
             <div class="mb-2 flex flex-wrap items-baseline text-sm">
@@ -42,11 +42,11 @@
               @if (datasetDetails().types.length > 0) {
                 <mat-chip-set>
                   @for (type of datasetDetails().types; track $index) {
-                    <mat-chip class="small-chips me-1">{{ type }}</mat-chip>
+                    <mat-chip class="small-chip me-1">{{ type }}</mat-chip>
                   }
                 </mat-chip-set>
               } @else {
-                <mat-chip class="small-chips">None</mat-chip>
+                <mat-chip class="small-chip">None</mat-chip>
               }
             </div>
           </div>
@@ -108,7 +108,7 @@
                     {{ type }}{{ last ? '' : ', ' }}
                   }
                 } @else {
-                  <mat-chip class="small-chips">None</mat-chip>
+                  <mat-chip class="small-chip">None</mat-chip>
                 }
               </p>
             </div>

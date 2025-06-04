@@ -8,6 +8,8 @@ import { Component, input } from '@angular/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
 
+const MAX_ITEMS = 3;
+
 /**
  * A component for badges for dataset summaries
  */
@@ -18,6 +20,7 @@ import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
   styleUrl: './summary-badges.component.scss',
 })
 export class SummaryBadgesComponent {
+  protected maxItems = MAX_ITEMS;
   data = input.required<
     {
       value: string;
