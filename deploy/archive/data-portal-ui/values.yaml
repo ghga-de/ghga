@@ -2,9 +2,9 @@ image:
   repository: "ghga/data-portal"
 
 configPrefix: data_portal
+apiBasePath: /
 
 # Service parameters
-
 parameters:
   default:
     host: 0.0.0.0
