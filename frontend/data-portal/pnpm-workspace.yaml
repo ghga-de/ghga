@@ -2,5 +2,6 @@ onlyBuiltDependencies:
   - '@compodoc/compodoc'
   - '@tailwindcss/oxide'
   - esbuild
+  - lmdb
   - msw
   - unrs-resolver

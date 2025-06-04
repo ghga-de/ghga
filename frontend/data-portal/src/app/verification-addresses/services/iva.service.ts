@@ -8,6 +8,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
+import { HttpCacheManager } from '@ngneat/cashew';
 import { map, Observable, tap, throwError } from 'rxjs';
 import { Iva, IvaFilter, IvaState, IvaType, UserWithIva } from '../models/iva';
 
@@ -17,6 +18,7 @@ import { Iva, IvaFilter, IvaState, IvaType, UserWithIva } from '../models/iva';
 @Injectable({ providedIn: 'root' })
 export class IvaService {
   #http = inject(HttpClient);
+  #httpCache = inject(HttpCacheManager);
 
   #config = inject(ConfigService);
   #authUrl = this.#config.authUrl;
@@ -50,6 +52,7 @@ export class IvaService {
       userId = this.#auth.user()?.id;
       if (!userId) return;
     }
+    this.#httpCache.delete(this.#userIvasUrl(userId));
     this.userIvas.reload();
   }
 

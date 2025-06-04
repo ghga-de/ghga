@@ -31,44 +31,63 @@
           </div>
           <div
             mat-cell
-            class="order-3 col-span-12 min-w-72 md:order-0 md:col-span-6 lg:col-span-4 xl:col-span-3"
+            class="order-3 col-span-6 min-w-48 md:order-0 md:col-span-6 lg:col-span-4 xl:col-span-3"
           >
             <div class="md:text-center">
               @switch (iva.state) {
                 @case ('Verified') {
                   <div class="text-bold text-success text-base">
                     Address has been verified
-                    <mat-icon class="align-bottom">done</mat-icon>
+                    <mat-icon class="align-bottom">verified_user</mat-icon>
                   </div>
                 }
                 @case ('Unverified') {
-                  <button
-                    (click)="requestVerification(iva)"
-                    class="w-64"
-                    mat-stroked-button
-                    data-umami-event="User IVA list Request Verification Clicked"
-                  >
-                    <mat-icon>pin</mat-icon>
-                    Request verification
-                  </button>
+                  <div class="text-bold text-error text-base">
+                    Needs verification
+                    <mat-icon class="align-bottom">gpp_bad</mat-icon>
+                  </div>
                 }
                 @case ('CodeTransmitted') {
-                  <button
-                    (click)="enterVerificationCode(iva)"
-                    class="w-64"
-                    mat-stroked-button
-                    data-umami-event="User IVA list Enter Verification Code Clicked"
-                  >
-                    <mat-icon>dialpad</mat-icon>
-                    Enter verification code
-                  </button>
+                  <div class="text-bold text-warning text-base">
+                    Code has been sent
+                    <mat-icon class="align-bottom">pin</mat-icon>
+                  </div>
                 }
                 @default {
-                  <div class="text-bold text-warning text-base">
-                    Verification requested
+                  <div class="text-bold text-info text-base">
+                    Waiting for verification
                     <mat-icon class="align-bottom">pending</mat-icon>
                   </div>
                 }
+              }
+            </div>
+          </div>
+          <div
+            mat-cell
+            class="order-4 col-span-6 min-w-48 md:order-0 md:col-span-6 lg:col-span-4 xl:col-span-3"
+          >
+            <div class="md:text-center">
+              @if (iva.state === 'Unverified') {
+                <button
+                  (click)="requestVerification(iva)"
+                  class="w-64"
+                  mat-stroked-button
+                  data-umami-event="User IVA list Request Verification Clicked"
+                >
+                  <mat-icon>pin</mat-icon>
+                  Request verification
+                </button>
+              } @else if (iva.state !== 'Verified') {
+                <button
+                  (click)="enterVerificationCode(iva)"
+                  [disabled]="checkingIvaId()"
+                  class="w-64"
+                  mat-stroked-button
+                  data-umami-event="User IVA list Enter Verification Code Clicked"
+                >
+                  <mat-icon>dialpad</mat-icon>
+                  Enter verification code
+                </button>
               }
             </div>
           </div>
