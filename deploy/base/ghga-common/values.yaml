@@ -216,6 +216,7 @@ exports:
     # Set `spec` of HTTPRoute here
     httpRoute:
       enabled: false
+      rules: []
 
     vaultAgent:
       enabled: false
