@@ -29,7 +29,7 @@ class NotificationInterpolationError(NotificationError):
     """Raised when notification interpolation fails."""
 
     def __init__(self, interp_args: dict) -> None:
-        message = f"Unable to format notification text with kwargs {interp_args}"
+        message = f"Unable to format notification with kwargs {interp_args}"
         super().__init__(message)
 
 
@@ -49,7 +49,9 @@ class Notification(NamedTuple):
         provided.
         """
         try:
-            return Notification(self.subject, self.text.format(**kwargs))
+            return Notification(
+                self.subject.format(**kwargs), self.text.format(**kwargs)
+            )
         except KeyError as err:
             interpolation_error = NotificationInterpolationError(kwargs)
             log.error(interpolation_error)
@@ -66,7 +68,7 @@ You should be contacted by one of our Data Stewards within the next three workin
 )
 
 ACCESS_REQUEST_CREATED_TO_DS = Notification(
-    "A data download access request has been created",
+    "{dataset_id} - New Data Access Request by {full_user_name}",
     """
 {full_user_name} ({email})
 requested to download the following dataset:
@@ -95,7 +97,7 @@ For help, please see the guide at https://docs.ghga.de/user_stories/accessing_da
 )
 
 ACCESS_REQUEST_ALLOWED_TO_DS = Notification(
-    "Data download access has been allowed",
+    "{dataset_id} - Access Request for {full_user_name} has been approved - GHGA Helpdesk Ticket {ticket_id}",
     """
 The request by {full_user_name} to download the dataset
 {dataset_id} has been approved and access has been granted.
@@ -114,7 +116,7 @@ about this decision.
 )
 
 ACCESS_REQUEST_DENIED_TO_DS = Notification(
-    "Data download access has been rejected",
+    "{dataset_id} - Access Request for {full_user_name} has been rejected - GHGA Helpdesk Ticket {ticket_id}",
     """
 The request by {full_user_name} to download the dataset
 {dataset_id} has been rejected and access has not been granted.

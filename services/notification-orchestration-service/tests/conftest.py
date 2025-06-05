@@ -33,7 +33,7 @@ TEST_USER = event_schemas.User(
     user_id="test_id",
     name="test user",
     title=event_schemas.AcademicTitle.DR,
-    email="test@test.abc",
+    email="user@test.abc",
 )
 
 

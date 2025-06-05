@@ -49,6 +49,7 @@ def access_request_payload(user_id: str, status: str = "pending") -> dict[str, A
         note_to_requester="Thank you",
         access_starts=start,
         access_ends=end,
+        ticket_id="123456",
     ).model_dump()
 
 
@@ -90,6 +91,7 @@ def iva_state_payload(user_id: str, state: event_schemas.IvaState) -> dict[str, 
             {
                 "full_user_name": TEST_USER.name,
                 "dataset_id": DATASET_ID,
+                "ticket_id": "#123456",
             },
             "allowed",
         ),
@@ -103,6 +105,7 @@ def iva_state_payload(user_id: str, state: event_schemas.IvaState) -> dict[str, 
             {
                 "full_user_name": TEST_USER.name,
                 "dataset_id": DATASET_ID,
+                "ticket_id": "#123456",
             },
             "denied",
         ),
@@ -125,14 +128,14 @@ async def test_access_request(
 
     user_notification = event_schemas.Notification(
         recipient_email=test_user.email,
-        subject=user_notification_content.subject,
+        subject=user_notification_content.subject.format(**user_kwargs),
         recipient_name=test_user.name,
         plaintext_body=user_notification_content.text.format(**user_kwargs),
     )
 
     data_steward_notification = event_schemas.Notification(
         recipient_email=joint_fixture.config.central_data_stewardship_email,
-        subject=ds_notification_content.subject,
+        subject=ds_notification_content.subject.format(**ds_kwargs),
         recipient_name="Data Steward",
         plaintext_body=ds_notification_content.text.format(**ds_kwargs),
     )
@@ -177,6 +180,62 @@ async def test_access_request(
     ) as recorder:
         await joint_fixture.event_subscriber.run(forever=False)
     assert not recorder.recorded_events
+
+
+@pytest.mark.parametrize(
+    "status, ds_notification",
+    [
+        ("allowed", notifications.ACCESS_REQUEST_ALLOWED_TO_DS),
+        ("denied", notifications.ACCESS_REQUEST_DENIED_TO_DS),
+    ],
+    ids=["allowed", "denied"],
+)
+async def test_access_request_no_ticket_id(
+    joint_fixture: JointFixture,
+    status: str,
+    ds_notification: notifications.Notification,
+):
+    """Test that the GHGA Ticket ID is set to "Missing" in the data steward notification
+    when the access request is published without a ticket ID. Only affects the
+    allowed/denied notifications, not the created notification.
+    """
+    # Create an access request payload and clear out the ticket
+    access_request = access_request_payload(TEST_USER.user_id, status=status)
+    access_request["ticket_id"] = ""
+
+    # Publish the access request event
+    await joint_fixture.kafka.publish_event(
+        payload=access_request,
+        type_="upserted",
+        topic=joint_fixture.config.access_request_topic,
+    )
+
+    # Both allowed/denied notifications use the same kwargs for the data steward
+    ds_kwargs = {
+        "full_user_name": TEST_USER.name,
+        "dataset_id": DATASET_ID,
+        "ticket_id": "Missing",
+    }
+
+    # Define the event that should be published by the NOS when the trigger is consumed
+    expected_notification = event_schemas.Notification(
+        recipient_email=joint_fixture.config.central_data_stewardship_email,
+        subject=ds_notification.subject.format(**ds_kwargs),
+        recipient_name="Data Steward",
+        plaintext_body=ds_notification.text.format(**ds_kwargs),
+    )
+
+    # Consume the message and check the recorded events to check the subject line
+    # of the published notification
+    async with joint_fixture.kafka.record_events(
+        in_topic=joint_fixture.config.notification_topic
+    ) as recorder:
+        await joint_fixture.event_subscriber.run(forever=False)
+    assert recorder.recorded_events
+    assert len(recorder.recorded_events) == 2  # One for the user, one for the ds
+    for event in recorder.recorded_events:
+        if event.key == joint_fixture.config.central_data_stewardship_email:
+            assert event.payload == expected_notification.model_dump()
 
 
 async def test_missing_user_id_access_requests(
