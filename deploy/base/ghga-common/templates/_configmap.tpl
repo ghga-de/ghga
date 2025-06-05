@@ -13,9 +13,9 @@ data:
     db_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.dbName" $) "context" $) }}
     {{- if eq $container.type "consumer"}}
     {{- if (include "ghga-common.serviceNameConsumer" $) }}
-    service_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceInstanceIdConsumer" $) "context" $) }}
+    service_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceNameConsumer" $) "context" $) }}
     {{- end }}
-    service_instance_id: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceInstanceId" $) "context" $) }}
+    service_instance_id: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceInstanceIdConsumer" $) "context" $) }}
     {{- else }}
     {{- if (include "ghga-common.serviceName" $) }}
     service_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceName" $) "context" $) }}
