@@ -120,3 +120,14 @@ _topics:
         - Read
         - Write
         - Create
+  deadLetterQueueRetries:
+    topic:
+      name: null
+      value: retry-
+    kafkaUser:
+      operations:
+        - Write
+        - Create
+        - Describe
+      resource:
+        patternType: prefix

@@ -21,6 +21,14 @@ spec:
         patternType: literal
         type: topic
     - operations:
+      - Write
+      - Create
+      - Describe
+      resource:
+        name: retry-
+        patternType: prefix
+        type: topic
+    - operations:
       - Read
       - Describe
       resource:
