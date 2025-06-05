@@ -277,20 +277,17 @@ async def test_missing_user_id_iva_state_changes(
     payloads = (
         iva_state_payload("bogus_user_id", event_schemas.IvaState.CODE_REQUESTED),
         iva_state_payload("bogus_user_id", event_schemas.IvaState.CODE_TRANSMITTED),
-        iva_state_payload("bogus_user_id", event_schemas.IvaState.VERIFIED),
         iva_state_payload("bogus_user_id", event_schemas.IvaState.UNVERIFIED),
     )
 
     event_types = (
         joint_fixture.config.iva_state_changed_type,  # requested
         joint_fixture.config.iva_state_changed_type,  # transmitted
-        joint_fixture.config.iva_state_changed_type,  # verified
         joint_fixture.config.iva_state_changed_type,  # unverified
     )
     notification_names = (
         "IVA Code Requested",
         "IVA Code Transmitted",
-        "IVA Code Validated",
         "IVA Unverified",
     )
     for payload, event_type, notification_name in zip(
@@ -332,11 +329,6 @@ async def test_missing_user_id_iva_state_changes(
             event_schemas.IvaState.CODE_TRANSMITTED,
             notifications.IVA_CODE_TRANSMITTED_TO_USER,
             None,
-        ),
-        (
-            event_schemas.IvaState.VERIFIED,
-            None,
-            notifications.IVA_CODE_SUBMITTED_TO_DS,
         ),
         (
             event_schemas.IvaState.UNVERIFIED,
@@ -512,3 +504,27 @@ async def test_second_factor_recreated_notification(joint_fixture: JointFixture)
         in_topic=joint_fixture.config.notification_topic,
     ):
         await joint_fixture.event_subscriber.run(forever=False)
+
+
+async def test_iva_verified_event_sub(joint_fixture: JointFixture):
+    """Test that the IVA verified event is quietly ignored. This is a regression test
+    for having removed the notification.
+    """
+    # Prepare triggering event (the IVA state change event).
+    iva_event = iva_state_payload("bogus_user_id", event_schemas.IvaState.VERIFIED)
+
+    # Publish the trigger event
+    await joint_fixture.kafka.publish_event(
+        payload=iva_event,
+        type_=joint_fixture.config.iva_state_changed_type,
+        topic=joint_fixture.config.iva_state_changed_topic,
+        key=TEST_USER.user_id,
+    )
+
+    async with joint_fixture.kafka.record_events(
+        in_topic=joint_fixture.config.kafka_dlq_topic
+    ) as recorder:
+        # Run the event subscriber to process the event
+        await joint_fixture.event_subscriber.run(forever=False)
+
+    assert not recorder.recorded_events, "IVA Verified event would be sent to DLQ!"

@@ -158,14 +158,6 @@ GHGA Data Portal.
 """,
 )
 
-IVA_CODE_SUBMITTED_TO_DS = Notification(
-    "IVA Verification Code Submitted",
-    """
-{full_user_name} has submitted an IVA verification code for review.
-
-The specified contact email address is: {email}.
-""",
-)
 
 IVA_UNVERIFIED_TO_USER = Notification(
     "Contact Address Invalidation",

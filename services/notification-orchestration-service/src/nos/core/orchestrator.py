@@ -276,16 +276,6 @@ class Orchestrator(OrchestratorPort):
             notification=notifications.IVA_CODE_TRANSMITTED_TO_USER,
         )
 
-    async def _iva_code_validated(self, *, user: event_schemas.User):
-        """Send a notification to the data steward that an IVA code has been validated."""
-        await self._notification_emitter.notify(
-            email=self._config.central_data_stewardship_email,
-            full_name=DATA_STEWARD_NAME,
-            notification=notifications.IVA_CODE_SUBMITTED_TO_DS.formatted(
-                full_user_name=user.name, email=user.email
-            ),
-        )
-
     async def _iva_unverified(
         self,
         *,
@@ -349,10 +339,6 @@ class Orchestrator(OrchestratorPort):
                 self._iva_code_transmitted,
                 "IVA Code Transmitted",
             ),
-            event_schemas.IvaState.VERIFIED: (
-                self._iva_code_validated,
-                "IVA Code Validated",
-            ),
             event_schemas.IvaState.UNVERIFIED: (
                 partial(
                     self._iva_unverified,
@@ -363,6 +349,13 @@ class Orchestrator(OrchestratorPort):
         }
 
         if user_iva.state not in method_map:
+            if user_iva.state == event_schemas.IvaState.VERIFIED:
+                # If the state is 'verified', we do not send a notification.
+                log.info(
+                    "User IVA state is verified, no notification sent",
+                    extra={"user_id": user_iva.user_id},
+                )
+                return
             unexpected_iva_state_error = self.UnexpectedIvaState(state=user_iva.state)
             log.error(
                 unexpected_iva_state_error,
