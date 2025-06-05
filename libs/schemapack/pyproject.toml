@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=69",
+    "setuptools>=80.3",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -30,6 +30,7 @@ dependencies = [
     "jsonschema >=4.19.2, <5",
     "arcticfreeze ~=0.1.1",
     "rich >13, <14",
+    "typer >= 0.16.0",
 ]
 
 [project.license]
@@ -148,8 +149,9 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "8.3"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [
