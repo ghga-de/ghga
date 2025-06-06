@@ -42,6 +42,7 @@ host: 0.0.0.0
 iva_state_changed_topic: ivas
 iva_state_changed_type: iva_state_changed
 ivas_collection: ivas
+kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: false
 kafka_max_message_size: 1048576
