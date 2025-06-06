@@ -19,6 +19,8 @@ auth_ext_algs:
 auth_ext_keys: null
 auth_key: null
 auth_map_claims: {}
+auth_paths:
+- /api/
 auth_topic: auth
 auto_reload: true
 basic_auth_credentials: null

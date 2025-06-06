@@ -68,6 +68,14 @@ def non_mocked_hosts() -> list:
     return ["testserver"]
 
 
+def assert_no_authorization_header(response):
+    """Check that the response does not contain an authorization header."""
+    assert response.status_code == status.HTTP_200_OK
+
+    assert not response.text
+    assert "Authorization" not in response.headers
+
+
 def assert_has_authorization_header(response, session):
     """Check that the response contains the expected authorization header.
 
@@ -126,55 +134,37 @@ def assert_is_forbidden_error(response, message: str):
 async def test_get_from_root(bare_client: BareClient):
     """Test that a simple GET request passes."""
     response = await bare_client.get("/")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert not response.text
-    assert "Authorization" not in response.headers
+    assert_no_authorization_header(response)
 
 
 async def test_get_from_some_path(bare_client: BareClient):
     """Test that a simple GET request passes."""
     response = await bare_client.get("/some/path")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert not response.text
-    assert "Authorization" not in response.headers
+    assert_no_authorization_header(response)
 
 
 async def test_get_from_some_path_with_query_parameters(bare_client: BareClient):
     """Test that a simple GET request passes."""
     response = await bare_client.get("/some/path?foo=1&bar=2")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert not response.text
-    assert "Authorization" not in response.headers
+    assert_no_authorization_header(response)
 
 
 async def test_patch_to_some_path(bare_client: BareClient):
     """Test that a PATCH request to a random path passes."""
     response = await bare_client.patch("/some/path")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert not response.text
-    assert "Authorization" not in response.headers
+    assert_no_authorization_header(response)
 
 
 async def test_post_to_some_path(bare_client: BareClient):
     """Test that a POST request to a random path passes."""
     response = await bare_client.post("/some/path")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert not response.text
-    assert "Authorization" not in response.headers
+    assert_no_authorization_header(response)
 
 
 async def test_delete_to_some_path(bare_client: BareClient):
     """Test that a DELETE request to a random path passes."""
     response = await bare_client.delete("/some/path")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert not response.text
-    assert "Authorization" not in response.headers
+    assert_no_authorization_header(response)
 
 
 async def test_basic_auth(client_with_basic_auth: ClientWithBasicAuth):
@@ -460,7 +450,10 @@ async def test_put_registered_user_with_session(
 
 
 async def test_random_url_authenticated(client_with_session: ClientWithSession):
-    """Test access via internal access token for authenticated users."""
+    """Test access via internal access token for authenticated users.
+
+    Note that only the configured "qualified" paths should be considered.
+    """
     client, session = client_with_session[:2]
     headers = headers_for_session(session)
     without_csrf = {
@@ -468,28 +461,25 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     }
 
     assert session.state is SessionState.REGISTERED
-    # make a query to a random path, with a not fully authenticated session
-    response = await client.get("/some/path", headers=headers)
+    # make a query to a qualified path, with a not fully authenticated session
+    response = await client.get("/api/some/path", headers=headers)
     # this should pass through without yielding an authorization header
-    assert response.status_code == status.HTTP_200_OK
-    assert "Authorization" not in response.headers
+    assert_no_authorization_header(response)
     assert response.headers["X-CSRF-Token"] == ""
     assert response.headers["Cookie"] == ""
-    response = await client.get("/some/path", headers=without_csrf)
-    assert response.status_code == status.HTTP_200_OK
-    assert "Authorization" not in response.headers
+    response = await client.get("/api/some/path", headers=without_csrf)
+    assert_no_authorization_header(response)
     assert "X-CSRF-Token" not in response.headers
     assert response.headers["Cookie"] == ""
 
-    # also try a post request to a random path, with the proper CSRF token
-    response = await client.post("/some/path", headers=headers)
-    assert response.status_code == status.HTTP_200_OK
-    assert "Authorization" not in response.headers
+    # also try a post request to a qualified path, with the proper CSRF token
+    response = await client.post("/api/some/path", headers=headers)
+    assert_no_authorization_header(response)
     assert response.headers["X-CSRF-Token"] == ""
     assert response.headers["Cookie"] == ""
     # however, a post request without a CSRF token should fail
     # even if this is not critical here, since we are not yet fully unauthenticated
-    response = await client.post("/some/path", headers=without_csrf)
+    response = await client.post("/api/some/path", headers=without_csrf)
     assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
 
     # create second factor and authenticate with that
@@ -509,34 +499,44 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
 
-    # make a query to a random path, without the session
-    response = await client.get("/some/path?foo=1&bar=2")
-    assert response.status_code == status.HTTP_200_OK
-    assert not response.text
-    assert "Authorization" not in response.headers
-    # make a query to a random path, including the session
+    # make a query to a qualified path, without the session
+    response = await client.get("/api/some/path?foo=1&bar=2")
+    assert_no_authorization_header(response)
+    # make a query to an unqualified path, including the session
     response = await client.get("/some/path?foo=1&bar=2", headers=without_csrf)
+    assert_no_authorization_header(response)
+    # make a query to a qualified path, including the session
+    response = await client.get("/api/some/path?foo=1&bar=2", headers=without_csrf)
     assert_has_authorization_header(response, session)
 
-    # make a post request to a random path, without the CSRF token
-    response = await client.post("/some/path", headers=without_csrf)
+    # make a post request to a qualified path, without the CSRF token
+    response = await client.post("/api/some/path", headers=without_csrf)
     assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
-    # make a post request to a random path, with the CSRF token
+    # make a post request to an unqualified path, with the CSRF token
     response = await client.post("/some/path", headers=headers)
+    assert_no_authorization_header(response)
+    # make a post request to a qualified path, with the CSRF token
+    response = await client.post("/api/some/path", headers=headers)
     assert_has_authorization_header(response, session)
 
-    # make a put request to a random path, without the CSRF token
-    response = await client.put("/some/path", headers=without_csrf)
+    # make a put request to a qualified path, without the CSRF token
+    response = await client.put("/api/some/path", headers=without_csrf)
     assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
-    # make a put request to a random path, with the CSRF token
+    # make a put request to an unqualified path, with the CSRF token
     response = await client.put("/some/path", headers=headers)
+    assert_no_authorization_header(response)
+    # make a put request to a qualified path, with the CSRF token
+    response = await client.put("/api/some/path", headers=headers)
     assert_has_authorization_header(response, session)
 
-    # make a delete request to a random path, without the CSRF token
-    response = await client.delete("/some/path", headers=without_csrf)
+    # make a delete request to a qualified path, without the CSRF token
+    response = await client.delete("/api/some/path", headers=without_csrf)
     assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
-    # make a delete request to a random path, with the CSRF token
-    response = await client.delete("/some/path", headers=headers)
+    # make a delete request to an unqualified path, with the CSRF token
+    response = await client.put("/some/path", headers=headers)
+    assert_no_authorization_header(response)
+    # make a delete request to a qualified path, with the CSRF token
+    response = await client.delete("/api/some/path", headers=headers)
     assert_has_authorization_header(response, session)
 
 
@@ -564,7 +564,7 @@ async def test_log_auth_info(
     caplog.set_level(logging.INFO)
     caplog.clear()
 
-    response = await client.put("/some/path", headers=headers)
+    response = await client.put("/api/some/path", headers=headers)
     assert_has_authorization_header(response, session)
 
     records = [record for record in caplog.records if record.module == "auth"]
@@ -572,6 +572,6 @@ async def test_log_auth_info(
     record: Any = records[0]
     assert record.message == "User authorized"
     assert record.method == "PUT"
-    assert record.path == "/some/path"
+    assert record.path == "/api/some/path"
     assert record.user == session.user_id
     assert record.roles == session.roles

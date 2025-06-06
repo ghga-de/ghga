@@ -90,6 +90,11 @@ class Config(
         description="allowed algorithms for signing external tokens",
     )
 
+    auth_paths: list[str] = Field(
+        default=["/api/"],
+        description="path prefixes that can generate an internal auth token",
+    )
+
     basic_auth_credentials: str | None = Field(
         default=None,
         description="credentials for basic authentication, separated by whitespace",

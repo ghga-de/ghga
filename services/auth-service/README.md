@@ -556,6 +556,10 @@ The service requires the following configuration parameters:
 
   - <a id="properties/auth_ext_algs/items"></a>**Items** *(string)*
 
+- <a id="properties/auth_paths"></a>**`auth_paths`** *(array)*: path prefixes that can generate an internal auth token. Default: `["/api/"]`.
+
+  - <a id="properties/auth_paths/items"></a>**Items** *(string)*
+
 - <a id="properties/basic_auth_credentials"></a>**`basic_auth_credentials`**: credentials for basic authentication, separated by whitespace. Default: `null`.
 
   - **Any of**

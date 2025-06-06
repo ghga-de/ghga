@@ -707,6 +707,17 @@
       "title": "Auth Ext Algs",
       "type": "array"
     },
+    "auth_paths": {
+      "default": [
+        "/api/"
+      ],
+      "description": "path prefixes that can generate an internal auth token",
+      "items": {
+        "type": "string"
+      },
+      "title": "Auth Paths",
+      "type": "array"
+    },
     "basic_auth_credentials": {
       "anyOf": [
         {

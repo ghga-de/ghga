@@ -69,6 +69,7 @@ from .headers import get_bearer_token, pass_auth_response, session_to_header
 
 router = APIRouter()
 
+auth_paths = tuple(CONFIG.auth_paths)
 basic_auth_dependency = get_basic_auth_dependency(CONFIG)
 basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else None
 
@@ -422,7 +423,9 @@ async def ext_auth(
     """
     if session:
         await session_store.save_session(session)
-        if session.state is SessionState.AUTHENTICATED:
+        if session.state is SessionState.AUTHENTICATED and request.url.path.startswith(
+            auth_paths
+        ):
             log_auth_info(request, session)
             internal_token = internal_token_from_session(session)
             return pass_auth_response(request, f"Bearer {internal_token}")
