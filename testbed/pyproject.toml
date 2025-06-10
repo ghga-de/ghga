@@ -1,6 +1,6 @@
 [project]
 name = "archive_test_bed"
-version = "12.0.2+2025-05-26-01"
+version = "13.0.6+2025-05-28-02"
 description = "GHGA Archive Test Bed"
 readme = "README.md"
 authors = [

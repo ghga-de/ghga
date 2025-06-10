@@ -184,7 +184,8 @@ def publish_corrected_event(
     }
 
     auth_headers = {"Authorization": f"Bearer {fixtures.config.dlq_token}"}
-    url = f"{fixtures.config.dlq_url}/dins/{dlq_event.topic}"
+    dins = fixtures.config.service_short_names["dataset information service"]
+    url = f"{fixtures.config.dlq_url}/{dins}/{dlq_event.topic}"
     response = fixtures.http.post(url, json=request_body, headers=auth_headers)
     assert response.status_code == 200, f"Failed to delete DLQ event: {response.text}"
     return corrected_payload

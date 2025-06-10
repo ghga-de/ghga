@@ -76,8 +76,16 @@ SEARCH_ALL_DATASETS = {
     ],
     "count": 2,
     "hits": [
-        {"alias": "DS_A", "title": "The complete-A dataset"},
-        {"alias": "DS_B", "title": "The complete-B dataset"},
+        {
+            "alias": "DS_A",
+            "ega_accession": "EGADATASET12345",
+            "title": "The complete-A dataset",
+        },
+        {
+            "alias": "DS_B",
+            "ega_accession": "EGADATASET12346",
+            "title": "The complete-B dataset",
+        },
     ],
 }
 

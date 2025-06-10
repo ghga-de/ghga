@@ -30,7 +30,7 @@ __all__ = ["HttpClient", "Response", "http_fixture"]
 TIMEOUT = 10  # timeout for HTTP requests in seconds
 
 EXT_AUTH_APIS = ["ars", "dcs", "wps", "ums"]  # APIs that need ExtAuth
-BASIC_AUTH_EXCLUDED_APIS = ["sms", "pcs"]  # APIs that don't need BasicAuth
+BASIC_AUTH_EXCLUDED_APIS = ["sms", "pcs", "dlq"]  # APIs that don't need BasicAuth
 
 
 class HttpClient(Client):

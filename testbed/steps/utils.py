@@ -30,7 +30,7 @@ from hexkit.providers.s3.testutils import FileObject
 from pydantic import BaseModel, EmailStr
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
-DATASET_SEARCH_RESULT_KEYS = {"accession", "title"}
+DATASET_SEARCH_RESULT_KEYS = {"accession", "title", "ega_accession"}
 FILE_OVERVIEW_KEYS = {
     "accession",
     "checksum",
