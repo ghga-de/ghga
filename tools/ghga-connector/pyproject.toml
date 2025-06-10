@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=69",
+    "setuptools>=80.3",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -11,7 +11,7 @@ authors = [
 ]
 requires-python = ">=3.9"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_connector"
-version = "1.7.2"
+version = "1.7.3"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
 dependencies = [
     "typer~=0.15",
@@ -69,6 +69,7 @@ fixable = [
     "UP",
     "I",
     "D",
+    "RUF022",
 ]
 ignore = [
     "E111",
@@ -88,6 +89,7 @@ ignore = [
     "D206",
     "D300",
     "UP040",
+    "PLC0206",
 ]
 select = [
     "C90",
@@ -147,8 +149,9 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "8.3"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.coverage.paths]
 source = [
