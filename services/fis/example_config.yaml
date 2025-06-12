@@ -13,6 +13,7 @@ file_validations_collection: fileValidations
 generate_correlation_id: true
 host: 127.0.0.1
 interrogation_success_type: file_interrogation_success
+kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: false
 kafka_max_message_size: 1048576
