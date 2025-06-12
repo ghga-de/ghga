@@ -16,11 +16,14 @@
 
 """Test the normalize module."""
 
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from schemapack import denormalize, load_datapack, load_schemapack
+from schemapack._internals.spec.custom_types import EmbeddingProfile
 from schemapack.exceptions import CircularRelationError
 from schemapack.utils import read_json_or_yaml_mapping
 from tests.fixtures.examples import (
@@ -34,7 +37,7 @@ from tests.fixtures.examples import (
 def run_denormalization_test(
     name: str,
     expected_denormalized_path: Path,
-    ignored_relations: dict[str, list[str]] | None = None,
+    embedding_profile: Mapping[str, Any] | None = None,
 ):
     """Run the denormalization test with optional ignored relations."""
     schemapack_name = name.split(".")[0]
@@ -45,9 +48,9 @@ def run_denormalization_test(
         denormalize(
             datapack=datapack,
             schemapack=schemapack,
-            ignored_relations=ignored_relations,
+            embedding_profile=embedding_profile,
         )
-        if ignored_relations
+        if embedding_profile
         else denormalize(datapack=datapack, schemapack=schemapack)
     )
 
@@ -64,10 +67,19 @@ def test_denormalize_deep_embedding(name: str, expected_denormalized_path: Path)
     run_denormalization_test(name, expected_denormalized_path)
 
 
-IGNORED_RELATIONS = {
-    "simple_nested_relations": {"B": ["c"]},
-    "rooted_simple_resources": {"Dataset": ["files"]},
-    "rooted_circular_relations": {"SomeClass": ["some_relation"]},
+EMBEDDING_PROFILE: Mapping[str, EmbeddingProfile] = {
+    "simple_nested_relations": {
+        "b": {"c": False}
+    },  # direct relation c is not defined but embedded by default
+    "rooted_simple_resources": {"files": False},
+    "rooted_circular_relations": {"some_relation": {"some_relation": False}},
+    "rooted_nested_relations": {
+        "some_relation": {}
+    },  # this is equivalent of profile {}
+    "team_rooted_self_relation": {
+        "teammates": {"teammates": False, "manager": False},
+        "manager": True,
+    },
 }
 
 
@@ -78,7 +90,7 @@ IGNORED_RELATIONS = {
 )
 def test_denormalize_custom_embedding(name: str, expected_denormalized_path: Path):
     """Test the denormalize function with valid datapacks."""
-    ignored_relations = IGNORED_RELATIONS[name.split(".")[-1]]
+    ignored_relations = EMBEDDING_PROFILE.get(name.split(".")[-1])
     run_denormalization_test(name, expected_denormalized_path, ignored_relations)
 
 
@@ -87,6 +99,7 @@ def test_denormalize_custom_embedding(name: str, expected_denormalized_path: Pat
     [
         "self_relation_rooted.rooted_circular_relations",
         "self_relation_rooted.rooted_circular_self_relations",
+        "team_rooted.team_rooted_self_relation",
     ],
 )
 def test_denormalize_circular_relation(name: str):

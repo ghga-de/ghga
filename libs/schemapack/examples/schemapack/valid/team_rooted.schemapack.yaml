@@ -1,0 +1,26 @@
+schemapack: 0.3.0
+description: A schema used to describe relationships between team members.
+classes:
+  Person:
+    id:
+      propertyName: name
+    content: ../../content_schemas/AnyObject.schema.json # Any object allowed
+    relations:
+      teammates:
+        targetClass: Person # refering to itself
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: true
+      manager:
+        targetClass: Person # refering to itself
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: false
+
+rootClass: Person

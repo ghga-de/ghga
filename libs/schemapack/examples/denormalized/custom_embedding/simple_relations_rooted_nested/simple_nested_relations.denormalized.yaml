@@ -1,7 +1,4 @@
-# The result of partial embedding where embedding relation c is not prohibited for
-# class A, but prohibited for class B. Since the embedding starts from A,
-# the condition implies c is prohibited for A(b)>B. Thus c is embedded in A, but not
-# embedded within A(b)>B
+# embedding profile: {"c": True, "b": {"c": False}}
 alias: a1
 property_a: property_of_a1
 b:

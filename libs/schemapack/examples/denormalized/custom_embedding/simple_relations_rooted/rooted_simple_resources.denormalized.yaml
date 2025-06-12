@@ -1,4 +1,5 @@
 # The result of partial embedding where "files" are not fully embedded
+# embedding profile: {"files": False}
 alias: example_dataset_1
 dac_contact: dac@example.org
 files:

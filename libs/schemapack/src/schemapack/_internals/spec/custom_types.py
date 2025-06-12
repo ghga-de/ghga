@@ -16,6 +16,7 @@
 
 """Custom types annotations used for type hinting."""
 
+from collections.abc import Mapping
 from typing import Annotated, TypeAlias
 
 from arcticfreeze import FrozenDict
@@ -29,3 +30,4 @@ ContentPropertyName: TypeAlias = _NonEmptyStr
 IdPropertyName: TypeAlias = _NonEmptyStr
 FrozenType: TypeAlias = FrozenDict[str, "str | FrozenType | tuple"]
 ThawedType: TypeAlias = dict[str, "str | ThawedType | list"]
+EmbeddingProfile: TypeAlias = Mapping[str, "bool | EmbeddingProfile"] | None

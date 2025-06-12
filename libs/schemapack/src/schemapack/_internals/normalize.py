@@ -18,9 +18,13 @@
 
 from collections import defaultdict
 from collections.abc import Mapping
-from typing import TypeAlias
+from dataclasses import dataclass
+from typing import Any, TypeAlias
 
-from schemapack._internals.spec.custom_types import RelationPropertyName
+from schemapack._internals.exceptions import InvalidEmbeddingProfileError
+from schemapack._internals.spec.custom_types import EmbeddingProfile
+from schemapack._internals.spec.datapack import Resource
+from schemapack._internals.spec.schemapack import ClassDefinition
 from schemapack.exceptions import CircularRelationError, ValidationAssumptionError
 from schemapack.spec.custom_types import ClassName, ResourceId
 from schemapack.spec.datapack import DataPack
@@ -29,11 +33,21 @@ from schemapack.spec.schemapack import SchemaPack
 JsonObjectCompatible: TypeAlias = dict[str, object]
 
 
-def denormalize(  # noqa: PLR0912,C901
+@dataclass
+class DenormalizationContext:
+    """Context for denormalization to group repeated arguments."""
+
+    datapack: DataPack
+    schemapack: SchemaPack
+    embedding_profile: Mapping[str, Any] | None
+    resource_blacklist: dict[ClassName, set[ResourceId]]
+
+
+def denormalize(
     *,
     datapack: DataPack,
     schemapack: SchemaPack,
-    ignored_relations: Mapping[ClassName, list[RelationPropertyName]] | None = None,
+    embedding_profile: EmbeddingProfile = None,
     _resource_blacklist: Mapping[ClassName, set[ResourceId]] | None = None,
     _alt_root_class_name: ClassName | None = None,
     _alt_root_resource_id: ResourceId | None = None,
@@ -47,9 +61,10 @@ def denormalize(  # noqa: PLR0912,C901
             The datapack to be denormalized. Must be rooted.
         schemapack:
             The schemapack to be used for looking up the classes of relations.
-        ignored_relations:
-            An optional list defining which relation should not be embedded for which
-            datapack root class.
+        embedding_profile:
+            An optional profile defining which relations should be embedded and which
+            should not. If None, all relations will be embedded. If a relation is not
+            present in the profile, it will be embedded by default.
         _resource_blacklist:
             An optional blacklist of resources (a mapping with resource ids as values
             and class names as keys) that cause an error to be raised if they are
@@ -73,7 +88,7 @@ def denormalize(  # noqa: PLR0912,C901
             If a circular relation is detected.
     """
     if not datapack.rootResource:
-        raise ValueError("Datapack must have a root resource.")
+        raise ValueError("Datapack must be rooted.")
 
     if not datapack.rootClass:
         raise ValueError("Datapack must have a root class.")
@@ -81,39 +96,27 @@ def denormalize(  # noqa: PLR0912,C901
     root_class_name = _alt_root_class_name or datapack.rootClass
     root_resource_id = _alt_root_resource_id or datapack.rootResource
 
-    resource_blacklist: dict[ClassName, set[ResourceId]] = defaultdict(set)
-    resource_blacklist[root_class_name].add(root_resource_id)
-    if _resource_blacklist:
-        for class_name, resource_ids in _resource_blacklist.items():
-            resource_blacklist[class_name].update(resource_ids)
+    resource_blacklist = _initialize_blacklist(
+        embedding_profile, root_class_name, root_resource_id, _resource_blacklist
+    )
 
-    root_class_resources = datapack.resources.get(root_class_name)
-    if not root_class_resources:
-        raise ValidationAssumptionError(context="root class lookup")
+    root_resource = _get_root_resource(datapack, root_class_name, root_resource_id)
 
-    root_resource = root_class_resources.get(root_resource_id)
-    if not root_resource:
-        raise ValidationAssumptionError(context="root resource lookup")
-
-    root_class_definition = schemapack.classes.get(root_class_name)
-    if not root_class_definition:
-        raise RuntimeError(
-            "This is a bug and should not happen. It should be caught by the schemapack"
-            + " spec validation."
-        )
+    root_class_definition = _get_class_definition(schemapack, root_class_name)
 
     denormalized_object: JsonObjectCompatible = {
-        root_class_definition.id.propertyName: root_resource_id
+        root_class_definition.id.propertyName: root_resource_id,
+        **root_resource.content,
     }
-    denormalized_object.update(root_resource.content)
 
     for relation_name, resource_relations in root_resource.relations.items():
         target_ids = resource_relations.targetResources
         target_class_name = resource_relations.targetClass
 
-        if ignored_relations and relation_name in ignored_relations.get(
-            root_class_name, {}
-        ):
+        # decide whether to embed the relation 'relation_name'
+        should_embed = _should_embed(embedding_profile, relation_name)
+
+        if should_embed is False:
             denormalized_object[relation_name] = (
                 [*sorted(target_ids)]
                 if isinstance(target_ids, frozenset)
@@ -123,47 +126,146 @@ def denormalize(  # noqa: PLR0912,C901
             )
             continue
 
-        if isinstance(target_ids, frozenset):
-            denormalized_object[relation_name] = []
-
-            # make the output predictable:
-            sorted_target_ids = sorted(target_ids)
-
-            for target_id in sorted_target_ids:
-                if (
-                    target_class_name in resource_blacklist
-                    and target_id in resource_blacklist[target_class_name]
-                ):
-                    raise CircularRelationError(
-                        "Cannot perform denormalization of datapack with circular relations."
-                        + " The circular relation involved the resource with id"
-                        + f" {target_id} of class {target_class_name}."
-                    )
-
-                target_resource = denormalize(
-                    datapack=datapack,
-                    schemapack=schemapack,
-                    ignored_relations=ignored_relations,
-                    _resource_blacklist=resource_blacklist,
-                    _alt_root_class_name=target_class_name,
-                    _alt_root_resource_id=target_id,
-                )
-
-                denormalized_object[relation_name].append(  # type: ignore
-                    target_resource
-                )
-
-        elif isinstance(target_ids, str):
-            denormalized_object[relation_name] = denormalize(
-                datapack=datapack,
-                schemapack=schemapack,
-                ignored_relations=ignored_relations,
-                _resource_blacklist=resource_blacklist,
-                _alt_root_class_name=target_class_name,
-                _alt_root_resource_id=target_ids,
-            )
-
-        else:
-            denormalized_object[relation_name] = None
+        next_embedding_profile = _get_next_embedding_profile(
+            embedding_profile, relation_name
+        )
+        denormalization_context = DenormalizationContext(
+            datapack=datapack,
+            schemapack=schemapack,
+            embedding_profile=next_embedding_profile,
+            resource_blacklist=resource_blacklist,
+        )
+        denormalized_object[relation_name] = _process_recursion(
+            denormalization_context,
+            target_class_name,
+            target_ids,
+        )
 
     return denormalized_object
+
+
+def _initialize_blacklist(
+    embedding_profile: EmbeddingProfile,
+    root_class_name: ClassName,
+    root_resource_id: ResourceId,
+    _resource_blacklist: Mapping[ClassName, set[ResourceId]] | None,
+) -> dict[ClassName, set[ResourceId]]:
+    """Function to initialize the resource blacklist."""
+    resource_blacklist: dict[ClassName, set[ResourceId]] = defaultdict(set)
+    if not embedding_profile:
+        resource_blacklist[root_class_name].add(root_resource_id)
+
+    if _resource_blacklist:
+        for class_name, resource_ids in _resource_blacklist.items():
+            resource_blacklist[class_name].update(resource_ids)
+    return resource_blacklist
+
+
+def _get_root_resource(
+    datapack: DataPack, root_class_name: ClassName, root_resource_id: ResourceId
+) -> Resource:
+    """Function to get the root resource from the datapack."""
+    root_class_resources = datapack.resources.get(root_class_name)
+    if not root_class_resources:
+        raise ValidationAssumptionError(context="root class lookup")
+
+    root_resource = root_class_resources.get(root_resource_id)
+    if not root_resource:
+        raise ValidationAssumptionError(context="root resource lookup")
+
+    return root_resource
+
+
+def _get_class_definition(
+    schemapack: SchemaPack, root_class_name: ClassName
+) -> ClassDefinition:
+    """Function to get the class definition from the schemapack."""
+    root_class_definition = schemapack.classes.get(root_class_name)
+    if not root_class_definition:
+        raise RuntimeError(
+            "This is a bug and should not happen. It should be caught by the schemapack"
+            + " spec validation."
+        )
+    return root_class_definition
+
+
+def _should_embed(embedding_profile: EmbeddingProfile, relation_name: str) -> bool:
+    """Function to decide whether to embed a relation based on the embedding profile.
+    When a relation_name is not found in the profile, it returns True by default.
+    If the profile is None, it returns True for all relations.
+    If the profile is empty, it returns True for all relations.
+    """
+    if not embedding_profile:
+        return True
+
+    value = embedding_profile.get(relation_name)
+    if value is None:
+        return True
+
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, dict):
+        return True
+
+    raise InvalidEmbeddingProfileError(
+        f"Invalid embedding profile: expected bool or dict for '{relation_name}', got {type(value).__name__}"
+    )
+
+
+def _get_next_embedding_profile(
+    embedding_profile: EmbeddingProfile, relation_name: str
+) -> EmbeddingProfile:
+    """Function to get the next embedding profile for a relation."""
+    if not embedding_profile:
+        return None
+    value = embedding_profile.get(relation_name)
+    if isinstance(value, dict):
+        return value
+    return None
+
+
+def _process_recursion(
+    context: DenormalizationContext,
+    class_name: ClassName,
+    resource_ids: frozenset[ResourceId] | ResourceId | None,
+) -> list[JsonObjectCompatible] | JsonObjectCompatible | None:
+    """Function to process the recursion for denormalization."""
+    if isinstance(resource_ids, frozenset):
+        return [
+            _recursive_denormalize(
+                context,
+                class_name,
+                target_id,
+            )
+            for target_id in sorted(resource_ids)
+        ]
+    elif isinstance(resource_ids, str):
+        return _recursive_denormalize(
+            context,
+            class_name,
+            resource_ids,
+        )
+    else:
+        return None
+
+
+def _recursive_denormalize(
+    context: DenormalizationContext,
+    class_name: ClassName,
+    resource_id: ResourceId,
+):
+    """Function used in recursively denormalize a resource by calling the function 'denormalize'."""
+    if resource_id in context.resource_blacklist.get(class_name, set()):
+        raise CircularRelationError(
+            f"Cannot perform denormalization of datapack with circular relations. "
+            f"The circular relation involved the resource with id {resource_id} of class {class_name}."
+        )
+
+    return denormalize(
+        datapack=context.datapack,
+        schemapack=context.schemapack,
+        embedding_profile=context.embedding_profile,
+        _resource_blacklist=context.resource_blacklist,
+        _alt_root_class_name=class_name,
+        _alt_root_resource_id=resource_id,
+    )

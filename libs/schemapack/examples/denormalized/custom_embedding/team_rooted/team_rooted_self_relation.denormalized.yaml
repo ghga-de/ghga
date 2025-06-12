@@ -1,0 +1,19 @@
+name: Alice
+teammates:
+  - name: Bob
+    teammates:
+      - Alice
+      - Charlie
+    manager: Dave
+  - name: Charlie
+    teammates:
+      - Alice
+      - Bob
+    manager: Dave
+manager:
+  name: Dave
+  teammates: []
+  manager:
+    name: Eve
+    teammates: []
+    manager: null

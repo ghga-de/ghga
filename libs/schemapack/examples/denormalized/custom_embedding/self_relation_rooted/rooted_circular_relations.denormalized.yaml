@@ -1,5 +1,7 @@
 # The result of custom embedding on a datapack with circular relations.
-# Denormalization is possible when 'some_relation' is excluded from the embedding.
+# embedding profile: {"some_relation": {"some_relation": False}}
 alias: a
 some_relation:
-  - b
+  - alias: b # <- embedded
+    some_relation:
+      - a # <- not embedded
