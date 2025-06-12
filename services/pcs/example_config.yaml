@@ -11,6 +11,7 @@ file_deletion_request_topic: file-deletion-requests
 file_deletion_request_type: file_deletion_requested
 generate_correlation_id: true
 host: 127.0.0.1
+kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: false
 kafka_max_message_size: 1048576
