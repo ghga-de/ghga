@@ -22,6 +22,7 @@ file_upload_received_type: file_uploaded
 generate_correlation_id: true
 host: 127.0.0.1
 interrogation_failure_type: file_validation_failed
+kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: true
 kafka_max_message_size: 1048576
