@@ -50,7 +50,8 @@
           </div>
           <mat-nav-list>
             <app-site-header-nav-buttons
-              class="mb-4 grid grid-cols-1 gap-y-2 px-4" /><app-account-button /></mat-nav-list
+              class="mb-4 grid grid-cols-1 gap-y-2 px-4"
+              (click)="sidenav.toggle()" /><app-account-button /></mat-nav-list
         ></mat-sidenav>
         <mat-sidenav-container></mat-sidenav-container>
       </mat-sidenav-container>
