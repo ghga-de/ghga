@@ -160,11 +160,31 @@
                 </p>
               }
               <p>The status or address of this request cannot be changed any more.</p>
+            } @else if (ivas().length === 1) {
+              @let iva = ivas()[0];
+              <p>
+                The user has only one verification address. It will be the address used
+                to secure this access request:
+              </p>
+              <div class="mt-2 overflow-x-auto">
+                <div class="flex min-w-md items-center">
+                  <div class="grow py-1 ps-4">
+                    {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}
+                  </div>
+                  <div
+                    [class]="(iva.state | IvaStatePipe).class"
+                    class="w-40 flex-shrink-0 py-2 ps-4 align-middle"
+                  >
+                    {{ (iva.state | IvaStatePipe).name }}
+                  </div>
+                </div>
+              </div>
             } @else {
               <label for="iva-selection-group" class="mb-2 font-medium">
                 @if (selectedIvaIdRadioButton()) {
-                  If you wish to change the verification address used for this access
-                  request, please select it below:
+                  The user has already specified a preferred verification address to use
+                  for this access request. If you wish to change it, please select it
+                  below:
                 } @else {
                   Please select the verification address that should be used to secure
                   the access request:
@@ -176,23 +196,25 @@
                 id="iva-selection-group"
                 class="iva-radio-group"
               >
-                <table class="mt-2">
+                <div
+                  class="divide-outline mt-2 flex flex-col divide-y-1 overflow-x-auto"
+                >
                   @for (iva of ivas(); track iva.id) {
-                    <tr class="border-outline border-t-1 border-b-1">
-                      <td class="py-1">
+                    <div class="flex min-w-md items-center">
+                      <div class="grow py-1">
                         <mat-radio-button [value]="iva.id">
                           {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}
                         </mat-radio-button>
-                      </td>
-                      <td
+                      </div>
+                      <div
                         [class]="(iva.state | IvaStatePipe).class"
-                        class="w-40 py-2 ps-4 align-middle"
+                        class="w-40 flex-shrink-0 py-2 ps-4 align-middle"
                       >
                         {{ (iva.state | IvaStatePipe).name }}
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   }
-                </table>
+                </div>
               </mat-radio-group>
             }
           </mat-card-content>

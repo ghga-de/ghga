@@ -70,10 +70,21 @@ export const allIvas: UserWithIva[] = [
     user_name: 'Prof. Jane Roe',
     user_email: 'roe@home.org',
   },
+  {
+    id: 'd88712a6-c687-4ec6-8937-488d634f47c6',
+    type: IvaType.Phone,
+    value: '+441234567890005',
+    changed: '2025-02-01T00:00:00',
+    state: IvaState.Verified,
+    user_id: 'mar@test.dev',
+    user_name: 'Dr. Joan Mar',
+    user_email: 'mar@home.org',
+  },
 ];
 
 export const allIvasOfDoe = allIvas.filter((iva) => iva.user_id === 'doe@test.dev');
 export const allIvasOfRoe = allIvas.filter((iva) => iva.user_id === 'roe@test.dev');
+export const allIvasOfMar = allIvas.filter((iva) => iva.user_id === 'mar@test.dev');
 
 /**
  * Metldata API
@@ -618,7 +629,28 @@ export const accessRequests = [
     changed_by: 'doe@test.dev',
     internal_note: 'We need to ask X about this.',
     note_to_requester: 'Please wait for the approval. Additional steps were required.',
-    ticket_id: 'GSI-1582',
+    ticket_id: '1582',
+  },
+
+  {
+    id: '3823d3f7-da5d-4dcb-afd2-d45de96c8cba',
+    user_id: 'mar@test.dev',
+    dataset_id: 'GHGAD12345678901234',
+    dac_alias: 'Data Access Committee of Heidelberg Center for Personalized Oncology',
+    dac_email: 'info@dac.com',
+    dataset_title: 'Test dataset for details',
+    full_user_name: 'Dr. Joan Mar',
+    email: 'mar@home.org',
+    request_text: 'This is a test request for dataset GHGAD12345678901234.',
+    access_starts: access_starts,
+    access_ends: access_ends,
+    request_created: '2025-05-18T12:04:03.000Z',
+    status: 'pending',
+    status_changed: '2025-05-19T12:04:02.000Z',
+    changed_by: 'mar@test.dev',
+    internal_note: 'We need to ask X about this.',
+    note_to_requester: 'Please wait for the approval. Additional steps were required.',
+    ticket_id: '1138',
   },
 ];
 

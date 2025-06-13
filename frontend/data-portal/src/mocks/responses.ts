@@ -7,6 +7,7 @@
 import {
   allIvas,
   allIvasOfDoe,
+  allIvasOfMar,
   allIvasOfRoe,
   datasetInformation,
   datasets,
@@ -37,6 +38,7 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // User IVAs
   'GET /api/auth/users/doe@test.dev/ivas': allIvasOfDoe,
   'GET /api/auth/users/roe@test.dev/ivas': allIvasOfRoe,
+  'GET /api/auth/users/mar@test.dev/ivas': allIvasOfMar,
 
   // New IVA
   'POST /api/auth/users/*/ivas': { id: 'ABC123' },
