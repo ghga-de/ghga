@@ -15,19 +15,19 @@ mat-card {
   }
 }
 
-:not(mat-radio-group) > table td {  
-  text-align: left;  
-  vertical-align: top;  
-  min-width: 240px;  
-  padding-bottom: 4px;  
-}  
-
-th {  
-  width: 144px;  
-  min-width: 144px;  
+:not(mat-radio-group) > table td {
   text-align: left;
   vertical-align: top;
-}  
+  min-width: 240px;
+  padding-bottom: 4px;
+}
+
+th {
+  width: 144px;
+  min-width: 144px;
+  text-align: left;
+  vertical-align: top;
+}
 
 mat-dialog-actions {
   border-top: 1px solid rgba(0, 0, 0, 0.12);
@@ -35,7 +35,7 @@ mat-dialog-actions {
 
 a mat-icon {
   scale: 0.6;
-  margin: 0 -5px 0 -3px;
+  margin: 0 -5px -2px -3px;
   transform: translateY(3px);
   height: 16px;
   font-size: 18px;

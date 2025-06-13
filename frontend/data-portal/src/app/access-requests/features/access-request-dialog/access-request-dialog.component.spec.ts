@@ -30,6 +30,7 @@ const mockConfig = {
   access_upfront_max_days: 180,
   access_grant_min_days: 7,
   access_grant_max_days: 730,
+  access_grant_max_extend: 5,
   default_access_duration_days: 365,
   oidc_client_id: 'test-oidc-client-id',
   oidc_redirect_url: 'test/redirect',

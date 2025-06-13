@@ -26,6 +26,7 @@ max_facet_options: 7
 access_upfront_max_days: 180
 access_grant_min_days: 7
 access_grant_max_days: 730
+access_grant_max_extend: 5
 default_access_duration_days: 365
 
 oidc_client_id: ghga-client

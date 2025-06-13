@@ -1,0 +1,106 @@
+@if (!locked()) {
+  <tr>
+    <th
+      class="w-36 min-w-36 pe-1 text-start"
+      [class.align-top]="!isOpen()"
+      [class.align-center]="isOpen()"
+    >
+      Access Starts:
+    </th>
+    <td
+      class="flex min-w-60"
+      [class.items-center]="isOpen()"
+      [class.items-start]="!isOpen()"
+    >
+      @if (isOpen()) {
+        <mat-form-field class="grow">
+          <mat-datepicker-toggle
+            matIconSuffix
+            [for]="datepickerFrom"
+          ></mat-datepicker-toggle>
+          <input
+            matInput
+            [formControl]="fromFormControl"
+            [matDatepicker]="datepickerFrom"
+            [(ngModel)]="fromField"
+            [min]="minFromDate"
+            [max]="maxFromDate"
+            (dateChange)="onDateSelected($event, true)"
+            class="pr-8"
+          />
+          @if (fromFieldErrorMessage()) {
+            <mat-error>
+              {{ fromFieldErrorMessage() }}
+            </mat-error>
+          }
+          <mat-datepicker #datepickerFrom></mat-datepicker>
+        </mat-form-field>
+        <mat-chip
+          class="smaller-chip interactive-chip cancel-edit-button mx-2 mb-5"
+          (click)="cancel()"
+          ><mat-icon>close</mat-icon></mat-chip
+        >
+        <mat-chip
+          class="smaller-chip interactive-chip save-edit-button mb-5"
+          (click)="save()"
+          [class.grayscale]="saveDisabled()"
+          [disabled]="saveDisabled()"
+          ><mat-icon>check</mat-icon></mat-chip
+        >
+      } @else {
+        <span class="grow">
+          {{ fromField() | date: 'yyyy-MM-dd' }}
+        </span>
+        <mat-chip
+          (click)="open()"
+          class="smaller-chip interactive-chip edit-button ms-2"
+          ><mat-icon class="scale-[0.75]">edit</mat-icon>
+        </mat-chip>
+      }
+    </td>
+  </tr>
+  <tr>
+    <th
+      class="w-36 min-w-36 pe-1 text-start"
+      [class.align-top]="!isOpen()"
+      [class.align-center]="isOpen()"
+    >
+      Access Ends:
+    </th>
+    <td
+      class="flex min-w-60 pb-1"
+      [class.items-center]="isOpen()"
+      [class.items-start]="!isOpen()"
+    >
+      @if (isOpen()) {
+        <mat-form-field class="grow">
+          <mat-datepicker-toggle
+            matIconSuffix
+            [for]="datepickerUntil"
+          ></mat-datepicker-toggle>
+          <input
+            matInput
+            [formControl]="untilFormControl"
+            [matDatepicker]="datepickerUntil"
+            [(ngModel)]="untilField"
+            [min]="minUntilDate"
+            [max]="maxUntilDate"
+            (dateChange)="onDateSelected($event, false)"
+            class="pr-8"
+          />
+          @if (untilFieldErrorMessage()) {
+            <mat-error>
+              {{ untilFieldErrorMessage() }}
+            </mat-error>
+          }
+          <mat-datepicker #datepickerUntil></mat-datepicker>
+        </mat-form-field>
+        <span class="w-16"></span>
+      } @else {
+        <span class="grow">
+          {{ untilField() | date: 'yyyy-MM-dd' }}
+        </span>
+      }
+    </td>
+  </tr>
+}

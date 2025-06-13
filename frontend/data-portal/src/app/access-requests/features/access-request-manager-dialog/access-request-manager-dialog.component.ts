@@ -41,6 +41,7 @@ import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
 import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
 import { SplitLinesPipe } from '../../../shared/pipes/split-lines.pipe';
+import { AccessRequestDurationEditComponent } from '../access-request-duration-edit/access-request-duration-edit.component';
 import { AccessRequestFieldEditComponent } from '../access-request-field-edit/access-request-field-edit.component';
 
 /**
@@ -65,6 +66,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
     MatChipsModule,
     MatInputModule,
     SplitLinesPipe,
+    AccessRequestDurationEditComponent,
   ],
   providers: [IvaTypePipe, DatePipe],
   templateUrl: './access-request-manager-dialog.component.html',
@@ -73,6 +75,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   readonly dialogRef = inject(MatDialogRef<AccessRequestManagerDialogComponent>);
   readonly data = inject<AccessRequest>(MAT_DIALOG_DATA);
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+  allowedState = AccessRequestStatus.allowed;
   #ivaService = inject(IvaService);
   #confirmationService = inject(ConfirmationService);
   #notificationService = inject(NotificationService);
@@ -165,7 +168,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
 
   /**
    * Memorize which editors have changes.
-   * @param event - The name of the field and whether it was edited
+   * @param event - The name of the fields and whether they were edited
    */
   edited(event: [keyof AccessRequest, boolean]): void {
     const [name, edited] = event;
@@ -174,12 +177,12 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   }
 
   /**
-   * Save a field change.
-   * @param event - The name of the field and the new value
+   * Save field changes.
+   * @param event - The names of the field and their new values
    */
-  saved(event: [keyof AccessRequest, string]): void {
-    const [name, value] = event;
-    this.#update({ [name]: value });
+  saved(event: Map<keyof AccessRequest, string>): void {
+    const data = Object.fromEntries(event);
+    this.#update(data as Partial<AccessRequest>);
   }
 
   /**

@@ -20,6 +20,7 @@ interface Config {
   access_upfront_max_days: number;
   access_grant_min_days: number;
   access_grant_max_days: number;
+  access_grant_max_extend: number;
   default_access_duration_days: number;
   oidc_client_id: string;
   oidc_redirect_url: string;
@@ -178,6 +179,14 @@ export class ConfigService {
    */
   get accessGrantMaxDays(): number {
     return this.#config.access_grant_max_days;
+  }
+
+  /**
+   * Gets the maximum factor of max days a data steward can extend an access grant
+   * @returns the number of days
+   */
+  get accessGrantMaxExtend(): number {
+    return this.#config.access_grant_max_extend;
   }
 
   /**

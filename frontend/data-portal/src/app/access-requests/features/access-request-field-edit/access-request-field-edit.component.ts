@@ -4,23 +4,19 @@
  * @license Apache-2.0
  */
 
-import { DatePipe } from '@angular/common';
 import {
   Component,
   computed,
-  effect,
   inject,
   input,
   model,
+  OnInit,
   output,
   signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatChipsModule } from '@angular/material/chips';
-import {
-  MatDatepickerInputEvent,
-  MatDatepickerModule,
-} from '@angular/material/datepicker';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
@@ -37,12 +33,12 @@ import { ConfigService } from '@app/shared/services/config.service';
     MatIconModule,
     MatInputModule,
     FormsModule,
-    DatePipe,
+    ReactiveFormsModule,
   ],
   templateUrl: './access-request-field-edit.component.html',
   styleUrl: './access-request-field-edit.component.scss',
 })
-export class AccessRequestFieldEditComponent {
+export class AccessRequestFieldEditComponent implements OnInit {
   #config = inject(ConfigService);
   #baseTicketUrl = this.#config.helpdeskTicketUrl;
 
@@ -51,59 +47,43 @@ export class AccessRequestFieldEditComponent {
   name = input.required<keyof AccessRequest>();
   label = input.required<string>();
 
-  isDate = input<boolean>(false);
-
   rows = computed<number>(() => (this.name().includes('note') ? 5 : 1));
   locked = computed<boolean>(() => this.request().status !== 'pending');
 
-  field = model<string>('');
+  field = model<string>();
 
-  saved = output<[keyof AccessRequest, string]>();
+  saved = output<Map<keyof AccessRequest, string>>();
   edited = output<[keyof AccessRequest, boolean]>();
 
   isOpen = signal<boolean>(false);
   isModified = signal<boolean>(false);
 
   ticketUrl = computed<string | null>(() =>
-    this.name() == 'ticket_id' && this.field()
-      ? this.#baseTicketUrl + this.field()
-      : null,
+    this.name() === 'ticket_id' ? this.#baseTicketUrl + this.field() : null,
   );
 
-  #defaultValue = computed<string>(() => (this.request() as any)[this.name()] || '');
+  #defaultValue = computed<string>(() => this.request()[this.name()] || '');
 
-  #initFieldEffect = effect(() => this.field.update(() => this.#defaultValue()));
+  /**
+   * Populate the editable field with the values from the access request on component init.
+   */
+  ngOnInit(): void {
+    this.field.update(() => this.#defaultValue());
+  }
 
   #getValue = () => {
-    const name = this.name();
-    let value = this.field();
-    if (name === 'ticket_id' && value && value.startsWith(this.#baseTicketUrl)) {
-      value = value.slice(this.#baseTicketUrl.length);
+    if (
+      this.name() === 'ticket_id' &&
+      this.field() &&
+      (this.field() as string).startsWith(this.#baseTicketUrl)
+    ) {
+      this.field.set((this.field() as string).slice(this.#baseTicketUrl.length));
     }
-    return value;
+    return this.field();
   };
 
   edit = () => {
     this.isOpen.set(true);
-  };
-
-  onDateSelected = (event: MatDatepickerInputEvent<Date>) => {
-    if (event.value) {
-      const selectedLocalDate = event.value;
-
-      const utcDateMidnight = new Date(
-        Date.UTC(
-          selectedLocalDate.getFullYear(),
-          selectedLocalDate.getMonth(),
-          selectedLocalDate.getDate(),
-        ),
-      );
-      this.field.set(utcDateMidnight.toISOString());
-      this.changed();
-    } else {
-      this.field.set('');
-      this.changed();
-    }
   };
 
   changed = () => {
@@ -124,13 +104,13 @@ export class AccessRequestFieldEditComponent {
   };
 
   save = () => {
-    const name = this.name();
-    const value = this.#getValue();
-    this.field.update(() => value);
-    if (this.isModified()) {
-      this.saved.emit([name, value]);
-      this.edited.emit([name, false]);
+    if (this.field()) {
+      this.field.update(() => this.field());
+      if (this.isModified()) {
+        this.saved.emit(new Map([[this.name(), this.field() as string]]));
+        this.edited.emit([this.name(), false]);
+      }
+      this.isOpen.set(false);
     }
-    this.isOpen.set(false);
   };
 }

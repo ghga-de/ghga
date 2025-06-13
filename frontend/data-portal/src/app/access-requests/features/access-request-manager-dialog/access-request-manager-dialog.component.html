@@ -1,8 +1,8 @@
 <div>
   <h2 mat-dialog-title>Access Request Detail</h2>
   <mat-dialog-content>
-    <div class="grid grid-cols-1 gap-2 lg:grid-cols-2">
-      <div class="my-2 flex flex-col items-start gap-2">
+    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div class="my-2 flex flex-col items-start gap-3">
         <mat-card>
           <mat-card-header>
             <mat-card-title>Request & Dataset</mat-card-title>
@@ -25,15 +25,8 @@
                       [href]="'/dataset/' + data.dataset_id"
                       target="_blank"
                       tabindex="-1"
-                    >
-                      {{ data.dataset_id }}
-                      <mat-icon
-                        role="img"
-                        aria-hidden="true"
-                        class="mat-icon material-symbols-outlined mat-icon-no-color no-translate h-4 w-4"
-                        data-mat-icon-type="font"
-                        >open_in_new</mat-icon
-                      >
+                      >{{ data.dataset_id
+                      }}<mat-icon aria-hidden="true">open_in_new</mat-icon>
                     </a>
                   </td>
                 </tr>
@@ -60,24 +53,12 @@
           <mat-card-content>
             <table class="w-full">
               <tbody>
-                <app-access-request-field-edit
+                <app-access-request-duration-edit
                   [request]="data"
-                  name="access_starts"
-                  label="Access starts"
-                  [isDate]="true"
                   (saved)="saved($event)"
                   (edited)="edited($event)"
                   class="contents"
-                ></app-access-request-field-edit>
-                <app-access-request-field-edit
-                  [request]="data"
-                  name="access_ends"
-                  label="Access ends"
-                  [isDate]="true"
-                  (saved)="saved($event)"
-                  (edited)="edited($event)"
-                  class="contents"
-                ></app-access-request-field-edit>
+                ></app-access-request-duration-edit>
                 <tr>
                   <th>Request details:</th>
                   <td class="max-h-38 overflow-y-auto">
@@ -93,7 +74,8 @@
               {{ data.request_created | date: friendlyDateFormat }}.
             </p>
             <p class="text-on-surface-variant pt-2 text-sm">
-              Access has been requested from
+              Access has been
+              {{ data.status === allowedState ? 'granted' : 'requested ' }} from
               {{ data.access_starts | date: friendlyDateFormat }} until
               {{ data.access_ends | date: friendlyDateFormat }}.
             </p>
@@ -129,7 +111,7 @@
           </mat-card-content>
         </mat-card>
       </div>
-      <div class="my-2 flex flex-col items-start gap-2">
+      <div class="my-2 flex flex-col items-start gap-3">
         <mat-card>
           <mat-card-header> <mat-card-title>Notes</mat-card-title> </mat-card-header>
           <mat-card-content>
