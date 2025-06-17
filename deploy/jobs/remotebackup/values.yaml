@@ -4,7 +4,7 @@ image:
 
 cronSchedule: "0 3 * * *"
 
-configPrefix: config
+configPrefix: ""
 
 containers:
 - name: default
