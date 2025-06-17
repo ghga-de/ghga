@@ -15,6 +15,8 @@ containers:
     fileName: .config.yaml
 
 vaultAgent:
+  annotations:
+    vault.hashicorp.com/agent-pre-populate-only: "true"
   secrets:
     mongodb:
       parameterName: DATABASE__MONGODB__SOURCE_CONNECTION_STR
