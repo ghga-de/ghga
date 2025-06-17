@@ -12,10 +12,9 @@ containers:
   cmd: "remotebackup backup"
   config:
     name: config
-    fileName: config.yaml
+    fileName: .config.yaml
 
 vaultAgent:
-  enabled: true
   secrets:
     mongodb:
-      enabled: true
+      parameterName: DATABASE__MONGODB__SOURCE_CONNECTION_STR
