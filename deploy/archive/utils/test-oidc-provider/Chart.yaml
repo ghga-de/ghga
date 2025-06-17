@@ -1,11 +1,12 @@
 name: test-oidc-provider
-description: A dummy OpenID Connect provider (OP) that can be user for testing purposes.
+description: A dummy OpenID Connect provider (OP) that can be user for testing 
+  purposes.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 13.0.14
+version: 13.0.15
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
@@ -19,7 +20,7 @@ apiVersion: v2
 
 dependencies:
 - name: ghga-common
-  version: 2.2.22
+  version: 2.2.23
   repository: https://ghga-de.github.io/charts
   import-values:
   - defaults
