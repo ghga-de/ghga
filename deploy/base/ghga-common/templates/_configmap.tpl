@@ -24,7 +24,9 @@ data:
     {{- if (include "ghga-common.serviceName" $) }}
     service_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceName" $) "context" $) }}
     {{- end }}
+    {{- if (include "ghga-common.serviceInstanceId" $) }}
     service_instance_id: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceInstanceId" $) "context" $) }}
+    {{- end }}
     {{- end }}
 {{- end }}
   parameters: |
@@ -39,5 +41,7 @@ data:
     {{- if (include "ghga-common.serviceName" $) }}
     service_name: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceName" $) "context" $) }}
     {{- end }}
+    {{- if (include "ghga-common.serviceInstanceId" $) }}
     service_instance_id: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.serviceInstanceId" $) "context" $) }}
+    {{- end }}
 {{- end -}}
