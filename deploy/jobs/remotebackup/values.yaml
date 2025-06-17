@@ -12,6 +12,7 @@ containers:
   cmd: "remotebackup backup"
   config:
     name: config
+    fileName: config.yaml
 
 vaultAgent:
   enabled: true
