@@ -79,3 +79,6 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (69) [Common Kingslayer](./69-common-kingslayer/technical_specification.md): Distributed tracing with OpenTelemetry and Jaeger
 - (70) [Common Furniture Beetle](./70-common-furniture-beetle/technical_specification.md): Metldata Transformation Finalzation
 - (71) [Carpenter Bee](./71-carpenter-bee/technical_specification.md): Metldata Configurable Workflows
+- (72) [Pygmy Goat](./72-pygmy-goat/technical_specification.md): Hexkit Documentation
+- (73) [Ballan Wrasse](./73-ballan-wrasse/technical_specification.md): Access Request Management Improvements
+- (77) [Alpine Longhorn Beetle](./77-alpine-longhorn-beetle/technical_specification.md): Make Metadata Downloadable
