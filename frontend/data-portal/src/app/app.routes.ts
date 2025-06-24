@@ -130,13 +130,8 @@ export const routes: Routes = [
 export class TemplatePageTitleStrategy extends TitleStrategy {
   TITLE_TEMPLATE = '#title | GHGA Data Portal';
 
-  /**
-   * Constructor for the strategy.
-   * @param title Creates the member called title that stores the current page title.
-   */
-  constructor(private readonly title: Title) {
-    super();
-  }
+  #title = inject(Title);
+
   /**
    * This gets called whenever the router requests a new title for a site.
    * @param routerState passes the current route to the function.
@@ -144,7 +139,7 @@ export class TemplatePageTitleStrategy extends TitleStrategy {
   override updateTitle(routerState: RouterStateSnapshot) {
     const title = this.buildTitle(routerState);
     if (title !== undefined) {
-      this.title.setTitle(this.TITLE_TEMPLATE.replace('#title', title));
+      this.#title.setTitle(this.TITLE_TEMPLATE.replace('#title', title));
     }
   }
 }
