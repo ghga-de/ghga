@@ -5,6 +5,7 @@
  */
 
 import { DatePipe } from '@angular/common';
+import { httpResource } from '@angular/common/http';
 import {
   Component,
   computed,
@@ -33,6 +34,9 @@ import {
 } from '@app/access-requests/models/access-requests';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
+import { User } from '@app/auth/models/user';
+import { SplitLinesPipe } from '@app/shared/pipes/split-lines.pipe';
+import { ConfigService } from '@app/shared/services/config.service';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
@@ -40,7 +44,6 @@ import { Iva, IvaState } from '@app/verification-addresses/models/iva';
 import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
 import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
-import { SplitLinesPipe } from '../../../shared/pipes/split-lines.pipe';
 import { AccessRequestDurationEditComponent } from '../access-request-duration-edit/access-request-duration-edit.component';
 import { AccessRequestFieldEditComponent } from '../access-request-field-edit/access-request-field-edit.component';
 
@@ -76,10 +79,14 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   readonly data = inject<AccessRequest>(MAT_DIALOG_DATA);
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   allowedState = AccessRequestStatus.allowed;
+  #config = inject(ConfigService);
   #ivaService = inject(IvaService);
   #confirmationService = inject(ConfirmationService);
   #notificationService = inject(NotificationService);
   #accessRequestService = inject(AccessRequestService);
+
+  #authUrl = this.#config.authUrl;
+  #usersUrl = `${this.#authUrl}/users`;
 
   #request = signal(this.data);
 
@@ -94,6 +101,20 @@ export class AccessRequestManagerDialogComponent implements OnInit {
   selectedIvaIdRadioButton = model<string | undefined>(undefined);
 
   #pendingEdits = new Set<keyof AccessRequest>();
+
+  /**
+   * Resource for loading the external ID of the user who made the access request
+   */
+  userExtId = httpResource<string | undefined>(
+    () => {
+      const userId = this.#request().user_id;
+      return `${this.#usersUrl}/${userId}`;
+    },
+    {
+      parse: (raw) => (raw as User).ext_id,
+      defaultValue: undefined,
+    },
+  );
 
   /**
    * Get the IVA associated with the access request.

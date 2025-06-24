@@ -12,6 +12,11 @@ import { accessRequests, allIvasOfDoe } from '@app/../mocks/data';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
 import { AccessRequestManagerDialogComponent } from './access-request-manager-dialog.component';
 
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import {
   AccessRequestService,
   MockAccessRequestService,
@@ -35,15 +40,18 @@ class MockIvaService {
  * Mock the config service as needed by the access request manager dialog component
  */
 class MockConfigService {
+  authUrl = 'http://mock.dev/auth';
   helpdeskTicketUrl = 'http:/helpdesk.test/ticket/';
 }
 
 describe('AccessRequestManagerDialogComponent', () => {
   let component: AccessRequestManagerDialogComponent;
   let fixture: ComponentFixture<AccessRequestManagerDialogComponent>;
+  let httpMock: HttpTestingController;
+  let testBed: TestBed;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
+    testBed = TestBed.configureTestingModule({
       imports: [AccessRequestManagerDialogComponent],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
@@ -54,17 +62,29 @@ describe('AccessRequestManagerDialogComponent', () => {
           useValue: { ...accessRequests[0], status: 'pending' },
         },
         { provide: MatDialogRef, useValue: {} },
+        provideHttpClient(),
+        provideHttpClientTesting(),
         provideNoopAnimations(),
       ],
-    }).compileComponents();
+    });
 
-    fixture = TestBed.createComponent(AccessRequestManagerDialogComponent);
+    await testBed.compileComponents();
+    fixture = testBed.createComponent(AccessRequestManagerDialogComponent);
     component = fixture.componentInstance;
+    httpMock = testBed.inject(HttpTestingController);
+
+    testBed.tick();
+    let row = screen.getByRole('row', { name: 'LifeScience ID: Loading...' });
+    expect(row).toBeVisible();
+    const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev');
+    expect(req.request.method).toBe('GET');
+    req.flush({ ext_id: 'ls-id-of-joe@ls-aai.dev' });
+
     await fixture.whenStable();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  afterEach(() => {
+    httpMock.verify();
   });
 
   it('should show the proper heading', () => {
@@ -77,12 +97,21 @@ describe('AccessRequestManagerDialogComponent', () => {
     expect(row).toBeVisible();
   });
 
-  it('should show the requester in a table row', () => {
-    const row = screen.getByRole('row', { name: /Requester: Dr. John Doe/i });
+  it('should show the requester with email in a table row', () => {
+    const row = screen.getByRole('row', {
+      name: 'Requester: Dr. John Doe - doe@home.org',
+    });
     expect(row).toBeVisible();
   });
 
-  it('should show the requester details in a table row', () => {
+  it('should load the LD ID and show it in a table row', () => {
+    let row = screen.getByRole('row', {
+      name: 'LifeScience ID: ls-id-of-joe​@ls-aai.dev',
+    });
+    expect(row).toBeVisible();
+  });
+
+  it('should show the request details in a table row', () => {
     const row = screen.getByRole('row', {
       name: 'Request details: This is a test request for dataset GHGAD12345678901234. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
     });

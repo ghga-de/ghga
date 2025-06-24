@@ -4,6 +4,8 @@
  * @license Apache-2.0
  */
 
+import { user } from './auth';
+
 import {
   allIvas,
   allIvasOfDoe,
@@ -34,6 +36,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   /**
    * Auth API including 2FA and IVAs
    */
+
+  // User Data
+  'GET /api/auth/users/doe@test.dev': user,
 
   // User IVAs
   'GET /api/auth/users/doe@test.dev/ivas': allIvasOfDoe,
