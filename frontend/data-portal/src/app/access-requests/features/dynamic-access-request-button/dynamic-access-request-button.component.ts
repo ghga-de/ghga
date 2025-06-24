@@ -88,16 +88,6 @@ export class DynamicAccessRequestButtonComponent {
     if (!this.#auth.isAuthenticated() || !userid) {
       return;
     }
-    data.userId = userid;
-
-    data.fromDate?.setUTCHours(0);
-    data.fromDate?.setUTCMinutes(0);
-    data.fromDate?.setUTCSeconds(0);
-    data.fromDate?.setUTCMilliseconds(0);
-    data.untilDate?.setHours(23);
-    data.untilDate?.setMinutes(59);
-    data.untilDate?.setSeconds(59);
-    data.untilDate?.setMilliseconds(999);
     this.#accessRequestService.performAccessRequest(data);
   };
 }

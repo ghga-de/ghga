@@ -29,6 +29,10 @@ th {
   vertical-align: top;
 }
 
+p.last {
+  margin-bottom: 0;
+}
+
 mat-dialog-actions {
   border-top: 1px solid rgba(0, 0, 0, 0.12);
 }

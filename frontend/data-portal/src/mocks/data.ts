@@ -614,7 +614,7 @@ export const accessRequests = [
   {
     id: '9409db13-e23e-433e-9afa-544d8f25b720',
     user_id: 'doe@test.dev',
-    dataset_id: 'GHGAD12345678901236',
+    dataset_id: 'GHGAD12345678901235',
     dac_alias: 'Data Access Committee of Heidelberg Center for Personalized Oncology',
     dac_email: 'info@dac.com',
     dataset_title: 'Test dataset for details',

@@ -271,10 +271,28 @@ export class AccessRequestDialogComponent {
    */
   submit(): void {
     const description = this.descriptionFormControl.value;
-    const fromDate = this.fromDate();
-    fromDate?.setHours(0, 0, 0, 0);
-    const untilDate = this.untilDate();
-    untilDate?.setHours(23, 59, 59, 999);
+    const fromDate = new Date(
+      Date.UTC(
+        this.fromDate()!.getFullYear(),
+        this.fromDate()!.getMonth(),
+        this.fromDate()!.getDate(),
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
+    const untilDate = new Date(
+      Date.UTC(
+        this.untilDate()!.getFullYear(),
+        this.untilDate()!.getMonth(),
+        this.untilDate()!.getDate(),
+        23,
+        59,
+        59,
+        999,
+      ),
+    );
     const email = this.emailFormControl.value;
     const data = { ...this.data, description, fromDate, untilDate, email };
     this.dialogRef.close(data);

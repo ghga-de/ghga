@@ -62,23 +62,23 @@
                 <tr>
                   <th>Request details:</th>
                   <td class="max-h-38 overflow-y-auto">
-                    @for (line of data.request_text | splitLines; track line) {
-                      <p>{{ line }}</p>
+                    @for (
+                      line of data.request_text | splitLines;
+                      track line;
+                      let last = $last
+                    ) {
+                      <p [class.last]="last">{{ line }}</p>
                     }
+                  </td>
+                </tr>
+                <tr>
+                  <th>Requested on:</th>
+                  <td>
+                    {{ data.request_created | date }}
                   </td>
                 </tr>
               </tbody>
             </table>
-            <p class="text-on-surface-variant pt-1 text-sm">
-              The request has been made on
-              {{ data.request_created | date: friendlyDateFormat }}.
-            </p>
-            <p class="text-on-surface-variant pt-2 text-sm">
-              Access has been
-              {{ data.status === allowedState ? 'granted' : 'requested ' }} from
-              {{ data.access_starts | date: friendlyDateFormat }} until
-              {{ data.access_ends | date: friendlyDateFormat }}.
-            </p>
           </mat-card-content>
         </mat-card>
         <mat-card>

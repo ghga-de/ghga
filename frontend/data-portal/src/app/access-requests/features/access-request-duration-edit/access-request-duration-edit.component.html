@@ -1,105 +1,82 @@
 @if (!locked()) {
-  <tr>
-    <th
-      class="w-36 min-w-36 pe-1 text-start"
-      [class.align-top]="!isOpen()"
-      [class.align-center]="isOpen()"
-    >
-      Access Starts:
-    </th>
-    <td
-      class="flex min-w-60"
-      [class.items-center]="isOpen()"
-      [class.items-start]="!isOpen()"
-    >
-      @if (isOpen()) {
-        <mat-form-field class="grow">
-          <mat-datepicker-toggle
-            matIconSuffix
-            [for]="datepickerFrom"
-          ></mat-datepicker-toggle>
-          <input
-            matInput
-            [formControl]="fromFormControl"
-            [matDatepicker]="datepickerFrom"
-            [(ngModel)]="fromField"
-            [min]="minFromDate"
-            [max]="maxFromDate"
-            (dateChange)="onDateSelected($event, true)"
-            class="pr-8"
-          />
-          @if (fromFieldErrorMessage()) {
-            <mat-error>
-              {{ fromFieldErrorMessage() }}
-            </mat-error>
-          }
-          <mat-datepicker #datepickerFrom></mat-datepicker>
-        </mat-form-field>
-        <mat-chip
-          class="smaller-chip interactive-chip cancel-edit-button mx-2 mb-5"
-          (click)="cancel()"
-          ><mat-icon>close</mat-icon></mat-chip
-        >
-        <mat-chip
-          class="smaller-chip interactive-chip save-edit-button mb-5"
-          (click)="save()"
-          [disabled]="saveDisabled()"
-          ><mat-icon>check</mat-icon></mat-chip
-        >
-      } @else {
+  @if (isOpen()) {
+    <tr>
+      <th class="w-36 min-w-36 pb-5 text-start">Access duration:</th>
+      <td class="min-w-60 pb-1">
+        <div class="flex items-center">
+          <div class="flex gap-x-1.5">
+            <mat-form-field class="w-39.5" hideRequiredMarker>
+              <mat-label>Start date</mat-label>
+              <mat-datepicker-toggle
+                matIconSuffix
+                [for]="datepickerFrom"
+              ></mat-datepicker-toggle>
+              <input
+                matInput
+                [formControl]="fromFormControl"
+                [matDatepicker]="datepickerFrom"
+                [(ngModel)]="fromField"
+                [min]="minFromDate"
+                [max]="maxFromDate"
+                (dateChange)="onDateSelected($event, true)"
+                class="pr-8"
+              />
+              @if (fromFieldErrorMessage()) {
+                <mat-error>{{ fromFieldErrorMessage() }}</mat-error>
+              }
+              <mat-datepicker #datepickerFrom></mat-datepicker>
+            </mat-form-field>
+            <mat-form-field class="w-39.5" hideRequiredMarker>
+              <mat-label>End date</mat-label>
+              <mat-datepicker-toggle
+                matIconSuffix
+                [for]="datepickerUntil"
+              ></mat-datepicker-toggle>
+              <input
+                matInput
+                [formControl]="untilFormControl"
+                [matDatepicker]="datepickerUntil"
+                [(ngModel)]="untilField"
+                [min]="minUntilDate"
+                [max]="maxUntilDate"
+                (dateChange)="onDateSelected($event, false)"
+                class="pr-8"
+              />
+              @if (untilFieldErrorMessage()) {
+                <mat-error>{{ untilFieldErrorMessage() }}</mat-error>
+              }
+              <mat-datepicker #datepickerUntil></mat-datepicker>
+            </mat-form-field>
+          </div>
+          <span class="grow"></span>
+          <mat-chip
+            class="smaller-chip interactive-chip cancel-edit-button mx-2"
+            (click)="cancel()"
+            ><mat-icon>close</mat-icon></mat-chip
+          >
+          <mat-chip
+            class="smaller-chip interactive-chip save-edit-button"
+            (click)="save()"
+            [disabled]="saveDisabled()"
+            ><mat-icon>check</mat-icon></mat-chip
+          >
+        </div>
+      </td>
+    </tr>
+  } @else {
+    <tr>
+      <th class="w-36 min-w-36 pe-1 text-start align-middle">Access duration:</th>
+      <td class="flex min-w-60 items-center pb-1">
         <span class="grow">
-          {{ fromField() | date: 'yyyy-MM-dd' }}
+          {{ fromField() | date }} to
+          {{ untilField() | date }}
         </span>
         <mat-chip
           (click)="open()"
           class="smaller-chip interactive-chip edit-button ms-2"
           ><mat-icon class="scale-[0.75]">edit</mat-icon>
         </mat-chip>
-      }
-    </td>
-  </tr>
-  <tr>
-    <th
-      class="w-36 min-w-36 pe-1 text-start"
-      [class.align-top]="!isOpen()"
-      [class.align-center]="isOpen()"
-    >
-      Access Ends:
-    </th>
-    <td
-      class="flex min-w-60 pb-1"
-      [class.items-center]="isOpen()"
-      [class.items-start]="!isOpen()"
-    >
-      @if (isOpen()) {
-        <mat-form-field class="grow">
-          <mat-datepicker-toggle
-            matIconSuffix
-            [for]="datepickerUntil"
-          ></mat-datepicker-toggle>
-          <input
-            matInput
-            [formControl]="untilFormControl"
-            [matDatepicker]="datepickerUntil"
-            [(ngModel)]="untilField"
-            [min]="minUntilDate"
-            [max]="maxUntilDate"
-            (dateChange)="onDateSelected($event, false)"
-            class="pr-8"
-          />
-          @if (untilFieldErrorMessage()) {
-            <mat-error>
-              {{ untilFieldErrorMessage() }}
-            </mat-error>
-          }
-          <mat-datepicker #datepickerUntil></mat-datepicker>
-        </mat-form-field>
-        <span class="w-16"></span>
-      } @else {
-        <span class="grow">
-          {{ untilField() | date: 'yyyy-MM-dd' }}
-        </span>
-      }
-    </td>
-  </tr>
+      </td>
+    </tr>
+  }
 }
