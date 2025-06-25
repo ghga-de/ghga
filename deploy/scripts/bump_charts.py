@@ -21,11 +21,11 @@ Dependencies:
     - subprocess
 
 Usage:
-    python bump_charts.py --chart-dir <chart_directory> --current-version <current_version>
+    python bump_charts.py --chart-dir <chart_directory> --library-chart-version <version>
 
 Arguments:
     --chart-dir (str): Path to the directory containing Helm charts to be bumped.
-    --current-version (str): The current version to be bumped.
+    --library-chart-version (str): Version of the ghga-common library chart to use.
 
 Global Variables:
     DRY_MODE (bool): If True, prevents actual file modifications.
@@ -146,12 +146,6 @@ if __name__ == "__main__":
         type=str,
         help="A directory containing Charts which should be bumped",
         default="charts/file-services-backend",
-    )  # Optional argument
-    parser.add_argument(
-        "--current-version",
-        type=str,
-        help="Current version which should be bumped",
-        default="7.0.0",
     )  # Optional argument
     parser.add_argument(
         "--library-chart-version",
