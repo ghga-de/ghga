@@ -32,9 +32,7 @@ parameters:
       <h3>The GHGA Team</h3>
       </body>
       </html>
-    smtp_auth:
-      username: "test@test.com"
-      password: test
+    smtp_auth: null
     plaintext_email_template: |
       Dear $recipient_name,
 
