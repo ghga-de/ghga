@@ -213,6 +213,9 @@ exports:
     environment:
       name: default
 
+    cluster:
+      name: default
+
     # Set `spec` of HTTPRoute here
     httpRoute:
       enabled: false

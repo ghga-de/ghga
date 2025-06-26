@@ -20,7 +20,7 @@ vault.hashicorp.com/role: "{{ .Release.Name }}"
 {{- $vaultSecretPath = .Values.vaultAgent.secrets.mongodb.secretPath }}
 {{- else }}
 {{- with .Values.mongodb.service }}
-{{- $vaultSecretPath = list (list $.Values.environment.name .namespace .name | join "-") "creds" $.Release.Name | join "/" }}
+{{- $vaultSecretPath = list (list $.Values.cluster.name .namespace .name | join "-") "creds" $.Release.Name | join "/" }}
 {{- end }}
 {{- end }}
 {{- $connectionString := .Values.vaultAgent.secrets.mongodb.connectionString }}

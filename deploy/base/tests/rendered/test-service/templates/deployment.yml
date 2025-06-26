@@ -36,9 +36,9 @@ spec:
         vault.hashicorp.com/role: "test-service"
         vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
           kill -TERM $(pgrep python)
-        vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: default-mongodb-mongodb/creds/test-service
+        vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: default-cluster-mongodb-mongodb/creds/test-service
         vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
-          {{- with secret "default-mongodb-mongodb/creds/test-service" -}}
+          {{- with secret "default-cluster-mongodb-mongodb/creds/test-service" -}}
           export TEST_DB_URL="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
           export TEST_DB_CONNECTION_STR=$TEST_DB_URL
           export TEST_MONGO_DSN=$TEST_DB_URL

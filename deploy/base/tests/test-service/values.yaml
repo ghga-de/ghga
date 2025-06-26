@@ -21,6 +21,9 @@ serviceInstanceId: test-service-instance-id
 # This parameter specifies the client id in Kafka
 serviceInstanceIdConsumer: test-service-instance-id-consumer
 
+cluster:
+  name: default-cluster
+
 parameters:
   default:
     foo: bar
