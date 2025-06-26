@@ -1,0 +1,342 @@
+{
+  "additionalProperties": false,
+  "description": "Modifies the original Settings class provided by the user",
+  "properties": {
+    "mongo_dsn": {
+      "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+      "examples": [
+        "mongodb://localhost:27017"
+      ],
+      "format": "multi-host-uri",
+      "minLength": 1,
+      "title": "Mongo Dsn",
+      "type": "string"
+    },
+    "db_name": {
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
+      "title": "Db Name",
+      "type": "string"
+    },
+    "mongo_timeout": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior).",
+      "examples": [
+        300,
+        600,
+        null
+      ],
+      "title": "Mongo Timeout"
+    },
+    "service_name": {
+      "default": "rts",
+      "description": "Short name of this service",
+      "title": "Service Name",
+      "type": "string"
+    },
+    "service_instance_id": {
+      "description": "A string that uniquely identifies this instance across all instances of this service. This is included in log messages.",
+      "examples": [
+        "germany-bw-instance-001"
+      ],
+      "title": "Service Instance Id",
+      "type": "string"
+    },
+    "kafka_servers": {
+      "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+      "examples": [
+        [
+          "localhost:9092"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Kafka Servers",
+      "type": "array"
+    },
+    "kafka_security_protocol": {
+      "default": "PLAINTEXT",
+      "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
+      "enum": [
+        "PLAINTEXT",
+        "SSL"
+      ],
+      "title": "Kafka Security Protocol",
+      "type": "string"
+    },
+    "kafka_ssl_cafile": {
+      "default": "",
+      "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
+      "title": "Kafka Ssl Cafile",
+      "type": "string"
+    },
+    "kafka_ssl_certfile": {
+      "default": "",
+      "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
+      "title": "Kafka Ssl Certfile",
+      "type": "string"
+    },
+    "kafka_ssl_keyfile": {
+      "default": "",
+      "description": "Optional filename containing the client private key.",
+      "title": "Kafka Ssl Keyfile",
+      "type": "string"
+    },
+    "kafka_ssl_password": {
+      "default": "",
+      "description": "Optional password to be used for the client private key.",
+      "format": "password",
+      "title": "Kafka Ssl Password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "generate_correlation_id": {
+      "default": true,
+      "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Generate Correlation Id",
+      "type": "boolean"
+    },
+    "kafka_max_message_size": {
+      "default": 1048576,
+      "description": "The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this.",
+      "examples": [
+        1048576,
+        16777216
+      ],
+      "exclusiveMinimum": 0,
+      "title": "Kafka Max Message Size",
+      "type": "integer"
+    },
+    "kafka_max_retries": {
+      "default": 0,
+      "description": "The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue.",
+      "examples": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "minimum": 0,
+      "title": "Kafka Max Retries",
+      "type": "integer"
+    },
+    "kafka_enable_dlq": {
+      "default": false,
+      "description": "A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries",
+      "examples": [
+        true,
+        false
+      ],
+      "title": "Kafka Enable DLQ",
+      "type": "boolean"
+    },
+    "kafka_dlq_topic": {
+      "default": "dlq",
+      "description": "The name of the topic used to resolve error-causing events.",
+      "examples": [
+        "dlq"
+      ],
+      "title": "Kafka DLQ Topic",
+      "type": "string"
+    },
+    "kafka_retry_backoff": {
+      "default": 0,
+      "description": "The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt.",
+      "examples": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "minimum": 0,
+      "title": "Kafka Retry Backoff",
+      "type": "integer"
+    },
+    "log_level": {
+      "default": "INFO",
+      "description": "The minimum log level to capture.",
+      "enum": [
+        "CRITICAL",
+        "ERROR",
+        "WARNING",
+        "INFO",
+        "DEBUG",
+        "TRACE"
+      ],
+      "title": "Log Level",
+      "type": "string"
+    },
+    "log_format": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details",
+      "examples": [
+        "%(timestamp)s - %(service)s - %(level)s - %(message)s",
+        "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+      ],
+      "title": "Log Format"
+    },
+    "log_traceback": {
+      "default": true,
+      "description": "Whether to include exception tracebacks in log messages.",
+      "title": "Log Traceback",
+      "type": "boolean"
+    },
+    "host": {
+      "default": "127.0.0.1",
+      "description": "IP of the host.",
+      "title": "Host",
+      "type": "string"
+    },
+    "port": {
+      "default": 8080,
+      "description": "Port to expose the server on the specified host",
+      "title": "Port",
+      "type": "integer"
+    },
+    "auto_reload": {
+      "default": false,
+      "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
+      "title": "Auto Reload",
+      "type": "boolean"
+    },
+    "workers": {
+      "default": 1,
+      "description": "Number of workers processes to run.",
+      "title": "Workers",
+      "type": "integer"
+    },
+    "api_root_path": {
+      "default": "",
+      "description": "Root path at which the API is reachable. This is relative to the specified host and port.",
+      "title": "Api Root Path",
+      "type": "string"
+    },
+    "openapi_url": {
+      "default": "/openapi.json",
+      "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
+      "title": "Openapi Url",
+      "type": "string"
+    },
+    "docs_url": {
+      "default": "/docs",
+      "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
+      "title": "Docs Url",
+      "type": "string"
+    },
+    "cors_allowed_origins": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.",
+      "examples": [
+        [
+          "https://example.org",
+          "https://www.example.org"
+        ]
+      ],
+      "title": "Cors Allowed Origins"
+    },
+    "cors_allow_credentials": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.",
+      "examples": [
+        [
+          "https://example.org",
+          "https://www.example.org"
+        ]
+      ],
+      "title": "Cors Allow Credentials"
+    },
+    "cors_allowed_methods": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.",
+      "examples": [
+        [
+          "*"
+        ]
+      ],
+      "title": "Cors Allowed Methods"
+    },
+    "cors_allowed_headers": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
+      "examples": [
+        []
+      ],
+      "title": "Cors Allowed Headers"
+    }
+  },
+  "required": [
+    "mongo_dsn",
+    "db_name",
+    "service_instance_id",
+    "kafka_servers"
+  ],
+  "title": "ModSettings",
+  "type": "object"
+}

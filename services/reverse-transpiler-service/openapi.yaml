@@ -1,0 +1,89 @@
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  description: A service running a REST API that serves accessioned metadata files
+    by study ID
+  title: Reverse Transpiler Service
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /artifacts/{artifact_name}/classes/{class_name}/resources/{resource_id}:
+    get:
+      description: Get a transpiled metadata file for a specific artifact, class,
+        and resource.
+      operationId: get_transpiled_metadata_artifacts__artifact_name__classes__class_name__resources__resource_id__get
+      parameters:
+      - in: path
+        name: artifact_name
+        required: true
+        schema:
+          title: Artifact Name
+          type: string
+      - in: path
+        name: class_name
+        required: true
+        schema:
+          title: Class Name
+          type: string
+      - in: path
+        name: resource_id
+        required: true
+        schema:
+          title: Resource Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get transpiled metadata
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+servers:
+- url: ''
