@@ -92,3 +92,16 @@ class AccessRequestEventsConfig(BaseSettings):
         description="Name of the event topic containing access request events",
         examples=["access-requests"],
     )
+
+
+class ArtifactEventsConfig(BaseSettings):
+    """Config for events communicating changes in metadata artifacts.
+
+    The event types are hardcoded in `metldata` to be "upserted" and "deleted".
+    """
+
+    artifact_topic: str = Field(
+        default=...,
+        description="Name of the event topic containing artifact events",
+        examples=["artifacts"],
+    )

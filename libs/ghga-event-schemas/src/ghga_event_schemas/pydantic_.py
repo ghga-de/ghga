@@ -73,6 +73,25 @@ class SearchableResource(SearchableResourceInfo):
     )
 
 
+class ArtifactTag(BaseModel):
+    """A model representing a tag for an artifact (artifact name and study accession)."""
+
+    study_accession: str = Field(
+        ..., description="The ID of the study this artifact pertains to."
+    )
+    artifact_name: str = Field(
+        ..., description="The name of the artifact, e.g. 'added_accessions'."
+    )
+
+
+class Artifact(ArtifactTag):
+    """A model representing an artifact."""
+
+    content: dict[str, Any] = Field(
+        ..., description="The metadata content of the artifact."
+    )
+
+
 class MetadataDatasetOverview(MetadataDatasetID):
     """
     Overview of files contained in a dataset.
