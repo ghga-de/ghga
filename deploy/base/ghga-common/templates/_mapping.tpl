@@ -4,6 +4,7 @@ apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
   name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
 spec:
   ambassador_id: {{ .Values.mapping.ambassador_id }}
   service: "{{ include "common.names.fullname" . }}:{{ .Values.mapping.port }}"

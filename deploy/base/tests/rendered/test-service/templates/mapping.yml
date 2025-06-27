@@ -4,6 +4,7 @@ apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
   name: test-service
+  namespace: "test"
 spec:
   ambassador_id: [default]
   service: "test-service:8080"
