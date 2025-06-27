@@ -58,7 +58,7 @@ EXAMPLE_WORKFLOW_DEFINITION = WorkflowDefinition(
 
 
 @dataclass(frozen=True)
-class WorkflowTestCase(Generic[Config]):
+class WorkflowTestCase(Generic[Config]):  # noqa: UP046
     """A test case for a workflow."""
 
     workflow_name: str

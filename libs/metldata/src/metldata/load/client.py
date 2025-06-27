@@ -46,7 +46,7 @@ def upload_artifacts_via_http_api(
             headers={
                 "Authorization": f"Bearer {token}",
             },
-            timeout=60,
+            timeout=config.request_timeout,
         )
 
     if response.status_code != 204:

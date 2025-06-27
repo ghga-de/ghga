@@ -51,7 +51,7 @@ class MetadataTransformationError(RuntimeError):
 Config = TypeVar("Config", bound=BaseModel)
 
 
-class MetadataTransformer(ABC, Generic[Config]):
+class MetadataTransformer(ABC, Generic[Config]):  # noqa: UP046
     """A base class for a metadata transformer."""
 
     def __init__(
@@ -84,7 +84,7 @@ class MetadataTransformer(ABC, Generic[Config]):
 
 
 @dataclass(frozen=True)
-class TransformationDefinition(Generic[Config]):
+class TransformationDefinition(Generic[Config]):  # noqa: UP046
     """A model for describing a transformation."""
 
     config_cls: type[Config] = Field(  # noqa: RUF009
