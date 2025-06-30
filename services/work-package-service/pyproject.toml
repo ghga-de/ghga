@@ -21,14 +21,14 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wps"
-version = "4.0.0"
+version = "4.0.1"
 description = "Work Package Service"
 dependencies = [
-    "ghga-event-schemas~=5.0.0",
+    "ghga-event-schemas~=9.2.0",
     "ghga-service-commons[api,auth,crypt]>=4.1",
-    "hexkit[akafka,mongodb,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=5.0",
+    "hexkit[akafka,mongodb,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=5.3",
     "httpx>=0.28",
-    "typer>=0.15",
+    "typer>=0.16",
 ]
 
 [project.license]

@@ -46,6 +46,8 @@ DATASET_UPSERTION_EVENT = MetadataDatasetOverview(
     stage=MetadataDatasetStage.DOWNLOAD,
     title="Test dataset 1",
     description="The first test dataset",
+    dac_alias="Some DAC",
+    dac_email="dac@some.org",
     files=[
         MetadataDatasetFile(
             accession="file-id-1",
