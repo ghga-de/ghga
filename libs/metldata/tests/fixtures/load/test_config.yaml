@@ -1,5 +1,7 @@
 primary_artifact_name: embedded_public
 primary_dataset_name: EmbeddedDataset
+artifact_topic: artifacts
+publishable_artifacts: ["added_accessions"]
 resource_change_topic: searchable_resources
 resource_deletion_type: searchable_resource_deleted
 resource_upsertion_type: searchable_resource_upserted

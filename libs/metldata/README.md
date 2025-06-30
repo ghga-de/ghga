@@ -58,13 +58,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/metldata):
 ```bash
-docker pull ghga/metldata:3.2.0
+docker pull ghga/metldata:4.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/metldata:3.2.0 .
+docker build -t ghga/metldata:4.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -72,7 +72,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/metldata:3.2.0 --help
+docker run -p 8080:8080 ghga/metldata:4.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -347,6 +347,16 @@ The service requires the following configuration parameters:
   ```
 
 
+- <a id="properties/artifact_topic"></a>**`artifact_topic`** *(string, required)*: Name of the event topic containing artifact events.
+
+
+  Examples:
+
+  ```json
+  "artifacts"
+  ```
+
+
 - <a id="properties/resource_change_topic"></a>**`resource_change_topic`** *(string, required)*: Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.
 
 
@@ -526,6 +536,25 @@ The service requires the following configuration parameters:
 - <a id="properties/loader_token_hashes"></a>**`loader_token_hashes`** *(array, required)*: Hashes of tokens used to authenticate for loading artifact.
 
   - <a id="properties/loader_token_hashes/items"></a>**Items** *(string)*
+
+- <a id="properties/publishable_artifacts"></a>**`publishable_artifacts`** *(array)*: List of artifacts to be published in their entirety when loaded into the Loader API.
+
+  - <a id="properties/publishable_artifacts/items"></a>**Items** *(string)*
+
+
+  Examples:
+
+  ```json
+  []
+  ```
+
+
+  ```json
+  [
+      "added_accessions"
+  ]
+  ```
+
 
 ## Definitions
 

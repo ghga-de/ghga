@@ -95,6 +95,7 @@ GHGA_ARCHIVE_WORKFLOW = WorkflowDefinition(
         ),
     },
     artifacts={
+        "added_accessions": "add_accessions",
         "embedded_restricted": "embed_restricted",
         "resolved_restricted": "merge_dataset_file_lists",
         "resolved_public": "remove_restricted_metadata",

@@ -16,10 +16,22 @@
 
 """Data models."""
 
-from typing import TypeAlias
+from typing import TypeAlias, TypedDict
 
 from metldata.custom_types import Json
 
-# A dictionary of an artifact. The keys on the first correspond to artifact names.
-# The values are lists of resources for different submissions.
-ArtifactResourceDict: TypeAlias = dict[str, list[Json]]
+
+class ArtifactJson(TypedDict):
+    """A model representing a single artifact instance.
+
+    The content is a JSON object containing the resources of the artifact.
+    """
+
+    study_accession: str
+    artifact_name: str
+    content: Json
+
+
+# A dictionary of artifacts. The keys on the first correspond to artifact names.
+# The values are lists of artifact instances for different submissions.
+ArtifactResourceDict: TypeAlias = dict[str, list[ArtifactJson]]

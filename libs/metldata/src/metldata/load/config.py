@@ -41,6 +41,12 @@ class ArtifactLoaderAPIConfig(
     loader_token_hashes: list[str] = Field(
         ..., description="Hashes of tokens used to authenticate for loading artifact."
     )
+    publishable_artifacts: list[str] = Field(
+        default_factory=list,
+        description="List of artifacts to be published in their entirety when loaded"
+        " into the Loader API.",
+        examples=[[], ["added_accessions"]],
+    )
 
 
 class ArtifactLoaderClientConfig(ArtifactCollectorConfig, FileSystemEventConfig):

@@ -18,12 +18,14 @@
 
 from typing import TypeAlias
 
+from ghga_event_schemas.pydantic_ import Artifact
 from hexkit.protocols.dao import Dao, DaoFactoryProtocol
 
 from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
 from metldata.artifacts_rest.models import ArtifactInfo, ArtifactResource
 
 ArtifactResourceDao: TypeAlias = Dao[ArtifactResource]
+ArtifactDao: TypeAlias = Dao[Artifact]
 
 
 class DaoNotFoundError(RuntimeError):
@@ -43,16 +45,19 @@ class ArtifactDaoCollection:
         cls,
         dao_factory: DaoFactoryProtocol,
         artifact_infos: list[ArtifactInfo],
+        publishable_artifacts: list[str] | None = None,
     ):
         """Initialize the collection of DAOs."""
         artifact_info_dict = get_artifact_info_dict(artifact_infos=artifact_infos)
 
         # Cannot use comprehensions because of bug: https://bugs.python.org/issue33346
-        artifact_daos: dict[str, dict[str, ArtifactResourceDao]] = {}
+        artifact_resource_daos: dict[str, dict[str, ArtifactResourceDao]] = {}
         for artifact_name, artifact_info in artifact_info_dict.items():
-            artifact_daos[artifact_name] = {}
+            artifact_resource_daos[artifact_name] = {}
             for class_name in artifact_info.resource_classes:
-                artifact_daos[artifact_name][class_name] = await dao_factory.get_dao(
+                artifact_resource_daos[artifact_name][
+                    class_name
+                ] = await dao_factory.get_dao(
                     name=cls._get_dao_name(
                         artifact_name=artifact_name, class_name=class_name
                     ),
@@ -60,15 +65,33 @@ class ArtifactDaoCollection:
                     id_field="id_",
                 )
 
-        return cls(artifact_daos=artifact_daos)
+        # Add a DAO for each entire artifact configured to be published
+        whole_artifact_daos: dict[str, ArtifactDao] = {
+            artifact_name: await dao_factory.get_dao(
+                name=artifact_name,  # each artifact type gets its own collection and DAO
+                dto_model=Artifact,
+                id_field="study_accession",
+            )
+            for artifact_name in publishable_artifacts or []
+        }
 
-    def __init__(self, artifact_daos: dict[str, dict[str, ArtifactResourceDao]]):
+        return cls(
+            artifact_resource_daos=artifact_resource_daos,
+            whole_artifact_daos=whole_artifact_daos,
+        )
+
+    def __init__(
+        self,
+        artifact_resource_daos: dict[str, dict[str, ArtifactResourceDao]],
+        whole_artifact_daos: dict[str, ArtifactDao] | None = None,
+    ):
         """Initialize the collection of DAOs.
 
         Please note, don't use this constructor directly. Use the construct method
         instead.
         """
-        self._artifact_daos = artifact_daos
+        self._artifact_resource_daos = artifact_resource_daos
+        self._whole_artifact_daos = whole_artifact_daos or {}
 
     @staticmethod
     def _get_dao_name(*, artifact_name: str, class_name: str) -> str:
@@ -76,6 +99,20 @@ class ArtifactDaoCollection:
         the class of the resource.
         """
         return f"art_{artifact_name}_class_{class_name}"
+
+    async def get_all_whole_artifact_tags(self) -> set[tuple[str, str]]:
+        """Retrieve all artifact tags currently present in the db.
+
+        An artifact tag combines artifact name and submission ID into a tuple,
+        i.e. (artifact name, submission_id)
+        """
+        all_artifact_tags: set[tuple[str, str]] = {
+            (artifact_name, artifact.study_accession)
+            for artifact_name, dao in self._whole_artifact_daos.items()
+            async for artifact in dao.find_all(mapping={})
+        }
+
+        return all_artifact_tags
 
     async def get_all_resource_tags(self) -> set[tuple[str, str, str]]:
         """Retrieve resource tags for all artifacts currently present in the db.
@@ -86,7 +123,7 @@ class ArtifactDaoCollection:
         of changes.
         """
         all_resource_tags: list[tuple[str, str, str]] = []
-        for artifact_type, class_name_dao in self._artifact_daos.items():
+        for artifact_type, class_name_dao in self._artifact_resource_daos.items():
             for class_name, resource_dao in class_name_dao.items():
                 # empty mapping should yield all resources
                 resource_ids = [
@@ -108,8 +145,17 @@ class ArtifactDaoCollection:
             DaoNotFoundError: If the DAO could not be found.
         """
         try:
-            return self._artifact_daos[artifact_name][class_name]
+            return self._artifact_resource_daos[artifact_name][class_name]
         except KeyError as error:
             raise DaoNotFoundError(
                 artifact_name=artifact_name, class_name=class_name
+            ) from error
+
+    async def get_whole_artifact_dao(self, *, artifact_name: str) -> ArtifactDao:
+        """Get the DAO for the whole artifact."""
+        try:
+            return self._whole_artifact_daos[artifact_name]
+        except KeyError as error:
+            raise DaoNotFoundError(
+                artifact_name=artifact_name, class_name=""
             ) from error

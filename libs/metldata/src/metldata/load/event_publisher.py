@@ -20,7 +20,10 @@ import json
 from abc import ABC, abstractmethod
 
 from ghga_event_schemas.configs import DatasetEventsConfig, ResourceEventsConfig
+from ghga_event_schemas.configs.stateful import ArtifactEventsConfig
 from ghga_event_schemas.pydantic_ import (
+    Artifact,
+    ArtifactTag,
     MetadataDatasetID,
     MetadataDatasetOverview,
     SearchableResource,
@@ -30,7 +33,9 @@ from hexkit.protocols.eventpub import EventPublisherProtocol
 from pydantic import Field
 
 
-class EventPubTranslatorConfig(DatasetEventsConfig, ResourceEventsConfig):
+class EventPubTranslatorConfig(
+    DatasetEventsConfig, ResourceEventsConfig, ArtifactEventsConfig
+):
     """Config for publishing population/deletion events to other services"""
 
     primary_artifact_name: str = Field(
@@ -58,6 +63,15 @@ class EventPublisherPort(ABC):
         """Communicate the deletion of an artifact resource"""
 
     @abstractmethod
+    async def process_artifact_deletion(
+        self,
+        *,
+        artifact_name: str,
+        study_accession: str,
+    ):
+        """Communicate the deletion of an entire artifact"""
+
+    @abstractmethod
     async def process_dataset_upsert(
         self, *, dataset_overview: MetadataDatasetOverview
     ):
@@ -66,6 +80,14 @@ class EventPublisherPort(ABC):
     @abstractmethod
     async def process_resource_upsert(self, *, resource: SearchableResource):
         """Communicate the upsert of an artifact resource"""
+
+    @abstractmethod
+    async def process_artifact_upsert(
+        self,
+        *,
+        artifact: Artifact,
+    ):
+        """Communicate the upsert of an entire artifact"""
 
     @abstractmethod
     def is_primary_dataset_source(
@@ -120,6 +142,23 @@ class EventPubTranslator(EventPublisherPort):
             topic=self._config.resource_change_topic,
         )
 
+    async def process_artifact_deletion(
+        self,
+        *,
+        artifact_name: str,
+        study_accession: str,
+    ):
+        """Communicate the deletion of an entire artifact"""
+        artifact_tag = ArtifactTag(
+            artifact_name=artifact_name, study_accession=study_accession
+        )
+        await self._provider.publish(
+            payload=artifact_tag.model_dump(),
+            type_="deleted",
+            key=f"{artifact_name}:{study_accession}",
+            topic=self._config.artifact_topic,
+        )
+
     async def process_dataset_upsert(
         self, *, dataset_overview: MetadataDatasetOverview
     ):
@@ -146,6 +185,20 @@ class EventPubTranslator(EventPublisherPort):
             type_=self._config.resource_upsertion_type,
             key=f"dataset_embedded_{resource.accession}",
             topic=self._config.resource_change_topic,
+        )
+
+    async def process_artifact_upsert(
+        self,
+        *,
+        artifact: Artifact,
+    ):
+        """Communicate the upsert of an entire artifact"""
+        payload = json.loads(artifact.model_dump_json())
+        await self._provider.publish(
+            payload=payload,
+            type_="upserted",
+            key=f"{artifact.artifact_name}:{artifact.study_accession}",
+            topic=self._config.artifact_topic,
         )
 
     def is_primary_dataset_source(

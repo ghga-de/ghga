@@ -17,15 +17,17 @@
 """Functionality for collecting available artifacts."""
 
 from collections import defaultdict
+from typing import cast
 
 from pydantic import Field, field_validator
 
+from metldata.custom_types import Json
 from metldata.event_handling.artifact_events import (
     ArtifactEventConfig,
     get_artifact_topic,
 )
 from metldata.event_handling.event_handling import FileSystemEventCollector
-from metldata.load.models import ArtifactResourceDict
+from metldata.load.models import ArtifactJson, ArtifactResourceDict
 
 
 class ArtifactCollectorConfig(ArtifactEventConfig):
@@ -63,9 +65,21 @@ def collect_artifacts(
             artifact_type=artifact_type,
         )
         for event in event_collector.collect_events(topic=topic):
-            content = event.payload.get("content")
+            content = cast(Json, event.payload.get("content"))
             if not content:
                 raise RuntimeError("Artifact does not contain 'content' field.")
-            artifact_resources[artifact_type].append(content)  # type: ignore
+            try:
+                study_accession = str(content["studies"][0]["accession"])
+            except (KeyError, IndexError) as err:
+                raise RuntimeError(
+                    "Artifact content does not contain a study accession."
+                ) from err
+            artifact_resources[artifact_type].append(
+                ArtifactJson(
+                    artifact_name=artifact_type,
+                    study_accession=study_accession,
+                    content=content,
+                )
+            )
 
     return artifact_resources

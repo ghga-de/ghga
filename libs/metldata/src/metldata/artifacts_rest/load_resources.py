@@ -19,6 +19,7 @@
 from typing import cast
 
 from ghga_event_schemas.pydantic_ import (
+    Artifact,
     MetadataDatasetFile,
     MetadataDatasetOverview,
     MetadataDatasetStage,
@@ -34,6 +35,7 @@ from metldata.artifacts_rest.models import (
 )
 from metldata.custom_types import Json
 from metldata.load.event_publisher import EventPublisherPort
+from metldata.load.models import ArtifactResourceDict
 from metldata.metadata_utils import (
     SlotNotFoundError,
     get_resources_of_class,
@@ -127,6 +129,51 @@ async def load_artifact_resources(
             artifact_name=artifact_info.name,
             dao_collection=dao_collection,
         )
+
+
+async def load_whole_artifact(
+    *,
+    artifact: Artifact,
+    artifact_name: str,
+    dao_collection: ArtifactDaoCollection,
+):
+    """Load the whole artifact into the database using the given DAO collection."""
+    dao = await dao_collection.get_whole_artifact_dao(artifact_name=artifact_name)
+    await dao.upsert(artifact)
+
+
+async def process_removed_artifacts(
+    *,
+    event_publisher: EventPublisherPort,
+    artifact_tags: set[tuple[str, str]],
+    dao_collection: ArtifactDaoCollection,
+) -> None:
+    """Delete no longer needed artifacts from DB and send corresponding events"""
+    for artifact_name, study_accession in artifact_tags:
+        # artifact tag was obtained from querying the db, so artifact with given ID
+        # should be present
+        dao = await dao_collection.get_whole_artifact_dao(artifact_name=artifact_name)
+        await dao.delete(study_accession)
+
+        await event_publisher.process_artifact_deletion(
+            artifact_name=artifact_name, study_accession=study_accession
+        )
+
+
+async def process_new_or_changed_artifacts(
+    *,
+    event_publisher: EventPublisherPort,
+    artifacts: ArtifactResourceDict,
+    dao_collection: ArtifactDaoCollection,
+) -> None:
+    """Upsert new or changed artifacts into DB and send corresponding events"""
+    for artifact_name, artifact_resources in artifacts.items():
+        dao = await dao_collection.get_whole_artifact_dao(artifact_name=artifact_name)
+
+        for artifact_dict in artifact_resources:
+            artifact = Artifact(**artifact_dict)
+            await dao.upsert(artifact)
+            await event_publisher.process_artifact_upsert(artifact=artifact)
 
 
 async def process_removed_resources(

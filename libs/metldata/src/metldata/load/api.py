@@ -35,7 +35,8 @@ from metldata.load.event_publisher import EventPubTranslator
 from metldata.load.load import (
     ArtifactResourcesInvalid,
     check_artifact_resources,
-    load_artifacts_using_dao,
+    load_artifact_resources_using_dao,
+    load_whole_artifacts_using_dao,
 )
 from metldata.load.models import ArtifactResourceDict
 from metldata.load.stats import create_stats_using_aggregator
@@ -80,7 +81,9 @@ async def rest_api_factory(  # noqa: PLR0913
     """Return a router for an API for loading artifacts."""
     artifact_info_dict = get_artifact_info_dict(artifact_infos=artifact_infos)
     dao_collection = await ArtifactDaoCollection.construct(
-        dao_factory=dao_factory, artifact_infos=artifact_infos
+        dao_factory=dao_factory,
+        artifact_infos=artifact_infos,
+        publishable_artifacts=config.publishable_artifacts,
     )
 
     async def require_token_context(
@@ -116,9 +119,17 @@ async def rest_api_factory(  # noqa: PLR0913
             event_publisher = EventPubTranslator(
                 config=config, provider=event_pub_provider
             )
-            await load_artifacts_using_dao(
+            await load_artifact_resources_using_dao(
                 artifact_resources=artifact_resources,
                 artifact_info_dict=artifact_info_dict,
+                publishable_artifacts=config.publishable_artifacts,
+                event_publisher=event_publisher,
+                dao_collection=dao_collection,
+            )
+
+            await load_whole_artifacts_using_dao(
+                publishable_artifacts=config.publishable_artifacts,
+                artifact_resources=artifact_resources,
                 event_publisher=event_publisher,
                 dao_collection=dao_collection,
             )

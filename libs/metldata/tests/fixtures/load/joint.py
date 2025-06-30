@@ -30,7 +30,7 @@ from metldata.custom_types import Json
 from metldata.load.auth import generate_token_and_hash
 from metldata.load.config import ArtifactLoaderAPIConfig
 from metldata.load.main import get_app
-from metldata.load.models import ArtifactResourceDict
+from metldata.load.models import ArtifactJson, ArtifactResourceDict
 from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.load.config import get_config
 from tests.fixtures.load.utils import BASE_DIR
@@ -38,9 +38,13 @@ from tests.fixtures.load.utils import BASE_DIR
 ARTIFACT_INFOS_PATH = BASE_DIR / "example_models" / "artifact_infos.json"
 ARTIFACT_NAME = "embedded_public"
 EMBEDDED_ARTIFACT_PATH = BASE_DIR / "example_metadata" / f"{ARTIFACT_NAME}.json"
+ADDED_ACCESSIONS_PATH = BASE_DIR / "example_metadata" / "added_accessions.json"
 EMBEDDED_DATASET_TEST_PATH = BASE_DIR / "example_metadata" / "embedded_dataset.json"
 EMBEDDED_ARTIFACT_MODEL_PATH = (
     BASE_DIR / "example_models" / f"{ARTIFACT_NAME}_model.yaml"
+)
+ADDED_ACCESSIONS_MODEL_PATH = (
+    BASE_DIR / "example_models" / "added_accessions_model.yaml"
 )
 
 
@@ -67,14 +71,39 @@ async def joint_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> JointFi
             name=ARTIFACT_NAME,
             description=ARTIFACT_NAME,
             model=MetadataModel.init_from_path(EMBEDDED_ARTIFACT_MODEL_PATH),
-        )
+        ),
+        load_artifact_info(
+            name="added_accessions",
+            description="added_accessions",
+            model=MetadataModel.init_from_path(ADDED_ACCESSIONS_MODEL_PATH),
+        ),
     ]
 
     with open(EMBEDDED_ARTIFACT_PATH, encoding="utf-8") as file:
         raw_artifacts = json.load(file)
         artifacts: ArtifactResourceDict = {
-            raw_artifacts["type_"]: [raw_artifacts["payload"]["content"]]
+            raw_artifacts["type_"]: [
+                ArtifactJson(
+                    artifact_name=raw_artifacts["type_"],
+                    study_accession=raw_artifacts["payload"]["content"]["studies"][0][
+                        "accession"
+                    ],
+                    content=raw_artifacts["payload"]["content"],
+                )
+            ]
         }
+
+    with open(ADDED_ACCESSIONS_PATH, encoding="utf-8") as file:
+        added_accessions_artifact = json.load(file)
+        artifacts[added_accessions_artifact["type_"]] = [
+            ArtifactJson(
+                artifact_name=added_accessions_artifact["type_"],
+                study_accession=added_accessions_artifact["payload"]["content"][
+                    "studies"
+                ][0]["accession"],
+                content=added_accessions_artifact["payload"]["content"],
+            )
+        ]
 
     token, token_hash = generate_token_and_hash()
 
@@ -89,10 +118,12 @@ async def joint_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> JointFi
         ]
     )
 
-    expected_file_resource_content = artifacts["embedded_public"][0]["study_files"][0]
+    expected_file_resource_content = artifacts["embedded_public"][0]["content"][
+        "study_files"
+    ][0]
     expected_embedded_dataset_resource_content = artifacts["embedded_public"][0][
-        "embedded_dataset"
-    ][1]
+        "content"
+    ]["embedded_dataset"][1]
 
     app = await get_app(config=config)
     client = AsyncTestClient(app)

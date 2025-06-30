@@ -34,7 +34,11 @@ from tests.fixtures.event_handling import (
 
 EXAMPLE_ARTIFACTS: ArtifactResourceDict = {
     "example_artifact": [
-        {"some": "example", "artifact": "data"},
+        {
+            "study_accession": "123test",
+            "artifact_name": "example_artifact",
+            "content": {"studies": [{"accession": "123test"}]},
+        },
     ]
 }
 
@@ -62,10 +66,13 @@ async def test_upload_artifacts_via_http_api(
             ),
             type_=artifact_type,
             key=str(uuid4()),  # will later be the submission id
-            payload={"content": artifact_content},
+            payload={
+                "study_accession": artifact_instance["study_accession"],
+                "content": artifact_instance["content"],
+            },
         )
-        for artifact_type, artifact_contents in EXAMPLE_ARTIFACTS.items()
-        for artifact_content in artifact_contents
+        for artifact_type, artifact_instances in EXAMPLE_ARTIFACTS.items()
+        for artifact_instance in artifact_instances
     ]
     await file_system_event_fixture.publish_events(artifact_events)
 

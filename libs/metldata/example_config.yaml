@@ -192,6 +192,7 @@ artifact_infos:
       description: null
       json_schema: {}
       name: SampleFile
+artifact_topic: artifacts
 auto_reload: false
 cors_allow_credentials: null
 cors_allowed_headers: null
@@ -228,6 +229,8 @@ openapi_url: /openapi.json
 port: 8080
 primary_artifact_name: embedded_public
 primary_dataset_name: EmbeddedDataset
+publishable_artifacts:
+- added_accessions
 resource_change_topic: searchable_resources
 resource_deletion_type: searchable_resource_deleted
 resource_upsertion_type: searchable_resource_upserted

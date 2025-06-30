@@ -331,6 +331,14 @@
       "title": "Kafka Retry Backoff",
       "type": "integer"
     },
+    "artifact_topic": {
+      "description": "Name of the event topic containing artifact events",
+      "examples": [
+        "artifacts"
+      ],
+      "title": "Artifact Topic",
+      "type": "string"
+    },
     "resource_change_topic": {
       "description": "Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.",
       "examples": [
@@ -533,6 +541,20 @@
       },
       "title": "Loader Token Hashes",
       "type": "array"
+    },
+    "publishable_artifacts": {
+      "description": "List of artifacts to be published in their entirety when loaded into the Loader API.",
+      "examples": [
+        [],
+        [
+          "added_accessions"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Publishable Artifacts",
+      "type": "array"
     }
   },
   "required": [
@@ -540,6 +562,7 @@
     "mongo_dsn",
     "db_name",
     "kafka_servers",
+    "artifact_topic",
     "resource_change_topic",
     "resource_deletion_type",
     "resource_upsertion_type",
