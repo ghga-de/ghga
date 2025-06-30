@@ -124,7 +124,10 @@ class Orchestrator(OrchestratorPort):
                 dataset_id=access_request.dataset_id
             ),
         )
-        log.info("Sent Access Request Created notification to data requester")
+        log.info(
+            "Created Access Request Created notification to user. Email address: %s",
+            user.email,
+        )
 
         # Send a notification to the data steward
         await self._notification_emitter.notify(
@@ -140,7 +143,10 @@ class Orchestrator(OrchestratorPort):
                 request_text=access_request.request_text,
             ),
         )
-        log.info("Sent Access Request Created notification to data steward")
+        log.info(
+            "Sent Access Request Created notification to data steward. Email address: %s",
+            self._config.central_data_stewardship_email,
+        )
 
     async def _access_request_allowed(
         self,
@@ -179,7 +185,10 @@ class Orchestrator(OrchestratorPort):
                 note_to_requester=note_to_requester,
             ),
         )
-        log.info("Sent Access Request Allowed notification to data requester")
+        log.info(
+            "Sent Access Request Allowed notification to user. Email address: %s",
+            user.email,
+        )
 
         # Send a confirmation email to the data steward
         ticket_id = access_request.ticket_id
@@ -192,7 +201,10 @@ class Orchestrator(OrchestratorPort):
                 ticket_id=f"#{ticket_id}" if ticket_id else "Missing",
             ),
         )
-        log.info("Sent Access Request Allowed notification to data steward")
+        log.info(
+            "Sent Access Request Allowed notification to data steward. Email address: %s",
+            self._config.central_data_stewardship_email,
+        )
 
     async def _access_request_denied(
         self,
@@ -230,7 +242,10 @@ class Orchestrator(OrchestratorPort):
                 note_to_requester=note_to_requester,
             ),
         )
-        log.info("Sent Access Request Denied notification to data requester")
+        log.info(
+            "Sent Access Request Denied notification to user. Email address: %s",
+            user.email,
+        )
 
         # Send a confirmation email to the data steward
         ticket_id = access_request.ticket_id
@@ -243,7 +258,10 @@ class Orchestrator(OrchestratorPort):
                 ticket_id=f"#{ticket_id}" if ticket_id else "Missing",
             ),
         )
-        log.info("Sent Access Request Denied notification to data steward")
+        log.info(
+            "Sent Access Request Denied notification to data steward. Email address: %s",
+            self._config.central_data_stewardship_email,
+        )
 
     async def _iva_code_requested(self, *, user: event_schemas.User):
         """Send notifications relaying that an IVA code has been requested.
@@ -259,6 +277,11 @@ class Orchestrator(OrchestratorPort):
             notification=notifications.IVA_CODE_REQUESTED_TO_USER,
         )
 
+        log.info(
+            "Sent IVA Code Requested notification to user. Email address: %s",
+            user.email,
+        )
+
         # Send a notification to the data steward
         await self._notification_emitter.notify(
             email=self._config.central_data_stewardship_email,
@@ -268,12 +291,22 @@ class Orchestrator(OrchestratorPort):
             ),
         )
 
+        log.info(
+            "Sent IVA Code Requested notification to data steward. Email address: %s",
+            self._config.central_data_stewardship_email,
+        )
+
     async def _iva_code_transmitted(self, *, user: event_schemas.User):
         """Send a notification that an IVA code has been transmitted to the user."""
         await self._notification_emitter.notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.IVA_CODE_TRANSMITTED_TO_USER,
+        )
+
+        log.info(
+            "Sent IVA Code Transmitted notification to user. Email address: %s",
+            user.email,
         )
 
     async def _iva_unverified(
@@ -295,6 +328,10 @@ class Orchestrator(OrchestratorPort):
                 helpdesk_email=self._config.helpdesk_email
             ),
         )
+        log.info(
+            "Sent IVA Unverified notification to user. Email address: %s",
+            user.email,
+        )
 
         # send a notification to the data steward
         await self._notification_emitter.notify(
@@ -303,6 +340,11 @@ class Orchestrator(OrchestratorPort):
             notification=notifications.IVA_UNVERIFIED_TO_DS.formatted(
                 full_user_name=user.name, email=user.email, type=iva_type
             ),
+        )
+
+        log.info(
+            "Sent IVA Unverified notification to data steward. Email address: %s",
+            self._config.central_data_stewardship_email,
         )
 
     async def process_all_ivas_invalidated(self, *, user_id: str):
@@ -325,6 +367,11 @@ class Orchestrator(OrchestratorPort):
             notification=notifications.ALL_IVAS_INVALIDATED_TO_USER.formatted(
                 helpdesk_email=self._config.helpdesk_email
             ),
+        )
+
+        log.info(
+            "Sent All IVAs Invalidated notification to user. Email address: %s",
+            user.email,
         )
 
     async def process_iva_state_change(self, *, user_iva: event_schemas.UserIvaState):
@@ -439,7 +486,12 @@ class Orchestrator(OrchestratorPort):
                         changed_details=changed_details,
                     ),
                 )
-                log.info("Sent User Re-registered notification to user")
+
+                log.info(
+                    "Sent User Re-registered notification to user. Email address: %s",
+                    existing_user.email,
+                )
+
         await self._user_dao.upsert(dto=update)
 
     async def delete_user_data(self, resource_id: str) -> None:
@@ -477,4 +529,9 @@ class Orchestrator(OrchestratorPort):
             notification=notifications.SECOND_FACTOR_RECREATED_TO_USER.formatted(
                 helpdesk_email=self._config.helpdesk_email
             ),
+        )
+
+        log.info(
+            "Sent Second Factor Recreated notification to user. Email address: %s",
+            user.email,
         )
