@@ -232,7 +232,7 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 5.1.0
+  version: 5.1.1
 openapi: 3.1.0
 paths:
   /access-requests:

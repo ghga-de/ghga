@@ -28,6 +28,7 @@ docs_url: /docs
 download_access_url: http://127.0.0.1:8080/download-access
 generate_correlation_id: true
 host: 127.0.0.1
+kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: true
 kafka_max_message_size: 1048576
