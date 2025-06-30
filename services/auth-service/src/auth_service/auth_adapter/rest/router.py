@@ -115,6 +115,7 @@ def add_allowed_routes():
 add_allowed_routes()
 
 
+@start_span()
 @router.post(
     AUTH_PATH + "/rpc/login",
     operation_id="login",
@@ -124,7 +125,6 @@ add_allowed_routes()
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@start_span()
 async def login(  # noqa: C901, PLR0913
     request: Request,
     session_store: SessionStoreDependency,
@@ -214,6 +214,7 @@ async def login(  # noqa: C901, PLR0913
     return response
 
 
+@start_span()
 @router.post(
     AUTH_PATH + "/rpc/logout",
     operation_id="logout",
@@ -223,7 +224,6 @@ async def login(  # noqa: C901, PLR0913
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@start_span()
 async def logout(
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -242,6 +242,7 @@ async def logout(
     return response
 
 
+@start_span()
 @router.post(
     AUTH_PATH + "/users",
     operation_id="post_user",
@@ -251,7 +252,6 @@ async def logout(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
-@start_span()
 async def post_user(
     request: Request,
     session_store: SessionStoreDependency,
@@ -268,6 +268,7 @@ async def post_user(
     return pass_auth_response(request, f"Bearer {internal_token}")
 
 
+@start_span()
 @router.put(
     AUTH_PATH + "/users/{id}",
     operation_id="put_user",
@@ -277,7 +278,6 @@ async def post_user(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
-@start_span()
 async def put_user(
     id_: Annotated[
         str,
@@ -306,6 +306,7 @@ async def put_user(
     return pass_auth_response(request, f"Bearer {internal_token}")
 
 
+@start_span()
 @router.post(
     AUTH_PATH + "/totp-token",
     operation_id="create_new_totp_token",
@@ -315,7 +316,6 @@ async def put_user(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_201_CREATED,
 )
-@start_span()
 async def create_new_totp_token(
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -355,6 +355,7 @@ async def create_new_totp_token(
     return TOTPTokenResponse(uri=SecretStr(uri))
 
 
+@start_span()
 @router.post(
     AUTH_PATH + "/rpc/verify-totp",
     operation_id="verify_totp",
@@ -364,7 +365,6 @@ async def create_new_totp_token(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@start_span()
 async def rpc_verify_totp(  # noqa: PLR0913
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -408,13 +408,13 @@ async def rpc_verify_totp(  # noqa: PLR0913
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@start_span()
 @router.api_route(
     "/{path:path}",
     methods=ALL_METHODS,
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
-@start_span()
 async def ext_auth(
     request: Request,
     session_store: SessionStoreDependency,

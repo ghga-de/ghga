@@ -49,6 +49,7 @@ claim_not_found_error = HTTPException(
 TAGS: list[str | Enum] = ["claims"]
 
 
+@start_span()
 @router.post(
     "/users/{user_id}/claims",
     operation_id="post_claim",
@@ -64,7 +65,6 @@ TAGS: list[str | Enum] = ["claims"]
     },
     status_code=201,
 )
-@start_span()
 async def post_claim(
     claim_creation: ClaimCreation,
     user_id: Annotated[
@@ -100,6 +100,7 @@ async def post_claim(
     return full_claim
 
 
+@start_span()
 @router.get(
     "/users/{user_id}/claims",
     operation_id="get_claims",
@@ -114,7 +115,6 @@ async def post_claim(
     },
     status_code=200,
 )
-@start_span()
 async def get_claims(
     user_id: Annotated[
         str,
@@ -134,6 +134,7 @@ async def get_claims(
     return [claim async for claim in claim_dao.find_all(mapping={"user_id": user_id})]
 
 
+@start_span()
 @router.patch(
     "/users/{user_id}/claims/{claim_id}",
     operation_id="patch_claim",
@@ -147,7 +148,6 @@ async def get_claims(
     },
     status_code=201,
 )
-@start_span()
 async def patch_claim(
     claim_update: ClaimUpdate,
     user_id: Annotated[
@@ -194,6 +194,7 @@ async def patch_claim(
     return Response(status_code=204)
 
 
+@start_span()
 @router.delete(
     "/users/{user_id}/claims/{claim_id}",
     operation_id="delete_claim",
@@ -207,7 +208,6 @@ async def patch_claim(
     },
     status_code=201,
 )
-@start_span()
 async def delete_claim(
     user_id: Annotated[
         str,

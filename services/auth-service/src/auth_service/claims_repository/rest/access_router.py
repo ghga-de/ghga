@@ -57,6 +57,7 @@ iva_not_found_error = HTTPException(
 TAGS: list[str | Enum] = ["access"]
 
 
+@start_span()
 @router.post(
     "/download-access/users/{user_id}/ivas/{iva_id}/datasets/{dataset_id}",
     operation_id="grant_download_access",
@@ -72,7 +73,6 @@ TAGS: list[str | Enum] = ["access"]
     },
     status_code=204,
 )
-@start_span()
 async def grant_download_access(  # noqa: PLR0913
     validity: ClaimValidity,
     user_id: Annotated[
@@ -128,6 +128,7 @@ async def grant_download_access(  # noqa: PLR0913
     return Response(status_code=204)
 
 
+@start_span()
 @router.get(
     "/download-access/users/{user_id}/datasets/{dataset_id}",
     operation_id="check_download_access",
@@ -142,7 +143,6 @@ async def grant_download_access(  # noqa: PLR0913
     },
     status_code=200,
 )
-@start_span()
 async def check_download_access(
     user_id: Annotated[
         str,
@@ -203,6 +203,7 @@ async def check_download_access(
     return valid_until
 
 
+@start_span()
 @router.get(
     "/download-access/users/{user_id}/datasets",
     operation_id="get_download_access_list",
@@ -220,7 +221,6 @@ async def check_download_access(
     },
     status_code=200,
 )
-@start_span()
 async def get_datasets_with_download_access(
     user_id: Annotated[
         str,

@@ -738,7 +738,7 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 6.0.0
+  version: 6.0.1
 openapi: 3.1.0
 paths:
   /download-access/users/{user_id}/datasets:
