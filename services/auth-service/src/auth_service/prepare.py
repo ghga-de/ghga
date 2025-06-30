@@ -42,7 +42,8 @@ from .claims_repository.core.deletion import (
 )
 from .claims_repository.core.seed import seed_data_steward_claims
 from .claims_repository.deps import get_claim_dao
-from .claims_repository.rest.router import router as claims_router
+from .claims_repository.rest.access_router import router as access_router
+from .claims_repository.rest.claims_router import router as claims_router
 from .claims_repository.translators.dao import ClaimDaoFactory
 from .claims_repository.translators.event_sub import EventSubTranslator
 from .config import Config
@@ -57,7 +58,13 @@ from .user_registry.rest.router import router as users_router
 from .user_registry.translators.dao import UserDaoPublisherFactory
 from .user_registry.translators.event_pub import EventPubTranslator
 
-__all__ = ["prepare_rest_app"]
+__all__ = [
+    "access_router",
+    "base_router",
+    "claims_router",
+    "prepare_rest_app",
+    "users_router",
+]
 
 
 @asynccontextmanager
@@ -100,10 +107,13 @@ async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
     apis = config.provide_apis
     with_users_api = "users" in apis
     with_claims_api = "claims" in apis
+    with_access_api = "access" in apis
     if with_users_api:
         app.include_router(users_router)
     if with_claims_api:
         app.include_router(claims_router)
+    if with_access_api:
+        app.include_router(access_router)
 
     dao_factory = MongoDbDaoFactory(config=config)
 
@@ -148,7 +158,7 @@ async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
             app.dependency_overrides[get_user_registry] = lambda: user_registry
 
         # Seed with data steward claims if started with claims API
-        if with_claims_api:
+        if with_claims_api or with_access_api:
             await seed_data_steward_claims(
                 config=config, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
             )

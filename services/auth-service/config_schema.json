@@ -790,13 +790,14 @@
       "examples": [
         "[\"ext_auth\"]",
         "[\"users\"]",
-        "[\"claims\"]"
+        "[\"claims\", \"access\"]"
       ],
       "items": {
         "enum": [
           "ext_auth",
           "users",
-          "claims"
+          "claims",
+          "access"
         ],
         "type": "string"
       },

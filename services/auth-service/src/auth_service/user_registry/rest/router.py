@@ -17,6 +17,7 @@
 """Routes for managing users and IVAs"""
 
 from contextlib import suppress
+from enum import Enum
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Query, Response
@@ -55,11 +56,13 @@ router = APIRouter()
 
 INITIAL_USER_STATUS = UserStatus.ACTIVE
 
+TAGS: list[str | Enum] = ["users"]
+
 
 @router.post(
     "/users",
     operation_id="post_user",
-    tags=["users"],
+    tags=TAGS,
     summary="Register a user",
     description="Endpoint used to register a new user."
     " May only be performed by the users themselves."
@@ -105,7 +108,7 @@ async def post_user(
 @router.put(
     "/users/{id}",
     operation_id="put_user",
-    tags=["users"],
+    tags=TAGS,
     summary="Update a user",
     description="Endpoint used to update a registered user"
     " when their name or email used by LS Login have changed."
@@ -157,7 +160,7 @@ async def put_user(
 @router.get(
     "/users/{id}",
     operation_id="get_user",
-    tags=["users"],
+    tags=TAGS,
     summary="Get user data",
     description="Endpoint used to get the user data for a specified user."
     " Can only be performed by a data steward or the same user.",
@@ -206,7 +209,7 @@ async def get_user(
 @router.patch(
     "/users/{id}",
     operation_id="patch_user",
-    tags=["users"],
+    tags=TAGS,
     summary="Modify user data",
     description="Endpoint used to modify the user data for a specified user."
     " Can only be performed by a data steward or the same user.",
@@ -266,7 +269,7 @@ async def patch_user(
 @router.delete(
     "/users/{id}",
     operation_id="delete_user",
-    tags=["users"],
+    tags=TAGS,
     summary="Delete user",
     description="Endpoint used to delete a user."
     " Can only be performed by a data steward.",
@@ -323,7 +326,7 @@ async def delete_user(
 @router.get(
     "/users/{user_id}/ivas",
     operation_id="get_user_ivas",
-    tags=["users"],
+    tags=TAGS,
     summary="Get all IVAs of a user",
     description="Endpoint used to get all IVAs for a specified user."
     " Can only be performed by a data steward or the same user.",
@@ -366,7 +369,7 @@ async def get_user_ivas(
 @router.post(
     "/users/{user_id}/ivas",
     operation_id="post_user_iva",
-    tags=["users"],
+    tags=TAGS,
     summary="Create a new IVA",
     description="Endpoint used to create a new IVA for a specified user.",
     responses={
@@ -413,7 +416,7 @@ async def post_user_iva(
 @router.delete(
     "/users/{user_id}/ivas/{iva_id}",
     operation_id="delete_user_iva",
-    tags=["users"],
+    tags=TAGS,
     summary="Delete an IVA",
     description="Endpoint used to delete an IVA for a specified user.",
     responses={
@@ -464,7 +467,7 @@ async def delete_user_iva(
 @router.post(
     "/rpc/ivas/{iva_id}/unverify",
     operation_id="unverify_iva",
-    tags=["users"],
+    tags=TAGS,
     summary="Unverify an IVA",
     description="Endpoint used to reset an IVA to the unverified state.",
     responses={
@@ -503,7 +506,7 @@ async def unverify_iva(
 @router.post(
     "/rpc/ivas/{iva_id}/request-code",
     operation_id="request_code_for_iva",
-    tags=["users"],
+    tags=TAGS,
     summary="Request verification code for an IVA",
     description="Endpoint used to request a verification code for a given IVA.",
     responses={
@@ -548,7 +551,7 @@ async def request_code_for_iva(
 @router.post(
     "/rpc/ivas/{iva_id}/create-code",
     operation_id="create_code_for_iva",
-    tags=["users"],
+    tags=TAGS,
     summary="Create verification code for an IVA",
     description="Endpoint used to create a verification code for a given IVA.",
     responses={
@@ -592,7 +595,7 @@ async def create_code_for_iva(
 @router.post(
     "/rpc/ivas/{iva_id}/code-transmitted",
     operation_id="code_transmitted_for_iva",
-    tags=["users"],
+    tags=TAGS,
     summary="Confirm verification code transmission for an IVA",
     description="Endpoint used to confirm"
     " that the verification code for an IVA has been transmitted.",
@@ -644,7 +647,7 @@ async def confirm_code_for_iva_transmitted(
 @router.post(
     "/rpc/ivas/{iva_id}/validate-code",
     operation_id="validate_code_for_iva",
-    tags=["users"],
+    tags=TAGS,
     summary="Validate the verification code for an IVA",
     description="Endpoint used to validate the verification code for an IVA.",
     responses={
@@ -703,7 +706,7 @@ async def validate_code_for_iva(
 @router.get(
     "/ivas",
     operation_id="get_all_ivas",
-    tags=["users"],
+    tags=TAGS,
     summary="Get all IVAs",
     description="Endpoint used to get all IVAs and their corresponding users."
     " Can only be performed by a data steward.",

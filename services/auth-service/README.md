@@ -616,7 +616,7 @@ The service requires the following configuration parameters:
 
 - <a id="properties/provide_apis"></a>**`provide_apis`** *(array)*: Which REST APIs should be provided. Default: `[]`.
 
-  - <a id="properties/provide_apis/items"></a>**Items** *(string)*: Must be one of: `["ext_auth", "users", "claims"]`.
+  - <a id="properties/provide_apis/items"></a>**Items** *(string)*: Must be one of: `["ext_auth", "users", "claims", "access"]`.
 
 
   Examples:
@@ -632,7 +632,7 @@ The service requires the following configuration parameters:
 
 
   ```json
-  "[\"claims\"]"
+  "[\"claims\", \"access\"]"
   ```
 
 

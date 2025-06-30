@@ -17,15 +17,12 @@
 """Port for managing and using TOTP tokens."""
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel
 
-T = TypeVar("T", bound=BaseModel)
 
-
-class TOTPHandlerPort(ABC, Generic[T]):
+class TOTPHandlerPort[T: BaseModel](ABC):
     """Port for a handler that can manage and use TOTP tokens."""
 
     @classmethod

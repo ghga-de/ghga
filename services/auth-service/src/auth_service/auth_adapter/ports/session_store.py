@@ -17,7 +17,7 @@
 """Port for managing user sessions that keep track of authentication state."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,10 +30,7 @@ class BaseSession(BaseModel, ABC):
     model_config = ConfigDict(extra="forbid")
 
 
-T = TypeVar("T", bound=BaseSession)
-
-
-class SessionStorePort(ABC, Generic[T]):
+class SessionStorePort[T: BaseSession](ABC):
     """Port providing a store for user sessions."""
 
     @abstractmethod

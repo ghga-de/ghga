@@ -773,7 +773,7 @@ paths:
           description: Validation error in submitted user IDs.
       summary: Get list of all dataset IDs with download access permission
       tags:
-      - datasets
+      - access
   /download-access/users/{user_id}/datasets/{dataset_id}:
     get:
       description: Endpoint to check whether the given dataset can be downloaded by
@@ -814,7 +814,7 @@ paths:
           description: Validation error in submitted user IDs.
       summary: Check download access permission for a dataset
       tags:
-      - datasets
+      - access
   /download-access/users/{user_id}/ivas/{iva_id}/datasets/{dataset_id}:
     post:
       description: Endpoint to add a controlled access grant for a given dataset so
@@ -862,7 +862,7 @@ paths:
           description: Validation error in submitted user IDs.
       summary: Grant download access permission for a dataset
       tags:
-      - datasets
+      - access
   /health:
     get:
       description: Used to check that this service is alive
@@ -1539,5 +1539,9 @@ paths:
 tags:
 - description: User data
   name: users
+- description: TOTP tokens
+  name: totp
 - description: User claims
   name: claims
+- description: Access permissions
+  name: access

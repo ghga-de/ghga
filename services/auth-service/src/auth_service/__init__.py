@@ -42,5 +42,7 @@ LICENSE_INFO = {
 
 TAGS_METADATA = [
     {"name": "users", "description": "User data"},
+    {"name": "totp", "description": "TOTP tokens"},
     {"name": "claims", "description": "User claims"},
+    {"name": "access", "description": "Access permissions"},
 ]

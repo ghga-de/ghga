@@ -97,18 +97,18 @@ def reload_auth_key_config(auth_adapter: bool = auth_adapter) -> None:
     environ["AUTH_SERVICE_PROVIDE_APIS"] = '["ext_auth"]' if auth_adapter else "[]"
     set_auth_keys_env()
 
-    from auth_service import config
+    from auth_service import config  # noqa: PLC0415
 
     reload(config)
 
     if auth_adapter:
-        from auth_service.auth_adapter.core import auth
+        from auth_service.auth_adapter.core import auth  # noqa: PLC0415
     else:
-        from auth_service.rest import auth  # type: ignore[no-redef]
+        from auth_service.rest import auth  # type: ignore[no-redef]  # noqa: PLC0415
 
     reload(auth)
 
-    from . import utils
+    from . import utils  # noqa: PLC0415
 
     reload(utils)
 

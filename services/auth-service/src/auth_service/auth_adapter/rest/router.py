@@ -19,6 +19,7 @@ Note: If a path_prefix is used for the Emissary AuthService,
 then this must be also specified in the config setting api_root_path.
 """
 
+from enum import Enum
 from typing import Annotated
 
 from fastapi import (
@@ -73,6 +74,9 @@ auth_paths = tuple(CONFIG.auth_paths)
 basic_auth_dependency = get_basic_auth_dependency(CONFIG)
 basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else None
 
+TAGS_USER: list[str | Enum] = ["users"]
+TAGS_TOTP: list[str | Enum] = ["totp"]
+
 # the auth adapter needs to handle all HTTP methods
 READ_METHODS = ["GET", "HEAD", "OPTIONS"]
 WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"]
@@ -114,7 +118,7 @@ add_allowed_routes()
 @router.post(
     AUTH_PATH + "/rpc/login",
     operation_id="login",
-    tags=["users"],
+    tags=TAGS_USER,
     summary="Create or get user session",
     description="Endpoint used when a user wants to log in",
     dependencies=basic_auth_dependencies,
@@ -213,7 +217,7 @@ async def login(  # noqa: C901, PLR0913
 @router.post(
     AUTH_PATH + "/rpc/logout",
     operation_id="logout",
-    tags=["users"],
+    tags=TAGS_USER,
     summary="End user session",
     description="Endpoint used when a user wants to log out",
     dependencies=basic_auth_dependencies,
@@ -241,7 +245,7 @@ async def logout(
 @router.post(
     AUTH_PATH + "/users",
     operation_id="post_user",
-    tags=["users"],
+    tags=TAGS_USER,
     summary="Register a user",
     description="Handle the endpoint to register a new user",
     dependencies=basic_auth_dependencies,
@@ -267,7 +271,7 @@ async def post_user(
 @router.put(
     AUTH_PATH + "/users/{id}",
     operation_id="put_user",
-    tags=["users"],
+    tags=TAGS_USER,
     summary="Update a user",
     description="Handle the endpoint to update an existing user",
     dependencies=basic_auth_dependencies,
@@ -305,7 +309,7 @@ async def put_user(
 @router.post(
     AUTH_PATH + "/totp-token",
     operation_id="create_new_totp_token",
-    tags=["totp"],
+    tags=TAGS_TOTP,
     summary="Create a new TOTP token",
     description="Endpoint used to create or replace a TOTP token",
     dependencies=basic_auth_dependencies,
@@ -354,7 +358,7 @@ async def create_new_totp_token(
 @router.post(
     AUTH_PATH + "/rpc/verify-totp",
     operation_id="verify_totp",
-    tags=["totp"],
+    tags=TAGS_TOTP,
     summary="Verify a TOTP code",
     description="Endpoint used to verify a TOTP code",
     dependencies=basic_auth_dependencies,

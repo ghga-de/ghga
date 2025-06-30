@@ -91,7 +91,7 @@ def test_does_not_validate_an_access_token_with_wrong_format():
 def test_does_not_validate_an_access_token_with_bad_signature():
     """Test that an access token with a corrupt signature is rejected."""
     access_token = create_access_token()
-    access_token = ".".join(access_token.split(".")[:-1] + ["somebadsignature"])
+    access_token = ".".join((*access_token.split(".")[:-1], "somebadsignature"))
     with pytest.raises(
         auth.TokenValidationError, match="Not a valid token: Missing Key"
     ):

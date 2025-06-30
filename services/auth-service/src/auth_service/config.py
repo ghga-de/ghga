@@ -112,11 +112,11 @@ class Config(
         description="paths for writing that use their own authentication mechanism",
     )
 
-    provide_apis: list[Literal["ext_auth", "users", "claims"]] = Field(
+    provide_apis: list[Literal["ext_auth", "users", "claims", "access"]] = Field(
         default=[],
         description="Which REST APIs should be provided.",
         title="Provide APIs",
-        examples=['["ext_auth"]', '["users"]', '["claims"]'],
+        examples=['["ext_auth"]', '["users"]', '["claims", "access"]'],
     )
 
     run_consumer: bool = Field(

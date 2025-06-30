@@ -14,16 +14,16 @@
 # limitations under the License.
 #
 
-"""Routes for managing user claims"""
+"""Routes for managing user access to datasets"""
 
 import logging
+from enum import Enum
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Response, status
 from fastapi.exceptions import HTTPException
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.opentelemetry import start_span
-from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_registry.deps import (
     IvaDaoDependency,
@@ -36,21 +36,9 @@ from ..core.claims import (
     has_download_access_for_dataset,
     is_valid_claim,
 )
-from ..core.utils import (
-    iva_is_verified,
-    user_exists,
-    user_is_active,
-    user_with_iva_exists,
-)
+from ..core.utils import iva_is_verified, user_is_active, user_with_iva_exists
 from ..deps import ClaimDaoDependency
-from ..models.claims import (
-    Accession,
-    Claim,
-    ClaimCreation,
-    ClaimUpdate,
-    ClaimValidity,
-    VisaType,
-)
+from ..models.claims import Accession, ClaimValidity, VisaType
 
 __all__ = ["router"]
 
@@ -65,214 +53,14 @@ user_not_found_error = HTTPException(
 iva_not_found_error = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND, detail="The IVA was not found."
 )
-claim_not_found_error = HTTPException(
-    status_code=status.HTTP_404_NOT_FOUND, detail="The user claim was not found."
-)
 
-
-@router.post(
-    "/users/{user_id}/claims",
-    operation_id="post_claim",
-    tags=["claims"],
-    summary="Store a user claim",
-    description="Endpoint used to store a new claim about a user.",
-    responses={
-        201: {"model": Claim, "description": "Claim was successfully stored."},
-        400: {"description": "Claim cannot be stored."},
-        404: {"description": "The user was not found."},
-        409: {"description": "Claim was already stored."},
-        422: {"description": "Validation error in submitted ID or claims data."},
-    },
-    status_code=201,
-)
-@start_span()
-async def post_claim(
-    claim_creation: ClaimCreation,
-    user_id: Annotated[
-        str,
-        Path(
-            ...,
-            alias="user_id",
-            description="Internal ID of the user",
-        ),
-    ],
-    user_dao: UserDaoDependency,
-    claim_dao: ClaimDaoDependency,
-) -> Claim:
-    """Store a user claim"""
-    if not await user_exists(user_id, user_dao=user_dao):
-        raise user_not_found_error
-
-    current_date = now_as_utc()
-    full_claim = Claim(
-        **claim_creation.model_dump(),
-        user_id=user_id,
-        creation_date=current_date,
-        revocation_date=None,
-    )
-
-    try:
-        await claim_dao.insert(full_claim)
-    except Exception as error:
-        log.error("Could not insert claim: %s", error)
-        raise HTTPException(
-            status_code=400, detail="User claim cannot be stored."
-        ) from error
-    return full_claim
-
-
-@router.get(
-    "/users/{user_id}/claims",
-    operation_id="get_claims",
-    tags=["claims"],
-    summary="Get all claims for a given user",
-    description="Endpoint used to get all claims for a specified user.",
-    responses={
-        200: {"model": list[Claim], "description": "User claims have been retrieved."},
-        401: {"description": "Not authorized to get user claims."},
-        404: {"description": "The user was not found."},
-        422: {"description": "Validation error in submitted user ID."},
-    },
-    status_code=200,
-)
-@start_span()
-async def get_claims(
-    user_id: Annotated[
-        str,
-        Path(
-            ...,
-            alias="user_id",
-            description="Internal ID of the user",
-        ),
-    ],
-    user_dao: UserDaoDependency,
-    claim_dao: ClaimDaoDependency,
-) -> list[Claim]:
-    """Get all claims for a given user"""
-    if not await user_exists(user_id, user_dao=user_dao):
-        raise user_not_found_error
-
-    return [claim async for claim in claim_dao.find_all(mapping={"user_id": user_id})]
-
-
-@router.patch(
-    "/users/{user_id}/claims/{claim_id}",
-    operation_id="patch_claim",
-    tags=["claims"],
-    summary="Revoke an existing user claim",
-    description="Endpoint used to revoke a claim for a specified user.",
-    responses={
-        204: {"description": "User claim was successfully saved."},
-        404: {"description": "The user claim was not found."},
-        422: {"description": "Validation error in submitted user data."},
-    },
-    status_code=201,
-)
-@start_span()
-async def patch_user(
-    claim_update: ClaimUpdate,
-    user_id: Annotated[
-        str,
-        Path(
-            ...,
-            alias="user_id",
-            description="Internal user ID",
-        ),
-    ],
-    claim_id: Annotated[
-        str,
-        Path(
-            ...,
-            alias="claim_id",
-            description="Internal claim ID",
-        ),
-    ],
-    user_dao: UserDaoDependency,
-    claim_dao: ClaimDaoDependency,
-) -> Response:
-    """Revoke an existing user claim"""
-    if not await user_exists(user_id, user_dao=user_dao):
-        raise user_not_found_error
-
-    try:
-        claim = await claim_dao.get_by_id(claim_id)
-    except ResourceNotFoundError as error:
-        raise claim_not_found_error from error
-
-    if claim.user_id != user_id:
-        raise claim_not_found_error
-
-    revocation_date = claim_update.revocation_date  # is not null per validation
-    if claim.revocation_date and revocation_date > claim.revocation_date:
-        raise HTTPException(status_code=422, detail="Already revoked earlier.")
-
-    claim = claim.model_copy(update={"revocation_date": revocation_date})
-    try:
-        await claim_dao.update(claim)
-    except ResourceNotFoundError as error:
-        raise claim_not_found_error from error
-
-    return Response(status_code=204)
-
-
-@router.delete(
-    "/users/{user_id}/claims/{claim_id}",
-    operation_id="delete_claim",
-    tags=["claims"],
-    summary="Delete an existing user claim",
-    description="Endpoint used to delete an existing user claim.",
-    responses={
-        204: {"description": "User claim was successfully deleted."},
-        404: {"description": "The user claim was not found."},
-        422: {"description": "Validation error in submitted user or claim ID."},
-    },
-    status_code=201,
-)
-@start_span()
-async def delete_claim(
-    user_id: Annotated[
-        str,
-        Path(
-            ...,
-            alias="user_id",
-            description="Internal user ID",
-        ),
-    ],
-    claim_id: Annotated[
-        str,
-        Path(
-            ...,
-            alias="claim_id",
-            description="Internal claim ID",
-        ),
-    ],
-    user_dao: UserDaoDependency,
-    claim_dao: ClaimDaoDependency,
-) -> Response:
-    """Delete an existing user claim"""
-    if not await user_exists(user_id, user_dao=user_dao):
-        raise user_not_found_error
-
-    try:
-        claim = await claim_dao.get_by_id(claim_id)
-    except ResourceNotFoundError as error:
-        raise claim_not_found_error from error
-
-    if claim.user_id != user_id:
-        raise claim_not_found_error
-
-    try:
-        await claim_dao.delete(claim_id)
-    except ResourceNotFoundError as error:
-        raise claim_not_found_error from error
-
-    return Response(status_code=204)
+TAGS: list[str | Enum] = ["access"]
 
 
 @router.post(
     "/download-access/users/{user_id}/ivas/{iva_id}/datasets/{dataset_id}",
     operation_id="grant_download_access",
-    tags=["datasets"],
+    tags=TAGS,
     summary="Grant download access permission for a dataset",
     description="Endpoint to add a controlled access grant for a given dataset"
     " so that it can be downloaded by the given user with the given IVA."
@@ -343,7 +131,7 @@ async def grant_download_access(  # noqa: PLR0913
 @router.get(
     "/download-access/users/{user_id}/datasets/{dataset_id}",
     operation_id="check_download_access",
-    tags=["datasets"],
+    tags=TAGS,
     summary="Check download access permission for a dataset",
     description="Endpoint to check whether the given dataset"
     " can be downloaded by the given user. For internal use only.",
@@ -418,7 +206,7 @@ async def check_download_access(
 @router.get(
     "/download-access/users/{user_id}/datasets",
     operation_id="get_download_access_list",
-    tags=["datasets"],
+    tags=TAGS,
     summary="Get list of all dataset IDs with download access permission",
     description="Endpoint to get the IDs of all datasets that can be downloaded"
     " by the given user mapped to until when the dataset can be requested."
