@@ -1,0 +1,23 @@
+service_instance_id: "1"
+kafka_servers: ["kafka:9092"]
+mongo_dsn: mongodb://localhost:27017
+db_name: rts
+mongo_timeout: 300
+artifact_topic: artifacts
+sheet_names:
+  analyses: Analysis
+  analysis_methods: AnalysisMethod
+  analysis_method_supporting_files: AnalysisMethodSupportingFile
+  studies: Study
+  individuals: Individual
+  individual_supporting_files: IndividualSupportingFile
+  samples: Sample
+  experiment_methods: ExperimentMethod
+  experiment_method_supporting_files: ExperimentMethodSupportingFile
+  experiments: Experiment
+  research_data_files: ResearchDataFile
+  process_data_files: ProcessDataFile
+  datasets: Dataset
+  data_access_policies: DataAccessPolicy
+  data_access_committees: DataAccessCommittee
+  publications: Publication

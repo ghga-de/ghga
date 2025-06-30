@@ -23,12 +23,16 @@ from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
 from rts.adapters.inbound.event_sub import OutboxSubTranslatorConfig
+from rts.core.rev_tran import SheetNameConfig
 
 SERVICE_NAME: str = "rts"
+
+__all__ = ["Config"]
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
+    SheetNameConfig,
     ApiConfigBase,
     LoggingConfig,
     KafkaConfig,

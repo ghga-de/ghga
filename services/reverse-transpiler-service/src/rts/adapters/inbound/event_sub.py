@@ -19,7 +19,10 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs.stateful import ArtifactEventsConfig
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 
+from rts.models import StudyMetadata
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
+
+__all__ = ["OutboxSubTranslator", "OutboxSubTranslatorConfig"]
 
 
 class OutboxSubTranslatorConfig(ArtifactEventsConfig):
@@ -39,13 +42,17 @@ class OutboxSubTranslator(DaoSubscriberProtocol[event_schemas.Artifact]):
         reverse_transpiler: ReverseTranspilerPort,
     ):
         self._config = config
-        self._orchestrator = reverse_transpiler
+        self._reverse_transpiler = reverse_transpiler
         self.event_topic = config.artifact_topic
 
-    async def changed(self, resource_id: str, update: event_schemas.User) -> None:
+    async def changed(self, resource_id: str, update: event_schemas.Artifact) -> None:
         """Consume change event (created or updated) for an artifact."""
-        pass
+        study_metadata = StudyMetadata(
+            study_accession=update.study_accession,
+            content=update.content,
+        )
+        await self._reverse_transpiler.upsert_metadata(study_metadata=study_metadata)
 
     async def deleted(self, resource_id: str) -> None:
         """Consume event indicating the deletion of an artifact."""
-        pass
+        await self._reverse_transpiler.delete_metadata(study_accession=resource_id)

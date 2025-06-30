@@ -37,29 +37,28 @@ info:
   version: 1.0.0
 openapi: 3.1.0
 paths:
-  /artifacts/{artifact_name}/classes/{class_name}/resources/{resource_id}:
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+  /studies/{accession}:
     get:
       description: Get a transpiled metadata file for a specific artifact, class,
         and resource.
-      operationId: get_transpiled_metadata_artifacts__artifact_name__classes__class_name__resources__resource_id__get
+      operationId: get_transpiled_metadata_studies__accession__get
       parameters:
       - in: path
-        name: artifact_name
+        name: accession
         required: true
         schema:
-          title: Artifact Name
-          type: string
-      - in: path
-        name: class_name
-        required: true
-        schema:
-          title: Class Name
-          type: string
-      - in: path
-        name: resource_id
-        required: true
-        schema:
-          title: Resource Id
+          title: Accession
           type: string
       responses:
         '200':
@@ -73,17 +72,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-      summary: Get transpiled metadata
-  /health:
-    get:
-      description: Used to test if this service is alive
-      operationId: health_health_get
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-      summary: health
+      summary: Get accessioned metadata in .xlsx format
 servers:
 - url: ''

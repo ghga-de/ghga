@@ -13,23 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Model definitions for the RTS"""
-
-from typing import Any
-
-from pydantic import BaseModel, Field
-
-__all__ = ["StudyMetadata"]
-
-
-class StudyMetadata(BaseModel):
-    """A model representing a Metadata Artifact, identified by the study accession."""
-
-    study_accession: str = Field(
-        ..., description="The ID of the study found within the metadata submission."
-    )
-
-    content: dict[str, Any] = Field(
-        ...,
-        description="The entire metadata content of the artifact.",
-    )
+"""Integration tests for the event sub functionality."""
