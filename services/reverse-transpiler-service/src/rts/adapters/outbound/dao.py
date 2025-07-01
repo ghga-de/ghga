@@ -15,6 +15,7 @@
 
 """DAO implementation"""
 
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from io import BytesIO
@@ -28,6 +29,8 @@ from pymongo import AsyncMongoClient
 from rts.models import StudyMetadata
 from rts.ports.outbound.dao import MetadataDao, ResourceNotFoundError, WorkbookDaoPort
 
+log = logging.getLogger(__name__)
+
 __all__ = [
     "FILE_EXTENSION",
     "METADATA_COLLECTION",
@@ -38,8 +41,6 @@ __all__ = [
 
 METADATA_COLLECTION = "metadata"
 FILE_EXTENSION = ".xlsx"
-
-# TODO: Add logging
 
 
 async def get_metadata_dao(*, dao_factory: DaoFactoryProtocol) -> MetadataDao:
@@ -80,6 +81,7 @@ class WorkbookDao(WorkbookDaoPort):
             _id=study_accession,
             filename=f"{study_accession}{FILE_EXTENSION}",  # e.g. my_accession.xlsx
         )
+        log.debug("Workbook upserted for study accession: %s", study_accession)
 
     async def find(self, *, study_accession: str) -> bytes:
         """Retrieve the workbook for a given study accession.
@@ -92,6 +94,8 @@ class WorkbookDao(WorkbookDaoPort):
         if result is None:
             raise ResourceNotFoundError(id_=study_accession)
 
+        log.debug("Workbook found for study accession: %s", study_accession)
+
         return await result.read()
 
     async def delete(self, *, study_accession: str) -> None:
@@ -101,6 +105,7 @@ class WorkbookDao(WorkbookDaoPort):
         an error when trying to delete a non-existent file.
         """
         await self._grid_fs.delete(study_accession)
+        log.debug("Workbook deleted for study accession: %s", study_accession)
 
 
 @asynccontextmanager

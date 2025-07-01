@@ -234,14 +234,21 @@ class ReverseTranspiler(ReverseTranspilerPort):
             column_headers = list(items[0].keys())
 
             # Ensure 'alias' is the first column if present
-            if "alias" in column_headers:
-                column_headers.remove("alias")
-                column_headers.insert(0, "alias")
-
-            # Ensure 'accession' is the second column if present
-            if "accession" in column_headers:
-                column_headers.remove("accession")
-                column_headers.insert(1, "accession")
+            for idx, special_header in enumerate(["alias", "accession"]):
+                if special_header in column_headers:
+                    column_headers.remove(special_header)
+                    column_headers.insert(idx, special_header)
+                else:
+                    log.info(  # Unsure of proper log level, or if this log is needed
+                        "No '%s' field found in %s property for accession '%s'.",
+                        special_header,
+                        property_name,
+                        study_metadata.study_accession,
+                        extra={
+                            "study_accession": study_metadata.study_accession,
+                            "property": property_name,
+                        },
+                    )
 
             # Write the headers to the first row
             for col_idx, header in enumerate(column_headers, 1):
