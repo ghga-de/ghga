@@ -15,6 +15,8 @@
 
 """Event subscriber logic"""
 
+import logging
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs.stateful import ArtifactEventsConfig
 from ghga_event_schemas.validation import get_validated_payload
@@ -25,6 +27,8 @@ from rts.models import StudyMetadata
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 
 __all__ = ["EventSubTranslator", "EventSubTranslatorConfig"]
+
+log = logging.getLogger(__name__)
 
 
 class EventSubTranslatorConfig(ArtifactEventsConfig):
@@ -56,11 +60,14 @@ class EventSubTranslator(EventSubscriberProtocol):
         """Consumes an event"""
         if key.split(":")[0] != "added_accessions":
             # Ignore events that are not related to added_accessions
+            log.debug("Ignored event with key: %s because it's not the right kind", key)
             return
 
         if type_ == "upserted":
+            log.debug("Consuming upsert event for key: %s", key)
             await self._consume_upsert(payload=payload)
         elif type_ == "deleted":
+            log.debug("Consuming delete event for key: %s", key)
             study_accession = key.split(":")[1]
             await self._consume_delete(study_accession=study_accession)
 
