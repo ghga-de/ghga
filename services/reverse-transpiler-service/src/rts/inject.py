@@ -32,21 +32,16 @@ from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 from rts.ports.outbound.dao import MetadataDao, WorkbookDaoPort
 
 __all__ = [
-    "get_dao_factory",
     "prepare_core",
-    "prepare_core_with_override",
     "prepare_event_subscriber",
     "prepare_rest_app",
 ]
-
-# TODO: Review all methods here to check that 1. names are consistent,
-# 2. docstrings are correct, and 3. methods are actually used in the codebase.
 
 # TODO: Unit and integration tests for everything
 
 
 async def get_dao_factory(*, config: Config) -> MetadataDao:
-    """Constructs and initializes the DAO factory."""
+    """Constructs and initializes a DAO factory using config."""
     dao_factory = MongoDbDaoFactory(config=config)
     dao = await get_metadata_dao(dao_factory=dao_factory)
     return dao
@@ -56,14 +51,14 @@ async def get_dao_factory(*, config: Config) -> MetadataDao:
 async def prepare_core(
     *,
     config: Config,
-    dao_override: MetadataDao | None = None,
+    metadata_dao_override: MetadataDao | None = None,
     workbook_dao_override: WorkbookDaoPort | None = None,
 ) -> AsyncGenerator[ReverseTranspilerPort, None]:
     """Constructs and initializes all core components and their outbound dependencies.
 
     The _override parameters can be used to override the default dependencies.
     """
-    metadata_dao = dao_override or await get_dao_factory(config=config)
+    metadata_dao = metadata_dao_override or await get_dao_factory(config=config)
     async with (
         nullcontext(workbook_dao_override)
         if workbook_dao_override
