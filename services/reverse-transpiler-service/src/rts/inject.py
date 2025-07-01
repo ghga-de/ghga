@@ -19,14 +19,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from hexkit.providers.akafka.provider import (
-    ComboTranslator,
-    KafkaEventPublisher,
-    KafkaEventSubscriber,
-)
+from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from rts.adapters.inbound.event_sub import OutboxSubTranslator
+from rts.adapters.inbound.event_sub import EventSubTranslator
 from rts.adapters.inbound.fastapi_ import dummies
 from rts.adapters.inbound.fastapi_.configure import get_configured_app
 from rts.adapters.outbound.dao import get_metadata_dao, get_workbook_dao
@@ -126,10 +122,9 @@ async def prepare_event_subscriber(
         ) as reverse_transpiler,
         KafkaEventPublisher.construct(config=config) as dlq_publisher,
     ):
-        _translator = OutboxSubTranslator(
+        translator = EventSubTranslator(
             config=config, reverse_transpiler=reverse_transpiler
         )
-        translator = ComboTranslator(translators=[_translator])
         async with KafkaEventSubscriber.construct(
             config=config, translator=translator, dlq_publisher=dlq_publisher
         ) as event_subscriber:

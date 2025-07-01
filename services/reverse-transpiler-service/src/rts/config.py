@@ -22,7 +22,7 @@ from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
 from pydantic import Field
 
-from rts.adapters.inbound.event_sub import OutboxSubTranslatorConfig
+from rts.adapters.inbound.event_sub import EventSubTranslatorConfig
 from rts.core.rev_tran import SheetNameConfig
 
 SERVICE_NAME: str = "rts"
@@ -37,7 +37,7 @@ class Config(
     LoggingConfig,
     KafkaConfig,
     MongoDbConfig,
-    OutboxSubTranslatorConfig,
+    EventSubTranslatorConfig,
 ):
     """Config parameters and their defaults."""
 
