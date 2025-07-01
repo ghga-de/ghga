@@ -16,14 +16,14 @@
 """Core functionality of the reverse transpiler service."""
 
 import logging
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 import openpyxl
 import openpyxl.styles
 from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
-from pydantic import Field
+from pydantic import Field, StringConstraints
 from pydantic_settings import BaseSettings
 
 from rts.models import StudyMetadata
@@ -32,17 +32,15 @@ from rts.ports.outbound.dao import MetadataDao, ResourceNotFoundError, WorkbookD
 
 log = logging.getLogger(__name__)
 
-# TODO: Add logging
-
-# TODO: Check codebase for references to 'xlsx'
-
 __all__ = ["ReverseTranspiler", "SheetNameConfig"]
+
+SheetName = Annotated[str, StringConstraints(max_length=31, min_length=1)]
 
 
 class SheetNameConfig(BaseSettings):
     """Configuration for sheet names in the spreadsheet output."""
 
-    sheet_names: dict[str, str] = Field(
+    sheet_names: dict[str, SheetName] = Field(
         ...,
         description="Mapping of worksheet names to display names in the workbook.",
         examples=[
@@ -52,17 +50,6 @@ class SheetNameConfig(BaseSettings):
             }
         ],
     )
-
-    # Add a validator to check all the values in sheet_names to ensure they're under 31 characters
-    @classmethod
-    def validate_sheet_names(cls, values: dict[str, str]) -> dict[str, str]:
-        """Ensure that all sheet names are under 31 characters."""
-        for key, value in values.items():
-            if len(value) > 31:
-                raise ValueError(
-                    f"Sheet name '{value}' for key '{key}' exceeds 31 characters."
-                )
-        return values
 
 
 class ReverseTranspiler(ReverseTranspilerPort):
@@ -81,10 +68,12 @@ class ReverseTranspiler(ReverseTranspilerPort):
         self._workbook_dao = workbook_dao
 
     async def upsert_metadata(self, *, study_metadata: StudyMetadata) -> None:
-        """Upsert study metadata in the database.
+        """Upsert study metadata in the database and reverse transpile it to a workbook.
 
-        This will run the reverse transpilation process and store the resulting XLSX,
-        even if the metadata already exists.
+        If the metadata already exists, it will compare the existing metadata
+        with the new one. If they are the same, it will skip the upsert and
+        workbook creation. If they differ, it will update the existing metadata
+        and create a new workbook, deleting the old one.
         """
         do_upsert = True
         accession = study_metadata.study_accession
@@ -169,13 +158,16 @@ class ReverseTranspiler(ReverseTranspilerPort):
             log.error(error)
             raise error from err
 
-    def _rename_sheets(self, workbook: openpyxl.Workbook) -> None:
-        """Rename sheets in the workbook to with configured values."""
-        # Rename each sheet according to the mapping
-        for sheet in workbook.worksheets:
-            if sheet.title not in self._config.sheet_names:
-                raise self.SheetNamingError(sheet_name=sheet.title)
-            sheet.title = self._config.sheet_names[sheet.title]
+    def _translate_sheet_name(self, sheet_name: str) -> str:
+        """Rename sheets in the workbook to with configured values.
+
+        Raises SheetNamingError if the sheet name is not configured.
+        """
+        if sheet_name not in self._config.sheet_names:
+            error = self.SheetNamingError(sheet_name=sheet_name)
+            log.error(error)
+            raise error
+        return self._config.sheet_names[sheet_name]
 
     def _format_value(self, value: Any) -> Any:
         """Format values for cells, recursively formatting list and dict values."""
@@ -211,7 +203,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
         Returns:
         - The metadata as an openpyxl Workbook.
         """
-        # Extract the content and accession map
+        # Extract the main artifact content
         content = study_metadata.content
 
         # Create a new workbook
@@ -221,16 +213,18 @@ class ReverseTranspiler(ReverseTranspilerPort):
         default_sheet = cast(Worksheet, workbook.active)
         workbook.remove(default_sheet)
 
-        # Process each key in content
+        # Process each property in content (e.g. "analyses", "studies", "samples", etc.)
         for property_name, items in content.items():
-            # If there are no items, continue to the next key
+            # If there are no items (each item equates to a row), continue to next key
             if not items:
                 continue
 
             # Create a new worksheet for this property
+            # NOTE: this will error if no value is configured
+            property_name = self._translate_sheet_name(property_name)
             worksheet: Worksheet = workbook.create_sheet(title=property_name)
 
-            # Get the headers (keys from the first item)
+            # Get the headers (just read the keys from the first item in the list)
             column_headers = list(items[0].keys())
 
             # Ensure 'alias' is the first column if present
@@ -271,8 +265,5 @@ class ReverseTranspiler(ReverseTranspilerPort):
                     # Set number format for numeric values
                     if isinstance(value, float | int) and not isinstance(value, bool):
                         cell.number_format = "0" if isinstance(value, int) else "0.00"
-
-        # TODO: Move this up so we avoid the warnings in test
-        self._rename_sheets(workbook)
 
         return workbook

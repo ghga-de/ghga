@@ -46,7 +46,6 @@ class JointFixture:
     rest_client: AsyncTestClient
 
 
-# TODO: Add rest api
 @pytest_asyncio.fixture(scope="function")
 async def joint_fixture(
     mongodb: MongoDbFixture, kafka: KafkaFixture

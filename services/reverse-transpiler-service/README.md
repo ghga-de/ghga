@@ -411,7 +411,7 @@ The service requires the following configuration parameters:
 
 - <a id="properties/sheet_names"></a>**`sheet_names`** *(object, required)*: Mapping of worksheet names to display names in the workbook. Can contain additional properties.
 
-  - <a id="properties/sheet_names/additionalProperties"></a>**Additional properties** *(string)*
+  - <a id="properties/sheet_names/additionalProperties"></a>**Additional properties** *(string)*: Length must be between 1 and 31 (inclusive).
 
 
   Examples:

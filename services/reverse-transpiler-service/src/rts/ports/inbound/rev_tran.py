@@ -49,10 +49,12 @@ class ReverseTranspilerPort(ABC):
 
     @abstractmethod
     async def upsert_metadata(self, *, study_metadata: StudyMetadata) -> None:
-        """Upsert study metadata in the database.
+        """Upsert study metadata in the database and reverse transpile it to a workbook.
 
-        This will run the reverse transpilation process and store the resulting XLSX,
-        even if the metadata already exists.
+        If the metadata already exists, it will compare the existing metadata
+        with the new one. If they are the same, it will skip the upsert and
+        workbook creation. If they differ, it will update the existing metadata
+        and create a new workbook, deleting the old one.
         """
         ...
 

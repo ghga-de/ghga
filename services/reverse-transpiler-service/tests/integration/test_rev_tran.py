@@ -99,7 +99,6 @@ async def test_basic_reverse_transpilation(joint_fixture: JointFixture):
     assert response.status_code == 200
     assert isinstance(response.content, bytes)
 
-    # TODO: Check if the filename value has to be in quotes or not
     assert response.headers["Content-Disposition"] == (
         f'attachment; filename="{accession}.xlsx"'
     )

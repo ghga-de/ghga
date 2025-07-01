@@ -366,6 +366,8 @@
     },
     "sheet_names": {
       "additionalProperties": {
+        "maxLength": 31,
+        "minLength": 1,
         "type": "string"
       },
       "description": "Mapping of worksheet names to display names in the workbook.",
