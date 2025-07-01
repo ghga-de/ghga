@@ -16,11 +16,10 @@
 """DAO implementation"""
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from io import BytesIO
 
 from gridfs.asynchronous import AsyncGridFS
-from gridfs.errors import FileExists
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb import MongoDbConfig
 from openpyxl import Workbook
@@ -39,6 +38,8 @@ __all__ = [
 
 METADATA_COLLECTION = "metadata"
 FILE_EXTENSION = ".xlsx"
+
+# TODO: Add logging
 
 
 async def get_metadata_dao(*, dao_factory: DaoFactoryProtocol) -> MetadataDao:
@@ -60,26 +61,24 @@ class WorkbookDao(WorkbookDaoPort):
         """
         self._grid_fs = grid_fs
 
-    def _filename(self, study_accession: str) -> str:
-        """Construct the filename for the workbook based on the study accession."""
-        return f"{study_accession}{FILE_EXTENSION}"
-
     async def upsert(self, *, workbook: Workbook, study_accession: str) -> None:
         """Upsert the workbook for a given study accession.
 
         If the workbook already exists, it will be replaced.
         """
-        with suppress(FileExists):
-            await self._grid_fs.delete({"study_accession": study_accession})
-
-        # Convert the workbook to bytes
+        # Convert the workbook to a bytestream
         workbook_bytestream = BytesIO()
         workbook.save(workbook_bytestream)
         workbook_bytestream.seek(0)
 
+        # Delete the file if it already exists
+        await self._grid_fs.delete(study_accession)
+
+        # Insert new file
         await self._grid_fs.put(
             data=workbook_bytestream,
-            filename=self._filename(study_accession),
+            _id=study_accession,
+            filename=f"{study_accession}{FILE_EXTENSION}",  # e.g. my_accession.xlsx
         )
 
     async def find(self, *, study_accession: str) -> bytes:
@@ -88,16 +87,12 @@ class WorkbookDao(WorkbookDaoPort):
         Raises `ResourceNotFoundError` if the workbook does not exist for the
         given study accession.
         """
-        result = await self._grid_fs.find_one(
-            {"filename": self._filename(study_accession)}
-        )
+        result = await self._grid_fs.find_one(study_accession)
 
         if result is None:
             raise ResourceNotFoundError(id_=study_accession)
 
-        workbook_bytes = await result.read()
-        await result.close()
-        return workbook_bytes
+        return await result.read()
 
     async def delete(self, *, study_accession: str) -> None:
         """Delete the workbook for a given study accession.
@@ -105,7 +100,7 @@ class WorkbookDao(WorkbookDaoPort):
         Does not raise an error if the workbook does not exist, as GridFS doesn't raise
         an error when trying to delete a non-existent file.
         """
-        await self._grid_fs.delete({"filename": self._filename(study_accession)})
+        await self._grid_fs.delete(study_accession)
 
 
 @asynccontextmanager
@@ -125,4 +120,5 @@ async def get_workbook_dao(
     try:
         yield WorkbookDao(grid_fs=grid_fs)
     finally:
+        # Perform cleanup to avoid hanging connections/async tasks
         await client.close()

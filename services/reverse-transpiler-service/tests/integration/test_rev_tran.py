@@ -27,27 +27,32 @@ pytestmark = pytest.mark.asyncio()
 
 
 def assert_workbooks_match(expected: Workbook, actual: Workbook) -> None:
-    """Compare two workbooks for equality."""
-    assert expected.sheetnames == actual.sheetnames, "Sheet names do not match"
+    """Compare two workbooks for equality.
+
+    This is more reliable than comparing bytestreams directly.
+    """
+    assert sorted(expected.sheetnames) == sorted(actual.sheetnames), (
+        "Sheet names do not match"
+    )
 
     for sheet_name in expected.sheetnames:
         expected_sheet = expected[sheet_name]
-        retrieved_sheet = actual[sheet_name]
+        actual_sheet = actual[sheet_name]
 
-        assert len([_ for _ in expected_sheet.rows]) != len(
-            [_ for _ in retrieved_sheet.rows]
-        ), f"Row counts do not match for sheet: {sheet_name}"
+        expected_row_count = len([_ for _ in expected_sheet.rows])
+        actual_row_count = len([_ for _ in actual_sheet.rows])
+        assert expected_row_count == actual_row_count, (
+            f"Row counts do not match for sheet: {sheet_name} (expected:"
+            + f" {expected_row_count}, got: {actual_row_count})"
+        )
 
-        for row_index, row in enumerate(expected_sheet.iter_rows()):
-            for col_index, cell in enumerate(row):
-                assert (
-                    cell.value
-                    == retrieved_sheet.cell(
-                        row=row_index + 1, column=col_index + 1
-                    ).value
-                ), (
-                    f"Cell values do not match at {sheet_name} row {row_index + 1},"
-                    + f" column {col_index + 1}"
+        for row_index, row in enumerate(expected_sheet.iter_rows(), 1):
+            for col_index, expected_cell in enumerate(row, 1):
+                actual_value = actual_sheet.cell(row=row_index, column=col_index).value
+                assert expected_cell.value == actual_value, (
+                    f"Cell values do not match at {sheet_name} row {row_index},"
+                    + f" column {col_index}. Expected: {expected_cell.value},"
+                    + f" Got: {actual_value}"
                 )
 
 
@@ -83,17 +88,31 @@ async def test_basic_reverse_transpilation(joint_fixture: JointFixture):
         study_accession=accession
     )
     assert isinstance(retrieved_workbook_bytes, bytes)
-    retrieved_bytestream = BytesIO(retrieved_workbook_bytes)
 
-    # Load the retrieved workbook and compare it to the expected one. We do it this
-    # way instead of comparing bytestreams directly because they can randomly differ
-    # in inconsequential ways
-    retrieved_workbook = load_workbook(retrieved_bytestream)
+    # Load the retrieved workbook and compare it to the expected one.
+    retrieved_workbook = load_workbook(BytesIO(retrieved_workbook_bytes))
     assert isinstance(retrieved_workbook, Workbook)
     assert_workbooks_match(expected=expected_workbook, actual=retrieved_workbook)
 
+    # Now call the REST API to get the transpiled data as well
+    response = await joint_fixture.rest_client.get(f"/studies/{accession}")
+    assert response.status_code == 200
+    assert isinstance(response.content, bytes)
+
+    # TODO: Check if the filename value has to be in quotes or not
+    assert response.headers["Content-Disposition"] == (
+        f'attachment; filename="{accession}.xlsx"'
+    )
+    content_type = response.headers["Content-Type"]
+    expected_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert content_type == expected_type
+
+    # Check if the HTTP response content matches the expected workbook
+    response_workbook = load_workbook(BytesIO(response.content))
+    assert_workbooks_match(expected_workbook, response_workbook)
+
     # Update the study metadata and check that the workbook is updated
-    study_metadata.content["samples"].clear()
+    study_metadata.content["samples"][0]["accession"] = "updated_sample_accession"
     updated_expected_workbook = reverse_transpiler.reverse_transpile(study_metadata)
 
     await reverse_transpiler.upsert_metadata(study_metadata=study_metadata)
@@ -116,7 +135,8 @@ async def test_basic_reverse_transpilation(joint_fixture: JointFixture):
 
     # Delete the workbook and check that it is deleted
     await reverse_transpiler.delete_metadata(study_accession=accession)
-    with pytest.raises(ValueError, match="No study metadata found for accession"):
+    msg = f"No workbook or metadata found for study accession '{accession}'"
+    with pytest.raises(reverse_transpiler.MetadataNotFoundError, match=msg):
         await reverse_transpiler.retrieve_workbook(study_accession=accession)
 
 
@@ -127,7 +147,8 @@ async def test_retrieve_non_existent_workbook(joint_fixture: JointFixture):
     """
     reverse_transpiler = joint_fixture.reverse_transpiler
 
-    with pytest.raises(ValueError, match="No study metadata found for accession"):
+    msg = "No workbook or metadata found for study accession 'non_existent_accession'"
+    with pytest.raises(reverse_transpiler.MetadataNotFoundError, match=msg):
         await reverse_transpiler.retrieve_workbook(
             study_accession="non_existent_accession"
         )

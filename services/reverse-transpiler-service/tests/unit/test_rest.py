@@ -14,3 +14,19 @@
 # limitations under the License.
 
 """Unit tests for the REST API."""
+
+import pytest
+
+from tests.fixtures.joint import JointFixture
+
+pytestmark = pytest.mark.asyncio()
+
+
+async def test_data_does_not_exist(joint_fixture: JointFixture):
+    """Test the case where data does not exist."""
+    # TODO: Move this to unit test
+
+
+async def test_invalid_call(joint_fixture: JointFixture):
+    """Test an invalid call to the REST API."""
+    # TODO: Move this to unit test

@@ -15,12 +15,14 @@
 
 """FastAPI endpoint function definitions"""
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 
 from rts.adapters.inbound.fastapi_.dummies import ReverseTranspilerDummy
 
 router = APIRouter()
+
+XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 class HttpMetadataNotFoundError(HttpCustomExceptionBase):
@@ -46,6 +48,7 @@ async def health():
     return {"status": "OK"}
 
 
+# TODO: Fill in endpoint metadata and check type-hinting
 @router.get(
     "/studies/{accession}",
     summary="Get accessioned metadata in .xlsx format",
@@ -54,9 +57,19 @@ async def health():
 async def get_transpiled_metadata(
     accession: str,
     reverse_transpiler: ReverseTranspilerDummy,
-):
+) -> Response:
     """Get a transpiled metadata file for a specific artifact, class, and resource."""
     try:
-        await reverse_transpiler.retrieve_workbook(study_accession=accession)
+        data = await reverse_transpiler.retrieve_workbook(study_accession=accession)
     except reverse_transpiler.MetadataNotFoundError as err:
         raise HttpMetadataNotFoundError(study_accession=accession) from err
+
+    response = Response(
+        status_code=200,
+        content=data,
+        headers={
+            "Content-Disposition": f'attachment; filename="{accession}.xlsx"',
+            "Content-Type": XLSX_CONTENT_TYPE,
+        },
+    )
+    return response

@@ -95,10 +95,6 @@ class ReverseTranspiler(ReverseTranspilerPort):
                 accession,
             )
             if existing_metadata.model_dump() == study_metadata.model_dump():
-                log.debug(
-                    "Metadata for accession '%s' has not changed, skipping upsert.",
-                    accession,
-                )
                 do_upsert = False
             else:
                 log.info(
@@ -111,8 +107,14 @@ class ReverseTranspiler(ReverseTranspilerPort):
                 accession,
             )
 
-        if do_upsert:
-            await self._metadata_dao.upsert(study_metadata)
+        if not do_upsert:
+            log.debug(
+                "Metadata for accession '%s' has not changed, skipping upsert.",
+                accession,
+            )
+            return
+
+        await self._metadata_dao.upsert(study_metadata)
 
         log.debug("Transpiling metadata to workbook for accession '%s'.", accession)
         workbook = self.reverse_transpile(study_metadata)

@@ -20,13 +20,14 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from rts.adapters.outbound.dao import get_metadata_dao
 from rts.config import Config
-from rts.inject import prepare_core, prepare_event_subscriber
+from rts.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 from rts.ports.outbound.dao import MetadataDao
 from tests.fixtures.config import get_config
@@ -42,6 +43,7 @@ class JointFixture:
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     metadata_dao: MetadataDao
+    rest_client: AsyncTestClient
 
 
 # TODO: Add rest api
@@ -59,6 +61,10 @@ async def joint_fixture(
     # Knit together the components into the joint fixture
     async with (
         prepare_core(config=config) as reverse_transpiler,
+        prepare_rest_app(
+            config=config, reverse_transpiler_override=reverse_transpiler
+        ) as app,
+        AsyncTestClient(app=app) as rest_client,
         prepare_event_subscriber(
             config=config, reverse_transpiler_override=reverse_transpiler
         ) as event_subscriber,
@@ -70,4 +76,5 @@ async def joint_fixture(
             kafka=kafka,
             mongodb=mongodb,
             metadata_dao=await get_metadata_dao(dao_factory=mongodb.dao_factory),
+            rest_client=rest_client,
         )
