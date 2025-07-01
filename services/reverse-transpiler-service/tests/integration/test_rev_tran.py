@@ -173,3 +173,62 @@ async def test_delete_non_existent_metadata(joint_fixture: JointFixture):
 
     # This should not raise an error, even though the metadata does not exist
     await reverse_transpiler.delete_metadata(study_accession="non_existent_accession")
+
+
+async def test_event_handling(joint_fixture: JointFixture):
+    """Test that the reverse transpiler can handle upsertion/deletion events.
+
+    This is a semi-redundant test of the what exists in test_event_sub.py.
+    """
+    accession = "test_accession"
+
+    # Publish the upsert event
+    await joint_fixture.kafka.publish_event(
+        topic=joint_fixture.config.artifact_topic,
+        type_="upserted",
+        key="added_accessions:test_accession",
+        payload={
+            "artifact_name": "added_accessions",
+            "content": {
+                "samples": [{"accession": "sample1"}],
+                "studies": [{"accession": accession}],
+            },
+            "study_accession": accession,
+        },
+    )
+
+    # Verify that nothing is in the DB yet
+    with pytest.raises(joint_fixture.reverse_transpiler.MetadataNotFoundError):
+        await joint_fixture.reverse_transpiler.retrieve_workbook(
+            study_accession=accession
+        )
+
+    # Now run the event subscriber to process the upsert event
+    await joint_fixture.event_subscriber.run(forever=False)
+
+    # Verify that the workbook is now in the DB
+    retrieved_workbook_bytes = await joint_fixture.reverse_transpiler.retrieve_workbook(
+        study_accession=accession
+    )
+
+    # Cursory check
+    assert isinstance(retrieved_workbook_bytes, bytes)
+    retrieved_workbook = load_workbook(BytesIO(retrieved_workbook_bytes))
+    assert retrieved_workbook.sheetnames == ["Sample", "Study"]  # from config
+
+    # Publish a deletion event
+    await joint_fixture.kafka.publish_event(
+        topic=joint_fixture.config.artifact_topic,
+        type_="deleted",
+        key=f"added_accessions:{accession}",
+        payload={},
+    )
+
+    # Run the event subscriber to process the deletion event
+    await joint_fixture.event_subscriber.run(forever=False)
+
+    # Verify that the workbook is no longer in the DB
+    with pytest.raises(joint_fixture.reverse_transpiler.MetadataNotFoundError):
+        await joint_fixture.reverse_transpiler.retrieve_workbook(
+            study_accession=accession
+        )

@@ -37,8 +37,6 @@ __all__ = [
     "prepare_rest_app",
 ]
 
-# TODO: Unit and integration tests for everything
-
 
 async def get_dao_factory(*, config: Config) -> MetadataDao:
     """Constructs and initializes a DAO factory using config."""

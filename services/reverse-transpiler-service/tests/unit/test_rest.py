@@ -15,18 +15,34 @@
 
 """Unit tests for the REST API."""
 
-import pytest
+from unittest.mock import AsyncMock
 
-from tests.fixtures.joint import JointFixture
+import pytest
+from ghga_service_commons.api.testing import AsyncTestClient
+
+from rts.inject import prepare_rest_app
+from rts.ports.inbound.rev_tran import ReverseTranspilerPort
+from tests.fixtures.config import get_config
 
 pytestmark = pytest.mark.asyncio()
 
 
-async def test_data_does_not_exist(joint_fixture: JointFixture):
+async def test_data_does_not_exist():
     """Test the case where data does not exist."""
-    # TODO: Move this to unit test
-
-
-async def test_invalid_call(joint_fixture: JointFixture):
-    """Test an invalid call to the REST API."""
-    # TODO: Move this to unit test
+    config = get_config()
+    core = AsyncMock()
+    accession = "test_accession"
+    core.retrieve_workbook.side_effect = ReverseTranspilerPort.MetadataNotFoundError(
+        study_accession=accession
+    )
+    async with (
+        prepare_rest_app(config=config, reverse_transpiler_override=core) as app,
+        AsyncTestClient(app) as client,
+    ):
+        response = await client.get(f"/studies/{accession}")
+        assert response.status_code == 404
+        assert response.json() == {
+            "exception_id": "metadataNotFoundError",
+            "description": "Metadata for study accession not found.",
+            "data": {"study_accession": accession},
+        }

@@ -184,7 +184,6 @@ class ReverseTranspiler(ReverseTranspilerPort):
                 output = f"{value['key']}={self._format_value(value['value'])}"
             else:
                 # Format as key=value pairs for each item
-                # output = json.dumps(formatted_value) TODO: Delete this if not needed
                 output = ";".join(
                     f"{k}={self._format_value(v)}" for k, v in value.items()
                 )

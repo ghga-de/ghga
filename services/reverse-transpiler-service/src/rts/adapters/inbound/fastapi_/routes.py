@@ -19,6 +19,7 @@ from fastapi import APIRouter, Response, status
 from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 
 from rts.adapters.inbound.fastapi_.dummies import ReverseTranspilerDummy
+from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 
 router = APIRouter()
 
@@ -48,11 +49,12 @@ async def health():
     return {"status": "OK"}
 
 
-# TODO: Fill in endpoint metadata and check type-hinting
 @router.get(
     "/studies/{accession}",
     summary="Get accessioned metadata in .xlsx format",
     status_code=status.HTTP_200_OK,
+    response_class=Response,
+    response_model=bytes,
 )
 async def get_transpiled_metadata(
     accession: str,
@@ -61,7 +63,7 @@ async def get_transpiled_metadata(
     """Get a transpiled metadata file for a specific artifact, class, and resource."""
     try:
         data = await reverse_transpiler.retrieve_workbook(study_accession=accession)
-    except reverse_transpiler.MetadataNotFoundError as err:
+    except ReverseTranspilerPort.MetadataNotFoundError as err:
         raise HttpMetadataNotFoundError(study_accession=accession) from err
 
     response = Response(
