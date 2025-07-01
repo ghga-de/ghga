@@ -36,10 +36,7 @@ log = logging.getLogger(__name__)
 
 # TODO: Check codebase for references to 'xlsx'
 
-__all__ = [
-    "ReverseTranspiler",
-    "SheetNameConfig",
-]
+__all__ = ["ReverseTranspiler", "SheetNameConfig"]
 
 
 class SheetNameConfig(BaseSettings):
@@ -83,7 +80,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
         self._metadata_dao = metadata_dao
         self._workbook_dao = workbook_dao
 
-    async def upsert_metadata(self, study_metadata: StudyMetadata) -> None:
+    async def upsert_metadata(self, *, study_metadata: StudyMetadata) -> None:
         """Upsert study metadata in the database.
 
         This will run the reverse transpilation process and store the resulting XLSX,
@@ -123,7 +120,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
         log.debug("Workbook created for accession '%s', upserting to DB.", accession)
         await self._workbook_dao.upsert(workbook=workbook, study_accession=accession)
 
-    async def retrieve_metadata(self, study_accession: str) -> StudyMetadata:
+    async def retrieve_metadata(self, *, study_accession: str) -> StudyMetadata:
         """Retrieve study metadata from the DAO by its accession.
 
         Raises MetadataNotFoundError if the metadata does not exist for the
@@ -136,7 +133,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
             log.error(error)
             raise error from err
 
-    async def delete_metadata(self, study_accession: str) -> None:
+    async def delete_metadata(self, *, study_accession: str) -> None:
         """Delete study metadata from the database by its accession.
 
         This method will always try to delete the associated workbook as well,
@@ -246,7 +243,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
 
             # Write the headers to the first row
             for col_idx, header in enumerate(column_headers, 1):
-                cell: Cell = worksheet.cell(row=1, column=col_idx)  # type: ignore
+                cell: Cell = worksheet.cell(row=1, column=col_idx)
                 cell.value = header
                 cell.font = openpyxl.styles.Font(bold=True)
                 worksheet.column_dimensions[cell.column_letter].width = 34

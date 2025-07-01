@@ -69,6 +69,9 @@ class ReverseTranspilerPort(ABC):
     async def delete_metadata(self, *, study_accession: str) -> None:
         """Delete study metadata from the database by its accession.
 
+        This method will always try to delete the associated workbook as well,
+        regardless of whether the metadata exists or not.
+
         Does not raise an error if the metadata or workbook does not exist.
         """
         ...
