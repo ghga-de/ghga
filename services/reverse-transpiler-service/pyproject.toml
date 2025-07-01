@@ -27,7 +27,7 @@ dependencies = [
     "typer >= 0.15",
     "ghga-service-commons[api] >= 4.1.0",
     "ghga-event-schemas ~= 9.2",
-    "hexkit[akafka,s3,mongodb] >= 5.3",
+    "hexkit[akafka,mongodb] >= 5.3",
     "openpyxl >= 3.0.0",
 ]
 
