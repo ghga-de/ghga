@@ -74,7 +74,8 @@ auth_paths = tuple(CONFIG.auth_paths)
 basic_auth_dependency = get_basic_auth_dependency(CONFIG)
 basic_auth_dependencies = [basic_auth_dependency] if basic_auth_dependency else None
 
-TAGS_USER: list[str | Enum] = ["users"]
+TAGS_USERS: list[str | Enum] = ["users"]
+TAGS_SESSION: list[str | Enum] = ["session"]
 TAGS_TOTP: list[str | Enum] = ["totp"]
 
 # the auth adapter needs to handle all HTTP methods
@@ -119,7 +120,7 @@ add_allowed_routes()
 @router.post(
     AUTH_PATH + "/rpc/login",
     operation_id="login",
-    tags=TAGS_USER,
+    tags=TAGS_SESSION,
     summary="Create or get user session",
     description="Endpoint used when a user wants to log in",
     dependencies=basic_auth_dependencies,
@@ -218,7 +219,7 @@ async def login(  # noqa: C901, PLR0913
 @router.post(
     AUTH_PATH + "/rpc/logout",
     operation_id="logout",
-    tags=TAGS_USER,
+    tags=TAGS_SESSION,
     summary="End user session",
     description="Endpoint used when a user wants to log out",
     dependencies=basic_auth_dependencies,
@@ -246,7 +247,7 @@ async def logout(
 @router.post(
     AUTH_PATH + "/users",
     operation_id="post_user",
-    tags=TAGS_USER,
+    tags=TAGS_USERS,
     summary="Register a user",
     description="Handle the endpoint to register a new user",
     dependencies=basic_auth_dependencies,
@@ -272,7 +273,7 @@ async def post_user(
 @router.put(
     AUTH_PATH + "/users/{id}",
     operation_id="put_user",
-    tags=TAGS_USER,
+    tags=TAGS_USERS,
     summary="Update a user",
     description="Handle the endpoint to update an existing user",
     dependencies=basic_auth_dependencies,

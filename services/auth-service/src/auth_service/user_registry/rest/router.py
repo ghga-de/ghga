@@ -20,7 +20,7 @@ from contextlib import suppress
 from enum import Enum
 from typing import Annotated
 
-from fastapi import APIRouter, Path, Query, Response
+from fastapi import APIRouter, Header, Path, Query, Response
 from fastapi.exceptions import HTTPException
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
@@ -28,6 +28,7 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from auth_service.auth_adapter.deps import UserTokenDaoDependency
 from auth_service.claims_repository.deps import ClaimDaoDependency
 
+from ...auth_adapter.rest.dto import TOTPTokenResponse
 from ...rest.auth import (
     StewardAuthContext,
     UserAuthContext,
@@ -56,14 +57,16 @@ router = APIRouter()
 
 INITIAL_USER_STATUS = UserStatus.ACTIVE
 
-TAGS: list[str | Enum] = ["users"]
+TAGS_USERS: list[str | Enum] = ["users"]
+TAGS_SESSION: list[str | Enum] = ["session"]
+TAGS_TOTP: list[str | Enum] = ["totp"]
 
 
 @start_span()
 @router.post(
     "/users",
     operation_id="post_user",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Register a user",
     description="Endpoint used to register a new user."
     " May only be performed by the users themselves."
@@ -109,7 +112,7 @@ async def post_user(
 @router.put(
     "/users/{id}",
     operation_id="put_user",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Update a user",
     description="Endpoint used to update a registered user"
     " when their name or email used by LS Login have changed."
@@ -161,7 +164,7 @@ async def put_user(
 @router.get(
     "/users/{id}",
     operation_id="get_user",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Get user data",
     description="Endpoint used to get the user data for a specified user."
     " Can only be performed by a data steward or the same user.",
@@ -210,7 +213,7 @@ async def get_user(
 @router.patch(
     "/users/{id}",
     operation_id="patch_user",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Modify user data",
     description="Endpoint used to modify the user data for a specified user."
     " Can only be performed by a data steward or the same user.",
@@ -270,7 +273,7 @@ async def patch_user(
 @router.delete(
     "/users/{id}",
     operation_id="delete_user",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Delete user",
     description="Endpoint used to delete a user."
     " Can only be performed by a data steward.",
@@ -327,7 +330,7 @@ async def delete_user(
 @router.get(
     "/users/{user_id}/ivas",
     operation_id="get_user_ivas",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Get all IVAs of a user",
     description="Endpoint used to get all IVAs for a specified user."
     " Can only be performed by a data steward or the same user.",
@@ -370,7 +373,7 @@ async def get_user_ivas(
 @router.post(
     "/users/{user_id}/ivas",
     operation_id="post_user_iva",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Create a new IVA",
     description="Endpoint used to create a new IVA for a specified user.",
     responses={
@@ -417,7 +420,7 @@ async def post_user_iva(
 @router.delete(
     "/users/{user_id}/ivas/{iva_id}",
     operation_id="delete_user_iva",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Delete an IVA",
     description="Endpoint used to delete an IVA for a specified user.",
     responses={
@@ -468,7 +471,7 @@ async def delete_user_iva(
 @router.post(
     "/rpc/ivas/{iva_id}/unverify",
     operation_id="unverify_iva",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Unverify an IVA",
     description="Endpoint used to reset an IVA to the unverified state.",
     responses={
@@ -507,7 +510,7 @@ async def unverify_iva(
 @router.post(
     "/rpc/ivas/{iva_id}/request-code",
     operation_id="request_code_for_iva",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Request verification code for an IVA",
     description="Endpoint used to request a verification code for a given IVA.",
     responses={
@@ -552,7 +555,7 @@ async def request_code_for_iva(
 @router.post(
     "/rpc/ivas/{iva_id}/create-code",
     operation_id="create_code_for_iva",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Create verification code for an IVA",
     description="Endpoint used to create a verification code for a given IVA.",
     responses={
@@ -596,7 +599,7 @@ async def create_code_for_iva(
 @router.post(
     "/rpc/ivas/{iva_id}/code-transmitted",
     operation_id="code_transmitted_for_iva",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Confirm verification code transmission for an IVA",
     description="Endpoint used to confirm"
     " that the verification code for an IVA has been transmitted.",
@@ -648,7 +651,7 @@ async def confirm_code_for_iva_transmitted(
 @router.post(
     "/rpc/ivas/{iva_id}/validate-code",
     operation_id="validate_code_for_iva",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Validate the verification code for an IVA",
     description="Endpoint used to validate the verification code for an IVA.",
     responses={
@@ -707,7 +710,7 @@ async def validate_code_for_iva(
 @router.get(
     "/ivas",
     operation_id="get_all_ivas",
-    tags=TAGS,
+    tags=TAGS_USERS,
     summary="Get all IVAs",
     description="Endpoint used to get all IVAs and their corresponding users."
     " Can only be performed by a data steward.",
@@ -741,3 +744,66 @@ async def get_all_ivas(
         return await user_registry.get_ivas_with_users(user_id=user_id, state=state)
     except user_registry.IvaRetrievalError as error:
         raise HTTPException(status_code=500, detail="Cannot retrieve IVAs.") from error
+
+
+# The following endpoints are actually shadowed and handled by the auth adapter.
+# They are duplicated here as stubs in order to provide the complete OpenAPI spec.
+
+not_implemented = NotImplementedError("Implemented by the auth adapter.")
+
+
+@router.post(
+    "/rpc/login",
+    operation_id="login",
+    tags=TAGS_SESSION,
+    summary="Create or get user session",
+    description="Endpoint used when a user wants to log in",
+    status_code=204,
+)
+async def login(
+    authorization: Annotated[str | None, Header()] = None,
+    x_authorization: Annotated[str | None, Header()] = None,
+) -> Response:
+    raise not_implemented
+
+
+@router.post(
+    "/rpc/logout",
+    operation_id="logout",
+    tags=TAGS_SESSION,
+    summary="End user session",
+    description="Endpoint used when a user wants to log out",
+    status_code=204,
+)
+async def logout() -> Response:
+    raise not_implemented
+
+
+@router.post(
+    "/totp-token",
+    operation_id="create_new_totp_token",
+    tags=TAGS_TOTP,
+    summary="Create a new TOTP token",
+    description="Endpoint used to create or replace a TOTP token",
+    status_code=201,
+)
+async def create_new_totp_token(
+    force: bool = Query(False, title="Overwrite existing token"),
+) -> TOTPTokenResponse:
+    raise not_implemented
+
+
+@router.post(
+    "/rpc/verify-totp",
+    operation_id="verify_totp",
+    tags=TAGS_TOTP,
+    summary="Verify a TOTP code",
+    description="Endpoint used to verify a TOTP code",
+    status_code=204,
+)
+async def rpc_verify_totp(
+    x_authorization: Annotated[
+        str | None, Header(title="the TOTP code to verify")
+    ] = None,
+) -> Response:
+    raise not_implemented

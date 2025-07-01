@@ -41,6 +41,8 @@ LICENSE_INFO = {
 }
 
 TAGS_METADATA = [
+    {"name": "health", "description": "Application health"},
+    {"name": "session", "description": "User sessions"},
     {"name": "users", "description": "User data"},
     {"name": "totp", "description": "TOTP tokens"},
     {"name": "claims", "description": "User claims"},

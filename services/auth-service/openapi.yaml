@@ -536,6 +536,19 @@ components:
           description: Previous user status
       title: StatusChange
       type: object
+    TOTPTokenResponse:
+      additionalProperties: false
+      description: Response model for a created TOTP token.
+      properties:
+        uri:
+          format: password
+          title: Provisioning URI
+          type: string
+          writeOnly: true
+      required:
+      - uri
+      title: TOTPTokenResponse
+      type: object
     User:
       additionalProperties: false
       description: Complete user model with ID
@@ -738,7 +751,7 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 6.0.1
+  version: 6.0.2
 openapi: 3.1.0
 paths:
   /download-access/users/{user_id}/datasets:
@@ -1106,6 +1119,102 @@ paths:
       summary: Validate the verification code for an IVA
       tags:
       - users
+  /rpc/login:
+    post:
+      description: Endpoint used when a user wants to log in
+      operationId: login
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - in: header
+        name: x-authorization
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Authorization
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create or get user session
+      tags:
+      - session
+  /rpc/logout:
+    post:
+      description: Endpoint used when a user wants to log out
+      operationId: logout
+      responses:
+        '204':
+          description: Successful Response
+      summary: End user session
+      tags:
+      - session
+  /rpc/verify-totp:
+    post:
+      description: Endpoint used to verify a TOTP code
+      operationId: verify_totp
+      parameters:
+      - in: header
+        name: x-authorization
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: the TOTP code to verify
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Verify a TOTP code
+      tags:
+      - totp
+  /totp-token:
+    post:
+      description: Endpoint used to create or replace a TOTP token
+      operationId: create_new_totp_token
+      parameters:
+      - in: query
+        name: force
+        required: false
+        schema:
+          default: false
+          title: Overwrite existing token
+          type: boolean
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TOTPTokenResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create a new TOTP token
+      tags:
+      - totp
   /users:
     post:
       description: Endpoint used to register a new user. May only be performed by
@@ -1537,6 +1646,10 @@ paths:
       tags:
       - users
 tags:
+- description: Application health
+  name: health
+- description: User sessions
+  name: session
 - description: User data
   name: users
 - description: TOTP tokens
