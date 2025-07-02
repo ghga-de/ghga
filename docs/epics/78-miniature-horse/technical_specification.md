@@ -47,6 +47,7 @@ This epic covers the following user journeys:
 - [MDN Curriculum on Semantic HTML](https://developer.mozilla.org/en-US/curriculum/core/semantic-html/)
 - [MDN Glossary on Semantics in HTML](https://developer.mozilla.org/en-US/docs/Glossary/Semantics#semantics_in_html)
 - [MDN Reference for HTML elements](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements)
+- [Angular Accessibility Workshop by Angular Architects](https://www.angulararchitects.io/en/training/angular-accessibility-workshop/)
 
 ## Human Resource/Time Estimation:
 
