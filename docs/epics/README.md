@@ -82,4 +82,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (72) [Pygmy Goat](./72-pygmy-goat/technical_specification.md): Hexkit Documentation
 - (73) [Ballan Wrasse](./73-ballan-wrasse/technical_specification.md): Access Request Management Improvements
 - (77) [Alpine Longhorn Beetle](./77-alpine-longhorn-beetle/technical_specification.md): Make Metadata Downloadable
-- (78) [Miniature Horse](./78-miniature-horse/technical_specification.md)
+- (79) [Miniature Horse](./79-miniature-horse/technical_specification.md): Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs
