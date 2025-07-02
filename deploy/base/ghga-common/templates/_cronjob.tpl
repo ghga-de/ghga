@@ -1,4 +1,5 @@
 {{- define "ghga-common.cronjob" -}}
+{{- if .Values.cronjob.enabled -}}
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -123,4 +124,5 @@ spec:
               secretName: {{ .Values.kafkaUser.caCertSecretName }}
               optional: false
           {{- end }}
+{{- end -}}
 {{- end -}}

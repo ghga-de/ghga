@@ -4,6 +4,9 @@ image:
 
 cronSchedule: "0 3 * * *"
 
+cronjob:
+  enabled: true
+
 configPrefix: ""
 
 containers:
