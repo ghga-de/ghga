@@ -64,10 +64,10 @@ class EventSubTranslator(EventSubscriberProtocol):
             return
 
         if type_ == "upserted":
-            log.debug("Consuming upsert event for key: %s", key)
+            log.info("Consuming artifact upsert event for key: %s", key)
             await self._consume_upsert(payload=payload)
         elif type_ == "deleted":
-            log.debug("Consuming delete event for key: %s", key)
+            log.info("Consuming artifact delete event for key: %s", key)
             study_accession = key.split(":")[1]
             await self._consume_delete(study_accession=study_accession)
 
