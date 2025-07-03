@@ -70,3 +70,21 @@ _topics:
       operations:
         - Read
         - Create
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+        - Create
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read
+        - Create
