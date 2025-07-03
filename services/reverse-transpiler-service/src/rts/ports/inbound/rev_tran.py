@@ -60,7 +60,7 @@ class ReverseTranspilerPort(ABC):
     async def retrieve_metadata(self, *, study_accession: str) -> StudyMetadata:
         """Retrieve study metadata from the DAO by its accession.
 
-        Raises MetadataNotFoundError if the metadata does not exist for the
+        Raises `MetadataNotFoundError` if the metadata does not exist for the
         given study accession.
         """
         ...
@@ -80,10 +80,7 @@ class ReverseTranspilerPort(ABC):
     async def retrieve_workbook(self, *, study_accession: str) -> bytes:
         """Retrieve the workbook for a given study accession.
 
-        Args:
-        - `study_accession`: The accession of the study metadata to retrieve.
-
-        Raises MetadataNotFoundError if the workbook does not exist.
+        Raises `MetadataNotFoundError` if the workbook does not exist.
 
         Returns:
         - The workbook as bytes.
