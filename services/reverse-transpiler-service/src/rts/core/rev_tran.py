@@ -261,8 +261,5 @@ class ReverseTranspiler(ReverseTranspilerPort):
 
                     formatted_value = self._format_value(value)
                     cell.value = formatted_value
-                    # Set number format for numeric values
-                    if isinstance(value, float | int) and not isinstance(value, bool):
-                        cell.number_format = "0" if isinstance(value, int) else "0.00"
 
         return workbook
