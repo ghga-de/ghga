@@ -27,6 +27,8 @@ parameters:
     download_access_url: http://claims-repository:8080/download-access
     host: "0.0.0.0"
     kafka_enable_dlq: true
+    db_version_collection: "arsDbVersions"
+    migration_wait_sec: 10
 
 containers:
 - name: rest
