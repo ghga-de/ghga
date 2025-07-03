@@ -102,7 +102,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
         await self._metadata_dao.upsert(study_metadata)
 
         log.debug("Transpiling metadata to workbook for accession '%s'.", accession)
-        workbook = self.reverse_transpile(study_metadata)
+        workbook = self._reverse_transpile(study_metadata)
 
         log.debug("Workbook created for accession '%s', upserting to DB.", accession)
         await self._workbook_dao.upsert(workbook=workbook, study_accession=accession)
@@ -186,7 +186,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
 
         return output
 
-    def reverse_transpile(
+    def _reverse_transpile(
         self,
         study_metadata: StudyMetadata,
     ) -> Workbook:

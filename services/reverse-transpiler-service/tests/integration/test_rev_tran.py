@@ -79,7 +79,7 @@ async def test_basic_reverse_transpilation(joint_fixture: JointFixture):
     accession = study_metadata.study_accession
 
     # Run the reverse transpilation manually so we have the output on hand to compare against
-    expected_workbook = reverse_transpiler.reverse_transpile(study_metadata)
+    expected_workbook = reverse_transpiler._reverse_transpile(study_metadata)  # type: ignore
     assert isinstance(expected_workbook, Workbook)
 
     # Perform the reverse transpilation
@@ -112,7 +112,7 @@ async def test_basic_reverse_transpilation(joint_fixture: JointFixture):
 
     # Update the study metadata and check that the workbook is updated
     study_metadata.content["samples"][0]["accession"] = "updated_sample_accession"
-    updated_expected_workbook = reverse_transpiler.reverse_transpile(study_metadata)
+    updated_expected_workbook = reverse_transpiler._reverse_transpile(study_metadata)  # type: ignore
 
     await reverse_transpiler.upsert_metadata(study_metadata=study_metadata)
     updated_retrieved_workbook_bytes = await reverse_transpiler.retrieve_workbook(

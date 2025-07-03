@@ -17,8 +17,6 @@
 
 from abc import ABC, abstractmethod
 
-from openpyxl import Workbook
-
 from rts.models import StudyMetadata
 
 __all__ = ["ReverseTranspilerPort"]
@@ -75,21 +73,6 @@ class ReverseTranspilerPort(ABC):
         regardless of whether the metadata exists or not.
 
         Does not raise an error if the metadata or workbook does not exist.
-        """
-        ...
-
-    @abstractmethod
-    def reverse_transpile(
-        self,
-        study_metadata: StudyMetadata,
-    ) -> Workbook:
-        """Convert StudyMetadata object to a workbook.
-
-        Args:
-        - `study_metadata`: The StudyMetadata instance to convert.
-
-        Returns:
-        - The metadata as an openpyxl Workbook.
         """
         ...
 
