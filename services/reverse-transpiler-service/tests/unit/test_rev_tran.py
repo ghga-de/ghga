@@ -21,6 +21,7 @@ import pytest
 from pydantic import ValidationError
 
 from rts.core.rev_tran import ReverseTranspiler, SheetNameConfig
+from rts.models import StudyMetadata
 from tests.fixtures.config import get_config
 
 
@@ -30,11 +31,49 @@ def test_missing_name_config():
     reverse_transpiler = ReverseTranspiler(
         config=config, metadata_dao=AsyncMock(), workbook_dao=AsyncMock()
     )
-    with pytest.raises(ReverseTranspiler.SheetNamingError):
-        reverse_transpiler._translate_sheet_name("some_sheet")
+    # Configured
+    assert reverse_transpiler._translate_sheet_name("analyses") == "Analysis"
+    # Not configured but under 31 chars
+    assert reverse_transpiler._translate_sheet_name("bald_knobber") == "bald_knobber"
+    # Not configured, over 31 chars. Test truncation
+    long_name = "this_is_a_very_long_name_if_you_are_excel"
+    assert reverse_transpiler._translate_sheet_name(long_name) == long_name[:31]
 
 
 def test_too_long_sheet_name():
     """Test that configuring sheet names longer than 31 characters begets an error."""
     with pytest.raises(ValidationError):
         _ = SheetNameConfig(sheet_names={"test": "A long sheet name" * 10})
+
+
+def test_column_aggregation():
+    """Test that we get the union of all column names across rows in a property.
+
+    The test content will have two rows for "samples", each with a unique column.
+    We expect to see both columns used in the output spreadsheet, not just 'col1'.
+    """
+    content = {
+        "samples": [
+            {"accession": "abc123", "alias": "sample1", "col1": "testval"},
+            {"accession": "abc123", "alias": "sample1", "col2": "testval2"},
+        ]
+    }
+    metadata = StudyMetadata(study_accession="my_study", content=content)
+
+    # do the reverse transpilation
+    config = get_config()
+    reverse_transpiler = ReverseTranspiler(
+        config=config, metadata_dao=AsyncMock(), workbook_dao=AsyncMock()
+    )
+    workbook = reverse_transpiler._reverse_transpile(study_metadata=metadata)
+
+    # Check that col1 and col2 both exist
+    sheet = workbook["Sample"]  # name translated by config
+    header_cells = [
+        col[0]
+        for col in sheet.iter_cols(
+            min_col=1, max_col=4, min_row=1, max_row=1, values_only=True
+        )
+    ]
+    assert "col1" in header_cells
+    assert "col2" in header_cells

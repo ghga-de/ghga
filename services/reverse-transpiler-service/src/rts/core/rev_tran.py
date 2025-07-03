@@ -157,16 +157,14 @@ class ReverseTranspiler(ReverseTranspilerPort):
     def _translate_sheet_name(self, sheet_name: str) -> str:
         """Rename sheets in the workbook to with configured values.
 
-        Raises SheetNamingError if the sheet name is not configured.
+        If no corresponding value is configured, the name will be returned unchanged
+        but truncated to 31 characters if necessary.
         """
-        if sheet_name not in self._config.sheet_names:
-            error = self.SheetNamingError(sheet_name=sheet_name)
-            log.error(error)
-            raise error
-        return self._config.sheet_names[sheet_name]
+        name = self._config.sheet_names.get(sheet_name, sheet_name[:31])
+        return name
 
     def _format_value(self, value: Any) -> Any:
-        """Format values for cells, recursively formatting list and dict values."""
+        """Format values for list and dict cells."""
         output = value
 
         if isinstance(value, list):
@@ -215,12 +213,15 @@ class ReverseTranspiler(ReverseTranspilerPort):
                 continue
 
             # Create a new worksheet for this property
-            # NOTE: this will error if no value is configured
             property_name = self._translate_sheet_name(property_name)
             worksheet: Worksheet = workbook.create_sheet(title=property_name)
 
-            # Get the headers (just read the keys from the first item in the list)
-            column_headers = list(items[0].keys())
+            # Get the headers as union of all keys for all items
+            # This makes it so we're not reliant on first item having all cols populated
+            column_names: set[str] = set()
+            for row in items:
+                column_names |= row.keys()
+            column_headers = list(column_names)
 
             # Ensure 'alias' is the first column if present
             for idx, special_header in enumerate(["alias", "accession"]):
