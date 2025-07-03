@@ -69,11 +69,10 @@ def test_column_aggregation():
 
     # Check that col1 and col2 both exist
     sheet = workbook["Sample"]  # name translated by config
-    header_cells = [
-        col[0]
+    header_cells: list[str] = [
+        str(col[0])
         for col in sheet.iter_cols(
             min_col=1, max_col=4, min_row=1, max_row=1, values_only=True
         )
     ]
-    assert "col1" in header_cells
-    assert "col2" in header_cells
+    assert sorted(header_cells) == ["accession", "alias", "col1", "col2"]

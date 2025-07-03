@@ -15,6 +15,7 @@
 
 """Core functionality of the reverse transpiler service."""
 
+import json
 import logging
 from typing import Annotated, Any, cast
 
@@ -163,22 +164,12 @@ class ReverseTranspiler(ReverseTranspilerPort):
     def _format_value(self, value: Any) -> Any:
         """Format values for list and dict cells."""
         output = value
-
+        # Handle lists (like types, affiliations, etc.)
         if isinstance(value, list):
-            # Handle lists (like types, affiliations, etc.)
-            formatted_values = [self._format_value(v) for v in value if v is not None]
-            output = "; ".join(str(v) for v in formatted_values)
+            output = ", ".join(str(v) for v in value)
+        # Handle dictionaries (like attributes)
         elif isinstance(value, dict):
-            # Handle dictionaries (like attributes)
-            if value.keys() == {"key", "value"}:
-                # If it's a {"key": x, "value": y} format, extract.
-                output = f"{value['key']}={self._format_value(value['value'])}"
-            else:
-                # Format as key=value pairs for each item
-                output = ";".join(
-                    f"{k}={self._format_value(v)}" for k, v in value.items()
-                )
-
+            output = json.dumps(value)
         return output
 
     def _reverse_transpile(
@@ -250,10 +241,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
             ):  # Start from row 2 (after headers)
                 for col_idx, header in enumerate(column_headers, 1):
                     cell: Cell = worksheet.cell(row=row_idx, column=col_idx)  # type: ignore
-
                     value = row_data.get(header)
-
-                    formatted_value = self._format_value(value)
-                    cell.value = formatted_value
+                    cell.value = self._format_value(value)
 
         return workbook
