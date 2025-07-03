@@ -25,8 +25,13 @@ from rts.models import StudyMetadata
 from tests.fixtures.config import get_config
 
 
-def test_missing_name_config():
-    """Test that the reverse transpiler raises an error if no name is configured."""
+def test_sheet_naming():
+    """Test that the reverse transpiler handles sheet names properly.
+
+    If a name is configured, it should use that.
+    If no name is configured, it should use the original but truncate it to 31
+    characters if necessary, otherwise Excel will complain.
+    """
     config = get_config()
     reverse_transpiler = ReverseTranspiler(
         config=config, metadata_dao=AsyncMock(), workbook_dao=AsyncMock()
