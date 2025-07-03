@@ -28,6 +28,8 @@ parameters:
     primary_artifact_name: embedded_public
     primary_dataset_name: EmbeddedDataset
     service_instance_id: 'rest.1'
+    artifact_topic: artifacts
+    publishable_artifacts: '["added_accessions"]'
 
 containers:
 - name: rest

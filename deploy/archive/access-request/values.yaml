@@ -14,6 +14,10 @@ mongodb:
 serviceName: ars-rest
 # This parameter specifies the client id in Kafka
 serviceInstanceId: ars-rest-1
+# This parameter is used as Kafka's group id
+serviceNameConsumer: ars-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: ars-consumer-1
 
 # Those values are directly injected into the service's configuration
 parameters:
@@ -22,14 +26,22 @@ parameters:
     mongo_dsn: null
     download_access_url: http://claims-repository:8080/download-access
     host: "0.0.0.0"
+    kafka_enable_dlq: true
 
 containers:
 - name: rest
   type: "rest"
-  cmd: ars
+  cmd: ars run-rest
   config:
-    name: parameters
-    key: parameters
+    name: parameters-rest
+    key: parameters-rest
+- name: consumer
+  type: "consumer"
+  cmd: ars consume-events
+  config:
+    name: parameters-consumer
+    key: parameters-consumer
+
 
 _topics:
   fileRegisteredEvent:
@@ -37,14 +49,22 @@ _topics:
     topic:
       name: access_request_topic
       value: access-requests
-    types:
-    - name: access_request_created_type
-      value: access_request_created
-    - name: access_request_allowed_type
-      value: access_request_allowed
-    - name: access_request_denied_type
-      value: access_request_denied
     kafkaUser:
       operations:
         - Write
+        - Create
+
+  datasetChangeEvent:
+    # as consumer
+    topic:
+      name: dataset_change_topic
+      value: metadata-datasets
+    types:
+    - name: dataset_upsertion_type
+      value: dataset_created
+    - name: dataset_deletion_type
+      value: dataset_deleted
+    kafkaUser:
+      operations:
+        - Read
         - Create
