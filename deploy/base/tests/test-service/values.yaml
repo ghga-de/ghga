@@ -43,6 +43,7 @@ containers:
 
 vaultAgent:
   enabled: true
+  releaseNameOverwrite: overwritten-release-name
   secrets:
     generic:
       ghga-auth-public:
