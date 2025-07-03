@@ -75,7 +75,6 @@ class ReverseTranspiler(ReverseTranspilerPort):
         workbook creation. If they differ, it will update the existing metadata
         and create a new workbook, deleting the old one.
         """
-        do_upsert = True
         accession = study_metadata.study_accession
         try:
             existing_metadata = await self._metadata_dao.get_by_id(accession)
@@ -84,7 +83,11 @@ class ReverseTranspiler(ReverseTranspilerPort):
                 accession,
             )
             if existing_metadata.model_dump() == study_metadata.model_dump():
-                do_upsert = False
+                log.debug(
+                    "Metadata for accession '%s' has not changed, skipping upsert.",
+                    accession,
+                )
+                return
             else:
                 log.info(
                     "Metadata for accession '%s' has changed, updating entry.",
@@ -95,13 +98,6 @@ class ReverseTranspiler(ReverseTranspilerPort):
                 "No existing metadata found for accession '%s', creating new entry.",
                 accession,
             )
-
-        if not do_upsert:
-            log.debug(
-                "Metadata for accession '%s' has not changed, skipping upsert.",
-                accession,
-            )
-            return
 
         await self._metadata_dao.upsert(study_metadata)
 
