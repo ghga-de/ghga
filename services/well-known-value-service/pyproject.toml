@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wkvs"
-version = "1.2.1"
+version = "1.2.2"
 description = "Well-Known-Value-Service - Provides access to common values via API"
 dependencies = [
-    "ghga-service-commons[api]>=4.0.0",
-    "hexkit>=5.1",
-    "typer>=0.15.2",
+    "ghga-service-commons[api]>=4.1",
+    "hexkit>=5.3",
+    "typer>=0.16",
 ]
 
 [project.license]
