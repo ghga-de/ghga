@@ -33,13 +33,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/notification-service):
 ```bash
-docker pull ghga/notification-service:4.0.1
+docker pull ghga/notification-service:4.0.2
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-service:4.0.1 .
+docker build -t ghga/notification-service:4.0.2 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -47,7 +47,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/notification-service:4.0.1 --help
+docker run -p 8080:8080 ghga/notification-service:4.0.2 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -234,7 +234,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/kafka_max_message_size"></a>**`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+- <a id="properties/kafka_max_message_size"></a>**`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size. Exclusive minimum: `0`. Default: `1048576`.
 
 
   Examples:
@@ -246,6 +246,42 @@ The service requires the following configuration parameters:
 
   ```json
   16777216
+  ```
+
+
+- <a id="properties/kafka_compression_type"></a>**`kafka_compression_type`**: The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/kafka_compression_type/anyOf/0"></a>*string*: Must be one of: `["gzip", "snappy", "lz4", "zstd"]`.
+
+    - <a id="properties/kafka_compression_type/anyOf/1"></a>*null*
+
+
+  Examples:
+
+  ```json
+  null
+  ```
+
+
+  ```json
+  "gzip"
+  ```
+
+
+  ```json
+  "snappy"
+  ```
+
+
+  ```json
+  "lz4"
+  ```
+
+
+  ```json
+  "zstd"
   ```
 
 
