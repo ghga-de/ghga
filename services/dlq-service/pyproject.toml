@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dlqs"
-version = "2.0.1"
+version = "2.0.2"
 description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
 dependencies = [
-    "typer >= 0.12",
-    "ghga-service-commons[api] >= 3.3",
-    "hexkit[akafka,mongodb] >= 5.1",
+    "typer >= 0.15",
+    "ghga-service-commons[api] >= 4.1",
+    "hexkit[akafka,mongodb] >= 5.3",
 ]
 
 [project.license]
