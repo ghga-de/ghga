@@ -25,14 +25,14 @@ spec:
       - Create
       - Describe
       resource:
-        name: prefix-retry-
+        name: retry-
         patternType: prefix
         type: topic
     - operations:
       - Read
       - Describe
       resource:
-        name: prefix-retry-test-service-name
+        name: retry-test-service-name
         patternType: literal
         type: topic
     - operations:
