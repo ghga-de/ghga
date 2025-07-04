@@ -54,11 +54,14 @@ spec:
     {{- /* The services do not support a configurable topic name or prefix at the moment for the `retry` topics. */ -}}
     {{- /* The serviceName is prefixed with the deployment name. */ -}}
     {{- else if and (eq $topicKey "deadLetterQueueRetry") $.Values.serviceNameConsumer }}
-    {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" (print $topicValue.topic.value "-" (include "ghga-common.serviceNameConsumer" $))))) -}}
+    {{- $topicValue := $.Values.topicPrefix | empty | ternary (list $topicValue.topic.value "-" (include "ghga-common.serviceNameConsumer" $)) (list $.Values.topicPrefix "-" $topicValue.topic.value "-" (include "ghga-common.serviceNameConsumer" $)) -}}
+    {{- $kafkaUser = merge $kafkaUser (dict "resource" (dict "name" (join "" $topicValue))) -}}
     {{- else if and (eq $topicKey "deadLetterQueueRetry") $.Values.serviceName }}
-    {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" (print $topicValue.topic.value "-" (include "ghga-common.serviceName" $))))) -}}
+    {{- $topicValue := $.Values.topicPrefix | empty | ternary (list $topicValue.topic.value "-" (include "ghga-common.serviceName" $)) (list $.Values.topicPrefix "-" $topicValue.topic.value "-" (include "ghga-common.serviceName" $)) -}}
+    {{- $kafkaUser = merge $kafkaUser (dict "resource" (dict "name" (join "" $topicValue))) -}}
     {{- else }}
-    {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" ($.Values.topicPrefix | empty | ternary $topicValue.topic.value (cat $.Values.topicPrefix "-" $topicValue.topic.value) | nospace )))) -}}
+    {{- $topicValue := $.Values.topicPrefix | empty | ternary (list $topicValue.topic.value) (list $.Values.topicPrefix "-" $topicValue.topic.value) -}}
+    {{- $kafkaUser = merge $kafkaUser (dict "resource" (dict "name" (join "" $topicValue))) -}}
     {{- end }}
     {{- $topicsACL = append $topicsACL $kafkaUser -}}
     {{- end }}

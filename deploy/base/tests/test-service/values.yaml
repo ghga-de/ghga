@@ -81,6 +81,8 @@ httpRoute:
           weight: 1
           port: 80
 
+topicPrefix: prefix
+
 kafkaUser:
   enabled: true
 
