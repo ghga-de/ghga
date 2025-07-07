@@ -11,11 +11,11 @@ These domains are: accessibility, responsiveness, and semantics.
 
 The first task of this epic relates to the overhaul of the data portal to improve its accessibility and semantics, as well as attempt to standardise the implementation of its responsiveness.
 
-The second task is that of creating documentation and SOPs for best practices in the implementation of accessibility, responsiveness, and semantics in the data portal.
+The second task is that of creating an ADR that contains guidelines (viz. SOPs) and best practices in the implementation of accessibility, responsiveness, and semantics in the data portal.
 
 ### Included/Required:
 - The data portal should be fully compliant with the European Accessibility Act (EAA, which also makes reference to EN 301 549), and the Web Content Accessibility Guidelines (WCAG).
-- The data portal should make full use of semantic tags and aria attributes whenever applicable.
+- The data portal should make full use of semantic tags and aria attributes whenever applicable, and should ensure the full implementation of [ADR016](http://github.com/ghga-de/adrs/blob/main/docs/adrs/adr016_semantic_web_technologies.md)).
 - The data portal should implement responsiveness in a more standardised manner that nevertheless remains suited for the specific purpose of the elements to make responsive.
 - Developers should have available documentation and SOPs for best practices on the implementation of accessibility, responsiveness, and semantics, as well as for ensuring that any new features to be released are accessibility-compliant.
 
@@ -24,16 +24,21 @@ The second task is that of creating documentation and SOPs for best practices in
 
 ### Not included:
 - The development of our own accessibility standards; only best practices for implementing legally required and any additional standards.
+- The implementation of accessibility standards for the administration features unless this is required by relevant staff in GHGA.
 
 ## User Journeys (optional)
 
 This epic covers the following user journeys:
 
-- Screen reader users should be able to navigate and use all available features of the data portal with minimal .
-- Users with limited vision should be able to easily navigate and use all available features of the data portal (to verify with high-contrast settings).
-- Users with limited or no perception of colour should be able to easily navigate and use all available features of the data portal (to verify with colourblind settings)
+- Screen reader users should be able to navigate and use all available public-facing* features of the data portal with minimal hindrance.
+- Users with limited vision should be able to easily navigate and use all available public-facing* features of the data portal (to verify with high-contrast settings).
+- Users with limited or no perception of colour should be able to easily navigate and use all available public-facing* features of the data portal (to verify with colourblind settings)
+
+^*^: These also include all features available to logged-in users (e.g. request access features, IVA creation, etc.), but not the data steward specific administration pages and features.
 
 ## Additional Implementation Details:
+
+- The documentation and implementation should be based on the a11y and responsiveness features that are already provided by Angular, Angular Material, Tailwind CSS, and any other library already in use that provides relevant features. Additional helper code can be provided in the shared directory of the data portal if needed, and additional libraries can be also added for this purpose.
 
 ### List of online resources
 - [Getting to know the European legislation on accessibility](https://accessible-eu-centre.ec.europa.eu/getting-know-european-legislation-accessibility_en)
