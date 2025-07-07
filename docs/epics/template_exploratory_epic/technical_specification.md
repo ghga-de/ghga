@@ -2,7 +2,7 @@
 **Epic Type:** Exploratory Epic
 
 Epic planning and implementation follows the
-[Epic Planning and Marathon SOP](https://docs.ghga-dev.de/main/sops/sop001_epic_planning.html)
+[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
 
 **Attention: Please do not put any confidential content here.**
 

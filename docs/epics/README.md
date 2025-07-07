@@ -1,12 +1,21 @@
-# Epic Docs
+# Epic Documentation
 
-Documentation and plans for service development epics.
+This repository contains technical specifications for GHGA development epics,
+documenting the scope and plans for each epic before the epic is started.
+
+## Structure and Conventions
+
+Each epic should have a descriptive title, a number and code name which should be the name of an animal (e.g. Blob Fish or Alpine Longhorn Beetle).
+
+The documentation for each epic should go into its own numbered directory (e.g., `0-blob-fish/` or `77-alpine-longhorn-beetle/`).
+
+Each directory should contain a Markdown file `technical_specification.md`  as the main specification document, and additional supporting files or subdirectories as needed.
 
 There are two different types of epics: Exploratory Epics and Implementation Epics.
 
 Please have a look at the templates ([exploratory](./template_exploratory_epic), [implementation](./template_implementation_epic)) and especially the contained technical specifications ([exploratory](./template_exploratory_epic/technical_specification.md), [implementation](./template_implementation_epic/technical_specification.md)).
 
-This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghga-dev.de/main/sops/sop001_epic_planning.html).
+This repository is part of the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## The Saga so far
 
@@ -81,4 +90,7 @@ This repository is part of the [Epic Planning and Marathon SOP](https://docs.ghg
 - (71) [Carpenter Bee](./71-carpenter-bee/technical_specification.md): Metldata Configurable Workflows
 - (72) [Pygmy Goat](./72-pygmy-goat/technical_specification.md): Hexkit Documentation
 - (73) [Ballan Wrasse](./73-ballan-wrasse/technical_specification.md): Access Request Management Improvements
+- (74) [Slow Worm](./74-slow-worm/technical_specification.md): Hexkit Support for BSON UUIDs and Datetimes
+- (75) [Eurasian Blackbird](./75-eurasian-blackbird/technical_specification.md): Kafka Event IDs
+- (76) [Lynx Boreal](./76-lynx-boreal/technical_specification.md): Upload Service Redux
 - (77) [Alpine Longhorn Beetle](./77-alpine-longhorn-beetle/technical_specification.md): Make Metadata Downloadable
