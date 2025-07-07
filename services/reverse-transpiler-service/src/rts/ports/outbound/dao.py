@@ -15,8 +15,43 @@
 
 """DAO Port definition"""
 
-from hexkit.protocols.dao import Dao, ResourceNotFoundError  # noqa: F401
+from abc import ABC, abstractmethod
 
-from rts.models import Metadata
+from hexkit.protocols.dao import Dao, ResourceNotFoundError
+from openpyxl import Workbook
 
-MetadataDao = Dao[Metadata]
+from rts.models import StudyMetadata
+
+__all__ = ["MetadataDao", "ResourceNotFoundError", "WorkbookDaoPort"]
+
+MetadataDao = Dao[StudyMetadata]
+
+
+class WorkbookDaoPort(ABC):
+    """Limited DAO for storing workbook data in the database."""
+
+    @abstractmethod
+    async def upsert(self, *, workbook: Workbook, study_accession: str) -> None:
+        """Upsert the workbook for a given study accession.
+
+        If the workbook already exists, it will be replaced.
+        """
+        ...
+
+    @abstractmethod
+    async def find(self, *, study_accession: str) -> bytes:
+        """Retrieve the workbook for a given study accession.
+
+        Raises `ResourceNotFoundError` if the workbook does not exist for the
+        given study accession.
+        """
+        ...
+
+    @abstractmethod
+    async def delete(self, *, study_accession: str) -> None:
+        """Delete the workbook for a given study accession.
+
+        Does not raise an error if the workbook does not exist, as GridFS doesn't raise
+        an error when trying to delete a non-existent file.
+        """
+        ...

@@ -1,4 +1,5 @@
 api_root_path: ''
+artifact_topic: artifacts
 auto_reload: false
 cors_allow_credentials: null
 cors_allowed_headers: null
@@ -8,6 +9,7 @@ db_name: rts
 docs_url: /docs
 generate_correlation_id: true
 host: 127.0.0.1
+kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: false
 kafka_max_message_size: 1048576
@@ -29,4 +31,21 @@ openapi_url: /openapi.json
 port: 8080
 service_instance_id: '1'
 service_name: rts
+sheet_names:
+  analyses: Analysis
+  analysis_method_supporting_files: AnalysisMethodSupportingFile
+  analysis_methods: AnalysisMethod
+  data_access_committees: DataAccessCommittee
+  data_access_policies: DataAccessPolicy
+  datasets: Dataset
+  experiment_method_supporting_files: ExperimentMethodSupportingFile
+  experiment_methods: ExperimentMethod
+  experiments: Experiment
+  individual_supporting_files: IndividualSupportingFile
+  individuals: Individual
+  process_data_files: ProcessDataFile
+  publications: Publication
+  research_data_files: ResearchDataFile
+  samples: Sample
+  studies: Study
 workers: 1

@@ -17,26 +17,72 @@
 
 from abc import ABC, abstractmethod
 
+from rts.models import StudyMetadata
+
+__all__ = ["ReverseTranspilerPort"]
+
 
 class ReverseTranspilerPort(ABC):
-    """Provides functionality to convert JSON files to XLSX format.
-
-    Included conversion logic contains specific transformations for GHGA metadata.
+    """Provides functionality to convert study metadata from JSON files back into
+    spreadsheet format.
     """
 
+    class SheetNamingError(RuntimeError):
+        """Raised when there is neither a configured nor default display value
+        for a sheet name.
+        """
+
+        def __init__(self, sheet_name: str) -> None:
+            """Initialize the error with a message."""
+            message = f"No display value configured for sheet name '{sheet_name}'."
+            super().__init__(message)
+
+    class MetadataNotFoundError(RuntimeError):
+        """Raised when the metadata cannot be retrieved from the database."""
+
+        def __init__(self, study_accession: str) -> None:
+            """Initialize the error with a message."""
+            message = f"No workbook or metadata found for study accession '{study_accession}'."
+            super().__init__(message)
+
     @abstractmethod
-    async def json_to_xlsx(
-        self,
-        input_file,
-        output_file=None,
-    ) -> bytes:
-        """Convert a JSON file to an XLSX file.
+    async def upsert_metadata(self, *, study_metadata: StudyMetadata) -> None:
+        """Upsert study metadata in the database and reverse transpile it to a workbook.
 
-        Args:
-        - `input_file`: Path to the input JSON file
-        - `output_file`: Path to the output XLSX file. If not provided,
-                                    it will use the input filename with .xlsx extension.
+        If the metadata already exists, it will compare the existing metadata
+        with the new one. If they are the same, it will skip the upsert and
+        workbook creation. If they differ, it will update the existing metadata
+        and create a new workbook, deleting the old one.
+        """
+        ...
 
-        Returns content of the generated XLSX file as bytes.
+    @abstractmethod
+    async def retrieve_metadata(self, *, study_accession: str) -> StudyMetadata:
+        """Retrieve study metadata from the DAO by its accession.
+
+        Raises `MetadataNotFoundError` if the metadata does not exist for the
+        given study accession.
+        """
+        ...
+
+    @abstractmethod
+    async def delete_metadata(self, *, study_accession: str) -> None:
+        """Delete study metadata from the database by its accession.
+
+        This method will always try to delete the associated workbook as well,
+        regardless of whether the metadata exists or not.
+
+        Does not raise an error if the metadata or workbook does not exist.
+        """
+        ...
+
+    @abstractmethod
+    async def retrieve_workbook(self, *, study_accession: str) -> bytes:
+        """Retrieve the workbook for a given study accession.
+
+        Raises `MetadataNotFoundError` if the workbook does not exist.
+
+        Returns:
+        - The workbook as bytes.
         """
         ...

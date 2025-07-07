@@ -19,25 +19,27 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from hexkit.providers.akafka.provider import (
-    ComboTranslator,
-    KafkaEventPublisher,
-    KafkaEventSubscriber,
-)
+from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from rts.adapters.inbound.event_sub import OutboxSubTranslator
+from rts.adapters.inbound.event_sub import EventSubTranslator
 from rts.adapters.inbound.fastapi_ import dummies
 from rts.adapters.inbound.fastapi_.configure import get_configured_app
-from rts.adapters.outbound.dao import get_metadata_dao
+from rts.adapters.outbound.dao import get_metadata_dao, get_workbook_dao
 from rts.config import Config
 from rts.core.rev_tran import ReverseTranspiler
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
-from rts.ports.outbound.dao import MetadataDao
+from rts.ports.outbound.dao import MetadataDao, WorkbookDaoPort
+
+__all__ = [
+    "prepare_core",
+    "prepare_event_subscriber",
+    "prepare_rest_app",
+]
 
 
-async def get_dao(*, config: Config) -> MetadataDao:
-    """Constructs and initializes the DAO factory."""
+async def get_dao_factory(*, config: Config) -> MetadataDao:
+    """Constructs and initializes a DAO factory using config."""
     dao_factory = MongoDbDaoFactory(config=config)
     dao = await get_metadata_dao(dao_factory=dao_factory)
     return dao
@@ -47,14 +49,22 @@ async def get_dao(*, config: Config) -> MetadataDao:
 async def prepare_core(
     *,
     config: Config,
-    dao_override: MetadataDao | None = None,
+    metadata_dao_override: MetadataDao | None = None,
+    workbook_dao_override: WorkbookDaoPort | None = None,
 ) -> AsyncGenerator[ReverseTranspilerPort, None]:
     """Constructs and initializes all core components and their outbound dependencies.
 
     The _override parameters can be used to override the default dependencies.
     """
-    dao = dao_override or await get_dao(config=config)
-    yield ReverseTranspiler(config=config, dao=dao)
+    metadata_dao = metadata_dao_override or await get_dao_factory(config=config)
+    async with (
+        nullcontext(workbook_dao_override)
+        if workbook_dao_override
+        else get_workbook_dao(config=config) as workbook_dao
+    ):
+        yield ReverseTranspiler(
+            config=config, metadata_dao=metadata_dao, workbook_dao=workbook_dao
+        )
 
 
 def prepare_core_with_override(
@@ -105,10 +115,9 @@ async def prepare_event_subscriber(
         ) as reverse_transpiler,
         KafkaEventPublisher.construct(config=config) as dlq_publisher,
     ):
-        _translator = OutboxSubTranslator(
+        translator = EventSubTranslator(
             config=config, reverse_transpiler=reverse_transpiler
         )
-        translator = ComboTranslator(translators=[_translator])
         async with KafkaEventSubscriber.construct(
             config=config, translator=translator, dlq_publisher=dlq_publisher
         ) as event_subscriber:

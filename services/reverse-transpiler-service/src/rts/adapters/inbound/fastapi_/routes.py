@@ -15,11 +15,28 @@
 
 """FastAPI endpoint function definitions"""
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
+from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 
 from rts.adapters.inbound.fastapi_.dummies import ReverseTranspilerDummy
+from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 
 router = APIRouter()
+
+XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+class HttpMetadataNotFoundError(HttpCustomExceptionBase):
+    """Thrown when metadata for a study accession is not found."""
+
+    exception_id = "metadataNotFoundError"
+
+    def __init__(self, study_accession: str):
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            description="Metadata for study accession not found.",
+            data={"study_accession": study_accession},
+        )
 
 
 @router.get(
@@ -32,17 +49,29 @@ async def health():
     return {"status": "OK"}
 
 
-# Make a GET endpoint that can serve a transpiled metadata file
 @router.get(
-    "/artifacts/{artifact_name}/classes/{class_name}/resources/{resource_id}",
-    summary="Get transpiled metadata",
+    "/studies/{accession}",
+    summary="Get accessioned metadata in .xlsx format",
     status_code=status.HTTP_200_OK,
+    response_class=Response,
+    response_model=bytes,
 )
 async def get_transpiled_metadata(
-    artifact_name: str,
-    class_name: str,
-    resource_id: str,
+    accession: str,
     reverse_transpiler: ReverseTranspilerDummy,
-):
+) -> Response:
     """Get a transpiled metadata file for a specific artifact, class, and resource."""
-    raise NotImplementedError()
+    try:
+        data = await reverse_transpiler.retrieve_workbook(study_accession=accession)
+    except ReverseTranspilerPort.MetadataNotFoundError as err:
+        raise HttpMetadataNotFoundError(study_accession=accession) from err
+
+    response = Response(
+        status_code=200,
+        content=data,
+        headers={
+            "Content-Disposition": f'attachment; filename="{accession}.xlsx"',
+            "Content-Type": XLSX_CONTENT_TYPE,
+        },
+    )
+    return response

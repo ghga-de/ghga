@@ -13,23 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Model definitions for the RTS"""
+"""Test-suite-wide fixture declaration."""
 
-from typing import Any
+from hexkit.providers.akafka.testutils import (  # noqa: F401
+    kafka_container_fixture,
+    kafka_fixture,
+)
+from hexkit.providers.mongodb.testutils import (  # noqa: F401
+    mongodb_container_fixture,
+    mongodb_fixture,
+)
 
-from pydantic import BaseModel, Field
-
-__all__ = ["StudyMetadata"]
-
-
-class StudyMetadata(BaseModel):
-    """A model representing a Metadata Artifact, identified by the study accession."""
-
-    study_accession: str = Field(
-        ..., description="The ID of the study found within the metadata submission."
-    )
-
-    content: dict[str, Any] = Field(
-        ...,
-        description="The entire metadata content of the artifact.",
-    )
+from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
