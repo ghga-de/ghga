@@ -249,7 +249,9 @@ class DataRepository(DataRepositoryPort):
         )
 
     async def cleanup_outbox_buckets(
-        self, *, object_storages_config: S3ObjectStoragesConfig
+        self,
+        *,
+        object_storages_config: S3ObjectStoragesConfig,
     ):
         """Run cleanup task for all outbox buckets configured in the service config."""
         for storage_alias in object_storages_config.object_storages:
@@ -265,16 +267,19 @@ class DataRepository(DataRepositoryPort):
         """
         # Run on demand through CLI, so crashing should be ok if the alias is not configured
         log.info(
-            f"Starting outbox cleanup for storage identified by alias '{storage_alias}'."
+            f"Starting outbox cleanup for storage identified by alias {storage_alias}."
         )
         try:
             bucket_id, object_storage = self._object_storages.for_alias(storage_alias)
-        except KeyError as exc:
+        except KeyError:
             storage_alias_not_configured = self.StorageAliasNotConfiguredError(
                 alias=storage_alias
             )
             log.critical(storage_alias_not_configured)
-            raise storage_alias_not_configured from exc
+            log.warning(
+                f"Skipping outbox cleanup for storage {storage_alias} as it is not configured."
+            )
+            return
 
         threshold = utc_dates.now_as_utc() - timedelta(
             days=self._config.outbox_cache_timeout
@@ -294,13 +299,14 @@ class DataRepository(DataRepositoryPort):
             except ResourceNotFoundError as error:
                 cleanup_error = self.CleanupError(object_id=object_id, from_error=error)
                 log.critical(cleanup_error)
-                raise cleanup_error from error
+                log.warning(
+                    f"Object with id {object_id} in storage {storage_alias} not found in database, skipping."
+                )
+                continue
 
             # only remove file if last access is later than oubtox_cache_timeout days ago
             if drs_object.last_accessed <= threshold:
-                log.info(
-                    f"Deleting object '{object_id}' from storage '{storage_alias}'."
-                )
+                log.info(f"Deleting object {object_id} from storage {storage_alias}.")
                 try:
                     await object_storage.delete_object(
                         bucket_id=bucket_id, object_id=object_id
@@ -313,7 +319,10 @@ class DataRepository(DataRepositoryPort):
                         object_id=object_id, from_error=error
                     )
                     log.critical(cleanup_error)
-                    raise cleanup_error from error
+                    log.warning(
+                        f"Could not delete object with id {object_id} from storage {storage_alias}."
+                    )
+                    continue
 
     async def register_new_file(self, *, file: models.DrsObjectBase):
         """Register a file as a new DRS Object."""

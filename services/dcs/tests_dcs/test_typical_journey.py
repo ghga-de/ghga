@@ -16,6 +16,7 @@
 """Tests typical user journeys"""
 
 import json
+import logging
 import re
 
 import httpx
@@ -220,7 +221,7 @@ async def test_happy_deletion(
     )
 
 
-async def test_bucket_cleanup(cleanup_fixture: CleanupFixture):
+async def test_bucket_cleanup(cleanup_fixture: CleanupFixture, caplog):
     """Test multiple outbox bucket cleanup handling."""
     data_repository = cleanup_fixture.joint.data_repository
 
@@ -246,7 +247,15 @@ async def test_bucket_cleanup(cleanup_fixture: CleanupFixture):
         object_id=expired_object.object_id,
     )
 
-    with pytest.raises(data_repository.StorageAliasNotConfiguredError):
+    with caplog.at_level(logging.ERROR):
         await data_repository.cleanup_outbox(
             storage_alias=cleanup_fixture.joint.endpoint_aliases.fake
         )
+
+    expected_message = str(
+        data_repository.StorageAliasNotConfiguredError(
+            alias=cleanup_fixture.joint.endpoint_aliases.fake
+        )
+    )
+
+    assert expected_message in caplog.records[0].message
