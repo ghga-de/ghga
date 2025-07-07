@@ -38,7 +38,10 @@ The UI should be similar to the already existing Access Request and IVA manager 
 
 ## User Interface
 
-TBD
+- User Management: ![User Management](./User_Management.png)
+- User Details: ![User Details](./User_Details.png)
+- Access Grants: ![Access Grants](./Access_Grants.png)
+- Access Grant: ![Access Grant](./Access_Grant.png)
 
 ## API Definitions
 
