@@ -206,9 +206,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
 
             # Get the headers as union of all keys for all items
             # This makes it so we're not reliant on first item having all cols populated
-            column_names: set[str] = set()
-            for row in items:
-                column_names |= row.keys()
+            column_names: set[str] = set(row.keys() for row in items)
             column_headers = list(column_names)
 
             # Ensure 'alias' is the first column if present
