@@ -70,7 +70,9 @@ export class AccessRequestFieldEditComponent implements OnInit {
   validationError = signal<string>('');
 
   ticketUrl = computed<string | null>(() =>
-    this.name() === 'ticket_id' ? this.#baseTicketUrl + this.field() : null,
+    this.name() === 'ticket_id' && this.field()
+      ? this.#baseTicketUrl + this.field()
+      : null,
   );
 
   #defaultValue = computed<string>(() => this.request()[this.name()] || '');
@@ -124,13 +126,14 @@ export class AccessRequestFieldEditComponent implements OnInit {
   };
 
   save = () => {
-    if (this.field()) {
-      this.field.update(() => this.field());
-      if (this.isModified()) {
-        this.saved.emit(new Map([[this.name(), this.field() as string]]));
-        this.edited.emit([this.name(), false]);
-      }
-      this.isOpen.set(false);
+    const field = this.field();
+    if (field === undefined) return;
+    this.field.update(() => field);
+    if (this.isModified()) {
+      const name = this.name();
+      this.saved.emit(new Map([[name, field]]));
+      this.edited.emit([name, false]);
     }
+    this.isOpen.set(false);
   };
 }
