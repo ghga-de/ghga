@@ -11,7 +11,7 @@ These domains are: accessibility, responsiveness, and semantics.
 
 The first task of this epic relates to the overhaul of the data portal to improve its accessibility and semantics, as well as attempt to standardise the implementation of its responsiveness.
 
-The second task is that of creating an ADR that contains guidelines (viz. SOPs) and best practices in the implementation of accessibility, responsiveness, and semantics in the data portal.
+The second task is that of creating a development document in a suitable location witin the data portal repository (e.g. `./docs/semantics.md`) containing guidelines (viz. SOPs) and best practices in the implementation of accessibility, responsiveness, and semantics in the data portal.
 
 ### Included/Required:
 - The data portal should be fully compliant with the European Accessibility Act (EAA, which also makes reference to EN 301 549), and the Web Content Accessibility Guidelines (WCAG).
