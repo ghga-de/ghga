@@ -63,8 +63,8 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
     datasets = resources["embedded_public"][0]["content"]["embedded_dataset"]
     for event in resource_recorder.recorded_events:
         assert event.type_ == joint_fixture.config.resource_upsertion_type
-    assert len(resource_recorder.recorded_events) == len(datasets)
-    assert len(dataset_recorder.recorded_events) == len(datasets)
+    assert len(resource_recorder.recorded_events) == len(datasets) == 2
+    assert len(dataset_recorder.recorded_events) == len(datasets) == 2
     for event, dataset in zip(dataset_recorder.recorded_events, datasets, strict=True):
         assert event.type_ == joint_fixture.config.dataset_upsertion_type
         payload = event.payload
@@ -141,7 +141,8 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
         assert abs((now_as_utc() - stats.created).seconds) < 5
         assert stats.resource_stats == expected_resource_stats
 
-    # replace tested resource with slightly changed one
+    # Delete first dataset and replace the remaining one with a changed one
+    # This should result in two deletion events and one upsertion event
     changed_accession = "CHANGED_EMBEDDED_DATASET"
     new_artifact_resources = deepcopy(joint_fixture.artifact_resources)
     del new_artifact_resources[expected_artifact_name][0]["content"][
@@ -204,7 +205,8 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
         )
         assert response.status_code == 204
 
-    assert len(resource_recorder.recorded_events) == 9
+    # Check for one deletion event for each topic (the first 2 datasets were deleted earlier)
+    assert len(resource_recorder.recorded_events) == 1
     for event in resource_recorder.recorded_events:
         assert event.type_ == joint_fixture.config.resource_deletion_type
 
@@ -215,6 +217,51 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
     # confirm that example resource was deleted:
     with pytest.raises(ResourceNotFoundError):
         await dao.get_by_id(changed_accession)
+
+
+async def test_load_stats_public(joint_fixture: JointFixture):  # noqa: F811
+    """Verify that we can load the stats_public artifact into the load api.
+
+    Also checks that we publish neither upsertion nor deletion events for stats_public.
+    """
+    artifacts_to_load = deepcopy(joint_fixture.artifact_resources)
+
+    # Remove artifacts that are not relevant for this test
+    artifacts_to_load.pop("added_accessions", None)
+    artifacts_to_load.pop("embedded_public", None)
+
+    # Double-check that the database is empty before we start
+    db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+    stats_collection = db["art_stats_public_class_DatasetStats"]
+    assert not stats_collection.find().to_list()
+
+    expected_doc_count = 2  # There are two resources in the stats_public artifact
+    change_topic = joint_fixture.config.resource_change_topic
+
+    # Insert the stats_public artifact and check for upsertion events (expect 0)
+    async with joint_fixture.kafka.record_events(in_topic=change_topic) as recorder:
+        response = await joint_fixture.client.post(
+            "/rpc/load-artifacts",
+            json=artifacts_to_load,
+            headers={"Authorization": f"Bearer {joint_fixture.token}"},
+        )
+        assert response.status_code == 204
+
+    # Check the DB -- the two stats_public artifact resources should have been saved
+    assert len(stats_collection.find().to_list()) == expected_doc_count
+
+    # Delete the stats_public artifact and check for deletion events (expect 0)
+    async with joint_fixture.kafka.record_events(in_topic=change_topic) as recorder:
+        response = await joint_fixture.client.post(
+            "/rpc/load-artifacts",
+            json={},
+            headers={"Authorization": f"Bearer {joint_fixture.token}"},
+        )
+        assert response.status_code == 204
+    assert not recorder.recorded_events
+
+    # Check the DB -- the stats_public artifact resources should have been deleted
+    assert stats_collection.find().to_list() == []
 
 
 async def test_whole_artifact_loading(joint_fixture: JointFixture):  # noqa: F811

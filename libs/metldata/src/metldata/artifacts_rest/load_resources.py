@@ -194,12 +194,12 @@ async def process_removed_resources(
             dao_collection=dao_collection,
         )
 
-        await event_publisher.process_resource_deletion(
-            accession=resource_id, class_name=class_name
-        )
         if event_publisher.is_primary_dataset_source(
             artifact_name=artifact_name, resource_class_name=class_name
         ):
+            await event_publisher.process_resource_deletion(
+                accession=resource_id, class_name=class_name
+            )
             await event_publisher.process_dataset_deletion(accession=resource_id)
 
 

@@ -35,11 +35,35 @@ from tests.fixtures.event_handling import (
 EXAMPLE_ARTIFACTS: ArtifactResourceDict = {
     "example_artifact": [
         {
-            "study_accession": "123test",
+            "study_accession": "",
             "artifact_name": "example_artifact",
-            "content": {"studies": [{"accession": "123test"}]},
+            "content": {"samples": [{"accession": "123test"}]},
         },
-    ]
+    ],
+    "added_accessions": [
+        {
+            "study_accession": "GHGAABC123",
+            "artifact_name": "added_accessions",
+            "content": {
+                "studies": [{"accession": "GHGAABC123"}],
+                "samples": [{"accession": "SAMPLE123"}],
+            },
+        },
+    ],
+    "stats_public": [
+        {
+            "study_accession": "",
+            "artifact_name": "stats_public",
+            "content": {
+                "DatasetStats": [
+                    {
+                        "title": "The complete-A dataset",
+                        "dac_email": "dac_institute_a@dac.dac",
+                    }
+                ],
+            },
+        }
+    ],
 }
 
 
@@ -54,6 +78,7 @@ async def test_upload_artifacts_via_http_api(
         artifact_types=list(EXAMPLE_ARTIFACTS.keys()),
         artifact_topic_prefix="artifact",
         loader_api_root="http://localhost:8000",
+        publishable_artifacts=["added_accessions"],
         **file_system_event_fixture.config.model_dump(),
     )
 

@@ -39,6 +39,7 @@ ARTIFACT_INFOS_PATH = BASE_DIR / "example_models" / "artifact_infos.json"
 ARTIFACT_NAME = "embedded_public"
 EMBEDDED_ARTIFACT_PATH = BASE_DIR / "example_metadata" / f"{ARTIFACT_NAME}.json"
 ADDED_ACCESSIONS_PATH = BASE_DIR / "example_metadata" / "added_accessions.json"
+STATS_PUBLIC_PATH = BASE_DIR / "example_metadata" / "stats_public.json"
 EMBEDDED_DATASET_TEST_PATH = BASE_DIR / "example_metadata" / "embedded_dataset.json"
 EMBEDDED_ARTIFACT_MODEL_PATH = (
     BASE_DIR / "example_models" / f"{ARTIFACT_NAME}_model.yaml"
@@ -46,6 +47,7 @@ EMBEDDED_ARTIFACT_MODEL_PATH = (
 ADDED_ACCESSIONS_MODEL_PATH = (
     BASE_DIR / "example_models" / "added_accessions_model.yaml"
 )
+STATS_PUBLIC_MODEL_PATH = BASE_DIR / "example_models" / "stats_public_model.yaml"
 
 
 @dataclass
@@ -77,6 +79,11 @@ async def joint_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> JointFi
             description="added_accessions",
             model=MetadataModel.init_from_path(ADDED_ACCESSIONS_MODEL_PATH),
         ),
+        load_artifact_info(
+            name="stats_public",
+            description="stats_public",
+            model=MetadataModel.init_from_path(STATS_PUBLIC_MODEL_PATH),
+        ),
     ]
 
     with open(EMBEDDED_ARTIFACT_PATH, encoding="utf-8") as file:
@@ -85,9 +92,7 @@ async def joint_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> JointFi
             raw_artifacts["type_"]: [
                 ArtifactJson(
                     artifact_name=raw_artifacts["type_"],
-                    study_accession=raw_artifacts["payload"]["content"]["studies"][0][
-                        "accession"
-                    ],
+                    study_accession="",
                     content=raw_artifacts["payload"]["content"],
                 )
             ]
@@ -102,6 +107,16 @@ async def joint_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> JointFi
                     "studies"
                 ][0]["accession"],
                 content=added_accessions_artifact["payload"]["content"],
+            )
+        ]
+
+    with open(STATS_PUBLIC_PATH, encoding="utf-8") as file:
+        stats_public_artifact = json.load(file)
+        artifacts[stats_public_artifact["type_"]] = [
+            ArtifactJson(
+                artifact_name=stats_public_artifact["type_"],
+                study_accession="",
+                content=stats_public_artifact["payload"]["content"],
             )
         ]
 

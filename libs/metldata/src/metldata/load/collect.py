@@ -42,6 +42,14 @@ class ArtifactCollectorConfig(ArtifactEventConfig):
         ),
     )
 
+    # This config value is also defined in ArtifactLoaderAPIConfig
+    publishable_artifacts: list[str] = Field(
+        default_factory=list,
+        description="List of artifacts to be published in their entirety when loaded"
+        " into the Loader API.",
+        examples=[[], ["added_accessions"]],
+    )
+
     @field_validator("artifact_types")
     def artifact_types_must_not_contain_dots(cls, value: list[str]):  # noqa: N805
         """Validate that artifact types do not contain dots."""
@@ -68,12 +76,25 @@ def collect_artifacts(
             content = cast(Json, event.payload.get("content"))
             if not content:
                 raise RuntimeError("Artifact does not contain 'content' field.")
-            try:
-                study_accession = str(content["studies"][0]["accession"])
-            except (KeyError, IndexError) as err:
-                raise RuntimeError(
-                    "Artifact content does not contain a study accession."
-                ) from err
+
+            # Most loaded data will have blank study_accession. Only publishable
+            # artifacts will have a study_accession. This is a temporary workaround
+            # to avoid over-complicating accounting for the different structure of
+            # the stats_public artifact. Eventually, new services will make this all
+            # obsolete.
+            study_accession = ""
+            if artifact_type in config.publishable_artifacts:
+                # If the artifact is publishable, we expect it to have a study_accession
+                # field. This is checked here to avoid encountering an error later
+                # on when the uploaded data is already half-way processed.
+                try:
+                    study_accession = content["studies"][0]["accession"]
+                except (KeyError, IndexError) as err:
+                    raise RuntimeError(
+                        f"Artifact '{artifact_type}' does not contain 'study_accession'"
+                        " field, but it is marked as publishable."
+                    ) from err
+
             artifact_resources[artifact_type].append(
                 ArtifactJson(
                     artifact_name=artifact_type,

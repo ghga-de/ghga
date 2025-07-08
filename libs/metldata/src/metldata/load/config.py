@@ -41,6 +41,8 @@ class ArtifactLoaderAPIConfig(
     loader_token_hashes: list[str] = Field(
         ..., description="Hashes of tokens used to authenticate for loading artifact."
     )
+
+    # This config value is also defined in ArtifactCollectorConfig
     publishable_artifacts: list[str] = Field(
         default_factory=list,
         description="List of artifacts to be published in their entirety when loaded"

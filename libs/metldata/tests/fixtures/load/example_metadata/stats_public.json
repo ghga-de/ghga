@@ -1,0 +1,233 @@
+{
+  "payload": {
+    "annotation": {
+      "accession_map": {
+        "analyses": {
+          "ANALYSIS_1": "GHGAR54348740624056",
+          "ANALYSIS_2": "GHGAR98211638658950"
+        },
+        "analysis_method_supporting_files": {
+          "ANALYSIS_METHOD_SF_1": "GHGAF50306816366360"
+        },
+        "analysis_methods": {
+          "ANALYSIS_METHOD_1": "GHGAZ37080296643035"
+        },
+        "data_access_committees": {
+          "DAC_1": "GHGAC05045906188918"
+        },
+        "data_access_policies": {
+          "DAP_1": "GHGAP32793167771402",
+          "DAP_2": "GHGAP51275987108889"
+        },
+        "datasets": {
+          "DS_A": "GHGAD23572188878277",
+          "DS_B": "GHGAD79693985203207"
+        },
+        "experiment_method_supporting_files": {
+          "EXP_METHOD_SF_1": "GHGAF76713152327205"
+        },
+        "experiment_methods": {
+          "EXP_METHOD_1": "GHGAQ27213114442839"
+        },
+        "experiments": {
+          "EXP_1": "GHGAX88950540822721",
+          "EXP_2": "GHGAX11983683134892"
+        },
+        "individual_supporting_files": {
+          "INDV_SF_1": "GHGAF81749230246999"
+        },
+        "individuals": {
+          "INDV_1": "GHGAI94890307430834"
+        },
+        "process_data_files": {
+          "PROCESSED_DATA_FILE_1": "GHGAF70334058419530",
+          "PROCESSED_DATA_FILE_2": "GHGAF82488359471914"
+        },
+        "publications": {
+          "PUB_1": "GHGAU29422573184957",
+          "PUB_2": "GHGAU10897423267741"
+        },
+        "research_data_files": {
+          "RESEARCH_DATA_FILE_1": "GHGAF58002773408921",
+          "RESEARCH_DATA_FILE_2": "GHGAF45816368180220",
+          "RESEARCH_DATA_FILE_3": "GHGAF21992263962622",
+          "RESEARCH_DATA_FILE_4": "GHGAF23397418376559",
+          "RESEARCH_DATA_FILE_5": "GHGAF68209541202399",
+          "RESEARCH_DATA_FILE_6": "GHGAF14086218675814",
+          "RESEARCH_DATA_FILE_7": "GHGAF99778535877097",
+          "RESEARCH_DATA_FILE_8": "GHGAF10746762039943",
+          "RESEARCH_DATA_FILE_9": "GHGAF02392946373832"
+        },
+        "samples": {
+          "SAMPLE_1": "GHGAN68948690862860",
+          "SAMPLE_2": "GHGAN70907637743045"
+        },
+        "studies": {
+          "STUDY_A": "GHGAS21145280109347",
+          "STUDY_B": "GHGAS69658281276298"
+        }
+      }
+    },
+    "content": {
+      "dataset_stats": [
+        {
+          "accession": "GHGAD23572188878277",
+          "dac_email": "dac_institute_a@dac.dac",
+          "description": "An interesting dataset A of complete example set",
+          "experiments_summary": {
+            "count": 2,
+            "stats": {
+              "experiment_methods": [
+                {
+                  "count": 3,
+                  "value": "454_GS"
+                }
+              ]
+            }
+          },
+          "files_summary": {
+            "count": 7,
+            "stats": {
+              "format": [
+                {
+                  "count": 3,
+                  "value": "FASTQ"
+                },
+                {
+                  "count": 1,
+                  "value": "JSON"
+                },
+                {
+                  "count": 1,
+                  "value": "TXT"
+                },
+                {
+                  "count": 2,
+                  "value": "VCF"
+                }
+              ]
+            }
+          },
+          "samples_summary": {
+            "count": 2,
+            "stats": {
+              "phenotypic_features": [
+                {
+                  "count": 1,
+                  "value": "Leukemia"
+                }
+              ],
+              "sex": [
+                {
+                  "count": 1,
+                  "value": "MALE"
+                }
+              ],
+              "tissues": [
+                {
+                  "count": 1,
+                  "value": "blood"
+                },
+                {
+                  "count": 1,
+                  "value": "subcutaneous adipose tissue"
+                }
+              ]
+            }
+          },
+          "studies_summary": {
+            "count": 1,
+            "stats": {
+              "accession": [
+                "GHGAS21145280109347"
+              ],
+              "title": [
+                "The A Study"
+              ]
+            }
+          },
+          "title": "The complete-A dataset",
+          "types": [
+            "Another Type",
+            "A Type"
+          ]
+        },
+        {
+          "accession": "GHGAD79693985203207",
+          "dac_email": "dac_institute_a@dac.dac",
+          "description": "An interesting dataset B of complete example set",
+          "experiments_summary": {
+            "count": 2,
+            "stats": {
+              "experiment_methods": [
+                {
+                  "count": 2,
+                  "value": "454_GS"
+                }
+              ]
+            }
+          },
+          "files_summary": {
+            "count": 7,
+            "stats": {
+              "format": [
+                {
+                  "count": 6,
+                  "value": "FASTQ"
+                },
+                {
+                  "count": 1,
+                  "value": "TXT"
+                }
+              ]
+            }
+          },
+          "samples_summary": {
+            "count": 2,
+            "stats": {
+              "phenotypic_features": [
+                {
+                  "count": 1,
+                  "value": "Leukemia"
+                }
+              ],
+              "sex": [
+                {
+                  "count": 1,
+                  "value": "MALE"
+                }
+              ],
+              "tissues": [
+                {
+                  "count": 1,
+                  "value": "blood"
+                },
+                {
+                  "count": 1,
+                  "value": "subcutaneous adipose tissue"
+                }
+              ]
+            }
+          },
+          "studies_summary": {
+            "count": 1,
+            "stats": {
+              "accession": [
+                "GHGAS69658281276298"
+              ],
+              "title": [
+                "The B Study"
+              ]
+            }
+          },
+          "title": "The complete-B dataset",
+          "types": [
+            "And another Type"
+          ]
+        }
+      ]
+    },
+    "submission_id": "b090ff3b-5452-4d69-b88d-024dd05d278c"
+  },
+  "type_": "stats_public"
+}
