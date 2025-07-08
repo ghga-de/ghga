@@ -15,7 +15,7 @@ The second task is that of creating an ADR that contains guidelines (viz. SOPs) 
 
 ### Included/Required:
 - The data portal should be fully compliant with the European Accessibility Act (EAA, which also makes reference to EN 301 549), and the Web Content Accessibility Guidelines (WCAG).
-- The data portal should make full use of semantic tags and aria attributes whenever applicable, and should ensure the full implementation of [ADR016](http://github.com/ghga-de/adrs/blob/main/docs/adrs/adr016_semantic_web_technologies.md)).
+- The data portal should make full use of semantic tags and aria attributes whenever applicable, and should ensure the implementation of [ADR016](https://github.com/ghga-de/adrs/blob/main/docs/adrs/adr016_semantic_web_technologies.md)).
 - The data portal should implement responsiveness in a more standardised manner that nevertheless remains suited for the specific purpose of the elements to make responsive.
 - Developers should have available documentation and SOPs for best practices on the implementation of accessibility, responsiveness, and semantics, as well as for ensuring that any new features to be released are accessibility-compliant.
 
