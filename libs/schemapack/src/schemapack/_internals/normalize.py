@@ -25,6 +25,7 @@ from schemapack._internals.exceptions import InvalidEmbeddingProfileError
 from schemapack._internals.spec.custom_types import EmbeddingProfile
 from schemapack._internals.spec.datapack import Resource
 from schemapack._internals.spec.schemapack import ClassDefinition
+from schemapack._internals.utils import thaw
 from schemapack.exceptions import CircularRelationError, ValidationAssumptionError
 from schemapack.spec.custom_types import ClassName, ResourceId
 from schemapack.spec.datapack import DataPack
@@ -106,7 +107,7 @@ def denormalize(
 
     denormalized_object: JsonObjectCompatible = {
         root_class_definition.id.propertyName: root_resource_id,
-        **root_resource.content,
+        **thaw(root_resource.content),
     }
 
     for relation_name, resource_relations in root_resource.relations.items():

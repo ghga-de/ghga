@@ -21,7 +21,7 @@ Warning: This is an internal part of the library and might change without notice
 
 import json
 import os
-from collections.abc import Mapping
+from collections.abc import Mapping, Set
 from contextlib import contextmanager
 from io import StringIO
 from pathlib import Path
@@ -35,7 +35,6 @@ import ruamel.yaml
 from arcticfreeze import FrozenDict
 from pydantic import BaseModel
 
-from schemapack._internals.spec.custom_types import FrozenType, ThawedType
 from schemapack.exceptions import ParsingError
 
 yaml = ruamel.yaml.YAML(typ="rt")
@@ -82,7 +81,7 @@ def assert_valid_json_schema(schema: Mapping[str, Any]) -> None:
         schema
     )
     if isinstance(schema, FrozenDict):
-        schema = thaw_frozendict(schema)
+        schema = thaw(schema)
     try:
         cls.check_schema(schema)
     except jsonschema.exceptions.SchemaError as error:
@@ -112,16 +111,18 @@ def model_to_serializable_dict(
     return json.loads(model.model_dump_json(exclude_defaults=True))
 
 
-def thaw_frozendict(frozen_dict: FrozenType) -> ThawedType:
-    """Recursively thaws a FrozenDict into a standard dictionary."""
-    return {
-        key: (
-            thaw_frozendict(val)
-            if isinstance(val, FrozenDict)
-            else (list(val) if isinstance(val, tuple) else val)
-        )
-        for key, val in frozen_dict.items()
-    }
+def thaw(frozen: Any) -> Any:
+    """Recursively thaws potentially frozen data structures into mutable ones, replacing
+    any mappings with dictionaries and tuples with lists.
+    """
+    if isinstance(frozen, Mapping):
+        return {key: thaw(value) for key, value in frozen.items()}
+    elif isinstance(frozen, Set):
+        return {thaw(item) for item in frozen}
+    elif isinstance(frozen, list | tuple):
+        return [thaw(item) for item in frozen]
+    else:
+        return frozen
 
 
 def dumps_model(
